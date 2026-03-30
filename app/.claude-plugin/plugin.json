@@ -1,0 +1,44 @@
+{
+  "name": "ai-toolkit",
+  "description": "Professional-grade Claude Code toolkit: 81 skills, 47 agents, expanded lifecycle hooks, experimental opt-in plugin packs, benchmark harvesting, and multi-tool support.",
+  "version": "1.0.0",
+  "author": {
+    "name": "SoftSpark",
+    "url": "https://github.com/softspark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/softspark/ai-toolkit"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/softspark/ai-toolkit",
+  "npm": "@softspark/ai-toolkit",
+  "install": "npx @softspark/ai-toolkit install",
+  "keywords": [
+    "development",
+    "testing",
+    "deployment",
+    "security",
+    "architecture",
+    "multi-agent",
+    "orchestration",
+    "devops",
+    "code-review",
+    "ai-toolkit",
+    "constitution",
+    "quality-gates",
+    "skills",
+    "agents",
+    "cursor",
+    "codex"
+  ],
+  "marketplace": {
+    "category": "developer-tools",
+    "tags": ["productivity", "code-quality", "agents", "safety"],
+    "listing-url": "https://smithery.ai/plugin/ai-toolkit",
+    "pricing": "free"
+  },
+  "claude-code": {
+    "min-version": "1.0.33"
+  }
+}

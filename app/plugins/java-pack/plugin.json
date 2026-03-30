@@ -1,0 +1,18 @@
+{
+    "name": "java-pack",
+    "description": "Domain plugin pack for Java development patterns and idiomatic conventions.",
+    "version": "1.0.0",
+    "domain": "java",
+    "type": "plugin-pack",
+    "status": "experimental",
+    "requires": {
+        "ai-toolkit": ">=1.0.0",
+        "claude-code": ">=1.0.33"
+    },
+    "includes": {
+        "agents": [],
+        "skills": ["java-patterns"],
+        "rules": [],
+        "hooks": []
+    }
+}

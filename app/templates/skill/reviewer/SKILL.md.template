@@ -1,0 +1,51 @@
+---
+name: {{NAME}}
+description: "{{DESCRIPTION}}"
+effort: high
+argument-hint: "[target: file, branch, or PR]"
+agent: code-reviewer
+context: fork
+allowed-tools: Read, Grep, Glob, Bash
+---
+
+# {{NAME}}
+
+$ARGUMENTS
+
+Review code for quality, patterns, and potential issues.
+
+## Usage
+
+```
+/{{NAME}} [target]
+```
+
+## What This Command Does
+
+1. **Identifies** changed files and scope of review
+2. **Analyzes** code quality, patterns, and potential issues
+3. **Reports** findings with severity and actionable suggestions
+4. **Summarizes** overall assessment
+
+## Review Checklist
+
+- [ ] Code correctness and logic
+- [ ] Error handling completeness
+- [ ] Naming conventions and readability
+- [ ] Test coverage for changes
+- [ ] Security considerations
+- [ ] Performance implications
+
+## Output Format
+
+For each finding:
+```
+[SEVERITY] file:line — Description
+  Suggestion: ...
+```
+
+## Rules
+
+- Focus on issues that matter, not style nitpicks
+- Suggest specific fixes, not vague advice
+- Acknowledge good patterns when found

@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+
+
+jobs:
+  auto-generate:
+    name: Regenerate AGENTS.md and llms.txt
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Regenerate AGENTS.md and llms.txt
+        run: |
+          python3 scripts/generate_agents_md.py > AGENTS.md
+          python3 scripts/generate_llms_txt.py > llms.txt
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add AGENTS.md llms.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-regenerate AGENTS.md and llms.txt"
+            git push
+          else
+            echo "No changes to commit."
+          fi
+
+  shellcheck:
+    name: ShellCheck hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install ShellCheck
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck on hooks
+        run: shellcheck --severity=warning app/hooks/*.sh
+
+  python-syntax:
+    name: Python syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Compile all Python scripts
+        run: python3 -m py_compile scripts/*.py app/skills/*/scripts/*.py
+
+  validate:
+    name: Validate toolkit integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run validate.py
+        run: python3 scripts/validate.py
+
+      - name: Run evaluate_skills.py
+        run: python3 scripts/evaluate_skills.py
+
+  test:
+    name: Bats test suite (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install bats-core + parallel (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bats parallel
+
+      - name: Install bats-core + parallel (macOS)
+        if: runner.os == 'macOS'
+        run: brew install bats-core parallel
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run tests
+        run: bats tests/ --jobs 4 --no-parallelize-within-files
+
+  test-action:
+    name: Test reusable action (local)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install from local checkout
+        run: npm install -g .
+      - name: Run ai-toolkit validate
+        run: ai-toolkit validate
+
+  check-license:
+    name: Check required files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check required community files
+        run: |
+          for f in LICENSE CHANGELOG.md .github/CONTRIBUTING.md SECURITY.md AGENTS.md; do
+            if [ ! -f "$f" ]; then
+              echo "MISSING: $f"
+              exit 1
+            else
+              echo "OK: $f"
+            fi
+          done
+

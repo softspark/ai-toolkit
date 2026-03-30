@@ -1,0 +1,38 @@
+.DS_Store
+
+# Local editor / machine-specific state
+settings.local.json
+.idea/
+/.claude/
+
+# Generated local platform configs
+.clinerules
+.cursorrules
+.windsurfrules
+.roomodes
+.aider.conf.yml
+
+# Python caches / coverage
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Node / build outputs
+node_modules/
+dist/
+*.log
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.key
+*.pem
+*.p12

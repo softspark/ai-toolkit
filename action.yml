@@ -1,0 +1,53 @@
+name: 'AI Toolkit Validate'
+description: 'Validate ai-toolkit integrity in CI pipelines'
+author: 'SoftSpark'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+inputs:
+  toolkit-version:
+    description: 'Version of @softspark/ai-toolkit to use'
+    required: false
+    default: 'latest'
+  node-version:
+    description: 'Node.js version'
+    required: false
+    default: '20'
+  command:
+    description: 'ai-toolkit command to run (validate or doctor)'
+    required: false
+    default: 'validate'
+
+outputs:
+  status:
+    description: 'pass or fail'
+    value: ${{ steps.run-toolkit.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install ai-toolkit
+      shell: bash
+      run: npm install -g @softspark/ai-toolkit@${{ inputs.toolkit-version }}
+
+    - name: Run ai-toolkit
+      id: run-toolkit
+      shell: bash
+      run: |
+        COMMAND="${{ inputs.command }}"
+        case "$COMMAND" in
+          validate|doctor) ;;
+          *) echo "Error: invalid command '$COMMAND' (allowed: validate, doctor)"; exit 1 ;;
+        esac
+        if ai-toolkit "$COMMAND"; then
+          echo "status=pass" >> "$GITHUB_OUTPUT"
+        else
+          echo "status=fail" >> "$GITHUB_OUTPUT"
+          exit 1
+        fi

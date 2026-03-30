@@ -1,0 +1,22 @@
+{
+  "name": "frontend-pack",
+  "description": "Domain plugin pack for UI architecture, design quality, accessibility, and frontend delivery workflows.",
+  "version": "1.0.0",
+  "domain": "frontend",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {
+    "ai-toolkit": ">=1.0.0",
+    "claude-code": ">=1.0.33"
+  },
+  "includes": {
+    "agents": ["frontend-specialist", "seo-specialist", "code-reviewer"],
+    "skills": ["design-engineering", "typescript-patterns", "docs"],
+    "rules": [],
+    "hooks": ["post-tool-use.sh"]
+  },
+  "hook_events": {
+    "post-tool-use.sh": "PostToolUse"
+  }
+}
+

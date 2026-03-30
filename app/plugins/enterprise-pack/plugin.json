@@ -1,0 +1,24 @@
+{
+  "name": "enterprise-pack",
+  "description": "Domain plugin pack for enterprise governance, operational reporting, and optional observability modules.",
+  "version": "1.0.0",
+  "domain": "enterprise",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {
+    "ai-toolkit": ">=1.0.0",
+    "claude-code": ">=1.0.33"
+  },
+  "includes": {
+    "agents": ["chief-of-staff", "documenter", "infrastructure-architect"],
+    "skills": ["briefing", "docs", "plugin-creator"],
+    "rules": [],
+    "hooks": ["session-end.sh", "hooks/status-line.sh", "hooks/output-style.sh"]
+  },
+  "hook_events": {
+    "session-end.sh": "SessionEnd",
+    "status-line.sh": "Stop",
+    "output-style.sh": "Stop"
+  }
+}
+

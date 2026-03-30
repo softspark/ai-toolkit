@@ -1,0 +1,39 @@
+# ai-toolkit
+
+> Professional-grade Claude Code toolkit: 85 skills, 47 agents, machine-enforced constitution, quality hooks.
+
+## Documentation
+
+- [README](README.md): Installation, usage, and feature overview
+- [CHANGELOG](CHANGELOG.md): Version history
+- [ARCHITECTURE](app/ARCHITECTURE.md): System design
+- [CONSTITUTION](app/constitution.md): Safety rules
+
+## Knowledge Base
+
+- [Best Practices](kb/best-practices/README.md)
+- [How-To Guides](kb/howto/README.md)
+- [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
+- [Agents Catalog (47 agents)](kb/reference/agents-catalog.md)
+- [Anti-Pattern Registry Format](kb/reference/anti-pattern-registry-format.md)
+- [AI Toolkit Architecture](kb/reference/architecture-overview.md)
+- [Config Benchmark](kb/reference/benchmark-config.md)
+- [CI Integration](kb/reference/ci-integration.md)
+- [Claude Ecosystem Benchmark Snapshot](kb/reference/claude-ecosystem-benchmark-snapshot.md)
+- [Claude Ecosystem Expansion Foundations](kb/reference/claude-ecosystem-expansion-foundations.md)
+- [Commands Catalog (DEPRECATED)](kb/reference/commands-catalog.md)
+- [Distribution Model](kb/reference/distribution-model.md)
+- [Global Install Model](kb/reference/global-install-model.md)
+- [Hierarchical Override Pattern](kb/reference/hierarchical-override-pattern.md)
+- [Hooks Catalog](kb/reference/hooks-catalog.md)
+- [External Integrations](kb/reference/integrations.md)
+- [Language Plugin Packs](kb/reference/language-packs.md)
+- [Merge-Friendly Install Model](kb/reference/merge-friendly-install-model.md)
+- [Plugin Pack Conventions](kb/reference/plugin-pack-conventions.md)
+- [Quick Wins Implementation Summary](kb/reference/quick-wins-implementation-summary.md)
+- [Skill Templates](kb/reference/skill-templates.md)
+- [Skills Catalog (85 skills)](kb/reference/skills-catalog.md)
+- [Skills Unification Model](kb/reference/skills-unification.md)
+- [Usage Statistics](kb/reference/stats.md)
+- [Config Sync](kb/reference/sync.md)
+- [Troubleshooting](kb/troubleshooting/README.md)

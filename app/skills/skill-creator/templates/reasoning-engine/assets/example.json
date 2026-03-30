@@ -1,0 +1,12 @@
+[
+  {
+    "id": "example-pattern-1",
+    "name": "Example Pattern",
+    "domain": "general",
+    "description": "A template entry showing the expected format",
+    "tags": ["template", "example"],
+    "anti_patterns": ["conflicting-pattern"],
+    "severity": "info",
+    "auto_fixable": false
+  }
+]

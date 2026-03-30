@@ -1,0 +1,9 @@
+# Exclude from npm package
+.git/
+.github/
+tests/
+benchmarks/
+PLAN-best-of-the-best.md
+*.bak
+.DS_Store
+llms-full.txt

@@ -1,0 +1,215 @@
+---
+title: "AI Toolkit - Skills Catalog"
+category: reference
+service: ai-toolkit
+tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
+version: "1.0.0"
+created: "2026-03-23"
+last_updated: "2026-04-01"
+description: "Complete catalog of 85 skills: 27 task, 27 hybrid, 31 knowledge. Includes effort levels, skill-scoped hooks, executable scripts, and creator workflows."
+---
+
+# Skills Catalog (85 skills)
+
+All functionality is unified under skills. Task and hybrid skills are user-invocable as slash commands. Knowledge skills provide domain patterns auto-loaded by agents.
+
+## Skill Tiers
+
+| Tier | Skills | When |
+|------|--------|------|
+| **1 — Quick single-agent** | `/debug`, `/review`, `/refactor`, `/analyze`, `/docs`, `/plan`, `/explain` | One concern, fast |
+| **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
+| **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
+
+## Task Skills (27)
+
+Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
+
+| Skill | Slash Command | Effort | Description |
+|-------|---------------|--------|-------------|
+| **commit** | `/commit` | medium | Create well-structured git commits (Conventional Commits) |
+| **pr** | `/pr` | medium | Create GitHub pull request with template and checks |
+| **test** | `/test` | medium | Run tests (auto-detect: pytest, vitest, jest, phpunit, flutter, go, cargo) |
+| **build** | `/build` | low | Build the current project (auto-detects project type) |
+| **lint** | `/lint` | low | Run linting and type checking (ruff/mypy, eslint/tsc, phpstan, dart analyze) |
+| **fix** | `/fix` | low | Autonomously fix failing tests or lint errors (iterative loop) |
+| **deploy** | `/deploy` | medium | Deploy to target environment with pre-deployment checks |
+| **rollback** | `/rollback` | medium | Safe rollback (git, database migrations, deployments) |
+| **migrate** | `/migrate` | medium | Database migration workflow (auto-detect: Alembic, Prisma, Laravel, Django) |
+| **ci** | `/ci` | medium | Generate/manage CI/CD pipeline configuration (GitHub Actions, GitLab CI) |
+| **panic** | `/panic` | low | EMERGENCY: Immediately halt all autonomous agent operations |
+| **index** | `/index` | low | Reindex knowledge base to vector store with change detection |
+| **onboard** | `/onboard` | medium | Guided project setup with the toolkit |
+| **night-watch** | `/night-watch` | medium | Trigger Night Watchman autonomous maintenance cycle |
+| **evolve** | `/evolve` | medium | Trigger Meta-Architect self-optimization cycle |
+| **chaos** | `/chaos` | medium | Trigger Chaos Engineering experiment |
+| **predict** | `/predict` | medium | Predict impact and risks of code changes |
+| **biz-scan** | `/biz-scan` | medium | Scan project for business value opportunities and metric gaps |
+| **briefing** | `/briefing` | medium | Generate daily executive summary of system status |
+| **evaluate** | `/evaluate` | medium | Evaluate RAG quality using LLM-as-a-Judge methodology |
+| **skill-creator** | `/skill-creator` | high | Create new skills following Agent Skills standard |
+| **hook-creator** | `/hook-creator` | high | Create new Claude Code hooks with conventions and validation |
+| **command-creator** | `/command-creator` | high | Create new slash commands with frontmatter and workflow guidance |
+| **agent-creator** | `/agent-creator` | high | Create new specialized agents with trigger and tool selection guidance |
+| **plugin-creator** | `/plugin-creator` | high | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
+| **health** | `/health` | medium | Check health of project services (auto-detect) |
+| **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
+
+## Hybrid Skills (27)
+
+Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
+
+| Skill | Slash Command | Effort | Description |
+|-------|---------------|--------|-------------|
+| **explore** | `/explore` | medium | Explore and understand codebase structure and tech stack |
+| **debug** | `/debug` | medium | Systematic debugging with logs, health checks, diagnostics (Tier 1 — single agent) |
+| **review** | `/review` | high | Review code changes: quality, security, performance (Tier 1 — single agent) |
+| **plan** | `/plan` | high | Create structured plan with task breakdown and agent assignments |
+| **refactor** | `/refactor` | high | Plan and execute code refactoring with safety checks (Tier 1 — single agent) |
+| **analyze** | `/analyze` | medium | Analyze code quality, complexity, and patterns |
+| **docs** | `/docs` | high | Generate/update docs: README, API docs, architecture notes, changelogs (Tier 1 — single agent) |
+| **search** | `/search` | medium | Search knowledge base (MCP tools with local fallback) |
+| **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |
+| **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, spawns agents via Agent tool |
+| **swarm** | `/swarm` | max | Massive parallelism: map-reduce, consensus, relay — Tier 3 |
+| **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2 |
+| **instinct-review** | `/instinct-review` | low | Review, curate, and manage learned instincts from past sessions |
+| **teams** | `/teams` | max | Launch pre-configured Agent Teams compositions for common workflows |
+| **write-a-prd** | `/write-a-prd` | high | Create PRD through interactive interview, codebase exploration, and module design |
+| **prd-to-plan** | `/prd-to-plan` | high | Convert PRD into phased implementation plan using tracer-bullet vertical slices |
+| **tdd** | `/tdd` | high | Test-driven development with red-green-refactor loop and vertical slices |
+| **design-an-interface** | `/design-an-interface` | high | Generate 3+ radically different interface designs using parallel sub-agents |
+| **grill-me** | `/grill-me` | medium | Stress-test a plan through relentless Socratic questioning |
+| **ubiquitous-language** | `/ubiquitous-language` | medium | Extract DDD-style ubiquitous language glossary from conversation |
+| **refactor-plan** | `/refactor-plan` | high | Create detailed refactor plan with tiny commits via user interview |
+| **qa-session** | `/qa-session` | high | Interactive QA session — report bugs conversationally, file GitHub issues |
+| **triage-issue** | `/triage-issue` | high | Triage bug with deep codebase exploration and TDD fix plan |
+| **architecture-audit** | `/architecture-audit` | high | Discover shallow modules and propose module-deepening refactors |
+| **subagent-development** | `/subagent-development` | high | Execute plans with 2-stage review (spec + quality) per task |
+| **repeat** | `/repeat` | medium | Autonomous loop with safety controls (Ralph Wiggum pattern) |
+| **mem-search** | `/mem-search` | medium | Search past coding sessions via natural language (memory-pack) |
+
+### `/workflow` types
+
+| Type | Agents | Use case |
+|------|--------|----------|
+| `feature-development` | 8 | Full stack feature: plan → backend + frontend + DB + tests + security + docs |
+| `backend-feature` | 5 | Backend only: API + logic + DB + tests + security |
+| `frontend-feature` | 4 | UI: component + state + tests + docs |
+| `api-design` | 7 | API contract → implement → test → benchmark → document |
+| `database-evolution` | 7 | Schema change + migration + ORM update + tests + perf + security |
+| `test-coverage` | 4 | Boost coverage: map gaps → unit tests + fixtures → review |
+| `security-audit` | 7 | Multi-vector: OWASP + code + infra + DB → prioritize → report |
+| `codebase-onboarding` | 6 | Read-only: structure + architecture + DB + tests + security → guide |
+| `spike` | 7 | Research → feasibility → security + perf → architecture note |
+| `debugging` | 5 | Diagnose → fix → test → document |
+| `incident-response` | 3 | Triage → fix → postmortem |
+| `performance-optimization` | 4 | Profile → optimize → benchmark → document |
+| `infrastructure-change` | 5 | Design + implement + security + tests + runbook |
+| `application-deploy` | 3 | Deploy → smoke test → release notes |
+| `proactive-troubleshooting` | 4 | Investigate → check perf → preventive fix → docs |
+
+## Knowledge Skills - Development (9)
+
+| Skill | Directory | Domain |
+|-------|-----------|--------|
+| **app-builder** | `skills/app-builder/` | Full-stack application architecture |
+| **api-patterns** | `skills/api-patterns/` | REST/GraphQL design, versioning, error handling |
+| **database-patterns** | `skills/database-patterns/` | Schema design, indexing, query optimization |
+| **flutter-patterns** | `skills/flutter-patterns/` | Flutter/Dart architecture, state management |
+| **ecommerce-patterns** | `skills/ecommerce-patterns/` | E-commerce: catalog, cart, checkout, payments |
+| **clean-code** | `skills/clean-code/` | Multi-language code quality: Python, TS, PHP, Go, Dart |
+| **typescript-patterns** | `skills/typescript-patterns/` | TypeScript/JavaScript patterns for frontend and backend |
+| **design-engineering** | `skills/design-engineering/` | UI polish, animation craft, easing, transforms, accessibility |
+| **documentation-standards** | `skills/documentation-standards/` | KB document conventions, frontmatter validation, category taxonomy |
+
+## Knowledge Skills - Infrastructure (6)
+
+| Skill | Directory | Domain |
+|-------|-----------|--------|
+| **docker-devops** | `skills/docker-devops/` | Docker, deployment, infrastructure |
+| **security-patterns** | `skills/security-patterns/` | OWASP, auth, encryption, vulnerability prevention |
+| **ci-cd-patterns** | `skills/ci-cd-patterns/` | GitHub Actions, GitLab CI, Docker builds, Kubernetes |
+| **observability-patterns** | `skills/observability-patterns/` | Logging, metrics, tracing, monitoring, SLOs |
+| **testing-patterns** | `skills/testing-patterns/` | Multi-language TDD: pytest, vitest, phpunit, go test, flutter |
+| **migration-patterns** | `skills/migration-patterns/` | Database migrations, API versioning, zero-downtime |
+
+## Knowledge Skills - AI/RAG (2)
+
+| Skill | Directory | Domain |
+|-------|-----------|--------|
+| **rag-patterns** | `skills/rag-patterns/` | RAG pipelines, chunking, reranking, evaluation |
+| **mcp-patterns** | `skills/mcp-patterns/` | MCP protocol, server/client design, tools |
+
+## Knowledge Skills - Process (7)
+
+| Skill | Directory | Domain |
+|-------|-----------|--------|
+| **plan-writing** | `skills/plan-writing/` | Implementation plans, success criteria, pre-mortem |
+| **debugging-tactics** | `skills/debugging-tactics/` | Iron Law 4-phase debugging: root cause → pattern → hypothesis → fix |
+| **git-mastery** | `skills/git-mastery/` | Git workflows, branching, conflict resolution |
+| **architecture-decision** | `skills/architecture-decision/` | Architecture notes, trade-off analysis, alternatives |
+| **performance-profiling** | `skills/performance-profiling/` | Profiling, bottleneck analysis, optimization |
+| **research-mastery** | `skills/research-mastery/` | Multi-source research, synthesis, fact-checking |
+| **verification-before-completion** | `skills/verification-before-completion/` | Iron Law: evidence-before-claims, no completion without fresh verification |
+
+## Knowledge Skills - Orchestration (1)
+
+| Skill | Directory | Domain |
+|-------|-----------|--------|
+| **hive-mind** | `skills/hive-mind/` | Multi-agent aggregation, consensus, swarm patterns |
+
+## Advanced Features
+
+### Effort Levels
+- **low**: Mechanical operations (lint, build, fix, panic, index)
+- **medium**: Standard operations (most skills)
+- **high**: Complex reasoning (review, plan, refactor, docs, skill-creator)
+- **max**: Multi-agent orchestration (orchestrate, swarm, workflow)
+
+### Skill-Scoped Hooks
+5 skills have lifecycle hooks:
+- **commit**: PreToolUse — lint reminder before committing
+- **test**: PostToolUse — coverage threshold reminder
+- **deploy**: PostToolUse — health check reminder
+- **migrate**: PreToolUse — backup reminder before migrations
+- **rollback**: PostToolUse — verification reminder after rollback
+
+### Skill Frontmatter Conventions
+- `agent: <name>` — delegates to a specialized agent persona
+- `context: fork` — runs skill in isolated forked context
+- `allowed-tools: ...` — tools available to the agent when processing this skill
+- `depends-on: skill-a, skill-b` — declares dependencies on other skills (validated by `validate.py`)
+
+### Skill Dependencies (`depends-on`)
+Skills can declare dependencies on other skills (primarily knowledge skills) for documentation and validation:
+```yaml
+depends-on: clean-code, api-patterns
+```
+- CSV list of skill directory names
+- Validated by `validate.py` — each dep must exist as `app/skills/{dep}/SKILL.md`
+- Reported in `evaluate_skills.py` quality metrics
+- No runtime autoloading — Claude loads knowledge skills contextually based on topic matching
+
+### Executable Scripts (18 total, stdlib-only, JSON output)
+
+| Skill | Script | Purpose |
+|-------|--------|---------|
+| **commit** | `scripts/pre-commit-check.py` | Staged files, secrets detection |
+| **test** | `scripts/detect-runner.py` | Auto-detect test framework |
+| **lint** | `scripts/detect-linters.py` | Detect available linters |
+| **build** | `scripts/detect-build.py` | Detect build system |
+| **deploy** | `scripts/pre_deploy_check.py` | Pre-deployment readiness |
+| **rollback** | `scripts/rollback_info.py` | Rollback context |
+| **migrate** | `scripts/migration-status.py` | Detect migration tool, status |
+| **ci** | `scripts/ci-detect.py` | Detect CI platform |
+| **fix** | `scripts/error-classifier.py` | Classify lint/test errors |
+| **pr** | `scripts/pr-summary.py` | Generate PR title/description |
+| **review** | `scripts/diff-analyzer.py` | Parse git diff, categorize files |
+| **debug** | `scripts/error-parser.py` | Parse stack traces |
+| **explore** | `scripts/visualize.py` | Interactive HTML codebase tree |
+| **explain** | `scripts/dependency-graph.py` | Import graph → Mermaid |
+| **docs** | `scripts/doc-inventory.py` | Inventory docs, measure coverage |
+| **refactor** | `scripts/refactor-scan.py` | Detect code smells |
+| **health** | `scripts/health_check.py` | JSON health report |
+| **analyze** | `scripts/complexity.py` | Code complexity metrics |

@@ -1,0 +1,22 @@
+{
+  "name": "memory-pack",
+  "description": "Persistent memory across Claude Code sessions with SQLite storage, full-text search, and progressive disclosure",
+  "version": "1.0.0",
+  "domain": "memory",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {
+    "ai-toolkit": ">=1.0.0",
+    "claude-code": ">=1.0.33"
+  },
+  "includes": {
+    "agents": [],
+    "skills": ["mem-search"],
+    "rules": [],
+    "hooks": ["observation-capture.sh", "session-summary.sh"]
+  },
+  "hook_events": {
+    "observation-capture.sh": "PostToolUse",
+    "session-summary.sh": "Stop"
+  }
+}

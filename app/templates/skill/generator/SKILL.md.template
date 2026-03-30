@@ -1,0 +1,40 @@
+---
+name: {{NAME}}
+description: "{{DESCRIPTION}}"
+effort: medium
+disable-model-invocation: true
+argument-hint: "[type or target]"
+allowed-tools: Read, Write, Bash, Glob
+---
+
+# {{NAME}}
+
+$ARGUMENTS
+
+Generate output files based on project analysis.
+
+## Usage
+
+```
+/{{NAME}} [type]
+```
+
+## What This Command Does
+
+1. **Scans** the project structure and existing files
+2. **Analyzes** patterns and conventions in use
+3. **Generates** output following project conventions
+4. **Writes** files to the appropriate locations
+
+## Output Targets
+
+| Type | Output | Description |
+|------|--------|-------------|
+| default | stdout | Print to console |
+
+## Rules
+
+- Follow existing project conventions and patterns
+- Never overwrite files without user confirmation
+- Use project's existing formatting and style
+- Include comments only where logic is non-obvious

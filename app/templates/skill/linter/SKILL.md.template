@@ -1,0 +1,34 @@
+---
+name: {{NAME}}
+description: "{{DESCRIPTION}}"
+effort: low
+disable-model-invocation: true
+argument-hint: "[path or file]"
+allowed-tools: Bash, Read, Grep
+---
+
+# {{NAME}}
+
+$ARGUMENTS
+
+Run linting checks on the specified target.
+
+## Usage
+
+```
+/{{NAME}} [path]
+```
+
+## What This Command Does
+
+1. **Detects** project type and available linters
+2. **Runs** appropriate linting tool
+3. **Reports** issues with file paths and line numbers
+4. **Suggests** auto-fixes where available
+
+## Rules
+
+- Always run linters with the project's existing configuration
+- Report issues grouped by severity (error, warning, info)
+- Suggest `--fix` flag when auto-fixable issues are found
+- Never modify files without explicit user approval

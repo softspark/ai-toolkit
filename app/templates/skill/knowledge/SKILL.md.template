@@ -1,0 +1,52 @@
+---
+name: {{NAME}}
+description: "{{DESCRIPTION}}"
+effort: medium
+user-invocable: false
+---
+
+# {{NAME}}
+
+## Core Principles
+
+### 1. Principle One
+Description and code example.
+
+```
+// Example code
+```
+
+### 2. Principle Two
+Description and code example.
+
+```
+// Example code
+```
+
+### 3. Principle Three
+Description and code example.
+
+```
+// Example code
+```
+
+## Common Patterns
+
+### Pattern A
+When to use, how to implement, example.
+
+### Pattern B
+When to use, how to implement, example.
+
+## Anti-Patterns
+
+| Anti-Pattern | Problem | Better Approach |
+|-------------|---------|----------------|
+| Example | Why it's bad | What to do instead |
+
+## Quick Reference
+
+| Concept | Usage | Example |
+|---------|-------|---------|
+| Concept A | When | `code` |
+| Concept B | When | `code` |

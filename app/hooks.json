@@ -1,0 +1,178 @@
+{
+    "hooks": {
+        "SessionStart": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "startup|compact",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/session-start.sh\""
+                    }
+                ]
+            }
+        ],
+        "Notification": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
+                    }
+                ]
+            }
+        ],
+        "PreToolUse": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/guard-destructive.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Bash|Read|Edit|Write|MultiEdit|Glob|Grep|NotebookEdit|mcp__filesystem__.*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/guard-path.sh\""
+                    }
+                ]
+            }
+        ],
+        "UserPromptSubmit": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/user-prompt-submit.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/track-usage.sh\""
+                    }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Edit|MultiEdit|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/post-tool-use.sh\""
+                    }
+                ]
+            }
+        ],
+        "Stop": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/quality-check.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/save-session.sh\""
+                    }
+                ]
+            }
+        ],
+        "TaskCompleted": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/quality-gate.sh\""
+                    }
+                ]
+            }
+        ],
+        "TeammateIdle": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "echo 'Teammate going idle. Verify: (1) All assigned files modified, (2) Tests written for changes, (3) Documentation updated if needed.'"
+                    }
+                ]
+            }
+        ],
+        "SubagentStart": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/subagent-start.sh\""
+                    }
+                ]
+            }
+        ],
+        "SubagentStop": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/subagent-stop.sh\""
+                    }
+                ]
+            }
+        ],
+        "PreCompact": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/pre-compact.sh\""
+                    }
+                ]
+            }
+        ],
+        "SessionEnd": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/session-end.sh\""
+                    }
+                ]
+            }
+        ]
+    }
+}

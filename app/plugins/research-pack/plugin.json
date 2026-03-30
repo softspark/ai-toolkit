@@ -1,0 +1,22 @@
+{
+  "name": "research-pack",
+  "description": "Domain plugin pack for research, synthesis, source validation, and benchmark-backed discovery.",
+  "version": "1.0.0",
+  "domain": "research",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {
+    "ai-toolkit": ">=1.0.0",
+    "claude-code": ">=1.0.33"
+  },
+  "includes": {
+    "agents": ["research-synthesizer", "technical-researcher", "fact-checker", "search-specialist"],
+    "skills": ["search", "docs", "research-mastery", "plan-writing"],
+    "rules": [],
+    "hooks": ["user-prompt-submit.sh"]
+  },
+  "hook_events": {
+    "user-prompt-submit.sh": "UserPromptSubmit"
+  }
+}
+

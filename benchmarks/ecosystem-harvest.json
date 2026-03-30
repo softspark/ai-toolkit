@@ -1,0 +1,148 @@
+{
+  "generated_at": "2026-03-28T09:37:52Z",
+  "mode": "offline",
+  "snapshot_date": "2026-03-28",
+  "freshness": {
+    "stale_threshold_days": 30,
+    "age_days": 0,
+    "status": "fresh"
+  },
+  "summary": {
+    "repo_count": 6,
+    "stars_total": 206035,
+    "categories": [
+      "cross-tool",
+      "ecosystem-scale",
+      "hooks-reference",
+      "meta-tooling",
+      "official",
+      "practical-showcase"
+    ],
+    "official_repo": "anthropics/claude-code"
+  },
+  "comparison_matrix": [
+    {
+      "pattern": "plugin-manifest-support",
+      "current_state": "implemented",
+      "benchmark_signal": "official Claude Code plugin layout",
+      "priority": "high",
+      "evidence": [
+        "anthropics/claude-code"
+      ]
+    },
+    {
+      "pattern": "creator-workflows",
+      "current_state": "implemented",
+      "benchmark_signal": "meta-tooling for commands, hooks, agents, plugins",
+      "priority": "high",
+      "evidence": [
+        "anthropics/claude-code",
+        "alirezarezvani/claude-code-skill-factory"
+      ]
+    },
+    {
+      "pattern": "lifecycle-breadth",
+      "current_state": "implemented",
+      "benchmark_signal": "prompt governance, post-tool feedback, subagent hooks, session end",
+      "priority": "high",
+      "evidence": [
+        "disler/claude-code-hooks-mastery",
+        "ChrisWiles/claude-code-showcase"
+      ]
+    },
+    {
+      "pattern": "plugin-packs",
+      "current_state": "implemented-experimental",
+      "benchmark_signal": "modular domain packaging",
+      "priority": "medium",
+      "evidence": [
+        "anthropics/claude-code",
+        "affaan-m/everything-claude-code"
+      ]
+    },
+    {
+      "pattern": "benchmark-harvesting",
+      "current_state": "implemented",
+      "benchmark_signal": "repeatable evidence for docs and roadmap decisions",
+      "priority": "medium",
+      "evidence": [
+        "anthropics/claude-code",
+        "codeaholicguy/ai-devkit"
+      ]
+    }
+  ],
+  "repos": [
+    {
+      "repo": "anthropics/claude-code",
+      "category": "official",
+      "stars": 83535,
+      "updated_at": "2026-03-27T16:50:16Z",
+      "commands_md": 18,
+      "agents_md": 15,
+      "skills": 10,
+      "hook_settings_files": 5,
+      "notes": "Official Claude Code repo with plugin layout, development kits, and modular commands/agents/hooks.",
+      "source": "snapshot"
+    },
+    {
+      "repo": "affaan-m/everything-claude-code",
+      "category": "ecosystem-scale",
+      "stars": 111863,
+      "updated_at": "2026-03-27T16:55:18Z",
+      "commands_md": 271,
+      "agents_md": 152,
+      "skills": 397,
+      "hook_settings_files": 2,
+      "notes": "Large ecosystem catalog. High inspiration value, high discoverability-debt risk.",
+      "source": "snapshot"
+    },
+    {
+      "repo": "ChrisWiles/claude-code-showcase",
+      "category": "practical-showcase",
+      "stars": 5593,
+      "updated_at": "2026-03-27T13:13:35Z",
+      "commands_md": 6,
+      "agents_md": 2,
+      "skills": 6,
+      "hook_settings_files": 1,
+      "notes": "Practical edit-time hooks, branch safety, formatting, and testing patterns.",
+      "source": "snapshot"
+    },
+    {
+      "repo": "disler/claude-code-hooks-mastery",
+      "category": "hooks-reference",
+      "stars": 3421,
+      "updated_at": "2026-03-27T15:49:11Z",
+      "commands_md": 21,
+      "agents_md": 19,
+      "skills": 0,
+      "hook_settings_files": 1,
+      "notes": "Strong reference for lifecycle breadth, status lines, and operational hook patterns.",
+      "source": "snapshot"
+    },
+    {
+      "repo": "codeaholicguy/ai-devkit",
+      "category": "cross-tool",
+      "stars": 985,
+      "updated_at": "2026-03-27T00:00:00Z",
+      "commands_md": 0,
+      "agents_md": 0,
+      "skills": 0,
+      "hook_settings_files": 0,
+      "notes": "Cross-tool toolkit positioning benchmark.",
+      "source": "snapshot"
+    },
+    {
+      "repo": "alirezarezvani/claude-code-skill-factory",
+      "category": "meta-tooling",
+      "stars": 638,
+      "updated_at": "2026-03-27T00:00:00Z",
+      "commands_md": 0,
+      "agents_md": 0,
+      "skills": 0,
+      "hook_settings_files": 0,
+      "notes": "Skill/agent/prompt factory inspiration for creator workflows.",
+      "source": "snapshot"
+    }
+  ]
+}

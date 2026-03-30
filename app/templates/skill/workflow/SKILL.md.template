@@ -1,0 +1,49 @@
+---
+name: {{NAME}}
+description: "{{DESCRIPTION}}"
+effort: max
+argument-hint: "[type] [task description]"
+agent: orchestrator
+context: fork
+model: opus
+---
+
+# {{NAME}}
+
+$ARGUMENTS
+
+Coordinate a multi-phase workflow with specialized agents.
+
+## Usage
+
+```
+/{{NAME}} [type] [description]
+```
+
+## What This Command Does
+
+1. **Analyzes** the task and selects appropriate workflow type
+2. **Plans** phases and agent assignments
+3. **Executes** each phase with the assigned agent
+4. **Validates** output at each phase gate
+5. **Synthesizes** results into a final deliverable
+
+## Workflow Phases
+
+### Phase 1: Analysis
+- Understand requirements and constraints
+- Identify affected files and components
+
+### Phase 2: Implementation
+- Execute the core task
+- Validate each change against requirements
+
+### Phase 3: Verification
+- Run tests and validation
+- Review output quality
+
+## Rules
+
+- Each phase must complete before the next begins
+- Escalate blockers to the user immediately
+- Never skip the verification phase

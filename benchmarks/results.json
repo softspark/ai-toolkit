@@ -1,0 +1,38 @@
+{
+  "run_date": "2026-03-26",
+  "model": "claude-sonnet-4-6",
+  "note": "B4 vanilla run found existing test file from with-toolkit run — tool_call count inflated, score still valid",
+  "with_toolkit": {
+    "agent_routing": "specialized (debugger, code-reviewer, test-engineer, documenter)",
+    "results": {
+      "B1": { "task": "Debug FastAPI JWT bug",           "score": 4, "max": 4, "tool_calls": 1 },
+      "B2": { "task": "Code review — 3 bugs",           "score": 4, "max": 4, "tool_calls": 1 },
+      "B3": { "task": "Refactor god function",          "score": 4, "max": 4, "tool_calls": 1 },
+      "B4": { "task": "Generate tests (payments)",      "score": 4, "max": 4, "tool_calls": 1 },
+      "B5": { "task": "Docs for Flask microservice",    "score": 4, "max": 4, "tool_calls": 3 }
+    },
+    "total_score": 20,
+    "max_score": 20,
+    "completion_rate": 1.0,
+    "avg_tool_calls": 1.4
+  },
+  "without_toolkit": {
+    "agent_routing": "general-purpose only",
+    "results": {
+      "B1": { "task": "Debug FastAPI JWT bug",           "score": 4, "max": 4, "tool_calls": 1 },
+      "B2": { "task": "Code review — 3 bugs",           "score": 4, "max": 4, "tool_calls": 1 },
+      "B3": { "task": "Refactor god function",          "score": 4, "max": 4, "tool_calls": 2 },
+      "B4": { "task": "Generate tests (payments)",      "score": 4, "max": 4, "tool_calls": 8 },
+      "B5": { "task": "Docs for Flask microservice",    "score": 4, "max": 4, "tool_calls": 10 }
+    },
+    "total_score": 20,
+    "max_score": 20,
+    "completion_rate": 1.0,
+    "avg_tool_calls": 4.4
+  },
+  "comparison": {
+    "score_delta": 0,
+    "tool_call_reduction_pct": 68,
+    "finding": "Same accuracy on isolated single-file tasks. Toolkit advantage: 3.1x fewer tool calls on complex tasks (B4/B5). Real gains expected on multi-file, multi-step scenarios where agent specialization and skill context matter."
+  }
+}

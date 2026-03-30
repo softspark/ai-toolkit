@@ -1,0 +1,75 @@
+{
+  "name": "@softspark/ai-toolkit",
+  "version": "1.0.0",
+  "description": "Professional-grade AI coding toolkit: 85 skills, 47 agents, multi-platform support (Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider), machine-enforced safety constitution, Iron Law enforcement, persistent memory, visual brainstorming, expanded lifecycle hooks, 11 plugin packs, and benchmark tooling.",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "ai",
+    "agents",
+    "skills",
+    "llm",
+    "toolkit",
+    "developer-tools",
+    "cursor",
+    "windsurf",
+    "copilot",
+    "gemini",
+    "cline",
+    "roo-code",
+    "roo",
+    "aider",
+    "multi-platform"
+  ],
+  "homepage": "https://github.com/softspark/ai-toolkit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softspark/ai-toolkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/softspark/ai-toolkit/issues"
+  },
+  "license": "MIT",
+  "author": "SoftSpark <biuro@softspark.eu>",
+  "main": "bin/ai-toolkit.js",
+  "bin": {
+    "ai-toolkit": "bin/ai-toolkit.js"
+  },
+  "scripts": {
+    "prepublishOnly": "npm run generate:all && python3 scripts/validate.py && npm test",
+    "test": "bats tests/ --jobs 4 --no-parallelize-within-files",
+    "validate": "python3 scripts/validate.py",
+    "evaluate": "python3 scripts/evaluate_skills.py",
+    "benchmark:ecosystem": "python3 scripts/benchmark_ecosystem.py --offline",
+    "benchmark:harvest": "python3 scripts/harvest_ecosystem.py --offline",
+    "generate:agents": "python3 scripts/generate_agents_md.py > AGENTS.md",
+    "generate:cursor": "python3 scripts/generate_cursor_rules.py > .cursorrules",
+    "generate:llms": "python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt",
+    "generate:windsurf": "python3 scripts/generate_windsurf.py > .windsurfrules",
+    "generate:copilot": "python3 scripts/generate_copilot.py > .github/copilot-instructions.md",
+    "generate:gemini": "python3 scripts/generate_gemini.py > GEMINI.md",
+    "generate:cline": "python3 scripts/generate_cline.py > .clinerules",
+    "generate:roo": "python3 scripts/generate_roo_modes.py > .roomodes",
+    "generate:aider": "python3 scripts/generate_aider_conf.py > .aider.conf.yml",
+    "generate:all": "npm run generate:agents && npm run generate:cursor && npm run generate:windsurf && npm run generate:copilot && npm run generate:gemini && npm run generate:cline && npm run generate:roo && npm run generate:aider && npm run generate:llms"
+  },
+  "files": [
+    "bin/",
+    "app/",
+    "scripts/",
+    "kb/",
+    "benchmarks/",
+    "action.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "AGENTS.md",
+    "llms.txt",
+    "llms-full.txt"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "bats": ">=1.8.0 — install via: brew install bats-core (macOS) or apt install bats (Ubuntu)"
+  }
+}

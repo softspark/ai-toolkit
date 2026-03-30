@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ai-toolkit Visual Companion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a2e;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+      padding: 12px 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #a8b2d1;
+      letter-spacing: 0.02em;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    #content {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 24px;
+      min-height: 200px;
+      transition: opacity 150ms ease-out;
+    }
+
+    #content img { max-width: 100%; height: auto; border-radius: 4px; }
+    #content table { border-collapse: collapse; width: 100%; }
+    #content th, #content td { border: 1px solid #0f3460; padding: 8px 12px; text-align: left; }
+    #content th { background: #1a1a2e; }
+    #content pre { background: #0d1117; padding: 16px; border-radius: 4px; overflow-x: auto; }
+    #content code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.9em; }
+    #content h1, #content h2, #content h3 { margin: 16px 0 8px; color: #ccd6f6; }
+    #content ul, #content ol { padding-left: 24px; }
+    #content li { margin: 4px 0; }
+
+    .status {
+      text-align: center;
+      padding: 8px;
+      font-size: 0.75rem;
+      color: #4a5568;
+    }
+
+    .status .dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #48bb78;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ai-toolkit Visual Companion</h1>
+  </header>
+  <main>
+    <div id="content">
+      <p>Waiting for content...</p>
+    </div>
+  </main>
+  <div class="status"><span class="dot"></span>Connected</div>
+  <script>
+    (function () {
+      var contentEl = document.getElementById("content");
+      var lastHtml = "";
+
+      function poll() {
+        fetch("/content")
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.html && data.html !== lastHtml) {
+              lastHtml = data.html;
+              contentEl.style.opacity = "0";
+              setTimeout(function () {
+                contentEl.innerHTML = data.html;
+                contentEl.style.opacity = "1";
+              }, 80);
+            }
+          })
+          .catch(function () {});
+      }
+
+      setInterval(poll, 2000);
+      poll();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ai-toolkit Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 8px; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; font-size: 0.875rem; }
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-card .label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--accent); margin-top: 4px; }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .chart-card h2 { font-size: 0.875rem; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .upload-area { background: var(--surface); border: 2px dashed var(--border); border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+  .upload-area:hover { border-color: var(--accent); }
+  .upload-area p { color: var(--muted); margin-top: 8px; font-size: 0.875rem; }
+  #file-input { display: none; }
+  #paste-area { width: 100%; min-height: 80px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 12px; font-family: monospace; font-size: 0.8rem; margin-top: 12px; resize: vertical; }
+  button { background: var(--accent); color: var(--bg); border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 8px; }
+  button:hover { opacity: 0.9; }
+  #dashboard { display: none; }
+  @media (max-width: 768px) { .charts { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>ai-toolkit Dashboard</h1>
+<p class="subtitle">Load stats.json to visualize skill usage, top agents, and session metrics.</p>
+
+<div id="loader">
+  <div class="upload-area" onclick="document.getElementById('file-input').click()">
+    <strong>Drop stats.json or click to upload</strong>
+    <p>Or paste JSON below and click Load</p>
+  </div>
+  <input type="file" id="file-input" accept=".json">
+  <textarea id="paste-area" placeholder='{"skills": {...}, "agents": {...}, "sessions": 0}'></textarea>
+  <button onclick="loadFromPaste()">Load</button>
+</div>
+
+<div id="dashboard">
+  <div class="stats-row">
+    <div class="stat-card"><div class="label">Total Sessions</div><div class="value" id="total-sessions">0</div></div>
+    <div class="stat-card"><div class="label">Skills Used</div><div class="value" id="skills-used">0</div></div>
+    <div class="stat-card"><div class="label">Top Agent</div><div class="value" id="top-agent" style="font-size:1.2rem">-</div></div>
+    <div class="stat-card"><div class="label">Most Used Skill</div><div class="value" id="top-skill" style="font-size:1.2rem">-</div></div>
+  </div>
+  <div class="charts">
+    <div class="chart-card"><h2>Skill Usage Frequency</h2><canvas id="skills-chart"></canvas></div>
+    <div class="chart-card"><h2>Top Agents</h2><canvas id="agents-chart"></canvas></div>
+  </div>
+</div>
+
+<script>
+let skillsChart = null, agentsChart = null;
+
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => render(JSON.parse(ev.target.result));
+  reader.readAsText(file);
+});
+
+function loadFromPaste() {
+  const raw = document.getElementById('paste-area').value.trim();
+  if (!raw) return;
+  try { render(JSON.parse(raw)); } catch (err) { alert('Invalid JSON: ' + err.message); }
+}
+
+function render(data) {
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+
+  const skills = data.skills || {};
+  const agents = data.agents || {};
+  const sessions = data.sessions || 0;
+
+  document.getElementById('total-sessions').textContent = sessions;
+  document.getElementById('skills-used').textContent = Object.keys(skills).length;
+
+  const sortedSkills = Object.entries(skills).sort((a, b) => b[1] - a[1]);
+  const sortedAgents = Object.entries(agents).sort((a, b) => b[1] - a[1]);
+
+  document.getElementById('top-skill').textContent = sortedSkills[0] ? sortedSkills[0][0] : '-';
+  document.getElementById('top-agent').textContent = sortedAgents[0] ? sortedAgents[0][0] : '-';
+
+  const top15Skills = sortedSkills.slice(0, 15);
+  const top10Agents = sortedAgents.slice(0, 10);
+
+  if (skillsChart) skillsChart.destroy();
+  if (agentsChart) agentsChart.destroy();
+
+  const chartDefaults = { color: '#8b949e', borderColor: '#30363d' };
+  Chart.defaults.color = chartDefaults.color;
+
+  skillsChart = new Chart(document.getElementById('skills-chart'), {
+    type: 'bar',
+    data: {
+      labels: top15Skills.map(s => s[0]),
+      datasets: [{ label: 'Invocations', data: top15Skills.map(s => s[1]),
+        backgroundColor: '#58a6ff', borderRadius: 4, barThickness: 18 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: '#21262d' } }, y: { grid: { display: false } } }
+    }
+  });
+
+  agentsChart = new Chart(document.getElementById('agents-chart'), {
+    type: 'bar',
+    data: {
+      labels: top10Agents.map(a => a[0]),
+      datasets: [{ label: 'Delegations', data: top10Agents.map(a => a[1]),
+        backgroundColor: '#3fb950', borderRadius: 4, barThickness: 18 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: '#21262d' } }, y: { grid: { display: false } } }
+    }
+  });
+}
+</script>
+</body>
+</html>

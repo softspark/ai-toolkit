@@ -1,0 +1,91 @@
+---
+name: security-patterns
+description: "Loaded when user asks about security, OWASP, or auth patterns"
+effort: medium
+user-invocable: false
+---
+
+# Security Patterns Skill
+
+## OWASP Top 10 Prevention
+
+| Risk | Prevention |
+|------|------------|
+| Injection | Parameterized queries, ORM |
+| Broken Auth | MFA, secure sessions |
+| Sensitive Data | Encryption, HTTPS |
+| XXE | Disable external entities |
+| Broken Access | RBAC, resource validation |
+| Security Misconfig | Security headers, defaults |
+| XSS | Escaping, CSP |
+| Insecure Deserialization | Signed tokens, validation |
+| Vulnerable Components | Dependency scanning |
+| Insufficient Logging | Audit logs, monitoring |
+
+---
+
+## Security Headers
+
+```python
+# FastAPI middleware
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    return response
+```
+
+---
+
+## Secrets Management
+
+### Environment Variables
+```bash
+# .env (never commit)
+DATABASE_URL=postgresql://...
+API_SECRET=...
+
+# .env.example (commit this)
+DATABASE_URL=postgresql://user:pass@localhost/db
+API_SECRET=your-secret-here
+```
+
+### Secret Scanning
+```yaml
+# pre-commit hook
+- repo: https://github.com/Yelp/detect-secrets
+  hooks:
+    - id: detect-secrets
+```
+
+---
+
+## Rate Limiting
+
+```python
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+
+@app.get("/api/resource")
+@limiter.limit("100/minute")
+async def resource():
+    pass
+```
+
+---
+
+## Reference Guides
+
+For authentication patterns (JWT, passwords, token strategy), see [reference/authentication.md](reference/authentication.md).
+
+For authorization patterns (RBAC, ABAC), see [reference/authorization.md](reference/authorization.md).
+
+For input validation patterns (SQL injection, XSS, Pydantic), see [reference/input-validation.md](reference/input-validation.md).
+
+For OAuth2 flows, CSRF protection, and audit logging, see [reference/oauth-csrf-audit.md](reference/oauth-csrf-audit.md).

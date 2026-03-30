@@ -1,0 +1,83 @@
+{
+  "version": "1.0.0",
+  "components": {
+    "agents": {
+      "description": "47 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
+      "path": "app/agents",
+      "target": ".claude/agents",
+      "type": "symlink",
+      "tags": ["core", "agents"]
+    },
+    "skills": {
+      "description": "85 skills: 27 task + 27 hybrid + 31 knowledge skills",
+      "path": "app/skills",
+      "target": ".claude/skills",
+      "type": "symlink",
+      "tags": ["core", "skills", "commands"]
+    },
+    "hooks": {
+      "description": "15 global hook entries across 12 lifecycle events + 5 skill-scoped lifecycle hooks",
+      "path": "app/hooks.json + app/hooks/*.sh",
+      "target": "~/.claude/settings.json (merge) + ~/.ai-toolkit/hooks/ (copy)",
+      "type": "merge+copy",
+      "tags": ["core", "hooks", "quality"]
+    },
+    "plugin-packs": {
+      "description": "Experimental domain plugin packs and optional hook/policy modules",
+      "path": "app/plugins",
+      "target": "opt-in / not installed by default",
+      "type": "experimental",
+      "tags": ["plugins", "packs", "experimental"]
+    },
+    "constitution": {
+      "description": "5-article machine-enforced safety constitution",
+      "path": "app/constitution.md",
+      "target": ".claude/constitution.md",
+      "type": "symlink",
+      "tags": ["core", "safety", "constitution"]
+    },
+    "architecture": {
+      "description": "System architecture documentation",
+      "path": "app/ARCHITECTURE.md",
+      "target": ".claude/ARCHITECTURE.md",
+      "type": "symlink",
+      "tags": ["docs"]
+    },
+    "output-styles": {
+      "description": "System prompt output style overrides (e.g. Golden Rules enforcement)",
+      "path": "app/output-styles",
+      "target": ".claude/output-styles",
+      "type": "symlink",
+      "tags": ["core", "output-styles"]
+    },
+    "rules": {
+      "description": "Auto-injected rules for CLAUDE.md (jira, quality-gates, etc.)",
+      "path": "app/rules",
+      "target": "CLAUDE.md (injected)",
+      "type": "injection",
+      "tags": ["core", "rules"]
+    }
+  },
+  "bundles": {
+    "minimal": {
+      "description": "Hooks and constitution only — safety without agents",
+      "includes": ["hooks", "constitution"]
+    },
+    "standard": {
+      "description": "Full toolkit (recommended)",
+      "includes": ["agents", "skills", "hooks", "constitution", "rules"]
+    },
+    "agents-only": {
+      "description": "Agents without skills (for custom skill setup)",
+      "includes": ["agents", "hooks", "constitution"]
+    },
+    "skills-only": {
+      "description": "Skills without agents",
+      "includes": ["skills", "hooks", "constitution"]
+    },
+    "safety": {
+      "description": "Constitution + hooks only (zero agent overhead)",
+      "includes": ["hooks", "constitution"]
+    }
+  }
+}

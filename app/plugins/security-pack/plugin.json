@@ -1,0 +1,23 @@
+{
+  "name": "security-pack",
+  "description": "Domain plugin pack for secure coding, architecture review, and hardening workflows.",
+  "version": "1.0.0",
+  "domain": "security",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {
+    "ai-toolkit": ">=1.0.0",
+    "claude-code": ">=1.0.33"
+  },
+  "includes": {
+    "agents": ["security-auditor", "security-architect", "code-reviewer"],
+    "skills": ["review", "security-patterns", "panic"],
+    "rules": ["quality-gates"],
+    "hooks": ["guard-destructive.sh", "quality-gate.sh"]
+  },
+  "hook_events": {
+    "guard-destructive.sh": "PreToolUse",
+    "quality-gate.sh": "TaskCompleted"
+  }
+}
+
