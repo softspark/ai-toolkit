@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-85-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-47-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-308%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-310%20passing-success)](tests/)
 
 ---
 
@@ -416,11 +416,7 @@ All packs have `status: experimental`. Each has a `plugin.json` manifest and `RE
 
 ## Agent Teams
 
-Native support for `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`:
-
-```bash
-export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
-```
+Native support for `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` — automatically enabled during `ai-toolkit install` / `update` via `env` in `~/.claude/settings.json`.
 
 Pre-configured team presets via `/teams`:
 

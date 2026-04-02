@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] - 2026-04-02
+
+### Added
+- **Agent Teams auto-enabled** — `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is now automatically set in `~/.claude/settings.json` via `env` field during `install` / `update`. No manual `export` needed.
+- 2 new install tests: env var injection + user env var preservation
+
+### Fixed
+- README test badge count: 308 → 310
+
+[1.1.0]: https://github.com/softspark/ai-toolkit/releases/tag/v1.1.0
+
+---
+
 ## [1.0.0] - 2026-04-02
 
 ### Added
@@ -46,7 +59,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - CI: auto-regenerate `AGENTS.md` and `llms.txt` on push to main; publish on tags
 - **DRY refactoring**: `scripts/_common.py` shared library for all generators and CLI scripts; `app/hooks/_profile-check.sh` for 9 hooks; CLI uses data-driven `GENERATORS` map
 - All hooks standardized to `#!/usr/bin/env bash` shebang
-- 308 tests across 16 test files
+- 310 tests across 16 test files
 - **Iron Law enforcement** in TDD, debugging, and verification skills — anti-rationalization tables prevent agents from skipping test-first, root-cause analysis, or claiming completion without evidence
 - **`/subagent-development`** — 2-stage review workflow: dispatch implementer → spec compliance review → code quality review per task, with 4-status protocol (DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, BLOCKED) and prompt templates
 - **`/repeat`** — Ralph Wiggum autonomous loop pattern with safety controls: max iterations (default 5), circuit breaker (3 consecutive failures → halt), min interval (1 minute), exit detection, stats logging

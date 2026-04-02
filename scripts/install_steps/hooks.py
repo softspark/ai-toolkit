@@ -25,6 +25,7 @@ def install_hooks(claude_dir: Path, hooks_scripts_dir: Path,
         output_styles_dir = app_dir / "output-styles"
         if output_styles_dir.is_dir():
             print("  Would install: output styles to ~/.claude/output-styles/ + set outputStyle in settings.json")
+        print("  Would set: env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in settings.json")
         return
 
     _copy_hook_scripts(claude_dir, hooks_scripts_dir)
@@ -41,6 +42,7 @@ def install_hooks(claude_dir: Path, hooks_scripts_dir: Path,
         print("  Removed: .claude/hooks.json (legacy)")
 
     _install_output_styles(claude_dir)
+    _install_env_vars(claude_dir)
 
 
 def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
@@ -88,3 +90,31 @@ def _install_output_styles(claude_dir: Path) -> None:
             with open(settings_path, "w", encoding="utf-8") as f:
                 json.dump(settings_data, f, indent=4)
             print("  Set: outputStyle = 'Golden Rules' in settings.json")
+
+
+# Toolkit env vars injected into settings.json
+TOOLKIT_ENV_VARS = {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+}
+
+
+def _install_env_vars(claude_dir: Path) -> None:
+    """Ensure toolkit env vars are set in settings.json."""
+    settings_path = claude_dir / "settings.json"
+    if settings_path.is_file():
+        with open(settings_path, encoding="utf-8") as f:
+            settings_data = json.load(f)
+    else:
+        settings_data = {}
+
+    env = settings_data.setdefault("env", {})
+    changed = False
+    for key, value in TOOLKIT_ENV_VARS.items():
+        if env.get(key) != value:
+            env[key] = value
+            changed = True
+
+    if changed:
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(settings_data, f, indent=4)
+        print("  Set: env vars in settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)")
