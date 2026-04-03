@@ -4,7 +4,7 @@ description: "Launch pre-configured Agent Teams for common workflows"
 effort: max
 user-invocable: true
 argument-hint: "<preset> [task-description]"
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Agent, TeamCreate, TeamDelete, SendMessage, TaskCreate, TaskList, TaskUpdate, TaskGet
 ---
 
 # /teams - Agent Teams Presets

@@ -1,4 +1,4 @@
-"""Install AI tool configs (Cursor, Windsurf, Gemini) and local project setup."""
+"""Install AI tool configs (Cursor, Windsurf, Gemini, Augment) and local project setup."""
 from __future__ import annotations
 
 import shutil
@@ -46,6 +46,15 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
             inject_with_rules("generate-gemini.sh", gemini_file, rules_dir)
     else:
         print("  Skipped: gemini")
+
+    if should_install("augment", only, skip):
+        augment_file = target_dir / ".augment" / "rules" / "ai-toolkit.md"
+        if dry_run:
+            print("  Would inject: ~/.augment/rules/ai-toolkit.md")
+        else:
+            inject_with_rules("generate-augment.sh", augment_file, rules_dir)
+    else:
+        print("  Skipped: augment")
 
     print()
     print("  Note: Copilot, Cline, Roo Code, and Aider have no global config -- use 'ai-toolkit install --local' per project")

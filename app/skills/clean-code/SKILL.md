@@ -3,6 +3,7 @@ name: clean-code
 description: "Loaded when user asks about clean code, naming, or code quality"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Clean Code Skill

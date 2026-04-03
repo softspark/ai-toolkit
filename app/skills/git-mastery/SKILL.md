@@ -3,7 +3,7 @@ name: git-mastery
 description: "Loaded when user asks about advanced Git workflows or history rewriting"
 effort: medium
 user-invocable: false
-allowed-tools: Bash
+allowed-tools: Read, Grep, Glob
 ---
 
 # Git Mastery Skill

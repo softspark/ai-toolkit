@@ -3,6 +3,7 @@ name: mcp-patterns
 description: "Loaded when user asks about MCP servers or tool protocol design"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # MCP Patterns Skill

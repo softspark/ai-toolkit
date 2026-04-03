@@ -3,6 +3,7 @@ name: api-patterns
 description: "Loaded when user asks about REST API design or GraphQL patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # API Patterns Skill

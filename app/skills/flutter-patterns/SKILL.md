@@ -3,6 +3,7 @@ name: flutter-patterns
 description: "Loaded when user asks about Flutter or Dart development patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Flutter Patterns Skill

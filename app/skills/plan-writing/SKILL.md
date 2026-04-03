@@ -3,6 +3,7 @@ name: plan-writing
 description: "Loaded when user asks to write an implementation plan or pre-mortem"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Plan Writing Skill

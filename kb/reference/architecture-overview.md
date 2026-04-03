@@ -13,7 +13,7 @@ description: "Architecture of ai-toolkit: directory layout, global install model
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, and Aider). Provides 47 specialized agents, 85 skills (slash commands + knowledge), expanded lifecycle hooks, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
+Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment). Provides 47 specialized agents, 87 skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
 
 ## Design Principles
 
@@ -31,7 +31,7 @@ ai-toolkit/
     ai-toolkit.js        # CLI entry point (install, init, add-rule, ...)
   app/                       # All toolkit components
     agents/                  # 47 agent definitions (.md + YAML frontmatter)
-    skills/                  # 85 skills: task, hybrid, knowledge
+    skills/                  # 87 skills: task, hybrid, knowledge
     rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
     hooks/                   # Hook scripts (copied to ~/.ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
@@ -165,8 +165,8 @@ Three tiers determine how to approach a task:
 
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
-| Task | `disable-model-invocation: true` | User via `/skill` only | 27 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 27 |
+| Task | `disable-model-invocation: true` | User via `/skill` only | 28 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 28 |
 | Knowledge | `user-invocable: false` | Claude auto-loads | 31 |
 
 ## Multi-Agent Execution
@@ -209,7 +209,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | TeammateIdle | Agent Teams: idle | *(inline)* | Completeness reminder |
 | SubagentStart | Subagent spawn | `subagent-start.sh` | Scope reminder for subagents |
 | SubagentStop | Subagent completion | `subagent-stop.sh` | Handoff checklist for subagents |
-| PreCompact | Before compaction | `pre-compact.sh` | Save context before compaction |
+| PreCompact | Before compaction | `pre-compact.sh` | Save prioritized context: instincts > tasks > git state > decisions |
 | SessionEnd | Session end | `session-end.sh` | Persist handoff note for the next session |
 
 Scripts at `~/.ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
@@ -223,6 +223,29 @@ Scripts at `~/.ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for 
 | III Operational Integrity | Green tests = Done, logs are evidence |
 | IV Self-Preservation | Constitution is read-only, kill switch via system-governor |
 | V Resource Governance | No destructive commands without confirmation |
+
+## Persona Presets
+
+Optional engineering personas injected via `ai-toolkit install --persona <name>`. Each persona adds role-specific communication style, preferred skills, and code review priorities to CLAUDE.md.
+
+| Persona | Focus |
+|---------|-------|
+| `backend-lead` | System design, scalability, data integrity, API stability |
+| `frontend-lead` | Component architecture, a11y, state management, Core Web Vitals |
+| `devops-eng` | Infrastructure as code, CI/CD, rollback safety, observability |
+| `junior-dev` | Step-by-step explanations, learning resources, small PRs |
+
+Persona files live in `app/personas/*.md` and use the same `inject_rule` mechanism as registered rules.
+
+## Skill Security Auditing
+
+`/skill-audit` scans `app/skills/` and `app/agents/` for security risks:
+- **Frontmatter**: overly permissive `allowed-tools`, knowledge skills with Bash
+- **Scripts**: `eval()`, `exec()`, `os.system()`, `subprocess(shell=True)`, `pickle.loads`
+- **Secrets**: AWS keys, GitHub PATs, private keys, hardcoded passwords
+- **Bash**: `curl | bash`, unquoted variables, `chmod 777`
+
+Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practice). CI-ready with non-zero exit on HIGH findings.
 
 ## Agent Model Tiers
 

@@ -9,7 +9,7 @@ last_updated: "2026-04-01"
 description: "Complete catalog of 85 skills: 27 task, 27 hybrid, 31 knowledge. Includes effort levels, skill-scoped hooks, executable scripts, and creator workflows."
 ---
 
-# Skills Catalog (85 skills)
+# Skills Catalog (87 skills)
 
 All functionality is unified under skills. Task and hybrid skills are user-invocable as slash commands. Knowledge skills provide domain patterns auto-loaded by agents.
 
@@ -21,7 +21,7 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (27)
+## Task Skills (28)
 
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
@@ -54,8 +54,9 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **plugin-creator** | `/plugin-creator` | high | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
 | **health** | `/health` | medium | Check health of project services (auto-detect) |
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
+| **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 
-## Hybrid Skills (27)
+## Hybrid Skills (28)
 
 Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
 
@@ -88,6 +89,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **subagent-development** | `/subagent-development` | high | Execute plans with 2-stage review (spec + quality) per task |
 | **repeat** | `/repeat` | medium | Autonomous loop with safety controls (Ralph Wiggum pattern) |
 | **mem-search** | `/mem-search` | medium | Search past coding sessions via natural language (memory-pack) |
+| **persona** | `/persona` | low | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
 
 ### `/workflow` types
 

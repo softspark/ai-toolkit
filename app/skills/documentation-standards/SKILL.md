@@ -3,6 +3,7 @@ name: documentation-standards
 description: "Loaded when creating or updating KB documents, architecture notes, SOPs, or any file in kb/ directory"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Documentation Standards

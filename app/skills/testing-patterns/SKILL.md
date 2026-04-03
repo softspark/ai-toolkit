@@ -3,6 +3,7 @@ name: testing-patterns
 description: "Loaded when user asks about testing strategy, fixtures, or mocking"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Testing Patterns Skill

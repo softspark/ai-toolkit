@@ -3,6 +3,7 @@ name: docker-devops
 description: "Loaded when user asks about Docker, containers, or DevOps patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Docker & DevOps Skill

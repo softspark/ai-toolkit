@@ -3,6 +3,7 @@ name: ci-cd-patterns
 description: "Loaded when user asks about CI/CD pipelines or deployment automation"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # CI/CD Patterns

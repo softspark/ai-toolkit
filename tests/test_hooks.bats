@@ -475,7 +475,7 @@ run_hook_with_input() {
     echo "Task: implement auth" > "$TEST_TMP/project/.claude/session-context.md"
     cd "$TEST_TMP/project"
     run_hook "pre-compact.sh"
-    echo "$output" | grep -q "Pre-Compaction Context"
+    echo "$output" | grep -q "Session Context"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════

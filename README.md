@@ -1,10 +1,10 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 85 skills, 47 agents, expanded lifecycle hooks, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, and Aider, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 87 skills, 47 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-85-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-87-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-47-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-310%20passing-success)](tests/)
 
@@ -21,7 +21,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 85 skills, 47 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 87 skills, 47 agents, quality hooks, and the safety constitution automatically.
 
 ### Update
 
@@ -57,6 +57,17 @@ After each `ai-toolkit update`, also run `ai-toolkit plugin update --all` to kee
 ai-toolkit install --profile minimal    # agents + skills only (no hooks, no constitution)
 ai-toolkit install --profile standard   # full install (default)
 ai-toolkit install --profile strict     # full install + git hooks even without --local
+```
+
+### Persona Presets
+
+Inject role-specific communication style and skill preferences:
+
+```bash
+ai-toolkit install --persona backend-lead    # system design, API stability, data integrity
+ai-toolkit install --persona frontend-lead   # component architecture, a11y, Core Web Vitals
+ai-toolkit install --persona devops-eng      # infra-as-code, CI/CD, rollback safety
+ai-toolkit install --persona junior-dev      # step-by-step explanations, learning focus
 ```
 
 ### Selective Install / Update
@@ -111,8 +122,8 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 
 | Component | Count | Description |
 |-----------|-------|-------------|
-| `skills/` (task) | 27 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, ... |
-| `skills/` (hybrid) | 27 | Slash commands with agent knowledge base |
+| `skills/` (task) | 28 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
+| `skills/` (hybrid) | 28 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 31 | Domain knowledge auto-loaded by agents |
 | `agents/` | 47 | Specialized agents across 10 categories |
 | `hooks/` | 15 global + 5 skill-scoped | Quality gates, path safety, CLAUDE.md enforcement, notifications, prompt governance, subagent lifecycle, session-end handoff, usage tracking |
@@ -134,7 +145,7 @@ ai-toolkit/
 │   │   ├── backend-specialist.md
 │   │   ├── security-architect.md
 │   │   └── ... (44 more)
-│   ├── skills/          # 85 skills (task / hybrid / knowledge)
+│   ├── skills/          # 87 skills (task / hybrid / knowledge)
 │   │   ├── commit/      # /commit slash command
 │   │   ├── review/      # /review slash command
 │   │   ├── clean-code/  # knowledge skill (auto-loaded)
@@ -192,6 +203,7 @@ ai-toolkit/
 | `/command-creator` | Scaffold a new slash command with frontmatter and workflow guidance | high |
 | `/agent-creator` | Scaffold a new specialized agent with tools and trigger guidance | high |
 | `/plugin-creator` | Scaffold an experimental plugin pack with manifest and optional modules | high |
+| `/skill-audit` | Scan skills/agents for security risks: dangerous patterns, secrets, permissions | medium |
 | `/analyze` | Code quality, complexity, and pattern analysis | medium |
 | `/fix` | Auto-fix lint/type errors | low |
 | `/build` | Build with issue detection | low |
@@ -563,6 +575,7 @@ Usage: ai-toolkit <command> [options]
 | `cline-rules` | Generate `.clinerules` in current dir |
 | `roo-modes` | Generate `.roomodes` in current dir |
 | `aider-conf` | Generate `.aider.conf.yml` in current dir |
+| `augment-rules` | Generate `.augment/rules/ai-toolkit.md` in current dir |
 | `agents-md` | Regenerate `AGENTS.md` from agent definitions |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
 | `generate-all` | Generate all platform configs at once |
@@ -574,6 +587,7 @@ Usage: ai-toolkit <command> [options]
 ai-toolkit install --only agents,hooks   # apply only listed components
 ai-toolkit install --skip hooks          # skip listed components
 ai-toolkit install --profile minimal     # profile preset: minimal | standard | strict
+ai-toolkit install --persona backend-lead # persona preset: backend-lead | frontend-lead | devops-eng | junior-dev
 ai-toolkit install --local               # also set up project-local configs (CLAUDE.md, settings, constitution, Copilot, Cline, Roo, Aider, Git Hooks, MCP Defaults)
 ai-toolkit update --local                # re-apply + refresh project-local configs
 ai-toolkit install --list                # dry-run: show what would be applied

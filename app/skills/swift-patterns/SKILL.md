@@ -3,6 +3,7 @@ name: swift-patterns
 description: "Loaded when user asks about Swift or iOS development patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Swift / iOS Patterns
@@ -487,7 +488,6 @@ Schemes: separate Debug/Release/Testing. Enable ASan + TSan in test schemes.
 ---
 
 ## Anti-Patterns
-
 | Anti-Pattern | Problem | Fix |
 |---|---|---|
 | Force unwrap `!` | Runtime crash | `guard let`, `if let`, `??` |

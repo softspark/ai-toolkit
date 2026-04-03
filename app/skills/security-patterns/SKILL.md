@@ -3,6 +3,7 @@ name: security-patterns
 description: "Loaded when user asks about security, OWASP, or auth patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Security Patterns Skill

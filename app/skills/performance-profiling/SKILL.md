@@ -2,7 +2,7 @@
 name: performance-profiling
 description: "Loaded when user asks about performance profiling or optimization"
 effort: medium
-allowed-tools: Bash, Grep
+allowed-tools: Read, Grep
 user-invocable: false
 ---
 

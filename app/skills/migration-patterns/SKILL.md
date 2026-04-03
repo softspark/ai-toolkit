@@ -3,6 +3,7 @@ name: migration-patterns
 description: "Loaded when user asks about database migrations or zero-downtime deploys"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Migration Patterns

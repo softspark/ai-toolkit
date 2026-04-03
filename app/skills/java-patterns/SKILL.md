@@ -3,6 +3,7 @@ name: java-patterns
 description: "Loaded when user asks about Java development patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Java Patterns Skill

@@ -3,6 +3,7 @@ name: app-builder
 description: "Loaded when user asks to scaffold or build a full-stack app"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # App Builder Skill

@@ -3,7 +3,7 @@ name: debugging-tactics
 description: "Loaded when user is debugging an issue or needs root cause analysis"
 effort: medium
 user-invocable: false
-allowed-tools: Bash, Grep, Read
+allowed-tools: Grep, Read
 ---
 
 # Debugging Tactics Skill

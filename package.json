@@ -1,7 +1,7 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "1.1.0",
-  "description": "Professional-grade AI coding toolkit: 85 skills, 47 agents, multi-platform support (Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider), machine-enforced safety constitution, Iron Law enforcement, persistent memory, visual brainstorming, expanded lifecycle hooks, 11 plugin packs, and benchmark tooling.",
+  "version": "1.2.0",
+  "description": "Professional-grade AI coding toolkit: 87 skills, 47 agents, multi-platform support (Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment), machine-enforced safety constitution, persona presets, skill security auditor, expanded lifecycle hooks, 11 plugin packs, and benchmark tooling.",
   "keywords": [
     "claude",
     "claude-code",
@@ -20,6 +20,7 @@
     "roo-code",
     "roo",
     "aider",
+    "augment",
     "multi-platform"
   ],
   "homepage": "https://github.com/softspark/ai-toolkit",

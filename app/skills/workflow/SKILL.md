@@ -7,7 +7,7 @@ argument-hint: "[type] [task description]"
 context: fork
 agent: orchestrator
 model: opus
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Agent, TeamCreate, TeamDelete, SendMessage, TaskCreate, TaskList, TaskUpdate
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Agent, TeamCreate, TeamDelete, SendMessage, TaskCreate, TaskList, TaskUpdate, TaskGet, TaskOutput, TaskStop
 ---
 
 # /workflow - Autonomous Agent Workflow

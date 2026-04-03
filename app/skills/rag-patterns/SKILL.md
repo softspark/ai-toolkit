@@ -3,6 +3,7 @@ name: rag-patterns
 description: "Loaded when user asks about RAG systems, embeddings, or vector search"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # RAG Patterns Skill

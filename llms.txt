@@ -1,6 +1,6 @@
 # ai-toolkit
 
-> Professional-grade Claude Code toolkit: 85 skills, 47 agents, machine-enforced constitution, quality hooks.
+> Professional-grade Claude Code toolkit: 87 skills, 47 agents, machine-enforced constitution, quality hooks.
 
 ## Documentation
 
@@ -32,7 +32,7 @@
 - [Plugin Pack Conventions](kb/reference/plugin-pack-conventions.md)
 - [Quick Wins Implementation Summary](kb/reference/quick-wins-implementation-summary.md)
 - [Skill Templates](kb/reference/skill-templates.md)
-- [Skills Catalog (85 skills)](kb/reference/skills-catalog.md)
+- [Skills Catalog (87 skills)](kb/reference/skills-catalog.md)
 - [Skills Unification Model](kb/reference/skills-unification.md)
 - [Usage Statistics](kb/reference/stats.md)
 - [Config Sync](kb/reference/sync.md)

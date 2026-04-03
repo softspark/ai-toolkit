@@ -67,6 +67,8 @@ Edit `.claude/settings.local.json` for project-specific settings:
 | `/review` | Code review |
 | `/commit` | Create a structured commit |
 
+
+
 ## Usage Examples
 
 ```

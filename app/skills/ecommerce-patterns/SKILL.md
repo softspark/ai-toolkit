@@ -3,6 +3,7 @@ name: ecommerce-patterns
 description: "Loaded when user asks about e-commerce or shopping cart features"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # E-commerce Patterns Skill

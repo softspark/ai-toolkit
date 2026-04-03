@@ -3,6 +3,7 @@ name: ruby-patterns
 description: "Loaded when user asks about Ruby development patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Ruby Patterns

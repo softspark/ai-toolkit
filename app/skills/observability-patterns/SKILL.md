@@ -3,6 +3,7 @@ name: observability-patterns
 description: "Loaded when user asks about logging, metrics, or tracing patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Observability Patterns

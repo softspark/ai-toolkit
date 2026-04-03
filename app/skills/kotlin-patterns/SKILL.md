@@ -3,6 +3,7 @@ name: kotlin-patterns
 description: "Loaded when user asks about Kotlin development patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Kotlin Patterns Skill

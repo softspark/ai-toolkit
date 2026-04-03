@@ -3,6 +3,7 @@ name: research-mastery
 description: "Loaded when user asks to research, verify, or synthesize information"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Research Mastery Skill

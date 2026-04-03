@@ -3,6 +3,7 @@ name: csharp-patterns
 description: "Loaded when user asks about C# or .NET development patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # C# / .NET Patterns

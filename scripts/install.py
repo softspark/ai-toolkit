@@ -29,9 +29,10 @@ Options:
   --list, --dry-run       Dry-run: show what would be installed
   --reset                 Wipe and recreate local configs
   --profile <p>           minimal|standard|strict
+  --persona <p>           backend-lead|frontend-lead|devops-eng|junior-dev
 
 Components: agents, skills, hooks, constitution, architecture, rules,
-            cursor, windsurf, gemini
+            cursor, windsurf, gemini, augment
 """
 from __future__ import annotations
 
@@ -39,7 +40,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import toolkit_dir
+from _common import toolkit_dir, app_dir, inject_rule
 from emission import agent_count as count_agents, skill_count as count_skills
 
 # Step modules
@@ -63,6 +64,7 @@ def parse_args(argv: list[str]) -> dict:
         "local": False,
         "reset": False,
         "profile": "",
+        "persona": "",
     }
     i = 0
     while i < len(argv):
@@ -88,6 +90,11 @@ def parse_args(argv: list[str]) -> dict:
         elif arg == "--profile":
             i += 1
             cfg["profile"] = argv[i] if i < len(argv) else ""
+        elif arg.startswith("--persona="):
+            cfg["persona"] = arg.split("=", 1)[1]
+        elif arg == "--persona":
+            i += 1
+            cfg["persona"] = argv[i] if i < len(argv) else ""
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -188,6 +195,27 @@ def install_claude_code(target_dir: Path, hooks_scripts_dir: Path,
     inject_rules(claude_dir, target_dir, rules_dir, only, skip, dry_run)
 
 
+VALID_PERSONAS = ("backend-lead", "frontend-lead", "devops-eng", "junior-dev")
+
+
+def install_persona(target_dir: Path, persona: str, dry_run: bool) -> None:
+    """Inject a persona rule into CLAUDE.md."""
+    if not persona:
+        return
+    if persona not in VALID_PERSONAS:
+        print(f"Unknown persona: {persona} (valid: {', '.join(VALID_PERSONAS)})")
+        sys.exit(1)
+    persona_file = app_dir / "personas" / f"{persona}.md"
+    if not persona_file.is_file():
+        print(f"  Persona file not found: {persona_file}")
+        return
+    if dry_run:
+        print(f"  Would inject persona: {persona}")
+        return
+    inject_rule(persona_file, target_dir)
+    print(f"  Persona applied: {persona}")
+
+
 def install_strict_git_hooks(profile: str, local: bool, dry_run: bool) -> None:
     if profile == "strict" and not local and not dry_run:
         cwd = Path.cwd()
@@ -210,6 +238,7 @@ def main() -> None:
     local: bool = cfg["local"]
     reset: bool = cfg["reset"]
     profile: str = cfg["profile"]
+    persona: str = cfg["persona"]
 
     rules_dir = Path.home() / ".ai-toolkit" / "rules"
     hooks_scripts_dir = Path.home() / ".ai-toolkit" / "hooks"
@@ -228,6 +257,7 @@ def main() -> None:
     if local:
         install_local_project(rules_dir, dry_run, reset)
 
+    install_persona(target_dir, persona, dry_run)
     install_strict_git_hooks(profile, local, dry_run)
     print_summary()
 

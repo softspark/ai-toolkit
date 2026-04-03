@@ -3,6 +3,7 @@ name: hive-mind
 description: "Loaded when orchestrating multi-agent swarms or consensus workflows"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Hive Mind Skill

@@ -3,6 +3,7 @@ name: rust-patterns
 description: "Loaded when user asks about Rust development patterns"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Rust Patterns

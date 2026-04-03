@@ -199,10 +199,12 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.ai-toolkit/hooks/pre-compact.sh` |
 | Fires | Before context compaction |
 
-**Actions:**
-1. Injects reminder to re-read CLAUDE.md files after compaction
-2. Preserves session context from `.claude/session-context.md` (if exists)
-3. Preserves active instincts from `.claude/instincts/*.md` (if any)
+**Actions (prioritized — higher priority items survive tighter token budgets):**
+1. **Mandatory reload reminder** — always emitted, instructs Claude to re-read CLAUDE.md and active tasks
+2. **Active instincts** — lists each instinct with confidence score and pattern name from `.claude/instincts/*.md`
+3. **Session context** — preserves task state from `.claude/session-context.md` (if exists)
+4. **Git working state** — branch name, uncommitted change count, last commit (if inside a git repo)
+5. **Key decisions** — last 10 lines from `.claude/decisions.md` (if exists)
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 

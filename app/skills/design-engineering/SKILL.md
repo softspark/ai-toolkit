@@ -3,6 +3,7 @@ name: design-engineering
 description: "Loaded when user asks about UI animations or CSS design craft"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Design Engineering Skill

@@ -3,6 +3,7 @@ name: database-patterns
 description: "Loaded when user asks about database schema or query optimization"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # Database Patterns Skill

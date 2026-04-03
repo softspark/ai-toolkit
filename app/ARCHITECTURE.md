@@ -7,7 +7,7 @@ Universal multi-agent system for software development. Works across all reposito
 | Component | Count |
 |-----------|-------|
 | Agents | 47 |
-| Skills | 85 |
+| Skills | 87 |
 | Hooks | 12 events / 15 entries (SessionStart, Notification, PreToolUse ×2, UserPromptSubmit ×2, PostToolUse, Stop ×2, TaskCompleted, TeammateIdle, SubagentStart, SubagentStop, PreCompact, SessionEnd) |
 
 ---
@@ -103,9 +103,9 @@ Universal multi-agent system for software development. Works across all reposito
 
 ---
 
-## Skills (85)
+## Skills (87)
 
-### Task Skills (27)
+### Task Skills (28)
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `commit` | `/commit` | Create well-structured git commits (Conventional Commits) |
@@ -135,8 +135,9 @@ Universal multi-agent system for software development. Works across all reposito
 | `agent-creator` | `/agent-creator` | Create new specialized agents with tools and trigger guidance |
 | `plugin-creator` | `/plugin-creator` | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
 | `prd-to-issues` | `/prd-to-issues` | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
+| `skill-audit` | `/skill-audit` | Scan skills and agents for security risks, dangerous patterns, secrets |
 
-### Hybrid Skills (27)
+### Hybrid Skills (28)
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `explore` | `/explore` | Codebase exploration and tech stack discovery |
@@ -166,6 +167,7 @@ Universal multi-agent system for software development. Works across all reposito
 | `subagent-development` | `/subagent-development` | Execute plans with 2-stage review (spec + quality) per task |
 | `repeat` | `/repeat` | Autonomous loop with safety controls (Ralph Wiggum pattern) |
 | `mem-search` | `/mem-search` | Search past coding sessions via natural language (memory-pack) |
+| `persona` | `/persona` | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
 
 ### Knowledge Skills - Development (15)
 | Skill | Purpose |
@@ -255,7 +257,7 @@ Phase 2: IMPLEMENTATION
 ├── ARCHITECTURE.md      # This file
 ├── agents/              # Agent definitions (47)
 ├── hooks.json           # Quality gate hooks (multi-language)
-├── skills/              # All skills: task, hybrid, knowledge (85)
+├── skills/              # All skills: task, hybrid, knowledge (87)
 ├── output-styles/       # System prompt output style overrides (e.g. golden-rules)
 ├── constitution.md      # Immutable safety rules (5 articles)
 └── settings.local.json  # Local settings + Agent Teams config

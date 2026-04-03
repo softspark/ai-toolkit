@@ -4,7 +4,7 @@ description: "Execute implementation plans using fresh subagents per task with t
 user-invocable: true
 effort: high
 argument-hint: "[plan file or task description]"
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Agent
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Agent, TaskCreate, TaskList, TaskUpdate, TaskGet
 ---
 
 # Subagent Development

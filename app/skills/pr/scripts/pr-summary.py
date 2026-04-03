@@ -36,15 +36,18 @@ CONVENTIONAL_TYPES: dict[str, str] = {
 
 
 def run(cmd: str) -> str:
-    """Run a shell command and return stripped stdout.
+    """Run a command and return stripped stdout.
 
     Args:
-        cmd: Shell command string to execute.
+        cmd: Command string (split via shlex, no shell).
 
     Returns:
         Stripped standard output of the command.
     """
-    r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    import shlex
+    # Strip shell redirects (2>/dev/null) — subprocess captures stderr anyway
+    clean = re.sub(r'\s*2>/dev/null\s*', '', cmd)
+    r = subprocess.run(shlex.split(clean), capture_output=True, text=True)
     return r.stdout.strip()
 
 

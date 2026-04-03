@@ -3,6 +3,7 @@ name: typescript-patterns
 description: "Loaded when user asks about TypeScript patterns or type safety"
 effort: medium
 user-invocable: false
+allowed-tools: Read
 ---
 
 # TypeScript/JavaScript Patterns
