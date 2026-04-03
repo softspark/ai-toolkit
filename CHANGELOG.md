@@ -7,6 +7,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.1] - 2026-04-03
+
+### Changed
+- **README.md** — added full documentation for all v1.2.0 features:
+  - `/persona` runtime switching with usage examples
+  - `audit_skills.py` CI pipeline integration with `--json` and `--ci` flags
+  - Skill Security Auditing section (severity levels, detection patterns)
+  - Persona Presets section (table with focus areas and key skills per role)
+  - Smart compaction description in hooks table
+  - Fixed section numbering (was duplicated at 4, skipped 10)
+- **CLAUDE.md** — added CRITICAL note: documentation/count accuracy is non-negotiable, must run validate + audit before every commit
+- **skills-catalog.md** — fixed stale frontmatter (was 85 skills/v1.0.0, now 87 skills/v1.2.1)
+- Version bump: 1.2.0 → 1.2.1 (package.json, plugin.json)
+
+[1.2.1]: https://github.com/softspark/ai-toolkit/releases/tag/v1.2.1
+
+---
+
 ## [1.2.0] - 2026-04-03
 
 ### Added

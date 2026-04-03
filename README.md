@@ -61,13 +61,23 @@ ai-toolkit install --profile strict     # full install + git hooks even without 
 
 ### Persona Presets
 
-Inject role-specific communication style and skill preferences:
+Personas adjust communication style, preferred skills, and code review priorities per engineering role.
+
+**Install-time (persistent — injected into CLAUDE.md):**
 
 ```bash
 ai-toolkit install --persona backend-lead    # system design, API stability, data integrity
 ai-toolkit install --persona frontend-lead   # component architecture, a11y, Core Web Vitals
 ai-toolkit install --persona devops-eng      # infra-as-code, CI/CD, rollback safety
 ai-toolkit install --persona junior-dev      # step-by-step explanations, learning focus
+```
+
+**Runtime (session-scoped — no reinstall needed):**
+
+```bash
+/persona backend-lead     # activate for this session
+/persona --list           # show available personas
+/persona --clear          # reset to default
 ```
 
 ### Selective Install / Update
@@ -224,6 +234,7 @@ ai-toolkit/
 | `/subagent-development` | Execute plans with 2-stage review (spec + quality) per task | high |
 | `/repeat` | Autonomous loop with safety controls (Ralph Wiggum pattern) | medium |
 | `/mem-search` | Search past coding sessions via natural language (memory-pack) | medium |
+| `/persona` | Switch engineering persona at runtime (session-scoped) | low |
 
 ### `/workflow` Types
 
@@ -276,7 +287,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
 | SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |
 | SubagentStop | `subagent-stop.sh` | Completion checklist for subagent handoff |
-| PreCompact | `pre-compact.sh` | Preserve context and instincts before compaction |
+| PreCompact | `pre-compact.sh` | Smart compaction: prioritized context (instincts > tasks > git state > decisions) |
 | SessionEnd | `session-end.sh` | Persist a session-end handoff note |
 | TeammateIdle | *(inline)* | Completeness reminder |
 
@@ -290,7 +301,29 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | `/migrate` | Pre | Backup verification |
 | `/rollback` | Post | State verification |
 
-### 3. Effort-Based Model Budgeting
+### 3. Skill Security Auditing
+
+Scan all skills and agents for security risks — both interactively and in CI:
+
+```bash
+# Interactive (Claude provides remediation suggestions)
+/skill-audit
+
+# Deterministic Python scanner for CI pipelines
+python3 scripts/audit_skills.py           # human-readable report
+python3 scripts/audit_skills.py --json    # machine-readable JSON
+python3 scripts/audit_skills.py --ci      # exit 1 on any HIGH finding
+```
+
+**What it detects:**
+- Dangerous code: `eval()`, `exec()`, `subprocess(shell=True)`, `pickle.loads`
+- Hardcoded secrets: AWS keys, GitHub PATs, private keys, API tokens
+- Permission issues: knowledge skills with Bash, missing `allowed-tools`
+- Bash risks: `curl | bash`, `chmod 777`, unquoted variables
+
+**Severity levels:** HIGH (blocks CI), WARN (should fix), INFO (review)
+
+### 4. Effort-Based Model Budgeting
 
 Every skill declares an effort level used for model token budgeting:
 - `low` — lint, build, fix (fast, cheap)
@@ -298,7 +331,7 @@ Every skill declares an effort level used for model token budgeting:
 - `high` — review, plan, refactor, docs
 - `max` — orchestrate, swarm, workflow
 
-### 4. Multi-Language Quality Gates
+### 5. Multi-Language Quality Gates
 
 The `Stop` hook runs after every response across 5 languages:
 
@@ -310,7 +343,7 @@ The `Stop` hook runs after every response across 5 languages:
 | Dart | dart analyze | dart analyze |
 | Go | go vet | go vet |
 
-### 5. Iron Law Enforcement
+### 6. Iron Law Enforcement
 
 Three skills enforce non-negotiable quality gates with anti-rationalization tables:
 
@@ -320,7 +353,7 @@ Three skills enforce non-negotiable quality gates with anti-rationalization tabl
 | `debugging-tactics` | `NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST` | 4-phase debugging: root cause → pattern → hypothesis → fix. 3+ failed fixes → question architecture. |
 | `verification-before-completion` | `NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE` | Gate function: IDENTIFY → RUN → READ → VERIFY → CLAIM. "Should work now" is not evidence. |
 
-### 6. Two-Stage Review (`/subagent-development`)
+### 7. Two-Stage Review (`/subagent-development`)
 
 Per-task review pipeline inspired by [obra/superpowers](https://github.com/obra/superpowers):
 
@@ -333,7 +366,7 @@ Implementer → Spec Compliance Review → Code Quality Review → Next Task
 - Quality reviewer checks: SOLID, naming, error handling, tests, security
 - Prompt templates included: `reference/implementer-prompt.md`, `spec-reviewer-prompt.md`, `code-quality-reviewer-prompt.md`
 
-### 7. Ralph Wiggum Loop (`/repeat`)
+### 8. Ralph Wiggum Loop (`/repeat`)
 
 Autonomous agent loop with safety controls:
 
@@ -352,7 +385,7 @@ Autonomous agent loop with safety controls:
 
 Constitution Article I, Section 4 enforces these limits.
 
-### 8. Visual Brainstorming Companion
+### 9. Visual Brainstorming Companion
 
 Optional browser-based companion for `/write-a-prd` and `/design-an-interface`:
 
@@ -361,7 +394,7 @@ Optional browser-based companion for `/write-a-prd` and `/design-an-interface`:
 - Per-question routing: mockups/diagrams → browser, text/conceptual → terminal
 - Consent-based: offered once as its own message, never forced
 
-### 9. Persistent Memory (`memory-pack` plugin)
+### 10. Persistent Memory (`memory-pack` plugin)
 
 SQLite-based session memory (opt-in plugin pack):
 
@@ -375,7 +408,20 @@ SQLite-based session memory (opt-in plugin pack):
 
 
 
-### 11. KB Integration Protocol
+### 11. Persona Presets
+
+4 engineering personas that adjust Claude's communication style per role:
+
+| Persona | Focus | Key Skills |
+|---------|-------|------------|
+| `backend-lead` | System design, scalability, data integrity | `/workflow backend-feature`, `/tdd` |
+| `frontend-lead` | Component architecture, a11y, Core Web Vitals | `/design-an-interface`, `/review` |
+| `devops-eng` | IaC, CI/CD, blast radius, rollback safety | `/workflow infrastructure-change`, `/deploy` |
+| `junior-dev` | Step-by-step explanations, learning focus | `/explain`, `/explore`, `/debug` |
+
+Persistent via `--persona` at install time, or session-scoped via `/persona` runtime command.
+
+### 12. KB Integration Protocol
 
 Agents follow a research-before-action protocol enforced via rules:
 1. `smart_query()` or `hybrid_search_kb()` before any technical answer

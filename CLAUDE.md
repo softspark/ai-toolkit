@@ -3,6 +3,12 @@
 ## Overview
 Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment — 87 skills, 47 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and safety constitution, distributed as a global npm package.
 
+## CRITICAL: Documentation & Count Accuracy
+**Every change to skills, agents, hooks, or editors MUST be reflected in ALL docs:**
+README.md, CLAUDE.md, ARCHITECTURE.md, package.json, plugin.json, skills-catalog.md, architecture-overview.md, llms.txt, AGENTS.md.
+Run `python3 scripts/validate.py --strict` + `python3 scripts/audit_skills.py --ci` before every commit.
+Stale counts = broken user trust. This is non-negotiable.
+
 ## Tech Stack
 - **Language**: Python (scripts, stdlib-only), Bash (hooks only), Node.js (CLI wrapper + visual-server.cjs)
 - **Framework**: Claude Code Agent Skills standard
@@ -13,6 +19,7 @@ Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cli
 # Test:   npm test  (bats tests/)
 # Validate: python3 scripts/validate.py
 # Evaluate: python3 scripts/evaluate_skills.py
+# Audit:    python3 scripts/audit_skills.py --ci  (security scan, exit 1 on HIGH)
 # Benchmark: python3 scripts/benchmark_ecosystem.py --offline
 # Harvest: python3 scripts/harvest_ecosystem.py --offline
 # Generate: python3 scripts/generate_agents_md.py > AGENTS.md
