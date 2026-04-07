@@ -409,11 +409,15 @@ def main() -> None:
     rules_dir = Path.home() / ".ai-toolkit" / "rules"
     hooks_scripts_dir = Path.home() / ".ai-toolkit" / "hooks"
 
-    # Resolve modules if module-level flags are present
+    # --local always implies --auto-detect (why install locally without language rules?)
+    if local and not auto_detect and not modules_arg:
+        auto_detect = True
+
     # --auto-detect only makes sense with --local (language rules are project-specific)
     if auto_detect and not local:
         print("Warning: --auto-detect requires --local (language rules are project-specific). Adding --local.")
         local = True
+
     project_dir = Path.cwd() if local else target_dir
     resolved_modules = resolve_requested_modules(
         modules_arg, profile, auto_detect, project_dir,
