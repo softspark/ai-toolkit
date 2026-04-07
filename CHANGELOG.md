@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.6 — Patch (2026-04-07)
+
+### Fixed
+- **Tests updated**: All hook tests now pass stdin JSON instead of env vars (matching hook changes from v1.3.5). 327/327 tests pass.
+
+---
+
 ## v1.3.5 — Patch (2026-04-07)
 
 ### Fixed
