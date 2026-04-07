@@ -24,8 +24,17 @@ log_event() {
     local EVENT="$1"
     local DETAIL="$2"
     mkdir -p "$LOG_DIR"
-    printf '{"timestamp":"%s","event":"%s","tool":"%s","detail":"%s","session":"%s"}\n' \
-        "$TIMESTAMP" "$EVENT" "$TOOL_NAME" "$DETAIL" "$SESSION" >> "$LOG_FILE"
+    if command -v jq >/dev/null 2>&1; then
+        jq -nc --arg ts "$TIMESTAMP" --arg ev "$EVENT" --arg tl "$TOOL_NAME" --arg dt "$DETAIL" --arg ss "$SESSION" \
+            '{"timestamp":$ts,"event":$ev,"tool":$tl,"detail":$dt,"session":$ss}' >> "$LOG_FILE"
+    else
+        # Escape double quotes in variable fields for basic JSON safety
+        local SAFE_DETAIL="${DETAIL//\"/\\\"}"
+        local SAFE_TOOL="${TOOL_NAME//\"/\\\"}"
+        local SAFE_SESSION="${SESSION//\"/\\\"}"
+        printf '{"timestamp":"%s","event":"%s","tool":"%s","detail":"%s","session":"%s"}\n' \
+            "$TIMESTAMP" "$EVENT" "$SAFE_TOOL" "$SAFE_DETAIL" "$SAFE_SESSION" >> "$LOG_FILE"
+    fi
 }
 
 case "$TOOL_NAME" in

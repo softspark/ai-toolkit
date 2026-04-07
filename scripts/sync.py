@@ -66,9 +66,20 @@ def do_import(source: str) -> None:
     """Import config from file or URL."""
     tmpfile: str | None = None
 
-    if source.startswith("http"):
-        tmpfile = tempfile.mktemp(suffix=".json")
-        urllib.request.urlretrieve(source, tmpfile)
+    if source.startswith("https://") or source.startswith("http://"):
+        if not source.startswith("https://"):
+            print("Warning: importing over HTTP (not HTTPS). Consider using HTTPS for security.")
+        tmp_fd, tmpfile = tempfile.mkstemp(suffix=".json")
+        os.close(tmp_fd)
+        try:
+            with urllib.request.urlopen(source, timeout=30) as resp:
+                data = resp.read(10 * 1024 * 1024)  # 10MB max
+                with open(tmpfile, 'wb') as f:
+                    f.write(data)
+        except Exception:
+            if os.path.exists(tmpfile):
+                os.unlink(tmpfile)
+            raise
         source = tmpfile
 
     source_path = Path(source)
@@ -112,7 +123,8 @@ def do_push() -> None:
         print("Error: gh not authenticated. Run: gh auth login")
         sys.exit(1)
 
-    tmpfile = tempfile.mktemp(suffix=".json")
+    tmp_fd, tmpfile = tempfile.mkstemp(suffix=".json")
+    os.close(tmp_fd)
     Path(tmpfile).write_text(do_export(), encoding="utf-8")
 
     if GIST_ID_FILE.is_file():
@@ -153,12 +165,14 @@ def do_pull(gist_id: str = "") -> None:
         print("Usage: ai-toolkit sync --pull <gist-id>")
         sys.exit(1)
 
-    tmpfile = tempfile.mktemp(suffix=".json")
-    subprocess.run(
-        ["gh", "gist", "view", gist_id, "-f", "ai-toolkit-config.json"],
-        stdout=open(tmpfile, "w"),
-        check=True,
-    )
+    tmp_fd, tmpfile = tempfile.mkstemp(suffix=".json")
+    os.close(tmp_fd)
+    with open(tmpfile, "w") as f:
+        subprocess.run(
+            ["gh", "gist", "view", gist_id, "-f", "ai-toolkit-config.json"],
+            stdout=f,
+            check=True,
+        )
     do_import(tmpfile)
     os.unlink(tmpfile)
 
