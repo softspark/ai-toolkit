@@ -68,11 +68,14 @@ def do_import(source: str) -> None:
 
     if source.startswith("https://") or source.startswith("http://"):
         if not source.startswith("https://"):
-            print("Warning: importing over HTTP (not HTTPS). Consider using HTTPS for security.")
+            print("Error: HTTP imports are not supported. Use HTTPS for security.", file=sys.stderr)
+            sys.exit(1)
         tmp_fd, tmpfile = tempfile.mkstemp(suffix=".json")
         os.close(tmp_fd)
         try:
-            with urllib.request.urlopen(source, timeout=30) as resp:
+            import ssl
+            ctx = ssl.create_default_context()
+            with urllib.request.urlopen(source, timeout=30, context=ctx) as resp:
                 data = resp.read(10 * 1024 * 1024)  # 10MB max
                 with open(tmpfile, 'wb') as f:
                     f.write(data)

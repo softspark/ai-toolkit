@@ -14,6 +14,7 @@ Arguments:
 """
 from __future__ import annotations
 
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -33,6 +34,10 @@ def main() -> None:
         sys.exit(1)
 
     rule_name = sys.argv[2] if len(sys.argv) > 2 else rule_file.stem
+    rule_name = re.sub(r"[^a-zA-Z0-9_-]", "", rule_name)
+    if not rule_name:
+        print("Error: rule name is empty after sanitization", file=sys.stderr)
+        sys.exit(1)
     rules_dir = Path.home() / ".ai-toolkit" / "rules"
     rules_dir.mkdir(parents=True, exist_ok=True)
 
