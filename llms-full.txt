@@ -3343,10 +3343,10 @@ The `common/` directory uses the same structure except `frameworks.md` is replac
 
 ## Auto-Detection
 
-When `--auto-detect` is passed, `scripts/install_steps/detect_language.py` scans the current directory for known marker files and selects the matching language module:
+`--local` automatically enables language auto-detection. `scripts/install_steps/detect_language.py` scans the current directory for known marker files and selects matching language modules:
 
 ```bash
-ai-toolkit install --local --auto-detect
+ai-toolkit install --local     # auto-detects language (--auto-detect is implied)
 ```
 
 Detection logic (first match wins when multiple markers are present):
@@ -3368,14 +3368,14 @@ Common rules are always injected regardless of detected language.
 ## Installation
 
 ```bash
-# Auto-detect language from project files
-ai-toolkit install --local --auto-detect
+# Auto-detect language from project files (default with --local)
+ai-toolkit install --local
 
 # Explicitly select a language
 ai-toolkit install --local --lang typescript
 
-# Install without language rules
-ai-toolkit install --local
+# Skip auto-detect, install specific modules only
+ai-toolkit install --local --modules core,agents
 ```
 
 Language rules are injected into the project `CLAUDE.md` between named markers:
@@ -3491,8 +3491,8 @@ ai-toolkit install --profile standard
 # Module-based install (new)
 ai-toolkit install --modules core,agents,rules-typescript
 
-# Auto-detect project language and install matching rules
-ai-toolkit install --local --auto-detect
+# --local implies --auto-detect (language rules auto-detected)
+ai-toolkit install --local
 
 # Show currently installed modules and their state
 ai-toolkit status
