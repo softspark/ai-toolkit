@@ -11,8 +11,11 @@ source "$(dirname "$0")/_profile-check.sh"
 SAVE_DIR="$HOME/.ai-toolkit/compactions"
 mkdir -p "$SAVE_DIR"
 
+# Read from stdin (Claude Code passes JSON with .session_id)
+INPUT=$(cat)
 TIMESTAMP=$(date -u +"%Y-%m-%d_%H-%M-%S")
-SESSION="${CLAUDE_SESSION_ID:-$$}"
+SESSION=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
+[ -z "$SESSION" ] && SESSION="$$"
 SAVE_FILE="$SAVE_DIR/${TIMESTAMP}_${SESSION}.txt"
 
 # Gather context

@@ -7,17 +7,22 @@
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
 
+# Read from stdin (Claude Code passes JSON with .session_id, .last_assistant_message)
+INPUT=$(cat)
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
+LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // "No summary available"' 2>/dev/null | head -5)
+
 SESSION_FILE=".claude/session-context.md"
 
-if [ -n "${CLAUDE_SESSION_ID:-}" ]; then
+if [ -n "$SESSION_ID" ]; then
     mkdir -p .claude
     cat > "$SESSION_FILE" << EOF
 # Session Context
 Updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-Session: ${CLAUDE_SESSION_ID:-unknown}
+Session: ${SESSION_ID}
 
-## Last Active Task
-${CLAUDE_TASK_DESCRIPTION:-No task description available}
+## Last Assistant Message
+${LAST_MSG}
 EOF
 fi
 

@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.5 — Patch (2026-04-07)
+
+### Fixed
+- **Stats not counting**: `track-usage.sh` and `user-prompt-submit.sh` now read prompt from stdin JSON (`.prompt` field) instead of non-existent `CLAUDE_USER_PROMPT` env var. Skill invocations are now properly tracked in `~/.ai-toolkit/stats.json`.
+
+---
+
 ## v1.3.4 — Patch (2026-04-07)
 
 ### Fixed

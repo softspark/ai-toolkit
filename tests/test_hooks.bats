@@ -354,15 +354,13 @@ run_hook_with_input() {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @test "track-usage: ignores non-slash prompts" {
-    export CLAUDE_USER_PROMPT="just a normal question"
-    run_hook "track-usage.sh"
+    run_hook_with_input "track-usage.sh" '{"prompt":"just a normal question"}'
     [ "$status" -eq 0 ]
     [ ! -f "$HOME/.ai-toolkit/stats.json" ]
 }
 
 @test "track-usage: tracks slash command invocation" {
-    export CLAUDE_USER_PROMPT="/review src/main.py"
-    run_hook "track-usage.sh"
+    run_hook_with_input "track-usage.sh" '{"prompt":"/review src/main.py"}'
     [ "$status" -eq 0 ]
     [ -f "$HOME/.ai-toolkit/stats.json" ]
     run bash -c "python3 -c \"import json; d=json.load(open('$HOME/.ai-toolkit/stats.json')); assert d['review']['count']==1\""
@@ -370,9 +368,8 @@ run_hook_with_input() {
 }
 
 @test "track-usage: increments counter on repeated invocation" {
-    export CLAUDE_USER_PROMPT="/debug error"
-    run_hook "track-usage.sh"
-    run_hook "track-usage.sh"
+    run_hook_with_input "track-usage.sh" '{"prompt":"/debug error"}'
+    run_hook_with_input "track-usage.sh" '{"prompt":"/debug error"}'
     run bash -c "python3 -c \"import json; d=json.load(open('$HOME/.ai-toolkit/stats.json')); assert d['debug']['count']==2\""
     [ "$status" -eq 0 ]
 }
@@ -383,33 +380,29 @@ run_hook_with_input() {
 
 @test "user-prompt-submit: skips when profile is minimal" {
     export TOOLKIT_HOOK_PROFILE="minimal"
-    run_hook "user-prompt-submit.sh"
+    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"anything"}'
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
 
 @test "user-prompt-submit: outputs Step 0 reminder" {
-    export CLAUDE_USER_PROMPT="how does auth work?"
-    run_hook "user-prompt-submit.sh"
+    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"how does auth work?"}'
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Step 0"
 }
 
 @test "user-prompt-submit: detects architectural prompt" {
-    export CLAUDE_USER_PROMPT="design a migration strategy"
-    run_hook "user-prompt-submit.sh"
+    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"design a migration strategy"}'
     echo "$output" | grep -q "architectural"
 }
 
 @test "user-prompt-submit: detects debugging prompt" {
-    export CLAUDE_USER_PROMPT="debug this error in auth"
-    run_hook "user-prompt-submit.sh"
+    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"debug this error in auth"}'
     echo "$output" | grep -q "debugging"
 }
 
 @test "user-prompt-submit: default prompt gets generic reminder" {
-    export CLAUDE_USER_PROMPT="add a button to the form"
-    run_hook "user-prompt-submit.sh"
+    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"add a button to the form"}'
     echo "$output" | grep -q "KB-first"
 }
 
@@ -425,23 +418,17 @@ run_hook_with_input() {
 }
 
 @test "post-tool-use: reports markdown file update" {
-    export CLAUDE_TOOL_INPUT_FILE_PATH="docs/README.md"
-    export CLAUDE_TOOL_NAME="Edit"
-    run_hook "post-tool-use.sh"
+    run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"docs/README.md"}}'
     echo "$output" | grep -q "docs and examples"
 }
 
 @test "post-tool-use: reports test file update" {
-    export CLAUDE_TOOL_INPUT_FILE_PATH="tests/test_auth.bats"
-    export CLAUDE_TOOL_NAME="Edit"
-    run_hook "post-tool-use.sh"
+    run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"tests/test_auth.bats"}}'
     echo "$output" | grep -q "test file"
 }
 
 @test "post-tool-use: reports config file update" {
-    export CLAUDE_TOOL_INPUT_FILE_PATH="config/settings.json"
-    export CLAUDE_TOOL_NAME="Edit"
-    run_hook "post-tool-use.sh"
+    run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"config/settings.json"}}'
     echo "$output" | grep -q "config file"
 }
 
@@ -490,8 +477,7 @@ run_hook_with_input() {
 }
 
 @test "subagent-start: outputs scoping reminder" {
-    export CLAUDE_SUBAGENT_NAME="security-auditor"
-    run_hook "subagent-start.sh"
+    run_hook_with_input "subagent-start.sh" '{"agent_type":"security-auditor","agent_id":"a123"}'
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "security-auditor"
     echo "$output" | grep -q "narrow scope"
@@ -509,8 +495,7 @@ run_hook_with_input() {
 }
 
 @test "subagent-stop: outputs completion checklist" {
-    export CLAUDE_SUBAGENT_NAME="test-engineer"
-    run_hook "subagent-stop.sh"
+    run_hook_with_input "subagent-stop.sh" '{"agent_type":"test-engineer","agent_id":"a456"}'
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "test-engineer"
     echo "$output" | grep -q "findings"
@@ -526,12 +511,10 @@ run_hook_with_input() {
     [ "$status" -eq 0 ]
 }
 
-@test "save-session: writes session file when CLAUDE_SESSION_ID set" {
+@test "save-session: writes session file when session_id provided" {
     cd "$TEST_TMP"
     mkdir -p .claude
-    export CLAUDE_SESSION_ID="test-session-123"
-    export CLAUDE_TASK_DESCRIPTION="Working on auth module"
-    run_hook "save-session.sh"
+    run_hook_with_input "save-session.sh" '{"session_id":"test-session-123","last_assistant_message":"Working on auth module"}'
     [ "$status" -eq 0 ]
     [ -f ".claude/session-context.md" ]
     grep -q "test-session-123" ".claude/session-context.md"

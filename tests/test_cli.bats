@@ -452,7 +452,7 @@ teardown() {
 
 @test "track-usage.sh records skill invocation" {
     mkdir -p "$TEST_TMP/.ai-toolkit"
-    CLAUDE_USER_PROMPT="/commit some message" HOME="$TEST_TMP" \
+    echo '{"prompt":"/commit some message"}' | HOME="$TEST_TMP" \
         bash "$TOOLKIT_DIR/app/hooks/track-usage.sh"
     [ -f "$TEST_TMP/.ai-toolkit/stats.json" ]
     grep -q '"commit"' "$TEST_TMP/.ai-toolkit/stats.json"
@@ -460,7 +460,7 @@ teardown() {
 
 @test "track-usage.sh ignores non-slash prompts" {
     mkdir -p "$TEST_TMP/.ai-toolkit"
-    CLAUDE_USER_PROMPT="just a regular question" HOME="$TEST_TMP" \
+    echo '{"prompt":"just a regular question"}' | HOME="$TEST_TMP" \
         bash "$TOOLKIT_DIR/app/hooks/track-usage.sh"
     [ ! -f "$TEST_TMP/.ai-toolkit/stats.json" ]
 }

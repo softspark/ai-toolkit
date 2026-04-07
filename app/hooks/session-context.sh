@@ -8,7 +8,10 @@
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
 
-SESSION="${CLAUDE_SESSION_ID:-$$}"
+# Read from stdin (Claude Code passes JSON with .session_id)
+INPUT=$(cat)
+SESSION=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
+[ -z "$SESSION" ] && SESSION="$$"
 SESSIONS_DIR="$HOME/.ai-toolkit/sessions"
 mkdir -p "$SESSIONS_DIR"
 

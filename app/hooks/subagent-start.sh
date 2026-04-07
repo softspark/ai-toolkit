@@ -8,9 +8,11 @@
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
 
-SUBAGENT="${CLAUDE_SUBAGENT_NAME:-${CLAUDE_TOOL_INPUT_SUBAGENT_TYPE:-subagent}}"
+# Read from stdin (Claude Code passes JSON with .agent_id, .agent_type)
+INPUT=$(cat)
+AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // "subagent"' 2>/dev/null)
 
-echo "SubagentStart: ${SUBAGENT} owns a narrow scope. Read only the necessary files first, cite evidence, and return explicit validation notes with any edits."
+echo "SubagentStart: ${AGENT_TYPE} owns a narrow scope. Read only the necessary files first, cite evidence, and return explicit validation notes with any edits."
 
 exit 0
 

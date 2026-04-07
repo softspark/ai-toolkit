@@ -8,7 +8,9 @@
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
 
-PROMPT_TEXT="${CLAUDE_USER_PROMPT:-${CLAUDE_PROMPT:-}}"
+# Read prompt from stdin (Claude Code passes JSON with .prompt field)
+INPUT=$(cat)
+PROMPT_TEXT=$(echo "$INPUT" | jq -r '.prompt // empty' 2>/dev/null)
 LOWERED="$(printf '%s' "$PROMPT_TEXT" | tr '[:upper:]' '[:lower:]')"
 
 echo "STOP. Execute Step 0 before responding: check your CLAUDE.md for search-first rules. If search-first rules exist, call the required search tool NOW — before any other tool or text output. If you skip this step, the user will interrupt you."

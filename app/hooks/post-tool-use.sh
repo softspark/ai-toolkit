@@ -8,8 +8,10 @@
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
 
-FILE_PATH="${CLAUDE_TOOL_INPUT_FILE_PATH:-}"
-TOOL_NAME="${CLAUDE_TOOL_NAME:-unknown}"
+# Read from stdin (Claude Code passes JSON with .tool_name, .tool_input)
+INPUT=$(cat)
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"' 2>/dev/null)
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 
 if [ -z "$FILE_PATH" ]; then
     echo "PostToolUse: ${TOOL_NAME} completed. Consider validating lint, tests, and docs if behavior changed."

@@ -8,7 +8,11 @@
 # Uses atomic write via python3 os.replace() to prevent corruption.
 
 STATS_FILE="${HOME}/.ai-toolkit/stats.json"
-PROMPT_TEXT="${CLAUDE_USER_PROMPT:-${CLAUDE_PROMPT:-}}"
+
+# Read prompt from stdin (Claude Code passes JSON with .prompt field)
+INPUT=$(cat)
+PROMPT_TEXT=$(echo "$INPUT" | jq -r '.prompt // empty' 2>/dev/null)
+[ -z "$PROMPT_TEXT" ] && exit 0
 
 # Only track if prompt starts with a slash command
 SKILL_NAME=$(printf '%s' "$PROMPT_TEXT" | grep -oE '^/[a-z][a-z0-9-]*' | head -1 | sed 's|^/||')
