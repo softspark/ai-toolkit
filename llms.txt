@@ -22,7 +22,6 @@
 - [CI Integration](kb/reference/ci-integration.md)
 - [Claude Ecosystem Benchmark Snapshot](kb/reference/claude-ecosystem-benchmark-snapshot.md)
 - [Claude Ecosystem Expansion Foundations](kb/reference/claude-ecosystem-expansion-foundations.md)
-- [Commands Catalog (DEPRECATED)](kb/reference/commands-catalog.md)
 - [Plan: Competitive Features — ai-toolkit](kb/reference/competitive-features-implementation.md)
 - [Distribution Model](kb/reference/distribution-model.md)
 - [Extension API Reference](kb/reference/extension-api.md)

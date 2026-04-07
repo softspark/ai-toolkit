@@ -145,7 +145,7 @@ smart_query("[task description in English]")  # or hybrid_search_kb()
 | `data-analyst` | Data | Analysis, visualization, SQL |
 | `documenter` | Documentation | Architecture notes, runbooks, guides |
 | `tech-lead` | Architecture | Code review, standards, tech disputes |
-| `product-owner` | Product | Requirements, priorities, acceptance criteria |
+| `product-manager` | Product | Requirements, priorities, acceptance criteria |
 | `security-architect` | Security Design | Threat modeling, secure architecture |
 | `night-watchman` | Autonomous Ops | Auto-updates, refactoring, cleanup |
 | `chaos-monkey` | Resilience | Fault injection, reliability testing |
@@ -154,6 +154,24 @@ smart_query("[task description in English]")  # or hybrid_search_kb()
 | `chief-of-staff` | Management | Executive summary, noise filtering |
 | `meta-architect` | Evolution | Self-optimization, agent updates |
 | `system-governor` | Safety | Constitution enforcement, VETO power |
+| `ai-engineer` | AI/ML | LLM integration, RAG, vector DBs |
+| `ml-engineer` | ML | Model training, MLOps |
+| `nlp-engineer` | NLP | NER, text classification, NLP pipelines |
+| `llm-ops-engineer` | LLM Ops | LLM caching, fallback, cost optimization |
+| `prompt-engineer` | Prompts | Prompt design, chain-of-thought |
+| `data-scientist` | Data Science | Statistics, EDA, A/B testing |
+| `search-specialist` | Search | Search optimization, relevance tuning |
+| `code-reviewer` | Code Quality | Code review, quality, security |
+| `code-archaeologist` | Legacy Code | Legacy code investigation, dead code |
+| `command-expert` | CLI | Shell scripting, CLI tools |
+| `qa-automation-engineer` | QA | E2E testing, Playwright, Cypress |
+| `mcp-testing-engineer` | MCP Testing | MCP protocol testing |
+| `infrastructure-architect` | Architecture | Architecture decisions, trade-offs |
+| `infrastructure-validator` | Deployment | Deployment verification, health checks |
+| `incident-responder` | Incidents | Production incidents, P1-P4 |
+| `seo-specialist` | SEO | SEO, meta tags, structured data |
+| `fact-checker` | Verification | Claim verification, accuracy |
+| `technical-researcher` | Research | Technical investigation, synthesis |
 
 ## 🔴 Agent Boundary Enforcement
 
@@ -213,7 +231,7 @@ Invoke entire SQUADS in PARALLEL to maximize impact.
 
 ### 1. The "Feature Squad" (New Capability)
 **Target**: Implementing a new user-facing feature.
-- `product-owner`: Value & Acceptance Criteria
+- `product-manager`: Value & Acceptance Criteria
 - `tech-lead`: Architecture & Standards
 - `frontend-specialist`: UI/UX
 - `backend-specialist`: Logic & Data
@@ -255,7 +273,7 @@ Invoke entire SQUADS in PARALLEL to maximize impact.
 □ MCP/Protocol  → mcp-specialist
 □ Discovery     → explorer-agent
 □ Architecture  → tech-lead
-□ Product       → product-owner
+□ Product       → product-manager
 □ Security Design → security-architect
 □ Maintenance   → night-watchman
 □ Resilience    → chaos-monkey

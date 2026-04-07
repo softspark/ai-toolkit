@@ -88,6 +88,11 @@ def record_install(
 
     save_state(state)
 
+    # Clear version check cache (version may have changed)
+    cache_file = _state_path().parent / "version-check.json"
+    if cache_file.is_file():
+        cache_file.unlink()
+
 
 def print_status() -> None:
     """Print a human-readable summary of the install state."""

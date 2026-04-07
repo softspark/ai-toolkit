@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.10 — Patch (2026-04-07)
+
+### Fixed
+- **Version cache**: `install` and `update` now clear `~/.ai-toolkit/version-check.json` so `status` shows correct "Latest" immediately after upgrade.
+
+---
+
 ## v1.3.9 — Single Source of Truth for Counts (2026-04-07)
 
 ### Changed

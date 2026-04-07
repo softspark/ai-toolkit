@@ -3,7 +3,7 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.3.8"
+version: "1.3.10"
 created: "2026-03-23"
 last_updated: "2026-04-07"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
