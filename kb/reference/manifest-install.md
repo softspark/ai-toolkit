@@ -61,8 +61,8 @@ ai-toolkit install --profile standard
 # Module-based install (new)
 ai-toolkit install --modules core,agents,rules-typescript
 
-# Auto-detect project language and install matching rules
-ai-toolkit install --local --auto-detect
+# --local implies --auto-detect (language rules auto-detected)
+ai-toolkit install --local
 
 # Show currently installed modules and their state
 ai-toolkit status

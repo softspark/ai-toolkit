@@ -474,12 +474,12 @@ Templates include: GitHub, PostgreSQL, Slack, Sentry, Context7, Brave Search, Su
 70 language-specific coding rules across 13 languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, plus 5 common rules. Each language has 5 rule categories: coding-style, testing, patterns, frameworks, security.
 
 ```bash
-ai-toolkit install --local --auto-detect  # detect project language, install matching rules
+ai-toolkit install --local                   # auto-detects project language, installs matching rules
 ai-toolkit install --local --lang typescript  # explicit language selection
 ai-toolkit install --local --lang go,python   # multiple languages
 ```
 
-Rules are injected into `CLAUDE.md` and auto-updated on `ai-toolkit update`.
+`--local` automatically detects languages (via package.json, go.mod, Cargo.toml, etc.) — no need for `--auto-detect`. Rules are injected into `CLAUDE.md` and auto-updated on `ai-toolkit update --local`.
 
 ---
 
@@ -507,7 +507,7 @@ Module-level install granularity. Install only what you need:
 
 ```bash
 ai-toolkit install --modules core,agents,rules-typescript
-ai-toolkit install --auto-detect          # detect project language and pick modules
+ai-toolkit install --local                # auto-detects language, installs matching rules
 ai-toolkit status                         # show installed modules and versions
 ai-toolkit update                         # incremental re-install (only changed modules)
 ```
@@ -732,7 +732,7 @@ ai-toolkit install --local               # also set up project-local configs (CL
 ai-toolkit update --local                # re-apply + refresh project-local configs
 ai-toolkit install --list                # dry-run: show what would be applied
 ai-toolkit install --modules core,agents,rules-typescript  # selective module install
-ai-toolkit install --auto-detect         # detect project language and install matching rules
+ai-toolkit install --local               # auto-detects language, installs matching rules
 ai-toolkit install --lang typescript     # explicit language for rules install
 ```
 
