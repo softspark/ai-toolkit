@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.3 — Patch (2026-04-07)
+
+### Fixed
+- **manifest.json missing from npm package**: Added `manifest.json` to `package.json` `files` array. Without it, `--auto-detect` and `--modules` could not read module definitions from installed package.
+
+---
+
 ## v1.3.2 — Patch (2026-04-07)
 
 ### Fixed

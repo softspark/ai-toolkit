@@ -59,7 +59,31 @@ def main() -> None:
         print("No invocations recorded.")
         return
 
-    rows = sorted(data.items(), key=lambda x: x[1].get("count", 0), reverse=True)
+    # Handle both formats: {skill: {count, last_used}} and {loop_runs: [...]}
+    if "loop_runs" in data:
+        runs = data["loop_runs"]
+        if not runs:
+            print("No invocations recorded.")
+            return
+        # Aggregate loop_runs by command
+        agg: dict[str, dict] = {}
+        for run in runs:
+            cmd = run.get("command", "unknown")
+            iters = run.get("iterations", [])
+            if cmd not in agg:
+                agg[cmd] = {"count": 0, "last_used": "unknown"}
+            agg[cmd]["count"] += len(iters) if iters else 1
+            started = run.get("started_at", "")
+            if started > agg[cmd]["last_used"]:
+                agg[cmd]["last_used"] = started
+        rows = sorted(agg.items(), key=lambda x: x[1]["count"], reverse=True)
+    else:
+        # Original format: {skill_name: {count, last_used}}
+        skill_data = {k: v for k, v in data.items() if isinstance(v, dict)}
+        if not skill_data:
+            print("No invocations recorded.")
+            return
+        rows = sorted(skill_data.items(), key=lambda x: x[1].get("count", 0), reverse=True)
 
     print(f"{'Skill':<30} {'Count':>6}  {'Last Used':<20}")
     print("-" * 60)
@@ -68,10 +92,10 @@ def main() -> None:
         last = info.get("last_used", "unknown")
         print(f"{name:<30} {count:>6}  {last:<20}")
 
-    total = sum(v.get("count", 0) for v in data.values())
+    total = sum(v.get("count", 0) for _, v in rows)
     print()
     print(f"Total invocations: {total}")
-    print(f"Unique skills: {len(data)}")
+    print(f"Unique skills: {len(rows)}")
     print()
     print(f"File: {STATS_FILE}")
     print("Reset: ai-toolkit stats --reset")
