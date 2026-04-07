@@ -588,6 +588,9 @@ def _parse_clean_args(args: list[str]) -> tuple[list[str], int]:
         if args[i] == "--days" and i + 1 < len(args):
             try:
                 days = int(args[i + 1])
+                if days <= 0:
+                    print(f"  ERROR: --days must be positive, got {days}")
+                    sys.exit(1)
             except ValueError:
                 print(f"  ERROR: --days requires a number, got '{args[i + 1]}'")
                 sys.exit(1)

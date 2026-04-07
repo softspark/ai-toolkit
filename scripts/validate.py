@@ -30,7 +30,7 @@ from plugin_schema import validate_references as _validate_plugin_references
 # ---------------------------------------------------------------------------
 
 VALID_TOOLS = frozenset({
-    "Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent",
+    "Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob", "Agent",
     "WebSearch", "WebFetch", "TodoRead", "TodoWrite",
     "TeamCreate", "TeamDelete", "SendMessage",
     "TaskCreate", "TaskList", "TaskUpdate", "TaskGet", "TaskOutput", "TaskStop",

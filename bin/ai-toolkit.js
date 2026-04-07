@@ -8,6 +8,11 @@ const fs = require('fs');
 const TOOLKIT_DIR = path.dirname(__dirname);
 const CWD = process.cwd();
 
+if (!process.env.HOME) {
+  console.error('Error: HOME environment variable is not set');
+  process.exit(1);
+}
+
 // ---------------------------------------------------------------------------
 // Generator map: command name -> { script, dest, mkdir? }
 // Used by individual generator commands, `generate-all`, and the default case.
