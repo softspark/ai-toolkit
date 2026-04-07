@@ -32,17 +32,17 @@ AI Toolkit Config Benchmark
 ========================
 
 ## Your Configuration (~/.claude/)
-  Agents:  47
+  Agents:  44
   Skills:  80
   Hooks:   12
 
 ## Toolkit Totals
-  Agents:  47
+  Agents:  44
   Skills:  80
   Hooks:   12
 
 ## Coverage
-  Agents:  100%  (47 / 47)
+  Agents:  100%  (44 / 44)
   Skills:  100%  (80 / 80)
   Hooks:   100%  (12 / 12)
 

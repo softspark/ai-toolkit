@@ -57,7 +57,7 @@ actual_test_count() {
 
 @test "README What You Get table agent count matches actual" {
     actual=$(actual_agent_count)
-    # Line like: | `agents/` | 47 | Specialized agents ...
+    # Line like: | `agents/` | 44 | Specialized agents ...
     readme_count=$(grep '`agents/`' "$TOOLKIT_DIR/README.md" | grep -oE '\| [0-9]+ \|' | grep -oE '[0-9]+')
     [ "$readme_count" = "$actual" ]
 }
@@ -99,7 +99,7 @@ actual_test_count() {
 
 @test "ARCHITECTURE.md agent count matches actual" {
     actual=$(actual_agent_count)
-    # Matches: "## Agents (47)" or "| Agents | 47 |"
+    # Matches: "## Agents (44)" or "| Agents | 44 |"
     arch_count=$(grep -oE 'Agents.*\(?[0-9]+\)?' "$TOOLKIT_DIR/app/ARCHITECTURE.md" | grep -oE '[0-9]+' | head -1 || echo "")
     [ -n "$arch_count" ]
     [ "$arch_count" = "$actual" ]
@@ -136,7 +136,7 @@ actual_test_count() {
 
 @test "architecture-overview.md agent count matches actual" {
     actual=$(actual_agent_count)
-    # Matches: "47 specialized agents" or "47 agent definitions"
+    # Matches: "44 specialized agents" or "44 agent definitions"
     kb_count=$(grep -oE '[0-9]+ (specialized )?agents' "$TOOLKIT_DIR/kb/reference/architecture-overview.md" | grep -oE '^[0-9]+' | head -1 || echo "")
     [ -n "$kb_count" ]
     [ "$kb_count" = "$actual" ]

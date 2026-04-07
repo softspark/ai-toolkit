@@ -8,7 +8,14 @@
 echo "MANDATORY: Before answering ANY technical question, apply ALL rules from your CLAUDE.md files (global + project). Follow the exact order of operations defined there. Do NOT skip mandatory steps even if you think you already know the answer."
 echo "REMINDER: When writing features or fixing bugs, ensure tests cover the changes. When modifying API, config, or setup, update relevant documentation. Propose these steps to the user — do not silently skip them."
 
-# 2. Load session context (if available)
+# 2. Check for updates (cached, max once per 24h, non-blocking)
+TOOLKIT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+VERSION_MSG=$(python3 "$TOOLKIT_DIR/scripts/version_check.py" 2>/dev/null)
+if [ -n "$VERSION_MSG" ]; then
+    echo "$VERSION_MSG"
+fi
+
+# 3. Load session context (if available)
 SESSION_FILE=".claude/session-context.md"
 if [ -f "$SESSION_FILE" ]; then
     echo "=== Session Context ==="

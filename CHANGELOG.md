@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.7 — Update Notifications (2026-04-07)
+
+### Added
+- **Update notifications**: `session-start.sh` hook checks npm for newer versions (cached 24h, non-blocking). `ai-toolkit status` shows installed vs latest version with upgrade command.
+
+---
+
 ## v1.3.6 — Patch (2026-04-07)
 
 ### Fixed

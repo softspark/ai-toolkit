@@ -115,3 +115,18 @@ def print_status() -> None:
         # Strip "rules-" prefix for readability
         langs = [m.replace("rules-", "") for m in detected]
         print(f"  Detected:   {', '.join(langs)}")
+
+    # Check for updates
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        from version_check import check
+        result = check()
+        if result["update_available"]:
+            print()
+            print(f"  Update available: {result['installed']} -> {result['latest']}")
+            print(f"  Run: npm install -g @softspark/ai-toolkit@latest && ai-toolkit update")
+        else:
+            print(f"  Latest:     {result['latest']} (up to date)")
+    except Exception:
+        pass  # version check is optional

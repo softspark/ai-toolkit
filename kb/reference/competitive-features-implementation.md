@@ -384,7 +384,7 @@ All entries are tagged with "_source": "<source-name>" for idempotent updates.
       "required": true
     },
     "agents": {
-      "description": "47 specialized agents",
+      "description": "44 specialized agents",
       "files": ["app/agents/*.md"],
       "required": false,
       "default": true

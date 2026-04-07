@@ -166,11 +166,11 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
-    """Inject language-specific rules into project's CLAUDE.md.
+    """Inject language-specific rule summary into project's .claude/CLAUDE.md.
 
-    Concatenates all .md files from matching app/rules/<lang>/ directories
-    into a single marker-injected section in the project's .claude/CLAUDE.md.
-    Also always includes common rules.
+    Instead of injecting full rule content (hundreds of lines), injects a
+    compact summary with the key rules per category. Full rules are available
+    as knowledge skills that Claude auto-loads contextually.
     """
     if not language_modules:
         return
@@ -179,19 +179,35 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
     if not rules_src.is_dir():
         return
 
-    # Always include common + detected languages
-    lang_dirs: list[str] = ["common"]
+    # Detect language names
+    langs: list[str] = []
     for mod in language_modules:
-        # module name format: "rules-typescript" → dir "typescript"
         if mod.startswith("rules-"):
-            lang_dirs.append(mod[6:])
+            langs.append(mod[6:])
 
-    # Collect all rule content
-    parts: list[str] = []
-    for lang_dir in lang_dirs:
+    if not langs:
+        return
+
+    # Build compact summary: first 5 key rules from each category
+    lines: list[str] = ["# Language Rules (auto-detected)", ""]
+    lines.append(f"Detected: **{', '.join(langs)}** + common rules.")
+    lines.append("")
+    lines.append("Detailed rules available as knowledge skills (auto-loaded by Claude).")
+    lines.append("")
+
+    # Deduplicate: common + unique language dirs
+    all_dirs: list[str] = ["common"]
+    for l in langs:
+        if l not in all_dirs:
+            all_dirs.append(l)
+
+    for lang_dir in all_dirs:
         lang_path = rules_src / lang_dir
         if not lang_path.is_dir():
             continue
+        lang_label = lang_dir.capitalize() if lang_dir != "common" else "Common"
+        lines.append(f"## {lang_label} Rules")
+        lines.append("")
         for rule_file in sorted(lang_path.glob("*.md")):
             content = rule_file.read_text(encoding="utf-8").strip()
             # Strip YAML frontmatter
@@ -199,15 +215,16 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
                 end = content.find("---", 3)
                 if end != -1:
                     content = content[end + 3:].strip()
-            if content:
-                parts.append(content)
+            # Extract first 3 bullet points as key rules
+            bullets = [l.strip() for l in content.splitlines() if l.strip().startswith("- ")][:3]
+            if bullets:
+                category = rule_file.stem.replace("-", " ").title()
+                lines.append(f"**{category}:** {' | '.join(b.lstrip('- ') for b in bullets)}")
+        lines.append("")
 
-    if not parts:
-        return
-
-    # Write concatenated rules to a temp file, then inject as a section
+    # Write summary to temp file, then inject as section
     import tempfile
-    combined = "\n\n".join(parts)
+    combined = "\n".join(lines)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False,
                                      encoding="utf-8") as tmp:
         tmp.write(combined)
@@ -215,8 +232,8 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
 
     try:
         inject_section(tmp_path, cwd / ".claude" / "CLAUDE.md", "language-rules")
-        detected = ", ".join(d for d in lang_dirs if d != "common")
-        print(f"  Injected: language rules (common + {detected})")
+        lang_names = [l for l in langs if l != "common"]
+        print(f"  Injected: language rules summary (common + {', '.join(lang_names)})")
     finally:
         tmp_path.unlink(missing_ok=True)
 
