@@ -36,7 +36,17 @@ def install_agents(claude_dir: Path, only: str, skip: str, dry_run: bool) -> Non
             continue
         target.symlink_to(agent_file)
         linked += 1
+
+    # Clean orphaned symlinks (agents removed from toolkit)
+    orphaned = 0
+    for target in sorted(agents_dst.glob("*.md")):
+        if target.is_symlink() and not target.resolve().exists():
+            target.unlink()
+            orphaned += 1
+
     print(f"  Linked: .claude/agents/ ({linked} files)")
+    if orphaned > 0:
+        print(f"  Cleaned: {orphaned} orphaned agent symlink(s)")
     if skipped > 0:
         print(f"  Kept: {skipped} user agent(s) (name conflict)")
 
@@ -73,7 +83,17 @@ def install_skills(claude_dir: Path, only: str, skip: str, dry_run: bool) -> Non
             continue
         target.symlink_to(skill_dir)
         linked += 1
+
+    # Clean orphaned symlinks (skills removed from toolkit)
+    orphaned = 0
+    for target in sorted(skills_dst.iterdir()):
+        if target.is_symlink() and not target.resolve().exists():
+            target.unlink()
+            orphaned += 1
+
     print(f"  Linked: .claude/skills/ ({linked} directories)")
+    if orphaned > 0:
+        print(f"  Cleaned: {orphaned} orphaned skill symlink(s)")
     if skipped > 0:
         print(f"  Kept: {skipped} user skill(s) (name conflict)")
 
