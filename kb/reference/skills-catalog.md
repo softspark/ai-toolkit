@@ -3,7 +3,7 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.3.0"
+version: "1.3.3"
 created: "2026-03-23"
 last_updated: "2026-04-07"
 description: "Complete catalog of 90 skills: 28 task, 30 hybrid, 32 knowledge. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
@@ -113,7 +113,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | `application-deploy` | 3 | Deploy → smoke test → release notes |
 | `proactive-troubleshooting` | 4 | Investigate → check perf → preventive fix → docs |
 
-## Knowledge Skills - Development (10)
+## Knowledge Skills - Development (16)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
@@ -124,6 +124,12 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **ecommerce-patterns** | `skills/ecommerce-patterns/` | E-commerce: catalog, cart, checkout, payments |
 | **clean-code** | `skills/clean-code/` | Multi-language code quality: Python, TS, PHP, Go, Dart |
 | **typescript-patterns** | `skills/typescript-patterns/` | TypeScript/JavaScript patterns for frontend and backend |
+| **rust-patterns** | `skills/rust-patterns/` | Ownership, borrowing, error handling, Cargo, tokio, serde |
+| **java-patterns** | `skills/java-patterns/` | Records, sealed classes, Stream API, Spring Boot, JUnit 5 |
+| **csharp-patterns** | `skills/csharp-patterns/` | Nullable refs, async/await, ASP.NET Core, EF Core |
+| **kotlin-patterns** | `skills/kotlin-patterns/` | Coroutines, DSLs, sealed classes, Ktor, MockK |
+| **swift-patterns** | `skills/swift-patterns/` | Protocol-oriented, SwiftUI, async/await, SPM |
+| **ruby-patterns** | `skills/ruby-patterns/` | Blocks, Rails conventions, RSpec, ActiveRecord |
 | **design-engineering** | `skills/design-engineering/` | UI polish, animation craft, easing, transforms, accessibility |
 | **documentation-standards** | `skills/documentation-standards/` | KB document conventions, frontmatter validation, category taxonomy |
 | **brand-voice** | `skills/brand-voice/` | Anti-trope list, voice principles, LLM rhetoric prevention |

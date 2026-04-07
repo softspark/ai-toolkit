@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.4 — Patch (2026-04-07)
+
+### Fixed
+- **skills-catalog.md**: Added 6 missing language pattern skills (rust, java, csharp, kotlin, swift, ruby) to Development section (10→16). Total now correctly sums to 90.
+
+---
+
 ## v1.3.3 — Patch (2026-04-07)
 
 ### Fixed
