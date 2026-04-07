@@ -1,0 +1,10 @@
+{
+  "name": "puppeteer",
+  "description": "Browser automation for screenshots, navigation, and web scraping",
+  "mcpServers": {
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    }
+  }
+}

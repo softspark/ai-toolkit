@@ -1,0 +1,10 @@
+{
+  "name": "git",
+  "description": "Git operations for repository inspection, diffs, logs, and branches",
+  "mcpServers": {
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git"]
+    }
+  }
+}

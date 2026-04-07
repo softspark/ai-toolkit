@@ -10,7 +10,7 @@
     "claude-code": ">=1.0.33"
   },
   "includes": {
-    "agents": ["research-synthesizer", "technical-researcher", "fact-checker", "search-specialist"],
+    "agents": ["technical-researcher", "fact-checker", "search-specialist"],
     "skills": ["search", "docs", "research-mastery", "plan-writing"],
     "rules": [],
     "hooks": ["user-prompt-submit.sh"]

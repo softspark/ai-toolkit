@@ -3,7 +3,7 @@
 Curated research and synthesis pack.
 
 ## Includes
-- Agents: `research-synthesizer`, `technical-researcher`, `fact-checker`, `search-specialist`
+- Agents: `technical-researcher`, `fact-checker`, `search-specialist`
 - Skills: `/search`, `/docs`, `research-mastery`, `plan-writing`
 - Hooks: `user-prompt-submit.sh`
 

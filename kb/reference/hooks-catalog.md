@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-27"
-last_updated: "2026-04-02"
+last_updated: "2026-04-07"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -13,7 +13,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 15 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.ai-toolkit/hooks/`.
+ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.ai-toolkit/hooks/`.
 
 ## Installation
 
@@ -231,6 +231,76 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 **Action:** Reminds teammate to verify: files modified, tests written, docs updated.
 
+---
+
+## New Hooks (v1.1.0)
+
+### PreToolUse (config guard) — `guard-config.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PreToolUse` |
+| Matcher | `Edit\|Write\|MultiEdit` |
+| Script | `~/.ai-toolkit/hooks/guard-config.sh` |
+| Fires | Before any file write/edit operation |
+
+**Action:** Blocks (exit 2) edits to linter and formatter config files — `.eslintrc`, `.eslintrc.*`, `eslint.config.*`, `.prettierrc`, `.prettierrc.*`, `prettier.config.*`, `tsconfig.json`, `tsconfig.*.json` — unless the request contains an explicit acknowledgment phrase (e.g. "intentionally editing config"). Returns a human-readable explanation to Claude so it can ask the user for confirmation before retrying.
+
+### SessionStart — `mcp-health.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `SessionStart` |
+| Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/mcp-health.sh` |
+| Fires | Session start |
+
+**Action:** Non-blocking (always exits 0). Reads MCP server definitions from `~/.claude/settings.json` and any local `.mcp.json`. For each configured server, checks whether the required runtime command (`npx`, `uvx`, `docker`, etc.) is available in `$PATH`. Emits warnings for any missing runtimes, including install hints (e.g. "npm install -g npx"). Helps surface MCP misconfiguration early without interrupting the session.
+
+### PostToolUse (governance) — `governance-capture.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PostToolUse` |
+| Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/governance-capture.sh` |
+| Fires | After any tool use |
+
+**Action:** Non-blocking (always exits 0). Logs security-sensitive operations (Bash commands, file writes to sensitive paths, large writes) to `~/.ai-toolkit/governance.log` with ISO timestamp, session ID, tool name, and a content excerpt. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### PreCompact — `pre-compact-save.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PreCompact` |
+| Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/pre-compact-save.sh` |
+| Fires | Before context compaction |
+
+**Action:** Saves a timestamped context snapshot to `~/.ai-toolkit/compactions/YYYY-MM-DD_HH-MM-SS.txt`. Captures session ID, working directory, git branch and status, and environment metadata. Provides an audit trail of what was in context at each compaction point. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### PreToolUse (commit quality) — `commit-quality.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PreToolUse` |
+| Matcher | `Bash` |
+| Script | `~/.ai-toolkit/hooks/commit-quality.sh` |
+| Fires | Before any Bash command |
+
+**Action:** Non-blocking (always exits 0). Inspects Bash commands containing `git commit`. Extracts the commit message from the `-m` flag and checks it against Conventional Commits format (`type: description`, where type is one of feat/fix/docs/refactor/test/chore/ci/perf/style/revert). Emits an advisory warning if the message does not match — the commit is not blocked, only nudged. Commands without `git commit` or without a `-m` message (e.g. interactive commits) are ignored.
+
+### SessionStart — `session-context.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `SessionStart` |
+| Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/session-context.sh` |
+| Fires | Session start |
+
+**Action:** Captures an environment snapshot to `~/.ai-toolkit/sessions/current-context.json`. Records working directory, git branch, git status summary, Node.js version, Python version, and timestamp. Used by other hooks and tools to access session metadata without re-running discovery commands. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
 ## Runtime Profiles
 
 Set in `.claude/settings.local.json`:
@@ -253,10 +323,14 @@ Set in `.claude/settings.local.json`:
 └── hooks/          # Hook scripts (copied on install)
     ├── _profile-check.sh    # Shared: profile skip logic (sourced by hooks)
     ├── session-start.sh
+    ├── session-context.sh   # NEW: capture session env snapshot
     ├── guard-destructive.sh
     ├── guard-path.sh
+    ├── guard-config.sh      # NEW: block config file edits
+    ├── mcp-health.sh        # NEW: check MCP runtime availability
     ├── user-prompt-submit.sh
     ├── post-tool-use.sh
+    ├── governance-capture.sh # NEW: log security-sensitive operations
     ├── quality-check.sh
     ├── quality-gate.sh
     ├── save-session.sh
@@ -264,22 +338,24 @@ Set in `.claude/settings.local.json`:
     ├── subagent-stop.sh
     ├── track-usage.sh
     ├── pre-compact.sh
+    ├── pre-compact-save.sh  # NEW: timestamped context snapshot
+    ├── commit-quality.sh    # NEW: advisory commit message check
     └── session-end.sh
 
 ~/.claude/settings.json
 └── hooks:          # Hook definitions referencing ~/.ai-toolkit/hooks/
-    ├── SessionStart → session-start.sh
-    ├── Notification → osascript (inline)
-    ├── PreToolUse   → guard-destructive.sh, guard-path.sh
+    ├── SessionStart     → session-start.sh, mcp-health.sh, session-context.sh
+    ├── Notification     → osascript (inline)
+    ├── PreToolUse       → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh
     ├── UserPromptSubmit → user-prompt-submit.sh, track-usage.sh
-    ├── PostToolUse  → post-tool-use.sh
-    ├── Stop         → quality-check.sh, save-session.sh
-    ├── TaskCompleted → quality-gate.sh
-    ├── TeammateIdle → echo (inline)
-    ├── SubagentStart → subagent-start.sh
-    ├── SubagentStop  → subagent-stop.sh
-    ├── PreCompact    → pre-compact.sh
-    └── SessionEnd    → session-end.sh
+    ├── PostToolUse      → post-tool-use.sh, governance-capture.sh
+    ├── Stop             → quality-check.sh, save-session.sh
+    ├── TaskCompleted    → quality-gate.sh
+    ├── TeammateIdle     → echo (inline)
+    ├── SubagentStart    → subagent-start.sh
+    ├── SubagentStop     → subagent-stop.sh
+    ├── PreCompact       → pre-compact.sh, pre-compact-save.sh
+    └── SessionEnd       → session-end.sh
 ```
 
 **Key design decisions:**

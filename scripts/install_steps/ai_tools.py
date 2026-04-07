@@ -120,7 +120,8 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
     return result.stdout if capture else ""
 
 
-def install_local_project(rules_dir: Path, dry_run: bool, reset: bool) -> None:
+def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
+                          language_modules: list[str] | None = None) -> None:
     """Install project-local configs."""
     cwd = Path.cwd()
     print()
@@ -131,6 +132,8 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool) -> None:
 
     if dry_run:
         _install_local_dry_run(reset)
+        if language_modules:
+            print(f"  Would inject language rules: {', '.join(language_modules)}")
         return
 
     (cwd / ".claude").mkdir(parents=True, exist_ok=True)
@@ -156,7 +159,66 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool) -> None:
         )
         print("  Injected: .claude/constitution.md")
 
+    # Inject language-specific rules into project CLAUDE.md
+    _inject_language_rules(cwd, language_modules)
+
     _create_local_ai_tool_configs(cwd, rules_dir)
+
+
+def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
+    """Inject language-specific rules into project's CLAUDE.md.
+
+    Concatenates all .md files from matching app/rules/<lang>/ directories
+    into a single marker-injected section in the project's .claude/CLAUDE.md.
+    Also always includes common rules.
+    """
+    if not language_modules:
+        return
+
+    rules_src = app_dir / "rules"
+    if not rules_src.is_dir():
+        return
+
+    # Always include common + detected languages
+    lang_dirs: list[str] = ["common"]
+    for mod in language_modules:
+        # module name format: "rules-typescript" → dir "typescript"
+        if mod.startswith("rules-"):
+            lang_dirs.append(mod[6:])
+
+    # Collect all rule content
+    parts: list[str] = []
+    for lang_dir in lang_dirs:
+        lang_path = rules_src / lang_dir
+        if not lang_path.is_dir():
+            continue
+        for rule_file in sorted(lang_path.glob("*.md")):
+            content = rule_file.read_text(encoding="utf-8").strip()
+            # Strip YAML frontmatter
+            if content.startswith("---"):
+                end = content.find("---", 3)
+                if end != -1:
+                    content = content[end + 3:].strip()
+            if content:
+                parts.append(content)
+
+    if not parts:
+        return
+
+    # Write concatenated rules to a temp file, then inject as a section
+    import tempfile
+    combined = "\n\n".join(parts)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False,
+                                     encoding="utf-8") as tmp:
+        tmp.write(combined)
+        tmp_path = Path(tmp.name)
+
+    try:
+        inject_section(tmp_path, cwd / ".claude" / "CLAUDE.md", "language-rules")
+        detected = ", ".join(d for d in lang_dirs if d != "common")
+        print(f"  Injected: language rules (common + {detected})")
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _install_local_dry_run(reset: bool) -> None:

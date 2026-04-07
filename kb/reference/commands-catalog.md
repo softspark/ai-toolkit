@@ -13,9 +13,9 @@ description: "DEPRECATED: All slash commands are implemented as skills. See skil
 
 All slash commands have been migrated to skills.
 
-See **[Skills Catalog](skills-catalog.md)** for the complete list of 85 skills, including:
-- **27 Task Skills** — formerly standalone commands and creator workflows (e.g., `/commit`, `/test`, `/deploy`, `/hook-creator`, `/plugin-creator`)
-- **27 Hybrid Skills** — slash commands that also provide agent knowledge (e.g., `/review`, `/debug`, `/plan`, `/tdd`, `/write-a-prd`)
-- **31 Knowledge Skills** — domain patterns auto-loaded by agents
+See **[Skills Catalog](skills-catalog.md)** for the complete list of 90 skills, including:
+- **28 Task Skills** — formerly standalone commands and creator workflows (e.g., `/commit`, `/test`, `/deploy`, `/hook-creator`, `/plugin-creator`)
+- **30 Hybrid Skills** — slash commands that also provide agent knowledge (e.g., `/review`, `/debug`, `/plan`, `/tdd`, `/write-a-prd`, `/council`, `/introspect`)
+- **32 Knowledge Skills** — domain patterns auto-loaded by agents (e.g., `brand-voice`, `clean-code`, `testing-patterns`)
 
 Slash command syntax (`/command`) continues to work. The underlying implementation moved from `app/commands/` to `app/skills/`.

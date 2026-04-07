@@ -140,8 +140,7 @@ smart_query("[task description in English]")  # or hybrid_search_kb()
 | `explorer-agent` | Discovery | Codebase exploration, dependencies |
 | `performance-optimizer` | Performance | Profiling, optimization, bottlenecks |
 | `project-planner` | Planning | Task breakdown, milestones, roadmap |
-| `rag-engineer` | RAG Systems | Search, indexing, retrieval |
-| `mcp-server-architect` | MCP | Protocol, tools, server design |
+| `mcp-specialist` | MCP | Protocol, tools, server design, client config |
 | `game-developer` | Games | Unity, Godot, Unreal, multiplayer |
 | `data-analyst` | Data | Analysis, visualization, SQL |
 | `documenter` | Documentation | Architecture notes, runbooks, guides |
@@ -252,8 +251,8 @@ Invoke entire SQUADS in PARALLEL to maximize impact.
 □ Database      → database-architect
 □ Testing       → test-engineer
 □ DevOps        → devops-implementer
-□ RAG/Search    → rag-engineer
-□ MCP/Protocol  → mcp-server-architect
+□ RAG/Search    → ai-engineer
+□ MCP/Protocol  → mcp-specialist
 □ Discovery     → explorer-agent
 □ Architecture  → tech-lead
 □ Product       → product-owner

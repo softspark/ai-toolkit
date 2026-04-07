@@ -287,6 +287,6 @@ For large documentation tasks, hand off to `documenter` agent.
 
 ## Limitations
 
-- **MCP server implementation** → Use `mcp-server-architect`
-- **MCP integration configuration** → Use `mcp-expert`
+- **MCP server implementation** → Use `mcp-specialist`
+- **MCP integration configuration** → Use `mcp-specialist`
 - **General testing** → Use `test-engineer`

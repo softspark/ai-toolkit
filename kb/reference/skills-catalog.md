@@ -3,13 +3,13 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.2.1"
+version: "1.3.0"
 created: "2026-03-23"
-last_updated: "2026-04-03"
-description: "Complete catalog of 87 skills: 28 task, 28 hybrid, 31 knowledge. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
+last_updated: "2026-04-07"
+description: "Complete catalog of 90 skills: 28 task, 30 hybrid, 32 knowledge. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
-# Skills Catalog (87 skills)
+# Skills Catalog (90 skills)
 
 All functionality is unified under skills. Task and hybrid skills are user-invocable as slash commands. Knowledge skills provide domain patterns auto-loaded by agents.
 
@@ -56,7 +56,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 
-## Hybrid Skills (28)
+## Hybrid Skills (30)
 
 Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
 
@@ -90,6 +90,8 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **repeat** | `/repeat` | medium | Autonomous loop with safety controls (Ralph Wiggum pattern) |
 | **mem-search** | `/mem-search` | medium | Search past coding sessions via natural language (memory-pack) |
 | **persona** | `/persona` | low | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
+| **council** | `/council` | high | 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) with synthesis and confidence-rated recommendation. Tier 1, orchestrator, `context: fork`. |
+| **introspect** | `/introspect` | medium | Agent self-debugging: classify failure pattern, suggest smallest recovery action, emit structured introspection report |
 
 ### `/workflow` types
 
@@ -111,7 +113,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | `application-deploy` | 3 | Deploy → smoke test → release notes |
 | `proactive-troubleshooting` | 4 | Investigate → check perf → preventive fix → docs |
 
-## Knowledge Skills - Development (9)
+## Knowledge Skills - Development (10)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
@@ -124,6 +126,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **typescript-patterns** | `skills/typescript-patterns/` | TypeScript/JavaScript patterns for frontend and backend |
 | **design-engineering** | `skills/design-engineering/` | UI polish, animation craft, easing, transforms, accessibility |
 | **documentation-standards** | `skills/documentation-standards/` | KB document conventions, frontmatter validation, category taxonomy |
+| **brand-voice** | `skills/brand-voice/` | Anti-trope list, voice principles, LLM rhetoric prevention |
 
 ## Knowledge Skills - Infrastructure (6)
 

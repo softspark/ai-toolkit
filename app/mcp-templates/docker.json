@@ -1,0 +1,10 @@
+{
+  "name": "docker",
+  "description": "Docker container and image management, logs, and compose operations",
+  "mcpServers": {
+    "docker": {
+      "command": "npx",
+      "args": ["-y", "docker-mcp-server"]
+    }
+  }
+}

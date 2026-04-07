@@ -1,0 +1,10 @@
+{
+  "name": "fetch",
+  "description": "HTTP fetch for retrieving web pages and API responses as markdown or raw content",
+  "mcpServers": {
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "redis",
+  "description": "Redis key-value store for cache inspection, data management, and monitoring",
+  "mcpServers": {
+    "redis": {
+      "command": "npx",
+      "args": ["-y", "redis-mcp-server"],
+      "env": {
+        "REDIS_URL": "${REDIS_URL:-redis://localhost:6379}"
+      }
+    }
+  }
+}

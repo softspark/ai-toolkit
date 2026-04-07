@@ -35,7 +35,6 @@ const GENERATORS = {
  */
 const SCRIPT_COMMANDS = {
   'install':              { script: 'install.py' },
-  'update':               { script: 'install.py' },
   'uninstall':            { script: 'uninstall.py' },
   'validate':             { script: 'validate.py',           toolkitCwd: true },
   'doctor':               { script: 'doctor.py',             toolkitCwd: true },
@@ -52,11 +51,14 @@ const SCRIPT_COMMANDS = {
 /** @type {Record<string, string>} */
 const COMMANDS = {
   install: 'First-time global install into ~/.claude/ (use --local to also set up project configs)',
-  update: 'Re-apply toolkit after npm update (use --local to also refresh project configs)',
+  update: 'Re-apply toolkit with saved modules from state.json (use --local to also refresh project configs)',
+  status: 'Show installed modules, version, and profile from state.json',
   reset: 'Wipe and recreate project-local configs from scratch (requires --local)',
   uninstall: 'Remove ai-toolkit from ~/.claude/',
   'add-rule': 'Register a rule file in ~/.ai-toolkit/rules/ (applied on every install/update)',
   'remove-rule': 'Unregister a rule from ~/.ai-toolkit/rules/ and remove its block from CLAUDE.md',
+  'inject-hook': 'Inject external hooks into ~/.claude/settings.json (tagged with _source for idempotent updates)',
+  'remove-hook': 'Remove injected hooks by source name from ~/.claude/settings.json',
   validate: 'Verify toolkit integrity',
   doctor: 'Check install health, hooks, and artifact drift',
   eject: 'Export standalone config (no symlinks, no toolkit dependency)',
@@ -65,6 +67,7 @@ const COMMANDS = {
   evaluate: 'Run skill evaluation suite',
   stats: 'Show skill usage statistics (--reset to clear, --json for raw output)',
   create: 'Scaffold new skill from template (e.g. create skill my-lint --template=linter)',
+  mcp: 'Manage MCP server templates (list, show, add, remove)',
   plugin: 'Manage plugin packs (install, remove, update, clean, list, status)',
   sync: 'Sync config to/from GitHub Gist (--export, --push, --pull, --import)',
   'cursor-rules': 'Generate .cursorrules for Cursor IDE',
@@ -180,6 +183,8 @@ function showHelp() {
   console.log('  --skip <list>   Skip listed components');
   console.log('  --local         Also set up project-local configs (CLAUDE.md, settings, constitution, copilot, cline, roo, aider, git hooks)');
   console.log('  --profile <p>   Install profile: minimal (agents+skills), standard (default), strict (all+git hooks)');
+  console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
+  console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
   console.log('\nOptions for create:');
   console.log('  skill <name> --template=<type>  Scaffold skill (types: linter, reviewer, generator, workflow, knowledge)');
@@ -194,6 +199,12 @@ function showHelp() {
   console.log('\nOptions for remove-rule:');
   console.log('  <rule-name>     Name of rule to unregister (filename without .md)');
   console.log('  [target-dir]    Target dir containing .claude/CLAUDE.md (default: $HOME)');
+  console.log('\nOptions for inject-hook:');
+  console.log('  <hooks-file>    Path to JSON file with {"hooks": {"EventName": [...]}} format');
+  console.log('  [target-dir]    Target dir containing .claude/settings.json (default: $HOME)');
+  console.log('\nOptions for remove-hook:');
+  console.log('  <source-name>   Source tag to remove (derived from hooks filename stem)');
+  console.log('  [target-dir]    Target dir containing .claude/settings.json (default: $HOME)');
   console.log('\nOptions for add-rule:');
   console.log('  <rule-file>     Path to .md rule file to register globally');
   console.log('  [rule-name]     Override rule name (default: filename without .md)');
@@ -207,6 +218,11 @@ function showHelp() {
   console.log('  remove --all    Remove all installed plugins');
   console.log('  list            Show available plugin packs with install status');
   console.log('  status          Show currently installed plugins with data stats');
+  console.log('\nOptions for mcp:');
+  console.log('  list                          List available MCP templates');
+  console.log('  show <name>                   Show template details');
+  console.log('  add <name> [names..] [--target <path>]  Add servers to .mcp.json');
+  console.log('  remove <name>                 Remove a server from .mcp.json');
   console.log('\nOptions for doctor:');
   console.log('  --fix           Auto-repair detected issues');
   console.log('\nOptions for eject:');
@@ -301,6 +317,47 @@ function handleAddRule(args) {
 }
 
 /**
+ * Handle `ai-toolkit inject-hook` -- injects external hooks into settings.json.
+ * @param {string[]} args
+ */
+function handleInjectHook(args) {
+  const hooksFile = args[0];
+  if (!hooksFile) {
+    console.error('Usage: ai-toolkit inject-hook <hooks-file.json> [target-dir]');
+    process.exit(1);
+  }
+  const absHooksFile = path.resolve(CWD, hooksFile);
+  const targetDir = args[1] || process.env.HOME;
+  run(scriptPath('inject_hook_cli.py'), [absHooksFile, targetDir]);
+}
+
+/**
+ * Handle `ai-toolkit remove-hook` -- removes injected hooks by source name.
+ * @param {string[]} args
+ */
+function handleRemoveHook(args) {
+  const sourceName = args[0];
+  if (!sourceName) {
+    console.error('Usage: ai-toolkit remove-hook <hook-source-name> [target-dir]');
+    process.exit(1);
+  }
+  const targetDir = args[1] || process.env.HOME;
+  run(scriptPath('inject_hook_cli.py'), ['--remove', sourceName, targetDir]);
+}
+
+/**
+ * Handle `ai-toolkit mcp` -- delegates to mcp_manager.py with subcommand.
+ * @param {string[]} args
+ */
+function handleMcp(args) {
+  if (args.length === 0) {
+    console.error('Usage: ai-toolkit mcp <list|show|add|remove> [args..]');
+    process.exit(1);
+  }
+  run(scriptPath('mcp_manager.py'), args);
+}
+
+/**
  * Handle `ai-toolkit generate-all` -- runs every generator plus llms-txt.
  * @param {string[]} _args - Unused, kept for signature consistency
  */
@@ -311,15 +368,59 @@ function handleGenerateAll(_args) {
   generateLlmsTxt();
 }
 
+/**
+ * Handle `ai-toolkit status` -- shows installed modules from state.json.
+ * @param {string[]} _args
+ */
+function handleStatus(_args) {
+  run(scriptPath('install.py'), ['--status']);
+}
+
+/**
+ * Handle `ai-toolkit update` -- re-runs install with saved state.
+ * Reads state.json to find previously installed modules and profile,
+ * then re-runs install.py with those flags to perform an incremental update.
+ * @param {string[]} args
+ */
+function handleUpdate(args) {
+  const statePath = path.join(process.env.HOME, '.ai-toolkit', 'state.json');
+  let stateArgs = [];
+
+  if (fs.existsSync(statePath)) {
+    try {
+      const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      const modules = state.installed_modules;
+      const profile = state.profile;
+
+      // If we have recorded modules, pass them to install.py
+      if (Array.isArray(modules) && modules.length > 0) {
+        stateArgs.push('--modules', modules.join(','));
+      } else if (profile) {
+        stateArgs.push('--profile', profile);
+      }
+    } catch (_err) {
+      // State file is corrupt or unreadable -- fall through to plain install
+    }
+  }
+
+  // User-provided args override state-derived args
+  run(scriptPath('install.py'), [...stateArgs, ...args]);
+}
+
 /** @type {Record<string, (args: string[]) => void>} */
 const SPECIAL_HANDLERS = {
+  'status':       handleStatus,
+  'update':       handleUpdate,
   'reset':        handleReset,
   'benchmark':    handleBenchmark,
   'create':       handleCreate,
   'sync':         handleSync,
+  'mcp':          handleMcp,
   'plugin':       (args) => run(scriptPath('plugin.py'), args),
   'remove-rule':  handleRemoveRule,
   'add-rule':     handleAddRule,
+  'inject-hook':  handleInjectHook,
+  'remove-hook':  handleRemoveHook,
   'llms-txt':     (_args) => generateLlmsTxt(),
   'generate-all': handleGenerateAll,
 };

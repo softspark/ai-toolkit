@@ -1,0 +1,15 @@
+{
+  "name": "google-drive",
+  "description": "Google Drive integration for file search, reading, and management",
+  "mcpServers": {
+    "google-drive": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-google-drive"],
+      "env": {
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GOOGLE_CLIENT_SECRET": "${GOOGLE_CLIENT_SECRET}",
+        "GOOGLE_REDIRECT_URI": "${GOOGLE_REDIRECT_URI}"
+      }
+    }
+  }
+}

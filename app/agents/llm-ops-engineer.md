@@ -232,6 +232,6 @@ For large documentation tasks, hand off to `documenter` agent.
 
 ## Limitations
 
-- **RAG retrieval** → Use `rag-engineer`
-- **MCP server** → Use `mcp-server-architect`
+- **RAG retrieval** → Use `ai-engineer`
+- **MCP server** → Use `mcp-specialist`
 - **Security** → Use `security-auditor`

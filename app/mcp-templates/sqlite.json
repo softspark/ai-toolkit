@@ -1,0 +1,10 @@
+{
+  "name": "sqlite",
+  "description": "SQLite database access for queries and schema management",
+  "mcpServers": {
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "${SQLITE_DB_PATH}"]
+    }
+  }
+}

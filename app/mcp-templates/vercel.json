@@ -1,0 +1,13 @@
+{
+  "name": "vercel",
+  "description": "Vercel deployment management, project settings, and environment variables",
+  "mcpServers": {
+    "vercel": {
+      "command": "npx",
+      "args": ["-y", "vercel-mcp-server"],
+      "env": {
+        "VERCEL_TOKEN": "${VERCEL_TOKEN}"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "google-maps",
+  "description": "Google Maps API for geocoding, directions, and place search",
+  "mcpServers": {
+    "google-maps": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-google-maps"],
+      "env": {
+        "GOOGLE_MAPS_API_KEY": "${GOOGLE_MAPS_API_KEY}"
+      }
+    }
+  }
+}

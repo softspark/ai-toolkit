@@ -1,0 +1,14 @@
+{
+  "name": "grafana",
+  "description": "Grafana dashboard queries, alerting, and data source management",
+  "mcpServers": {
+    "grafana": {
+      "command": "npx",
+      "args": ["-y", "grafana-mcp-server"],
+      "env": {
+        "GRAFANA_URL": "${GRAFANA_URL}",
+        "GRAFANA_API_KEY": "${GRAFANA_API_KEY}"
+      }
+    }
+  }
+}

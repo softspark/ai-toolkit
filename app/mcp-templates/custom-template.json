@@ -1,0 +1,13 @@
+{
+  "name": "custom-template",
+  "description": "Empty template — copy and customize for your own MCP server",
+  "mcpServers": {
+    "my-server": {
+      "command": "npx",
+      "args": ["-y", "your-mcp-server-package"],
+      "env": {
+        "API_KEY": "${YOUR_API_KEY}"
+      }
+    }
+  }
+}

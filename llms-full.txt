@@ -1,6 +1,6 @@
 # ai-toolkit
 
-> Professional-grade Claude Code toolkit: 85 skills, 47 agents, machine-enforced constitution, quality hooks.
+> Professional-grade Claude Code toolkit: 90 skills, 44 agents, machine-enforced constitution, quality hooks.
 
 ## Documentation
 
@@ -14,7 +14,7 @@
 - [Best Practices](kb/best-practices/README.md)
 - [How-To Guides](kb/howto/README.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
-- [Agents Catalog (47 agents)](kb/reference/agents-catalog.md)
+- [Agents Catalog (44 agents)](kb/reference/agents-catalog.md)
 - [Anti-Pattern Registry Format](kb/reference/anti-pattern-registry-format.md)
 - [AI Toolkit Architecture](kb/reference/architecture-overview.md)
 - [Config Benchmark](kb/reference/benchmark-config.md)
@@ -22,17 +22,22 @@
 - [Claude Ecosystem Benchmark Snapshot](kb/reference/claude-ecosystem-benchmark-snapshot.md)
 - [Claude Ecosystem Expansion Foundations](kb/reference/claude-ecosystem-expansion-foundations.md)
 - [Commands Catalog (DEPRECATED)](kb/reference/commands-catalog.md)
+- [Plan: Competitive Features — ai-toolkit](kb/reference/competitive-features-implementation.md)
 - [Distribution Model](kb/reference/distribution-model.md)
+- [Extension API Reference](kb/reference/extension-api.md)
 - [Global Install Model](kb/reference/global-install-model.md)
 - [Hierarchical Override Pattern](kb/reference/hierarchical-override-pattern.md)
 - [Hooks Catalog](kb/reference/hooks-catalog.md)
 - [External Integrations](kb/reference/integrations.md)
 - [Language Plugin Packs](kb/reference/language-packs.md)
+- [Language Rules System](kb/reference/language-rules.md)
+- [Manifest-Driven Install System](kb/reference/manifest-install.md)
+- [MCP Server Templates](kb/reference/mcp-templates.md)
 - [Merge-Friendly Install Model](kb/reference/merge-friendly-install-model.md)
 - [Plugin Pack Conventions](kb/reference/plugin-pack-conventions.md)
 - [Quick Wins Implementation Summary](kb/reference/quick-wins-implementation-summary.md)
 - [Skill Templates](kb/reference/skill-templates.md)
-- [Skills Catalog (85 skills)](kb/reference/skills-catalog.md)
+- [Skills Catalog (90 skills)](kb/reference/skills-catalog.md)
 - [Skills Unification Model](kb/reference/skills-unification.md)
 - [Usage Statistics](kb/reference/stats.md)
 - [Config Sync](kb/reference/sync.md)
@@ -47,6 +52,7 @@
 - **architecture-audit**: Explore codebase organically for architectural friction, discover shallow modules, and propose module-deepening refactors as GitHub issue RFCs using parallel sub-agent interface designs. Use when user wants to improve architecture, find shallow modules, deepen modules, or reduce coupling.
 - **architecture-decision**: Loaded when user asks about architecture decisions or architecture note writing
 - **biz-scan**: Scan codebase for business opportunities and KPIs
+- **brand-voice**: Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice.
 - **briefing**: Generate executive daily briefing across all agents
 - **build**: Build the project with auto-detected toolchain
 - **chaos**: Inject controlled faults for resilience testing
@@ -55,6 +61,7 @@
 - **clean-code**: Loaded when user asks about clean code, naming, or code quality
 - **command-creator**: Creates new Claude Code slash commands with frontmatter, workflow guidance, and validation
 - **commit**: Create Conventional Commits with pre-commit validation
+- **council**: 4-perspective decision evaluation for architecture choices. Use when user wants multi-angle analysis, needs to decide between alternatives, or mentions 'council', 'evaluate decision', 'pros cons'.
 - **csharp-patterns**: Loaded when user asks about C# or .NET development patterns
 - **database-patterns**: Loaded when user asks about database schema or query optimization
 - **debug**: Debug errors and trace root causes systematically
@@ -79,6 +86,7 @@
 - **hook-creator**: Creates new Claude Code hooks with guided workflow, strict conventions, and validation
 - **index**: Index codebase into the knowledge base
 - **instinct-review**: Review and manage learned instincts from past sessions
+- **introspect**: Agent self-debugging and recovery. Use when stuck in loops, making repeated errors, or quality degrades. Triggers: introspect, self-debug, stuck, loop, why failing.
 - **java-patterns**: Loaded when user asks about Java development patterns
 - **kotlin-patterns**: Loaded when user asks about Kotlin development patterns
 - **lint**: Lint code with auto-detected tools and fix suggestions
@@ -92,6 +100,7 @@
 - **orchestrate**: Coordinate multiple specialized agents in parallel
 - **panic**: Emergency stabilization via system-governor agent
 - **performance-profiling**: Loaded when user asks about performance profiling or optimization
+- **persona**: Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
 - **plan**: Plan implementation with tasks and success criteria
 - **plan-writing**: Loaded when user asks to write an implementation plan or pre-mortem
 - **plugin-creator**: Creates experimental opt-in Claude Code plugin packs with manifests, conventions, and optional module scaffolding
@@ -111,6 +120,7 @@
 - **rust-patterns**: Loaded when user asks about Rust development patterns
 - **search**: Search the knowledge base with semantic and hybrid modes
 - **security-patterns**: Loaded when user asks about security, OWASP, or auth patterns
+- **skill-audit**: Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions
 - **skill-creator**: Create new skills from templates with guided workflow
 - **subagent-development**: Execute implementation plans using fresh subagents per task with two-stage review: spec compliance first, then code quality. Use when executing plans with independent tasks.
 - **swarm**: Execute tasks via Map-Reduce, Consensus, or Relay swarms
@@ -128,7 +138,7 @@
 
 ## Agents
 
-- **ai-engineer**: AI/ML integration specialist. Use for LLM integration, vector databases, RAG pipelines, embeddings, and AI agent orchestration. Triggers: ai, ml, llm, embedding, vector, rag, agent, openai, anthropic.
+- **ai-engineer**: AI/ML integration specialist. Use for LLM integration, vector databases, RAG pipelines, embeddings, AI agent orchestration, document indexing, semantic search, hybrid retrieval, and answer generation. Triggers: ai, ml, llm, embedding, vector, rag, agent, openai, anthropic, search, retrieval, indexing, chunking, reranking.
 - **backend-specialist**: Expert backend architect for Node.js, Python, PHP, and modern serverless systems. Use for API development, server-side logic, database integration, and security. Triggers: backend, server, api, endpoint, database, auth, fastapi, express, laravel.
 - **business-intelligence**: Opportunity Discovery agent. Scans data models and code to identify missing business metrics, KPIs, and opportunities for value creation.
 - **chaos-monkey**: Resilience testing agent. Use to inject faults, latency, and failures into the system to verify robustness and recovery mechanisms.
@@ -150,8 +160,7 @@
 - **infrastructure-architect**: System design expert. Use for architectural decisions, architecture notes, trade-off analysis, technology selection. Triggers: architecture, design, decision, trade-off, scalability, infrastructure planning.
 - **infrastructure-validator**: Deployment validation expert. Use for deployment verification, health checks, testing, rollback procedures. Triggers: validate, deploy, deployment, health check, smoke test, rollback.
 - **llm-ops-engineer**: LLM operations expert. Use for LLM caching, fallback strategies, cost optimization, observability, and reliability. Triggers: llm, language model, openai, ollama, caching, fallback, token, cost.
-- **mcp-expert**: MCP integration expert. Use for configuring MCP clients, integrations, troubleshooting MCP connections. Triggers: mcp config, mcp integration, mcp connection, claude desktop, mcp client.
-- **mcp-server-architect**: MCP server design and implementation expert. Use for creating MCP servers, JSON-RPC transport, tool definitions, protocol compliance. Triggers: mcp, model context protocol, json-rpc, sse, stdio, mcp server.
+- **mcp-specialist**: MCP server design, implementation, client configuration, and integration troubleshooting. Triggers: mcp, model context protocol, json-rpc, sse, stdio, mcp server, mcp config, mcp integration, mcp connection, claude desktop, mcp client.
 - **mcp-testing-engineer**: MCP protocol testing expert. Use for MCP server testing, protocol compliance, transport validation, integration testing. Triggers: mcp test, protocol compliance, mcp validation, transport testing.
 - **meta-architect**: Self-Optimization agent. Analyzes system performance and mistakes to update agent definitions and instructions. The only agent allowed to modify .claude/agents/*.
 - **ml-engineer**: Machine learning systems specialist. Use for model training, data pipelines, MLOps, and model deployment. Triggers: ml, machine learning, model training, mlops, tensorflow, pytorch, scikit-learn.
@@ -165,15 +174,13 @@
 - **project-planner**: Smart project planning agent. Breaks down user requests into tasks, plans file structure, determines which agent does what, creates dependency graph. Use when starting new projects or planning major features.
 - **prompt-engineer**: LLM prompt design and optimization specialist. Trigger words: prompt, LLM, chain-of-thought, few-shot, system prompt, prompt engineering, token optimization
 - **qa-automation-engineer**: Test automation and QA specialist. Use for E2E testing, API testing, performance testing, and CI/CD test integration. Triggers: e2e, playwright, cypress, selenium, api test, performance test, automation.
-- **rag-engineer**: RAG systems expert. Use for document indexing, semantic search, hybrid retrieval, CRAG, multi-hop reasoning, and answer generation. Triggers: rag, search, retrieval, indexing, embedding, vector, chunking, reranking.
-- **research-synthesizer**: Multi-source research coordination and synthesis specialist. Trigger words: synthesize, aggregate, report, executive summary, gap analysis, conflict resolution, findings, research, investigate, multi-source, cross-reference, research planning
 - **search-specialist**: Information retrieval and search optimization specialist. Trigger words: search, query, semantic search, information retrieval, relevance, ranking, search optimization
 - **security-architect**: Proactive security design expert. Use for Threat Modeling, architecture security reviews, and designing secure systems (AuthN/AuthZ, Crypto).
 - **security-auditor**: Security expert. Use for OWASP Top 10, CVE analysis, security audits, penetration testing, vulnerability assessment, hardening. Triggers: security, owasp, cve, vulnerability, audit, hardening, penetration, pentest, injection test, api security.
 - **seo-specialist**: Search engine optimization specialist. Trigger words: SEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org
 - **system-governor**: The Guardian of the Constitution. Validates all evolutionary changes and enforces immutable rules. Has VETO power.
 - **tech-lead**: Technical authority for code quality, architecture patterns, and stack decisions. Use for code reviews, technological disputes, and standards enforcement.
-- **technical-researcher**: Deep technical investigation specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix
+- **technical-researcher**: Deep technical investigation and multi-source research synthesis specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix, synthesize, aggregate, report, executive summary, gap analysis, findings, multi-source, cross-reference
 - **test-engineer**: Testing expert. Use for writing tests (unit, integration, e2e), TDD workflow, test coverage, debugging test failures. Triggers: test, pytest, unittest, coverage, tdd, testing, mock, fixture.
 
 ---
@@ -531,10 +538,10 @@ tags: [agents, catalog, roles, ai-development]
 version: "2.0.0"
 created: "2026-03-23"
 last_updated: "2026-03-25"
-description: "Complete catalog of 47 specialized agents with roles, models, and use cases."
+description: "Complete catalog of 44 specialized agents with roles, models, and use cases."
 ---
 
-# Agents Catalog (47 agents)
+# Agents Catalog (44 agents)
 
 ## By Category
 
@@ -557,17 +564,16 @@ description: "Complete catalog of 47 specialized agents with roles, models, and 
 | **game-developer** | opus | Unity, Godot, Unreal, Phaser, Three.js |
 | **database-architect** | opus | Schema design, migrations, query optimization, operations |
 
-### AI/ML (7)
+### AI/ML (6)
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **ai-engineer** | opus | LLM integration, vector databases, RAG, agent orchestration |
+| **ai-engineer** | opus | LLM integration, vector databases, RAG pipelines, agent orchestration |
 | **ml-engineer** | opus | Model training, MLOps, TensorFlow, PyTorch |
 | **nlp-engineer** | opus | NLP pipelines, NER, text classification, transformers |
 | **data-scientist** | opus | Statistics, visualization, EDA, hypothesis testing |
 | **data-analyst** | sonnet | SQL, analytics, reporting, dashboards |
 | **prompt-engineer** | opus | Prompt design, chain-of-thought, few-shot, optimization |
-| **rag-engineer** | opus | RAG pipelines, document indexing, retrieval optimization |
 
 ### Quality & Security (6)
 
@@ -591,23 +597,21 @@ description: "Complete catalog of 47 specialized agents with roles, models, and 
 | **performance-optimizer** | opus | Profiling, bottleneck analysis, latency, scaling |
 | **llm-ops-engineer** | opus | LLM caching, fallback, cost optimization, observability |
 
-### Research & Documentation (6)
+### Research & Documentation (5)
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
 | **explorer-agent** | sonnet | Codebase discovery (READ-ONLY, never writes) |
-| **research-synthesizer** | opus | Research coordination, synthesis, report generation |
-| **technical-researcher** | opus | Deep technical investigation, feasibility studies |
+| **technical-researcher** | opus | Deep technical investigation, research synthesis |
 | **search-specialist** | sonnet | Search optimization, relevance ranking |
 | **fact-checker** | sonnet | Claim verification, source validation |
 | **documenter** | sonnet | Documentation, KB management, SOPs, API docs, tutorials |
 
-### MCP (3)
+### MCP (2)
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **mcp-expert** | opus | MCP protocol expertise, client configuration |
-| **mcp-server-architect** | opus | MCP server design, JSON-RPC, tool definitions |
+| **mcp-specialist** | opus | MCP server design, client config, troubleshooting |
 | **mcp-testing-engineer** | sonnet | MCP protocol compliance, transport testing |
 
 ### Management & Evolution (4)
@@ -645,8 +649,8 @@ description: "Complete catalog of 47 specialized agents with roles, models, and 
 | Security | security-auditor | security-architect | code-reviewer |
 | Architecture | infrastructure-architect | devops-implementer | security-auditor |
 | Documentation | documenter | explorer-agent | tech-lead |
-| AI/ML | ai-engineer | ml-engineer | rag-engineer |
-| Research | research-synthesizer | technical-researcher | fact-checker |
+| AI/ML | ai-engineer | ml-engineer | data-scientist |
+| Research | technical-researcher | search-specialist | fact-checker |
 
 ---
 
@@ -885,7 +889,7 @@ service: ai-toolkit
 tags: [architecture, overview, design, structure]
 version: "1.0.0"
 created: "2026-03-23"
-last_updated: "2026-04-02"
+last_updated: "2026-04-07"
 description: "Architecture of ai-toolkit: directory layout, global install model, skill tiers, and integration with projects."
 ---
 
@@ -893,7 +897,7 @@ description: "Architecture of ai-toolkit: directory layout, global install model
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, and Aider). Provides 47 specialized agents, 85 skills (slash commands + knowledge), expanded lifecycle hooks, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
+Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment). Provides 44 specialized agents, 90 skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
 
 ## Design Principles
 
@@ -910,8 +914,8 @@ ai-toolkit/
   bin/
     ai-toolkit.js        # CLI entry point (install, init, add-rule, ...)
   app/                       # All toolkit components
-    agents/                  # 47 agent definitions (.md + YAML frontmatter)
-    skills/                  # 85 skills: task, hybrid, knowledge
+    agents/                  # 44 agent definitions (.md + YAML frontmatter)
+    skills/                  # 90 skills: task, hybrid, knowledge
     rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
     hooks/                   # Hook scripts (copied to ~/.ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
@@ -1045,9 +1049,9 @@ Three tiers determine how to approach a task:
 
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
-| Task | `disable-model-invocation: true` | User via `/skill` only | 27 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 27 |
-| Knowledge | `user-invocable: false` | Claude auto-loads | 31 |
+| Task | `disable-model-invocation: true` | User via `/skill` only | 28 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 30 |
+| Knowledge | `user-invocable: false` | Claude auto-loads | 32 |
 
 ## Multi-Agent Execution
 
@@ -1075,21 +1079,30 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
+21 entries across 12 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|
 | SessionStart | Session start + compact | `session-start.sh` | MANDATORY rules reminder + session context + instincts |
+| SessionStart | Session start | `mcp-health.sh` | Check MCP runtime availability |
+| SessionStart | Session start | `session-context.sh` | Capture environment snapshot |
 | Notification | Claude waiting for input | *(inline)* | macOS desktop notification |
 | PreToolUse | Before Bash | `guard-destructive.sh` | Block destructive commands |
 | PreToolUse | Before file ops (Bash, Read, Edit, Write, MultiEdit, Glob, Grep, NotebookEdit, mcp\_filesystem) | `guard-path.sh` | Block wrong-user path hallucination |
+| PreToolUse | Before Edit/Write/MultiEdit | `guard-config.sh` | Block config file edits without explicit acknowledgment |
+| PreToolUse | Before Bash (git commit) | `commit-quality.sh` | Advisory Conventional Commits format check |
 | UserPromptSubmit | Before user prompt execution | `user-prompt-submit.sh` | Prompt governance reminder |
+| UserPromptSubmit | Before user prompt execution | `track-usage.sh` | Record skill invocations to stats.json |
 | PostToolUse | After edit/write tools | `post-tool-use.sh` | Lightweight validation reminders |
+| PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
 | Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
 | TaskCompleted | Agent Teams: task done | `quality-gate.sh` | Block completion on errors |
 | TeammateIdle | Agent Teams: idle | *(inline)* | Completeness reminder |
 | SubagentStart | Subagent spawn | `subagent-start.sh` | Scope reminder for subagents |
 | SubagentStop | Subagent completion | `subagent-stop.sh` | Handoff checklist for subagents |
-| PreCompact | Before compaction | `pre-compact.sh` | Save context before compaction |
+| PreCompact | Before compaction | `pre-compact.sh` | Save prioritized context: instincts > tasks > git state > decisions |
+| PreCompact | Before compaction | `pre-compact-save.sh` | Timestamped context snapshot to audit trail |
 | SessionEnd | Session end | `session-end.sh` | Persist handoff note for the next session |
 
 Scripts at `~/.ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
@@ -1104,12 +1117,49 @@ Scripts at `~/.ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for 
 | IV Self-Preservation | Constitution is read-only, kill switch via system-governor |
 | V Resource Governance | No destructive commands without confirmation |
 
+## Persona Presets
+
+Optional engineering personas injected via `ai-toolkit install --persona <name>`. Each persona adds role-specific communication style, preferred skills, and code review priorities to CLAUDE.md.
+
+| Persona | Focus |
+|---------|-------|
+| `backend-lead` | System design, scalability, data integrity, API stability |
+| `frontend-lead` | Component architecture, a11y, state management, Core Web Vitals |
+| `devops-eng` | Infrastructure as code, CI/CD, rollback safety, observability |
+| `junior-dev` | Step-by-step explanations, learning resources, small PRs |
+
+Persona files live in `app/personas/*.md` and use the same `inject_rule` mechanism as registered rules.
+
+## Skill Security Auditing
+
+`/skill-audit` scans `app/skills/` and `app/agents/` for security risks:
+- **Frontmatter**: overly permissive `allowed-tools`, knowledge skills with Bash
+- **Scripts**: `eval()`, `exec()`, `os.system()`, `subprocess(shell=True)`, `pickle.loads`
+- **Secrets**: AWS keys, GitHub PATs, private keys, hardcoded passwords
+- **Bash**: `curl | bash`, unquoted variables, `chmod 777`
+
+Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practice). CI-ready with non-zero exit on HIGH findings.
+
 ## Agent Model Tiers
 
 | Model | Purpose | Count |
 |-------|---------|-------|
 | opus | Complex reasoning, code generation, security | 32 |
 | sonnet | Documentation, analysis, pattern-following | 15 |
+
+## Extension Points
+
+### MCP Templates
+`app/plugins/mcp-templates/` contains 25 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
+
+### Language Rules
+`app/rules/` provides 70 rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`.
+
+### Extension API (`inject-hook`)
+`inject_section_cli.py` provides a stable marker-based API for injecting content into `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content.
+
+### Manifest Install (`--modules`, `--auto-detect`)
+`manifest.json` defines all installable components as named modules. Install individual modules with `ai-toolkit install --modules <name>` or enable auto-detection to select language rules based on files found in the project.
 
 ---
 
@@ -1460,12 +1510,694 @@ description: "DEPRECATED: All slash commands are implemented as skills. See skil
 
 All slash commands have been migrated to skills.
 
-See **[Skills Catalog](skills-catalog.md)** for the complete list of 85 skills, including:
-- **27 Task Skills** — formerly standalone commands and creator workflows (e.g., `/commit`, `/test`, `/deploy`, `/hook-creator`, `/plugin-creator`)
-- **27 Hybrid Skills** — slash commands that also provide agent knowledge (e.g., `/review`, `/debug`, `/plan`, `/tdd`, `/write-a-prd`)
-- **31 Knowledge Skills** — domain patterns auto-loaded by agents
+See **[Skills Catalog](skills-catalog.md)** for the complete list of 90 skills, including:
+- **28 Task Skills** — formerly standalone commands and creator workflows (e.g., `/commit`, `/test`, `/deploy`, `/hook-creator`, `/plugin-creator`)
+- **30 Hybrid Skills** — slash commands that also provide agent knowledge (e.g., `/review`, `/debug`, `/plan`, `/tdd`, `/write-a-prd`, `/council`, `/introspect`)
+- **32 Knowledge Skills** — domain patterns auto-loaded by agents (e.g., `brand-voice`, `clean-code`, `testing-patterns`)
 
 Slash command syntax (`/command`) continues to work. The underlying implementation moved from `app/commands/` to `app/skills/`.
+
+---
+
+## kb/reference/competitive-features-implementation.md
+
+---
+title: "Plan: Competitive Features Implementation — Learning System, Language Rules, Hook Matrix, MCP Templates"
+category: reference
+service: ai-toolkit
+tags:
+  - competitive-analysis
+  - continuous-learning
+  - language-rules
+  - hook-matrix
+  - mcp-templates
+  - install-profiles
+  - completed
+doc_type: plan
+status: completed
+created: "2026-04-07"
+last_updated: "2026-04-07"
+completion: "100%"
+description: "Implementation plan for features identified from competitive analysis of everything-claude-code and claude-mem. Focus on learning system, language rules, advanced hooks, MCP templates, and rag-mcp integration. COMPLETED: 8/9 features shipped (1 skipped). See kb/reference/ for permanent documentation."
+---
+
+# Plan: Competitive Features — ai-toolkit
+
+**Status:** :yellow_circle: IN PROGRESS
+**Completion:** 100% (9/9 features)
+**Started:** 2026-04-07
+**Estimated Completion:** 2026-06-15
+**Source:** Competitive analysis of `affaan-m/everything-claude-code` (ECC) + `thedotmack/claude-mem`
+
+---
+
+## 1. Objective
+
+Strengthen ai-toolkit's competitive position by implementing 10 features from competitive analysis while maintaining our advantages (clean architecture, 9 editors, personas, safety constitution).
+
+**Key design principle:** ai-toolkit is a **generic toolkit** — it does NOT know about rag-mcp or any specific consumer. Consumers (like rag-mcp) use ai-toolkit's public API (`inject-rule`, `inject-hook`, `merge-hooks`) to add their own rules and hooks.
+
+**State before plan:** 88 skills, 47 agents, 14 hooks, 9 editor integrations
+**State after plan:** 90 skills, 44 agents, 21 hooks, 70 language rules, 25 MCP templates, extension API
+
+---
+
+## 2. Progress Tracking
+
+| # | Feature | Priority | Status | Est. Time | Actual | Notes |
+|---|---------|----------|--------|-----------|--------|-------|
+| 1.1 | Language-Specific Rules (13 langs) | P0 | :white_check_mark: | 5-7d | 1d | 70 files (13 langs × 5 + 5 common) |
+| 1.2 | Advanced Hook Matrix | P0 | :white_check_mark: | 5-7d | 1d | 6 new hooks + hooks.json |
+| 1.3 | MCP Server Templates (25) | P0 | :white_check_mark: | 2-3d | 1d | 25 templates + mcp_manager.py + CLI |
+| 2.1 | `inject-hook` CLI command | P1 | :white_check_mark: | 3-5d | 1d | inject_hook_cli.py + 17 tests + CLI |
+| 2.2 | Manifest-Driven Install | P1 | :white_check_mark: | 7-10d | 1d | modules, state tracking, auto-detect |
+| 3.1 | Council Skill | P2 | :white_check_mark: | 3-5d | 1d | /council (4-perspective orchestrator) |
+| 3.2 | Brand Voice Skill | P2 | :white_check_mark: | 2-3d | 1d | knowledge skill + anti-trope list |
+| 3.3 | Agent Introspection Skill | P2 | :white_check_mark: | 3-5d | 1d | /introspect (7 failure patterns) |
+| 4.1 | Documentation Site (Starlight/Astro) | P3 | :no_entry: SKIPPED | — | — | Unnecessary — README/CLAUDE.md sufficient |
+
+---
+
+## 3. Dependency Graph
+
+```
+ALL FEATURES ARE INDEPENDENT — no external dependencies
+
+MCP Templates (1.3) ← quick win, start here
+Language Rules (1.1) ← independent
+Hook Matrix (1.2) ← independent
+inject-hook CLI (2.1) ← independent (extends existing inject-rule pattern)
+Manifest Install (2.2) ← independent but complex
+Council Skill (3.1) ← independent
+Brand Voice (3.2) ← independent
+Agent Introspection (3.3) ← independent
+Documentation Site (4.1) ← independent
+```
+
+---
+
+## 4. Detailed Implementation
+
+### Faza 1: Quick Wins + Foundation (tydzień 1-2)
+
+#### 1.1 Language-Specific Rules System
+
+**Source:** ECC — 13 language dirs × 5 files each = 65 rule files
+**What we create:** Skill-based language rules that inject into CLAUDE.md via `--local`
+
+**Current state:** We have `app/skills/` with some language patterns (typescript-patterns, ruby-patterns, etc.)
+**Gap:** No systematic coding-style + testing + security + hooks + patterns per language
+
+**Files to create:**
+
+```
+app/rules/
+├── common/
+│   ├── coding-style.md          # KISS, DRY, YAGNI, immutability
+│   ├── testing.md               # Testing standards
+│   ├── git-workflow.md          # Commit conventions
+│   ├── performance.md           # Performance guidelines
+│   └── security.md              # OWASP, input validation
+├── typescript/
+│   ├── coding-style.md          # TS-specific (strict mode, no any, etc.)
+│   ├── testing.md               # Jest/Vitest patterns
+│   ├── patterns.md              # TS patterns (discriminated unions, etc.)
+│   ├── hooks.md                 # React hooks, lifecycle
+│   └── security.md              # XSS, sanitization
+├── python/
+│   ├── coding-style.md          # PEP 8, type hints, dataclasses
+│   ├── testing.md               # pytest, fixtures, parametrize
+│   ├── patterns.md              # Python patterns
+│   ├── hooks.md                 # Django/FastAPI lifecycle
+│   └── security.md              # SQL injection, SSTI
+├── golang/                      # Same 5-file structure
+├── rust/
+├── java/
+├── kotlin/
+├── swift/
+├── dart/
+├── csharp/
+├── php/
+├── cpp/
+└── ruby/
+```
+
+**Total: 13 languages × 5 files + 5 common = 70 files**
+
+**Integration with install:**
+```bash
+# During ai-toolkit install --local
+# Detect project language from package.json, Cargo.toml, go.mod, etc.
+# Inject relevant language rules into CLAUDE.md
+```
+
+**Files to modify:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/rules/` (70 files) | CREATE | Language-specific rules |
+| `scripts/install_steps/detect_language.py` | CREATE | Auto-detect project language |
+| `scripts/install_steps/inject_rules.py` | EDIT | Inject language rules into CLAUDE.md |
+| `scripts/validate.py` | EDIT | Validate rules format |
+| `tests/test_rules.py` | CREATE | Tests |
+
+**Success Criteria:**
+- [ ] 13 languages × 5 rule files created
+- [ ] `ai-toolkit install --local` auto-detects language and injects rules
+- [ ] Manual override: `ai-toolkit install --local --lang typescript`
+- [ ] validate.py checks rules format
+- [ ] Tests: >=13 (one per language)
+
+---
+
+#### 1.2 Advanced Hook Matrix
+
+**Source:** ECC — 11+ specific hooks with PreToolUse/PostToolUse matrix
+**Current state:** 14 hooks in `app/hooks/`
+**Gap:** Missing specific hooks for config protection, MCP health, governance, continuous learning
+
+**New hooks to add:**
+
+| Hook | Event | Script | Purpose |
+|------|-------|--------|---------|
+| `guard-config.sh` | PreToolUse (Edit/Write) | Bash | Block edits to .eslintrc, .prettierrc, tsconfig unless explicit |
+| `mcp-health.sh` | SessionStart | Bash | Check MCP server health before session |
+| `governance-capture.sh` | PostToolUse | Bash | Log governance events (security, policy) |
+| `observe-session.sh` | PostToolUse | Bash | Send observations to rag-mcp (bridge) |
+| `pre-compact-save.sh` | PreCompact | Bash | Save context state before compaction |
+| `commit-quality.sh` | PreToolUse (Bash) | Bash | Check commit message quality |
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/hooks/guard-config.sh` | CREATE | Config file protection |
+| `app/hooks/mcp-health.sh` | CREATE | MCP server health check |
+| `app/hooks/governance-capture.sh` | CREATE | Governance event logging |
+| `app/hooks/observe-session.sh` | CREATE | Send obs to rag-mcp |
+| `app/hooks/pre-compact-save.sh` | CREATE | Context save before compact |
+| `app/hooks/commit-quality.sh` | CREATE | Commit message quality |
+| `scripts/install_steps/install_hooks.py` | EDIT | Register new hooks |
+| `tests/test_hooks.py` | EDIT | Tests for new hooks |
+
+**Success Criteria:**
+- [ ] 6 new hooks created and registerable
+- [ ] guard-config blocks config edits unless `--force`
+- [ ] mcp-health pings configured MCP servers on session start
+- [ ] All hooks optional (enable/disable in settings.json)
+- [ ] Tests: >=6 (one per hook)
+
+---
+
+#### 1.3 MCP Server Templates
+
+**Source:** ECC — 25 preconfigured MCP servers
+**What we create:** Template configs that users can copy
+
+**File to create:**
+```
+app/mcp-templates/
+├── README.md                    # How to use templates
+├── github.json                  # GitHub MCP server
+├── jira.json                    # Jira MCP server
+├── context7.json                # Context7 docs
+├── filesystem.json              # Filesystem MCP server
+├── sequential-thinking.json     # Sequential thinking
+├── exa-search.json              # Exa web search
+├── supabase.json                # Supabase
+├── postgres.json                # PostgreSQL
+├── redis.json                   # Redis
+├── cloudflare.json              # Cloudflare
+├── vercel.json                  # Vercel
+├── railway.json                 # Railway
+├── docker.json                  # Docker
+├── browser-use.json             # Browser automation
+├── fal-ai.json                  # fal.ai (image/video)
+├── firecrawl.json               # Web scraping
+├── sentry.json                  # Sentry error tracking
+├── linear.json                  # Linear issue tracker
+├── slack.json                   # Slack
+├── notion.json                  # Notion
+├── confluence.json              # Confluence
+├── grafana.json                 # Grafana
+├── datadog.json                 # Datadog
+└── custom-template.json         # Template for custom MCP
+```
+
+**CLI command:**
+```bash
+ai-toolkit mcp add github          # Copy github.json to .mcp.json
+ai-toolkit mcp add github jira     # Add multiple
+ai-toolkit mcp list                 # List available templates
+ai-toolkit mcp show github         # Show config details
+```
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/mcp-templates/` (25 files) | CREATE | MCP configs |
+| `bin/ai-toolkit` | EDIT | Add `mcp` subcommand |
+| `scripts/mcp_manager.py` | CREATE | MCP template manager |
+| `tests/test_mcp_templates.py` | CREATE | Validate JSON schemas |
+
+**Success Criteria:**
+- [ ] 25 MCP template configs created
+- [ ] `ai-toolkit mcp add <name>` merges into .mcp.json
+- [ ] `ai-toolkit mcp list` shows all available
+- [ ] Tests: >=5 (schema validation)
+
+---
+
+### Faza 2: Extension API + Install (tydzień 3-5)
+
+#### 2.1 `inject-hook` CLI Command (Generic Hook Injection)
+
+**Purpose:** Allow ANY external tool to inject hooks into `~/.claude/settings.json` — the same way `inject-rule` works for `~/.claude/CLAUDE.md`. This is the missing piece that enables consumers (rag-mcp, custom tools, CI systems) to register hooks without knowing ai-toolkit internals.
+
+**Current state:**
+- `inject-rule ./my-rules.md` → injects rules into CLAUDE.md between `<!-- TOOLKIT:my-rules START/END -->` markers
+- `merge-hooks.py inject <hooks.json> <settings.json>` → merges hooks but ONLY with `_source: "ai-toolkit"` tag
+- **Gap:** No public CLI for external tools to inject hooks with their OWN `_source` tag
+
+**Architecture (parallels inject-rule):**
+```
+inject-rule ./rag-mcp-rules.md          → CLAUDE.md      (markers: <!-- TOOLKIT:rag-mcp-rules -->)
+inject-hook ./rag-mcp-hooks.json        → settings.json  (tag: "_source": "rag-mcp-hooks")
+remove-rule rag-mcp-rules               → strips from CLAUDE.md
+remove-hook rag-mcp-hooks               → strips from settings.json
+```
+
+**Example: rag-mcp consuming this API:**
+```bash
+# rag-mcp creates a hooks file:
+cat > /tmp/rag-mcp-hooks.json << 'EOF'
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "echo 'apply KB-first research'" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "$HOME/.rag-mcp/hooks/observe-session.sh" }]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "$HOME/.rag-mcp/hooks/inject-instincts.sh" }]
+      }
+    ]
+  }
+}
+EOF
+
+# rag-mcp calls ai-toolkit to inject:
+npx @softspark/ai-toolkit inject-hook /tmp/rag-mcp-hooks.json
+# → all entries tagged with _source: "rag-mcp-hooks" in settings.json
+# → re-running is idempotent (strips old rag-mcp-hooks entries, appends new)
+
+# rag-mcp removes its hooks:
+npx @softspark/ai-toolkit remove-hook rag-mcp-hooks
+```
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `scripts/inject_hook_cli.py` | CREATE | CLI: inject-hook / remove-hook |
+| `scripts/merge-hooks.py` | EDIT | Support custom `_source` tag (not just "ai-toolkit") |
+| `bin/ai-toolkit.js` | EDIT | Register `inject-hook` + `remove-hook` subcommands |
+| `tests/test_inject_hook.bats` | CREATE | Tests |
+| `kb/howto/inject-hook-api.md` | CREATE | Documentation for consumers |
+
+**merge-hooks.py changes:**
+```python
+# Current: always uses SOURCE_TAG = "ai-toolkit"
+# New: accept --source parameter
+SOURCE_TAG = "ai-toolkit"  # default
+
+def cmd_inject(toolkit_path: str, target_path: str, source: str = "") -> None:
+    source_tag = source or derive_source_from_filename(toolkit_path)
+    # ... tag all entries with _source: source_tag
+    # ... strip old entries with same source_tag
+    # ... append new entries
+```
+
+**inject_hook_cli.py:**
+```python
+#!/usr/bin/env python3
+"""Inject external hooks into ~/.claude/settings.json.
+
+Usage:
+  inject_hook_cli.py <hooks-file.json> [target-dir]
+  inject_hook_cli.py --remove <hook-source-name> [target-dir]
+
+The source name is derived from the filename stem (e.g., rag-mcp-hooks.json → "rag-mcp-hooks").
+All entries are tagged with "_source": "<source-name>" for idempotent updates.
+"""
+```
+
+**Consistency table — all ai-toolkit extension commands:**
+
+| Command | Target File | Mechanism | Idempotent |
+|---------|------------|-----------|------------|
+| `inject-rule <file.md>` | `~/.claude/CLAUDE.md` | HTML markers (`<!-- TOOLKIT:name -->`) | Yes |
+| `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers | Yes |
+| `inject-hook <file.json>` | `~/.claude/settings.json` | JSON `_source` tag | Yes |
+| `remove-hook <name>` | `~/.claude/settings.json` | Strip by `_source` | Yes |
+| `add-rule <file.md>` | `~/.ai-toolkit/rules/` | File copy + re-inject all | Yes |
+
+**Success Criteria:**
+- [ ] `inject-hook ./my-hooks.json` merges hooks with auto-derived `_source` tag
+- [ ] `remove-hook my-hooks` strips all entries with that `_source`
+- [ ] Re-running is idempotent (update, not duplicate)
+- [ ] Existing ai-toolkit hooks (`_source: "ai-toolkit"`) are never touched
+- [ ] Tests: >=6 (inject, remove, idempotent, coexistence, malformed input, missing file)
+
+---
+
+#### 2.2 Manifest-Driven Install System
+
+**Source:** ECC — JSON manifests, state tracking, 5 profiles
+**Current state:** Simple profile-based install (minimal/standard/strict)
+**Gap:** No granular module selection, no state tracking, no incremental updates
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `manifest.json` | EDIT | Full module manifest with dependencies |
+| `scripts/install_steps/install_plan.py` | CREATE | Plan what to install |
+| `scripts/install_steps/install_apply.py` | CREATE | Execute install plan |
+| `scripts/install_steps/install_state.py` | CREATE | Track installed modules |
+| `tests/test_manifest_install.py` | CREATE | Tests |
+
+**manifest.json structure:**
+```json
+{
+  "modules": {
+    "core": {
+      "description": "Core skills and hooks",
+      "files": ["app/skills/commit/*", "app/skills/review/*", "app/hooks/*.sh"],
+      "required": true
+    },
+    "agents": {
+      "description": "47 specialized agents",
+      "files": ["app/agents/*.md"],
+      "required": false,
+      "default": true
+    },
+    "rules-common": {
+      "description": "Common coding rules",
+      "files": ["app/rules/common/*.md"],
+      "required": false,
+      "default": true
+    },
+    "rules-typescript": {
+      "description": "TypeScript-specific rules",
+      "files": ["app/rules/typescript/*.md"],
+      "auto_detect": "package.json"
+    },
+    "rules-python": {
+      "description": "Python-specific rules",
+      "files": ["app/rules/python/*.md"],
+      "auto_detect": "requirements.txt|pyproject.toml|setup.py"
+    },
+    "mcp-templates": {
+      "description": "MCP server templates",
+      "files": ["app/mcp-templates/*.json"],
+      "required": false
+    },
+    "rag-mcp-bridge": {
+      "description": "rag-mcp integration hooks",
+      "files": ["app/hooks/observe-session.sh", "scripts/config/rag-mcp-bridge.yaml"],
+      "required": false,
+      "requires": ["core"]
+    }
+  },
+  "profiles": {
+    "minimal": ["core"],
+    "standard": ["core", "agents", "rules-common"],
+    "strict": ["core", "agents", "rules-common", "mcp-templates"],
+    "full": ["*"]
+  }
+}
+```
+
+**State tracking (~/.ai-toolkit/state.json):**
+```json
+{
+  "installed_version": "1.2.1",
+  "installed_modules": ["core", "agents", "rules-common", "rules-typescript"],
+  "installed_at": "2026-04-07T10:00:00Z",
+  "last_updated": "2026-04-07T10:00:00Z",
+  "file_hashes": {
+    "app/hooks/session-start.sh": "abc123..."
+  }
+}
+```
+
+**CLI:**
+```bash
+ai-toolkit install --profile standard          # Profile-based (existing)
+ai-toolkit install --modules core,agents       # Module-based (new)
+ai-toolkit install --auto-detect               # Detect language, install matching rules
+ai-toolkit update                              # Incremental update (only changed files)
+ai-toolkit status                              # Show installed modules
+```
+
+**Success Criteria:**
+- [ ] manifest.json defines all modules with dependencies
+- [ ] install --modules allows granular selection
+- [ ] install --auto-detect detects language from project files
+- [ ] state.json tracks what's installed
+- [ ] update only changes modified files (content hash)
+- [ ] Backward compatible with existing install
+- [ ] Tests: >=10
+
+---
+
+### Faza 3: New Skills (tydzień 6-7)
+
+#### 3.1 Council Skill (/council)
+
+**Source:** ECC — 4-voice decision workflow
+**Type:** Hybrid skill (user-invocable: true)
+
+**File:** `app/skills/council/SKILL.md`
+
+**Skill definition:**
+```yaml
+---
+name: council
+description: "4-perspective decision evaluation for architecture choices"
+user-invocable: true
+agent: orchestrator
+context: fork
+---
+```
+
+**Behavior:**
+1. User invokes `/council "Should we migrate from Redis to Valkey?"`
+2. Spawn 4 sub-agents in parallel:
+   - **Advocate:** Strongest case FOR
+   - **Critic:** Strongest case AGAINST (devil's advocate)
+   - **Pragmatist:** Trade-offs, costs, timeline, team capacity
+   - **User-Proxy:** End-user/customer impact
+3. Synthesize into structured output:
+   - Pros (from Advocate)
+   - Cons (from Critic)
+   - Trade-offs (from Pragmatist)
+   - User Impact (from User-Proxy)
+   - **Recommendation** with confidence level
+
+**Success Criteria:**
+- [ ] `/council` invocable
+- [ ] 4 perspectives generated
+- [ ] Structured output with recommendation
+- [ ] Tests: >=2
+
+---
+
+#### 3.2 Brand Voice Skill (/brand-voice)
+
+**Source:** ECC — canonical voice system
+**Type:** Knowledge skill (user-invocable: false, auto-loaded for writing tasks)
+
+**File:** `app/skills/brand-voice/SKILL.md`
+
+**Content:**
+- Anti-trope list (banned LLM phrases: "dive into", "game-changer", "cutting-edge", etc.)
+- Voice capture template (how to define a project's voice)
+- Consistency checks (before outputting content, verify voice match)
+
+**Success Criteria:**
+- [ ] Skill auto-loads when writing docs/content
+- [ ] Anti-trope list prevents generic LLM rhetoric
+- [ ] Tests: >=2
+
+---
+
+#### 3.3 Agent Introspection Skill (/introspect)
+
+**Source:** ECC — agent-introspection-debugging
+**Type:** Task skill (user-invocable: true)
+
+**File:** `app/skills/introspect/SKILL.md`
+
+**Behavior:**
+1. Capture current failure/stuck state
+2. Classify pattern (loop, wrong approach, missing context, etc.)
+3. Suggest smallest recovery action
+4. Emit structured introspection report
+5. Optionally hand off to verification
+
+**Success Criteria:**
+- [ ] `/introspect` invocable when agent is stuck
+- [ ] Classifies failure pattern
+- [ ] Suggests recovery action
+- [ ] Tests: >=2
+
+---
+
+### Faza 4: Documentation & Marketing (tydzień 8)
+
+#### 4.1 Documentation Site
+
+**Source:** claude-mem (Mintlify, 27 languages)
+**Options:**
+1. **Starlight (Astro)** — free, static, fast (recommended)
+2. **Mintlify** — paid, beautiful, hosted
+3. **Docusaurus** — free, React-based
+
+**Structure:**
+```
+docs/
+├── astro.config.mjs
+├── src/content/docs/
+│   ├── getting-started/
+│   │   ├── installation.md
+│   │   ├── quick-start.md
+│   │   └── first-skill.md
+│   ├── skills/
+│   │   ├── tier-1.md
+│   │   ├── tier-2.md
+│   │   └── tier-3.md
+│   ├── agents/
+│   │   └── catalog.md
+│   ├── hooks/
+│   │   └── lifecycle.md
+│   ├── guides/
+│   │   ├── create-skill.md
+│   │   ├── create-agent.md
+│   │   └── rag-mcp-integration.md
+│   └── reference/
+│       ├── cli.md
+│       └── manifest.md
+```
+
+**Success Criteria:**
+- [ ] Documentation site deployed (GitHub Pages or Vercel)
+- [ ] Covers: installation, skills, agents, hooks, CLI reference
+- [ ] Auto-generated from existing CLAUDE.md/README.md content
+- [ ] Tests: Build passes
+
+---
+
+## 5. Extension API Design (Generic — No Consumer Knowledge)
+
+ai-toolkit provides a **generic extension API**. It does NOT know about any specific consumer. Consumers use the public CLI to register their rules and hooks.
+
+```
+┌──────────────────────────────────────────────────────┐
+│                   ai-toolkit (generic)                │
+│                                                      │
+│  Public Extension API:                               │
+│    inject-rule  <file.md>     → CLAUDE.md            │
+│    remove-rule  <name>        → CLAUDE.md            │
+│    inject-hook  <file.json>   → settings.json  [NEW] │
+│    remove-hook  <name>        → settings.json  [NEW] │
+│    add-rule     <file.md>     → rules/ registry      │
+│    mcp add      <template>    → .mcp.json      [NEW] │
+│                                                      │
+│  Idempotent: markers (rules) / _source tags (hooks)  │
+│  ai-toolkit NEVER calls external services            │
+└──────────────────────────────────────────────────────┘
+                        ▲
+                        │ uses API
+        ┌───────────────┼───────────────┐
+        │               │               │
+   rag-mcp          custom-tool     ci-system
+   (consumer)       (consumer)      (consumer)
+```
+
+**Example: how rag-mcp would consume (handled in rag-mcp repo, NOT here):**
+```bash
+# rag-mcp install script calls:
+npx @softspark/ai-toolkit inject-rule  ./rag-mcp-rules.md      # existing
+npx @softspark/ai-toolkit inject-hook  ./rag-mcp-hooks.json    # NEW
+# → rag-mcp's hooks + rules are registered, ai-toolkit doesn't care what they do
+```
+
+---
+
+## 6. Success Criteria (Overall)
+
+| Metric | Before | Target |
+|--------|--------|--------|
+| Skills | 88 | ~91 (+3 new skills) |
+| Hooks | 14 | 20 (+6) |
+| Language rules | ~8 (pattern skills) | 70 (13 langs × 5 + 5 common) |
+| MCP templates | 0 | 25 |
+| Install granularity | 3 profiles | 3 profiles + module-level |
+| Extension API | inject-rule only | inject-rule + inject-hook + mcp add |
+| Documentation | README only | Published site |
+
+---
+
+## 7. Risks and Mitigation
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| 70 rule files = maintenance burden | Medium | Medium | Auto-generate from ECC (port script), validate.py checks |
+| inject-hook misuse by consumers | Low | Medium | Validate JSON schema, reject malformed hooks |
+| Manifest install breaks existing | Low | High | Backward compatible, existing CLI preserved |
+| Documentation site drift | Medium | Medium | Generate from source (CLAUDE.md → site), CI check |
+| Too many hooks slow session start | Low | Medium | Hooks run async, timeout 5s each |
+
+---
+
+## 8. Pre-Mortem
+
+1. **Language rules become stale** — Mitigation: version in frontmatter, validate.py checks freshness
+2. **inject-hook consumers conflict** — Mitigation: each consumer has unique `_source` tag, never collide
+3. **Manifest install confuses users** — Mitigation: `--profile` still works, manifest is opt-in power feature
+4. **Council skill too slow** — Mitigation: parallel sub-agents, timeout 60s per perspective
+5. **Documentation out of sync** — Mitigation: CI job: generate docs → diff → fail if stale
+
+---
+
+## 9. Next Actions
+
+1. [ ] **Create `app/rules/common/` (5 files)** — Start with common rules
+2. [ ] **Create `app/mcp-templates/` (25 configs)** — Quick win, high impact
+3. [ ] **Create 6 new hooks** — Independent, can parallelize
+4. [ ] Review and approve this plan
+
+---
+
+## 10. Blockers
+
+None — all features are independent of external systems.
+
+---
+
+**Last Updated:** 2026-04-07
 
 ---
 
@@ -1534,6 +2266,186 @@ This model gives:
 - `kb/reference/global-install-model.md`
 - `kb/reference/merge-friendly-install-model.md`
 - `kb/reference/architecture-overview.md`
+
+---
+
+## kb/reference/extension-api.md
+
+---
+title: "Extension API Reference"
+category: reference
+service: ai-toolkit
+tags: [extension-api, inject-rule, inject-hook, mcp-templates, integration]
+version: "1.3.0"
+created: "2026-04-07"
+last_updated: "2026-04-07"
+description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, remove-rule, remove-hook, and mcp template management."
+---
+
+# Extension API Reference
+
+## Overview
+
+ai-toolkit exposes a generic extension API that lets external tools register their own rules and hooks alongside the toolkit's built-in components. The toolkit has no knowledge of any specific consumer — it only provides the injection mechanism. Consumers call the public CLI commands from their own install scripts.
+
+This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP servers, CI systems, custom tools) use the public API to add their own rules and hooks without modifying toolkit internals.
+
+## Commands
+
+| Command | Target File | Mechanism | Idempotent |
+|---------|-------------|-----------|------------|
+| `inject-rule <file.md>` | `~/.claude/CLAUDE.md` | HTML comment markers (`<!-- TOOLKIT:name -->`) | Yes |
+| `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers by block name | Yes |
+| `inject-hook <file.json>` | `~/.claude/settings.json` | JSON `_source` tag per entry | Yes |
+| `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source` | Yes |
+| `add-rule <file.md>` | `~/.ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
+| `mcp add <name...>` | `.mcp.json` | Merge `mcpServers` block from template | Yes |
+
+## inject-rule
+
+Injects a Markdown rules file into `~/.claude/CLAUDE.md` between named HTML comment markers.
+
+```bash
+npx @softspark/ai-toolkit inject-rule ./my-tool-rules.md
+```
+
+**Implementation:** `scripts/inject_rule_cli.py` (delegates to `inject_section_cli.py`).
+
+**Markers written:**
+```html
+<!-- TOOLKIT:my-tool-rules START -->
+... content of my-tool-rules.md ...
+<!-- TOOLKIT:my-tool-rules END -->
+```
+
+The block name is derived from the file stem (`my-tool-rules.md` → `my-tool-rules`). Re-running replaces the existing block — no duplicates. Content outside these markers is never modified.
+
+## remove-rule
+
+Strips a previously injected rule block from `~/.claude/CLAUDE.md`.
+
+```bash
+npx @softspark/ai-toolkit remove-rule my-tool-rules
+```
+
+The argument is the block name (file stem used during `inject-rule`). If the block is not present, the command exits 0 silently.
+
+## inject-hook
+
+Injects hook entries from a JSON file into `~/.claude/settings.json`. Every injected entry is tagged with `"_source": "<source-name>"` where the source name is derived from the filename stem.
+
+```bash
+npx @softspark/ai-toolkit inject-hook ./my-tool-hooks.json
+```
+
+**Implementation:** `scripts/inject_hook_cli.py`.
+
+**Input format:**
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "$HOME/.my-tool/hooks/on-start.sh" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "$HOME/.my-tool/hooks/on-edit.sh" }]
+      }
+    ]
+  }
+}
+```
+
+**Source name derivation:** `my-tool-hooks.json` → source name `"my-tool-hooks"`. All entries are tagged `"_source": "my-tool-hooks"` in settings.json.
+
+**Idempotency:** Re-running strips all existing entries with the same source name, then appends the new ones. No duplicates accumulate.
+
+**Safety:** Entries tagged `"_source": "ai-toolkit"` are never modified or removed by this command. External tools cannot affect the toolkit's own hooks.
+
+## remove-hook
+
+Strips all hook entries from `~/.claude/settings.json` that carry a given `_source` tag.
+
+```bash
+npx @softspark/ai-toolkit remove-hook my-tool-hooks
+```
+
+The argument is the source name (file stem used during `inject-hook`). If no entries with that source are present, the command exits 0 silently.
+
+## mcp add
+
+Merges one or more MCP server templates from `app/mcp-templates/` into the project's `.mcp.json`.
+
+```bash
+ai-toolkit mcp add github                # add a single template
+ai-toolkit mcp add github postgres slack  # add multiple at once
+ai-toolkit mcp list                       # list all available templates
+ai-toolkit mcp show github                # print a template's JSON
+ai-toolkit mcp remove github             # remove an entry from .mcp.json
+```
+
+**Implementation:** `scripts/mcp_manager.py`.
+
+The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist, it is created. If the server name already exists, the entry is overwritten. See [mcp-templates.md](mcp-templates.md) for the full list of available templates.
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────┐
+│                   ai-toolkit (generic)               │
+│                                                      │
+│  Public Extension API:                               │
+│    inject-rule  <file.md>     → CLAUDE.md            │
+│    remove-rule  <name>        → CLAUDE.md            │
+│    inject-hook  <file.json>   → settings.json        │
+│    remove-hook  <name>        → settings.json        │
+│    add-rule     <file.md>     → rules/ registry      │
+│    mcp add      <template>    → .mcp.json            │
+│                                                      │
+│  Idempotent: markers (rules) / _source tags (hooks)  │
+│  ai-toolkit NEVER calls external services            │
+└──────────────────────────────────────────────────────┘
+                        ▲
+                        │ uses API
+        ┌───────────────┼───────────────┐
+        │               │               │
+   rag-mcp          custom-tool     ci-system
+   (consumer)       (consumer)      (consumer)
+```
+
+## Example: Registering Rules and Hooks from an External Tool
+
+An external tool's install script would call:
+
+```bash
+# Register rules into CLAUDE.md
+npx @softspark/ai-toolkit inject-rule ./rules/my-tool-rules.md
+
+# Register hooks into settings.json
+npx @softspark/ai-toolkit inject-hook ./hooks/my-tool-hooks.json
+
+# Add an MCP server template
+npx @softspark/ai-toolkit mcp add github
+```
+
+To uninstall:
+
+```bash
+npx @softspark/ai-toolkit remove-rule my-tool-rules
+npx @softspark/ai-toolkit remove-hook my-tool-hooks
+```
+
+All operations are idempotent — safe to run on every install or update.
+
+## Related Documentation
+
+- [PATH: kb/reference/hooks-catalog.md] — built-in hooks reference
+- [PATH: kb/reference/mcp-templates.md] — available MCP server templates
+- [PATH: kb/reference/architecture-overview.md] — overall install model
 
 ---
 
@@ -1810,9 +2722,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-27"
-last_updated: "2026-04-02"
+last_updated: "2026-04-07"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -1820,7 +2732,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 15 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.ai-toolkit/hooks/`.
+ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.ai-toolkit/hooks/`.
 
 ## Installation
 
@@ -2006,10 +2918,12 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.ai-toolkit/hooks/pre-compact.sh` |
 | Fires | Before context compaction |
 
-**Actions:**
-1. Injects reminder to re-read CLAUDE.md files after compaction
-2. Preserves session context from `.claude/session-context.md` (if exists)
-3. Preserves active instincts from `.claude/instincts/*.md` (if any)
+**Actions (prioritized — higher priority items survive tighter token budgets):**
+1. **Mandatory reload reminder** — always emitted, instructs Claude to re-read CLAUDE.md and active tasks
+2. **Active instincts** — lists each instinct with confidence score and pattern name from `.claude/instincts/*.md`
+3. **Session context** — preserves task state from `.claude/session-context.md` (if exists)
+4. **Git working state** — branch name, uncommitted change count, last commit (if inside a git repo)
+5. **Key decisions** — last 10 lines from `.claude/decisions.md` (if exists)
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -2036,6 +2950,76 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 **Action:** Reminds teammate to verify: files modified, tests written, docs updated.
 
+---
+
+## New Hooks (v1.1.0)
+
+### PreToolUse (config guard) — `guard-config.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PreToolUse` |
+| Matcher | `Edit\|Write\|MultiEdit` |
+| Script | `~/.ai-toolkit/hooks/guard-config.sh` |
+| Fires | Before any file write/edit operation |
+
+**Action:** Blocks (exit 2) edits to linter and formatter config files — `.eslintrc`, `.eslintrc.*`, `eslint.config.*`, `.prettierrc`, `.prettierrc.*`, `prettier.config.*`, `tsconfig.json`, `tsconfig.*.json` — unless the request contains an explicit acknowledgment phrase (e.g. "intentionally editing config"). Returns a human-readable explanation to Claude so it can ask the user for confirmation before retrying.
+
+### SessionStart — `mcp-health.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `SessionStart` |
+| Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/mcp-health.sh` |
+| Fires | Session start |
+
+**Action:** Non-blocking (always exits 0). Reads MCP server definitions from `~/.claude/settings.json` and any local `.mcp.json`. For each configured server, checks whether the required runtime command (`npx`, `uvx`, `docker`, etc.) is available in `$PATH`. Emits warnings for any missing runtimes, including install hints (e.g. "npm install -g npx"). Helps surface MCP misconfiguration early without interrupting the session.
+
+### PostToolUse (governance) — `governance-capture.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PostToolUse` |
+| Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/governance-capture.sh` |
+| Fires | After any tool use |
+
+**Action:** Non-blocking (always exits 0). Logs security-sensitive operations (Bash commands, file writes to sensitive paths, large writes) to `~/.ai-toolkit/governance.log` with ISO timestamp, session ID, tool name, and a content excerpt. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### PreCompact — `pre-compact-save.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PreCompact` |
+| Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/pre-compact-save.sh` |
+| Fires | Before context compaction |
+
+**Action:** Saves a timestamped context snapshot to `~/.ai-toolkit/compactions/YYYY-MM-DD_HH-MM-SS.txt`. Captures session ID, working directory, git branch and status, and environment metadata. Provides an audit trail of what was in context at each compaction point. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### PreToolUse (commit quality) — `commit-quality.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PreToolUse` |
+| Matcher | `Bash` |
+| Script | `~/.ai-toolkit/hooks/commit-quality.sh` |
+| Fires | Before any Bash command |
+
+**Action:** Non-blocking (always exits 0). Inspects Bash commands containing `git commit`. Extracts the commit message from the `-m` flag and checks it against Conventional Commits format (`type: description`, where type is one of feat/fix/docs/refactor/test/chore/ci/perf/style/revert). Emits an advisory warning if the message does not match — the commit is not blocked, only nudged. Commands without `git commit` or without a `-m` message (e.g. interactive commits) are ignored.
+
+### SessionStart — `session-context.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `SessionStart` |
+| Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/session-context.sh` |
+| Fires | Session start |
+
+**Action:** Captures an environment snapshot to `~/.ai-toolkit/sessions/current-context.json`. Records working directory, git branch, git status summary, Node.js version, Python version, and timestamp. Used by other hooks and tools to access session metadata without re-running discovery commands. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
 ## Runtime Profiles
 
 Set in `.claude/settings.local.json`:
@@ -2058,10 +3042,14 @@ Set in `.claude/settings.local.json`:
 └── hooks/          # Hook scripts (copied on install)
     ├── _profile-check.sh    # Shared: profile skip logic (sourced by hooks)
     ├── session-start.sh
+    ├── session-context.sh   # NEW: capture session env snapshot
     ├── guard-destructive.sh
     ├── guard-path.sh
+    ├── guard-config.sh      # NEW: block config file edits
+    ├── mcp-health.sh        # NEW: check MCP runtime availability
     ├── user-prompt-submit.sh
     ├── post-tool-use.sh
+    ├── governance-capture.sh # NEW: log security-sensitive operations
     ├── quality-check.sh
     ├── quality-gate.sh
     ├── save-session.sh
@@ -2069,22 +3057,24 @@ Set in `.claude/settings.local.json`:
     ├── subagent-stop.sh
     ├── track-usage.sh
     ├── pre-compact.sh
+    ├── pre-compact-save.sh  # NEW: timestamped context snapshot
+    ├── commit-quality.sh    # NEW: advisory commit message check
     └── session-end.sh
 
 ~/.claude/settings.json
 └── hooks:          # Hook definitions referencing ~/.ai-toolkit/hooks/
-    ├── SessionStart → session-start.sh
-    ├── Notification → osascript (inline)
-    ├── PreToolUse   → guard-destructive.sh, guard-path.sh
+    ├── SessionStart     → session-start.sh, mcp-health.sh, session-context.sh
+    ├── Notification     → osascript (inline)
+    ├── PreToolUse       → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh
     ├── UserPromptSubmit → user-prompt-submit.sh, track-usage.sh
-    ├── PostToolUse  → post-tool-use.sh
-    ├── Stop         → quality-check.sh, save-session.sh
-    ├── TaskCompleted → quality-gate.sh
-    ├── TeammateIdle → echo (inline)
-    ├── SubagentStart → subagent-start.sh
-    ├── SubagentStop  → subagent-stop.sh
-    ├── PreCompact    → pre-compact.sh
-    └── SessionEnd    → session-end.sh
+    ├── PostToolUse      → post-tool-use.sh, governance-capture.sh
+    ├── Stop             → quality-check.sh, save-session.sh
+    ├── TaskCompleted    → quality-gate.sh
+    ├── TeammateIdle     → echo (inline)
+    ├── SubagentStart    → subagent-start.sh
+    ├── SubagentStop     → subagent-stop.sh
+    ├── PreCompact       → pre-compact.sh, pre-compact-save.sh
+    └── SessionEnd       → session-end.sh
 ```
 
 **Key design decisions:**
@@ -2261,6 +3251,463 @@ File an issue with the `language-pack` label. Include:
 - Language name
 - Key topics to cover
 - Popular frameworks/libraries to include
+
+---
+
+## kb/reference/language-rules.md
+
+---
+title: "Language Rules System"
+category: reference
+service: ai-toolkit
+tags: [rules, languages, coding-style, testing, patterns, security]
+version: "1.0.0"
+created: "2026-04-07"
+last_updated: "2026-04-07"
+description: "Reference for the language-specific rules system: 13 languages, 5 categories per language, auto-detection."
+---
+
+# Language Rules System
+
+## Overview
+
+ai-toolkit ships 70 language-specific rule files covering 13 programming languages plus a common set. Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
+
+Rules are distinct from skills: rules are injected as static text into `CLAUDE.md` and are always visible to Claude, whereas skills are loaded contextually by agents.
+
+## File Structure
+
+```
+app/rules/
+├── common/
+│   ├── coding-style.md     # KISS, DRY, YAGNI, immutability
+│   ├── testing.md          # Universal testing standards
+│   ├── git-workflow.md     # Commit conventions
+│   ├── performance.md      # Performance guidelines
+│   └── security.md         # OWASP, input validation
+├── typescript/
+│   ├── coding-style.md     # Strict mode, no-any, naming
+│   ├── testing.md          # Vitest/Jest patterns
+│   ├── patterns.md         # Discriminated unions, utility types
+│   ├── frameworks.md       # React hooks, Next.js, lifecycle
+│   └── security.md         # XSS prevention, sanitization
+├── python/
+│   ├── coding-style.md     # PEP 8, type hints, dataclasses
+│   ├── testing.md          # pytest, fixtures, parametrize
+│   ├── patterns.md         # Python idioms, context managers
+│   ├── frameworks.md       # FastAPI/Django lifecycle, SQLAlchemy
+│   └── security.md         # SQL injection, SSTI prevention
+├── golang/           # same 5-file structure
+├── rust/
+├── java/
+├── kotlin/
+├── swift/
+├── dart/
+├── csharp/
+├── php/
+├── cpp/
+└── ruby/
+```
+
+**Total: 13 languages × 5 files + 5 common = 70 rule files**
+
+## Supported Languages
+
+| Language | Directory | Auto-detect Files |
+|----------|-----------|------------------|
+| Common | `rules/common/` | always included |
+| TypeScript | `rules/typescript/` | `package.json`, `tsconfig.json` |
+| Python | `rules/python/` | `requirements.txt`, `pyproject.toml`, `setup.py`, `Pipfile` |
+| Go | `rules/golang/` | `go.mod` |
+| Rust | `rules/rust/` | `Cargo.toml` |
+| Java | `rules/java/` | `pom.xml`, `build.gradle`, `build.gradle.kts` |
+| Kotlin | `rules/kotlin/` | `build.gradle.kts` |
+| Swift | `rules/swift/` | `Package.swift`, `*.xcodeproj` |
+| Dart | `rules/dart/` | `pubspec.yaml` |
+| C# | `rules/csharp/` | `*.csproj`, `*.sln` |
+| PHP | `rules/php/` | `composer.json` |
+| C++ | `rules/cpp/` | `CMakeLists.txt`, `Makefile`, `*.cpp` |
+| Ruby | `rules/ruby/` | `Gemfile`, `*.gemspec` |
+
+## Rule Categories
+
+| Category | Filename | Content |
+|----------|----------|---------|
+| `coding-style` | `coding-style.md` | Naming, formatting, idiomatic constructs, linter config |
+| `testing` | `testing.md` | Test framework usage, fixture patterns, coverage targets |
+| `patterns` | `patterns.md` | Language-specific design patterns and idioms |
+| `frameworks` | `frameworks.md` | Recommended framework conventions and lifecycle hooks |
+| `security` | `security.md` | Common language-specific vulnerabilities and mitigations |
+
+The `common/` directory uses the same structure except `frameworks.md` is replaced by `git-workflow.md` and `performance.md`.
+
+## Auto-Detection
+
+When `--auto-detect` is passed, `scripts/install_steps/detect_language.py` scans the current directory for known marker files and selects the matching language module:
+
+```bash
+ai-toolkit install --local --auto-detect
+```
+
+Detection logic (first match wins when multiple markers are present):
+1. `package.json` or `tsconfig.json` → TypeScript
+2. `go.mod` → Go
+3. `Cargo.toml` → Rust
+4. `pubspec.yaml` → Dart
+5. `composer.json` → PHP
+6. `Gemfile` → Ruby
+7. `requirements.txt`, `pyproject.toml`, `setup.py`, or `Pipfile` → Python
+8. `pom.xml` or `build.gradle` → Java
+9. `build.gradle.kts` → Kotlin
+10. `Package.swift` → Swift
+11. `*.csproj` or `*.sln` → C#
+12. `CMakeLists.txt` or `Makefile` → C++
+
+Common rules are always injected regardless of detected language.
+
+## Installation
+
+```bash
+# Auto-detect language from project files
+ai-toolkit install --local --auto-detect
+
+# Explicitly select a language
+ai-toolkit install --local --lang typescript
+
+# Install without language rules
+ai-toolkit install --local
+```
+
+Language rules are injected into the project `CLAUDE.md` between named markers:
+
+```
+<!-- TOOLKIT:rules-typescript START -->
+... TypeScript rules content ...
+<!-- TOOLKIT:rules-typescript END -->
+```
+
+Re-running `install --local` is idempotent — existing blocks are replaced, not duplicated.
+
+## Manifest Module Names
+
+Language rules are tracked as modules in `manifest.json`:
+
+| Module | Description |
+|--------|-------------|
+| `rules-common` | Common coding rules (5 files), included in `standard` profile |
+| `rules-typescript` | TypeScript-specific rules |
+| `rules-python` | Python-specific rules |
+| `rules-golang` | Go-specific rules |
+| `rules-rust` | Rust-specific rules |
+| `rules-java` | Java-specific rules |
+| `rules-kotlin` | Kotlin-specific rules |
+| `rules-swift` | Swift-specific rules |
+| `rules-dart` | Dart/Flutter-specific rules |
+| `rules-csharp` | C#/.NET-specific rules |
+| `rules-php` | PHP-specific rules |
+| `rules-cpp` | C++-specific rules |
+| `rules-ruby` | Ruby-specific rules |
+
+## Rules vs Skills
+
+| | Rules | Skills |
+|---|-------|--------|
+| Location | `app/rules/` | `app/skills/` |
+| Delivery | Injected into `CLAUDE.md` text | Loaded from `~/.claude/skills/` |
+| Visibility | Always visible in context | Loaded contextually by agents |
+| Scope | Per-language static guidance | Domain-specific agent behavior |
+| Install | `--local` only | Global install |
+
+## Related Documentation
+
+- [PATH: kb/reference/manifest-install.md] — module-level install granularity
+- [PATH: kb/reference/extension-api.md] — injecting rules from external tools
+- [PATH: kb/reference/architecture-overview.md] — overall install model
+
+---
+
+## kb/reference/manifest-install.md
+
+---
+title: "Manifest-Driven Install System"
+category: reference
+service: ai-toolkit
+tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
+version: "1.0.0"
+created: "2026-04-07"
+last_updated: "2026-04-07"
+description: "Reference for the manifest-driven install system: 17 modules, 4 profiles, auto-detection, and state tracking in ~/.ai-toolkit/state.json."
+---
+
+# Manifest-Driven Install System
+
+## Overview
+
+ai-toolkit's install system supports module-level granularity on top of the existing profile-based install. Instead of choosing only between minimal/standard/strict, you can select individual modules (specific language rules, MCP templates, etc.) or enable auto-detection of the project language.
+
+All existing `--profile` behavior is preserved and unchanged. The manifest system is an additive opt-in layer.
+
+## Modules
+
+Modules are defined in `manifest.json` at the repository root. There are 17 modules:
+
+| Module | Description | In Profile |
+|--------|-------------|-----------|
+| `core` | Core hooks and essential skills | minimal, standard, strict, full |
+| `agents` | 47 specialized agents | standard, strict, full |
+| `skills` | 90 skills (task, hybrid, knowledge) | standard, strict, full |
+| `rules-common` | Common coding rules (5 files) | standard, strict, full |
+| `rules-typescript` | TypeScript-specific rules (5 files) | auto-detect |
+| `rules-python` | Python-specific rules (5 files) | auto-detect |
+| `rules-golang` | Go-specific rules (5 files) | auto-detect |
+| `rules-rust` | Rust-specific rules (5 files) | auto-detect |
+| `rules-java` | Java-specific rules (5 files) | auto-detect |
+| `rules-kotlin` | Kotlin-specific rules (5 files) | auto-detect |
+| `rules-swift` | Swift-specific rules (5 files) | auto-detect |
+| `rules-dart` | Dart/Flutter-specific rules (5 files) | auto-detect |
+| `rules-csharp` | C#/.NET-specific rules (5 files) | auto-detect |
+| `rules-php` | PHP-specific rules (5 files) | auto-detect |
+| `rules-cpp` | C++-specific rules (5 files) | auto-detect |
+| `rules-ruby` | Ruby-specific rules (5 files) | auto-detect |
+| `mcp-templates` | 25 MCP server config templates | strict, full |
+
+## Profiles
+
+Profiles are predefined module sets. They map directly to `--profile` values:
+
+| Profile | Modules |
+|---------|---------|
+| `minimal` | `core` |
+| `standard` | `core`, `agents`, `skills`, `rules-common` |
+| `strict` | `core`, `agents`, `skills`, `rules-common`, `mcp-templates` |
+| `full` | All modules (same as strict currently; language rules added via `--auto-detect`) |
+
+## CLI
+
+```bash
+# Profile-based install (existing behavior, unchanged)
+ai-toolkit install --profile standard
+
+# Module-based install (new)
+ai-toolkit install --modules core,agents,rules-typescript
+
+# Auto-detect project language and install matching rules
+ai-toolkit install --local --auto-detect
+
+# Show currently installed modules and their state
+ai-toolkit status
+
+# Incremental update (only re-applies modules with changed content)
+ai-toolkit update
+```
+
+### --modules
+
+Accepts a comma-separated list of module names. Can be combined with a profile:
+
+```bash
+# Start from standard profile, also add TypeScript rules
+ai-toolkit install --profile standard --modules rules-typescript
+```
+
+### --auto-detect
+
+Scans the current working directory for marker files and selects the matching language module. Implemented in `scripts/install_steps/detect_language.py`.
+
+Detection markers per module:
+
+| Module | Detected when these files exist |
+|--------|--------------------------------|
+| `rules-typescript` | `package.json` or `tsconfig.json` |
+| `rules-python` | `requirements.txt`, `pyproject.toml`, `setup.py`, or `Pipfile` |
+| `rules-golang` | `go.mod` |
+| `rules-rust` | `Cargo.toml` |
+| `rules-java` | `pom.xml` or `build.gradle` |
+| `rules-kotlin` | `build.gradle.kts` |
+| `rules-swift` | `Package.swift` |
+| `rules-dart` | `pubspec.yaml` |
+| `rules-csharp` | `*.csproj` or `*.sln` |
+| `rules-php` | `composer.json` |
+| `rules-cpp` | `CMakeLists.txt` or `Makefile` |
+| `rules-ruby` | `Gemfile` |
+
+### status
+
+Lists all currently installed modules with version and install timestamp:
+
+```bash
+ai-toolkit status
+# Installed modules (from ~/.ai-toolkit/state.json):
+#   core            v1.3.0   installed 2026-04-07T10:00:00Z
+#   agents          v1.3.0   installed 2026-04-07T10:00:00Z
+#   skills          v1.3.0   installed 2026-04-07T10:00:00Z
+#   rules-common    v1.3.0   installed 2026-04-07T10:00:00Z
+#   rules-typescript v1.3.0  installed 2026-04-07T10:00:00Z
+```
+
+### update
+
+Re-applies installed modules, skipping files whose content hash has not changed since last install. Implemented in `scripts/install_steps/install_state.py`.
+
+## State Tracking
+
+Installed module state is persisted to `~/.ai-toolkit/state.json`:
+
+```json
+{
+  "installed_version": "1.3.0",
+  "installed_modules": ["core", "agents", "skills", "rules-common", "rules-typescript"],
+  "installed_at": "2026-04-07T10:00:00Z",
+  "last_updated": "2026-04-07T10:00:00Z",
+  "file_hashes": {
+    "app/hooks/session-start.sh": "abc123..."
+  }
+}
+```
+
+- `installed_modules` — used by `update` to know which modules to re-apply
+- `file_hashes` — used to skip unchanged files during `update`
+- The file is written after every successful install or update
+
+## Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `manifest.json` | Module and profile definitions |
+| `scripts/install_steps/detect_language.py` | Auto-detect project language from marker files |
+| `scripts/install_steps/install_state.py` | Read/write `~/.ai-toolkit/state.json` |
+
+## Backward Compatibility
+
+Existing `--profile` usage works identically. The manifest system does not change what gets installed when you use `--profile minimal/standard/strict`. It only adds:
+
+1. `--modules` for granular selection
+2. `--auto-detect` for language rules
+3. `state.json` tracking for incremental updates
+4. `status` command to inspect installed state
+
+No existing install scripts or CI configurations need changes.
+
+## Related Documentation
+
+- [PATH: kb/reference/language-rules.md] — language rules structure and auto-detection detail
+- [PATH: kb/reference/mcp-templates.md] — MCP server templates (the `mcp-templates` module)
+- [PATH: kb/reference/architecture-overview.md] — overall install model
+
+---
+
+## kb/reference/mcp-templates.md
+
+---
+title: "MCP Server Templates"
+category: reference
+service: ai-toolkit
+tags: [mcp, templates, servers, configuration]
+version: "1.0.0"
+created: "2026-04-07"
+last_updated: "2026-04-07"
+description: "Reference for 25 MCP server configuration templates: GitHub, PostgreSQL, Slack, Sentry, and more."
+---
+
+# MCP Server Templates
+
+## Overview
+
+ai-toolkit ships 25 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the `mcpServers` block for a specific service. Templates are merged into the project's `.mcp.json` via the `ai-toolkit mcp` CLI subcommand.
+
+## CLI
+
+```bash
+ai-toolkit mcp list               # List all available templates
+ai-toolkit mcp show <name>        # Print a template's JSON config
+ai-toolkit mcp add <name>         # Merge a template into .mcp.json
+ai-toolkit mcp add <n1> <n2>      # Add multiple templates at once
+ai-toolkit mcp remove <name>      # Remove a server entry from .mcp.json
+```
+
+**Implementation:** `scripts/mcp_manager.py`
+
+The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist it is created. If the server name already exists in `.mcp.json`, the entry is overwritten with the template version.
+
+## Template List
+
+| Name | Description | Required Env Vars |
+|------|-------------|-------------------|
+| `brave-search` | Web and local search powered by Brave Search API | `BRAVE_API_KEY` |
+| `cloudflare` | Cloudflare Workers, KV, D1, R2, and DNS management | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+| `context7` | Up-to-date library documentation lookup via Context7 | — |
+| `custom-template` | Empty template for building a custom MCP server | `API_KEY` (placeholder) |
+| `datadog` | Datadog monitoring: metrics, logs, traces, dashboard queries | `DD_API_KEY`, `DD_APP_KEY`, `DD_SITE` |
+| `docker` | Docker container and image management, logs, compose operations | — |
+| `fetch` | HTTP fetch for web pages and API responses as markdown or raw content | — |
+| `filesystem` | Local filesystem access for reading, writing, and searching files | — |
+| `git` | Git repository inspection: diffs, logs, branches | — |
+| `github` | GitHub API: issues, PRs, repos, code search | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| `google-drive` | Google Drive file search, reading, and management | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` |
+| `google-maps` | Google Maps geocoding, directions, place search | `GOOGLE_MAPS_API_KEY` |
+| `grafana` | Grafana dashboard queries, alerting, and data source management | `GRAFANA_URL`, `GRAFANA_API_KEY` |
+| `linear` | Linear issue tracker: issues, projects, team workflows | `LINEAR_API_KEY` |
+| `memory` | Persistent memory store using a local knowledge graph | — |
+| `notion` | Notion workspace: pages, databases, content management | `NOTION_API_KEY` |
+| `postgres` | PostgreSQL database access, schema inspection, analysis | — |
+| `puppeteer` | Browser automation: screenshots, navigation, web scraping | — |
+| `redis` | Redis cache inspection, data management, and monitoring | `REDIS_URL` |
+| `sentry` | Sentry error tracking: issue search, event details, alerting | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` |
+| `sequential-thinking` | Step-by-step reasoning and problem decomposition | — |
+| `slack` | Slack workspace: channels, messages, users | `SLACK_BOT_TOKEN`, `SLACK_TEAM_ID` |
+| `sqlite` | SQLite database access, queries, schema management | — |
+| `supabase` | Supabase project management, database queries, edge functions | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+| `vercel` | Vercel deployment management, project settings, environment variables | `VERCEL_TOKEN` |
+
+## Template Format
+
+Each template is a JSON file with the following structure:
+
+```json
+{
+  "name": "example",
+  "description": "Human-readable description of what this server provides",
+  "mcpServers": {
+    "example": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-example"],
+      "env": {
+        "EXAMPLE_API_KEY": "${EXAMPLE_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+- `name` — identifier used with `mcp add <name>`
+- `description` — shown by `mcp list` and `mcp show`
+- `mcpServers` — the block merged verbatim into `.mcp.json`
+- `env` values use `${VAR_NAME}` placeholders that must be set in the shell environment or `.env` file before Claude Code starts
+
+## Example: Adding GitHub and PostgreSQL
+
+```bash
+# Add templates
+ai-toolkit mcp add github postgres
+
+# Set required env vars (e.g., in .env or shell profile)
+export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_...
+
+# Resulting .mcp.json contains both mcpServers entries
+```
+
+## Contributing a New Template
+
+1. Create `app/mcp-templates/<name>.json` following the format above.
+2. Use `${ENV_VAR}` placeholders for secrets — never hardcode values.
+3. Keep the `name` field identical to the filename stem.
+4. Run `python3 scripts/validate.py` to verify the file is valid JSON.
+5. Add an entry to this document's template list table.
+
+## Related Documentation
+
+- [PATH: kb/reference/extension-api.md] — `mcp add` as part of the extension API
+- [PATH: kb/reference/architecture-overview.md] — overall install model
 
 ---
 
@@ -2620,13 +4067,13 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.0.0"
+version: "1.3.0"
 created: "2026-03-23"
-last_updated: "2026-04-01"
-description: "Complete catalog of 85 skills: 27 task, 27 hybrid, 31 knowledge. Includes effort levels, skill-scoped hooks, executable scripts, and creator workflows."
+last_updated: "2026-04-07"
+description: "Complete catalog of 90 skills: 28 task, 30 hybrid, 32 knowledge. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
-# Skills Catalog (85 skills)
+# Skills Catalog (90 skills)
 
 All functionality is unified under skills. Task and hybrid skills are user-invocable as slash commands. Knowledge skills provide domain patterns auto-loaded by agents.
 
@@ -2638,7 +4085,7 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (27)
+## Task Skills (28)
 
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
@@ -2671,8 +4118,9 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **plugin-creator** | `/plugin-creator` | high | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
 | **health** | `/health` | medium | Check health of project services (auto-detect) |
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
+| **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 
-## Hybrid Skills (27)
+## Hybrid Skills (30)
 
 Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
 
@@ -2705,6 +4153,9 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **subagent-development** | `/subagent-development` | high | Execute plans with 2-stage review (spec + quality) per task |
 | **repeat** | `/repeat` | medium | Autonomous loop with safety controls (Ralph Wiggum pattern) |
 | **mem-search** | `/mem-search` | medium | Search past coding sessions via natural language (memory-pack) |
+| **persona** | `/persona` | low | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
+| **council** | `/council` | high | 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) with synthesis and confidence-rated recommendation. Tier 1, orchestrator, `context: fork`. |
+| **introspect** | `/introspect` | medium | Agent self-debugging: classify failure pattern, suggest smallest recovery action, emit structured introspection report |
 
 ### `/workflow` types
 
@@ -2726,7 +4177,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | `application-deploy` | 3 | Deploy → smoke test → release notes |
 | `proactive-troubleshooting` | 4 | Investigate → check perf → preventive fix → docs |
 
-## Knowledge Skills - Development (9)
+## Knowledge Skills - Development (10)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
@@ -2739,6 +4190,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **typescript-patterns** | `skills/typescript-patterns/` | TypeScript/JavaScript patterns for frontend and backend |
 | **design-engineering** | `skills/design-engineering/` | UI polish, animation craft, easing, transforms, accessibility |
 | **documentation-standards** | `skills/documentation-standards/` | KB document conventions, frontmatter validation, category taxonomy |
+| **brand-voice** | `skills/brand-voice/` | Anti-trope list, voice principles, LLM rhetoric prevention |
 
 ## Knowledge Skills - Infrastructure (6)
 

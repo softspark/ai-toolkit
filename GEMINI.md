@@ -3,13 +3,13 @@
 
 # AI Toolkit — Gemini CLI Configuration
 
-Shared AI development toolkit with 47 specialized agents, 85 skills, quality hooks, and a safety constitution.
+Shared AI development toolkit with 44 specialized agents, 90 skills, quality hooks, and a safety constitution.
 
-## Available Agents (47)
+## Available Agents (44)
 
 Specialized agent personas — apply their expertise for relevant tasks:
 
-- **ai-engineer**: AI/ML integration specialist. Use for LLM integration, vector databases, RAG pipelines, embeddings, and AI agent orchestration. Triggers: ai, ml, llm, embedding, vector, rag, agent, openai, anthropic.
+- **ai-engineer**: AI/ML integration specialist. Use for LLM integration, vector databases, RAG pipelines, embeddings, AI agent orchestration, document indexing, semantic search, hybrid retrieval, and answer generation. Triggers: ai, ml, llm, embedding, vector, rag, agent, openai, anthropic, search, retrieval, indexing, chunking, reranking.
 - **backend-specialist**: Expert backend architect for Node.js, Python, PHP, and modern serverless systems. Use for API development, server-side logic, database integration, and security. Triggers: backend, server, api, endpoint, database, auth, fastapi, express, laravel.
 - **business-intelligence**: Opportunity Discovery agent. Scans data models and code to identify missing business metrics, KPIs, and opportunities for value creation.
 - **chaos-monkey**: Resilience testing agent. Use to inject faults, latency, and failures into the system to verify robustness and recovery mechanisms.
@@ -31,8 +31,7 @@ Specialized agent personas — apply their expertise for relevant tasks:
 - **infrastructure-architect**: System design expert. Use for architectural decisions, architecture notes, trade-off analysis, technology selection. Triggers: architecture, design, decision, trade-off, scalability, infrastructure planning.
 - **infrastructure-validator**: Deployment validation expert. Use for deployment verification, health checks, testing, rollback procedures. Triggers: validate, deploy, deployment, health check, smoke test, rollback.
 - **llm-ops-engineer**: LLM operations expert. Use for LLM caching, fallback strategies, cost optimization, observability, and reliability. Triggers: llm, language model, openai, ollama, caching, fallback, token, cost.
-- **mcp-expert**: MCP integration expert. Use for configuring MCP clients, integrations, troubleshooting MCP connections. Triggers: mcp config, mcp integration, mcp connection, claude desktop, mcp client.
-- **mcp-server-architect**: MCP server design and implementation expert. Use for creating MCP servers, JSON-RPC transport, tool definitions, protocol compliance. Triggers: mcp, model context protocol, json-rpc, sse, stdio, mcp server.
+- **mcp-specialist**: MCP server design, implementation, client configuration, and integration troubleshooting. Triggers: mcp, model context protocol, json-rpc, sse, stdio, mcp server, mcp config, mcp integration, mcp connection, claude desktop, mcp client.
 - **mcp-testing-engineer**: MCP protocol testing expert. Use for MCP server testing, protocol compliance, transport validation, integration testing. Triggers: mcp test, protocol compliance, mcp validation, transport testing.
 - **meta-architect**: Self-Optimization agent. Analyzes system performance and mistakes to update agent definitions and instructions. The only agent allowed to modify .claude/agents/*.
 - **ml-engineer**: Machine learning systems specialist. Use for model training, data pipelines, MLOps, and model deployment. Triggers: ml, machine learning, model training, mlops, tensorflow, pytorch, scikit-learn.
@@ -46,18 +45,16 @@ Specialized agent personas — apply their expertise for relevant tasks:
 - **project-planner**: Smart project planning agent. Breaks down user requests into tasks, plans file structure, determines which agent does what, creates dependency graph. Use when starting new projects or planning major features.
 - **prompt-engineer**: LLM prompt design and optimization specialist. Trigger words: prompt, LLM, chain-of-thought, few-shot, system prompt, prompt engineering, token optimization
 - **qa-automation-engineer**: Test automation and QA specialist. Use for E2E testing, API testing, performance testing, and CI/CD test integration. Triggers: e2e, playwright, cypress, selenium, api test, performance test, automation.
-- **rag-engineer**: RAG systems expert. Use for document indexing, semantic search, hybrid retrieval, CRAG, multi-hop reasoning, and answer generation. Triggers: rag, search, retrieval, indexing, embedding, vector, chunking, reranking.
-- **research-synthesizer**: Multi-source research coordination and synthesis specialist. Trigger words: synthesize, aggregate, report, executive summary, gap analysis, conflict resolution, findings, research, investigate, multi-source, cross-reference, research planning
 - **search-specialist**: Information retrieval and search optimization specialist. Trigger words: search, query, semantic search, information retrieval, relevance, ranking, search optimization
 - **security-architect**: Proactive security design expert. Use for Threat Modeling, architecture security reviews, and designing secure systems (AuthN/AuthZ, Crypto).
 - **security-auditor**: Security expert. Use for OWASP Top 10, CVE analysis, security audits, penetration testing, vulnerability assessment, hardening. Triggers: security, owasp, cve, vulnerability, audit, hardening, penetration, pentest, injection test, api security.
 - **seo-specialist**: Search engine optimization specialist. Trigger words: SEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org
 - **system-governor**: The Guardian of the Constitution. Validates all evolutionary changes and enforces immutable rules. Has VETO power.
 - **tech-lead**: Technical authority for code quality, architecture patterns, and stack decisions. Use for code reviews, technological disputes, and standards enforcement.
-- **technical-researcher**: Deep technical investigation specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix
+- **technical-researcher**: Deep technical investigation and multi-source research synthesis specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix, synthesize, aggregate, report, executive summary, gap analysis, findings, multi-source, cross-reference
 - **test-engineer**: Testing expert. Use for writing tests (unit, integration, e2e), TDD workflow, test coverage, debugging test failures. Triggers: test, pytest, unittest, coverage, tdd, testing, mock, fixture.
 
-## Available Skills (85)
+## Available Skills (90)
 
 Skills are invocable slash commands or auto-loaded knowledge sources:
 
@@ -68,6 +65,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **architecture-audit**: Explore codebase organically for architectural friction, discover shallow modules, and propose module-deepening refactors as GitHub issue RFCs using parallel sub-agent interface designs. Use when user wants to improve architecture, find shallow modules, deepen modules, or reduce coupling.
 - **architecture-decision**: Loaded when user asks about architecture decisions or architecture note writing
 - **biz-scan**: Scan codebase for business opportunities and KPIs
+- **brand-voice**: Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice.
 - **briefing**: Generate executive daily briefing across all agents
 - **build**: Build the project with auto-detected toolchain
 - **chaos**: Inject controlled faults for resilience testing
@@ -76,6 +74,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **clean-code**: Loaded when user asks about clean code, naming, or code quality
 - **command-creator**: Creates new Claude Code slash commands with frontmatter, workflow guidance, and validation
 - **commit**: Create Conventional Commits with pre-commit validation
+- **council**: 4-perspective decision evaluation for architecture choices. Use when user wants multi-angle analysis, needs to decide between alternatives, or mentions 'council', 'evaluate decision', 'pros cons'.
 - **csharp-patterns**: Loaded when user asks about C# or .NET development patterns
 - **database-patterns**: Loaded when user asks about database schema or query optimization
 - **debug**: Debug errors and trace root causes systematically
@@ -100,6 +99,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **hook-creator**: Creates new Claude Code hooks with guided workflow, strict conventions, and validation
 - **index**: Index codebase into the knowledge base
 - **instinct-review**: Review and manage learned instincts from past sessions
+- **introspect**: Agent self-debugging and recovery. Use when stuck in loops, making repeated errors, or quality degrades. Triggers: introspect, self-debug, stuck, loop, why failing.
 - **java-patterns**: Loaded when user asks about Java development patterns
 - **kotlin-patterns**: Loaded when user asks about Kotlin development patterns
 - **lint**: Lint code with auto-detected tools and fix suggestions
@@ -113,6 +113,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **orchestrate**: Coordinate multiple specialized agents in parallel
 - **panic**: Emergency stabilization via system-governor agent
 - **performance-profiling**: Loaded when user asks about performance profiling or optimization
+- **persona**: Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
 - **plan**: Plan implementation with tasks and success criteria
 - **plan-writing**: Loaded when user asks to write an implementation plan or pre-mortem
 - **plugin-creator**: Creates experimental opt-in Claude Code plugin packs with manifests, conventions, and optional module scaffolding
@@ -132,6 +133,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **rust-patterns**: Loaded when user asks about Rust development patterns
 - **search**: Search the knowledge base with semantic and hybrid modes
 - **security-patterns**: Loaded when user asks about security, OWASP, or auth patterns
+- **skill-audit**: Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions
 - **skill-creator**: Create new skills from templates with guided workflow
 - **subagent-development**: Execute implementation plans using fresh subagents per task with two-stage review: spec compliance first, then code quality. Use when executing plans with independent tasks.
 - **swarm**: Execute tasks via Map-Reduce, Consensus, or Relay swarms

@@ -6,10 +6,10 @@ tags: [agents, catalog, roles, ai-development]
 version: "2.0.0"
 created: "2026-03-23"
 last_updated: "2026-03-25"
-description: "Complete catalog of 47 specialized agents with roles, models, and use cases."
+description: "Complete catalog of 44 specialized agents with roles, models, and use cases."
 ---
 
-# Agents Catalog (47 agents)
+# Agents Catalog (44 agents)
 
 ## By Category
 
@@ -32,17 +32,16 @@ description: "Complete catalog of 47 specialized agents with roles, models, and 
 | **game-developer** | opus | Unity, Godot, Unreal, Phaser, Three.js |
 | **database-architect** | opus | Schema design, migrations, query optimization, operations |
 
-### AI/ML (7)
+### AI/ML (6)
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **ai-engineer** | opus | LLM integration, vector databases, RAG, agent orchestration |
+| **ai-engineer** | opus | LLM integration, vector databases, RAG pipelines, agent orchestration |
 | **ml-engineer** | opus | Model training, MLOps, TensorFlow, PyTorch |
 | **nlp-engineer** | opus | NLP pipelines, NER, text classification, transformers |
 | **data-scientist** | opus | Statistics, visualization, EDA, hypothesis testing |
 | **data-analyst** | sonnet | SQL, analytics, reporting, dashboards |
 | **prompt-engineer** | opus | Prompt design, chain-of-thought, few-shot, optimization |
-| **rag-engineer** | opus | RAG pipelines, document indexing, retrieval optimization |
 
 ### Quality & Security (6)
 
@@ -66,23 +65,21 @@ description: "Complete catalog of 47 specialized agents with roles, models, and 
 | **performance-optimizer** | opus | Profiling, bottleneck analysis, latency, scaling |
 | **llm-ops-engineer** | opus | LLM caching, fallback, cost optimization, observability |
 
-### Research & Documentation (6)
+### Research & Documentation (5)
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
 | **explorer-agent** | sonnet | Codebase discovery (READ-ONLY, never writes) |
-| **research-synthesizer** | opus | Research coordination, synthesis, report generation |
-| **technical-researcher** | opus | Deep technical investigation, feasibility studies |
+| **technical-researcher** | opus | Deep technical investigation, research synthesis |
 | **search-specialist** | sonnet | Search optimization, relevance ranking |
 | **fact-checker** | sonnet | Claim verification, source validation |
 | **documenter** | sonnet | Documentation, KB management, SOPs, API docs, tutorials |
 
-### MCP (3)
+### MCP (2)
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **mcp-expert** | opus | MCP protocol expertise, client configuration |
-| **mcp-server-architect** | opus | MCP server design, JSON-RPC, tool definitions |
+| **mcp-specialist** | opus | MCP server design, client config, troubleshooting |
 | **mcp-testing-engineer** | sonnet | MCP protocol compliance, transport testing |
 
 ### Management & Evolution (4)
@@ -120,5 +117,5 @@ description: "Complete catalog of 47 specialized agents with roles, models, and 
 | Security | security-auditor | security-architect | code-reviewer |
 | Architecture | infrastructure-architect | devops-implementer | security-auditor |
 | Documentation | documenter | explorer-agent | tech-lead |
-| AI/ML | ai-engineer | ml-engineer | rag-engineer |
-| Research | research-synthesizer | technical-researcher | fact-checker |
+| AI/ML | ai-engineer | ml-engineer | data-scientist |
+| Research | technical-researcher | search-specialist | fact-checker |

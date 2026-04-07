@@ -1,0 +1,10 @@
+{
+  "name": "context7",
+  "description": "Up-to-date library documentation lookup via Context7",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "cloudflare",
+  "description": "Cloudflare Workers, KV, D1, R2, and DNS management",
+  "mcpServers": {
+    "cloudflare": {
+      "command": "npx",
+      "args": ["-y", "@cloudflare/mcp-server-cloudflare"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}"
+      }
+    }
+  }
+}

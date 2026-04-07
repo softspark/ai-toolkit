@@ -30,12 +30,13 @@ Options:
   --reset                 Wipe and recreate local configs
   --profile <p>           minimal|standard|strict
   --persona <p>           backend-lead|frontend-lead|devops-eng|junior-dev
-
-Components: agents, skills, hooks, constitution, architecture, rules,
-            cursor, windsurf, gemini, augment
+  --modules <list>        Install specific modules (comma-separated)
+  --auto-detect           Detect project languages and install matching rules
+  --status                Show installed modules and exit
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -48,6 +49,134 @@ from install_steps.symlinks import install_agents, install_skills, clean_legacy_
 from install_steps.hooks import install_hooks
 from install_steps.markers import install_marker_files, inject_rules
 from install_steps.ai_tools import install_ai_tools, install_local_project, run_script
+from install_steps.install_state import (
+    load_state,
+    record_install,
+    get_installed_modules,
+    get_installed_profile,
+    print_status,
+)
+from install_steps.detect_language import detect_languages
+
+
+# ---------------------------------------------------------------------------
+# Manifest helpers
+# ---------------------------------------------------------------------------
+
+def _load_manifest() -> dict:
+    """Load manifest.json from toolkit root."""
+    manifest_path = toolkit_dir / "manifest.json"
+    if not manifest_path.is_file():
+        return {}
+    with open(manifest_path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _get_manifest_profiles() -> dict[str, list[str]]:
+    """Return profiles from manifest.json."""
+    manifest = _load_manifest()
+    return manifest.get("profiles", {})
+
+
+def _get_manifest_modules() -> dict[str, dict]:
+    """Return modules from manifest.json."""
+    manifest = _load_manifest()
+    return manifest.get("modules", {})
+
+
+def resolve_modules_from_profile(profile: str) -> list[str]:
+    """Resolve a profile name to a list of module names.
+
+    Returns an empty list if the profile is not found in manifest.
+    """
+    profiles = _get_manifest_profiles()
+    return profiles.get(profile, [])
+
+
+def resolve_requested_modules(
+    modules_arg: str,
+    profile: str,
+    auto_detect: bool,
+    project_dir: Path,
+) -> list[str] | None:
+    """Determine which modules to install based on CLI flags.
+
+    Only activates when ``--modules`` or ``--auto-detect`` is passed.
+    A bare ``--profile`` without those flags returns None so the
+    legacy code path handles it unchanged.
+
+    Returns:
+        A sorted list of module names to install, or None if no
+        module-level flags were provided (legacy mode).
+    """
+    # If neither --modules nor --auto-detect was given, stay in legacy mode.
+    # This ensures --profile alone behaves exactly as before.
+    if not modules_arg and not auto_detect:
+        return None
+
+    manifest_modules = _get_manifest_modules()
+    result: set[str] = set()
+
+    # Always include required modules
+    for name, cfg in manifest_modules.items():
+        if cfg.get("required"):
+            result.add(name)
+
+    # --modules flag takes precedence
+    if modules_arg:
+        for name in modules_arg.split(","):
+            name = name.strip()
+            if name and name in manifest_modules:
+                result.add(name)
+            elif name:
+                print(f"Warning: unknown module '{name}' (skipped)")
+        if auto_detect:
+            detected = detect_languages(project_dir, toolkit_dir)
+            result.update(detected)
+        return sorted(result)
+
+    # --auto-detect (without --modules): add profile or defaults + detected
+    if auto_detect:
+        if profile:
+            profile_modules = resolve_modules_from_profile(profile)
+            if profile_modules:
+                result.update(profile_modules)
+        else:
+            for name, cfg in manifest_modules.items():
+                if cfg.get("default"):
+                    result.add(name)
+        detected = detect_languages(project_dir, toolkit_dir)
+        result.update(detected)
+        return sorted(result)
+
+    # Should not reach here, but return None for safety
+    return None
+
+
+def modules_to_component_filter(modules: list[str]) -> str:
+    """Convert module names to a comma-separated component filter string.
+
+    Maps module names back to the component names used by the existing
+    ``--only`` system (e.g. "agents", "skills", "hooks", "rules").
+    This bridges the new module system with the old component system.
+    """
+    components: set[str] = set()
+
+    for module in modules:
+        if module == "core":
+            # Core maps to hooks, constitution, architecture, output-styles
+            components.update(["hooks", "constitution", "architecture", "rules"])
+        elif module == "agents":
+            components.add("agents")
+        elif module == "skills":
+            components.add("skills")
+        elif module.startswith("rules-"):
+            components.add("rules")
+        elif module == "mcp-templates":
+            # MCP templates don't map to a legacy component
+            pass
+
+    return ",".join(sorted(components))
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +194,9 @@ def parse_args(argv: list[str]) -> dict:
         "reset": False,
         "profile": "",
         "persona": "",
+        "modules": "",
+        "auto_detect": False,
+        "status": False,
     }
     i = 0
     while i < len(argv):
@@ -75,6 +207,10 @@ def parse_args(argv: list[str]) -> dict:
             cfg["local"] = True
         elif arg == "--reset":
             cfg["reset"] = True
+        elif arg == "--auto-detect":
+            cfg["auto_detect"] = True
+        elif arg == "--status":
+            cfg["status"] = True
         elif arg.startswith("--only="):
             cfg["only"] = arg.split("=", 1)[1]
         elif arg == "--only":
@@ -95,6 +231,11 @@ def parse_args(argv: list[str]) -> dict:
         elif arg == "--persona":
             i += 1
             cfg["persona"] = argv[i] if i < len(argv) else ""
+        elif arg.startswith("--modules="):
+            cfg["modules"] = arg.split("=", 1)[1]
+        elif arg == "--modules":
+            i += 1
+            cfg["modules"] = argv[i] if i < len(argv) else ""
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -139,7 +280,8 @@ def resolve_profile(profile: str, only: str) -> str:
 
 
 def print_banner(target_dir: Path, rules_dir: Path, profile: str,
-                 only: str, skip: str, dry_run: bool) -> None:
+                 only: str, skip: str, dry_run: bool,
+                 modules: list[str] | None = None) -> None:
     print("AI Toolkit Installer")
     print("========================")
     print(f"Toolkit:   {toolkit_dir}")
@@ -147,6 +289,8 @@ def print_banner(target_dir: Path, rules_dir: Path, profile: str,
     print(f"Rules:     {rules_dir}")
     if profile:
         print(f"Profile:   {profile}")
+    if modules is not None:
+        print(f"Modules:   {', '.join(modules)}")
     if only:
         print(f"Only:      {only}")
     if skip:
@@ -165,6 +309,7 @@ def print_summary() -> None:
     print("  2. Per project: ai-toolkit install --local (or: ai-toolkit update --local)")
     print("  3. To update: npm install -g @softspark/ai-toolkit@latest && ai-toolkit update")
     print("  4. To register rules from other tools: ai-toolkit add-rule <rule.md>")
+    print("  5. Check install state: ai-toolkit status")
 
 
 # ---------------------------------------------------------------------------
@@ -225,11 +370,30 @@ def install_strict_git_hooks(profile: str, local: bool, dry_run: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Version helper
+# ---------------------------------------------------------------------------
+
+def _get_toolkit_version() -> str:
+    """Read version from package.json."""
+    pkg = toolkit_dir / "package.json"
+    if pkg.is_file():
+        with open(pkg, encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("version", "unknown")
+    return "unknown"
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main() -> None:
     cfg = parse_args(sys.argv[1:])
+
+    # Handle --status early exit
+    if cfg["status"]:
+        print_status()
+        sys.exit(0)
 
     target_dir: Path = cfg["target_dir"]
     only: str = cfg["only"]
@@ -239,13 +403,35 @@ def main() -> None:
     reset: bool = cfg["reset"]
     profile: str = cfg["profile"]
     persona: str = cfg["persona"]
+    modules_arg: str = cfg["modules"]
+    auto_detect: bool = cfg["auto_detect"]
 
     rules_dir = Path.home() / ".ai-toolkit" / "rules"
     hooks_scripts_dir = Path.home() / ".ai-toolkit" / "hooks"
 
-    only = resolve_profile(profile, only)
+    # Resolve modules if module-level flags are present
+    # --auto-detect only makes sense with --local (language rules are project-specific)
+    if auto_detect and not local:
+        print("Warning: --auto-detect requires --local (language rules are project-specific). Adding --local.")
+        local = True
+    project_dir = Path.cwd() if local else target_dir
+    resolved_modules = resolve_requested_modules(
+        modules_arg, profile, auto_detect, project_dir,
+    )
+
+    # If module-level flags produced a module list, bridge to legacy --only
+    if resolved_modules is not None:
+        component_filter = modules_to_component_filter(resolved_modules)
+        if component_filter and not only:
+            only = component_filter
+
+    # Legacy profile resolution (only when no module-level override)
+    if resolved_modules is None:
+        only = resolve_profile(profile, only)
+
     check_dependencies()
-    print_banner(target_dir, rules_dir, profile, only, skip, dry_run)
+    print_banner(target_dir, rules_dir, profile, only, skip, dry_run,
+                 modules=resolved_modules)
 
     if not dry_run:
         rules_dir.mkdir(parents=True, exist_ok=True)
@@ -255,11 +441,59 @@ def main() -> None:
     install_ai_tools(target_dir, rules_dir, only, skip, dry_run)
 
     if local:
-        install_local_project(rules_dir, dry_run, reset)
+        # Pass language modules for --auto-detect / --modules rules-*
+        lang_modules = [m for m in (resolved_modules or []) if m.startswith("rules-")]
+        install_local_project(rules_dir, dry_run, reset, lang_modules or None)
 
     install_persona(target_dir, persona, dry_run)
     install_strict_git_hooks(profile, local, dry_run)
+
+    # Record install state (skip for dry-run)
+    if not dry_run:
+        auto_detected = None
+        if auto_detect:
+            auto_detected = detect_languages(project_dir, toolkit_dir)
+
+        # Determine what modules to record
+        if resolved_modules is not None:
+            record_modules = resolved_modules
+        else:
+            # Legacy mode: infer modules from profile/only
+            record_modules = _infer_modules_from_legacy(profile, only)
+
+        record_install(
+            version=_get_toolkit_version(),
+            modules=record_modules,
+            profile=profile or "standard",
+            auto_detected=auto_detected,
+        )
+
     print_summary()
+
+
+def _infer_modules_from_legacy(profile: str, only: str) -> list[str]:
+    """Best-effort inference of module names from legacy flags.
+
+    Used when the user did not pass --modules or a manifest-aware
+    --profile, so we approximate from what was actually installed.
+    """
+    modules: set[str] = {"core"}  # core is always installed
+
+    if only:
+        components = {c.strip() for c in only.split(",")}
+    else:
+        # Standard install: all main components
+        components = {"agents", "skills", "hooks", "constitution",
+                      "architecture", "rules"}
+
+    if "agents" in components:
+        modules.add("agents")
+    if "skills" in components:
+        modules.add("skills")
+    if "rules" in components:
+        modules.add("rules-common")
+
+    return sorted(modules)
 
 
 if __name__ == "__main__":

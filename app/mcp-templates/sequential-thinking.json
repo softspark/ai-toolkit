@@ -1,0 +1,10 @@
+{
+  "name": "sequential-thinking",
+  "description": "Step-by-step reasoning and problem decomposition server",
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    }
+  }
+}

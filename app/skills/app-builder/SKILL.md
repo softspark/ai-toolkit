@@ -18,7 +18,7 @@ allowed-tools: Read
 | mobile, ios, android | Mobile App | mobile-developer |
 | cli, command, terminal | CLI Tool | backend-specialist |
 | game, unity, godot | Game | game-developer |
-| ai, ml, rag | AI/ML | rag-engineer |
+| ai, ml, rag | AI/ML | ai-engineer |
 | e-commerce, shop, store | E-commerce | backend + frontend |
 
 ---

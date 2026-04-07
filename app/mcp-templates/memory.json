@@ -1,0 +1,10 @@
+{
+  "name": "memory",
+  "description": "Persistent memory store using a local knowledge graph",
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "filesystem",
+  "description": "Local filesystem access for reading, writing, and searching files",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${FILESYSTEM_ROOT:-./}"]
+    }
+  }
+}

@@ -6,13 +6,13 @@ Universal multi-agent system for software development. Works across all reposito
 
 | Component | Count |
 |-----------|-------|
-| Agents | 47 |
-| Skills | 87 |
-| Hooks | 12 events / 15 entries (SessionStart, Notification, PreToolUse ×2, UserPromptSubmit ×2, PostToolUse, Stop ×2, TaskCompleted, TeammateIdle, SubagentStart, SubagentStop, PreCompact, SessionEnd) |
+| Agents | 44 |
+| Skills | 90 |
+| Hooks | 12 events / 21 entries (SessionStart, Notification, PreToolUse ×2, UserPromptSubmit ×2, PostToolUse, Stop ×2, TaskCompleted, TeammateIdle, SubagentStart, SubagentStop, PreCompact, SessionEnd) |
 
 ---
 
-## Agents (47)
+## Agents (44)
 
 ### Orchestration & Planning (4)
 | Agent | Model | Purpose |
@@ -31,16 +31,15 @@ Universal multi-agent system for software development. Works across all reposito
 | `game-developer` | opus | Unity, Godot, Unreal, Phaser |
 | `database-architect` | opus | Schema design, migrations, query optimization, operations |
 
-### AI/ML (7)
+### AI/ML (6)
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| `ai-engineer` | opus | LLM integration, vector search |
+| `ai-engineer` | opus | LLM integration, vector search, RAG pipelines |
 | `ml-engineer` | opus | Model training, MLOps |
 | `nlp-engineer` | opus | NLP pipelines, text processing |
 | `data-scientist` | opus | Statistics, analysis, visualization |
 | `data-analyst` | sonnet | SQL, analytics, reporting |
 | `prompt-engineer` | opus | Prompt design, optimization |
-| `rag-engineer` | opus | RAG pipelines, retrieval |
 
 ### Quality & Security (6)
 | Agent | Model | Purpose |
@@ -62,12 +61,11 @@ Universal multi-agent system for software development. Works across all reposito
 | `performance-optimizer` | opus | Performance tuning |
 | `llm-ops-engineer` | opus | LLM operations, monitoring |
 
-### Research & Documentation (6)
+### Research & Documentation (5)
 | Agent | Model | Purpose |
 |-------|-------|---------|
 | `explorer-agent` | sonnet | Codebase discovery (READ-ONLY) |
-| `research-synthesizer` | opus | Research coordination, synthesis, reports |
-| `technical-researcher` | opus | Deep technical investigation |
+| `technical-researcher` | opus | Deep technical investigation, research synthesis |
 | `search-specialist` | sonnet | Search optimization |
 | `fact-checker` | sonnet | Verification, source checking |
 | `documenter` | sonnet | Documentation, KB management, SOPs, API docs |
@@ -86,11 +84,10 @@ Universal multi-agent system for software development. Works across all reposito
 | `night-watchman` | sonnet | Autonomous maintenance: dependency updates, dead code |
 | `chaos-monkey` | opus | Resilience testing: fault injection, failure verification |
 
-### MCP (3)
+### MCP (2)
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| `mcp-expert` | opus | MCP protocol expertise |
-| `mcp-server-architect` | opus | MCP server design |
+| `mcp-specialist` | opus | MCP server design, client config, troubleshooting |
 | `mcp-testing-engineer` | sonnet | MCP testing |
 
 ### Specialist (4)
@@ -103,7 +100,7 @@ Universal multi-agent system for software development. Works across all reposito
 
 ---
 
-## Skills (87)
+## Skills (90)
 
 ### Task Skills (28)
 | Skill | Slash Command | Purpose |
@@ -137,7 +134,7 @@ Universal multi-agent system for software development. Works across all reposito
 | `prd-to-issues` | `/prd-to-issues` | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | `skill-audit` | `/skill-audit` | Scan skills and agents for security risks, dangerous patterns, secrets |
 
-### Hybrid Skills (28)
+### Hybrid Skills (30)
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `explore` | `/explore` | Codebase exploration and tech stack discovery |
@@ -168,8 +165,10 @@ Universal multi-agent system for software development. Works across all reposito
 | `repeat` | `/repeat` | Autonomous loop with safety controls (Ralph Wiggum pattern) |
 | `mem-search` | `/mem-search` | Search past coding sessions via natural language (memory-pack) |
 | `persona` | `/persona` | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
+| `council` | `/council` | 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) with synthesis |
+| `introspect` | `/introspect` | Agent self-debugging: classify failure pattern, suggest recovery action, emit introspection report |
 
-### Knowledge Skills - Development (15)
+### Knowledge Skills - Development (16)
 | Skill | Purpose |
 |-------|---------|
 | `app-builder` | Project scaffolding, tech stack |
@@ -187,6 +186,7 @@ Universal multi-agent system for software development. Works across all reposito
 | `kotlin-patterns` | Coroutines, DSLs, sealed classes, Ktor, MockK |
 | `swift-patterns` | Protocol-oriented, SwiftUI, async/await, SPM |
 | `ruby-patterns` | Blocks, Rails conventions, RSpec, ActiveRecord |
+| `brand-voice` | Anti-trope list, voice principles, LLM rhetoric prevention |
 
 ### Knowledge Skills - Infrastructure (6)
 | Skill | Purpose |
@@ -245,7 +245,7 @@ Phase 2: IMPLEMENTATION
 | Bug Fix | debugger | backend/frontend, test-engineer |
 | Performance | performance-optimizer | database-architect |
 | Security | security-auditor | code-reviewer |
-| Research | research-synthesizer | technical-researcher, search-specialist |
+| Research | technical-researcher | search-specialist, fact-checker |
 | Documentation | documenter | explorer-agent |
 
 ---
@@ -255,9 +255,9 @@ Phase 2: IMPLEMENTATION
 ```
 .claude/
 ├── ARCHITECTURE.md      # This file
-├── agents/              # Agent definitions (47)
+├── agents/              # Agent definitions (44)
 ├── hooks.json           # Quality gate hooks (multi-language)
-├── skills/              # All skills: task, hybrid, knowledge (87)
+├── skills/              # All skills: task, hybrid, knowledge (90)
 ├── output-styles/       # System prompt output style overrides (e.g. golden-rules)
 ├── constitution.md      # Immutable safety rules (5 articles)
 └── settings.local.json  # Local settings + Agent Teams config
@@ -294,6 +294,22 @@ Lead Session (You)
 | `Notification` | Claude notification | OS notification |
 | `PreCompact` | Before compaction | Saves context before compaction boundary |
 | `SessionEnd` | Claude session ends | Writes handoff snapshot for the next session |
+
+---
+
+## Extension Points
+
+### MCP Templates (25)
+`app/plugins/mcp-templates/` ships 25 ready-to-use MCP server config templates (filesystems, databases, GitHub, Slack, etc.). Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
+
+### Language Rules (70 files, 13 languages)
+`app/rules/` contains per-language coding rules injected into `CLAUDE.md`. Supported languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, and common (shared). Auto-detected from project files via `--auto-detect` or selected with `--modules rules-<lang>`.
+
+### Extension API (`inject-hook`)
+The `inject_section_cli.py` script provides a stable marker-based injection API. Any tool can add sections to `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content, using `<!-- TOOLKIT:START:<id> -->` / `<!-- TOOLKIT:END:<id> -->` markers.
+
+### Manifest Install (`--modules`, `--auto-detect`)
+`manifest.json` defines all installable components as named modules. Install individual modules with `ai-toolkit install --modules <name>` or let the installer detect which language rules to add based on project files (e.g. `package.json` → `rules-typescript`, `go.mod` → `rules-golang`).
 
 ---
 

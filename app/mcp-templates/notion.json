@@ -1,0 +1,13 @@
+{
+  "name": "notion",
+  "description": "Notion workspace integration for pages, databases, and content management",
+  "mcpServers": {
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "notion-mcp-server"],
+      "env": {
+        "NOTION_API_KEY": "${NOTION_API_KEY}"
+      }
+    }
+  }
+}

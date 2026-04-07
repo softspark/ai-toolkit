@@ -2,21 +2,21 @@
   "version": "1.0.0",
   "components": {
     "agents": {
-      "description": "47 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
+      "description": "44 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
       "path": "app/agents",
       "target": ".claude/agents",
       "type": "symlink",
       "tags": ["core", "agents"]
     },
     "skills": {
-      "description": "85 skills: 27 task + 27 hybrid + 31 knowledge skills",
+      "description": "90 skills (28 task + 30 hybrid + 32 knowledge)",
       "path": "app/skills",
       "target": ".claude/skills",
       "type": "symlink",
       "tags": ["core", "skills", "commands"]
     },
     "hooks": {
-      "description": "15 global hook entries across 12 lifecycle events + 5 skill-scoped lifecycle hooks",
+      "description": "21 global hook entries across 12 lifecycle events + 5 skill-scoped lifecycle hooks",
       "path": "app/hooks.json + app/hooks/*.sh",
       "target": "~/.claude/settings.json (merge) + ~/.ai-toolkit/hooks/ (copy)",
       "type": "merge+copy",
@@ -60,7 +60,7 @@
   },
   "bundles": {
     "minimal": {
-      "description": "Hooks and constitution only — safety without agents",
+      "description": "Hooks and constitution only -- safety without agents",
       "includes": ["hooks", "constitution"]
     },
     "standard": {
@@ -79,5 +79,81 @@
       "description": "Constitution + hooks only (zero agent overhead)",
       "includes": ["hooks", "constitution"]
     }
+  },
+  "modules": {
+    "core": {
+      "description": "Core hooks and essential skills",
+      "required": true
+    },
+    "agents": {
+      "description": "44 specialized agents",
+      "default": true
+    },
+    "skills": {
+      "description": "90 skills (task, hybrid, knowledge)",
+      "default": true
+    },
+    "rules-common": {
+      "description": "Common coding rules (5 files)",
+      "default": true
+    },
+    "rules-typescript": {
+      "description": "TypeScript-specific rules",
+      "auto_detect": ["package.json", "tsconfig.json"]
+    },
+    "rules-python": {
+      "description": "Python-specific rules",
+      "auto_detect": ["requirements.txt", "pyproject.toml", "setup.py", "Pipfile"]
+    },
+    "rules-golang": {
+      "description": "Go-specific rules",
+      "auto_detect": ["go.mod"]
+    },
+    "rules-rust": {
+      "description": "Rust-specific rules",
+      "auto_detect": ["Cargo.toml"]
+    },
+    "rules-java": {
+      "description": "Java-specific rules",
+      "auto_detect": ["pom.xml", "build.gradle", "build.gradle.kts"]
+    },
+    "rules-kotlin": {
+      "description": "Kotlin-specific rules",
+      "auto_detect": ["build.gradle.kts"]
+    },
+    "rules-swift": {
+      "description": "Swift-specific rules",
+      "auto_detect": ["Package.swift", "*.xcodeproj"]
+    },
+    "rules-dart": {
+      "description": "Dart/Flutter-specific rules",
+      "auto_detect": ["pubspec.yaml"]
+    },
+    "rules-csharp": {
+      "description": "C#/.NET-specific rules",
+      "auto_detect": ["*.csproj", "*.sln"]
+    },
+    "rules-php": {
+      "description": "PHP-specific rules",
+      "auto_detect": ["composer.json"]
+    },
+    "rules-cpp": {
+      "description": "C++-specific rules",
+      "auto_detect": ["CMakeLists.txt", "Makefile", "*.cpp"]
+    },
+    "rules-ruby": {
+      "description": "Ruby-specific rules",
+      "auto_detect": ["Gemfile", "*.gemspec"]
+    },
+    "mcp-templates": {
+      "description": "25 MCP server config templates",
+      "default": false
+    }
+  },
+  "profiles": {
+    "minimal": ["core"],
+    "standard": ["core", "agents", "skills", "rules-common"],
+    "strict": ["core", "agents", "skills", "rules-common", "mcp-templates"],
+    "full": ["core", "agents", "skills", "rules-common", "mcp-templates"]
   }
 }

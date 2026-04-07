@@ -10,6 +10,26 @@
                         "command": "\"$HOME/.ai-toolkit/hooks/session-start.sh\""
                     }
                 ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "startup|compact",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/mcp-health.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "startup|compact",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/session-context.sh\""
+                    }
+                ]
             }
         ],
         "Notification": [
@@ -44,6 +64,26 @@
                         "command": "\"$HOME/.ai-toolkit/hooks/guard-path.sh\""
                     }
                 ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Edit|Write|MultiEdit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/guard-config.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/commit-quality.sh\""
+                    }
+                ]
             }
         ],
         "UserPromptSubmit": [
@@ -76,6 +116,16 @@
                     {
                         "type": "command",
                         "command": "\"$HOME/.ai-toolkit/hooks/post-tool-use.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Bash|Edit|Write|MultiEdit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/governance-capture.sh\""
                     }
                 ]
             }
@@ -158,6 +208,16 @@
                     {
                         "type": "command",
                         "command": "\"$HOME/.ai-toolkit/hooks/pre-compact.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.ai-toolkit/hooks/pre-compact-save.sh\""
                     }
                 ]
             }

@@ -36,7 +36,7 @@ gemini --system "$(cat .claude/agents/backend-specialist.md)" "implement the API
 
 ### `ai-engineer`
 
-AI/ML integration specialist. Use for LLM integration, vector databases, RAG pipelines, embeddings, and AI agent orchestration. Triggers: ai, ml, llm, embedding, vector, rag, agent, openai, anthropic.
+AI/ML integration specialist. Use for LLM integration, vector databases, RAG pipelines, embeddings, AI agent orchestration, document indexing, semantic search, hybrid retrieval, and answer generation. Triggers: ai, ml, llm, embedding, vector, rag, agent, openai, anthropic, search, retrieval, indexing, chunking, reranking.
 
 **Tools:** `Read, Write, Edit, Bash, Grep, Glob`
 
@@ -210,19 +210,11 @@ LLM operations expert. Use for LLM caching, fallback strategies, cost optimizati
 
 ---
 
-### `mcp-expert`
+### `mcp-specialist`
 
-MCP integration expert. Use for configuring MCP clients, integrations, troubleshooting MCP connections. Triggers: mcp config, mcp integration, mcp connection, claude desktop, mcp client.
+MCP server design, implementation, client configuration, and integration troubleshooting. Triggers: mcp, model context protocol, json-rpc, sse, stdio, mcp server, mcp config, mcp integration, mcp connection, claude desktop, mcp client.
 
-**Tools:** `Read, Write, Edit, Bash`
-
----
-
-### `mcp-server-architect`
-
-MCP server design and implementation expert. Use for creating MCP servers, JSON-RPC transport, tool definitions, protocol compliance. Triggers: mcp, model context protocol, json-rpc, sse, stdio, mcp server.
-
-**Tools:** `Read, Write, Edit, Bash`
+**Tools:** `Read, Write, Edit, Bash, Grep, Glob`
 
 ---
 
@@ -330,22 +322,6 @@ Test automation and QA specialist. Use for E2E testing, API testing, performance
 
 ---
 
-### `rag-engineer`
-
-RAG systems expert. Use for document indexing, semantic search, hybrid retrieval, CRAG, multi-hop reasoning, and answer generation. Triggers: rag, search, retrieval, indexing, embedding, vector, chunking, reranking.
-
-**Tools:** `Read, Write, Edit, Bash`
-
----
-
-### `research-synthesizer`
-
-Multi-source research coordination and synthesis specialist. Trigger words: synthesize, aggregate, report, executive summary, gap analysis, conflict resolution, findings, research, investigate, multi-source, cross-reference, research planning
-
-**Tools:** `Read, Write, Edit, Bash, Grep, Glob`
-
----
-
 ### `search-specialist`
 
 Information retrieval and search optimization specialist. Trigger words: search, query, semantic search, information retrieval, relevance, ranking, search optimization
@@ -396,7 +372,7 @@ Technical authority for code quality, architecture patterns, and stack decisions
 
 ### `technical-researcher`
 
-Deep technical investigation specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix
+Deep technical investigation and multi-source research synthesis specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix, synthesize, aggregate, report, executive summary, gap analysis, findings, multi-source, cross-reference
 
 **Tools:** `Read, Write, Edit, Bash, Grep, Glob`
 

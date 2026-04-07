@@ -1,7 +1,7 @@
 # ai-toolkit
 
 ## Overview
-Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment — 87 skills, 47 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and safety constitution, distributed as a global npm package.
+Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment — 90 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and safety constitution, distributed as a global npm package.
 
 ## CRITICAL: Documentation & Count Accuracy
 **Every change to skills, agents, hooks, or editors MUST be reflected in ALL docs:**

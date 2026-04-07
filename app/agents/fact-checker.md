@@ -168,5 +168,5 @@ kb_references:
 ## Limitations
 
 - **Implementation** → Use appropriate specialist agent
-- **Research** → Use `rag-engineer` for technical details
+- **Research** → Use `ai-engineer` for technical details
 - **Documentation updates** → Use `documenter`

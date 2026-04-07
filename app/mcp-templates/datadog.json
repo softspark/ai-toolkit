@@ -1,0 +1,15 @@
+{
+  "name": "datadog",
+  "description": "Datadog monitoring for metrics, logs, traces, and dashboard queries",
+  "mcpServers": {
+    "datadog": {
+      "command": "npx",
+      "args": ["-y", "datadog-mcp-server"],
+      "env": {
+        "DD_API_KEY": "${DD_API_KEY}",
+        "DD_APP_KEY": "${DD_APP_KEY}",
+        "DD_SITE": "${DD_SITE:-datadoghq.com}"
+      }
+    }
+  }
+}

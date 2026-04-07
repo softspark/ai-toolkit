@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [architecture, overview, design, structure]
 version: "1.0.0"
 created: "2026-03-23"
-last_updated: "2026-04-02"
+last_updated: "2026-04-07"
 description: "Architecture of ai-toolkit: directory layout, global install model, skill tiers, and integration with projects."
 ---
 
@@ -13,7 +13,7 @@ description: "Architecture of ai-toolkit: directory layout, global install model
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment). Provides 47 specialized agents, 87 skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
+Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment). Provides 44 specialized agents, 90 skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
 
 ## Design Principles
 
@@ -30,8 +30,8 @@ ai-toolkit/
   bin/
     ai-toolkit.js        # CLI entry point (install, init, add-rule, ...)
   app/                       # All toolkit components
-    agents/                  # 47 agent definitions (.md + YAML frontmatter)
-    skills/                  # 87 skills: task, hybrid, knowledge
+    agents/                  # 44 agent definitions (.md + YAML frontmatter)
+    skills/                  # 90 skills: task, hybrid, knowledge
     rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
     hooks/                   # Hook scripts (copied to ~/.ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
@@ -166,8 +166,8 @@ Three tiers determine how to approach a task:
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 28 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 28 |
-| Knowledge | `user-invocable: false` | Claude auto-loads | 31 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 30 |
+| Knowledge | `user-invocable: false` | Claude auto-loads | 32 |
 
 ## Multi-Agent Execution
 
@@ -195,14 +195,22 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
+21 entries across 12 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|
 | SessionStart | Session start + compact | `session-start.sh` | MANDATORY rules reminder + session context + instincts |
+| SessionStart | Session start | `mcp-health.sh` | Check MCP runtime availability |
+| SessionStart | Session start | `session-context.sh` | Capture environment snapshot |
 | Notification | Claude waiting for input | *(inline)* | macOS desktop notification |
 | PreToolUse | Before Bash | `guard-destructive.sh` | Block destructive commands |
 | PreToolUse | Before file ops (Bash, Read, Edit, Write, MultiEdit, Glob, Grep, NotebookEdit, mcp\_filesystem) | `guard-path.sh` | Block wrong-user path hallucination |
+| PreToolUse | Before Edit/Write/MultiEdit | `guard-config.sh` | Block config file edits without explicit acknowledgment |
+| PreToolUse | Before Bash (git commit) | `commit-quality.sh` | Advisory Conventional Commits format check |
 | UserPromptSubmit | Before user prompt execution | `user-prompt-submit.sh` | Prompt governance reminder |
+| UserPromptSubmit | Before user prompt execution | `track-usage.sh` | Record skill invocations to stats.json |
 | PostToolUse | After edit/write tools | `post-tool-use.sh` | Lightweight validation reminders |
+| PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
 | Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
 | TaskCompleted | Agent Teams: task done | `quality-gate.sh` | Block completion on errors |
@@ -210,6 +218,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | SubagentStart | Subagent spawn | `subagent-start.sh` | Scope reminder for subagents |
 | SubagentStop | Subagent completion | `subagent-stop.sh` | Handoff checklist for subagents |
 | PreCompact | Before compaction | `pre-compact.sh` | Save prioritized context: instincts > tasks > git state > decisions |
+| PreCompact | Before compaction | `pre-compact-save.sh` | Timestamped context snapshot to audit trail |
 | SessionEnd | Session end | `session-end.sh` | Persist handoff note for the next session |
 
 Scripts at `~/.ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
@@ -253,3 +262,17 @@ Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practic
 |-------|---------|-------|
 | opus | Complex reasoning, code generation, security | 32 |
 | sonnet | Documentation, analysis, pattern-following | 15 |
+
+## Extension Points
+
+### MCP Templates
+`app/plugins/mcp-templates/` contains 25 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
+
+### Language Rules
+`app/rules/` provides 70 rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`.
+
+### Extension API (`inject-hook`)
+`inject_section_cli.py` provides a stable marker-based API for injecting content into `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content.
+
+### Manifest Install (`--modules`, `--auto-detect`)
+`manifest.json` defines all installable components as named modules. Install individual modules with `ai-toolkit install --modules <name>` or enable auto-detection to select language rules based on files found in the project.

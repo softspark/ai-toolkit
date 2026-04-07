@@ -151,4 +151,4 @@ For large documentation tasks, hand off to `documenter` agent.
 
 - **ML infrastructure** → Use `ml-engineer`
 - **LLM integration** → Use `ai-engineer`
-- **RAG systems** → Use `rag-engineer`
+- **RAG systems** → Use `ai-engineer`
