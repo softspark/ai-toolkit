@@ -24,8 +24,8 @@ Modules are defined in `manifest.json` at the repository root. There are 17 modu
 | Module | Description | In Profile |
 |--------|-------------|-----------|
 | `core` | Core hooks and essential skills | minimal, standard, strict, full |
-| `agents` | 44 specialized agents | standard, strict, full |
-| `skills` | 90 skills (task, hybrid, knowledge) | standard, strict, full |
+| `agents` | Specialized agents | standard, strict, full |
+| `skills` | All skills (task, hybrid, knowledge) | standard, strict, full |
 | `rules-common` | Common coding rules (5 files) | standard, strict, full |
 | `rules-typescript` | TypeScript-specific rules (5 files) | auto-detect |
 | `rules-python` | Python-specific rules (5 files) | auto-detect |

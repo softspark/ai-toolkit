@@ -6,10 +6,10 @@ tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
 version: "1.3.8"
 created: "2026-03-23"
 last_updated: "2026-04-07"
-description: "Complete catalog of 90 skills: 28 task, 30 hybrid, 32 knowledge. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
+description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
-# Skills Catalog (90 skills)
+# Skills Catalog
 
 All functionality is unified under skills. Task and hybrid skills are user-invocable as slash commands. Knowledge skills provide domain patterns auto-loaded by agents.
 

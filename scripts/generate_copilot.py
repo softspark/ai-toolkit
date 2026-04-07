@@ -16,7 +16,7 @@ if __name__ == "__main__":
         "title": "# GitHub Copilot Instructions",
         "intro_template": (
             "This repository uses the ai-toolkit — a shared AI development toolkit"
-            " with {agents} specialized agent personas and {skills} skills."
+            " with specialized agent personas and skills."
         ),
         "agents_section": "## Available Agent Personas",
         "agents_intro": "Apply the expertise of these agents when working on relevant tasks:",

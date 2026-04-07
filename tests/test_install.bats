@@ -235,3 +235,29 @@ assert d['env']['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] == '1', 'toolkit env var
     run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local"
     [ "$status" -eq 0 ]
 }
+
+# ── Orphan cleanup ─────────────────────────────────────────────────────────────
+
+@test "install cleans orphaned agent symlinks" {
+    mkdir -p "$TEST_PROJECT/.claude/agents"
+    ln -s "/nonexistent/deleted-agent.md" "$TEST_PROJECT/.claude/agents/deleted-agent.md"
+    [ -L "$TEST_PROJECT/.claude/agents/deleted-agent.md" ]
+
+    run python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT"
+    [ "$status" -eq 0 ]
+
+    # Broken symlink should be removed
+    [ ! -L "$TEST_PROJECT/.claude/agents/deleted-agent.md" ]
+}
+
+@test "install cleans orphaned skill symlinks" {
+    mkdir -p "$TEST_PROJECT/.claude/skills"
+    ln -s "/nonexistent/deleted-skill" "$TEST_PROJECT/.claude/skills/deleted-skill"
+    [ -L "$TEST_PROJECT/.claude/skills/deleted-skill" ]
+
+    run python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT"
+    [ "$status" -eq 0 ]
+
+    # Broken symlink should be removed
+    [ ! -L "$TEST_PROJECT/.claude/skills/deleted-skill" ]
+}

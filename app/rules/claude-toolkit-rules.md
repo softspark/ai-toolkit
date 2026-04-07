@@ -1,6 +1,6 @@
 # Claude Toolkit
 
-Shared AI development toolkit — 90 skills, 44 agents, lifecycle hooks, safety constitution.
+Shared AI development toolkit — lifecycle hooks, safety constitution, multi-platform support.
 
 ## Skill Tiers
 

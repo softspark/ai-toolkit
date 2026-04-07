@@ -527,3 +527,119 @@ run_hook_with_input() {
     [ "$status" -eq 0 ]
     [ ! -f ".claude/session-context.md" ]
 }
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# guard-config.sh
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@test "guard-config: blocks edit to .eslintrc.json" {
+    run_hook_with_input "guard-config.sh" '{"tool_input":{"file_path":"src/.eslintrc.json"}}'
+    [ "$status" -eq 2 ]
+}
+
+@test "guard-config: allows edit to regular .ts file" {
+    run_hook_with_input "guard-config.sh" '{"tool_input":{"file_path":"src/main.ts"}}'
+    [ "$status" -eq 0 ]
+}
+
+@test "guard-config: blocks edit to tsconfig.json" {
+    run_hook_with_input "guard-config.sh" '{"tool_input":{"file_path":"tsconfig.json"}}'
+    [ "$status" -eq 2 ]
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# mcp-health.sh
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@test "mcp-health: exits 0 (non-blocking)" {
+    run_hook "mcp-health.sh"
+    [ "$status" -eq 0 ]
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# governance-capture.sh
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@test "governance-capture: logs rm -rf command to governance.log" {
+    run_hook_with_input "governance-capture.sh" '{"tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/danger"}}'
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.ai-toolkit/governance.log" ]
+    grep -q "dangerous-command" "$TEST_TMP/.ai-toolkit/governance.log"
+    grep -q "rm -rf" "$TEST_TMP/.ai-toolkit/governance.log"
+}
+
+@test "governance-capture: does not log regular command" {
+    run_hook_with_input "governance-capture.sh" '{"tool_name":"Bash","tool_input":{"command":"ls -la /tmp"}}'
+    [ "$status" -eq 0 ]
+    [ ! -f "$TEST_TMP/.ai-toolkit/governance.log" ] || ! grep -q "dangerous-command" "$TEST_TMP/.ai-toolkit/governance.log"
+}
+
+@test "governance-capture: creates governance.log directory if missing" {
+    rm -rf "$TEST_TMP/.ai-toolkit"
+    run_hook_with_input "governance-capture.sh" '{"tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/danger"}}'
+    [ "$status" -eq 0 ]
+    [ -d "$TEST_TMP/.ai-toolkit" ]
+    [ -f "$TEST_TMP/.ai-toolkit/governance.log" ]
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# commit-quality.sh
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@test "commit-quality: warns on non-conventional commit" {
+    run_hook_with_input "commit-quality.sh" '{"tool_input":{"command":"git commit -m \"updated stuff\""}}'
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "conventional commit"
+}
+
+@test "commit-quality: passes on conventional commit" {
+    run_hook_with_input "commit-quality.sh" '{"tool_input":{"command":"git commit -m \"feat: add new login flow\""}}'
+    [ "$status" -eq 0 ]
+    ! echo "$output" | grep -q "conventional commit"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# session-context.sh
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@test "session-context: creates session JSON file with session_id from stdin" {
+    run_hook_with_input "session-context.sh" '{"session_id":"test-123","source":"startup"}'
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.ai-toolkit/sessions/test-123.json" ]
+}
+
+@test "session-context: JSON contains pwd and git_branch fields" {
+    run_hook_with_input "session-context.sh" '{"session_id":"test-456","source":"startup"}'
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json
+with open('$TEST_TMP/.ai-toolkit/sessions/test-456.json') as f:
+    d = json.load(f)
+assert 'pwd' in d, 'missing pwd field'
+assert 'git_branch' in d, 'missing git_branch field'
+"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# pre-compact-save.sh
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@test "pre-compact-save: creates timestamped file in compactions/ directory" {
+    run_hook_with_input "pre-compact-save.sh" '{"session_id":"test-789"}'
+    [ "$status" -eq 0 ]
+    [ -d "$TEST_TMP/.ai-toolkit/compactions" ]
+    local found
+    found=$(ls "$TEST_TMP/.ai-toolkit/compactions/"*test-789*.txt 2>/dev/null | wc -l)
+    [ "$found" -ge 1 ]
+}
+
+@test "pre-compact-save: file contains session ID" {
+    export CLAUDE_SESSION_ID="test-session-abc"
+    run_hook_with_input "pre-compact-save.sh" '{"session_id":"test-abc"}'
+    [ "$status" -eq 0 ]
+    local file
+    file=$(ls "$TEST_TMP/.ai-toolkit/compactions/"*test-abc*.txt 2>/dev/null | head -1)
+    [ -n "$file" ]
+    grep -q "test-session-abc" "$file"
+    unset CLAUDE_SESSION_ID
+}

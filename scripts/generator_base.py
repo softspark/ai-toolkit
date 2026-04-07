@@ -12,7 +12,7 @@ Usage::
     render_generator({
         "title": "# Cursor Rules",
         "header_lines": ["# Auto-generated..."],
-        "intro_template": "This repo uses ai-toolkit with {agents} agents and {skills} skills.",
+        "intro_template": "This repo uses ai-toolkit with specialized agents and skills.",
         "agents_section": "## Available Agent Personas",
         "agents_format": "headings",    # "headings" or "bullets"
         "agents_level": "##",           # heading level (for "headings" format)
@@ -57,7 +57,7 @@ def render_generator(config: dict) -> None:
     Config keys:
         title: str — main heading line
         header_lines: list[str] — additional header lines (comments etc)
-        intro_template: str — format string with {agents} and {skills}
+        intro_template: str — intro text (may use {agents}/{skills} placeholders)
         agents_section: str — heading for agents section
         agents_format: "headings" | "bullets"
         agents_level: str — heading level for headings format (default "##")

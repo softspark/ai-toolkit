@@ -97,26 +97,14 @@ actual_test_count() {
     [ -z "$count" ] || [ "$count" = "$actual" ]
 }
 
-@test "ARCHITECTURE.md agent count matches actual" {
-    actual=$(actual_agent_count)
-    # Matches: "## Agents (44)" or "| Agents | 44 |"
-    arch_count=$(grep -oE 'Agents.*\(?[0-9]+\)?' "$TOOLKIT_DIR/app/ARCHITECTURE.md" | grep -oE '[0-9]+' | head -1 || echo "")
-    [ -n "$arch_count" ]
-    [ "$arch_count" = "$actual" ]
+@test "ARCHITECTURE.md does not contain hardcoded agent count in headings" {
+    # Secondary docs must not contain hardcoded counts (only README.md, manifest.json, package.json may)
+    ! grep -qE '## Agents \([0-9]+\)' "$TOOLKIT_DIR/app/ARCHITECTURE.md"
 }
 
-@test "ARCHITECTURE.md task skill count matches actual" {
-    actual=$(actual_task_skill_count)
-    arch_count=$(grep -oE '### Task Skills \([0-9]+\)' "$TOOLKIT_DIR/app/ARCHITECTURE.md" | grep -oE '[0-9]+' | head -1 || true)
-    [ -n "$arch_count" ]
-    [ "$arch_count" = "$actual" ]
-}
-
-@test "ARCHITECTURE.md hybrid skill count matches actual" {
-    actual=$(actual_hybrid_skill_count)
-    arch_count=$(grep -oE '### Hybrid Skills \([0-9]+\)' "$TOOLKIT_DIR/app/ARCHITECTURE.md" | grep -oE '[0-9]+' | head -1 || true)
-    [ -n "$arch_count" ]
-    [ "$arch_count" = "$actual" ]
+@test "ARCHITECTURE.md does not contain hardcoded skill count in headings" {
+    # Secondary docs must not contain hardcoded counts
+    ! grep -qE '## Skills \([0-9]+\)' "$TOOLKIT_DIR/app/ARCHITECTURE.md"
 }
 
 @test "package.json version is present and non-empty" {
@@ -134,41 +122,27 @@ actual_test_count() {
     grep -q "$version" "$TOOLKIT_DIR/CHANGELOG.md"
 }
 
-@test "architecture-overview.md agent count matches actual" {
-    actual=$(actual_agent_count)
-    # Matches: "44 specialized agents" or "44 agent definitions"
-    kb_count=$(grep -oE '[0-9]+ (specialized )?agents' "$TOOLKIT_DIR/kb/reference/architecture-overview.md" | grep -oE '^[0-9]+' | head -1 || echo "")
-    [ -n "$kb_count" ]
-    [ "$kb_count" = "$actual" ]
+@test "architecture-overview.md does not contain hardcoded agent count in description" {
+    # Secondary docs must not contain hardcoded counts like "44 specialized agents"
+    ! grep -qE '[0-9]+ specialized agents' "$TOOLKIT_DIR/kb/reference/architecture-overview.md"
 }
 
-@test "architecture-overview.md skill count matches actual" {
-    actual=$(actual_skill_count)
-    # Matches: "59 skills" anywhere in the file
-    kb_count=$(grep -oE '[0-9]+ skills' "$TOOLKIT_DIR/kb/reference/architecture-overview.md" | grep -oE '^[0-9]+' | head -1 || echo "")
-    [ -n "$kb_count" ]
-    [ "$kb_count" = "$actual" ]
+@test "architecture-overview.md does not contain hardcoded skill count in description" {
+    # Secondary docs must not contain hardcoded counts like "90 skills"
+    ! grep -qE '[0-9]+ skills \(slash' "$TOOLKIT_DIR/kb/reference/architecture-overview.md"
 }
 
-@test "skills-catalog.md total skill count matches actual" {
-    actual=$(actual_skill_count)
-    kb_count=$(grep -oE 'Skills Catalog \([0-9]+ skills\)' "$TOOLKIT_DIR/kb/reference/skills-catalog.md" | grep -oE '[0-9]+' | head -1 || echo "")
-    [ -n "$kb_count" ]
-    [ "$kb_count" = "$actual" ]
+@test "skills-catalog.md does not contain hardcoded total skill count in heading" {
+    # Secondary docs must not contain hardcoded counts
+    ! grep -qE 'Skills Catalog \([0-9]+ skills\)' "$TOOLKIT_DIR/kb/reference/skills-catalog.md"
 }
 
-@test "skills-catalog.md task skill count matches actual" {
-    actual=$(actual_task_skill_count)
-    kb_count=$(grep -oE '## Task Skills \([0-9]+\)' "$TOOLKIT_DIR/kb/reference/skills-catalog.md" | grep -oE '[0-9]+' | head -1 || echo "")
-    [ -n "$kb_count" ]
-    [ "$kb_count" = "$actual" ]
+@test "skills-catalog.md task skill section exists" {
+    grep -q '## Task Skills' "$TOOLKIT_DIR/kb/reference/skills-catalog.md"
 }
 
-@test "skills-catalog.md hybrid skill count matches actual" {
-    actual=$(actual_hybrid_skill_count)
-    kb_count=$(grep -oE '## Hybrid Skills \([0-9]+\)' "$TOOLKIT_DIR/kb/reference/skills-catalog.md" | grep -oE '[0-9]+' | head -1 || echo "")
-    [ -n "$kb_count" ]
-    [ "$kb_count" = "$actual" ]
+@test "skills-catalog.md hybrid skill section exists" {
+    grep -q '## Hybrid Skills' "$TOOLKIT_DIR/kb/reference/skills-catalog.md"
 }
 
 @test "architecture-overview.md task skill count matches actual" {

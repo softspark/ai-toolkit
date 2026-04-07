@@ -1,6 +1,6 @@
 # ai-toolkit
 
-> Professional-grade Claude Code toolkit: 90 skills, 44 agents, machine-enforced constitution, quality hooks.
+> Professional-grade Claude Code toolkit: skills, agents, machine-enforced constitution, quality hooks.
 
 ## Documentation
 
@@ -12,9 +12,10 @@
 ## Knowledge Base
 
 - [Best Practices](kb/best-practices/README.md)
+- [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
 - [How-To Guides](kb/howto/README.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
-- [Agents Catalog (44 agents)](kb/reference/agents-catalog.md)
+- [Agents Catalog](kb/reference/agents-catalog.md)
 - [Anti-Pattern Registry Format](kb/reference/anti-pattern-registry-format.md)
 - [AI Toolkit Architecture](kb/reference/architecture-overview.md)
 - [Config Benchmark](kb/reference/benchmark-config.md)
@@ -37,7 +38,7 @@
 - [Plugin Pack Conventions](kb/reference/plugin-pack-conventions.md)
 - [Quick Wins Implementation Summary](kb/reference/quick-wins-implementation-summary.md)
 - [Skill Templates](kb/reference/skill-templates.md)
-- [Skills Catalog (90 skills)](kb/reference/skills-catalog.md)
+- [Skills Catalog](kb/reference/skills-catalog.md)
 - [Skills Unification Model](kb/reference/skills-unification.md)
 - [Usage Statistics](kb/reference/stats.md)
 - [Config Sync](kb/reference/sync.md)

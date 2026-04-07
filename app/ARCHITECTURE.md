@@ -6,13 +6,13 @@ Universal multi-agent system for software development. Works across all reposito
 
 | Component | Count |
 |-----------|-------|
-| Agents | 44 |
-| Skills | 90 |
-| Hooks | 12 events / 21 entries (SessionStart, Notification, PreToolUse ×2, UserPromptSubmit ×2, PostToolUse, Stop ×2, TaskCompleted, TeammateIdle, SubagentStart, SubagentStop, PreCompact, SessionEnd) |
+| Agents | See agents catalog |
+| Skills | See skills catalog |
+| Hooks | 12 events / 21 entries (SessionStart ×3, Notification ×1, PreToolUse ×4, UserPromptSubmit ×2, PostToolUse ×2, Stop ×2, TaskCompleted ×1, TeammateIdle ×1, SubagentStart ×1, SubagentStop ×1, PreCompact ×2, SessionEnd ×1) |
 
 ---
 
-## Agents (44)
+## Agents
 
 ### Orchestration & Planning (4)
 | Agent | Model | Purpose |
@@ -100,7 +100,7 @@ Universal multi-agent system for software development. Works across all reposito
 
 ---
 
-## Skills (90)
+## Skills
 
 ### Task Skills (28)
 | Skill | Slash Command | Purpose |
@@ -255,9 +255,9 @@ Phase 2: IMPLEMENTATION
 ```
 .claude/
 ├── ARCHITECTURE.md      # This file
-├── agents/              # Agent definitions (44)
+├── agents/              # Agent definitions
 ├── hooks.json           # Quality gate hooks (multi-language)
-├── skills/              # All skills: task, hybrid, knowledge (90)
+├── skills/              # All skills: task, hybrid, knowledge
 ├── output-styles/       # System prompt output style overrides (e.g. golden-rules)
 ├── constitution.md      # Immutable safety rules (5 articles)
 └── settings.local.json  # Local settings + Agent Teams config

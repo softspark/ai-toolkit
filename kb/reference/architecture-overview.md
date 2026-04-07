@@ -13,7 +13,7 @@ description: "Architecture of ai-toolkit: directory layout, global install model
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment). Provides 44 specialized agents, 90 skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
+Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment). Provides specialized agents, skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
 
 ## Design Principles
 
@@ -30,8 +30,8 @@ ai-toolkit/
   bin/
     ai-toolkit.js        # CLI entry point (install, init, add-rule, ...)
   app/                       # All toolkit components
-    agents/                  # 44 agent definitions (.md + YAML frontmatter)
-    skills/                  # 90 skills: task, hybrid, knowledge
+    agents/                  # Agent definitions (.md + YAML frontmatter)
+    skills/                  # skills: task, hybrid, knowledge
     rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
     hooks/                   # Hook scripts (copied to ~/.ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)

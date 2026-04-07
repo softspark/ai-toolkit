@@ -15,13 +15,13 @@ if __name__ == "__main__":
     render_generator({
         "title": "# AI Toolkit — Gemini CLI Configuration",
         "intro_template": (
-            "Shared AI development toolkit with {agents} specialized agents,"
-            " {skills} skills, quality hooks, and a safety constitution."
+            "Shared AI development toolkit with specialized agents,"
+            " skills, quality hooks, and a safety constitution."
         ),
-        "agents_section": "## Available Agents ({agents})",
+        "agents_section": "## Available Agents",
         "agents_intro": "Specialized agent personas — apply their expertise for relevant tasks:",
         "agents_format": "bullets",
-        "skills_section": "## Available Skills ({skills})",
+        "skills_section": "## Available Skills",
         "skills_intro": "Skills are invocable slash commands or auto-loaded knowledge sources:",
         "skills_format": "bullets",
         "guidelines": ["quality_standards", "workflow"],

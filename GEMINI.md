@@ -3,9 +3,9 @@
 
 # AI Toolkit — Gemini CLI Configuration
 
-Shared AI development toolkit with 44 specialized agents, 90 skills, quality hooks, and a safety constitution.
+Shared AI development toolkit with specialized agents, skills, quality hooks, and a safety constitution.
 
-## Available Agents (44)
+## Available Agents
 
 Specialized agent personas — apply their expertise for relevant tasks:
 
@@ -54,7 +54,7 @@ Specialized agent personas — apply their expertise for relevant tasks:
 - **technical-researcher**: Deep technical investigation and multi-source research synthesis specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix, synthesize, aggregate, report, executive summary, gap analysis, findings, multi-source, cross-reference
 - **test-engineer**: Testing expert. Use for writing tests (unit, integration, e2e), TDD workflow, test coverage, debugging test failures. Triggers: test, pytest, unittest, coverage, tdd, testing, mock, fixture.
 
-## Available Skills (90)
+## Available Skills
 
 Skills are invocable slash commands or auto-loaded knowledge sources:
 

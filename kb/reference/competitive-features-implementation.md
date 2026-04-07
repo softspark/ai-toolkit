@@ -35,7 +35,7 @@ Strengthen ai-toolkit's competitive position by implementing 10 features from co
 **Key design principle:** ai-toolkit is a **generic toolkit** — it does NOT know about rag-mcp or any specific consumer. Consumers (like rag-mcp) use ai-toolkit's public API (`inject-rule`, `inject-hook`, `merge-hooks`) to add their own rules and hooks.
 
 **State before plan:** 88 skills, 47 agents, 14 hooks, 9 editor integrations
-**State after plan:** 90 skills, 44 agents, 21 hooks, 70 language rules, 25 MCP templates, extension API
+**State after plan:** See manifest.json for current counts. Target: skills, agents, hooks, 70 language rules, 25 MCP templates, extension API
 
 ---
 
@@ -384,7 +384,7 @@ All entries are tagged with "_source": "<source-name>" for idempotent updates.
       "required": true
     },
     "agents": {
-      "description": "44 specialized agents",
+      "description": "Specialized agents",
       "files": ["app/agents/*.md"],
       "required": false,
       "default": true

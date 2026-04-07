@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.9 — Single Source of Truth for Counts (2026-04-07)
+
+### Changed
+- **Counts policy**: Hardcoded skill/agent/hook/test counts removed from all secondary docs. Only README.md, manifest.json, and package.json contain counts. Rule: `kb/best-practices/no-hardcoded-counts.md`.
+- **47 new tests** (327 → 374): MCP manager, language auto-detect, install state, version check, new hooks, orphan cleanup.
+
+### Fixed
+- manifest.json version synced (was 1.0.0)
+- plugin.json version synced (was 1.2.1)
+- agents-catalog.md version aligned
+- ARCHITECTURE.md hook event multipliers corrected
+- Generator scripts no longer embed counts
+
+---
+
 ## v1.3.8 — Language Rules as References (2026-04-07)
 
 ### Changed

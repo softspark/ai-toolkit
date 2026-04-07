@@ -65,8 +65,8 @@ def generate_index() -> None:
     print("# ai-toolkit")
     print()
     print(
-        f"> Professional-grade Claude Code toolkit: {skills} skills,"
-        f" {agents} agents, machine-enforced constitution, quality hooks."
+        "> Professional-grade Claude Code toolkit: skills,"
+        " agents, machine-enforced constitution, quality hooks."
     )
     print()
     print("## Documentation")
