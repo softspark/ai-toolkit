@@ -188,39 +188,27 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
     if not langs:
         return
 
-    # Build compact summary: first 5 key rules from each category
-    lines: list[str] = ["# Language Rules (auto-detected)", ""]
-    lines.append(f"Detected: **{', '.join(langs)}** + common rules.")
+    # Build a lightweight reference pointer — NOT the full rules content.
+    # Full rules are available as knowledge skills (auto-loaded by Claude)
+    # and as files Claude can Read on demand.
+    toolkit_pkg = app_dir.parent
+    lines: list[str] = ["# Language Rules", ""]
+    lines.append(f"This project uses: **{', '.join(langs)}**")
     lines.append("")
-    lines.append("Detailed rules available as knowledge skills (auto-loaded by Claude).")
-    lines.append("")
-
-    # Deduplicate: common + unique language dirs
+    lines.append("When writing or reviewing code, use the Glob and Read tools to read the rules:")
+    # Resolve actual installed path for the rules
+    rules_resolved = str(rules_src.resolve())
     all_dirs: list[str] = ["common"]
     for l in langs:
         if l not in all_dirs:
             all_dirs.append(l)
-
-    for lang_dir in all_dirs:
-        lang_path = rules_src / lang_dir
-        if not lang_path.is_dir():
-            continue
-        lang_label = lang_dir.capitalize() if lang_dir != "common" else "Common"
-        lines.append(f"## {lang_label} Rules")
-        lines.append("")
-        for rule_file in sorted(lang_path.glob("*.md")):
-            content = rule_file.read_text(encoding="utf-8").strip()
-            # Strip YAML frontmatter
-            if content.startswith("---"):
-                end = content.find("---", 3)
-                if end != -1:
-                    content = content[end + 3:].strip()
-            # Extract first 3 bullet points as key rules
-            bullets = [l.strip() for l in content.splitlines() if l.strip().startswith("- ")][:3]
-            if bullets:
-                category = rule_file.stem.replace("-", " ").title()
-                lines.append(f"**{category}:** {' | '.join(b.lstrip('- ') for b in bullets)}")
-        lines.append("")
+    for lang in all_dirs:
+        lang_path = rules_src / lang
+        if lang_path.is_dir():
+            categories = ", ".join(f.stem for f in sorted(lang_path.glob("*.md")))
+            lines.append(f"- `{lang_path.resolve()}/` ({categories})")
+    lines.append("")
+    lines.append("Read the relevant rule files before making code changes. Do NOT guess — read first.")
 
     # Write summary to temp file, then inject as section
     import tempfile

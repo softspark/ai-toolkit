@@ -7,6 +7,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.8 — Language Rules as References (2026-04-07)
+
+### Changed
+- **Language rules injection**: Instead of inlining full rule content (~705 lines), `install --local` now injects lightweight reference pointers (~12 lines) with absolute paths to rule files. Claude reads them on demand via Read tool, keeping CLAUDE.md compact.
+- **plugin.json**: Version synced from stale 1.2.1 to 1.3.8.
+
+---
+
 ## v1.3.7 — Update Notifications (2026-04-07)
 
 ### Added

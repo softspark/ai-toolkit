@@ -1,7 +1,7 @@
 {
   "name": "ai-toolkit",
   "description": "Professional-grade Claude Code toolkit: 90 skills, 44 agents, persona presets, skill security auditor, expanded lifecycle hooks, experimental opt-in plugin packs, benchmark harvesting, and multi-tool support.",
-  "version": "1.2.1",
+  "version": "1.3.8",
   "author": {
     "name": "SoftSpark",
     "url": "https://github.com/softspark"

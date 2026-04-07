@@ -3,7 +3,7 @@ title: "Extension API Reference"
 category: reference
 service: ai-toolkit
 tags: [extension-api, inject-rule, inject-hook, mcp-templates, integration]
-version: "1.3.0"
+version: "1.3.8"
 created: "2026-04-07"
 last_updated: "2026-04-07"
 description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, remove-rule, remove-hook, and mcp template management."
