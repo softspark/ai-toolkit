@@ -181,7 +181,8 @@ ai-toolkit/
 │   │   ├── governance-capture.sh # Security-sensitive op logging
 │   │   ├── commit-quality.sh     # Conventional commit advisory
 │   │   ├── session-context.sh    # Environment snapshot on start
-│   │   └── track-usage.sh        # Skill invocation tracking
+│   │   ├── track-usage.sh        # Skill invocation tracking
+│   │   └── notify-waiting.sh     # Cross-platform "Claude waiting" notification
 │   ├── hooks.json       # Hook definitions (merged into settings.json)
 │   ├── plugins/         # Experimental plugin packs (opt-in, not part of default install)
 │   ├── output-styles/   # System prompt output style overrides

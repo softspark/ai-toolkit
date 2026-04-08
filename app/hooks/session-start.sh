@@ -9,10 +9,19 @@ echo "MANDATORY: Before answering ANY technical question, apply ALL rules from y
 echo "REMINDER: When writing features or fixing bugs, ensure tests cover the changes. When modifying API, config, or setup, update relevant documentation. Propose these steps to the user — do not silently skip them."
 
 # 2. Check for updates (cached, max once per 24h, non-blocking)
-TOOLKIT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+TOOLKIT_DIR="$(npm root -g 2>/dev/null)/@softspark/ai-toolkit"
+[ ! -d "$TOOLKIT_DIR" ] && TOOLKIT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 VERSION_MSG=$(python3 "$TOOLKIT_DIR/scripts/version_check.py" 2>/dev/null)
 if [ -n "$VERSION_MSG" ]; then
     echo "$VERSION_MSG"
+    # Desktop notification so user sees update before typing
+    if command -v osascript >/dev/null 2>&1; then
+        osascript -e "display notification \"$VERSION_MSG\" with title \"ai-toolkit\"" 2>/dev/null &
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send "ai-toolkit" "$VERSION_MSG" 2>/dev/null &
+    elif command -v powershell.exe >/dev/null 2>&1; then
+        powershell.exe -Command "[void](New-Object -ComObject WScript.Shell).Popup('$VERSION_MSG',5,'ai-toolkit',64)" 2>/dev/null &
+    fi
 fi
 
 # 3. Load session context (if available)

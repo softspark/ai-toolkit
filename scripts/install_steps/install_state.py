@@ -126,7 +126,7 @@ def print_status() -> None:
         import sys as _sys
         _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
         from version_check import check
-        result = check()
+        result = check(force=True)
         if result["update_available"]:
             print()
             print(f"  Update available: {result['installed']} -> {result['latest']}")

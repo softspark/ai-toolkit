@@ -27,7 +27,23 @@ PACKAGE_NAME = "@softspark/ai-toolkit"
 
 
 def _get_installed_version() -> str:
-    """Read version from the toolkit's own package.json."""
+    """Read version from state.json (what user actually has configured).
+
+    Falls back to package.json if state.json is missing (e.g. fresh install).
+    state.json is the source of truth because it reflects what was last
+    installed/updated, while package.json may be newer if the npm package
+    was upgraded but `ai-toolkit update` was not run yet.
+    """
+    state_file = Path.home() / ".ai-toolkit" / "state.json"
+    if state_file.is_file():
+        try:
+            with open(state_file, encoding="utf-8") as f:
+                version = json.load(f).get("installed_version")
+                if version:
+                    return version
+        except (json.JSONDecodeError, OSError):
+            pass
+    # Fallback: package.json
     pkg = Path(__file__).resolve().parent.parent / "package.json"
     if pkg.is_file():
         with open(pkg, encoding="utf-8") as f:

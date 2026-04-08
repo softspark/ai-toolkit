@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.12 — Cross-platform notifications + version check fix (2026-04-08)
+
+### Fixed
+- **Version check**: `ai-toolkit status` and session-start hook now read installed version from `state.json` instead of `package.json`, fixing false "up to date" when npm package was upgraded but `ai-toolkit update` not yet run.
+- **Version check**: `status` forces a fresh npm check (no 24h cache) so user always sees real state.
+- **Session-start hook**: `TOOLKIT_DIR` resolved via `npm root -g` instead of broken `../../` relative path from `~/.ai-toolkit/hooks/`.
+
+### Changed
+- **Notification hook**: replaced inline macOS-only `osascript` with cross-platform `notify-waiting.sh` script (macOS/Linux/Windows WSL).
+- **Update notification**: session-start hook now shows desktop notification (macOS/Linux/Windows) when a new version is available.
+
+---
+
 ## v1.3.11 — Proactive Context Checkpointing + Augment CLI (2026-04-08)
 
 ### Added

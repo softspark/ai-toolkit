@@ -2783,15 +2783,19 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 3. Loads session context from `.claude/session-context.md` (if exists)
 4. Loads active instincts from `.claude/instincts/*.md` (if any)
 
-### Notification — inline
+### Notification — `notify-waiting.sh`
 
 | Field | Value |
 |-------|-------|
 | Event | `Notification` |
 | Matcher | *(all)* |
+| Script | `~/.ai-toolkit/hooks/notify-waiting.sh` |
 | Fires | Claude Code waiting for user input |
 
-**Action:** macOS desktop notification via `osascript`.
+**Action:** Cross-platform desktop notification ("Claude Code needs your attention"):
+- macOS: `osascript` (native)
+- Linux: `notify-send` (libnotify)
+- Windows/WSL: `powershell.exe` WScript popup (5s auto-close)
 
 ### PreToolUse (Bash) — `guard-destructive.sh`
 
