@@ -3,7 +3,7 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-04-08"
 last_updated: "2026-04-08"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, and eject from user perspective."
@@ -31,15 +31,58 @@ Verifies all critical paths from the user's perspective.
 
 ## Quick Checklist (TL;DR)
 
-6 commands — if all pass, the release is ready:
+9 commands — if all pass, the release is ready:
 
 ```bash
-ai-toolkit --version                        # 1. Version OK?
-ai-toolkit status                            # 2. Status OK?
-ai-toolkit doctor                            # 3. Health check passed?
-ai-toolkit install --dry-run                 # 4. Global install OK?
-python3 scripts/validate.py --strict         # 5. Validation passed?
-npm test                                     # 6. All tests passed?
+# Pre-commit (Phase 0)
+python3 scripts/generate_agents_md.py > AGENTS.md   # 1. Regenerate artifacts
+python3 scripts/generate_llms_txt.py > llms.txt      # 2. Regenerate llms.txt
+python3 scripts/validate.py --strict                 # 3. Validation passed?
+npm test                                             # 4. All tests passed?
+
+# Post-install verification (Phases 1-7)
+ai-toolkit --version                                 # 5. Version OK?
+ai-toolkit status                                    # 6. Status OK?
+ai-toolkit doctor                                    # 7. Health check passed?
+ai-toolkit install --dry-run                         # 8. Global install OK?
+python3 scripts/audit_skills.py --ci                 # 9. Security audit clean?
+```
+
+---
+
+## Phase 0: Pre-Commit & Pre-Push (2 min)
+
+Run these commands **before every commit and push to main**. CI validates
+counts but does NOT auto-regenerate — you must do it locally.
+
+```bash
+# 1. Regenerate generated artifacts
+python3 scripts/generate_agents_md.py > AGENTS.md
+python3 scripts/generate_llms_txt.py > llms.txt
+python3 scripts/generate_llms_txt.py --full > llms-full.txt
+
+# 2. Validate everything (catches stale counts, missing assets)
+python3 scripts/validate.py --strict
+
+# 3. Security audit
+python3 scripts/audit_skills.py --ci
+
+# 4. Run tests
+npm test
+
+# 5. Stage and commit
+git add AGENTS.md llms.txt llms-full.txt
+git add -p  # stage your other changes
+git commit -m "feat: your change description"
+```
+
+**Why local?** Branch protection on `main` requires PRs and status checks.
+CI cannot push directly to `main`, so generated artifacts must be committed
+by the developer as part of their PR.
+
+**One-liner (copy-paste):**
+```bash
+python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---
@@ -160,7 +203,7 @@ npm test
 **Key test areas:**
 - Guards: rm -rf, DROP TABLE, git push --force blocked
 - Install: idempotent, profiles, --only/--skip, orphan cleanup
-- Eject: real files (nie symlinks), inlined rules
+- Eject: real files (not symlinks), inlined rules
 - Uninstall: removes toolkit, preserves user content
 
 ---

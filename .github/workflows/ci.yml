@@ -6,33 +6,6 @@ on:
 
 
 jobs:
-  auto-generate:
-    name: Regenerate AGENTS.md and llms.txt
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Regenerate AGENTS.md and llms.txt
-        run: |
-          python3 scripts/generate_agents_md.py > AGENTS.md
-          python3 scripts/generate_llms_txt.py > llms.txt
-
-      - name: Commit if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add AGENTS.md llms.txt
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: auto-regenerate AGENTS.md and llms.txt"
-            git push
-          else
-            echo "No changes to commit."
-          fi
-
   shellcheck:
     name: ShellCheck hooks
     runs-on: ubuntu-latest

@@ -15,6 +15,7 @@
 - [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
 - [How-To Guides](kb/howto/README.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
+- [SOP: Release Verification](kb/procedures/release-verification-sop.md)
 - [Agents Catalog](kb/reference/agents-catalog.md)
 - [Anti-Pattern Registry Format](kb/reference/anti-pattern-registry-format.md)
 - [AI Toolkit Architecture](kb/reference/architecture-overview.md)
