@@ -269,7 +269,7 @@ Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practic
 `app/plugins/mcp-templates/` contains 25 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
 ### Language Rules
-`app/rules/` provides 70 rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`.
+`app/rules/` provides language-specific rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`. See README.md for current count.
 
 ### Extension API (`inject-hook`)
 `inject_section_cli.py` provides a stable marker-based API for injecting content into `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content.

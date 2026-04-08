@@ -13,7 +13,7 @@ description: "Reference for the language-specific rules system: 13 languages, 5 
 
 ## Overview
 
-ai-toolkit ships 70 language-specific rule files covering 13 programming languages plus a common set. Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
+ai-toolkit ships language-specific rule files covering 13 programming languages plus a common set (see README.md for current count). Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
 
 Rules are distinct from skills: rules are injected as static text into `CLAUDE.md` and are always visible to Claude, whereas skills are loaded contextually by agents.
 
@@ -51,7 +51,7 @@ app/rules/
 └── ruby/
 ```
 
-**Total: 13 languages × 5 files + 5 common = 70 rule files**
+**Total: 13 directories × 5 files each + 3 standalone = 68 rule files** (see README.md for canonical count)
 
 ## Supported Languages
 

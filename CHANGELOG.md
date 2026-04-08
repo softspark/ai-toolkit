@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.11 — Proactive Context Checkpointing + Augment CLI (2026-04-08)
+
+### Added
+- **Constitution Art. I §5: Proactive Context Checkpointing** — agents must checkpoint `.claude/session-context.md` during multi-step tasks (objective, completed/pending steps, files modified, key decisions).
+- **`augment-rules` CLI command** — wired `generate_augment.py` into `bin/ai-toolkit.js` GENERATORS + COMMANDS + `generate-all`. Generates `.augment/rules/ai-toolkit.md`.
+- **Augment in Platform Support** — added to README table with project scope.
+
+### Changed
+- **`save-session.sh`** — enriched with git branch, dirty count, diff stat, and agent-written checkpoint preservation.
+- **Language rules count** — corrected 70→68 in README.md (13 dirs × 5 + 3 standalone).
+- **Secondary docs** — removed hardcoded rule counts from `language-rules.md`, `architecture-overview.md`, `competitive-features-implementation.md`; reference README for canonical count.
+- **README architecture tree** — added missing `track-usage.sh`.
+
+---
+
 ## v1.3.10 — Patch (2026-04-07)
 
 ### Fixed

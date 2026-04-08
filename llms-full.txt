@@ -1199,7 +1199,7 @@ Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practic
 `app/plugins/mcp-templates/` contains 25 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
 ### Language Rules
-`app/rules/` provides 70 rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`.
+`app/rules/` provides language-specific rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`. See README.md for current count.
 
 ### Extension API (`inject-hook`)
 `inject_section_cli.py` provides a stable marker-based API for injecting content into `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content.
@@ -1578,7 +1578,7 @@ Strengthen ai-toolkit's competitive position by implementing 10 features from co
 **Key design principle:** ai-toolkit is a **generic toolkit** — it does NOT know about rag-mcp or any specific consumer. Consumers (like rag-mcp) use ai-toolkit's public API (`inject-rule`, `inject-hook`, `merge-hooks`) to add their own rules and hooks.
 
 **State before plan:** 88 skills, 47 agents, 14 hooks, 9 editor integrations
-**State after plan:** See manifest.json for current counts. Target: skills, agents, hooks, 70 language rules, 25 MCP templates, extension API
+**State after plan:** See manifest.json and README.md for current counts. Target: skills, agents, hooks, language rules, MCP templates, extension API
 
 ---
 
@@ -2184,7 +2184,7 @@ npx @softspark/ai-toolkit inject-hook  ./rag-mcp-hooks.json    # NEW
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| 70 rule files = maintenance burden | Medium | Medium | Auto-generate from ECC (port script), validate.py checks |
+| Rule files = maintenance burden | Medium | Medium | Auto-generate from ECC (port script), validate.py checks |
 | inject-hook misuse by consumers | Low | Medium | Validate JSON schema, reject malformed hooks |
 | Manifest install breaks existing | Low | High | Backward compatible, existing CLI preserved |
 | Documentation site drift | Medium | Medium | Generate from source (CLAUDE.md → site), CI check |
@@ -2886,7 +2886,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.ai-toolkit/hooks/save-session.sh` |
 | Fires | After every Claude response |
 
-**Action:** Writes session context to `.claude/session-context.md` for cross-session persistence.
+**Action:** Writes enriched session context to `.claude/session-context.md` for cross-session persistence. Captures:
+- Session ID and last assistant message (first 5 lines)
+- Git branch, uncommitted change count, and diff stat (last 5 lines)
+- Agent-written checkpoints from `.claude/session-context.md.checkpoints` (if present — written by proactive checkpointing per Constitution Art. I §5)
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -3291,7 +3294,7 @@ description: "Reference for the language-specific rules system: 13 languages, 5 
 
 ## Overview
 
-ai-toolkit ships 70 language-specific rule files covering 13 programming languages plus a common set. Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
+ai-toolkit ships language-specific rule files covering 13 programming languages plus a common set (see README.md for current count). Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
 
 Rules are distinct from skills: rules are injected as static text into `CLAUDE.md` and are always visible to Claude, whereas skills are loaded contextually by agents.
 
@@ -3329,7 +3332,7 @@ app/rules/
 └── ruby/
 ```
 
-**Total: 13 languages × 5 files + 5 common = 70 rule files**
+**Total: 13 directories × 5 files each + 3 standalone = 68 rule files** (see README.md for canonical count)
 
 ## Supported Languages
 

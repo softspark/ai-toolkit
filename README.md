@@ -122,6 +122,7 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 | Cline | `.clinerules` | `ai-toolkit install --local` | project |
 | Roo Code | `.roomodes` | `ai-toolkit install --local` | project |
 | Aider | `.aider.conf.yml` | `ai-toolkit install --local` | project |
+| Augment | `.augment/rules/ai-toolkit.md` | `ai-toolkit install --local` | project |
 | Codex / OpenCode | `AGENTS.md` | `ai-toolkit agents-md` | project |
 
 > **Note:** Claude Code remains the primary platform with full feature support (agents, lifecycle hooks, safety constitution). Other platforms receive a distilled ruleset generated from the same source. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
@@ -179,7 +180,8 @@ ai-toolkit/
 │   │   ├── mcp-health.sh         # MCP server availability check
 │   │   ├── governance-capture.sh # Security-sensitive op logging
 │   │   ├── commit-quality.sh     # Conventional commit advisory
-│   │   └── session-context.sh    # Environment snapshot on start
+│   │   ├── session-context.sh    # Environment snapshot on start
+│   │   └── track-usage.sh        # Skill invocation tracking
 │   ├── hooks.json       # Hook definitions (merged into settings.json)
 │   ├── plugins/         # Experimental plugin packs (opt-in, not part of default install)
 │   ├── output-styles/   # System prompt output style overrides
@@ -471,7 +473,7 @@ Templates include: GitHub, PostgreSQL, Slack, Sentry, Context7, Brave Search, Su
 
 ## Language Rules
 
-70 language-specific coding rules across 13 languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, plus 5 common rules. Each language has 5 rule categories: coding-style, testing, patterns, frameworks, security.
+68 language-specific coding rules across 13 languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, plus common rules. Each language has 5 rule categories: coding-style, testing, patterns, frameworks, security.
 
 ```bash
 ai-toolkit install --local                   # auto-detects project language, installs matching rules

@@ -27,6 +27,7 @@ const GENERATORS = {
   'cline-rules':          { script: 'generate_cline.py',         dest: '.clinerules' },
   'roo-modes':            { script: 'generate_roo_modes.py',     dest: '.roomodes' },
   'aider-conf':           { script: 'generate_aider_conf.py',    dest: '.aider.conf.yml' },
+  'augment-rules':        { script: 'generate_augment.py',       dest: path.join('.augment', 'rules', 'ai-toolkit.md'), mkdir: '.augment/rules' },
   'agents-md':            { script: 'generate_agents_md.py',     dest: 'AGENTS.md' },
 };
 
@@ -82,9 +83,10 @@ const COMMANDS = {
   'cline-rules': 'Generate .clinerules for Cline',
   'roo-modes': 'Generate .roomodes for Roo Code',
   'aider-conf': 'Generate .aider.conf.yml for Aider',
+  'augment-rules': 'Generate .augment/rules/ai-toolkit.md for Augment',
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
-  'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, llms)',
+  'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, llms)',
   help: 'Show this help message',
 };
 

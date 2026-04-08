@@ -20,6 +20,13 @@ status: IMMUTABLE
 - All iterations MUST be logged to stats for audit
 - Exceeding limits requires explicit user override
 
+### Section 5: Proactive Context Checkpointing
+- During multi-step tasks (>5 tool calls), update `.claude/session-context.md` after each major milestone
+- Checkpoint MUST include: current objective, completed steps, pending steps, files modified, key decisions
+- Minimum frequency: after every completed task phase, workflow stage, or subagent handoff
+- Agent SHOULD checkpoint before any risky or destructive operation
+- Format: append `## Checkpoint <timestamp>` sections, do not overwrite previous checkpoints within the same session
+
 ## Article II: The Hierarchy of Truth
 1. **KB Supremacy**: The Knowledge Base (`kb/`) is the source of truth. If code contradicts KB, check KB freshness.
 2. **Research Protocol**: Use `research-mastery` skill before any major decision. Guessing is forbidden.

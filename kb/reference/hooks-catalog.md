@@ -147,7 +147,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.ai-toolkit/hooks/save-session.sh` |
 | Fires | After every Claude response |
 
-**Action:** Writes session context to `.claude/session-context.md` for cross-session persistence.
+**Action:** Writes enriched session context to `.claude/session-context.md` for cross-session persistence. Captures:
+- Session ID and last assistant message (first 5 lines)
+- Git branch, uncommitted change count, and diff stat (last 5 lines)
+- Agent-written checkpoints from `.claude/session-context.md.checkpoints` (if present — written by proactive checkpointing per Constitution Art. I §5)
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 

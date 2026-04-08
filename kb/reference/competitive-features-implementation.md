@@ -35,7 +35,7 @@ Strengthen ai-toolkit's competitive position by implementing 10 features from co
 **Key design principle:** ai-toolkit is a **generic toolkit** — it does NOT know about rag-mcp or any specific consumer. Consumers (like rag-mcp) use ai-toolkit's public API (`inject-rule`, `inject-hook`, `merge-hooks`) to add their own rules and hooks.
 
 **State before plan:** 88 skills, 47 agents, 14 hooks, 9 editor integrations
-**State after plan:** See manifest.json for current counts. Target: skills, agents, hooks, 70 language rules, 25 MCP templates, extension API
+**State after plan:** See manifest.json and README.md for current counts. Target: skills, agents, hooks, language rules, MCP templates, extension API
 
 ---
 
@@ -641,7 +641,7 @@ npx @softspark/ai-toolkit inject-hook  ./rag-mcp-hooks.json    # NEW
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| 70 rule files = maintenance burden | Medium | Medium | Auto-generate from ECC (port script), validate.py checks |
+| Rule files = maintenance burden | Medium | Medium | Auto-generate from ECC (port script), validate.py checks |
 | inject-hook misuse by consumers | Low | Medium | Validate JSON schema, reject malformed hooks |
 | Manifest install breaks existing | Low | High | Backward compatible, existing CLI preserved |
 | Documentation site drift | Medium | Medium | Generate from source (CLAUDE.md → site), CI check |
