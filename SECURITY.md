@@ -50,6 +50,15 @@ All bundled scripts (`scripts/*.py`, `scripts/*.sh`) use stdlib only — no exte
 - Modify system files outside of the target project's `.claude/` directory
 - Request elevated permissions
 
+## GitHub Security Advisories
+
+For confirmed vulnerabilities, we use [GitHub Security Advisories](https://github.com/softspark/ai-toolkit/security/advisories) to:
+1. Coordinate private disclosure and fix development
+2. Request a CVE identifier when applicable
+3. Publish the advisory alongside the patched release
+
+If you believe a vulnerability warrants a CVE, mention it in your report email — we will initiate the process.
+
 ## Scope
 
 In scope:

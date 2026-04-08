@@ -106,6 +106,15 @@ jobs:
       - name: Run ai-toolkit validate
         run: ai-toolkit validate
 
+  security-audit:
+    name: Skill security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run audit_skills.py
+        run: python3 scripts/audit_skills.py --ci
+
   check-license:
     name: Check required files
     runs-on: ubuntu-latest
@@ -114,7 +123,7 @@ jobs:
 
       - name: Check required community files
         run: |
-          for f in LICENSE CHANGELOG.md .github/CONTRIBUTING.md SECURITY.md AGENTS.md; do
+          for f in LICENSE CHANGELOG.md .github/CONTRIBUTING.md SECURITY.md AGENTS.md CODE_OF_CONDUCT.md; do
             if [ ! -f "$f" ]; then
               echo "MISSING: $f"
               exit 1

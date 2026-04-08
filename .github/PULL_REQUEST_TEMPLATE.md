@@ -1,11 +1,26 @@
-## This project does not accept pull requests
+## Summary
 
-Thank you for your interest, but **ai-toolkit does not accept external code contributions**.
+<!-- What does this PR do? Link related issues with "Closes #123". -->
 
-The code is MIT-licensed — feel free to fork and modify it for your own use.
+## Type of Change
 
-To report bugs or suggest features:
-- Report bugs via [GitHub Issues](../issues/new/choose)
-- Suggest features via an issue with the `enhancement` label
+- [ ] Bug fix
+- [ ] New skill / agent / hook
+- [ ] Refactor (no behavior change)
+- [ ] Test improvement
+- [ ] Other: ___
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+## Checklist
+
+- [ ] I have read the [Contributing Guide](CONTRIBUTING.md)
+- [ ] Branch follows naming convention (`feat/`, `fix/`, `refactor/`, etc.)
+- [ ] Commits use [Conventional Commits](https://www.conventionalcommits.org/) format
+- [ ] `python3 scripts/validate.py` passes
+- [ ] `python3 scripts/audit_skills.py --ci` passes (0 HIGH)
+- [ ] `bats tests/` passes
+- [ ] New code has no external dependencies (stdlib only)
+- [ ] No secrets, tokens, or API keys in the code
+
+## Notes for Maintainer
+
+<!-- Anything the maintainer should know during review? -->
