@@ -440,6 +440,8 @@ const [,, command, ...args] = process.argv;
 
 if (!command || command === 'help' || command === '--help' || command === '-h') {
   showHelp();
+} else if (command === '--version' || command === '-v' || command === 'version') {
+  console.log(require('../package.json').version);
 } else if (SPECIAL_HANDLERS[command]) {
   SPECIAL_HANDLERS[command](args);
 } else if (SCRIPT_COMMANDS[command]) {

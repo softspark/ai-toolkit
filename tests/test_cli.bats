@@ -33,6 +33,23 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
+@test "cli: --version exits 0 and prints semver" {
+    run $CLI --version
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'
+}
+
+@test "cli: -v exits 0 and prints semver" {
+    run $CLI -v
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'
+}
+
+@test "cli: version exits 0" {
+    run $CLI version
+    [ "$status" -eq 0 ]
+}
+
 @test "cli: no command exits 0 and shows help" {
     run $CLI
     [ "$status" -eq 0 ]

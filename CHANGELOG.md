@@ -7,6 +7,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.13 — CLI --version flag (2026-04-08)
+
+### Added
+- **`--version` / `-v` / `version` CLI flag** — prints clean semver string and exits 0 (previously fell through to "Unknown command" with exit 1).
+- **3 new CLI tests** for `--version`, `-v`, and `version` subcommand.
+
+---
+
 ## v1.3.12 — Cross-platform notifications + version check fix (2026-04-08)
 
 ### Fixed
