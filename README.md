@@ -385,6 +385,43 @@ Three skills enforce non-negotiable quality gates with anti-rationalization tabl
 | `debugging-tactics` | `NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST` | 4-phase debugging: root cause → pattern → hypothesis → fix. 3+ failed fixes → question architecture. |
 | `verification-before-completion` | `NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE` | Gate function: IDENTIFY → RUN → READ → VERIFY → CLAIM. "Should work now" is not evidence. |
 
+Additionally, **15 core skills** include `## Common Rationalizations` tables — domain-specific excuses with rebuttals that prevent agent drift and shortcut-taking. Skills with rationalization tables: `/review`, `/debug`, `/refactor`, `/tdd`, `/plan`, `/docs`, `/analyze`, `security-patterns`, `testing-patterns`, `api-patterns`, `ci-cd-patterns`, `clean-code`, `performance-profiling`, `git-mastery`, `database-patterns`.
+
+### Confidence Scoring & Self-Evaluation (`/review`)
+
+The `/review` skill outputs findings with per-issue confidence scores (1-10) and severity classification (critical/major/minor/nit). After completing a review, an LLM-as-Judge self-evaluation pass checks for blind spots: anchoring bias, assumption vs verification, missing unhappy paths, and calibrates confidence scores.
+
+### Agent Verification Checklists
+
+10 key agents include `## Verification Checklist` — exit criteria that MUST be met before presenting results. Each checklist is domain-specific:
+
+| Agent | Key exit criteria |
+|-------|------------------|
+| `code-reviewer` | Every finding has file:line + evidence, not just opinion |
+| `security-auditor` | Each finding includes proof-of-concept or exploit path |
+| `test-engineer` | No empty/placeholder tests, mocks only at boundaries |
+| `debugger` | Root cause identified, regression test added |
+| `backend-specialist` | Input validation, error format, query optimization |
+| `frontend-specialist` | Empty/loading/error states, accessibility, responsive |
+| `database-architect` | Migration tested on prod-like volume, rollback tested |
+| `performance-optimizer` | Baseline measured, profiler evidence attached |
+| `devops-implementer` | Dry run passed, rollback documented, no hardcoded secrets |
+| `documenter` | Code examples runnable, no placeholders, valid links |
+
+### Skill Reference Routing
+
+7 core skills include `## Related Skills` sections that suggest logical follow-up skills, improving discoverability:
+
+```
+/review → found issues? → /debug, /tdd, /cve-scan, /analyze
+/debug  → bug fixed?   → /review, /tdd, /workflow incident-response
+/plan   → approved?    → /orchestrate, /write-a-prd, /grill-me
+```
+
+### Intent Capture Interview (`/onboard`)
+
+The `/onboard` skill now includes a Step 0 interview phase before setup — asking 5 targeted questions to capture undocumented project intent (common contributor mistakes, protected files, deployment model, non-obvious constraints, review culture). Answers customize the generated `CLAUDE.md`.
+
 ### 7. Two-Stage Review (`/subagent-development`)
 
 Per-task review pipeline inspired by [obra/superpowers](https://github.com/obra/superpowers):

@@ -200,6 +200,14 @@ After implementing significant changes, update documentation:
 ### Delegation
 For large documentation tasks, hand off to `documenter` agent.
 
+## Verification Checklist
+Before presenting implementation:
+- [ ] Components render correctly with empty/loading/error states
+- [ ] Accessibility basics checked (keyboard nav, aria labels, contrast)
+- [ ] No console errors or warnings in dev tools
+- [ ] Responsive behavior verified at mobile/tablet/desktop breakpoints
+- [ ] Bundle size impact assessed for new dependencies
+
 ## KB Integration
 
 Before coding, search knowledge base:

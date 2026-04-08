@@ -308,6 +308,14 @@ After schema/database changes, update documentation:
 ### Delegation
 For large documentation tasks, hand off to `documenter` agent.
 
+## Verification Checklist
+Before presenting schema changes:
+- [ ] Migration tested on production-like data volume
+- [ ] Rollback script exists and was tested
+- [ ] Indexes cover the expected query patterns
+- [ ] No long-running locks on large tables
+- [ ] Application handles both old and new schema during migration
+
 ## KB Integration
 
 Before designing, search knowledge base:

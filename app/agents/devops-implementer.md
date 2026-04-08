@@ -187,6 +187,14 @@ instructions: |
 ---
 ```
 
+## Verification Checklist
+Before presenting infrastructure changes:
+- [ ] Dry run completed successfully
+- [ ] Rollback procedure documented and tested
+- [ ] Secrets are not hardcoded or logged
+- [ ] Health checks configured for new services
+- [ ] Resource limits set to prevent runaway costs
+
 ## Limitations
 
 - **Architectural decisions** → Use `infrastructure-architect`

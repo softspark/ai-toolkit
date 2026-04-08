@@ -82,6 +82,15 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/complexity.py .
 
 Reports file counts by type, largest files, TODO/FIXME counts, and total code lines.
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "The linter is green, the code is fine" | Linters catch syntax, not design flaws — analysis covers architecture and patterns |
+| "We know where the problems are" | Intuition misses systemic issues — data-driven analysis reveals hidden hotspots |
+| "Analysis takes too long" | A 5-minute scan prevents weeks of debugging — front-load the investment |
+| "It's legacy code, analysis won't help" | Legacy code benefits most — find the critical paths before they break |
+
 ## Tools Used
 
 | Language | Tools |
@@ -90,3 +99,9 @@ Reports file counts by type, largest files, TODO/FIXME counts, and total code li
 | JavaScript | eslint, tsc |
 | Go | golangci-lint |
 | Rust | clippy |
+
+## Related Skills
+- Found quality issues? → `/refactor` to fix them systematically
+- Security issues detected? → `/cve-scan` for dependency audit
+- Want deeper architecture review? → `/architecture-audit` for friction discovery
+- Performance hotspots found? → `/workflow performance-optimization`

@@ -172,3 +172,9 @@ Before marking work complete:
 - [ ] Edge cases and errors covered
 
 Can't check all boxes? You skipped TDD. Start over.
+
+## Related Skills
+- Feature complete? → `/review` to get a code review
+- Need to plan the feature first? → `/plan` for task breakdown
+- Want a full test coverage sweep? → `/workflow test-coverage`
+- Debugging a test failure? → `/debug` for systematic root cause analysis

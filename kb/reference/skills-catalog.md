@@ -3,7 +3,7 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.3.14"
+version: "1.3.15"
 created: "2026-03-23"
 last_updated: "2026-04-08"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
@@ -170,6 +170,62 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **hive-mind** | `skills/hive-mind/` | Multi-agent aggregation, consensus, swarm patterns |
+
+## Quality Guardrails
+
+### Anti-Rationalization Tables
+
+15 core skills include `## Common Rationalizations` — domain-specific tables of excuses and rebuttals that prevent agent drift and shortcut-taking:
+
+| Skill | Example rationalization blocked |
+|-------|---------------------------------|
+| `/review` | "Small change, quick scan is enough" |
+| `/debug` | "It must be a library bug" |
+| `/refactor` | "It works, don't touch it" |
+| `/tdd` | "Too simple to test" |
+| `/plan` | "Planning is wasted time, just start coding" |
+| `/docs` | "The code is self-documenting" |
+| `/analyze` | "The linter is green, the code is fine" |
+| `security-patterns` | "It's an internal API, security doesn't matter" |
+| `testing-patterns` | "Tests slow down development" |
+| `api-patterns` | "We'll version the API later" |
+| `ci-cd-patterns` | "Manual deploys give us more control" |
+| `clean-code` | "It's readable enough" |
+| `performance-profiling` | "It feels slow, let me optimize this function" |
+| `git-mastery` | "One big commit is simpler" |
+| `database-patterns` | "We'll add indexes later when it's slow" |
+
+### Confidence Scoring (`/review`)
+
+The `/review` skill outputs structured findings with:
+- **Severity**: critical / major / minor / nit
+- **Confidence score**: 1-10 per finding with calibration guide
+- **Evidence requirement**: each finding must include file:line + reasoning
+
+### Self-Evaluation — LLM-as-Judge (`/review`)
+
+After completing a review, the agent performs a self-evaluation pass:
+1. Verify vs assume — did I read actual code for each finding?
+2. Check the inverse — if X is a problem, is NOT-X also a problem elsewhere?
+3. Detect anchoring bias — did early findings bias toward similar patterns?
+4. Check unhappy paths — error handling, edge cases, failure modes
+5. Calibrate confidence — overconfident? re-examine weakest finding
+
+### Agent Verification Checklists
+
+10 key agents include `## Verification Checklist` — exit criteria before presenting results:
+`code-reviewer`, `test-engineer`, `security-auditor`, `debugger`, `backend-specialist`, `frontend-specialist`, `database-architect`, `performance-optimizer`, `devops-implementer`, `documenter`.
+
+### Skill Reference Routing
+
+7 core skills include `## Related Skills` sections suggesting logical follow-up skills:
+`/review`, `/debug`, `/plan`, `/refactor`, `/tdd`, `/docs`, `/analyze`.
+
+### Intent Capture Interview (`/onboard`)
+
+Step 0 interview before setup — 5 targeted questions to capture undocumented project intent, customizing the generated `CLAUDE.md`.
+
+---
 
 ## Advanced Features
 

@@ -144,6 +144,16 @@ Have them talk to each other to challenge each other's theories.
 Report consensus when done.
 ```
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "It works on my machine" | Environment differences are the #1 cause of production bugs — reproduce in prod-like env |
+| "It must be a library bug" | 95% of the time it's your code — exhaust local hypotheses first |
+| "I'll just add more logging and wait" | Passive debugging wastes hours — form a hypothesis and test it actively |
+| "The error message says X, so it must be X" | Error messages often describe symptoms, not root causes — trace the full chain |
+| "It only happens sometimes, probably a fluke" | Intermittent bugs are race conditions or state leaks — they get worse, not better |
+
 ## Debug Checklist
 
 - [ ] Identified error/symptom
@@ -152,3 +162,9 @@ Report consensus when done.
 - [ ] Reproduced issue
 - [ ] Formed hypothesis
 - [ ] Tested fix
+
+## Related Skills
+- Bug fixed? → `/review` to verify the fix quality
+- Need a regression test? → `/tdd` to write it test-first
+- Performance issue? → `/analyze --type=complexity` for hotspot analysis
+- Incident in production? → `/workflow incident-response` for full response

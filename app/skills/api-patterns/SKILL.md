@@ -292,6 +292,16 @@ Accept: application/vnd.myapi.v1+json
 
 ---
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "We'll version the API later" | Unversioned APIs break clients on every change — version from day one |
+| "Retries are the client's problem" | Server-side idempotency prevents data corruption — design for at-least-once delivery |
+| "We'll add rate limiting later" | Unprotected endpoints get abused within hours of deployment |
+| "Error messages are just for debugging" | Error responses are your API's UX — clients depend on consistent, parseable errors |
+| "PATCH and PUT are the same thing" | PUT replaces the resource, PATCH modifies it — wrong semantics cause data loss |
+
 ## Best Practices
 
 - [ ] Use HTTPS only

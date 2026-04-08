@@ -3,7 +3,7 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.3.14"
+version: "1.3.15"
 created: "2026-03-23"
 last_updated: "2026-04-08"
 description: "Architecture of ai-toolkit: directory layout, global install model, skill tiers, and integration with projects."
@@ -177,6 +177,23 @@ Skills that spawn real parallel agents use:
 - `Agent` tool — spawns subagents in parallel within the agent's response
 
 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` must be set for Agent Teams (tmux-based) support.
+
+## Quality Guardrails
+
+### Anti-Rationalization Tables
+15 core skills include `## Common Rationalizations` tables — domain-specific excuses with rebuttals that prevent agent drift. Skills: `/review`, `/debug`, `/refactor`, `/tdd`, `/plan`, `/docs`, `/analyze`, `security-patterns`, `testing-patterns`, `api-patterns`, `ci-cd-patterns`, `clean-code`, `performance-profiling`, `git-mastery`, `database-patterns`.
+
+### Confidence Scoring & LLM-as-Judge (`/review`)
+Review findings include per-issue confidence scores (1-10) and severity tiers (critical/major/minor/nit). A self-evaluation pass after review checks for anchoring bias, assumption vs verification, and calibrates confidence.
+
+### Agent Verification Checklists
+10 agents have `## Verification Checklist` — domain-specific exit criteria: `code-reviewer`, `test-engineer`, `security-auditor`, `debugger`, `backend-specialist`, `frontend-specialist`, `database-architect`, `performance-optimizer`, `devops-implementer`, `documenter`.
+
+### Skill Reference Routing
+7 core skills include `## Related Skills` suggesting follow-up skills: `/review`, `/debug`, `/plan`, `/refactor`, `/tdd`, `/docs`, `/analyze`.
+
+### Intent Capture Interview (`/onboard`)
+Step 0 interview — 5 questions to capture undocumented project intent before setup.
 
 ## Component Relationships
 

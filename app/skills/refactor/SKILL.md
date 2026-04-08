@@ -81,6 +81,16 @@ Before executing:
 - [ ] Tests passing
 - [ ] Backup created
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "It works, don't touch it" | Working code that's hard to maintain slows every future change |
+| "We'll refactor it later" | Later never comes — refactor when the pain is fresh and context is loaded |
+| "It's too risky to change" | That's exactly why it needs refactoring — risk compounds with complexity |
+| "Just one more hack won't hurt" | Each hack makes the next one easier to justify — break the cycle now |
+| "We need to rewrite from scratch" | Incremental refactoring is safer and delivers value continuously |
+
 ## READ BEFORE WRITE
 
 This command analyzes and plans first.
@@ -122,3 +132,9 @@ Create an agent team for refactoring:
 - Teammate 2 (backend-specialist): "Implement the refactoring changes identified by the reviewer." Use Opus.
 Teammate 1 completes first, then Teammate 2 acts on the plan.
 ```
+
+## Related Skills
+- Need a safe refactor plan? → `/refactor-plan` for incremental steps as GitHub RFC
+- Want to validate architecture? → `/analyze` for code quality metrics
+- Need tests before refactoring? → `/tdd` to build safety net first
+- Architecture decision needed? → `/council` for multi-perspective evaluation

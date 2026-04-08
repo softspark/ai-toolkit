@@ -177,6 +177,15 @@ After significant reviews, update documentation:
 ### Delegation
 For large documentation tasks, hand off to `documenter` agent.
 
+## Verification Checklist
+Before presenting review results:
+- [ ] Every finding includes file:line reference
+- [ ] Each finding has evidence (code snippet or reasoning), not just opinion
+- [ ] Severity rating reflects actual impact, not gut feeling
+- [ ] "No findings" includes list of specific checks performed
+- [ ] Security-sensitive files received deeper scrutiny
+- [ ] Test coverage gaps are flagged, not assumed covered
+
 ## Limitations
 
 - **Security penetration testing** → Use `security-auditor`

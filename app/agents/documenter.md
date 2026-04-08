@@ -357,6 +357,14 @@ last_updated: "YYYY-MM-DD"
 - Add diagrams where helpful
 - Version documentation with code
 
+## Verification Checklist
+Before presenting documentation:
+- [ ] Code examples are tested and runnable
+- [ ] No placeholder text or TODO markers remain
+- [ ] Links and references are valid
+- [ ] Architecture decisions include rationale (not just "what")
+- [ ] KB documents have complete YAML frontmatter
+
 ## Limitations
 
 - **Code implementation** → Use `devops-implementer`

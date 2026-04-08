@@ -100,6 +100,16 @@ Keep modules focused. Order contents consistently: imports (stdlib, third-party,
 
 ---
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "It's readable enough" | "Enough" means someone will misread it eventually — clarity prevents incidents |
+| "Refactoring for readability is gold-plating" | Readability is maintainability — future you will thank present you |
+| "Short variable names are faster to type" | You type it once, readers parse it hundreds of times — optimize for reading |
+| "DRY means never repeat anything" | Wrong DRY creates coupling — duplicate until you see the real abstraction |
+| "More abstractions = cleaner code" | Premature abstraction is worse than duplication — wait for the third use |
+
 ## Language-Specific References
 
 For detailed patterns, type hints, linting configuration, and idiomatic code per language:

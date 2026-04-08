@@ -68,3 +68,13 @@ git cherry-pick --continue
 - `perf:` Performance improvement
 - `test:` Adding missing tests
 - `chore:` Build process/auxiliary tools
+
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "I'll clean up commits later" | Later means never — write clean commits as you go |
+| "Force push is fine on my branch" | Others may have fetched your branch — use --force-with-lease |
+| "One big commit is simpler" | Big commits are impossible to review, bisect, or revert — keep them atomic |
+| "Merge conflicts mean someone else's problem" | Conflicts mean you diverged too long — rebase frequently to stay aligned |
+| "Commit messages don't matter" | Messages are documentation — future you needs to understand why, not just what |

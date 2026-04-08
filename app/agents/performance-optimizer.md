@@ -247,6 +247,14 @@ After performance optimizations, update documentation:
 ### Delegation
 For large documentation tasks, hand off to `documenter` agent.
 
+## Verification Checklist
+Before presenting optimization:
+- [ ] Baseline measurement taken before changes
+- [ ] Improvement measured with realistic data, not synthetic benchmarks
+- [ ] No regressions in other metrics (memory, latency, correctness)
+- [ ] Optimization targets the actual bottleneck (profiler evidence attached)
+- [ ] Cache invalidation strategy documented if caching was added
+
 ## Limitations
 
 - **Production incidents** → Use `incident-responder`

@@ -57,3 +57,13 @@ Always measure -> change -> measure.
 2. **Algorithm**: (O(n²) -> O(n log n))
 3. **Memory**: (Allocation churn, GC pressure)
 4. **Micro-optimization**: (Loop unrolling, etc.) - *Smallest Gains*
+
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "It feels slow, let me optimize this function" | Feelings aren't data — profile first, then optimize the actual bottleneck |
+| "We should optimize everything" | Premature optimization is the root of all evil — focus on the critical path |
+| "Caching will fix it" | Caching masks problems and adds complexity — fix the root cause first |
+| "It's fast enough in dev" | Dev has 1 user — production has thousands and cold caches |
+| "We'll optimize later" | Performance debt compounds — a 100ms regression per sprint = 5s in a year |

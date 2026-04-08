@@ -81,6 +81,16 @@ async def resource():
 
 ---
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "It's an internal API, security doesn't matter" | Internal APIs get exposed — lateral movement is attackers' primary technique |
+| "The framework handles security" | Frameworks provide tools, not guarantees — misconfiguration is OWASP #5 |
+| "We'll add auth later" | Unauthenticated endpoints in production get discovered within hours |
+| "Nobody would exploit this" | Automated scanners don't care about your threat model — they scan everything |
+| "It's behind a VPN" | VPNs are perimeter defense — zero trust assumes breach already happened |
+
 ## Reference Guides
 
 For authentication patterns (JWT, passwords, token strategy), see [reference/authentication.md](reference/authentication.md).

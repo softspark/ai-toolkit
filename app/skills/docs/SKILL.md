@@ -113,6 +113,16 @@ Proposed
 - [ ] Commit changes
 ```
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "The code is self-documenting" | Code shows how, not why — decisions, constraints, and context need prose |
+| "Nobody reads docs anyway" | People don't read bad docs — good docs are the first thing consulted |
+| "I'll document it when it's stable" | Unstable code needs docs most — document intent so others can contribute |
+| "Comments get stale" | That's an argument for maintaining docs, not skipping them |
+| "The tests are the documentation" | Tests verify behavior but don't explain architecture, trade-offs, or setup |
+
 ## Configuration
 
 Documentation settings in:
@@ -143,3 +153,9 @@ Create an agent team for documentation:
 - Teammate 3 (documenter): "Generate README sections: installation, usage, API reference." Use Opus.
 Teammates should NOT overlap — each owns their assigned scope.
 ```
+
+## Related Skills
+- Documenting an architecture decision? → `/council` for multi-perspective analysis first
+- Need to explore the codebase? → `/explore` to understand structure before documenting
+- Writing a PRD? → `/write-a-prd` for structured product requirements
+- Auditing existing docs? → `/analyze` for coverage gaps

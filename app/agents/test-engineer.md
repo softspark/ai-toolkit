@@ -257,6 +257,15 @@ After writing significant tests, update documentation:
 ### Delegation
 For large documentation tasks, hand off to `documenter` agent.
 
+## Verification Checklist
+Before presenting test results:
+- [ ] Every test has a clear assertion (no empty or placeholder tests)
+- [ ] Edge cases are explicitly tested, not assumed
+- [ ] Mocks are only at system boundaries, not internal collaborators
+- [ ] Test names describe behavior, not implementation
+- [ ] Flaky test patterns (time, network, order-dependent) are flagged
+- [ ] Coverage gaps are reported with specific uncovered paths
+
 ## Limitations
 
 - **Code implementation** → Use `devops-implementer`

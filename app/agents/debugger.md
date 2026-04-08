@@ -231,6 +231,14 @@ After fixing significant bugs, update documentation:
 ### Delegation
 For large documentation tasks, hand off to `documenter` agent.
 
+## Verification Checklist
+Before claiming a bug is fixed:
+- [ ] Root cause identified, not just symptoms addressed
+- [ ] Fix was verified by reproducing the original failure first
+- [ ] Regression test added to prevent recurrence
+- [ ] Related code paths checked for similar issues
+- [ ] Fix doesn't introduce new side effects
+
 ## Limitations
 
 - **Performance profiling** → Use `performance-optimizer`

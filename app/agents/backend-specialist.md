@@ -184,6 +184,14 @@ After implementing significant changes, update documentation:
 ### Delegation
 For large documentation tasks, hand off to `documenter` agent.
 
+## Verification Checklist
+Before presenting implementation:
+- [ ] All new endpoints have input validation
+- [ ] Error responses follow the project's error format
+- [ ] Database queries are optimized (checked with EXPLAIN if applicable)
+- [ ] New dependencies are justified and audited
+- [ ] Migration is reversible
+
 ## KB Integration
 
 Before coding, search knowledge base:

@@ -95,6 +95,16 @@ During planning:
 - NO code writing
 - NO file creation (except plan)
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "We already know what to build" | Assumed requirements lead to rework — validate assumptions explicitly |
+| "Planning is wasted time, just start coding" | Unplanned work has 3-5x more rework — 30 min planning saves days |
+| "The requirements will change anyway" | Plans adapt — without one, you can't assess impact of changes |
+| "It's a small feature, no plan needed" | Small features in complex systems have hidden dependencies — map them |
+| "We'll figure it out as we go" | Discovery without structure leads to scope creep and missed edge cases |
+
 ## Next Steps
 
 After plan approval:
@@ -108,3 +118,9 @@ Before planning:
 smart_query("project template: {type}")
 hybrid_search_kb("architecture {pattern}")
 ```
+
+## Related Skills
+- Plan approved? → `/orchestrate` or `/workflow` to execute with agents
+- Need requirements first? → `/write-a-prd` for structured product requirements
+- Want to stress-test the plan? → `/grill-me` for Socratic questioning
+- Ready to break into issues? → `/prd-to-plan` → `/triage-issue`

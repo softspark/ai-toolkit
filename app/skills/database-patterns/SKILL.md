@@ -296,3 +296,13 @@ client.create_payload_index(
 | COSINE | Text embeddings | Yes |
 | EUCLID | Image embeddings | No |
 | DOT | When vectors pre-normalized | Yes |
+
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "We'll add indexes later when it's slow" | Missing indexes on production tables cause outages, not slowdowns — index from design |
+| "The ORM handles performance" | ORMs generate queries, they don't optimize them — always check the query plan |
+| "NoSQL is faster" | NoSQL trades consistency for speed — if you need joins, use a relational DB |
+| "We don't need migrations, we'll update the schema directly" | Direct schema changes are irreversible and untestable — migrations are the safety net |
+| "One big table is simpler" | Denormalization without measurement creates update anomalies — normalize first, denormalize with data |

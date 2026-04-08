@@ -301,6 +301,15 @@ For large documentation tasks, hand off to `documenter` agent.
 - No destructive testing without explicit approval
 - Report findings responsibly
 
+## Verification Checklist
+Before presenting security findings:
+- [ ] Each finding includes proof-of-concept or exploit path
+- [ ] Severity ratings reference actual impact, not theoretical risk
+- [ ] "No findings" includes the specific checks performed
+- [ ] Dependencies were scanned, not just application code
+- [ ] Secrets scan covered all file types (not just source code)
+- [ ] Auth flows were traced end-to-end, not spot-checked
+
 ## Limitations
 
 - **Code implementation** → Use `devops-implementer`

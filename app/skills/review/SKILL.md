@@ -117,17 +117,40 @@ After all reviewers complete:
 - **Lines Added**: [+count]
 - **Lines Removed**: [-count]
 - **Issues Found**: [count]
+- **Overall Confidence**: [1-10] — how confident the reviewer is in the assessment
 
 ### Findings
 
 #### Critical
 - **[file:line]**: [issue]
-  - [explanation]
+  - Severity: critical | Confidence: [1-10]
+  - Evidence: [specific code reference and reasoning]
   - Suggested fix: [code]
 
-#### Suggestions
+#### Major
+- **[file:line]**: [issue]
+  - Severity: major | Confidence: [1-10]
+  - Evidence: [specific code reference and reasoning]
+  - Suggested fix: [code]
+
+#### Minor
+- **[file:line]**: [issue]
+  - Severity: minor | Confidence: [1-10]
+  - Evidence: [line number + reasoning]
+
+#### Nit
 - **[file:line]**: [suggestion]
-  - [explanation]
+  - Severity: nit | Confidence: [1-10]
+
+### Confidence Guide
+
+| Score | Meaning |
+|-------|---------|
+| 9-10 | Certain — verified via code, tests, or documentation |
+| 7-8 | High — strong evidence, minor assumptions |
+| 5-6 | Medium — plausible issue, needs author confirmation |
+| 3-4 | Low — speculative, based on patterns not proof |
+| 1-2 | Guess — flag for discussion, don't block on this |
 
 ### Positive Notes
 - [What's good about the code]
@@ -136,6 +159,38 @@ After all reviewers complete:
 [APPROVE / REQUEST_CHANGES / NEEDS_DISCUSSION]
 ```
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "Small change, quick scan is enough" | Small changes introduce subtle bugs — apply consistent review regardless of size |
+| "Tests pass, so the code is correct" | Tests validate specific scenarios, not all behaviors — verify missing coverage |
+| "It's just a refactor, no need for deep review" | Refactors change invariants — verify behavior preservation, not just compilation |
+| "The author is senior, they know what they're doing" | Seniority doesn't prevent mistakes — review the code, not the person |
+| "We're in a hurry, ship it" | Rushed reviews create tech debt that costs 10x more to fix later |
+
+## Self-Evaluation (LLM-as-Judge)
+
+After completing the review, perform a self-evaluation pass:
+
+### Check for Blind Spots
+1. **Did I verify, or assume?** — For each finding, confirm you read the actual code (not inferred from context)
+2. **Did I miss the inverse?** — If you flagged X as a problem, did you check if NOT doing X is also a problem elsewhere?
+3. **Did I anchor on the first issue?** — Review whether early findings biased you toward similar patterns, missing different issue classes
+4. **Did I check the unhappy path?** — Error handling, edge cases, failure modes — not just the golden path
+5. **Did I flag uncertainty?** — Findings with confidence < 6 should be clearly marked as "needs author input"
+
+### Calibrate Confidence
+- If all findings are confidence 7+, you may be overconfident — re-examine the weakest finding
+- If any finding lacks a file:line reference, downgrade it or remove it
+- If you found zero issues, state what you specifically checked (not "looks good")
+
 ## READ-ONLY
 
 This skill only analyzes. It does NOT modify any files.
+
+## Related Skills
+- Issues found? → `/debug` to trace root causes
+- Missing tests? → `/tdd` to add test-first coverage
+- Security findings? → `/cve-scan` for dependency vulnerabilities
+- Architecture concerns? → `/analyze` for deeper code quality metrics

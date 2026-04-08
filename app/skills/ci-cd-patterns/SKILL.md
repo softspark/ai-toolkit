@@ -291,6 +291,16 @@ env:
 | `feat:` | Minor (0.x.0) | `feat: add user search endpoint` |
 | `feat!:` / `BREAKING CHANGE:` | Major (x.0.0) | `feat!: change API response format` |
 
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "CI is green, ship it" | CI tests the happy path — verify edge cases, security, and performance separately |
+| "Manual deploys give us more control" | Manual deploys give you more human error — automate the repeatable parts |
+| "We'll set up CI when the project is bigger" | Small projects grow fast — CI debt compounds and retrofitting is painful |
+| "Caching isn't worth the complexity" | Uncached builds waste developer time daily — caching pays for itself in a week |
+| "Feature flags are over-engineering" | Feature flags decouple deploy from release — they're the cheapest safety net |
+
 ## Anti-Patterns
 - Secrets in pipeline logs or environment dumps
 - No caching (slow builds)

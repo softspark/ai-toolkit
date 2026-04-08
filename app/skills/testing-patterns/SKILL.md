@@ -72,3 +72,13 @@ For PHP PHPUnit patterns, see [reference/php-phpunit.md](reference/php-phpunit.m
 For Go testing patterns, see [reference/go-testing.md](reference/go-testing.md).
 
 For Flutter/Dart testing patterns, see [reference/flutter-testing.md](reference/flutter-testing.md).
+
+## Common Rationalizations
+
+| Excuse | Why It's Wrong |
+|--------|----------------|
+| "It's too simple to test" | Simple code breaks in integration — test the contract, not the complexity |
+| "Tests slow down development" | Tests slow down bugs reaching production — that's the point |
+| "We'll add tests later" | Untested code accumulates — later means never, and coverage gaps compound |
+| "Mocking everything is fine" | Over-mocking tests the mocks, not the code — mock at boundaries only |
+| "100% coverage means no bugs" | Coverage measures execution, not correctness — focus on behavior assertions |
