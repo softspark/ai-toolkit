@@ -1,10 +1,10 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 90 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 91 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-90-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-91-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-377%20passing-success)](tests/)
 
@@ -21,7 +21,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 90 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 91 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 ### Update
 
@@ -134,7 +134,7 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 | Component | Count | Description |
 |-----------|-------|-------------|
 | `skills/` (task) | 28 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
-| `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
+| `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 32 | Domain knowledge auto-loaded by agents |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, CLAUDE.md enforcement, notifications, prompt governance, subagent lifecycle, session-end handoff, usage tracking, config protection, MCP health, governance audit |
@@ -156,7 +156,7 @@ ai-toolkit/
 │   │   ├── backend-specialist.md
 │   │   ├── security-architect.md
 │   │   └── ... (41 more)
-│   ├── skills/          # 90 skills (task / hybrid / knowledge)
+│   ├── skills/          # 91 skills (task / hybrid / knowledge)
 │   │   ├── commit/      # /commit slash command
 │   │   ├── review/      # /review slash command
 │   │   ├── clean-code/  # knowledge skill (auto-loaded)
@@ -223,6 +223,7 @@ ai-toolkit/
 | `/agent-creator` | Scaffold a new specialized agent with tools and trigger guidance | high |
 | `/plugin-creator` | Scaffold an experimental plugin pack with manifest and optional modules | high |
 | `/skill-audit` | Scan skills/agents for security risks: dangerous patterns, secrets, permissions | medium |
+| `/cve-scan` | Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, ruby, dart) | medium |
 | `/analyze` | Code quality, complexity, and pattern analysis | medium |
 | `/fix` | Auto-fix lint/type errors | low |
 | `/build` | Build with issue detection | low |
@@ -329,25 +330,28 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | `/migrate` | Pre | Backup verification |
 | `/rollback` | Post | State verification |
 
-### 3. Skill Security Auditing
+### 3. Security Scanning
 
-Scan all skills and agents for security risks — both interactively and in CI:
+Two complementary security tools:
+
+**`/skill-audit`** — scan skills and agents for code-level risks:
 
 ```bash
-# Interactive (Claude provides remediation suggestions)
-/skill-audit
-
-# Deterministic Python scanner for CI pipelines
-python3 scripts/audit_skills.py           # human-readable report
-python3 scripts/audit_skills.py --json    # machine-readable JSON
-python3 scripts/audit_skills.py --ci      # exit 1 on any HIGH finding
+/skill-audit                              # Interactive (Claude remediation)
+python3 scripts/audit_skills.py --ci      # CI mode: exit 1 on HIGH
 ```
 
-**What it detects:**
-- Dangerous code: `eval()`, `exec()`, `subprocess(shell=True)`, `pickle.loads`
-- Hardcoded secrets: AWS keys, GitHub PATs, private keys, API tokens
-- Permission issues: knowledge skills with Bash, missing `allowed-tools`
-- Bash risks: `curl | bash`, `chmod 777`, unquoted variables
+Detects: `eval()`/`exec()`, hardcoded secrets, permission issues, bash risks.
+
+**`/cve-scan`** — scan project dependencies for known CVEs:
+
+```bash
+/cve-scan                                 # Auto-detect ecosystems, scan all
+python3 app/skills/cve-scan/scripts/cve_scan.py          # Direct invocation
+python3 app/skills/cve-scan/scripts/cve_scan.py --json   # Machine-readable
+```
+
+Supports: npm, pip, composer, cargo, go, ruby, dart. Uses native audit tools — zero external deps.
 
 **Severity levels:** HIGH (blocks CI), WARN (should fix), INFO (review)
 

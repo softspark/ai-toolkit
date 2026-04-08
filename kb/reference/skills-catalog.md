@@ -3,9 +3,9 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.3.10"
+version: "1.3.14"
 created: "2026-03-23"
-last_updated: "2026-04-07"
+last_updated: "2026-04-08"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
@@ -56,7 +56,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 
-## Hybrid Skills (30)
+## Hybrid Skills (31)
 
 Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
 
@@ -68,6 +68,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **plan** | `/plan` | high | Create structured plan with task breakdown and agent assignments |
 | **refactor** | `/refactor` | high | Plan and execute code refactoring with safety checks (Tier 1 — single agent) |
 | **analyze** | `/analyze` | medium | Analyze code quality, complexity, and patterns |
+| **cve-scan** | `/cve-scan` | medium | Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, ruby, dart) |
 | **docs** | `/docs` | high | Generate/update docs: README, API docs, architecture notes, changelogs (Tier 1 — single agent) |
 | **search** | `/search` | medium | Search knowledge base (MCP tools with local fallback) |
 | **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |

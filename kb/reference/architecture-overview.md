@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.3.10"
+version: "1.3.14"
 created: "2026-03-23"
-last_updated: "2026-04-07"
+last_updated: "2026-04-08"
 description: "Architecture of ai-toolkit: directory layout, global install model, skill tiers, and integration with projects."
 ---
 
@@ -166,7 +166,7 @@ Three tiers determine how to approach a task:
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 28 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 30 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
 | Knowledge | `user-invocable: false` | Claude auto-loads | 32 |
 
 ## Multi-Agent Execution

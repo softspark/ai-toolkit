@@ -134,7 +134,7 @@ Universal multi-agent system for software development. Works across all reposito
 | `prd-to-issues` | `/prd-to-issues` | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | `skill-audit` | `/skill-audit` | Scan skills and agents for security risks, dangerous patterns, secrets |
 
-### Hybrid Skills (30)
+### Hybrid Skills (31)
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `explore` | `/explore` | Codebase exploration and tech stack discovery |
@@ -143,6 +143,7 @@ Universal multi-agent system for software development. Works across all reposito
 | `plan` | `/plan` | Create structured plan with task breakdown |
 | `refactor` | `/refactor` | Plan and execute code refactoring with safety checks |
 | `analyze` | `/analyze` | Analyze code quality, complexity, and patterns |
+| `cve-scan` | `/cve-scan` | Scan project dependencies for CVEs using native tools (npm, pip, composer, cargo, go, ruby, dart) |
 | `docs` | `/docs` | Generate/update documentation (README, API docs, architecture notes) |
 | `search` | `/search` | Search knowledge base (MCP + local fallback) |
 | `explain` | `/explain` | Explain file/module architecture with Mermaid diagrams |

@@ -96,6 +96,58 @@ OPTIONAL = [
         },
         "reason": "Running toolkit test suite (npm test)",
     },
+    {
+        "name": "pip-audit",
+        "check": "pip-audit",
+        "packages": {
+            "brew": "pip-audit  # or: pip install pip-audit",
+            "apt": "pip-audit  # pip install pip-audit",
+            "dnf": "pip-audit  # pip install pip-audit",
+            "pacman": "pip-audit  # pip install pip-audit",
+            "apk": "pip-audit  # pip install pip-audit",
+            "zypper": "pip-audit  # pip install pip-audit",
+        },
+        "reason": "CVE scanner (/cve-scan) for Python dependencies",
+    },
+    {
+        "name": "cargo-audit",
+        "check": "cargo-audit",
+        "packages": {
+            "brew": "cargo-audit  # or: cargo install cargo-audit",
+            "apt": "cargo-audit  # cargo install cargo-audit",
+            "dnf": "cargo-audit  # cargo install cargo-audit",
+            "pacman": "cargo-audit  # cargo install cargo-audit",
+            "apk": "cargo-audit  # cargo install cargo-audit",
+            "zypper": "cargo-audit  # cargo install cargo-audit",
+        },
+        "reason": "CVE scanner (/cve-scan) for Rust dependencies",
+    },
+    {
+        "name": "govulncheck",
+        "check": "govulncheck",
+        "packages": {
+            "brew": "govulncheck  # go install golang.org/x/vuln/cmd/govulncheck@latest",
+            "apt": "govulncheck  # go install golang.org/x/vuln/cmd/govulncheck@latest",
+            "dnf": "govulncheck  # go install golang.org/x/vuln/cmd/govulncheck@latest",
+            "pacman": "govulncheck  # go install golang.org/x/vuln/cmd/govulncheck@latest",
+            "apk": "govulncheck  # go install golang.org/x/vuln/cmd/govulncheck@latest",
+            "zypper": "govulncheck  # go install golang.org/x/vuln/cmd/govulncheck@latest",
+        },
+        "reason": "CVE scanner (/cve-scan) for Go dependencies",
+    },
+    {
+        "name": "bundle-audit",
+        "check": "bundle-audit",
+        "packages": {
+            "brew": "bundler-audit  # or: gem install bundler-audit",
+            "apt": "bundler-audit  # gem install bundler-audit",
+            "dnf": "bundler-audit  # gem install bundler-audit",
+            "pacman": "bundler-audit  # gem install bundler-audit",
+            "apk": "bundler-audit  # gem install bundler-audit",
+            "zypper": "bundler-audit  # gem install bundler-audit",
+        },
+        "reason": "CVE scanner (/cve-scan) for Ruby dependencies",
+    },
 ]
 
 

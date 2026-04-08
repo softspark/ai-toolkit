@@ -1,5 +1,5 @@
 {
-  "version": "1.3.12",
+  "version": "1.3.14",
   "components": {
     "agents": {
       "description": "44 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
@@ -9,7 +9,7 @@
       "tags": ["core", "agents"]
     },
     "skills": {
-      "description": "90 skills (28 task + 30 hybrid + 32 knowledge)",
+      "description": "91 skills (28 task + 31 hybrid + 32 knowledge)",
       "path": "app/skills",
       "target": ".claude/skills",
       "type": "symlink",
@@ -90,7 +90,7 @@
       "default": true
     },
     "skills": {
-      "description": "90 skills (task, hybrid, knowledge)",
+      "description": "91 skills (task, hybrid, knowledge)",
       "default": true
     },
     "rules-common": {

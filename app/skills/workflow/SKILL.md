@@ -188,13 +188,13 @@ Agent(subagent_type="code-reviewer",         prompt="Review test quality — no 
 # Sequential recon:
 Agent(subagent_type="explorer-agent",        prompt="Map attack surface, entry points, data flows. READ-ONLY.")
 # Parallel audit:
-Agent(subagent_type="security-auditor",      prompt="OWASP Top 10, injection, auth review. READ-ONLY.")
+Agent(subagent_type="security-auditor",      prompt="Run /cve-scan first, then OWASP Top 10, injection, auth review. READ-ONLY.")
 Agent(subagent_type="code-reviewer",         prompt="Secrets in code, error handling, logging gaps. READ-ONLY.")
 Agent(subagent_type="devops-implementer",    prompt="Infra misconfig, Docker hardening, network. READ-ONLY.")
 Agent(subagent_type="database-architect",    prompt="SQL injection vectors, access controls, encryption. READ-ONLY.")
 # Sequential:
-Agent(subagent_type="tech-lead",             prompt="Prioritize findings, assign severity (CVSS).")
-Agent(subagent_type="documenter",            prompt="Security audit report + remediation checklist. Own files: kb/")
+Agent(subagent_type="tech-lead",             prompt="Prioritize findings including CVE scan results, assign severity (CVSS).")
+Agent(subagent_type="documenter",            prompt="Security audit report + CVE inventory + remediation checklist. Own files: kb/")
 ```
 
 **`codebase-onboarding`** — understand an unfamiliar codebase fast (READ-ONLY)

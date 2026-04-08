@@ -7,6 +7,28 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.14 — CVE Scanner + Open Contributions (2026-04-08)
+
+### Added
+- **`/cve-scan` skill** — auto-detect project ecosystems (npm, pip, composer, cargo, go, ruby, dart) and scan dependencies for known CVEs using native audit tools. Includes `cve_scan.py` scanner script with parsers for npm and pip-audit, unified severity report, `--fix` and `--json` modes.
+- **CVE scan in security-auditor agent** — `/cve-scan` is now a mandatory first step in the OWASP A06 (Vulnerable Components) checklist.
+- **CVE scan in `/workflow security-audit`** — security-auditor agent runs CVE scan as part of the parallel audit phase.
+- **`security-audit` CI job** — `audit_skills.py --ci` now runs in GitHub Actions pipeline.
+- **`CODE_OF_CONDUCT.md` in CI** — added to required files check.
+- **`.github/CODEOWNERS`** — auto-assigns maintainer for review.
+- **`.github/FUNDING.yml`** — GitHub Sponsors configuration.
+- **GitHub Security Advisories** — added CVE/advisory procedure to `SECURITY.md`.
+- **Open contribution workflow** — full `CONTRIBUTING.md` rewrite (fork, branch naming, commit conventions, CI requirements), PR checklist template, blank issues enabled.
+
+### Removed
+- **`close-prs.yml`** — removed auto-close workflow to accept external PRs.
+
+### Fixed
+- **Copyright** — `LICENSE` updated from `2024-present` to `2024-2026`.
+- **`SECURITY.md`** — removed duplicate Scope section.
+
+---
+
 ## v1.3.13 — CLI --version flag (2026-04-08)
 
 ### Added

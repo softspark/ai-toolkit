@@ -63,7 +63,7 @@ hybrid_search_kb(query="vulnerability {type}", limit=10)
 - [ ] Unnecessary features disabled
 
 ### A06:2021 - Vulnerable Components
-- [ ] Dependencies scanned for CVEs
+- [ ] Dependencies scanned for CVEs — **run `/cve-scan` or `python3 ${SKILL_DIR}/cve-scan/scripts/cve_scan.py`**
 - [ ] Components up to date
 - [ ] SBOM maintained
 
@@ -90,6 +90,21 @@ hybrid_search_kb(query="vulnerability {type}", limit=10)
 - [ ] Firewall rules
 
 ## Security Audit Commands
+
+### Dependency CVE Scan (MANDATORY — run FIRST)
+
+```bash
+# Auto-detect ecosystems and scan all dependencies for CVEs
+python3 app/skills/cve-scan/scripts/cve_scan.py
+
+# JSON output for structured analysis
+python3 app/skills/cve-scan/scripts/cve_scan.py --json
+
+# Or use the skill interactively
+/cve-scan
+```
+
+### Code & Infrastructure Scans
 
 ```bash
 # Check for secrets in code
