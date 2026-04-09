@@ -85,13 +85,16 @@ The `common/` directory uses the same structure except `frameworks.md` is replac
 
 ## Auto-Detection
 
-`--local` automatically enables language auto-detection. `scripts/install_steps/detect_language.py` scans the current directory for known marker files and selects matching language modules:
+`--local` automatically enables language auto-detection. `scripts/install_steps/detect_language.py` uses two-phase detection and merges results from both:
 
 ```bash
 ai-toolkit install --local     # auto-detects language (--auto-detect is implied)
 ```
 
-Detection logic (first match wins when multiple markers are present):
+### Phase 1: Marker files (config-level signals)
+
+Scans for configuration files defined in each module's `auto_detect` list in `manifest.json`:
+
 1. `package.json` or `tsconfig.json` → TypeScript
 2. `go.mod` → Go
 3. `Cargo.toml` → Rust
@@ -105,7 +108,13 @@ Detection logic (first match wins when multiple markers are present):
 11. `*.csproj` or `*.sln` → C#
 12. `CMakeLists.txt` or `Makefile` → C++
 
-Common rules are always injected regardless of detected language.
+### Phase 2: Source file extensions (actual code presence)
+
+Scans top-level files and one directory level deep for source file extensions (`.py`, `.ts`, `.go`, `.rs`, `.java`, `.kt`, `.swift`, `.dart`, `.cs`, `.php`, `.cpp`, `.rb`, etc.). Skips dependency/build directories (`node_modules`, `venv`, `dist`, `build`, etc.) for speed.
+
+This catches cases where marker files are misleading — e.g., a Python project with a `package.json` only for its npm CLI wrapper will correctly detect both Python (via `.py` files) and TypeScript (via `package.json`).
+
+Both phases contribute; results are merged and deduplicated. Common rules are always injected regardless of detected language.
 
 ## Installation
 
@@ -113,12 +122,17 @@ Common rules are always injected regardless of detected language.
 # Auto-detect language from project files (default with --local)
 ai-toolkit install --local
 
-# Explicitly select a language
+# Explicitly select a language (implies --local, disables auto-detect)
 ai-toolkit install --local --lang typescript
+
+# Multiple languages
+ai-toolkit install --local --lang go,python
 
 # Skip auto-detect, install specific modules only
 ai-toolkit install --local --modules core,agents
 ```
+
+The `--lang` flag accepts comma-separated language names and converts them to `rules-<lang>` modules. Common aliases are supported: `go` → `golang`, `c++` → `cpp`, `c#`/`cs` → `csharp`. Using `--lang` implies `--local` and disables auto-detection.
 
 Language rules are injected into the project `CLAUDE.md` between named markers:
 

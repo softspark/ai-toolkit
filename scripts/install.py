@@ -197,6 +197,7 @@ def parse_args(argv: list[str]) -> dict:
         "modules": "",
         "auto_detect": False,
         "status": False,
+        "lang": "",
     }
     i = 0
     while i < len(argv):
@@ -236,6 +237,11 @@ def parse_args(argv: list[str]) -> dict:
         elif arg == "--modules":
             i += 1
             cfg["modules"] = argv[i] if i < len(argv) else ""
+        elif arg.startswith("--lang="):
+            cfg["lang"] = arg.split("=", 1)[1]
+        elif arg == "--lang":
+            i += 1
+            cfg["lang"] = argv[i] if i < len(argv) else ""
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -405,6 +411,17 @@ def main() -> None:
     persona: str = cfg["persona"]
     modules_arg: str = cfg["modules"]
     auto_detect: bool = cfg["auto_detect"]
+    lang_arg: str = cfg["lang"]
+
+    # --lang <list> → merge into --modules as rules-<lang> entries
+    _LANG_ALIASES = {"go": "golang", "c++": "cpp", "c#": "csharp", "cs": "csharp"}
+    if lang_arg:
+        langs = [_LANG_ALIASES.get(l.strip(), l.strip()) for l in lang_arg.split(",") if l.strip()]
+        lang_modules = ",".join(f"rules-{l}" for l in langs)
+        modules_arg = f"{modules_arg},{lang_modules}" if modules_arg else lang_modules
+        auto_detect = False  # explicit --lang overrides auto-detect
+        if not local:
+            local = True  # language rules are project-local
 
     rules_dir = Path.home() / ".ai-toolkit" / "rules"
     hooks_scripts_dir = Path.home() / ".ai-toolkit" / "hooks"

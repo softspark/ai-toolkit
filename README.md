@@ -523,7 +523,7 @@ ai-toolkit install --local --lang typescript  # explicit language selection
 ai-toolkit install --local --lang go,python   # multiple languages
 ```
 
-`--local` automatically detects languages (via package.json, go.mod, Cargo.toml, etc.) — no need for `--auto-detect`. Rules are injected into `CLAUDE.md` and auto-updated on `ai-toolkit update --local`.
+`--local` automatically detects languages using two-phase detection: config markers (package.json, go.mod, Cargo.toml, etc.) plus source file extension scanning (.py, .ts, .go, etc.). `--lang` accepts aliases (`go`, `c++`, `cs`). Rules are injected into `CLAUDE.md` and auto-updated on `ai-toolkit update --local`.
 
 ---
 

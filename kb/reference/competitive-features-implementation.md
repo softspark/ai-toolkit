@@ -13,15 +13,15 @@ tags:
 doc_type: plan
 status: completed
 created: "2026-04-07"
-last_updated: "2026-04-07"
+last_updated: "2026-04-09"
 completion: "100%"
 description: "Implementation plan for features identified from competitive analysis of everything-claude-code and claude-mem. Focus on learning system, language rules, advanced hooks, MCP templates, and rag-mcp integration. COMPLETED: 8/9 features shipped (1 skipped). See kb/reference/ for permanent documentation."
 ---
 
 # Plan: Competitive Features — ai-toolkit
 
-**Status:** :yellow_circle: IN PROGRESS
-**Completion:** 100% (9/9 features)
+**Status:** :white_check_mark: COMPLETED
+**Completion:** 100% (8/9 features, 1 skipped)
 **Started:** 2026-04-07
 **Estimated Completion:** 2026-06-15
 **Source:** Competitive analysis of `affaan-m/everything-claude-code` (ECC) + `thedotmack/claude-mem`
@@ -139,11 +139,11 @@ app/rules/
 | `tests/test_rules.py` | CREATE | Tests |
 
 **Success Criteria:**
-- [ ] 13 languages × 5 rule files created
-- [ ] `ai-toolkit install --local` auto-detects language and injects rules
-- [ ] Manual override: `ai-toolkit install --local --lang typescript`
-- [ ] validate.py checks rules format
-- [ ] Tests: >=13 (one per language)
+- [x] 13 languages × 5 rule files created (70 files: 13 dirs × 5 + 5 common)
+- [x] `ai-toolkit install --local` auto-detects language and injects rules (two-phase: marker files + extension scan)
+- [x] Manual override: `ai-toolkit install --local --lang typescript` (with aliases: go→golang, c++→cpp, cs→csharp)
+- [ ] validate.py checks rules format (not yet implemented)
+- [ ] Tests: >=13 (no test_rules file yet)
 
 ---
 
@@ -178,11 +178,11 @@ app/rules/
 | `tests/test_hooks.py` | EDIT | Tests for new hooks |
 
 **Success Criteria:**
-- [ ] 6 new hooks created and registerable
-- [ ] guard-config blocks config edits unless `--force`
-- [ ] mcp-health pings configured MCP servers on session start
-- [ ] All hooks optional (enable/disable in settings.json)
-- [ ] Tests: >=6 (one per hook)
+- [x] 5/6 new hooks created and registerable (observe-session.sh not in app/hooks — lives in rag-mcp as consumer)
+- [x] guard-config blocks config edits unless `--force`
+- [x] mcp-health pings configured MCP servers on session start
+- [x] All hooks optional (enable/disable in settings.json)
+- [x] Tests: 89 hook tests in test_hooks.bats
 
 ---
 
@@ -239,10 +239,10 @@ ai-toolkit mcp show github         # Show config details
 | `tests/test_mcp_templates.py` | CREATE | Validate JSON schemas |
 
 **Success Criteria:**
-- [ ] 25 MCP template configs created
-- [ ] `ai-toolkit mcp add <name>` merges into .mcp.json
-- [ ] `ai-toolkit mcp list` shows all available
-- [ ] Tests: >=5 (schema validation)
+- [x] 25 MCP template configs created
+- [x] `ai-toolkit mcp add <name>` merges into .mcp.json
+- [x] `ai-toolkit mcp list` shows all available
+- [x] Tests: 15 in test_mcp_manager.bats
 
 ---
 
@@ -350,11 +350,11 @@ All entries are tagged with "_source": "<source-name>" for idempotent updates.
 | `add-rule <file.md>` | `~/.ai-toolkit/rules/` | File copy + re-inject all | Yes |
 
 **Success Criteria:**
-- [ ] `inject-hook ./my-hooks.json` merges hooks with auto-derived `_source` tag
-- [ ] `remove-hook my-hooks` strips all entries with that `_source`
-- [ ] Re-running is idempotent (update, not duplicate)
-- [ ] Existing ai-toolkit hooks (`_source: "ai-toolkit"`) are never touched
-- [ ] Tests: >=6 (inject, remove, idempotent, coexistence, malformed input, missing file)
+- [x] `inject-hook ./my-hooks.json` merges hooks with auto-derived `_source` tag
+- [x] `remove-hook my-hooks` strips all entries with that `_source`
+- [x] Re-running is idempotent (update, not duplicate)
+- [x] Existing ai-toolkit hooks (`_source: "ai-toolkit"`) are never touched
+- [x] Tests: 17 in test_inject_hook.bats
 
 ---
 
@@ -449,13 +449,13 @@ ai-toolkit status                              # Show installed modules
 ```
 
 **Success Criteria:**
-- [ ] manifest.json defines all modules with dependencies
-- [ ] install --modules allows granular selection
-- [ ] install --auto-detect detects language from project files
-- [ ] state.json tracks what's installed
-- [ ] update only changes modified files (content hash)
-- [ ] Backward compatible with existing install
-- [ ] Tests: >=10
+- [x] manifest.json defines all modules with dependencies
+- [x] install --modules allows granular selection
+- [x] install --auto-detect detects language from project files (two-phase: markers + extensions)
+- [x] state.json tracks what's installed
+- [x] update only changes modified files (content hash)
+- [x] Backward compatible with existing install
+- [x] Tests: 35 across test_install.bats, test_install_flags.bats, test_install_state.bats
 
 ---
 
@@ -494,10 +494,10 @@ context: fork
    - **Recommendation** with confidence level
 
 **Success Criteria:**
-- [ ] `/council` invocable
-- [ ] 4 perspectives generated
-- [ ] Structured output with recommendation
-- [ ] Tests: >=2
+- [x] `/council` invocable
+- [x] 4 perspectives generated
+- [x] Structured output with recommendation
+- [ ] Tests: dedicated council tests not yet written
 
 ---
 
@@ -514,9 +514,9 @@ context: fork
 - Consistency checks (before outputting content, verify voice match)
 
 **Success Criteria:**
-- [ ] Skill auto-loads when writing docs/content
-- [ ] Anti-trope list prevents generic LLM rhetoric
-- [ ] Tests: >=2
+- [x] Skill auto-loads when writing docs/content
+- [x] Anti-trope list prevents generic LLM rhetoric
+- [ ] Tests: dedicated brand-voice tests not yet written
 
 ---
 
@@ -535,10 +535,10 @@ context: fork
 5. Optionally hand off to verification
 
 **Success Criteria:**
-- [ ] `/introspect` invocable when agent is stuck
-- [ ] Classifies failure pattern
-- [ ] Suggests recovery action
-- [ ] Tests: >=2
+- [x] `/introspect` invocable when agent is stuck
+- [x] Classifies failure pattern
+- [x] Suggests recovery action
+- [ ] Tests: dedicated introspect tests not yet written
 
 ---
 
@@ -579,10 +579,7 @@ docs/
 ```
 
 **Success Criteria:**
-- [ ] Documentation site deployed (GitHub Pages or Vercel)
-- [ ] Covers: installation, skills, agents, hooks, CLI reference
-- [ ] Auto-generated from existing CLAUDE.md/README.md content
-- [ ] Tests: Build passes
+- :no_entry: SKIPPED — README/CLAUDE.md sufficient, no documentation site needed
 
 ---
 
@@ -628,7 +625,7 @@ npx @softspark/ai-toolkit inject-hook  ./rag-mcp-hooks.json    # NEW
 | Metric | Before | Target |
 |--------|--------|--------|
 | Skills | 88 | ~91 (+3 new skills) |
-| Hooks | 14 | 20 (+6) |
+| Hooks | 14 | 21 (+7, observe-session in rag-mcp) |
 | Language rules | ~8 (pattern skills) | 70 (13 langs × 5 + 5 common) |
 | MCP templates | 0 | 25 |
 | Install granularity | 3 profiles | 3 profiles + module-level |
@@ -659,12 +656,14 @@ npx @softspark/ai-toolkit inject-hook  ./rag-mcp-hooks.json    # NEW
 
 ---
 
-## 9. Next Actions
+## 9. Remaining Gaps
 
-1. [ ] **Create `app/rules/common/` (5 files)** — Start with common rules
-2. [ ] **Create `app/mcp-templates/` (25 configs)** — Quick win, high impact
-3. [ ] **Create 6 new hooks** — Independent, can parallelize
-4. [ ] Review and approve this plan
+All major features shipped. Outstanding items:
+
+1. [ ] `validate.py` does not check rules format (1.1)
+2. [ ] No dedicated `test_rules` test file (1.1)
+3. [ ] No dedicated tests for council, brand-voice, introspect skills (3.1-3.3)
+4. [x] `observe-session.sh` lives in rag-mcp (consumer), not ai-toolkit — by design
 
 ---
 
@@ -674,4 +673,4 @@ None — all features are independent of external systems.
 
 ---
 
-**Last Updated:** 2026-04-07
+**Last Updated:** 2026-04-09

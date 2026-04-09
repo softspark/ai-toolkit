@@ -191,6 +191,7 @@ function showHelp() {
   console.log('  --local         Also set up project-local configs (CLAUDE.md, settings, constitution, copilot, cline, roo, aider, git hooks)');
   console.log('  --profile <p>   Install profile: minimal (agents+skills), standard (default), strict (all+git hooks)');
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
+  console.log('  --lang <list>   Explicitly select language rules (e.g. typescript, go,python)');
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
   console.log('\nOptions for create:');
