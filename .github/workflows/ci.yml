@@ -31,7 +31,6 @@ jobs:
 
   validate:
     name: Validate toolkit integrity
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
