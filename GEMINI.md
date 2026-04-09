@@ -96,6 +96,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **git-mastery**: Loaded when user asks about advanced Git workflows or history rewriting
 - **grill-me**: Stress-test a plan or design through relentless Socratic questioning, walking down each decision branch until reaching shared understanding. Use when user wants to stress-test a plan, get grilled, validate assumptions, or mentions 'grill me'.
 - **health**: Report service and infrastructure health status
+- **hipaa-validate**: Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references
 - **hive-mind**: Loaded when orchestrating multi-agent swarms or consensus workflows
 - **hook-creator**: Creates new Claude Code hooks with guided workflow, strict conventions, and validation
 - **index**: Index codebase into the knowledge base

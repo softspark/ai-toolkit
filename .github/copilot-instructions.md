@@ -259,6 +259,9 @@ Stress-test a plan or design through relentless Socratic questioning, walking do
 ### health
 Report service and infrastructure health status
 
+### hipaa-validate
+Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references
+
 ### hive-mind
 Loaded when orchestrating multi-agent swarms or consensus workflows
 
