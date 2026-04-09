@@ -3,9 +3,9 @@ title: "Distribution Model"
 category: reference
 service: ai-toolkit
 tags: [architecture, distribution, symlinks, npm, install]
-version: "1.0.0"
+version: "1.4.2"
 created: "2026-03-23"
-last_updated: "2026-03-28"
+last_updated: "2026-04-09"
 description: "Reference description of how ai-toolkit is delivered and propagated on a developer machine."
 ---
 

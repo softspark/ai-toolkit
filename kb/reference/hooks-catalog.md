@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.1.0"
+version: "1.4.2"
 created: "2026-03-27"
-last_updated: "2026-04-07"
+last_updated: "2026-04-09"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -380,7 +380,7 @@ Set in `.claude/settings.local.json`:
 
 **Hook script not found:**
 ```bash
-ls ~/.ai-toolkit/hooks/     # should list 12 .sh files (plus _profile-check.sh helper)
+ls ~/.ai-toolkit/hooks/     # should list 21 .sh files (plus _profile-check.sh helper)
 ai-toolkit update            # re-copies scripts
 ```
 

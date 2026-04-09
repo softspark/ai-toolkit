@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, local-setup]
-version: "1.0.0"
+version: "1.4.2"
 created: "2026-03-26"
-last_updated: "2026-03-28"
+last_updated: "2026-04-09"
 description: "Reference description of the global install target, local project setup, and command responsibilities in ai-toolkit."
 ---
 
@@ -23,7 +23,9 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 |---------|--------|---------|
 | `ai-toolkit install` | `~/.claude/` | first-time machine setup |
 | `ai-toolkit update` | `~/.claude/` | re-apply after package or rule changes |
-| `ai-toolkit install --local` | current project | Claude Code configs only (CLAUDE.md, settings, constitution, language rules). Add `--editors all` for other tools. |
+| `ai-toolkit install --local` | current project | Claude Code configs only (CLAUDE.md, settings, constitution, language rules). Add `--editors all` for other tools, or `--editors cursor,aider` for specific ones. Auto-detects editors from existing project files when `--editors` is omitted. |
+| `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
+| `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
 | `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
 | `ai-toolkit add-rule` | `~/.ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.ai-toolkit/rules/` | unregister a global rule |
@@ -45,6 +47,8 @@ These files still stay local to a repository:
 - `.clinerules`
 - `.roomodes`
 - `.aider.conf.yml`
+- `.augment/rules/ai-toolkit-*.md`
+- `.agent/rules/*.md` and `.agent/workflows/*.md` (Google Antigravity)
 - `.git/hooks/pre-commit` (fallback)
 - project-specific documentation or safety overlays
 
