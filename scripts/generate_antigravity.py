@@ -188,6 +188,177 @@ description: Safely refactor code with test protection
 """
 
 
+def _workflow_security_audit() -> str:
+    return """\
+---
+description: Multi-vector security assessment of codebase
+---
+
+# Security Audit Workflow
+
+1. Scan dependencies for known CVEs (npm audit, pip audit, etc.)
+2. Check for hardcoded secrets, API keys, and credentials
+3. Review authentication and authorization logic
+4. Test input validation — look for SQL injection, XSS, SSTI
+5. Check file upload handling and path traversal risks
+6. Review error handling — ensure no sensitive data in error messages
+7. Verify HTTPS usage for all external communication
+8. Check access control — principle of least privilege
+9. Document findings with severity (HIGH/MEDIUM/LOW)
+10. Create issues for each finding with fix recommendations
+"""
+
+
+def _workflow_test_coverage() -> str:
+    return """\
+---
+description: Boost test coverage for a module or feature
+---
+
+# Test Coverage Workflow
+
+1. Run coverage report to identify untested code
+2. Prioritize: critical paths > edge cases > happy paths already covered
+3. Write tests for uncovered public APIs first
+4. Add edge case tests: null inputs, empty collections, boundary values
+5. Add error path tests: invalid inputs, network failures, timeouts
+6. Run coverage again — verify improvement
+7. Do not write tests just for coverage numbers — each test should catch real bugs
+"""
+
+
+def _workflow_api_design() -> str:
+    return """\
+---
+description: Design and implement a new API endpoint
+---
+
+# API Design Workflow
+
+1. Define the resource and its relationships
+2. Choose HTTP methods (GET/POST/PUT/PATCH/DELETE) following REST conventions
+3. Define request/response schemas with types
+4. Plan error responses (400, 401, 403, 404, 422, 500)
+5. Implement validation for all input fields
+6. Write integration tests covering happy path and error cases
+7. Add rate limiting and authentication if needed
+8. Document the endpoint (OpenAPI/Swagger or inline docs)
+9. Test with real HTTP client (curl, httpie, Postman)
+"""
+
+
+def _workflow_database_migration() -> str:
+    return """\
+---
+description: Safely evolve database schema with zero-downtime migration
+---
+
+# Database Migration Workflow
+
+1. Write the migration script (up and down)
+2. Test migration on a copy of production data
+3. Check for breaking changes: column renames, type changes, NOT NULL on existing data
+4. Plan backfill strategy for new columns with defaults
+5. Consider index impact on large tables (concurrent index creation)
+6. Update ORM models/entities to match new schema
+7. Run the full test suite against the migrated schema
+8. Document rollback procedure
+"""
+
+
+def _workflow_incident_response() -> str:
+    return """\
+---
+description: Respond to production incidents systematically
+---
+
+# Incident Response Workflow
+
+1. Acknowledge the incident — assign severity (P1-P4)
+2. Identify impact: which users, which features, since when
+3. Check monitoring dashboards and recent deployments
+4. If recent deploy is the cause, consider rollback first
+5. Gather logs, stack traces, and error rates
+6. Implement a fix or workaround — prioritize restoring service
+7. Verify the fix in production
+8. Write a postmortem: timeline, root cause, action items
+9. Create follow-up issues to prevent recurrence
+"""
+
+
+def _workflow_performance_optimization() -> str:
+    return """\
+---
+description: Profile and optimize performance bottlenecks
+---
+
+# Performance Optimization Workflow
+
+1. Measure first — establish baseline metrics (latency, throughput, memory)
+2. Profile to find the actual bottleneck — do not guess
+3. Check for N+1 queries, unnecessary allocations, blocking I/O
+4. Implement the smallest change that addresses the bottleneck
+5. Measure again — verify improvement with same benchmark
+6. If no improvement, revert and investigate further
+7. Document the optimization and its measured impact
+"""
+
+
+def _workflow_tdd() -> str:
+    return """\
+---
+description: Test-driven development with red-green-refactor loop
+---
+
+# TDD Workflow
+
+1. Write a failing test that describes the expected behavior (RED)
+2. Write the minimum code to make the test pass (GREEN)
+3. Refactor to improve code quality while keeping tests green (REFACTOR)
+4. Repeat for the next behavior
+5. Keep each cycle small — one behavior per iteration
+6. Run the full test suite after each green phase
+7. Commit after each successful refactor
+"""
+
+
+def _workflow_codebase_onboarding() -> str:
+    return """\
+---
+description: Understand an unfamiliar codebase (read-only exploration)
+---
+
+# Codebase Onboarding Workflow
+
+1. Read README, CLAUDE.md, and any architecture docs
+2. Identify the tech stack: language, framework, database, build tools
+3. Map the directory structure — locate entry points, configs, tests
+4. Trace a request end-to-end: from entry point through layers to response
+5. Read the test suite to understand expected behavior
+6. Check git log for recent activity and active contributors
+7. Note any patterns, conventions, or anti-patterns observed
+8. Do NOT write or modify any code during onboarding
+"""
+
+
+def _workflow_docs() -> str:
+    return """\
+---
+description: Generate or update documentation for code changes
+---
+
+# Documentation Workflow
+
+1. Identify what changed: new feature, API change, config change, bug fix
+2. Update inline code comments only where logic is non-obvious
+3. Update README if setup, usage, or prerequisites changed
+4. Update API docs if endpoints, params, or responses changed
+5. Add examples for new features
+6. Remove documentation for deleted features — no stale docs
+7. Run any doc generation tools (typedoc, sphinx, etc.)
+"""
+
+
 # ---------------------------------------------------------------------------
 # File registry
 # ---------------------------------------------------------------------------
@@ -209,6 +380,15 @@ WORKFLOW_FILES: dict[str, callable] = {
     f"{_PREFIX}feature-development.md": _workflow_feature_development,
     f"{_PREFIX}debug.md": _workflow_debug,
     f"{_PREFIX}refactor.md": _workflow_refactor,
+    f"{_PREFIX}security-audit.md": _workflow_security_audit,
+    f"{_PREFIX}test-coverage.md": _workflow_test_coverage,
+    f"{_PREFIX}api-design.md": _workflow_api_design,
+    f"{_PREFIX}database-migration.md": _workflow_database_migration,
+    f"{_PREFIX}incident-response.md": _workflow_incident_response,
+    f"{_PREFIX}performance-optimization.md": _workflow_performance_optimization,
+    f"{_PREFIX}tdd.md": _workflow_tdd,
+    f"{_PREFIX}codebase-onboarding.md": _workflow_codebase_onboarding,
+    f"{_PREFIX}docs.md": _workflow_docs,
 }
 
 
