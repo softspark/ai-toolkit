@@ -103,14 +103,19 @@ Machine (global)                              Project (local)
 
 **`ai-toolkit update`** — re-apply after `npm install -g @softspark/ai-toolkit@latest` or after `add-rule` / `remove-rule`. Same as `install` but semantically correct for update flows.
 
-**`ai-toolkit install --local`** (or `update --local`) — run per project, creates `CLAUDE.md` template + `.claude/settings.local.json` (only if missing, initialized with MCP defaults), and injects `constitution.md` + Copilot + Cline + Roo Code + Aider configs into local `.claude/` (preserves existing user content). Installs `--local` git hooks as a fallback for quality gates. Hooks are global-only — not merged into project settings.
+**`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, constitution.md, language rules). Editor configs are opt-in via `--editors`:
+- `--editors all` — install all 8 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+- `--editors cursor,aider` — install only selected editors
+- (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
+
+Each editor gets both legacy single-file format (for backwards compat) and new directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.cline/rules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Hooks are global-only — not merged into project settings.
 
 ## CLI Commands
 
 | Command | Target | What it does |
 |---------|--------|-------------|
 | `install` | `~/.claude/` | First-time: per-file symlinks + JSON merge + marker injection + rules |
-| `install --local` | `./` | Also set up project-local: `CLAUDE.md` + `settings.local.json` + constitution + Copilot + Cline + Roo + Aider + Git Hooks (hooks stay global-only) |
+| `install --local` | `./` | Claude Code configs + editors via `--editors` (auto-detect or explicit) |
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
@@ -120,14 +125,20 @@ Machine (global)                              Project (local)
 | `doctor` | toolkit | Install health, hooks, benchmark freshness, and artifact drift diagnostics |
 | `benchmark-ecosystem` | toolkit | Benchmark snapshot for official Claude Code and external ecosystem repos |
 | `evaluate` | toolkit | Skill quality report |
-| `cursor-rules` | `./` | Generates `.cursorrules` |
-| `windsurf-rules` | `./` | Generates `.windsurfrules` |
+| `cursor-rules` | `./` | Generates `.cursorrules` (legacy) |
+| `cursor-mdc` | `./` | Generates `.cursor/rules/*.mdc` (recommended) |
+| `windsurf-rules` | `./` | Generates `.windsurfrules` (legacy) |
+| `windsurf-dir-rules` | `./` | Generates `.windsurf/rules/*.md` |
 | `copilot-instructions` | `./` | Generates `.github/copilot-instructions.md` |
 | `gemini-md` | `./` | Generates `GEMINI.md` |
-| `cline-rules` | `./` | Generates `.clinerules` |
+| `cline-rules` | `./` | Generates `.clinerules` (legacy) |
+| `cline-dir-rules` | `./` | Generates `.cline/rules/*.md` |
 | `roo-modes` | `./` | Generates `.roomodes` |
+| `roo-dir-rules` | `./` | Generates `.roo/rules/*.md` |
 | `aider-conf` | `./` | Generates `.aider.conf.yml` |
-| `antigravity-rules` | `./` | Generates `.agent/rules/` and `.agent/workflows/` for Google Antigravity |
+| `conventions-md` | `./` | Generates `CONVENTIONS.md` (Aider auto-loaded) |
+| `augment-dir-rules` | `./` | Generates `.augment/rules/ai-toolkit-*.md` |
+| `antigravity-rules` | `./` | Generates `.agent/rules/` + `.agent/workflows/` |
 | `agents-md` | toolkit | Regenerates `AGENTS.md` |
 | `llms-txt` | `./` | Generates `llms.txt` |
 | `generate-all` | `./` | Generates all platform configs at once |

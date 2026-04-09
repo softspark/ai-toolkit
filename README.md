@@ -126,7 +126,7 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 | Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | `ai-toolkit install --local` | project |
 | Codex / OpenCode | `AGENTS.md` | `ai-toolkit agents-md` | project |
 
-> **Note:** Claude Code remains the primary platform with full feature support (agents, lifecycle hooks, safety constitution). Other platforms receive a distilled ruleset generated from the same source. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
+> **Note:** Claude Code is always installed (primary platform with full feature support). Other editors are installed on demand with `--editors <list>` or auto-detected from existing project files. All platforms receive the same agent/skill catalog, guidelines, and rules. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
 
 ---
 
@@ -780,11 +780,12 @@ ai-toolkit install --only agents,hooks   # apply only listed components
 ai-toolkit install --skip hooks          # skip listed components
 ai-toolkit install --profile minimal     # profile preset: minimal | standard | strict
 ai-toolkit install --persona backend-lead # persona preset: backend-lead | frontend-lead | devops-eng | junior-dev
-ai-toolkit install --local               # also set up project-local configs (CLAUDE.md, settings, constitution, Copilot, Cline, Roo, Aider, Git Hooks, MCP Defaults)
-ai-toolkit update --local                # re-apply + refresh project-local configs
+ai-toolkit install --local               # Claude Code only (CLAUDE.md, settings, constitution, language rules)
+ai-toolkit install --local --editors all # Claude Code + all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+ai-toolkit install --local --editors cursor,aider  # Claude Code + specific editors
+ai-toolkit update --local                # re-apply; auto-detects editors from existing project files
 ai-toolkit install --list                # dry-run: show what would be applied
 ai-toolkit install --modules core,agents,rules-typescript  # selective module install
-ai-toolkit install --local               # auto-detects language, installs matching rules
 ai-toolkit install --lang typescript     # explicit language for rules install
 ```
 

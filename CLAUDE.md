@@ -26,7 +26,9 @@ Stale counts = broken user trust. This is non-negotiable.
 # Generate: python3 scripts/generate_llms_txt.py > llms.txt
 # Install:  ai-toolkit install            (global → ~/.claude/settings.json hooks + ~/.ai-toolkit/hooks/ scripts)
 # Install:  ai-toolkit install --profile minimal|standard|strict
-# Init:     ai-toolkit install --local    (project-local CLAUDE.md + settings + constitution + copilot + cline + roo + aider + git hooks)
+# Init:     ai-toolkit install --local    (project-local Claude Code configs only)
+# Init:     ai-toolkit install --local --editors all  (+ all editors: cursor, windsurf, cline, roo, aider, augment, copilot, antigravity)
+# Init:     ai-toolkit install --local --editors cursor,aider  (+ specific editors)
 # Doctor:   ai-toolkit doctor --fix       (auto-repair broken symlinks, hooks, artifacts)
 # Eject:    ai-toolkit eject              (standalone copy, no toolkit dependency)
 # Deps:    python3 scripts/check_deps.py  (check system dependencies, OS-specific install hints)

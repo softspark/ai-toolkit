@@ -153,7 +153,7 @@ If doctor detects problems: `ai-toolkit doctor --fix` auto-repairs
 ```bash
 mkdir -p /tmp/ai-toolkit-verify && cd /tmp/ai-toolkit-verify
 git init -q
-ai-toolkit install --local --dry-run
+ai-toolkit install --local --editors all --dry-run
 cd - && rm -rf /tmp/ai-toolkit-verify
 ```
 
@@ -161,11 +161,16 @@ cd - && rm -rf /tmp/ai-toolkit-verify
 - [ ] Would create: CLAUDE.md
 - [ ] Would create: .claude/settings.local.json
 - [ ] Would inject: .claude/constitution.md
-- [ ] Would inject: .github/copilot-instructions.md
-- [ ] Would inject: .clinerules, .roomodes, .aider.conf.yml
-- [ ] Would generate: .agent/rules/ and .agent/workflows/ (Antigravity)
+- [ ] Editors: all 8 listed (copilot, cursor, windsurf, cline, roo, aider, augment, antigravity)
+- [ ] Would generate configs for each editor (legacy + directory-based)
 - [ ] Would install: .git/hooks/pre-commit
 - [ ] Would inject language rules (auto-detected)
+
+**Also test auto-detect (no --editors flag):**
+```bash
+ai-toolkit install --local --dry-run
+# → Editors: none (empty project has no existing configs)
+```
 
 ---
 
