@@ -31,12 +31,14 @@ npm install -g @softspark/ai-toolkit@latest && ai-toolkit update
 
 ### Per-Project Setup
 
-After global install, run `--local` in each project to generate project-specific configs (CLAUDE.md, Copilot, Cline, Roo Code, Aider, git hooks):
+After global install, run `--local` in each project. By default, only Claude Code configs are installed (CLAUDE.md, settings, constitution, language rules). Add `--editors` for other tools:
 
 ```bash
 cd your-project/
-ai-toolkit install --local         # first time
-ai-toolkit update --local          # after toolkit updates
+ai-toolkit install --local                     # Claude Code only
+ai-toolkit install --local --editors all       # + all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+ai-toolkit install --local --editors cursor,aider  # + specific editors
+ai-toolkit update --local                      # auto-detects editors from existing project files
 ```
 
 ### Plugin Management
@@ -642,10 +644,13 @@ ai-toolkit install
 # After npm update — re-apply updated components
 ai-toolkit update
 
-# Init project (CLAUDE.md + settings + constitution + Copilot + Cline + Roo + Aider + Git Hooks + MCP Default)
+# Init project (Claude Code configs only: CLAUDE.md, settings, constitution, language rules)
 ai-toolkit install --local
 
-# Update project-local configs after toolkit update
+# Init with all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+ai-toolkit install --local --editors all
+
+# Update project — auto-detects editors from existing config files
 ai-toolkit update --local
 ```
 
@@ -720,9 +725,9 @@ Usage: ai-toolkit <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install` | First-time global install into `~/.claude/` + Cursor, Windsurf, Gemini |
-| `install --local` | Also set up project-local configs (CLAUDE.md, settings, constitution, Copilot, Cline, Roo, Aider, Git Hooks, MCP Defaults) |
+| `install --local` | Claude Code configs only; add `--editors all` or `--editors cursor,aider` for other tools |
 | `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
-| `update --local` | Re-apply + refresh project-local configs in current dir |
+| `update --local` | Re-apply + auto-detect editors from existing project files |
 | `reset --local` | Wipe all project-local configs and recreate from scratch (clean slate) |
 | `add-rule <rule.md> [name]` | Register rule in `~/.ai-toolkit/rules/` — auto-applied on every `update` |
 | `remove-rule <name> [dir]` | Unregister rule from `~/.ai-toolkit/rules/` and remove its block from `CLAUDE.md` |
