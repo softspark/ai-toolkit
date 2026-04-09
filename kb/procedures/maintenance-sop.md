@@ -3,9 +3,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "1.0.0"
+version: "1.4.2"
 created: "2026-03-23"
-last_updated: "2026-04-02"
+last_updated: "2026-04-09"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -22,17 +22,29 @@ cd /path/to/new-project
 ai-toolkit install --local
 ```
 
-This creates/updates:
+By default, `--local` installs Claude Code configs only:
 - `CLAUDE.md` — project-specific rules template (only if missing)
 - `.claude/settings.local.json` — MCP servers, env vars, permissions (only if missing, initialized with MCP defaults)
 - `.claude/constitution.md` — toolkit constitution **injected** via markers (preserves user content)
-- `.github/copilot-instructions.md` — GitHub Copilot rules (marker-injected)
-- `.clinerules` — Cline rules (marker-injected)
-- `.roomodes` — Roo Code custom modes (generated)
-- `.aider.conf.yml` — Aider configuration (generated)
-- `.git/hooks/pre-commit` — Safety fallback for quality gates (generated)
+
+To also install editor configs, use `--editors`:
+
+```bash
+ai-toolkit install --local --editors all                  # all supported editors
+ai-toolkit install --local --editors cursor,aider         # specific editors only
+```
+
+Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`.
+
+To restrict which language rules are injected into `CLAUDE.md`, use `--lang`:
+
+```bash
+ai-toolkit install --local --lang python,typescript
+```
 
 **Note:** Hooks are global-only — merged into `~/.claude/settings.json` by `ai-toolkit install`. Project-local `--local` does not install hooks; any legacy `.claude/hooks.json` is removed automatically.
+
+**Input validation (v1.4.2):** `--only`, `--skip`, `--editors`, and `--lang` are validated on input; an invalid value exits with a clear error before any changes are made.
 
 Then edit `CLAUDE.md`:
 ```markdown
@@ -90,10 +102,13 @@ ai-toolkit update
 `update` is a semantic alias for `install` — use it for all re-apply flows. Supports the same flags:
 
 ```bash
-ai-toolkit update --only agents,hooks   # re-apply only specific components
-ai-toolkit update --local               # refresh project-local configs (auto-detects editors from existing files)
-ai-toolkit update --list                # dry-run: show what would change
+ai-toolkit update --only agents,hooks                  # re-apply only specific components
+ai-toolkit update --local                              # refresh project-local Claude Code configs; auto-detects editors from existing project files (no --editors needed)
+ai-toolkit update --local --editors cursor,windsurf   # override auto-detection and target specific editors
+ai-toolkit update --list                               # dry-run: show what would change
 ```
+
+When running `update --local`, the CLI inspects existing config files (e.g. `.cursor/rules`, `.aider.conf.yml`) to determine which editors are present and refreshes only those — no flags required.
 
 ---
 
@@ -233,15 +248,14 @@ ai-toolkit benchmark-ecosystem --offline   # benchmark snapshot
 Changes propagate instantly to all machines via symlinks. After any change:
 
 ```bash
-scripts/validate.py           # must pass before commit
-npm test                      # must pass before commit
+npm run generate:all          # FIRST: regenerate AGENTS.md, llms.txt, all platform configs
+scripts/validate.py           # then validate — must pass before commit
+npm test                      # then test — must pass before commit
 ```
 
-If you added/removed agents or skills, also regenerate derived artifacts:
-
-```bash
-npm run generate:all          # regenerates AGENTS.md, llms.txt, all platform configs
-```
+Run `generate:all` before validate and test so that generated artifacts are current when
+the metadata contract tests run. Committing without regenerating first causes artifact
+drift and fails CI.
 
 ## Release Checklist
 
@@ -272,7 +286,17 @@ npm test            # full bats suite including metadata contracts and CLI tests
 The metadata contract tests (`tests/test_metadata_contracts.bats`) catch drift
 automatically. If they fail, fix the stale numbers before continuing.
 
-### 5. Commit and tag
+### 5. Check for artifact drift
+
+```bash
+git diff --stat
+```
+
+Review the diff to confirm that all generated files (`AGENTS.md`, `llms.txt`, platform
+configs) reflect the current state. If `generate:all` produced unexpected changes,
+investigate before staging.
+
+### 6. Commit and tag
 
 ```bash
 git add -A

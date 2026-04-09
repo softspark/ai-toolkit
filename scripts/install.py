@@ -258,6 +258,56 @@ def parse_args(argv: list[str]) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Input validation
+# ---------------------------------------------------------------------------
+
+VALID_COMPONENTS = {"agents", "skills", "hooks", "rules", "constitution", "architecture"}
+VALID_LANGS = {"python", "typescript", "golang", "go", "rust", "java", "kotlin",
+               "swift", "ruby", "php", "dart", "cpp", "csharp", "c++", "c#", "cs",
+               "common"}
+
+
+def validate_args(cfg: dict) -> None:
+    """Validate parsed arguments — exit non-zero on invalid values."""
+    from install_steps.ai_tools import ALL_EDITORS
+
+    errors: list[str] = []
+
+    # Validate --only components
+    if cfg["only"]:
+        for c in cfg["only"].split(","):
+            c = c.strip()
+            if c and c not in VALID_COMPONENTS:
+                errors.append(f"Unknown component in --only: '{c}' (valid: {', '.join(sorted(VALID_COMPONENTS))})")
+
+    # Validate --skip components
+    if cfg["skip"]:
+        for c in cfg["skip"].split(","):
+            c = c.strip()
+            if c and c not in VALID_COMPONENTS:
+                errors.append(f"Unknown component in --skip: '{c}' (valid: {', '.join(sorted(VALID_COMPONENTS))})")
+
+    # Validate --editors
+    if cfg["editors"] and cfg["editors"] != "all":
+        for e in cfg["editors"].split(","):
+            e = e.strip()
+            if e and e not in ALL_EDITORS:
+                errors.append(f"Unknown editor: '{e}' (valid: {', '.join(ALL_EDITORS)}, all)")
+
+    # Validate --lang
+    if cfg["lang"]:
+        for l in cfg["lang"].split(","):
+            l = l.strip()
+            if l and l.lower() not in VALID_LANGS:
+                errors.append(f"Unknown language: '{l}' (valid: {', '.join(sorted(VALID_LANGS - {'c++', 'c#', 'cs', 'go', 'common'}))})")
+
+    if errors:
+        for e in errors:
+            print(f"Error: {e}")
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
 # Dependency check
 # ---------------------------------------------------------------------------
 
@@ -408,6 +458,7 @@ def _get_toolkit_version() -> str:
 
 def main() -> None:
     cfg = parse_args(sys.argv[1:])
+    validate_args(cfg)
 
     # Handle --status early exit
     if cfg["status"]:

@@ -3,9 +3,9 @@ title: "AI Toolkit - Agents Catalog"
 category: reference
 service: ai-toolkit
 tags: [agents, catalog, roles, ai-development]
-version: "1.3.10"
+version: "1.4.2"
 created: "2026-03-23"
-last_updated: "2026-03-25"
+last_updated: "2026-04-09"
 description: "Complete catalog of specialized agents with roles, models, and use cases."
 ---
 
