@@ -76,14 +76,20 @@ const COMMANDS = {
   mcp: 'Manage MCP server templates (list, show, add, remove)',
   plugin: 'Manage plugin packs (install, remove, update, clean, list, status)',
   sync: 'Sync config to/from GitHub Gist (--export, --push, --pull, --import)',
-  'cursor-rules': 'Generate .cursorrules for Cursor IDE',
-  'windsurf-rules': 'Generate .windsurfrules for Windsurf',
+  'cursor-rules': 'Generate .cursorrules for Cursor IDE (legacy)',
+  'cursor-mdc': 'Generate .cursor/rules/*.mdc for Cursor IDE (recommended)',
+  'windsurf-rules': 'Generate .windsurfrules for Windsurf (legacy)',
+  'windsurf-dir-rules': 'Generate .windsurf/rules/*.md for Windsurf (recommended)',
   'copilot-instructions': 'Generate .github/copilot-instructions.md',
   'gemini-md': 'Generate GEMINI.md for Gemini CLI',
-  'cline-rules': 'Generate .clinerules for Cline',
+  'cline-rules': 'Generate .clinerules for Cline (legacy)',
+  'cline-dir-rules': 'Generate .cline/rules/*.md for Cline (recommended)',
   'roo-modes': 'Generate .roomodes for Roo Code',
+  'roo-dir-rules': 'Generate .roo/rules/*.md shared rules for Roo Code',
   'aider-conf': 'Generate .aider.conf.yml for Aider',
-  'augment-rules': 'Generate .augment/rules/ai-toolkit.md for Augment',
+  'conventions-md': 'Generate CONVENTIONS.md for Aider (auto-loaded)',
+  'augment-rules': 'Generate .augment/rules/ai-toolkit.md for Augment (legacy)',
+  'augment-dir-rules': 'Generate .augment/rules/ai-toolkit-*.md for Augment (recommended)',
   'antigravity-rules': 'Generate .agent/rules/ and .agent/workflows/ for Google Antigravity',
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
@@ -374,7 +380,17 @@ function handleGenerateAll(_args) {
   for (const gen of Object.values(GENERATORS)) {
     writeGeneratorOutput(gen);
   }
+  // Directory-based generators (multi-file output)
   run(scriptPath('generate_antigravity.py'), [CWD]);
+  run(scriptPath('generate_cursor_mdc.py'), [CWD]);
+  run(scriptPath('generate_windsurf_rules.py'), [CWD]);
+  run(scriptPath('generate_cline_rules.py'), [CWD]);
+  run(scriptPath('generate_roo_rules.py'), [CWD]);
+  run(scriptPath('generate_augment_rules.py'), [CWD]);
+  // Single-file generators
+  const conventionsOut = runGenerator('generate_conventions.py');
+  fs.writeFileSync(path.join(CWD, 'CONVENTIONS.md'), conventionsOut);
+  console.log('Generated: CONVENTIONS.md');
   generateLlmsTxt();
 }
 
@@ -433,6 +449,12 @@ const SPECIAL_HANDLERS = {
   'remove-hook':  handleRemoveHook,
   'llms-txt':     (_args) => generateLlmsTxt(),
   'antigravity-rules': (_args) => run(scriptPath('generate_antigravity.py'), [CWD]),
+  'cursor-mdc':   (_args) => run(scriptPath('generate_cursor_mdc.py'), [CWD]),
+  'windsurf-dir-rules': (_args) => run(scriptPath('generate_windsurf_rules.py'), [CWD]),
+  'cline-dir-rules': (_args) => run(scriptPath('generate_cline_rules.py'), [CWD]),
+  'roo-dir-rules': (_args) => run(scriptPath('generate_roo_rules.py'), [CWD]),
+  'conventions-md': (_args) => { const out = runGenerator('generate_conventions.py'); fs.writeFileSync(path.join(CWD, 'CONVENTIONS.md'), out); console.log('Generated: CONVENTIONS.md'); },
+  'augment-dir-rules': (_args) => run(scriptPath('generate_augment_rules.py'), [CWD]),
   'generate-all': handleGenerateAll,
 };
 

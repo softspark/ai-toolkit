@@ -7,7 +7,18 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 setup_file() {
     export GEN_DIR; GEN_DIR="$(mktemp -d)"
     export AG_DIR; AG_DIR="$(mktemp -d)"
+    export CURSOR_DIR; CURSOR_DIR="$(mktemp -d)"
+    export WS_DIR; WS_DIR="$(mktemp -d)"
+    export CL_DIR; CL_DIR="$(mktemp -d)"
+    export ROO_DIR; ROO_DIR="$(mktemp -d)"
+    export AUG_DIR; AUG_DIR="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" > "$GEN_DIR/antigravity.log" 2>/dev/null; echo $? > "$GEN_DIR/antigravity.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_cursor_mdc.py" "$CURSOR_DIR" > "$GEN_DIR/cursor-mdc.log" 2>/dev/null; echo $? > "$GEN_DIR/cursor-mdc.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_windsurf_rules.py" "$WS_DIR" > "$GEN_DIR/windsurf-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/windsurf-rules.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_cline_rules.py" "$CL_DIR" > "$GEN_DIR/cline-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/cline-rules.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_roo_rules.py" "$ROO_DIR" > "$GEN_DIR/roo-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/roo-rules.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_augment_rules.py" "$AUG_DIR" > "$GEN_DIR/augment-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/augment-rules.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_conventions.py" > "$GEN_DIR/conventions" 2>/dev/null; echo $? > "$GEN_DIR/conventions.status"
     python3 "$TOOLKIT_DIR/scripts/generate_agents_md.py" > "$GEN_DIR/agents-md" 2>/dev/null; echo $? > "$GEN_DIR/agents-md.status"
     python3 "$TOOLKIT_DIR/scripts/generate_llms_txt.py" > "$GEN_DIR/llms" 2>/dev/null; echo $? > "$GEN_DIR/llms.status"
     python3 "$TOOLKIT_DIR/scripts/generate_llms_txt.py" --full > "$GEN_DIR/llms-full" 2>/dev/null; echo $? > "$GEN_DIR/llms-full.status"
@@ -24,7 +35,7 @@ setup_file() {
 }
 
 teardown_file() {
-    rm -rf "$GEN_DIR" "$AG_DIR"
+    rm -rf "$GEN_DIR" "$AG_DIR" "$CURSOR_DIR" "$WS_DIR" "$CL_DIR" "$ROO_DIR" "$AUG_DIR"
 }
 
 # ── generate_agents_md.py ───────────────────────────────────────────────────
@@ -311,6 +322,113 @@ teardown_file() {
     python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" >/dev/null 2>&1
     # Stale file should be removed
     [ ! -f "$AG_DIR/.agent/rules/ai-toolkit-obsolete.md" ]
+}
+
+# ── generate_cursor_mdc.py ──────────────────────────────────────────────────
+
+@test "generate_cursor_mdc.py exits 0" {
+    [ "$(cat "$GEN_DIR/cursor-mdc.status")" = "0" ]
+}
+
+@test "generate_cursor_mdc.py creates .cursor/rules/ with 6 .mdc files" {
+    count=$(ls "$CURSOR_DIR/.cursor/rules"/ai-toolkit-*.mdc 2>/dev/null | wc -l | xargs)
+    [ "$count" -eq 6 ]
+}
+
+@test "generate_cursor_mdc.py .mdc files have YAML frontmatter with alwaysApply" {
+    for f in "$CURSOR_DIR"/.cursor/rules/ai-toolkit-*.mdc; do
+        head -1 "$f" | grep -q '^---' || { echo "No frontmatter: $f"; return 1; }
+        grep -q 'alwaysApply:' "$f" || { echo "No alwaysApply: $f"; return 1; }
+    done
+}
+
+@test "generate_cursor_mdc.py testing.mdc has globs for test files" {
+    grep -q 'globs:' "$CURSOR_DIR/.cursor/rules/ai-toolkit-testing.mdc"
+}
+
+@test "generate_cursor_mdc.py agents-and-skills.mdc contains agent names" {
+    missing=0
+    for f in "$TOOLKIT_DIR"/app/agents/*.md; do
+        agent_name="${f##*/}"; agent_name="${agent_name%.md}"
+        grep -q "$agent_name" "$CURSOR_DIR/.cursor/rules/ai-toolkit-agents-and-skills.mdc" || missing=$((missing + 1))
+    done
+    [ "$missing" -eq 0 ]
+}
+
+# ── generate_windsurf_rules.py ──────────────────────────────────────────────
+
+@test "generate_windsurf_rules.py exits 0" {
+    [ "$(cat "$GEN_DIR/windsurf-rules.status")" = "0" ]
+}
+
+@test "generate_windsurf_rules.py creates 6 rule files" {
+    count=$(ls "$WS_DIR/.windsurf/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    [ "$count" -eq 6 ]
+}
+
+# ── generate_cline_rules.py ────────────────────────────────────────────────
+
+@test "generate_cline_rules.py exits 0" {
+    [ "$(cat "$GEN_DIR/cline-rules.status")" = "0" ]
+}
+
+@test "generate_cline_rules.py creates 6 rule files" {
+    count=$(ls "$CL_DIR/.cline/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    [ "$count" -eq 6 ]
+}
+
+# ── generate_roo_rules.py ──────────────────────────────────────────────────
+
+@test "generate_roo_rules.py exits 0" {
+    [ "$(cat "$GEN_DIR/roo-rules.status")" = "0" ]
+}
+
+@test "generate_roo_rules.py creates 6 rule files" {
+    count=$(ls "$ROO_DIR/.roo/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    [ "$count" -eq 6 ]
+}
+
+# ── generate_augment_rules.py ──────────────────────────────────────────────
+
+@test "generate_augment_rules.py exits 0" {
+    [ "$(cat "$GEN_DIR/augment-rules.status")" = "0" ]
+}
+
+@test "generate_augment_rules.py creates 6 rule files" {
+    count=$(ls "$AUG_DIR/.augment/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    [ "$count" -eq 6 ]
+}
+
+@test "generate_augment_rules.py testing.md has auto_attached type" {
+    grep -q 'type: auto_attached' "$AUG_DIR/.augment/rules/ai-toolkit-testing.md"
+}
+
+@test "generate_augment_rules.py agents-and-skills.md has always_apply type" {
+    grep -q 'type: always_apply' "$AUG_DIR/.augment/rules/ai-toolkit-agents-and-skills.md"
+}
+
+# ── generate_conventions.py ────────────────────────────────────────────────
+
+@test "generate_conventions.py exits 0" {
+    [ "$(cat "$GEN_DIR/conventions.status")" = "0" ]
+}
+
+@test "generate_conventions.py output contains agents and skills" {
+    grep -qi 'agent' "$GEN_DIR/conventions"
+    grep -qi 'skill' "$GEN_DIR/conventions"
+}
+
+@test "generate_conventions.py output has TOOLKIT markers" {
+    grep -q 'TOOLKIT:ai-toolkit START' "$GEN_DIR/conventions"
+}
+
+# ── cross-platform: all dir-rules generators produce same file count ────────
+
+@test "all directory-based generators produce 6 rule files" {
+    for dir in "$AG_DIR/.agent/rules" "$CURSOR_DIR/.cursor/rules" "$WS_DIR/.windsurf/rules" "$CL_DIR/.cline/rules" "$ROO_DIR/.roo/rules" "$AUG_DIR/.augment/rules"; do
+        count=$(ls "$dir"/ai-toolkit-*.* 2>/dev/null | wc -l | xargs)
+        [ "$count" -eq 6 ] || { echo "Expected 6 in $dir, got $count"; return 1; }
+    done
 }
 
 # ── cross-generator: all outputs mention ai-toolkit ──────────────────────────

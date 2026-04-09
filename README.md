@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-91-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-389%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-408%20passing-success)](tests/)
 
 ---
 
@@ -112,18 +112,18 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 
 ## Platform Support
 
-| Platform | Config File | How | Scope |
-|----------|------------|-----|-------|
+| Platform | Config Files | How | Scope |
+|----------|-------------|-----|-------|
 | Claude Code | `~/.claude/` | `ai-toolkit install` | global |
-| Cursor | `~/.cursor/rules` | `ai-toolkit install` | global |
-| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | `ai-toolkit install` | global |
+| Cursor | `~/.cursor/rules` + `.cursor/rules/*.mdc` | `ai-toolkit install` / `--local` | global + project |
+| Windsurf | `~/.codeium/.../global_rules.md` + `.windsurf/rules/*.md` | `ai-toolkit install` / `--local` | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | `ai-toolkit install` | global |
 | GitHub Copilot | `.github/copilot-instructions.md` | `ai-toolkit install --local` | project |
-| Cline | `.clinerules` | `ai-toolkit install --local` | project |
-| Roo Code | `.roomodes` | `ai-toolkit install --local` | project |
-| Aider | `.aider.conf.yml` | `ai-toolkit install --local` | project |
-| Augment | `.augment/rules/ai-toolkit.md` | `ai-toolkit install --local` | project |
-| Google Antigravity | `.agent/rules/`, `.agent/workflows/` | `ai-toolkit install --local` | project |
+| Cline | `.clinerules` + `.cline/rules/*.md` | `ai-toolkit install --local` | project |
+| Roo Code | `.roomodes` + `.roo/rules/*.md` | `ai-toolkit install --local` | project |
+| Aider | `.aider.conf.yml` + `CONVENTIONS.md` | `ai-toolkit install --local` | project |
+| Augment | `.augment/rules/ai-toolkit-*.md` | `ai-toolkit install --local` | project |
+| Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | `ai-toolkit install --local` | project |
 | Codex / OpenCode | `AGENTS.md` | `ai-toolkit agents-md` | project |
 
 > **Note:** Claude Code remains the primary platform with full feature support (agents, lifecycle hooks, safety constitution). Other platforms receive a distilled ruleset generated from the same source. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
@@ -760,7 +760,13 @@ Usage: ai-toolkit <command> [options]
 | `cline-rules` | Generate `.clinerules` in current dir |
 | `roo-modes` | Generate `.roomodes` in current dir |
 | `aider-conf` | Generate `.aider.conf.yml` in current dir |
-| `augment-rules` | Generate `.augment/rules/ai-toolkit.md` in current dir |
+| `conventions-md` | Generate `CONVENTIONS.md` for Aider (auto-loaded) |
+| `augment-rules` | Generate `.augment/rules/ai-toolkit.md` (legacy single file) |
+| `augment-dir-rules` | Generate `.augment/rules/ai-toolkit-*.md` (recommended) |
+| `cursor-mdc` | Generate `.cursor/rules/*.mdc` for Cursor (recommended) |
+| `windsurf-dir-rules` | Generate `.windsurf/rules/*.md` for Windsurf |
+| `cline-dir-rules` | Generate `.cline/rules/*.md` for Cline |
+| `roo-dir-rules` | Generate `.roo/rules/*.md` for Roo Code |
 | `antigravity-rules` | Generate `.agent/rules/` and `.agent/workflows/` for Google Antigravity |
 | `agents-md` | Regenerate `AGENTS.md` from agent definitions |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |

@@ -5,12 +5,19 @@ settings.local.json
 .idea/
 /.claude/
 
-# Generated local platform configs
+# Generated local platform configs (legacy single-file)
 .clinerules
 .cursorrules
 .windsurfrules
 .roomodes
 .aider.conf.yml
+CONVENTIONS.md
+
+# Generated directory-based configs
+/.cursor/rules/
+/.windsurf/
+/.cline/
+/.roo/
 
 # Python caches / coverage
 __pycache__/

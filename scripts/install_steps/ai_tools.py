@@ -240,7 +240,13 @@ def _install_local_dry_run(reset: bool) -> None:
         print("  Would inject: .clinerules")
         print("  Would inject: .roomodes")
         print("  Would inject: .aider.conf.yml")
+        print("  Would inject: CONVENTIONS.md (Aider auto-loaded)")
         print("  Would generate: .agent/rules/ and .agent/workflows/ (Antigravity)")
+        print("  Would generate: .cursor/rules/*.mdc (Cursor)")
+        print("  Would generate: .windsurf/rules/*.md (Windsurf)")
+        print("  Would generate: .cline/rules/*.md (Cline)")
+        print("  Would generate: .roo/rules/*.md (Roo Code)")
+        print("  Would generate: .augment/rules/ai-toolkit-*.md (Augment)")
         print("  Would install: .git/hooks/pre-commit")
 
 
@@ -335,8 +341,25 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path) -> None:
     (cwd / ".aider.conf.yml").write_text(aider_output, encoding="utf-8")
     print("  Created: .aider.conf.yml")
 
-    # Antigravity .agent/rules/ and .agent/workflows/
-    from generate_antigravity import generate as generate_antigravity
-    generate_antigravity(cwd)
+    # Directory-based rules for all platforms
+    from generate_antigravity import generate as gen_antigravity
+    from generate_cursor_mdc import generate as gen_cursor_mdc
+    from generate_windsurf_rules import generate as gen_windsurf_rules
+    from generate_cline_rules import generate as gen_cline_rules
+    from generate_roo_rules import generate as gen_roo_rules
+    from generate_augment_rules import generate as gen_augment_rules
+    gen_antigravity(cwd)
+    gen_cursor_mdc(cwd)
+    gen_windsurf_rules(cwd)
+    gen_cline_rules(cwd)
+    gen_roo_rules(cwd)
+    gen_augment_rules(cwd)
+
+    # CONVENTIONS.md for Aider (auto-loaded)
+    conventions_output = run_script("generate-conventions.sh", capture=True)
+    if not conventions_output:
+        conventions_output = run_script("generate_conventions.py", capture=True)
+    if conventions_output:
+        inject_with_rules("generate_conventions.py", cwd / "CONVENTIONS.md", rules_dir)
 
     run_script("install-git-hooks.sh", str(cwd))
