@@ -96,7 +96,7 @@ which ai-toolkit
 ```
 
 **Verify:**
-- [ ] `--version` returns correct semver (e.g., `1.3.15`)
+- [ ] `--version` returns correct semver (e.g., `1.4.0`)
 - [ ] `--help` displays full command list without errors
 - [ ] `which` points to global npm bin path
 

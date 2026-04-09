@@ -7,6 +7,35 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.4.0 — Full Platform Parity: 11 Editors, Directory-Based Rules, --editors Flag (2026-04-09)
+
+### Added
+- **Google Antigravity support** — new editor integration with `.agent/rules/` (6 rule files) and `.agent/workflows/` (13 workflow templates with YAML frontmatter). Full agent/skill catalog parity with other platforms.
+- **Directory-based rules for all editors** — every platform now gets modern directory-based configs in addition to legacy single-file formats:
+  - Cursor: `.cursor/rules/*.mdc` with YAML frontmatter (`alwaysApply`, `globs`, `description`)
+  - Windsurf: `.windsurf/rules/*.md`
+  - Cline: `.cline/rules/*.md`
+  - Roo Code: `.roo/rules/*.md` (shared rules for all modes)
+  - Augment: `.augment/rules/ai-toolkit-*.md` with `auto_attached` globs per file type
+  - Aider: `CONVENTIONS.md` (auto-loaded as read-only context)
+- **`--editors` flag** for `install --local` — selective editor installation:
+  - `--editors all` — install all 8 editors
+  - `--editors cursor,aider` — install only selected
+  - (no flag) — auto-detect from existing project files
+  - `update --local` auto-detects editors from existing configs
+- **`--lang` flag** — explicit language selection for rules (`--lang typescript`, `--lang go,python`) with aliases (`go`→`golang`, `c++`→`cpp`, `cs`→`csharp`)
+- **Two-phase language detection** — marker files (package.json, go.mod, etc.) + source file extension scanning (.py, .ts, .go, etc.)
+- **Shared rule content module** (`dir_rules_shared.py`) — all platforms get identical agent/skill catalog, guidelines, and rules from a single source of truth
+- **7 new CLI commands**: `cursor-mdc`, `windsurf-dir-rules`, `cline-dir-rules`, `roo-dir-rules`, `augment-dir-rules`, `conventions-md`, `antigravity-rules`
+- **71 generator tests** — file existence, content verification, user file preservation, idempotency, stale cleanup, cross-platform parity check
+
+### Changed
+- `install --local` now installs only Claude Code configs by default (no editor bloat); editors require `--editors` flag or auto-detect from existing files
+- All directory-based generators use `ai-toolkit-` prefix to prevent overwriting user files
+- Total test count: 377 → 408
+
+---
+
 ## v1.3.15 — Quality Guardrails: Anti-Rationalization, Confidence Scoring, Verification Checklists (2026-04-08)
 
 ### Added
