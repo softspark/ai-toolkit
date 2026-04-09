@@ -91,7 +91,7 @@ ai-toolkit update
 
 ```bash
 ai-toolkit update --only agents,hooks   # re-apply only specific components
-ai-toolkit update --local               # also refresh project-local Copilot + Cline + Roo + Aider
+ai-toolkit update --local               # refresh project-local configs (auto-detects editors from existing files)
 ai-toolkit update --list                # dry-run: show what would change
 ```
 
