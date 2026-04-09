@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import (
+    count_agents_and_skills,
     emit_agents_bullets,
     emit_skills_bullets,
     generate_general_guidelines,
@@ -103,6 +104,33 @@ def _rule_quality_standards() -> str:
 * Commands like `rm -rf`, `DROP TABLE`, `FORMAT` require explicit user confirmation
 * Never delete audit logs or archives without explicit approval and backup
 """
+
+
+def _rule_agents_and_skills() -> str:
+    """Generate full listing of agents and skills — same content other platforms get."""
+    agents_count, skills_count = count_agents_and_skills()
+    lines = [
+        f"# AI Toolkit — {agents_count} Agents, {skills_count} Skills",
+        "",
+        "Shared AI development toolkit with specialized agents, skills, quality hooks, and a safety constitution.",
+        "",
+        "## Available Agents",
+        "",
+        "Specialized agent personas — apply their expertise for relevant tasks:",
+        "",
+        emit_agents_bullets(),
+        "",
+        "## Available Skills",
+        "",
+        "Skills are invocable slash commands or auto-loaded knowledge sources:",
+        "",
+        emit_skills_bullets(),
+        "",
+        generate_quality_standards(),
+        "",
+        generate_workflow_guidelines(),
+    ]
+    return "\n".join(lines) + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +396,7 @@ description: Generate or update documentation for code changes
 _PREFIX = "ai-toolkit-"
 
 RULE_FILES: dict[str, callable] = {
+    f"{_PREFIX}agents-and-skills.md": _rule_agents_and_skills,
     f"{_PREFIX}code-style.md": _rule_code_style,
     f"{_PREFIX}testing.md": _rule_testing,
     f"{_PREFIX}security.md": _rule_security,

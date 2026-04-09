@@ -6,6 +6,8 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
 setup_file() {
     export GEN_DIR; GEN_DIR="$(mktemp -d)"
+    export AG_DIR; AG_DIR="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" > "$GEN_DIR/antigravity.log" 2>/dev/null; echo $? > "$GEN_DIR/antigravity.status"
     python3 "$TOOLKIT_DIR/scripts/generate_agents_md.py" > "$GEN_DIR/agents-md" 2>/dev/null; echo $? > "$GEN_DIR/agents-md.status"
     python3 "$TOOLKIT_DIR/scripts/generate_llms_txt.py" > "$GEN_DIR/llms" 2>/dev/null; echo $? > "$GEN_DIR/llms.status"
     python3 "$TOOLKIT_DIR/scripts/generate_llms_txt.py" --full > "$GEN_DIR/llms-full" 2>/dev/null; echo $? > "$GEN_DIR/llms-full.status"
@@ -22,7 +24,7 @@ setup_file() {
 }
 
 teardown_file() {
-    rm -rf "$GEN_DIR"
+    rm -rf "$GEN_DIR" "$AG_DIR"
 }
 
 # ── generate_agents_md.py ───────────────────────────────────────────────────
@@ -223,6 +225,92 @@ teardown_file() {
 
 @test "generate_aider_conf.py output mentions ai-toolkit" {
     grep -qiE 'ai.toolkit' "$GEN_DIR/aider"
+}
+
+# ── generate_antigravity.py ─────────────────────────────────────────────────
+
+@test "generate_antigravity.py exits 0" {
+    [ "$(cat "$GEN_DIR/antigravity.status")" = "0" ]
+}
+
+@test "generate_antigravity.py creates .agent/rules/ directory" {
+    [ -d "$AG_DIR/.agent/rules" ]
+}
+
+@test "generate_antigravity.py creates .agent/workflows/ directory" {
+    [ -d "$AG_DIR/.agent/workflows" ]
+}
+
+@test "generate_antigravity.py creates all 6 rule files" {
+    expected="ai-toolkit-agents-and-skills.md ai-toolkit-code-style.md ai-toolkit-quality-standards.md ai-toolkit-security.md ai-toolkit-testing.md ai-toolkit-workflow.md"
+    missing=0
+    for f in $expected; do
+        [ -f "$AG_DIR/.agent/rules/$f" ] || missing=$((missing + 1))
+    done
+    [ "$missing" -eq 0 ]
+}
+
+@test "generate_antigravity.py creates all 13 workflow files" {
+    expected="ai-toolkit-api-design.md ai-toolkit-code-review.md ai-toolkit-codebase-onboarding.md ai-toolkit-database-migration.md ai-toolkit-debug.md ai-toolkit-docs.md ai-toolkit-feature-development.md ai-toolkit-incident-response.md ai-toolkit-performance-optimization.md ai-toolkit-refactor.md ai-toolkit-security-audit.md ai-toolkit-tdd.md ai-toolkit-test-coverage.md"
+    missing=0
+    for f in $expected; do
+        [ -f "$AG_DIR/.agent/workflows/$f" ] || missing=$((missing + 1))
+    done
+    [ "$missing" -eq 0 ]
+}
+
+@test "generate_antigravity.py rule files are non-empty markdown" {
+    for f in "$AG_DIR"/.agent/rules/ai-toolkit-*.md; do
+        [ -s "$f" ] || { echo "Empty: $f"; return 1; }
+        grep -q '^# ' "$f" || { echo "No heading: $f"; return 1; }
+    done
+}
+
+@test "generate_antigravity.py workflow files have YAML frontmatter" {
+    for f in "$AG_DIR"/.agent/workflows/ai-toolkit-*.md; do
+        head -1 "$f" | grep -q '^---' || { echo "No frontmatter: $f"; return 1; }
+        grep -q '^description:' "$f" || { echo "No description: $f"; return 1; }
+    done
+}
+
+@test "generate_antigravity.py agents-and-skills file contains all agents" {
+    missing=0
+    for f in "$TOOLKIT_DIR"/app/agents/*.md; do
+        agent_name="${f##*/}"; agent_name="${agent_name%.md}"
+        grep -q "$agent_name" "$AG_DIR/.agent/rules/ai-toolkit-agents-and-skills.md" || missing=$((missing + 1))
+    done
+    [ "$missing" -eq 0 ]
+}
+
+@test "generate_antigravity.py agents-and-skills file references skills" {
+    grep -qiE 'skill' "$AG_DIR/.agent/rules/ai-toolkit-agents-and-skills.md"
+}
+
+@test "generate_antigravity.py preserves user files" {
+    # Create user files
+    echo "* My rule" > "$AG_DIR/.agent/rules/my-custom.md"
+    echo "* My flow" > "$AG_DIR/.agent/workflows/deploy.md"
+    # Re-run generator
+    python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" >/dev/null 2>&1
+    # Verify user files untouched
+    grep -q "My rule" "$AG_DIR/.agent/rules/my-custom.md"
+    grep -q "My flow" "$AG_DIR/.agent/workflows/deploy.md"
+}
+
+@test "generate_antigravity.py is idempotent" {
+    # Run twice, count files — should be same
+    count1=$(ls "$AG_DIR/.agent/rules"/ai-toolkit-*.md | wc -l | xargs)
+    python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" >/dev/null 2>&1
+    count2=$(ls "$AG_DIR/.agent/rules"/ai-toolkit-*.md | wc -l | xargs)
+    [ "$count1" -eq "$count2" ]
+}
+
+@test "generate_antigravity.py cleans stale toolkit files" {
+    # Create a fake stale toolkit file
+    echo "stale" > "$AG_DIR/.agent/rules/ai-toolkit-obsolete.md"
+    python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" >/dev/null 2>&1
+    # Stale file should be removed
+    [ ! -f "$AG_DIR/.agent/rules/ai-toolkit-obsolete.md" ]
 }
 
 # ── cross-generator: all outputs mention ai-toolkit ──────────────────────────
