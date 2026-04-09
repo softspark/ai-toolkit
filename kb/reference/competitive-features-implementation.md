@@ -30,7 +30,7 @@ description: "Implementation plan for features identified from competitive analy
 
 ## 1. Objective
 
-Strengthen ai-toolkit's competitive position by implementing 10 features from competitive analysis while maintaining our advantages (clean architecture, 9 editors, personas, safety constitution).
+Strengthen ai-toolkit's competitive position by implementing 10 features from competitive analysis while maintaining our advantages (clean architecture, 11 editors, personas, safety constitution).
 
 **Key design principle:** ai-toolkit is a **generic toolkit** — it does NOT know about rag-mcp or any specific consumer. Consumers (like rag-mcp) use ai-toolkit's public API (`inject-rule`, `inject-hook`, `merge-hooks`) to add their own rules and hooks.
 

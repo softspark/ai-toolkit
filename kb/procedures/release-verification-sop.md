@@ -113,7 +113,7 @@ ai-toolkit status
 - [ ] Agents >= 40
 - [ ] Skills >= 80
 - [ ] Hooks merged into settings.json
-- [ ] "Other AI Tools" section lists cursor, windsurf, gemini, augment
+- [ ] "Other AI Tools" section lists cursor, windsurf, gemini, augment (antigravity via --local)
 
 **Verify `status`:**
 - [ ] Version matches expected
@@ -163,6 +163,7 @@ cd - && rm -rf /tmp/ai-toolkit-verify
 - [ ] Would inject: .claude/constitution.md
 - [ ] Would inject: .github/copilot-instructions.md
 - [ ] Would inject: .clinerules, .roomodes, .aider.conf.yml
+- [ ] Would generate: .agent/rules/ and .agent/workflows/ (Antigravity)
 - [ ] Would install: .git/hooks/pre-commit
 - [ ] Would inject language rules (auto-detected)
 

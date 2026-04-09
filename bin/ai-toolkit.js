@@ -84,9 +84,10 @@ const COMMANDS = {
   'roo-modes': 'Generate .roomodes for Roo Code',
   'aider-conf': 'Generate .aider.conf.yml for Aider',
   'augment-rules': 'Generate .augment/rules/ai-toolkit.md for Augment',
+  'antigravity-rules': 'Generate .agent/rules/ and .agent/workflows/ for Google Antigravity',
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
-  'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, llms)',
+  'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, llms)',
   help: 'Show this help message',
 };
 
@@ -373,6 +374,7 @@ function handleGenerateAll(_args) {
   for (const gen of Object.values(GENERATORS)) {
     writeGeneratorOutput(gen);
   }
+  run(scriptPath('generate_antigravity.py'), [CWD]);
   generateLlmsTxt();
 }
 
@@ -430,6 +432,7 @@ const SPECIAL_HANDLERS = {
   'inject-hook':  handleInjectHook,
   'remove-hook':  handleRemoveHook,
   'llms-txt':     (_args) => generateLlmsTxt(),
+  'antigravity-rules': (_args) => run(scriptPath('generate_antigravity.py'), [CWD]),
   'generate-all': handleGenerateAll,
 };
 

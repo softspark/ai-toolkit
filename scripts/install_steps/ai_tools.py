@@ -229,7 +229,7 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
 def _install_local_dry_run(reset: bool) -> None:
     if reset:
         print("  Would remove: CLAUDE.md, .claude/settings.local.json")
-        print("  Would remove: .claude/constitution.md, .github/copilot-instructions.md, .clinerules, .roomodes, .aider.conf.yml")
+        print("  Would remove: .claude/constitution.md, .github/copilot-instructions.md, .clinerules, .roomodes, .aider.conf.yml, .agent/")
         print("  Would recreate all from templates (clean slate)")
         print("  Would install git hooks (if .git/hooks exists)")
     else:
@@ -240,6 +240,7 @@ def _install_local_dry_run(reset: bool) -> None:
         print("  Would inject: .clinerules")
         print("  Would inject: .roomodes")
         print("  Would inject: .aider.conf.yml")
+        print("  Would generate: .agent/rules/ and .agent/workflows/ (Antigravity)")
         print("  Would install: .git/hooks/pre-commit")
 
 
@@ -333,5 +334,9 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path) -> None:
     aider_output = run_script("generate-aider-conf.sh", capture=True)
     (cwd / ".aider.conf.yml").write_text(aider_output, encoding="utf-8")
     print("  Created: .aider.conf.yml")
+
+    # Antigravity .agent/rules/ and .agent/workflows/
+    from generate_antigravity import generate as generate_antigravity
+    generate_antigravity(cwd)
 
     run_script("install-git-hooks.sh", str(cwd))

@@ -1,6 +1,6 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 91 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 91 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, and Google Antigravity, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -123,6 +123,7 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 | Roo Code | `.roomodes` | `ai-toolkit install --local` | project |
 | Aider | `.aider.conf.yml` | `ai-toolkit install --local` | project |
 | Augment | `.augment/rules/ai-toolkit.md` | `ai-toolkit install --local` | project |
+| Google Antigravity | `.agent/rules/`, `.agent/workflows/` | `ai-toolkit install --local` | project |
 | Codex / OpenCode | `AGENTS.md` | `ai-toolkit agents-md` | project |
 
 > **Note:** Claude Code remains the primary platform with full feature support (agents, lifecycle hooks, safety constitution). Other platforms receive a distilled ruleset generated from the same source. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
@@ -760,6 +761,7 @@ Usage: ai-toolkit <command> [options]
 | `roo-modes` | Generate `.roomodes` in current dir |
 | `aider-conf` | Generate `.aider.conf.yml` in current dir |
 | `augment-rules` | Generate `.augment/rules/ai-toolkit.md` in current dir |
+| `antigravity-rules` | Generate `.agent/rules/` and `.agent/workflows/` for Google Antigravity |
 | `agents-md` | Regenerate `AGENTS.md` from agent definitions |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
 | `generate-all` | Generate all platform configs at once |

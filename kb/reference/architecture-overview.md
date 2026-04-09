@@ -13,7 +13,7 @@ description: "Architecture of ai-toolkit: directory layout, global install model
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, and Augment). Provides specialized agents, skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
+Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, and Google Antigravity). Provides specialized agents, skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
 
 ## Design Principles
 
@@ -127,6 +127,7 @@ Machine (global)                              Project (local)
 | `cline-rules` | `./` | Generates `.clinerules` |
 | `roo-modes` | `./` | Generates `.roomodes` |
 | `aider-conf` | `./` | Generates `.aider.conf.yml` |
+| `antigravity-rules` | `./` | Generates `.agent/rules/` and `.agent/workflows/` for Google Antigravity |
 | `agents-md` | toolkit | Regenerates `AGENTS.md` |
 | `llms-txt` | `./` | Generates `llms.txt` |
 | `generate-all` | `./` | Generates all platform configs at once |
