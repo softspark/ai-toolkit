@@ -134,6 +134,7 @@ def inject_section(
 
     output = "\n".join(parts) + "\n"
     output = collapse_blank_runs(output)
+    output = output.lstrip("\n")  # no leading blank lines
 
     target_file.write_text(output, encoding="utf-8")
     return action
