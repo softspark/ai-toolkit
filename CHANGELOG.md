@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.4.2 — --local Scoping Fix, Leading Blank Lines Fix (2026-04-09)
+
+### Fixed
+- `--local` now runs only project-local install (no global re-install). Global install runs separately without `--local`.
+- Fixed leading blank lines in generated files (copilot-instructions.md, etc.) caused by `inject_section` and `inject_with_rules`.
+- Context-aware "Next steps" message (local vs global).
+
+### Changed
+- Updated KB docs: global-install-model.md, maintenance-sop.md to reflect `--local` scoping change.
+
+---
+
 ## v1.4.1 — Documentation Fix: --local Behavior (2026-04-09)
 
 ### Fixed
