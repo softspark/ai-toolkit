@@ -199,6 +199,8 @@ function showHelp() {
   console.log('  --profile <p>   Install profile: minimal (agents+skills), standard (default), strict (all+git hooks)');
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
   console.log('  --lang <list>   Explicitly select language rules (e.g. typescript, go,python)');
+  console.log('  --editors <list> Install editor configs: cursor,windsurf,cline,roo,aider,augment,copilot,antigravity (or "all")');
+  console.log('                  Default with --local: auto-detect from existing project files');
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
   console.log('\nOptions for create:');

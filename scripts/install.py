@@ -198,6 +198,7 @@ def parse_args(argv: list[str]) -> dict:
         "auto_detect": False,
         "status": False,
         "lang": "",
+        "editors": "",
     }
     i = 0
     while i < len(argv):
@@ -242,6 +243,11 @@ def parse_args(argv: list[str]) -> dict:
         elif arg == "--lang":
             i += 1
             cfg["lang"] = argv[i] if i < len(argv) else ""
+        elif arg.startswith("--editors="):
+            cfg["editors"] = arg.split("=", 1)[1]
+        elif arg == "--editors":
+            i += 1
+            cfg["editors"] = argv[i] if i < len(argv) else ""
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -464,7 +470,9 @@ def main() -> None:
     if local:
         # Pass language modules for --auto-detect / --modules rules-*
         lang_modules = [m for m in (resolved_modules or []) if m.startswith("rules-")]
-        install_local_project(rules_dir, dry_run, reset, lang_modules or None)
+        editors_arg: str = cfg["editors"]
+        install_local_project(rules_dir, dry_run, reset, lang_modules or None,
+                              editors=editors_arg)
 
     install_persona(target_dir, persona, dry_run)
     install_strict_git_hooks(profile, local, dry_run)

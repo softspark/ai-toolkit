@@ -120,18 +120,81 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
     return result.stdout if capture else ""
 
 
+# All known editor identifiers for --editors flag
+ALL_EDITORS = [
+    "copilot", "cursor", "windsurf", "cline", "roo",
+    "aider", "augment", "antigravity",
+]
+
+# Map of project files/dirs → editor names for auto-detection
+_EDITOR_MARKERS: dict[str, str] = {
+    ".github/copilot-instructions.md": "copilot",
+    ".cursorrules": "cursor",
+    ".cursor/rules": "cursor",
+    ".windsurfrules": "windsurf",
+    ".windsurf/rules": "windsurf",
+    ".clinerules": "cline",
+    ".cline/rules": "cline",
+    ".roomodes": "roo",
+    ".roo/rules": "roo",
+    ".aider.conf.yml": "aider",
+    "CONVENTIONS.md": "aider",
+    ".augment/rules": "augment",
+    ".agent/rules": "antigravity",
+}
+
+
+def _detect_editors(cwd: Path) -> list[str]:
+    """Detect which editors have configs in the project directory."""
+    found: set[str] = set()
+    for marker, editor in _EDITOR_MARKERS.items():
+        p = cwd / marker
+        if p.exists():
+            found.add(editor)
+    return sorted(found)
+
+
+def _resolve_editors(editors_arg: str, cwd: Path) -> list[str]:
+    """Resolve --editors argument to a list of editor names.
+
+    - ""           → auto-detect from existing project files (empty if none found)
+    - "all"        → all editors
+    - "cursor,aider" → explicit list
+    """
+    if editors_arg == "all":
+        return list(ALL_EDITORS)
+    if editors_arg:
+        return [e.strip() for e in editors_arg.split(",") if e.strip()]
+    # Auto-detect: return editors that already have configs in the project
+    return _detect_editors(cwd)
+
+
 def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
-                          language_modules: list[str] | None = None) -> None:
-    """Install project-local configs."""
+                          language_modules: list[str] | None = None,
+                          editors: str = "") -> None:
+    """Install project-local configs.
+
+    Claude Code configs (CLAUDE.md, settings, constitution) are always installed.
+    Editor configs are installed based on ``--editors`` flag:
+    - ``--editors all``: install all editors
+    - ``--editors cursor,aider``: install only these
+    - (empty): auto-detect from existing project files, install only those
+    """
     cwd = Path.cwd()
+    resolved_editors = _resolve_editors(editors, cwd)
+
     print()
     print(f"## Project-local ({cwd})")
     if reset:
         print("   Mode: RESET (all local configs will be wiped and recreated)")
+    if resolved_editors:
+        print(f"   Editors: {', '.join(resolved_editors)}")
+    else:
+        print("   Editors: none (use --editors <list> or --editors all to enable)")
     print()
 
     if dry_run:
-        _install_local_dry_run(reset)
+        _install_local_dry_run(reset, resolved_editors)
         if language_modules:
             print(f"  Would inject language rules: {', '.join(language_modules)}")
         return
@@ -162,7 +225,8 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
     # Inject language-specific rules into project CLAUDE.md
     _inject_language_rules(cwd, language_modules)
 
-    _create_local_ai_tool_configs(cwd, rules_dir)
+    # Install editor configs only for resolved editors
+    _create_local_ai_tool_configs(cwd, rules_dir, resolved_editors)
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
@@ -226,28 +290,36 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
         tmp_path.unlink(missing_ok=True)
 
 
-def _install_local_dry_run(reset: bool) -> None:
+def _install_local_dry_run(reset: bool, editors: list[str] | None = None) -> None:
+    eds = set(editors or [])
     if reset:
         print("  Would remove: CLAUDE.md, .claude/settings.local.json")
-        print("  Would remove: .claude/constitution.md, .github/copilot-instructions.md, .clinerules, .roomodes, .aider.conf.yml, .agent/")
+        print("  Would remove: .claude/constitution.md and all editor configs")
         print("  Would recreate all from templates (clean slate)")
-        print("  Would install git hooks (if .git/hooks exists)")
     else:
         print("  Would create: CLAUDE.md (if missing)")
         print("  Would create: .claude/settings.local.json (if missing)")
         print("  Would inject: .claude/constitution.md")
-        print("  Would inject: .github/copilot-instructions.md")
-        print("  Would inject: .clinerules")
-        print("  Would inject: .roomodes")
-        print("  Would inject: .aider.conf.yml")
-        print("  Would inject: CONVENTIONS.md (Aider auto-loaded)")
-        print("  Would generate: .agent/rules/ and .agent/workflows/ (Antigravity)")
-        print("  Would generate: .cursor/rules/*.mdc (Cursor)")
-        print("  Would generate: .windsurf/rules/*.md (Windsurf)")
-        print("  Would generate: .cline/rules/*.md (Cline)")
-        print("  Would generate: .roo/rules/*.md (Roo Code)")
-        print("  Would generate: .augment/rules/ai-toolkit-*.md (Augment)")
-        print("  Would install: .git/hooks/pre-commit")
+
+    # Editor-specific dry-run messages
+    _EDITOR_DRY_RUN = {
+        "copilot":      "  Would inject: .github/copilot-instructions.md",
+        "cursor":       "  Would generate: .cursorrules + .cursor/rules/*.mdc",
+        "windsurf":     "  Would generate: .windsurfrules + .windsurf/rules/*.md",
+        "cline":        "  Would generate: .clinerules + .cline/rules/*.md",
+        "roo":          "  Would generate: .roomodes + .roo/rules/*.md",
+        "aider":        "  Would generate: .aider.conf.yml + CONVENTIONS.md",
+        "augment":      "  Would generate: .augment/rules/ai-toolkit-*.md",
+        "antigravity":  "  Would generate: .agent/rules/ + .agent/workflows/",
+    }
+    for ed, msg in _EDITOR_DRY_RUN.items():
+        if ed in eds:
+            print(msg)
+
+    if not eds:
+        print("  No editors selected (use --editors <list> or --editors all)")
+
+    print("  Would install: .git/hooks/pre-commit")
 
 
 def _reset_local_configs(cwd: Path) -> None:
@@ -321,45 +393,63 @@ def _create_local_settings(cwd: Path, reset: bool) -> None:
         print("  Kept: .claude/settings.local.json (already exists)")
 
 
-def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path) -> None:
-    inject_with_rules(
-        "generate-copilot.sh",
-        cwd / ".github" / "copilot-instructions.md",
-        rules_dir,
-    )
-    inject_with_rules(
-        "generate-cline.sh",
-        cwd / ".clinerules",
-        rules_dir,
-    )
+def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
+                                   editors: list[str]) -> None:
+    eds = set(editors)
 
-    roo_output = run_script("generate-roo-modes.sh", capture=True)
-    (cwd / ".roomodes").write_text(roo_output, encoding="utf-8")
-    print("  Created: .roomodes")
+    if "copilot" in eds:
+        inject_with_rules(
+            "generate-copilot.sh",
+            cwd / ".github" / "copilot-instructions.md",
+            rules_dir,
+        )
 
-    aider_output = run_script("generate-aider-conf.sh", capture=True)
-    (cwd / ".aider.conf.yml").write_text(aider_output, encoding="utf-8")
-    print("  Created: .aider.conf.yml")
+    if "cursor" in eds:
+        inject_with_rules(
+            "generate-cursor-rules.sh",
+            cwd / ".cursorrules",
+            rules_dir,
+        )
+        from generate_cursor_mdc import generate as gen_cursor_mdc
+        gen_cursor_mdc(cwd)
 
-    # Directory-based rules for all platforms
-    from generate_antigravity import generate as gen_antigravity
-    from generate_cursor_mdc import generate as gen_cursor_mdc
-    from generate_windsurf_rules import generate as gen_windsurf_rules
-    from generate_cline_rules import generate as gen_cline_rules
-    from generate_roo_rules import generate as gen_roo_rules
-    from generate_augment_rules import generate as gen_augment_rules
-    gen_antigravity(cwd)
-    gen_cursor_mdc(cwd)
-    gen_windsurf_rules(cwd)
-    gen_cline_rules(cwd)
-    gen_roo_rules(cwd)
-    gen_augment_rules(cwd)
+    if "windsurf" in eds:
+        inject_with_rules(
+            "generate-windsurf.sh",
+            cwd / ".windsurfrules",
+            rules_dir,
+        )
+        from generate_windsurf_rules import generate as gen_windsurf_rules
+        gen_windsurf_rules(cwd)
 
-    # CONVENTIONS.md for Aider (auto-loaded)
-    conventions_output = run_script("generate-conventions.sh", capture=True)
-    if not conventions_output:
-        conventions_output = run_script("generate_conventions.py", capture=True)
-    if conventions_output:
+    if "cline" in eds:
+        inject_with_rules(
+            "generate-cline.sh",
+            cwd / ".clinerules",
+            rules_dir,
+        )
+        from generate_cline_rules import generate as gen_cline_rules
+        gen_cline_rules(cwd)
+
+    if "roo" in eds:
+        roo_output = run_script("generate-roo-modes.sh", capture=True)
+        (cwd / ".roomodes").write_text(roo_output, encoding="utf-8")
+        print("  Created: .roomodes")
+        from generate_roo_rules import generate as gen_roo_rules
+        gen_roo_rules(cwd)
+
+    if "aider" in eds:
+        aider_output = run_script("generate-aider-conf.sh", capture=True)
+        (cwd / ".aider.conf.yml").write_text(aider_output, encoding="utf-8")
+        print("  Created: .aider.conf.yml")
         inject_with_rules("generate_conventions.py", cwd / "CONVENTIONS.md", rules_dir)
+
+    if "augment" in eds:
+        from generate_augment_rules import generate as gen_augment_rules
+        gen_augment_rules(cwd)
+
+    if "antigravity" in eds:
+        from generate_antigravity import generate as gen_antigravity
+        gen_antigravity(cwd)
 
     run_script("install-git-hooks.sh", str(cwd))
