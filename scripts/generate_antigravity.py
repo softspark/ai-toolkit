@@ -192,19 +192,23 @@ description: Safely refactor code with test protection
 # File registry
 # ---------------------------------------------------------------------------
 
+# Prefix ensures toolkit files never collide with user files.
+# Re-running overwrites only ai-toolkit-* files (idempotent).
+_PREFIX = "ai-toolkit-"
+
 RULE_FILES: dict[str, callable] = {
-    "code-style.md": _rule_code_style,
-    "testing.md": _rule_testing,
-    "security.md": _rule_security,
-    "workflow.md": _rule_workflow,
-    "quality-standards.md": _rule_quality_standards,
+    f"{_PREFIX}code-style.md": _rule_code_style,
+    f"{_PREFIX}testing.md": _rule_testing,
+    f"{_PREFIX}security.md": _rule_security,
+    f"{_PREFIX}workflow.md": _rule_workflow,
+    f"{_PREFIX}quality-standards.md": _rule_quality_standards,
 }
 
 WORKFLOW_FILES: dict[str, callable] = {
-    "code-review.md": _workflow_code_review,
-    "feature-development.md": _workflow_feature_development,
-    "debug.md": _workflow_debug,
-    "refactor.md": _workflow_refactor,
+    f"{_PREFIX}code-review.md": _workflow_code_review,
+    f"{_PREFIX}feature-development.md": _workflow_feature_development,
+    f"{_PREFIX}debug.md": _workflow_debug,
+    f"{_PREFIX}refactor.md": _workflow_refactor,
 }
 
 
@@ -212,13 +216,32 @@ WORKFLOW_FILES: dict[str, callable] = {
 # Main
 # ---------------------------------------------------------------------------
 
+def _cleanup_stale(directory: Path, current_files: set[str]) -> None:
+    """Remove ai-toolkit-* files that are no longer in the registry."""
+    if not directory.is_dir():
+        return
+    for f in directory.iterdir():
+        if f.name.startswith(_PREFIX) and f.name not in current_files:
+            f.unlink()
+            print(f"  Removed stale: {f.relative_to(directory.parent.parent)}")
+
+
 def generate(target_dir: Path) -> None:
-    """Write .agent/rules/ and .agent/workflows/ files to target_dir."""
+    """Write .agent/rules/ and .agent/workflows/ files to target_dir.
+
+    Only writes files prefixed with ``ai-toolkit-``. User files without
+    the prefix are never touched. Re-running is idempotent — updates
+    toolkit files, removes stale ones, leaves user files intact.
+    """
     rules_dir = target_dir / ".agent" / "rules"
     workflows_dir = target_dir / ".agent" / "workflows"
 
     rules_dir.mkdir(parents=True, exist_ok=True)
     workflows_dir.mkdir(parents=True, exist_ok=True)
+
+    # Clean up stale toolkit files from previous versions
+    _cleanup_stale(rules_dir, set(RULE_FILES.keys()))
+    _cleanup_stale(workflows_dir, set(WORKFLOW_FILES.keys()))
 
     for filename, content_fn in RULE_FILES.items():
         (rules_dir / filename).write_text(content_fn(), encoding="utf-8")
