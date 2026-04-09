@@ -23,8 +23,8 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 |---------|--------|---------|
 | `ai-toolkit install` | `~/.claude/` | first-time machine setup |
 | `ai-toolkit update` | `~/.claude/` | re-apply after package or rule changes |
-| `ai-toolkit install --local` | current project | create local `CLAUDE.md`, `.claude/settings.local.json`, and inject constitution + Copilot + Cline + Roo Code + Aider configs. Installs git hooks fallback. |
-| `ai-toolkit update --local` | current project | refresh those local project files |
+| `ai-toolkit install --local` | current project | Claude Code configs only (CLAUDE.md, settings, constitution, language rules). Add `--editors all` for other tools. |
+| `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
 | `ai-toolkit add-rule` | `~/.ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.ai-toolkit/rules/` | unregister a global rule |
 

@@ -90,6 +90,7 @@ def inject_with_rules(
     if start_marker in existing:
         existing = _strip_section(existing, "ai-toolkit")
     existing = _trim_trailing_blanks(existing)
+    existing = existing.lstrip("\n")  # no leading blank lines
 
     parts: list[str] = []
     if existing.strip():
@@ -99,6 +100,7 @@ def inject_with_rules(
 
     output = "\n".join(parts) + "\n"
     output = _collapse_blank_runs(output)
+    output = output.lstrip("\n")  # no leading blank lines
     target_file.write_text(output, encoding="utf-8")
 
     if rules_dir.is_dir():

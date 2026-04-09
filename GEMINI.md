@@ -76,6 +76,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **commit**: Create Conventional Commits with pre-commit validation
 - **council**: 4-perspective decision evaluation for architecture choices. Use when user wants multi-angle analysis, needs to decide between alternatives, or mentions 'council', 'evaluate decision', 'pros cons'.
 - **csharp-patterns**: Loaded when user asks about C# or .NET development patterns
+- **cve-scan**: Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, bundler, dart)
 - **database-patterns**: Loaded when user asks about database schema or query optimization
 - **debug**: Debug errors and trace root causes systematically
 - **debugging-tactics**: Loaded when user is debugging an issue or needs root cause analysis

@@ -312,16 +312,23 @@ def print_banner(target_dir: Path, rules_dir: Path, profile: str,
     print()
 
 
-def print_summary() -> None:
+def print_summary(local: bool = False) -> None:
     print()
     print("Done.")
-    print()
-    print("Next steps:")
-    print("  1. Edit ~/.claude/CLAUDE.md -- add your global rules above the toolkit sections")
-    print("  2. Per project: ai-toolkit install --local (or: ai-toolkit update --local)")
-    print("  3. To update: npm install -g @softspark/ai-toolkit@latest && ai-toolkit update")
-    print("  4. To register rules from other tools: ai-toolkit add-rule <rule.md>")
-    print("  5. Check install state: ai-toolkit status")
+    if local:
+        print()
+        print("Next steps:")
+        print("  1. Edit CLAUDE.md -- add your project-specific rules")
+        print("  2. Add more editors: ai-toolkit install --local --editors cursor,aider")
+        print("  3. Update project configs: ai-toolkit update --local")
+    else:
+        print()
+        print("Next steps:")
+        print("  1. Edit ~/.claude/CLAUDE.md -- add your global rules above the toolkit sections")
+        print("  2. Per project: ai-toolkit install --local --editors all")
+        print("  3. To update: npm install -g @softspark/ai-toolkit@latest && ai-toolkit update")
+        print("  4. To register rules from other tools: ai-toolkit add-rule <rule.md>")
+        print("  5. Check install state: ai-toolkit status")
 
 
 # ---------------------------------------------------------------------------
@@ -457,25 +464,26 @@ def main() -> None:
         only = resolve_profile(profile, only)
 
     check_dependencies()
-    print_banner(target_dir, rules_dir, profile, only, skip, dry_run,
-                 modules=resolved_modules)
 
     if not dry_run:
         rules_dir.mkdir(parents=True, exist_ok=True)
         hooks_scripts_dir.mkdir(parents=True, exist_ok=True)
 
-    install_claude_code(target_dir, hooks_scripts_dir, rules_dir, only, skip, dry_run)
-    install_ai_tools(target_dir, rules_dir, only, skip, dry_run)
-
     if local:
-        # Pass language modules for --auto-detect / --modules rules-*
+        # --local: project-local only, no global install
         lang_modules = [m for m in (resolved_modules or []) if m.startswith("rules-")]
         editors_arg: str = cfg["editors"]
         install_local_project(rules_dir, dry_run, reset, lang_modules or None,
                               editors=editors_arg)
-
-    install_persona(target_dir, persona, dry_run)
-    install_strict_git_hooks(profile, local, dry_run)
+        install_strict_git_hooks(profile, local, dry_run)
+    else:
+        # Global install
+        print_banner(target_dir, rules_dir, profile, only, skip, dry_run,
+                     modules=resolved_modules)
+        install_claude_code(target_dir, hooks_scripts_dir, rules_dir, only, skip, dry_run)
+        install_ai_tools(target_dir, rules_dir, only, skip, dry_run)
+        install_persona(target_dir, persona, dry_run)
+        install_strict_git_hooks(profile, local, dry_run)
 
     # Record install state (skip for dry-run)
     if not dry_run:
@@ -497,7 +505,7 @@ def main() -> None:
             auto_detected=auto_detected,
         )
 
-    print_summary()
+    print_summary(local=local)
 
 
 def _infer_modules_from_legacy(profile: str, only: str) -> list[str]:
