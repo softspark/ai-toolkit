@@ -126,6 +126,8 @@ def _rule_agents_and_skills() -> str:
         "",
         emit_skills_bullets(),
         "",
+        generate_general_guidelines(),
+        "",
         generate_quality_standards(),
         "",
         generate_workflow_guidelines(),
