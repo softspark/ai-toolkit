@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-91-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-92-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-439%20passing-success)](tests/)
 
@@ -136,7 +136,7 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 
 | Component | Count | Description |
 |-----------|-------|-------------|
-| `skills/` (task) | 28 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
+| `skills/` (task) | 29 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, `/hipaa-validate`, ... |
 | `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 32 | Domain knowledge auto-loaded by agents |
 | `agents/` | 44 | Specialized agents across 10 categories |
@@ -227,6 +227,7 @@ ai-toolkit/
 | `/plugin-creator` | Scaffold an experimental plugin pack with manifest and optional modules | high |
 | `/skill-audit` | Scan skills/agents for security risks: dangerous patterns, secrets, permissions | medium |
 | `/cve-scan` | Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, ruby, dart) | medium |
+| `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, audit logging, encryption, access control | medium |
 | `/analyze` | Code quality, complexity, and pattern analysis | medium |
 | `/fix` | Auto-fix lint/type errors | low |
 | `/build` | Build with issue detection | low |

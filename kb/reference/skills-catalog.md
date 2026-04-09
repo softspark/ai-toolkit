@@ -21,7 +21,7 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (28)
+## Task Skills (29)
 
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
@@ -55,6 +55,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **health** | `/health` | medium | Check health of project services (auto-detect) |
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
+| **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps |
 
 ## Hybrid Skills (31)
 

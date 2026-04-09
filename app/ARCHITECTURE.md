@@ -102,7 +102,7 @@ Universal multi-agent system for software development. Works across all reposito
 
 ## Skills
 
-### Task Skills (28)
+### Task Skills (29)
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `commit` | `/commit` | Create well-structured git commits (Conventional Commits) |
@@ -133,6 +133,7 @@ Universal multi-agent system for software development. Works across all reposito
 | `plugin-creator` | `/plugin-creator` | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
 | `prd-to-issues` | `/prd-to-issues` | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | `skill-audit` | `/skill-audit` | Scan skills and agents for security risks, dangerous patterns, secrets |
+| `hipaa-validate` | `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, audit logging, encryption, access control |
 
 ### Hybrid Skills (31)
 | Skill | Slash Command | Purpose |

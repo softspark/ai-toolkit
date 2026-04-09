@@ -11,8 +11,6 @@ We welcome bug fixes, new skills, agents, hooks, and improvements. This guide ex
 5. **Push** to your fork and open a **Pull Request** against `main`
 6. The maintainer will review, pull the branch locally if needed, adjust documentation, and merge
 
-
-
 > **Note:** Documentation updates (README, ARCHITECTURE, CLAUDE.md, counts, etc.) are handled by the maintainer after merge. You do not need to update these yourself.
 
 ## Branch Naming
