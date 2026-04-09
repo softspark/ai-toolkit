@@ -44,3 +44,5 @@ dist/
 *.pem
 *.p12
 /.agent/
+/.augment/
+/.cursor/
