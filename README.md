@@ -191,7 +191,7 @@ ai-toolkit/
 │   ├── output-styles/   # System prompt output style overrides
 │   ├── constitution.md  # 5 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design
-├── kb/                  # Reference docs, architecture notes, procedures
+├── kb/                  # Reference docs, architecture notes, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
 ├── tests/               # Bats test suite
 └── CHANGELOG.md

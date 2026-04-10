@@ -178,7 +178,7 @@ scripts/validate.py
 # Checks: required fields present, category is valid, tags non-empty
 ```
 
-Valid categories: `reference`, `howto`, `procedures`, `troubleshooting`, `best-practices`.
+Valid categories: `reference`, `howto`, `procedures`, `troubleshooting`, `best-practices`, `planning`.
 
 ## Anti-Patterns
 

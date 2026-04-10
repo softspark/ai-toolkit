@@ -44,7 +44,7 @@ Generate or update documentation.
 When creating or updating documents in the `kb/` directory, follow the `documentation-standards` knowledge skill (auto-loaded). Key rules:
 
 - **7 required frontmatter fields:** title, category, service, tags, created, last_updated, description
-- **5 valid categories:** reference, howto, procedures, troubleshooting, best-practices
+- **6 valid categories:** reference, howto, procedures, troubleshooting, best-practices, planning
 - **Category must match directory** (e.g., `category: howto` → `kb/howto/`)
 - **English only.** No exceptions.
 - **validate.sh rejects docs without valid frontmatter.**

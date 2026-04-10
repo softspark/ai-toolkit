@@ -46,6 +46,7 @@ VALID_HOOK_EVENTS = frozenset({
 
 VALID_KB_CATEGORIES = frozenset({
     "reference", "howto", "procedures", "troubleshooting", "best-practices",
+    "planning",
 })
 
 PLANNED_ASSETS = [

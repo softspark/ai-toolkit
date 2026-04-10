@@ -480,7 +480,7 @@ State tracked in `~/.ai-toolkit/plugins.json`.
 
 Follow the `documentation-standards` knowledge skill (`app/skills/documentation-standards/SKILL.md`) for full spec. Quick checklist:
 
-1. **Choose category directory:** `kb/reference/`, `kb/howto/`, `kb/procedures/`, `kb/troubleshooting/`, or `kb/best-practices/`
+1. **Choose category directory:** `kb/reference/`, `kb/howto/`, `kb/procedures/`, `kb/troubleshooting/`, `kb/best-practices/`, or `kb/planning/`
 2. **Create file:** kebab-case name, no dates in filename
 3. **Add frontmatter** with all 7 required fields: `title`, `category`, `service`, `tags`, `created`, `last_updated`, `description`
 4. **Write in English**

@@ -11,7 +11,7 @@ KB_DIR="$TOOLKIT_DIR/kb"
 }
 
 @test "all KB documents have valid frontmatter (required fields, category, tags)" {
-    valid_categories="reference howto procedures troubleshooting best-practices"
+    valid_categories="reference howto procedures troubleshooting best-practices planning"
     errors=0
     while IFS= read -r f; do
         if ! head -1 "$f" | grep -q '^---$'; then

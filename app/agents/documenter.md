@@ -202,12 +202,12 @@ command
 
 ## Frontmatter Standards (MANDATORY)
 
-Follow the `documentation-standards` knowledge skill for full spec. **7 required fields:** title, category, service, tags, created, last_updated, description. **5 valid categories:** reference, howto, procedures, troubleshooting, best-practices. `validate.sh` enforces compliance — **docs without valid frontmatter block CI.**
+Follow the `documentation-standards` knowledge skill for full spec. **7 required fields:** title, category, service, tags, created, last_updated, description. **6 valid categories:** reference, howto, procedures, troubleshooting, best-practices, planning. `validate.sh` enforces compliance — **docs without valid frontmatter block CI.**
 
 ## Hard Rules (ENFORCED — NO EXCEPTIONS)
 
 1. **REFUSE** to create any file in `kb/` without valid YAML frontmatter containing ALL 7 required fields (title, category, service, tags, created, last_updated, description).
-2. **REFUSE** to use any category other than: `reference`, `howto`, `procedures`, `troubleshooting`, `best-practices`.
+2. **REFUSE** to use any category other than: `reference`, `howto`, `procedures`, `troubleshooting`, `best-practices`, `planning`.
 3. **REFUSE** to place a document in a directory that doesn't match its `category:` field (e.g., a `howto` doc MUST go in `kb/howto/`).
 4. **REFUSE** to write KB content in any language other than English.
 5. **ALWAYS** run `ai-toolkit validate` or `scripts/validate.py` after creating/modifying KB documents to verify compliance.
