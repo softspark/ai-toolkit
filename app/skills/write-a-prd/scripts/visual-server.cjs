@@ -20,13 +20,23 @@ function resetIdleTimer() {
 
 const templatePath = path.join(__dirname, "frame-template.html");
 const templateHtml = fs.readFileSync(templatePath, "utf-8");
+const pollJs = fs.readFileSync(path.join(__dirname, "poll.js"), "utf-8");
 
 const server = http.createServer((req, res) => {
   resetIdleTimer();
 
   if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": "script-src 'self'",
+    });
     res.end(templateHtml);
+    return;
+  }
+
+  if (req.method === "GET" && req.url === "/poll.js") {
+    res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
+    res.end(pollJs);
     return;
   }
 

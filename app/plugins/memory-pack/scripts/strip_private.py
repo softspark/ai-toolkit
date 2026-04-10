@@ -14,7 +14,7 @@ import sys
 
 def main() -> None:
     content = sys.stdin.read()
-    cleaned = re.sub(r"<private>[^<]*</private>", "", content)
+    cleaned = re.sub(r"<private>.*?</private>", "", content, flags=re.DOTALL)
     sys.stdout.write(cleaned)
 
 

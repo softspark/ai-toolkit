@@ -39,8 +39,9 @@ runs:
     - name: Run ai-toolkit
       id: run-toolkit
       shell: bash
+      env:
+        COMMAND: ${{ inputs.command }}
       run: |
-        COMMAND="${{ inputs.command }}"
         case "$COMMAND" in
           validate|doctor) ;;
           *) echo "Error: invalid command '$COMMAND' (allowed: validate, doctor)"; exit 1 ;;
