@@ -133,7 +133,7 @@ Universal multi-agent system for software development. Works across all reposito
 | `plugin-creator` | `/plugin-creator` | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
 | `prd-to-issues` | `/prd-to-issues` | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | `skill-audit` | `/skill-audit` | Scan skills and agents for security risks, dangerous patterns, secrets |
-| `hipaa-validate` | `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, audit logging, encryption, access control |
+| `hipaa-validate` | `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, missing BAA references |
 
 ### Hybrid Skills (31)
 | Skill | Slash Command | Purpose |

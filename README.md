@@ -227,7 +227,7 @@ ai-toolkit/
 | `/plugin-creator` | Scaffold an experimental plugin pack with manifest and optional modules | high |
 | `/skill-audit` | Scan skills/agents for security risks: dangerous patterns, secrets, permissions | medium |
 | `/cve-scan` | Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, ruby, dart) | medium |
-| `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, audit logging, encryption, access control | medium |
+| `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, missing BAA references | medium |
 | `/analyze` | Code quality, complexity, and pattern analysis | medium |
 | `/fix` | Auto-fix lint/type errors | low |
 | `/build` | Build with issue detection | low |

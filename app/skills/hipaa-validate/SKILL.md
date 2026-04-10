@@ -1,10 +1,13 @@
 ---
 name: hipaa-validate
 description: "Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references"
+user-invocable: true
 effort: medium
 disable-model-invocation: true
-argument-hint: "[path] [--mode developer|compliance] [--severity high|warn] [--keywords term1,term2]"
-allowed-tools: Read, Grep, Glob
+context: fork
+agent: security-auditor
+argument-hint: "[path] [--mode developer|compliance] [--severity high|warn] [--keywords term1,term2] [--output json]"
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 # /hipaa-validate - HIPAA Compliance Scanner
@@ -23,6 +26,7 @@ Scan a codebase for HIPAA compliance issues using pattern-matching heuristics. D
 /hipaa-validate --mode compliance            # Full audit sweep including heuristic categories
 /hipaa-validate --severity high              # Filter to HIGH findings only
 /hipaa-validate --keywords member,enrollee   # Extend healthcare keyword list
+/hipaa-validate --output json                # Structured JSON output for CI integration
 ```
 
 **Modes:**
@@ -33,68 +37,56 @@ Scan a codebase for HIPAA compliance issues using pattern-matching heuristics. D
 
 ## What This Command Does
 
-1. **Context gate** — identify PHI-adjacent files via healthcare keyword grep
-2. **Detect** project language/framework from manifest files
-3. **Scan** for HIPAA violations across 8 check categories
-4. **Report** findings with file paths, line numbers, severity, confidence, and HIPAA rule citations
+1. **Run scanner script** — execute `scripts/hipaa_scan.py` with passed arguments
+2. **Interpret results** — analyze findings, add context, suggest specific fixes
+3. **Report** — present findings with file paths, line numbers, severity, confidence, and HIPAA rule citations
 
 ## Steps
 
-### Step 0: Context Gate
+### Step 1: Run the Scanner Script
 
-Grep the entire project for healthcare keywords to build a PHI-adjacent file set:
+Execute the Python scanner with the user's arguments:
+
+```bash
+python3 "$(dirname "$0")/../app/skills/hipaa-validate/scripts/hipaa_scan.py" [path] [--mode developer|compliance] [--severity high|warn] [--keywords term1,term2] [--output json]
+```
+
+The script handles all scanning logic deterministically:
+- **Context gate** — identifies PHI-adjacent files via healthcare keyword matching
+- **Language detection** — detects project languages from manifest files
+- **8 check categories** — runs regex patterns and co-occurrence heuristics
+- **Deduplication** — removes duplicate findings (same file+line+category)
+- **`.hipaaignore` support** — honors exclusion patterns from project root
+- **`.hipaa-config` support** — reads `covered_vendors` for BAA checks
+
+If the script reports "No healthcare context detected", relay the message and suggest the `--keywords` flag with alternative terminology.
+
+If `--output json` is used, the script outputs structured JSON suitable for CI pipelines. The exit code is 1 if any HIGH findings exist, 0 otherwise.
+
+### Step 2: Interpret and Enrich Results
+
+For each finding from the script output:
+
+1. **Read the flagged file and line** to understand the actual code context
+2. **Add a specific fix suggestion** — not generic advice, but concrete code changes based on what you see
+3. **For heuristic findings** (confidence: "heuristic"), check if the concern is actually addressed elsewhere in the codebase (e.g., auth middleware at router level, audit logging in a shared module)
+4. **Mark confirmed false positives** and suggest adding them to `.hipaaignore`
+
+### Scanner Reference
+
+The script implements the following scan categories. This reference is provided so you can explain findings to the user and verify edge cases.
+
+**Modes:**
+- `developer` (default): Categories 1, 3, 4, 7, 8 — definitive regex matches only, low false-positive rate
+- `compliance`: All 8 categories — includes heuristic checks (Cat 2, 5, 6)
 
 **Default keywords**: `patient`, `diagnosis`, `medication`, `clinical`, `healthcare`, `medical`, `fhir`, `hl7`, `hipaa`, `phi`, `protected.health`, `health-record`, `health-plan`, `health-insurance`
 
-> **Note**: Bare `health` is deliberately excluded — it matches infrastructure health checks (`healthCheck`, `/health`, `isHealthy`) in nearly every codebase. Only compound healthcare terms are used.
+> **Note**: Bare `health` is deliberately excluded — it matches infrastructure health checks in nearly every codebase.
 
-If `--keywords` is passed, merge those terms into the default list.
+**Built-in exclusions**: Binary files, lock files, vendored directories (`node_modules/`, `vendor/`, `.git/`, `dist/`, `build/`, `out/`, `.next/`). Test directories (`test/`, `tests/`, `__tests__/`, `spec/`, `fixtures/`, `mocks/`) are excluded for Category 4 only.
 
-If **zero files match**, report:
-
-```
-No healthcare context detected.
-Keywords searched: patient, diagnosis, medication, clinical, healthcare, medical, fhir, hl7, hipaa, phi, protected.health, health-record, health-plan, health-insurance
-If your project uses different terminology (e.g., member, enrollee, beneficiary, subscriber, resident, subject, claimant), re-run with:
-  /hipaa-validate --keywords member,enrollee,...
-```
-
-And exit clean — no findings.
-
-**Built-in file exclusions** (always skipped):
-- Binary files, lock files (`*.lock`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`)
-- Vendored directories (`node_modules/`, `vendor/`, `.git/`, `dist/`, `build/`, `out/`, `.next/`)
-
-**`.hipaaignore` support**: If a `.hipaaignore` file exists at project root, read it and exclude matching paths. Format follows `.gitignore` syntax — one glob pattern per line, `#` for comments. Example:
-
-```
-# Synthetic test data
-tests/fixtures/**
-seed/demo-data.sql
-```
-
-**Scope check**: After building the PHI-adjacent file set, count files. If count > 50, emit this warning in the Summary header before proceeding:
-
-> ⚠️ Large scope: N PHI-adjacent files detected. Analysis may be incomplete due to context limits. Consider narrowing: `/hipaa-validate src/api/` for targeted results.
-
-### Step 1: Detect Language/Framework
-
-| Indicator | Language | Log Patterns | Framework Hints |
-|-----------|----------|--------------|-----------------|
-| `package.json` | JS/TS | `console.*`, `logger.*` | Express, Next.js, Fastify |
-| `requirements.txt` / `pyproject.toml` | Python | `print(`, `logging.*` | Django, FastAPI, Flask |
-| `*.go` / `go.mod` | Go | `fmt.Print`, `log.*` | net/http, gin, echo |
-| `*.java` / `pom.xml` | Java | `System.out`, `Logger.*` | Spring Boot |
-| `*.rb` / `Gemfile` | Ruby | `puts`, `Rails.logger` | Rails |
-| `*.cs` / `*.csproj` | C# | `Console.Write`, `ILogger` | ASP.NET |
-
-### Step 2: Run Check Categories
-
-**Mode: developer (default)**: Run Categories 1, 3, 4, 7, 8 only — definitive regex matches, minimal false positives.
-**Mode: compliance**: Run all 8 categories — Categories 2, 5, 6 are heuristic and expected to produce false positives.
-
-Categories 1 and 2 scan the full project (patterns are inherently healthcare-scoped).
-Categories 3, 4, 5, 6, 7, and 8 scan only the PHI-adjacent file set from Step 0.
+Categories 1 and 2 scan the full project. Categories 3–8 scan only PHI-adjacent files.
 
 ---
 
@@ -289,7 +281,7 @@ See: [reference/hipaa-rules.md](reference/hipaa-rules.md) §164.310(d)(2)(iii) f
 
 ### Step 3: Compile and Report
 
-Parse all findings into the unified output format below. Sort by severity (HIGH first), then by file path.
+Present the scanner output to the user. Sort by severity (HIGH first), then by file path.
 
 ## Output Format
 

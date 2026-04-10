@@ -4507,7 +4507,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **health** | `/health` | medium | Check health of project services (auto-detect) |
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
-| **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps |
+| **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references |
 
 ## Hybrid Skills (31)
 

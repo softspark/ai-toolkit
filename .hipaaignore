@@ -1,0 +1,16 @@
+# ai-toolkit is not a healthcare application.
+# These exclusions suppress false positives from toolkit documentation
+# and agent/rule definitions that mention healthcare terms as examples.
+
+# Agent definitions (contain technology keyword examples, not PHI)
+app/agents/**
+
+# Rule definitions (coding style guides, not healthcare code)
+app/rules/**
+
+# Build/utility scripts
+scripts/**
+
+# Documentation
+README.md
+kb/**
