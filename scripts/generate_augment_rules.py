@@ -18,7 +18,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dir_rules_shared import (
+    LANG_GLOBS,
     PREFIX,
+    build_language_rules,
+    build_registered_rules,
     cleanup_stale,
     rule_agents_and_skills,
     rule_code_style,
@@ -87,14 +90,45 @@ def _make_rules() -> dict[str, callable]:
 RULES = _make_rules()
 
 
-def generate(target_dir: Path) -> None:
+def generate(target_dir: Path, *,
+             language_modules: list[str] | None = None,
+             rules_dir: Path | None = None) -> None:
     """Write .augment/rules/ai-toolkit-*.md files to target_dir."""
-    rules_dir = target_dir / ".augment" / "rules"
-    rules_dir.mkdir(parents=True, exist_ok=True)
-    cleanup_stale(rules_dir, set(RULES.keys()) | {"ai-toolkit.md"})
+    out_dir = target_dir / ".augment" / "rules"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    for filename, content_fn in RULES.items():
-        (rules_dir / filename).write_text(content_fn(), encoding="utf-8")
+    all_rules: dict[str, callable] = dict(RULES)
+
+    # Add language rules with Augment frontmatter
+    for filename, content_fn in build_language_rules(language_modules).items():
+        lang = filename.removeprefix(f"{PREFIX}lang-").removesuffix(".md")
+        globs = LANG_GLOBS.get(lang)
+        if globs:
+            all_rules[filename] = (lambda fn, l, g: lambda: _augment_wrap(
+                fn(),
+                description=f"{l.title()} language rules",
+                rule_type="auto_attached",
+                globs=g,
+            ))(content_fn, lang, globs)
+        else:
+            # common — always apply
+            all_rules[filename] = (lambda fn, l: lambda: _augment_wrap(
+                fn(),
+                description=f"{l.title()} language rules",
+            ))(content_fn, lang)
+
+    # Add registered rules with Augment frontmatter
+    for filename, content_fn in build_registered_rules(rules_dir).items():
+        name = filename.removeprefix(f"{PREFIX}custom-").removesuffix(".md")
+        all_rules[filename] = (lambda fn, n: lambda: _augment_wrap(
+            fn(),
+            description=f"Custom rule: {n}",
+        ))(content_fn, name)
+
+    cleanup_stale(out_dir, set(all_rules.keys()) | {"ai-toolkit.md"})
+
+    for filename, content_fn in all_rules.items():
+        (out_dir / filename).write_text(content_fn(), encoding="utf-8")
         print(f"  Generated: .augment/rules/{filename}")
 
 

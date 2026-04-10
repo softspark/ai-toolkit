@@ -228,7 +228,8 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
     _inject_language_rules(cwd, language_modules)
 
     # Install editor configs only for resolved editors
-    _create_local_ai_tool_configs(cwd, rules_dir, resolved_editors)
+    _create_local_ai_tool_configs(cwd, rules_dir, resolved_editors,
+                                  language_modules=language_modules)
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
@@ -396,7 +397,8 @@ def _create_local_settings(cwd: Path, reset: bool) -> None:
 
 
 def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
-                                   editors: list[str]) -> None:
+                                   editors: list[str],
+                                   language_modules: list[str] | None = None) -> None:
     eds = set(editors)
 
     if "copilot" in eds:
@@ -413,7 +415,8 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             rules_dir,
         )
         from generate_cursor_mdc import generate as gen_cursor_mdc
-        gen_cursor_mdc(cwd)
+        gen_cursor_mdc(cwd, language_modules=language_modules,
+                       rules_dir=rules_dir)
 
     if "windsurf" in eds:
         inject_with_rules(
@@ -422,7 +425,8 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             rules_dir,
         )
         from generate_windsurf_rules import generate as gen_windsurf_rules
-        gen_windsurf_rules(cwd)
+        gen_windsurf_rules(cwd, language_modules=language_modules,
+                           rules_dir=rules_dir)
 
     if "cline" in eds:
         inject_with_rules(
@@ -431,14 +435,16 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             rules_dir,
         )
         from generate_cline_rules import generate as gen_cline_rules
-        gen_cline_rules(cwd)
+        gen_cline_rules(cwd, language_modules=language_modules,
+                        rules_dir=rules_dir)
 
     if "roo" in eds:
         roo_output = run_script("generate-roo-modes.sh", capture=True)
         (cwd / ".roomodes").write_text(roo_output, encoding="utf-8")
         print("  Created: .roomodes")
         from generate_roo_rules import generate as gen_roo_rules
-        gen_roo_rules(cwd)
+        gen_roo_rules(cwd, language_modules=language_modules,
+                      rules_dir=rules_dir)
 
     if "aider" in eds:
         aider_output = run_script("generate-aider-conf.sh", capture=True)
@@ -448,10 +454,12 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
 
     if "augment" in eds:
         from generate_augment_rules import generate as gen_augment_rules
-        gen_augment_rules(cwd)
+        gen_augment_rules(cwd, language_modules=language_modules,
+                          rules_dir=rules_dir)
 
     if "antigravity" in eds:
         from generate_antigravity import generate as gen_antigravity
-        gen_antigravity(cwd)
+        gen_antigravity(cwd, language_modules=language_modules,
+                        rules_dir=rules_dir)
 
     run_script("install-git-hooks.sh", str(cwd))

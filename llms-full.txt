@@ -14,6 +14,10 @@
 - [Best Practices](kb/best-practices/README.md)
 - [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
 - [How-To Guides](kb/howto/README.md)
+- [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
+- [Plan: Enterprise Config Inheritance — Multi-Repo Governance with `extends`](kb/planning/enterprise-config-inheritance-plan.md)
+- [Plan: Local Dashboard — `ai-toolkit ui`](kb/planning/local-dashboard-plan.md)
+- [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/planning/offline-slm-profile-plan.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Release Preparation](kb/procedures/release-preparation-sop.md)
 - [SOP: Release Verification](kb/procedures/release-verification-sop.md)
@@ -264,6 +268,3199 @@ last_updated: "2026-03-25"
 # How-To Guides
 
 Step-by-step guides for common tasks. Guides will be added here as they are created.
+
+---
+
+## kb/planning/cloud-security-pack-plan.md
+
+---
+title: "Plan: Cloud Security Pack — Multi-Cloud Audit (GCP/AWS/Azure)"
+category: planning
+service: ai-toolkit
+tags:
+  - cloud-security
+  - gcp
+  - aws
+  - azure
+  - firebase
+  - plugin-pack
+  - security-audit
+  - credentials
+doc_type: plan
+status: proposed
+created: "2026-04-10"
+last_updated: "2026-04-10"
+completion: "0%"
+council_review: "2026-04-10 — conditional FOR, scope reduction recommended"
+description: "Plugin pack for deterministic, read-only security auditing of GCP (Firebase/Cloud Functions), AWS (S3/Lambda/IAM), and Azure (NSG/Functions/CosmosDB). Includes CLI credential management, static+live modes, false positive resolution, SARIF output, incremental scanning, and CI integration."
+---
+
+# Plan: Cloud Security Pack — Multi-Cloud Audit
+
+**Status:** Proposed
+**Completion:** 0%
+**Created:** 2026-04-10
+**Origin:** Firebase RTDB/Firestore rules audit, Cloud Functions public exposure, false positive resolution for App Check/Gateway patterns
+**Estimated Effort:** 5-6 weeks (council-revised from original 3-4 weeks)
+
+---
+
+## 1. Objective
+
+Create `cloud-security-pack` plugin pack that provides deterministic, read-only security auditing for three major cloud providers. All scripts are stdlib-only Python with zero external dependencies. The pack includes a dedicated agent, multiple scan scripts, CLI credential management, and CI pipeline integration.
+
+**Key design principles:**
+- **Read-only** — never modifies cloud resources, only reads state
+- **Deterministic** — reproducible results, no LLM-driven regex (same pattern as `hipaa_scan.py`)
+- **False positive aware** — context graph resolves "public endpoint behind gateway/App Check/WAF"
+- **CI-ready** — `--output json` + `--output sarif` (SARIF v2.1.0 for GitHub Advanced Security), exit code 1 on HIGH, 0 otherwise
+- **Credential isolation** — keys stored in `~/.ai-toolkit/credentials/`, accessible only by this pack's scripts
+- **Static-first** — static mode (no credentials) is the default, live mode is opt-in upgrade
+- **Incremental** — `--changed` flag scans only files modified since last commit (PR workflow)
+- **IaC via `terraform show -json`** — wraps Terraform's own JSON output instead of parsing HCL directly
+
+---
+
+## 2. Architecture Overview
+
+```
+ai-toolkit credentials add gcp --file ~/sa-viewer.json
+ai-toolkit credentials add aws --profile my-audit-profile
+ai-toolkit credentials add azure --subscription abc-123
+
+  ┌──────────────────────────────────────────────────────┐
+  │              cloud-security-pack                      │
+  │                                                      │
+  │  Agent: cloud-security-auditor                       │
+  │  Tools: Read, Grep, Glob, Bash (read-only commands)  │
+  │                                                      │
+  │  Skills:                                             │
+  │    /cloud-security-audit          (orchestrator)     │
+  │    /firebase-rules-audit          (GCP: rules)       │
+  │    /cloud-functions-audit         (GCP: CF + IAM)    │
+  │    /aws-security-audit            (AWS: S3/Lambda)   │
+  │    /azure-security-audit          (Azure: NSG/Fn)    │
+  │                                                      │
+  │  Scripts (stdlib Python, zero deps):                 │
+  │    gcp_auth.py                    (credential helper)│
+  │    firebase_rules_scan.py         (static parser)    │
+  │    cloud_functions_audit.py       (CF IAM + context) │
+  │    aws_security_scan.py           (S3/Lambda/IAM)    │
+  │    azure_security_scan.py         (NSG/Fn/RBAC)      │
+  │    false_positive_resolver.py     (context graph)    │
+  │    sarif_formatter.py             (SARIF v2.1.0)     │
+  │    incremental.py                 (git diff filter)  │
+  │                                                      │
+  │  Modes:                                              │
+  │    --static    (no credentials, parse IaC/source)    │
+  │    --live      (credentials, deployed state)         │
+  │    --output json|sarif  (CI pipeline)                │
+  │    --changed <ref>  (incremental, static only)       │
+  │    --explain <id>   (remediation lookup)             │
+  └──────────────────────────────────────────────────────┘
+
+### YAML Parsing Constraint (BLOCKER)
+
+Python stdlib has NO YAML parser. This affects AWS static mode:
+- CloudFormation templates (`.yaml`) — YAML
+- `serverless.yml` — YAML
+- SAM templates (`template.yaml`) — YAML
+
+**Decision: JSON-only for static IaC parsing.** Rationale:
+1. CloudFormation supports both JSON and YAML — JSON variant parseable with `json` module
+2. `terraform show -json` outputs JSON — the primary Terraform path
+3. `serverless.yml` → recommend users run `sls print --format json` to convert
+4. Adding `pyyaml` breaks the stdlib-only constraint for the entire toolkit
+
+**Practical impact:** ~30% of CloudFormation users use JSON, ~70% YAML. For YAML users, live mode (`--mode live`) still works (queries APIs directly, no file parsing needed). The `--explain` output will suggest `sls print --format json` conversion.
+
+**v2 option:** Ship a vendored minimal YAML subset parser (~150 LOC, handles flat key-value and simple nested maps — enough for security-relevant fields like `Principal`, `Effect`, `authLevel`).
+```
+
+---
+
+## 3. Progress Tracking
+
+| # | Feature | Priority | Status | Est. Time | Notes |
+|---|---------|----------|--------|-----------|-------|
+| 1.1 | CLI `credentials` command (add/list/remove/test) | P0 | Proposed | 2d | 0600 perms, allowlist wrapper |
+| 1.1b | `credentials init` interactive wizard | P1 | Proposed | 1.5d | **Deferred to Milestone 2** (orchestration-review: saves 1.5d in M1 critical path) |
+| 1.2 | `cloud-security-auditor` agent | P0 | Proposed | 1d | Agent definition |
+| 1.3 | SARIF + incremental scan infrastructure | P0 | Proposed | 2d | `--output sarif`, `--changed` flag |
+| 2.1 | `firebase-rules-audit` skill + script | P0 | Proposed | 4-5d | Recursive descent parser (orchestration-review: +1d vs regex) |
+| 2.2 | `cloud-functions-audit` skill + script | P0 | Proposed | 3-4d | CF IAM + App Check context |
+| 2.3 | False positive resolver (GCP context) | P0 | Proposed | 3-4d | Context graph engine — GCP only (~8 code paths). **+2d per provider** in later milestones (orchestration-review) |
+| 3.1 | `aws-security-audit` skill + script | P1 | Proposed | 4-5d | S3/Lambda/IAM/SG, `terraform show -json` |
+| 3.2 | `/cloud-security-audit` orchestrator + plugin.json | P1 | Proposed | 3d | Multi-provider orchestration + pack |
+| 4.1 | `azure-security-audit` skill + script | P1 | Proposed | 4-5d | NSG/Functions/RBAC |
+| 5.1 | Tests + CI integration docs | P1 | Proposed | 3d | Tests + SARIF + pipeline examples |
+| 5.2 | Documentation (kb/) | P2 | Proposed | 1d | Checklists, patterns, KB |
+
+**Phasing (full delivery, all 3 providers):**
+- **Phase 1 (week 1-2):** Foundation + GCP — credentials CLI, agent, SARIF/incremental infra, firebase-rules, cloud-functions, false positive resolver (GCP context)
+- **Phase 2 (week 3-4):** AWS + orchestrator — AWS security audit, `terraform show -json`, orchestrator skill, plugin pack, `credentials init`
+- **Phase 3 (week 5-6):** Azure + polish — Azure security audit, false positive resolver (Azure context), full test suite, documentation
+
+---
+
+## 4. Dependency Graph
+
+```
+                         Phase 1: Foundation + GCP (week 1-2)
+                         ====================================
+credentials CLI (1.1) ─────┐
+                            ├──► firebase-rules-audit (2.1)
+SARIF + incremental (1.3) ──┤
+                            ├──► cloud-functions-audit (2.2) ──► false-positive-resolver (2.3)
+agent definition (1.2) ─────┘
+
+                         Phase 2: AWS + Orchestrator (week 3-4)
+                         ======================================
+credentials init (1.1b) ───┐
+                            ├──► aws-security-audit (3.1) ─────► false-positive-resolver (+AWS context)
+                            └──► orchestrator skill + plugin.json (3.2)
+
+                         Phase 3: Azure + Polish (week 5-6)
+                         ==================================
+                            ├──► azure-security-audit (4.1) ───► false-positive-resolver (+Azure context)
+                            └──► tests + docs (5.1, 5.2)
+```
+
+**All 3 providers ship.** No conditional gates — full delivery in 6 weeks.
+
+---
+
+## 5. Detailed Implementation
+
+### Faza 1: Foundation (tydzien 1)
+
+#### 1.1 CLI `credentials` Command
+
+**Purpose:** Secure credential storage for cloud provider API access. Credentials live outside any project directory and are only accessible by this pack's scripts.
+
+**CLI interface:**
+```bash
+# GCP — Service Account JSON
+ai-toolkit credentials add gcp --file ~/sa-viewer.json
+ai-toolkit credentials add gcp --file ~/sa-viewer.json --project my-project-id
+
+# GCP — use existing gcloud session (no file needed)
+ai-toolkit credentials add gcp --gcloud --project my-project-id
+
+# AWS — named profile (reads from ~/.aws/credentials)
+ai-toolkit credentials add aws --profile audit-readonly
+ai-toolkit credentials add aws --profile audit-readonly --region eu-west-1
+
+# AWS — explicit keys (interactive, never on CLI args)
+ai-toolkit credentials add aws --interactive
+
+# Azure — subscription
+ai-toolkit credentials add azure --subscription abc-123-def
+
+# Azure — use existing az login session
+ai-toolkit credentials add azure --az-cli
+
+# Interactive guided setup (reduces onboarding from 4 steps to 1)
+ai-toolkit credentials init           # auto-detect provider, interactive wizard
+ai-toolkit credentials init --provider gcp  # skip auto-detect, go straight to GCP setup
+
+# Management
+ai-toolkit credentials list
+ai-toolkit credentials remove gcp
+ai-toolkit credentials remove aws
+ai-toolkit credentials remove azure
+ai-toolkit credentials test gcp       # verify read-only access works
+ai-toolkit credentials test aws
+```
+
+**Storage structure:**
+```
+~/.ai-toolkit/
+  credentials/
+    gcp.json              # SA key file (copied, chmod 0600)
+    gcp.meta.json         # { project_id, added_at, method: "file"|"gcloud" }
+    aws.json              # { profile, region, method: "profile"|"keys" }
+    azure.json            # { subscription_id, method: "subscription"|"az-cli" }
+```
+
+**`credentials init` interactive flow:**
+1. Auto-detect providers from project files (`firebase.json` → GCP, `*.tf` with `provider "aws"` → AWS, etc.)
+2. If multiple detected → ask user: "Found GCP and AWS markers. Which provider to configure first? [gcp/aws/both]"
+3. Per provider:
+   - GCP: "Do you have a Service Account JSON file? [y/n]" → if yes: ask path → if no: "Run `gcloud auth application-default login` and we'll use that"
+   - AWS: "Do you have a named profile in ~/.aws/credentials? [y/n]" → if yes: ask profile name → if no: "Run `aws configure` first"
+   - Azure: "Do you have an active `az login` session? [y/n]" → if yes: ask subscription ID → if no: "Run `az login` first"
+4. Run `credentials test` automatically after setup
+5. Generate `.cloud-security.json` scaffold with detected context
+
+**Security requirements:**
+- All credential files: `chmod 0600` (owner read/write only)
+- Never log credential contents to stdout/stderr
+- `credentials test` validates:
+  - Connection works (GCP: `gcloud auth list`, AWS: `aws sts get-caller-identity`, Azure: `az account show`)
+  - SA/role has **only read permissions** — **REFUSE to store** if write access detected (orchestration-review: warn-only is ignored by users). Override: `--force` flag with explicit acknowledgment
+  - Project/subscription exists
+- `.gitignore`-proof — lives in `~/.ai-toolkit/`, never in project directory
+- Scripts access credentials via `gcp_auth.py` helper — single entry point, no direct file reads
+
+**Files to create/modify:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `scripts/credentials_cli.py` | CREATE | CLI: add/list/remove/test credentials |
+| `bin/ai-toolkit.js` | EDIT | Register `credentials` subcommand |
+| `tests/test_credentials.bats` | CREATE | Tests: add, remove, permissions, test |
+
+**Success Criteria:**
+- [ ] `credentials add gcp --file` copies and secures SA key
+- [ ] `credentials add aws --profile` stores profile reference
+- [ ] `credentials add azure --subscription` stores subscription
+- [ ] `credentials test` validates read access + warns on write perms
+- [ ] `credentials list` shows providers without exposing secrets
+- [ ] `credentials remove` cleans up securely
+- [ ] All files created with 0600 permissions
+- [ ] Tests: >= 8
+
+---
+
+#### 1.3 SARIF Output + Incremental Scanning (Council addition)
+
+**SARIF v2.1.0 output** — industry standard consumed by GitHub Advanced Security (inline PR annotations), VS Code SARIF Viewer, Azure DevOps, and SonarQube.
+
+```bash
+/cloud-security-audit --output sarif > results.sarif
+
+# GitHub Actions: upload SARIF for inline PR annotations
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+**SARIF structure (per finding):**
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [{
+    "tool": { "driver": {
+      "name": "cloud-security-audit", "version": "1.0.0",
+      "rules": [{ "id": "GCP-CF-001", "shortDescription": { "text": "Public Cloud Function invoker" }, "helpUri": "https://cloud.google.com/functions/docs/securing" }]
+    } },
+    "results": [{
+      "ruleId": "GCP-CF-001",
+      "level": "error",
+      "message": { "text": "Cloud Function 'adminEndpoint' has allUsers invoker with no protection layer" },
+      "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "functions/src/admin.ts" }, "region": { "startLine": 42 } } }],
+      "properties": { "resolved_severity": "HIGH", "context_chain": [], "provider": "gcp" }
+    }]
+  }]
+}
+```
+
+**Incremental scan mode** — scan only changed files since last commit:
+
+```bash
+/cloud-security-audit --changed              # files changed vs HEAD~1
+/cloud-security-audit --changed HEAD~5       # files changed in last 5 commits
+/cloud-security-audit --changed main         # files changed vs main branch (PR workflow)
+```
+
+Implementation: use `git diff --name-only <ref>` to get changed files, filter to relevant extensions (.rules, .tf, .json, .ts, .py, .bicep), scan only those. Falls back to full scan if no git repo detected.
+
+**`--changed` applies to static mode ONLY.** Live mode always scans all deployed resources (it queries cloud APIs, not files). If user passes `--changed` with `--mode live`, emit warning: "Incremental scan applies to static analysis only. Live mode will scan all resources." and proceed with full live scan.
+
+**`--explain` flag** — detailed remediation for a specific finding:
+
+```bash
+/cloud-security-audit --explain GCP-CF-001
+# Output: what the finding means, why it matters, exact fix steps,
+# links to GCP documentation, CIS Benchmark reference
+```
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/skills/cloud-security-audit/scripts/sarif_formatter.py` | CREATE | SARIF v2.1.0 output |
+| `app/skills/cloud-security-audit/scripts/incremental.py` | CREATE | Git diff + file filter |
+| `app/skills/cloud-security-audit/reference/rule-explanations.json` | CREATE | Per-rule remediation guides |
+
+**Success Criteria:**
+- [ ] `--output sarif` produces valid SARIF v2.1.0 JSON with `driver.rules[]` array (orchestration-review: GitHub silently drops annotations without rule metadata)
+- [ ] SARIF upload to GitHub Advanced Security works (inline PR annotations)
+- [ ] SARIF `level` mapping: HIGH→`error`, WARN→`warning`, INFO→`note`
+- [ ] `--changed main` scans only PR-changed files
+- [ ] `--explain <rule-id>` shows detailed remediation
+- [ ] Tests: >= 6
+
+---
+
+#### 1.2 Agent Definition: `cloud-security-auditor`
+
+**File:** `app/agents/cloud-security-auditor.md`
+
+```markdown
+---
+name: cloud-security-auditor
+description: "Multi-cloud security auditor (GCP/AWS/Azure). Read-only deterministic scans
+  for IAM, network, storage, serverless, and compliance. False positive resolution
+  via security context graph."
+model: opus
+color: red
+tools: Read, Grep, Glob, Bash
+skills: security-patterns, cloud-security-audit
+---
+
+# Cloud Security Auditor Agent
+
+You are the **Cloud Security Auditor**. You perform read-only security assessments
+across GCP, AWS, and Azure. You never modify cloud resources.
+
+## Core Philosophy
+**"Read everything, change nothing. Context before verdict."**
+
+## Mandatory Protocol
+Before any audit:
+1. Check credentials: `ai-toolkit credentials test <provider>`
+2. Determine mode: `--static` (IaC/source only) or `--live` (deployed state)
+3. Run deterministic scripts first, then interpret results
+
+## Responsibilities
+
+### 1. Static Analysis (no credentials needed)
+- Parse IaC: Terraform (.tf), CloudFormation (.yaml/.json), Bicep (.bicep)
+- Parse Firebase rules: firestore.rules, database.rules.json
+- Parse source: Cloud Functions (onCall vs onRequest), Lambda handlers, Azure Functions
+- Parse configs: firebase.json, serverless.yml, sam-template.yaml
+
+### 2. Live Analysis (credentials required, READ-ONLY)
+- GCP: `gcloud` CLI commands (list, describe, get-iam-policy)
+- AWS: `aws` CLI commands (s3api, lambda, iam, ec2 — get/list/describe only)
+- Azure: `az` CLI commands (network nsg, functionapp, cosmosdb — list/show only)
+
+### 3. False Positive Resolution
+Build security context graph before rendering verdict:
+- Public endpoint → check: API Gateway? WAF? App Check? CDN?
+- Open port → check: behind Load Balancer? VPN? private subnet?
+- Broad IAM role → check: scoped to specific resource? temporary?
+
+## Allowed CLI Commands (WHITELIST — read-only only)
+
+### GCP
+- gcloud functions list / describe / get-iam-policy
+- gcloud projects get-iam-policy
+- gcloud app-check services list
+- gcloud firestore indexes list
+- gcloud compute firewall-rules list
+- gcloud run services list / describe
+- firebase apps:list
+
+### AWS
+- aws s3api get-bucket-policy / get-bucket-acl / get-public-access-block
+- aws lambda get-policy / get-function-configuration / list-functions
+- aws iam list-roles / list-policies / get-role / get-policy-version
+- aws ec2 describe-security-groups / describe-network-acls
+- aws apigateway get-rest-apis / get-resources
+- aws elbv2 describe-load-balancers / describe-listeners
+
+### Azure
+- az network nsg list / show / rule list
+- az functionapp list / show / config show
+- az cosmosdb list / show / keys list
+- az role assignment list
+- az webapp show / config show
+- az network application-gateway list
+
+### NEVER ALLOWED
+- Any create/update/delete/put/set/deploy/push command
+- Any command that modifies state
+- `gcloud auth activate-service-account` (credential pivot)
+- `aws sts assume-role` (lateral movement)
+- `az login` (session hijack)
+- `terraform apply` / `terraform destroy`
+
+## Output Format
+(see skill SKILL.md for detailed format)
+```
+
+**SECURITY: Programmatic Bash Allowlist (orchestration-review P0 BLOCKER)**
+
+The read-only whitelist above lives in the agent's system prompt. An LLM can be prompt-injected via malicious IaC files or source code comments. **The prompt-only approach is insufficient.**
+
+**Required:** A shell wrapper script (`scripts/cloud_security_allowlist.sh`) that validates every CLI invocation against a compiled allowlist regex BEFORE execution, independent of the LLM:
+
+```bash
+#!/bin/bash
+# cloud_security_allowlist.sh — wraps Bash calls from cloud-security-auditor
+# Rejects any command not matching read-only patterns
+
+ALLOWED_PATTERNS=(
+  '^gcloud (functions|projects|app-check|firestore|compute|run) (list|describe|get-iam-policy|indexes)'
+  '^gcloud auth list$'
+  '^firebase apps:list'
+  '^aws (s3api|lambda|iam|ec2|apigateway|elbv2|sts|cloudfront) (get-|list-|describe-|generate-credential-report)'
+  '^aws sts get-caller-identity$'
+  '^az (network|functionapp|cosmosdb|role|webapp|storage) (list|show|rule list|config show|assignment list|account show)'
+  '^az account show$'
+  '^terraform show -json'
+  '^git diff --name-only'
+  '^python3 .*/scripts/.*\.(py)$'
+)
+
+CMD="$*"
+for pattern in "${ALLOWED_PATTERNS[@]}"; do
+  if [[ "$CMD" =~ $pattern ]]; then
+    exec $CMD
+  fi
+done
+
+echo "BLOCKED: Command not in read-only allowlist: $CMD" >&2
+exit 1
+```
+
+The agent's `allowed-tools` in SKILL.md references this wrapper instead of raw Bash. All cloud CLI calls go through the allowlist.
+
+**`terraform plan` risk (orchestration-review):** `terraform plan -json` executes providers and provisioners. A malicious `.tf` file with `local-exec` provisioner runs arbitrary code during plan. **Decision: use `terraform show -json` ONLY (reads existing state), NOT `terraform plan -json`.** Document this prominently.
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/skills/cloud-security-audit/scripts/cloud_security_allowlist.sh` | CREATE | Bash allowlist wrapper |
+
+**Success Criteria:**
+- [ ] Agent file created in `app/agents/`
+- [ ] Read-only command whitelist documented
+- [ ] NEVER ALLOWED section explicit
+- [ ] Programmatic Bash allowlist enforced (not just prompt)
+- [ ] `terraform plan` excluded — only `terraform show -json` allowed
+- [ ] Allowlist tested: blocked commands return exit 1
+
+---
+
+### Faza 2: GCP / Firebase (Phase 1, tydzien 1-2)
+
+#### 2.1 Skill: `firebase-rules-audit`
+
+**Purpose:** Static analysis of Firestore rules and RTDB rules. No credentials needed.
+
+**What it scans:**
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| `allow read, write: if true` | HIGH | World-readable/writable collection |
+| `allow read: if true` without `write` guard | WARN | Public read — may be intentional |
+| `allow write: if request.auth != null` without field validation | WARN | Authenticated but no field-level validation |
+| Missing `request.resource.data` validation on writes | WARN | No schema enforcement |
+| Wildcard collection `/{document=**}` with broad permissions | HIGH | Recursive wildcard + open access |
+| RTDB `.read: true` or `.write: true` at root | HIGH | Entire database public |
+| RTDB `.read: "auth != null"` without path scoping | WARN | All authenticated users can read everything |
+| Timestamp/TTL rules missing for sensitive collections | WARN | No data lifecycle enforcement |
+| `get()` / `exists()` cross-collection reads without auth check | WARN | Privilege escalation via rule chaining |
+| Rules file > 256KB (approaching Firebase limit) | WARN | May hit deployment limit |
+
+**Script:** `scripts/firebase_rules_scan.py`
+- Parses `firestore.rules` via **recursive descent parser** (not regex — orchestration-review P1)
+  - Grammar: ~8 production rules (service, match, allow, function, condition)
+  - Tracks: brace depth, current match path, accumulated allow blocks
+  - Handles: nested `match` blocks, multi-line conditions with `&&`/`||`, custom `function` declarations
+  - Estimated: 550-650 LOC for parser + check logic
+  - Unsupported (documented): CEL ternary expressions, complex `get()`/`exists()` chains with computed paths
+- Parses `database.rules.json` (JSON rules — stdlib `json` module)
+- Outputs findings as JSON or text
+- Exit code 1 on HIGH, 0 otherwise
+- Supports `.cloud-security-ignore` for suppressions
+
+**Reference file:** `reference/firebase-rules-patterns.md` — safe/unsafe patterns with examples
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/skills/firebase-rules-audit/SKILL.md` | CREATE | Skill definition |
+| `app/skills/firebase-rules-audit/scripts/firebase_rules_scan.py` | CREATE | Deterministic scanner |
+| `app/skills/firebase-rules-audit/reference/firebase-rules-patterns.md` | CREATE | Safe/unsafe patterns |
+
+**Success Criteria:**
+- [ ] Parses `firestore.rules` — detects 10+ check patterns
+- [ ] Parses `database.rules.json` — detects root-level open access
+- [ ] `--output json` for CI
+- [ ] `.cloud-security-ignore` support
+- [ ] Tests: >= 10 (one per check pattern + edge cases)
+
+---
+
+#### 2.2 Skill: `cloud-functions-audit`
+
+**Purpose:** Audit Cloud Functions permissions and detect false positives.
+
+**Static mode (no credentials):**
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| `onRequest` handler without auth middleware | WARN | Potentially public — needs context |
+| `onCall` handler (inherently authenticated) | INFO | Informational — callable is auth'd |
+| Hardcoded API keys / secrets in source | HIGH | Secrets in code |
+| CORS `origin: '*'` in CF handler | WARN | Unrestricted CORS |
+| Missing rate limiting patterns | WARN | No throttling on public endpoint |
+| `functions.https.onRequest` + no `validateFirebaseIdToken` | WARN | HTTP function without Firebase Auth check |
+
+**Live mode (credentials required):**
+
+| Check | Severity | CLI Command | Description |
+|-------|----------|-------------|-------------|
+| `allUsers` invoker on CF | CONTEXT | `gcloud functions get-iam-policy` | Public — resolve with context graph |
+| `allAuthenticatedUsers` invoker | WARN | `gcloud functions get-iam-policy` | Any Google account can invoke |
+| App Check enforcement status | CONTEXT | `gcloud app-check services list` | Feeds into false positive resolution |
+| Deployed rules vs local rules diff | WARN | `gcloud firestore indexes` + local | Rules drift detection |
+| Cloud Run public ingress | CONTEXT | `gcloud run services describe` | Public — resolve with context graph |
+| Overly broad IAM roles on SA | HIGH | `gcloud projects get-iam-policy` | CF service account with editor/owner |
+
+**Script:** `scripts/cloud_functions_audit.py`
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/skills/cloud-functions-audit/SKILL.md` | CREATE | Skill definition |
+| `app/skills/cloud-functions-audit/scripts/cloud_functions_audit.py` | CREATE | Scanner |
+| `app/skills/cloud-functions-audit/scripts/gcp_auth.py` | CREATE | Credential loader |
+| `app/skills/cloud-functions-audit/reference/false-positives-gcp.md` | CREATE | False positive patterns |
+
+**Success Criteria:**
+- [ ] Static: parses CF source for auth patterns
+- [ ] Live: checks IAM bindings via `gcloud`
+- [ ] False positive resolution for App Check + Gateway patterns
+- [ ] Tests: >= 8
+
+---
+
+#### 2.3 False Positive Resolver
+
+**Purpose:** Central engine that resolves "is this actually a problem?" by building a security context graph.
+
+**How it works:**
+```
+Input: Finding { resource, severity, type }
+
+Step 1: Gather context
+  ├── Check API Gateway routes (firebase.json rewrites, API Gateway configs)
+  ├── Check WAF/CDN (Cloudflare, CloudFront, Azure Front Door)
+  ├── Check App Check / AppArmor / Shield
+  ├── Check callable vs HTTP function type
+  ├── Check VPC / private subnet placement
+  └── Check Load Balancer + auth middleware
+
+Step 2: Apply resolution rules
+  ├── Public CF + App Check ENFORCED → SUPPRESSED (protected)
+  ├── Public CF + API Gateway route → SUPPRESSED (gateway handles auth)
+  ├── Public CF + onCall() → SUPPRESSED (callable is auth'd by SDK)
+  ├── Public S3 + CloudFront OAI → SUPPRESSED (not directly accessible)
+  ├── Open SG port + ALB → SUPPRESSED (ALB handles TLS + auth)
+  ├── Open NSG + Application Gateway → SUPPRESSED (WAF handles filtering)
+  └── No context found → KEEP ORIGINAL SEVERITY
+
+Step 3: Output
+  ├── Original severity
+  ├── Resolved severity (SUPPRESSED / DOWNGRADED / CONFIRMED)
+  ├── Context chain (what protections were found)
+  └── Confidence (high if multiple protections, low if single)
+```
+
+**Output example:**
+```json
+{
+  "resource": "processPayment",
+  "provider": "gcp",
+  "type": "cloud-function-public-invoker",
+  "original_severity": "HIGH",
+  "resolved_severity": "SUPPRESSED",
+  "confidence": "high",
+  "context_chain": [
+    { "layer": "app_check", "status": "ENFORCED", "source": "gcloud app-check services list" },
+    { "layer": "function_type", "status": "onCall", "source": "source:index.ts:42" },
+    { "layer": "api_gateway", "status": "ROUTED", "source": "firebase.json:rewrites" }
+  ],
+  "verdict": "3/3 protection layers active. Suppressing finding."
+}
+```
+
+**Script:** `scripts/false_positive_resolver.py`
+
+**Resolution rules stored in:** `reference/resolution-rules.json`
+```json
+{
+  "rules": [
+    {
+      "id": "gcp-cf-appcheck",
+      "finding_type": "cloud-function-public-invoker",
+      "provider": "gcp",
+      "context_required": ["app_check:ENFORCED"],
+      "action": "SUPPRESS",
+      "reason": "App Check enforced — only verified app instances can invoke"
+    },
+    {
+      "id": "gcp-cf-callable",
+      "finding_type": "cloud-function-public-invoker",
+      "provider": "gcp",
+      "context_required": ["function_type:onCall"],
+      "action": "SUPPRESS",
+      "reason": "onCall functions require Firebase Auth token from client SDK"
+    },
+    {
+      "id": "aws-s3-cloudfront-oai",
+      "finding_type": "s3-bucket-public-access",
+      "provider": "aws",
+      "context_required": ["cloudfront_oai:ACTIVE"],
+      "action": "SUPPRESS",
+      "reason": "Bucket accessed only via CloudFront Origin Access Identity"
+    },
+    {
+      "id": "azure-func-apigw",
+      "finding_type": "function-app-public",
+      "provider": "azure",
+      "context_required": ["application_gateway:ACTIVE"],
+      "action": "SUPPRESS",
+      "reason": "Function behind Application Gateway with WAF"
+    }
+  ]
+}
+```
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/skills/cloud-security-audit/scripts/false_positive_resolver.py` | CREATE | Context graph engine |
+| `app/skills/cloud-security-audit/reference/resolution-rules.json` | CREATE | Configurable rules |
+
+**Success Criteria:**
+- [ ] Resolves GCP: App Check, Gateway, callable patterns
+- [ ] Resolves AWS: CloudFront OAI, ALB, WAF patterns
+- [ ] Resolves Azure: App Gateway, Front Door, VNET patterns
+- [ ] JSON output with context chain
+- [ ] User can add custom rules to `.cloud-security.json` `context` section
+- [ ] Tests: >= 12 (4 per provider)
+
+---
+
+### Faza 3: AWS (Phase 2, tydzien 3-4)
+
+#### 3.1 Skill: `aws-security-audit`
+
+**Static mode (IaC parsing):**
+
+| Check | Severity | Source | Description |
+|-------|----------|--------|-------------|
+| S3 bucket `"Effect": "Allow", "Principal": "*"` | HIGH | .tf / .json | Public bucket policy |
+| S3 `BlockPublicAccess` all false | HIGH | .tf / .json | Public access not blocked |
+| Lambda `resource-based policy` with `Principal: "*"` | HIGH | .tf / .json | Public Lambda |
+| Security Group `0.0.0.0/0` ingress on non-80/443 | HIGH | .tf / .json | Open port to world |
+| IAM policy with `Action: "*"` | HIGH | .tf / .json | God-mode IAM |
+| IAM policy with `Resource: "*"` + sensitive actions | WARN | .tf / .json | Broad resource scope |
+| Unencrypted RDS/DynamoDB | WARN | .tf / .json | Missing encryption at rest |
+| CloudTrail disabled | HIGH | .tf / .json | No audit logging |
+| Missing VPC Flow Logs | WARN | .tf / .json | No network monitoring |
+
+**Live mode:**
+
+| Check | CLI Command | Description |
+|-------|-------------|-------------|
+| S3 public buckets | `aws s3api get-public-access-block` | Per-bucket public access |
+| Lambda public policies | `aws lambda get-policy` | Resource-based policies |
+| Open Security Groups | `aws ec2 describe-security-groups` | Ingress from 0.0.0.0/0 |
+| Overly permissive IAM | `aws iam list-roles` + `get-role` | Roles with admin/broad access |
+| Unused IAM credentials | `aws iam generate-credential-report` | Stale access keys |
+| API Gateway without auth | `aws apigateway get-rest-apis` | Endpoints without authorizer |
+
+**Script:** `scripts/aws_security_scan.py`
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/skills/aws-security-audit/SKILL.md` | CREATE | Skill definition |
+| `app/skills/aws-security-audit/scripts/aws_security_scan.py` | CREATE | Scanner |
+| `app/skills/aws-security-audit/scripts/aws_auth.py` | CREATE | Credential loader |
+| `app/skills/aws-security-audit/reference/aws-security-checklist.md` | CREATE | CIS Benchmark mapping |
+| `app/skills/aws-security-audit/reference/false-positives-aws.md` | CREATE | ALB/CloudFront/WAF patterns |
+
+**Terraform approach (council revision):** Do NOT parse HCL directly (stdlib-only Python cannot handle heredocs, variable interpolation, modules, `for_each`). Instead wrap `terraform show -json` / `terraform plan -json` which outputs clean JSON. Fallback to flat-resource regex for projects without `terraform` CLI.
+
+**Success Criteria:**
+- [ ] Static: `terraform show -json` wrapper + CloudFormation/SAM JSON parsing
+- [ ] Live: checks S3, Lambda, IAM, SG via `aws` CLI
+- [ ] False positive resolution for CloudFront/ALB/WAF
+- [ ] CIS Benchmark mapping in reference
+- [ ] Tests: >= 10
+
+---
+
+### Faza 4: Azure (Phase 3, tydzien 5-6)
+
+#### 4.1 Skill: `azure-security-audit`
+
+**Static mode (IaC parsing):**
+
+| Check | Severity | Source | Description |
+|-------|----------|--------|-------------|
+| NSG rule `0.0.0.0/0` source on management ports | HIGH | .tf / .bicep | Open RDP/SSH to world |
+| Function App `authLevel: "anonymous"` | WARN | source / .tf | Public Azure Function |
+| Cosmos DB `publicNetworkAccess: enabled` | WARN | .tf / .bicep | Public database access |
+| Storage Account `allowBlobPublicAccess: true` | HIGH | .tf / .bicep | Public blob storage |
+| Missing Key Vault references (hardcoded secrets) | HIGH | source | Secrets not in Key Vault |
+| Missing RBAC (classic co-admin model) | WARN | .tf | Legacy access model |
+
+**Live mode:**
+
+| Check | CLI Command | Description |
+|-------|-------------|-------------|
+| Open NSG rules | `az network nsg rule list` | Broad inbound rules |
+| Function App auth | `az functionapp show` + `config` | Auth level and provider |
+| Cosmos DB access | `az cosmosdb show` | Network access settings |
+| RBAC assignments | `az role assignment list` | Owner/Contributor sprawl |
+| Storage public access | `az storage account show` | Blob public access |
+| App Service auth | `az webapp auth show` | Auth configuration |
+
+**Script:** `scripts/azure_security_scan.py`
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `app/skills/azure-security-audit/SKILL.md` | CREATE | Skill definition |
+| `app/skills/azure-security-audit/scripts/azure_security_scan.py` | CREATE | Scanner |
+| `app/skills/azure-security-audit/scripts/azure_auth.py` | CREATE | Credential loader |
+| `app/skills/azure-security-audit/reference/azure-security-checklist.md` | CREATE | CIS Benchmark mapping |
+| `app/skills/azure-security-audit/reference/false-positives-azure.md` | CREATE | App Gateway/Front Door patterns |
+
+**Success Criteria:**
+- [ ] Static: parses Terraform, Bicep, ARM templates
+- [ ] Live: checks NSG, Functions, CosmosDB, RBAC via `az` CLI
+- [ ] False positive resolution for App Gateway/Front Door/VNET
+- [ ] Tests: >= 10
+
+---
+
+### Faza 3 (cont.): Orchestration + Pack Integration (Phase 2, tydzien 3-4)
+
+#### 3.2 Orchestrator Skill: `/cloud-security-audit`
+
+**Purpose:** Single entry point that runs all provider audits detected in the project.
+
+**Behavior:**
+1. Auto-detect providers from project files:
+   - `firebase.json` / `firestore.rules` / `.firebaserc` → GCP
+   - `serverless.yml` / `template.yaml` / `*.tf` with `provider "aws"` → AWS
+   - `*.bicep` / `*.tf` with `provider "azurerm"` / `azure-pipelines.yml` → Azure
+2. Check available credentials: `ai-toolkit credentials list`
+3. Run detected provider scans in parallel
+4. Merge results through false positive resolver
+5. Output unified report
+
+**Skill frontmatter:**
+```yaml
+---
+name: cloud-security-audit
+description: "Multi-cloud security audit — auto-detects GCP/AWS/Azure and runs
+  deterministic scans with false positive resolution"
+user-invocable: true
+effort: high
+disable-model-invocation: true
+context: fork
+agent: cloud-security-auditor
+argument-hint: "[path] [--provider gcp|aws|azure|auto] [--mode static|live] [--severity high|warn] [--output json]"
+allowed-tools: Read, Grep, Glob, Bash
+---
+```
+
+**CLI usage:**
+```bash
+/cloud-security-audit                            # auto-detect providers, static mode (default)
+/cloud-security-audit --provider gcp             # GCP only
+/cloud-security-audit --provider aws,azure       # AWS + Azure
+/cloud-security-audit --mode static              # no credentials, IaC/source only (DEFAULT)
+/cloud-security-audit --mode live                # deployed state (requires credentials)
+/cloud-security-audit --severity high            # HIGH findings only
+/cloud-security-audit --output json              # CI pipeline output
+/cloud-security-audit --output sarif             # SARIF v2.1.0 for GitHub Advanced Security
+/cloud-security-audit --changed main             # incremental: only files changed vs main
+/cloud-security-audit --explain GCP-CF-001       # detailed remediation for specific rule
+/cloud-security-audit src/functions/             # scan specific path
+```
+
+**Unified report format:**
+```markdown
+## Cloud Security Audit Report
+
+### Summary
+| Metric | GCP | AWS | Azure | Total |
+|--------|-----|-----|-------|-------|
+| Mode | live | static | n/a | — |
+| Resources scanned | 12 | 8 | 0 | 20 |
+| HIGH | 2 | 1 | 0 | 3 |
+| WARN | 4 | 3 | 0 | 7 |
+| SUPPRESSED (false positive) | 3 | 1 | 0 | 4 |
+
+### Findings (sorted by severity)
+
+#### [HIGH] GCP: Cloud Function "adminEndpoint" — public invoker, no protection
+...
+
+#### [SUPPRESSED] GCP: Cloud Function "processPayment" — public invoker
+Context: App Check ENFORCED + onCall + API Gateway routed (3/3 layers)
+...
+```
+
+---
+
+#### 3.2.1 Plugin Pack Manifest
+
+**File:** `app/plugins/cloud-security-pack/plugin.json`
+
+```json
+{
+  "name": "cloud-security-pack",
+  "description": "Multi-cloud security auditing for GCP, AWS, and Azure",
+  "version": "1.0.0",
+  "domain": "cloud-security",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": [],
+  "includes": {
+    "agents": ["cloud-security-auditor"],
+    "skills": [
+      "cloud-security-audit",
+      "firebase-rules-audit",
+      "cloud-functions-audit",
+      "aws-security-audit",
+      "azure-security-audit"
+    ],
+    "rules": [],
+    "hooks": []
+  },
+  "credentials": {
+    "supported_providers": ["gcp", "aws", "azure"],
+    "setup_command": "ai-toolkit credentials add <provider>"
+  }
+}
+```
+
+**Directory structure:**
+```
+app/plugins/cloud-security-pack/
+├── plugin.json
+├── README.md
+└── (skills and agent live in core app/ dirs, referenced by name)
+```
+
+---
+
+### Faza 5: Tests + Documentation (ongoing, ships with each milestone)
+
+#### 5.1 Tests
+
+| Test file | Count | Description |
+|-----------|-------|-------------|
+| `tests/test_credentials.bats` | 8+ | CLI credentials management |
+| `tests/test_firebase_rules_scan.py` | 10+ | Firestore/RTDB rules patterns |
+| `tests/test_cloud_functions_audit.py` | 8+ | CF static + live checks |
+| `tests/test_aws_security_scan.py` | 10+ | S3/Lambda/IAM/SG checks |
+| `tests/test_azure_security_scan.py` | 10+ | NSG/Functions/CosmosDB checks |
+| `tests/test_false_positive_resolver.py` | 12+ | Context graph resolution |
+| `tests/test_sarif_formatter.py` | 4+ | SARIF v2.1.0 output validation |
+| `tests/test_incremental.py` | 4+ | Git diff filtering, fallback |
+| `tests/test_credentials_init.py` | 4+ | Interactive wizard, auto-detect |
+| **Total** | **70+** | |
+
+#### 5.2 Documentation
+
+| File | Description |
+|------|-------------|
+| `kb/planning/cloud-security-pack-plan.md` | This document |
+| `kb/reference/cloud-security-checklist.md` | Unified multi-cloud checklist (created when Milestone 1 ships) |
+| Skills `reference/` dirs | Per-provider patterns and false positives |
+
+---
+
+## 6. Configuration & Suppression (Unified)
+
+**Council revision:** merged `.cloud-security-ignore` + `.cloud-security-config` into a single `.cloud-security.json`. Two config files is one too many — developers expect one file.
+
+Scaffold interactively: `ai-toolkit credentials init` generates this file.
+
+**Suppression Governance (orchestration-review P0):**
+- **Wildcard ignores** (e.g., `GCP-CF-*`) REQUIRE a `justification` field — scanner refuses to suppress without one
+- **All ignore entries** require `justification` — enforced by schema validation
+- **CI diff detection:** When `.cloud-security.json` is modified in a PR, scanner emits a `SUPPRESSION_CHANGED` finding (severity: WARN) listing added/removed/modified ignore rules. This prevents silent suppression of vulnerabilities via committed config changes.
+- **In live mode:** context claims (e.g., `app_check_enforced: true`) are verified against actual cloud state. If claim doesn't match reality, emit `CONTEXT_MISMATCH` finding (severity: HIGH)
+
+```json
+{
+  "$schema": "https://softspark.github.io/ai-toolkit/schemas/cloud-security.json",
+
+  "ignore": [
+    { "rule": "GCP-CF-001:processPayment", "justification": "Behind App Check + API Gateway, verified 2026-04-10" },
+    { "rule": "AWS-S3-001:static-assets", "justification": "Intentionally public static bucket, CloudFront OAI active" },
+    { "rule": "GCP-CF-*", "justification": "REQUIRED for wildcard suppression — reviewed by @jacek in PR #142" }
+  ],
+
+  "context": {
+    "gcp": {
+      "app_check_enforced": true,
+      "api_gateway": "projects/my-proj/locations/us-central1/gateways/main",
+      "known_public_functions": ["healthCheck", "webhookReceiver"]
+    },
+    "aws": {
+      "waf_enabled": true,
+      "cloudfront_distributions": ["E1234567890"],
+      "known_public_buckets": ["static-assets-prod"]
+    },
+    "azure": {
+      "front_door_enabled": true,
+      "application_gateway": "my-app-gw",
+      "known_public_functions": ["webhookHandler"]
+    }
+  }
+}
+```
+
+---
+
+## 7. CI Pipeline Integration
+
+### Basic: JSON output + fail on HIGH
+
+```yaml
+- name: Cloud Security Audit
+  run: |
+    python3 scripts/cloud_security_audit.py \
+      --mode static --output json --severity high \
+      > security-report.json
+    # Exit code 1 = HIGH findings → fail pipeline
+```
+
+### Recommended: SARIF + GitHub Advanced Security (inline PR annotations)
+
+```yaml
+- name: Cloud Security Audit
+  run: |
+    python3 scripts/cloud_security_audit.py \
+      --mode static --output sarif --changed ${{ github.event.pull_request.base.sha }} \
+      > results.sarif
+  continue-on-error: true
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+### Live mode with credentials (hardened — orchestration-review P0)
+
+```yaml
+- name: Cloud Security Audit (Live)
+  env:
+    GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+  run: |
+    TMPFILE=$(mktemp -m 0600)
+    trap 'rm -f "$TMPFILE"' EXIT
+    echo "$GCP_SA_KEY" > "$TMPFILE"
+    ai-toolkit credentials add gcp --file "$TMPFILE"
+    python3 scripts/cloud_security_audit.py \
+      --mode live --output sarif --changed "${{ github.event.pull_request.base.sha }}" \
+      > results.sarif
+
+- name: Validate & Upload SARIF
+  if: always()
+  run: python3 -c "import json; d=json.load(open('results.sarif')); assert d.get('version')=='2.1.0', 'Invalid SARIF'"
+  continue-on-error: false
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+**CI Security Notes (orchestration-review):**
+- `mktemp -m 0600` creates file with owner-only permissions (not world-readable `/tmp/sa.json`)
+- `trap 'rm -f' EXIT` ensures cleanup even on script failure
+- SARIF schema validated before upload to prevent injected/corrupted annotations
+- `${{ github.event.pull_request.base.sha }}` quoted to prevent shell injection via crafted refs
+- Consider GitHub OIDC workload identity federation instead of long-lived SA keys for production
+
+---
+
+## 8. Success Criteria (Overall)
+
+| Metric | Target |
+|--------|--------|
+| Providers supported | 3 (GCP, AWS, Azure) |
+| Check patterns (total) | 40+ (GCP: 16, AWS: 15, Azure: 12) |
+| False positive rules | 10+ |
+| Output formats | 3 (text, JSON, SARIF v2.1.0) |
+| CLI commands | 7 (add, list, remove, test, init per provider) |
+| Scripts (stdlib Python) | 9 (auth + scanners + resolver + sarif + incremental) |
+| Tests | 70+ |
+| External dependencies | 0 (stdlib only, CLI tools: gcloud/aws/az/terraform) |
+| CI exit codes | 0=clean, 1=HIGH findings, 2=credential error |
+| Incremental scan | `--changed` flag works with git refs |
+| GitHub integration | SARIF upload → inline PR annotations |
+
+---
+
+## 9. Fix Strategy
+
+**Same approach as HIPAA scanner v1: No auto-fix. Agent interprets and suggests.**
+
+The deterministic scripts produce findings. The `cloud-security-auditor` agent then:
+1. **Reads** the flagged file/resource to understand actual context
+2. **Suggests** a specific fix (not generic advice — concrete code/config change)
+3. **Never** auto-applies changes — the user reviews and applies manually
+
+Examples:
+- Firestore rules finding → agent suggests the exact `allow read: if request.auth != null` rule change
+- Public CF finding → agent suggests adding `validateFirebaseIdToken` middleware with code snippet
+- Open S3 bucket → agent suggests the exact bucket policy JSON to add `BlockPublicAccess`
+- Broad IAM role → agent suggests the minimal policy document with only required permissions
+
+**Why no auto-fix in v1:**
+- Cloud security fixes require project-specific knowledge (which SA, which bucket, which auth flow)
+- Wrong auto-fix on IAM can lock out real users
+- Firestore rules changes can break client apps
+- The agent's context-aware suggestion is more valuable than a blind auto-fix
+
+**v2 option:** `--fix-mode suggest` generates a `.cloud-security-fixes.patch` file that users can review and apply with `git apply`.
+
+---
+
+## 10. Risks and Mitigation (updated)
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| CLI tools (gcloud/aws/az) not installed | Medium | Medium | Graceful fallback to static-only mode, clear error message |
+| Cloud APIs change breaking audit commands | Low | Medium | Version-pin CLI output format parsing, test with CI |
+| False positive rules too aggressive (suppress real issues) | Low | High | Default to WARN not SUPPRESS, require `.cloud-security-config` for suppression |
+| Credential leakage in logs | Low | Critical | Never log credentials, 0600 perms, `/tmp` cleanup in CI |
+| Scope creep (too many checks) | Medium | Medium | Start with top-10 per provider, expand based on feedback |
+| YAML IaC not parseable (stdlib-only) | High | Medium | JSON-only for static IaC; live mode unaffected; v2: vendored YAML subset parser |
+| `--changed` confused with live mode | Low | Low | Explicit warning: incremental applies to static only |
+
+---
+
+## 11. Pre-Mortem
+
+1. **Firebase rules parser too simplistic** — Firestore rules use CEL-like syntax with nested `match` blocks. Parser needs proper recursive descent, not just regex. Mitigation: build minimal CEL parser or use line-by-line pattern matching with scope tracking.
+2. **False positive resolver gives false confidence** — Users may trust SUPPRESSED status and miss real issues. Mitigation: always show context chain, require explicit `.cloud-security-config` for auto-suppression, default to WARN.
+3. **AWS credential scope too broad** — User provides admin-level AWS profile. Mitigation: `credentials test` checks actual permissions, WARN if write access detected, suggest read-only IAM policy in docs.
+4. **Three providers = 3x maintenance** — Each provider's CLI evolves independently. Mitigation: abstract provider interface, single test matrix, version tracking per provider.
+5. **Terraform parsing incomplete** — HCL syntax is complex (modules, variables, conditionals). Mitigation: wrap `terraform show -json` instead of parsing HCL. Fallback to flat regex for projects without `terraform` CLI.
+6. **SARIF adoption low** — Users may not know how to use SARIF with GitHub. Mitigation: provide copy-paste GitHub Actions workflow in docs and `--explain` for onboarding.
+
+---
+
+## 12. Council Review Summary (2026-04-10)
+
+**Verdict:** CONDITIONAL FOR — implement with scope reduction.
+**Confidence:** MEDIUM (weighted score: FOR 3.1 vs AGAINST 2.9)
+
+**Key insights applied to this plan:**
+- [x] Timeline revised from 3-4 → 5-6 weeks
+- [x] ~~Azure deferred to Milestone 3~~ → **reinstated: full 3-provider delivery**
+- [x] SARIF v2.1.0 output added — essential for GitHub Advanced Security integration
+- [x] Incremental scan mode added (`--changed`) — how developers actually use security tools
+- [x] `terraform show -json` wrapper instead of HCL parsing — realistic path
+- [x] Single config file `.cloud-security.json` (merged ignore + context)
+- [x] `credentials init` interactive wizard — reduce onboarding friction
+- [x] `--explain <rule-id>` for on-demand remediation guidance
+- [x] Static mode as default — zero-setup first experience
+
+**Deferred to v2:**
+- Kubernetes/container security (separate pack candidate)
+- Secret scanning with entropy detection
+- Compliance framework mapping (SOC2, PCI-DSS, NIST 800-53)
+- Visual security dashboard in browser
+- GitHub PR comment integration beyond SARIF
+- Vendored YAML subset parser for CloudFormation YAML static scanning
+
+**Council strongest agreement:** False positive resolver is the killer feature and primary differentiator vs Checkov/Trivy/Prowler. No existing tool combines deterministic scanning with context-aware resolution.
+
+---
+
+## 13. Orchestration Review Summary (2026-04-10)
+
+**Agents:** tech-lead, security-architect, product-manager, code-reviewer (4 parallel)
+
+**Verdict:** Plan structurally complete (14/14 elements). Three P0 security blockers identified and resolved.
+
+**Applied changes:**
+
+| # | Action | Source | Priority | Applied? |
+|---|--------|--------|----------|----------|
+| 1 | Programmatic Bash allowlist | security-architect | P0 | Yes — allowlist.sh + agent integration |
+| 2 | CI hardening (mktemp/trap/SARIF validation) | security-architect | P0 | Yes — CI examples rewritten |
+| 3 | Suppression governance (justification + diff detection) | security-architect | P0 | Yes — schema + SUPPRESSION_CHANGED finding |
+| 4 | Recursive descent parser for Firestore | code-reviewer | P1 | Yes — replaced regex approach, +1d estimate |
+| 5 | SARIF `driver.rules[]` for GitHub annotations | code-reviewer | P1 | Yes — schema + success criteria |
+| 6 | Task 4.1→3.2 numbering fix | tech-lead | P1 | Yes — renumbered |
+| 7 | `terraform plan` execution risk documented | security-architect | P1 | Yes — only `show -json` allowed |
+| 8 | `credentials init` deferred to M2 | code-reviewer | P2 | Yes — saves 1.5d in M1 |
+| 9 | False positive resolver budgeted +2d/provider | code-reviewer | P2 | Yes — estimate updated |
+| 10 | `SUPPRESSION_CHANGED` finding type | security-architect | P2 | Yes — in governance section |
+
+**Market positioning (product-manager):**
+- Not competing with Checkov on check count (40 vs 3000)
+- Competing on: zero-noise (false positive resolver), zero-setup (static-first), IDE-native (10 platforms), AI interpretation
+- Target: developers in ai-toolkit ecosystem, not enterprise security teams
+- Value as ecosystem feature, not standalone product
+
+**Timeline revision (code-reviewer):**
+- 1 person: 6-7 weeks realistic (was 5-6)
+- 2 people: 4-5 weeks (parallel GCP + AWS tracks)
+- All 3 providers ship in 6 weeks — no conditional gates
+
+---
+
+## 14. Next Actions
+
+1. [ ] Approve plan
+2. [ ] Implement `credentials` CLI command (1.1) + Bash allowlist
+3. [ ] Create `cloud-security-auditor` agent (1.2)
+4. [ ] Implement SARIF formatter + incremental scan (1.3)
+5. [ ] Implement `firebase-rules-audit` — recursive descent parser (2.1)
+6. [ ] Implement `cloud-functions-audit` + false positive resolver GCP (2.2, 2.3)
+7. [ ] Implement `aws-security-audit` + `terraform show -json` wrapper (3.1)
+8. [ ] Implement orchestrator + plugin pack + `credentials init` (3.2, 1.1b)
+9. [ ] Implement `azure-security-audit` + false positive resolver Azure (4.1)
+10. [ ] Full test suite (70+) + documentation + release
+
+---
+
+**Last Updated:** 2026-04-10
+**Council Reviewed:** 2026-04-10
+**Orchestration Reviewed:** 2026-04-10 (4 agents: tech-lead, security-architect, product-manager, code-reviewer)
+
+---
+
+## kb/planning/enterprise-config-inheritance-plan.md
+
+---
+title: "Plan: Enterprise Config Inheritance — Multi-Repo Governance with extends"
+category: planning
+service: ai-toolkit
+tags:
+  - enterprise
+  - multi-repo
+  - config-inheritance
+  - extends
+  - governance
+  - team-management
+  - monorepo
+doc_type: plan
+status: proposed
+created: "2026-04-10"
+last_updated: "2026-04-10"
+completion: "0%"
+description: "Configuration inheritance system for ai-toolkit. Enables organizations to define a shared base config (agents, rules, hooks, profiles, constitution overrides) published as an npm package or local path, which individual projects extend via an `extends` field. Changes to the base config propagate automatically on `ai-toolkit update`. Targets enterprises managing 10-100+ repositories with uniform AI governance."
+---
+
+# Plan: Enterprise Config Inheritance — Multi-Repo Governance with `extends`
+
+**Status:** Proposed
+**Completion:** 0%
+**Created:** 2026-04-10
+**Origin:** Organizations adopting ai-toolkit across 10-100+ repositories face a config synchronization problem — updating a rule or policy requires touching every repository individually. The `extends` pattern (popularized by ESLint, TypeScript, Prettier) solves this by establishing a single source of truth that projects inherit from.
+**Estimated Effort:** 4-5 weeks (1 person)
+
+---
+
+## 1. Objective
+
+Create a configuration inheritance system where projects can extend a shared base config published as an npm package, a Git URL, or a local path. The base config defines organizational defaults (which agents to enable, which rules to enforce, which hooks to require, persona presets, and constitution amendments). Individual projects can override or supplement the base, creating a layered governance model.
+
+**Key design principles:**
+- **Familiar pattern** — mirrors ESLint's `extends`, TypeScript's `extends`, and Prettier's shared configs
+- **npm-first distribution** — base configs are regular npm packages (e.g., `@mycompany/ai-toolkit-config`)
+- **Layered merge** — base → project, with explicit override semantics (`override: true` required for safety-critical overrides)
+- **Constitution immutable** — base configs can ADD constitution articles but never REMOVE or WEAKEN existing ones
+- **Offline-capable** — resolved at `install`/`update` time, not at runtime
+- **Backward-compatible** — projects without `extends` work exactly as today (no breaking changes)
+- **Audit trail** — `state.json` records which base config was resolved and what was overridden
+
+---
+
+## 2. Architecture Overview
+
+```
+Organization Level (published once, consumed by all repos):
+═══════════════════════════════════════════════════════════
+
+  @mycompany/ai-toolkit-config (npm package)
+  ├── ai-toolkit.config.json       ← base configuration
+  ├── rules/
+  │   ├── code-review-policy.md    ← company-specific rules
+  │   └── deployment-checklist.md
+  ├── agents/
+  │   └── compliance-auditor.md    ← company-specific agent
+  └── package.json
+
+Project Level (per-repository):
+══════════════════════════════
+
+  my-service/
+  ├── .ai-toolkit.json             ← project config with "extends"
+  ├── .claude/
+  │   ├── CLAUDE.md                ← generated (base + project merged)
+  │   └── settings.json            ← generated (base hooks + project hooks merged)
+  └── ...
+
+Merge Pipeline:
+══════════════
+
+  @mycompany/ai-toolkit-config     ← Layer 0: organizational defaults
+          │
+          ▼
+  ai-toolkit defaults (manifest.json) ← Layer 1: toolkit defaults
+          │
+          ▼
+  .ai-toolkit.json                  ← Layer 2: project overrides
+          │
+          ▼
+  Resolved Configuration             ← Final: CLAUDE.md, settings.json, etc.
+```
+
+### Config Resolution Order
+
+```
+1. Load base config from "extends" (npm package, git URL, or local path)
+2. Merge with ai-toolkit defaults (manifest.json profiles)
+3. Apply project-level overrides from .ai-toolkit.json
+4. Validate merged config (constitution immutability, schema validation)
+5. Generate output files (CLAUDE.md, settings.json, agent symlinks, etc.)
+```
+
+---
+
+## 3. Progress Tracking
+
+| # | Feature | Priority | Status | Est. Time | Notes |
+|---|---------|----------|--------|-----------|-------|
+| 1.1 | `.ai-toolkit.json` schema definition | P0 | Proposed | 1d | JSON Schema with `extends` field |
+| 1.2 | Config resolver (npm, git, local path) | P0 | Proposed | 3d | Fetch + cache + validate base configs |
+| 1.3 | Merge engine (layered merge with override semantics) | P0 | Proposed | 3d | Deep merge with `override: true` gates |
+| 1.4 | Constitution immutability guard | P0 | Proposed | 1d | Block weakening of safety articles |
+| 2.1 | Install/update integration | P0 | Proposed | 2d | Resolve extends during install/update |
+| 2.2 | `ai-toolkit config init` command | P1 | Proposed | 1.5d | Interactive project config setup |
+| 2.3 | `ai-toolkit config create-base` command | P1 | Proposed | 2d | Scaffold base config package |
+| 2.4 | `ai-toolkit config diff` command | P1 | Proposed | 1.5d | Show project vs base differences |
+| 2.5 | `ai-toolkit config validate` command | P1 | Proposed | 1d | Validate .ai-toolkit.json schema + extends resolution |
+| 3.1 | Audit trail in state.json | P1 | Proposed | 1d | Record resolved config provenance |
+| 3.2 | Lock file (`.ai-toolkit.lock.json`) | P1 | Proposed | 1.5d | Pin resolved versions for reproducibility |
+| 3.3 | Base config scaffolder (npm package template) | P1 | Proposed | 1.5d | Ready-to-publish template |
+| 3.4 | CI enforcement (`ai-toolkit config check`) | P2 | Proposed | 1d | Verify project adheres to base + no unapproved overrides |
+| 4.1 | Tests | P1 | Proposed | 2.5d | Resolution, merge, immutability, override |
+| 4.2 | Documentation (kb/ + README) | P2 | Proposed | 1.5d | Enterprise setup guide |
+
+**Phasing:**
+- **Phase 1 (week 1-2):** Core — schema, resolver, merge engine, constitution guard
+- **Phase 2 (week 2-3):** CLI — install integration, config init, create-base, diff, validate
+- **Phase 3 (week 3-4):** Enterprise — audit trail, lock file, scaffolder, CI enforcement
+- **Phase 4 (week 5):** Polish — tests, documentation
+
+---
+
+## 4. Dependency Graph
+
+```
+                     Phase 1: Core Engine (week 1-2)
+                     ================================
+Schema definition (1.1) ──────┐
+                              ├──► Merge engine (1.3)
+Config resolver (1.2) ────────┤
+                              └──► Constitution guard (1.4)
+
+                     Phase 2: CLI Integration (week 2-3)
+                     =====================================
+Install integration (2.1) ──┐
+                            ├──► config init (2.2)
+                            ├──► create-base (2.3)
+                            └──► config diff (2.4) + validate (2.5)
+
+                     Phase 3: Enterprise Features (week 3-4)
+                     ========================================
+Audit trail (3.1) ──┐
+                    ├──► Lock file (3.2)
+                    ├──► Scaffolder (3.3)
+                    └──► CI enforcement (3.4)
+
+                     Phase 4: Polish (week 5)
+                     ========================
+                            └──► Tests + docs (4.1, 4.2)
+```
+
+---
+
+## 5. Detailed Implementation
+
+### Phase 1: Core Engine (week 1-2)
+
+#### 1.1 Configuration Schema (`.ai-toolkit.json`)
+
+**Project-level config file:**
+
+```json
+{
+  "$schema": "https://softspark.github.io/ai-toolkit/schemas/ai-toolkit-config.json",
+
+  "extends": "@mycompany/ai-toolkit-config",
+
+  "profile": "standard",
+  "persona": "backend-lead",
+  "hookProfile": "strict",
+
+  "agents": {
+    "enabled": ["backend-specialist", "test-engineer", "debugger"],
+    "disabled": ["game-developer", "mobile-developer"],
+    "custom": ["./agents/compliance-auditor.md"]
+  },
+
+  "skills": {
+    "disabled": ["/deploy", "/rollback"],
+    "custom": ["./skills/internal-deploy/"]
+  },
+
+  "rules": {
+    "inject": ["./rules/code-review-policy.md"],
+    "remove": []
+  },
+
+  "plugins": {
+    "required": ["security-pack", "memory-pack"],
+    "forbidden": []
+  },
+
+  "languages": ["typescript", "python"],
+
+  "editors": ["cursor", "windsurf", "copilot"],
+
+  "constitution": {
+    "amendments": [
+      {
+        "article": 6,
+        "title": "Data Sovereignty",
+        "text": "All code generation must comply with GDPR. No personal data in prompts. No PII in generated code comments."
+      }
+    ]
+  },
+
+  "overrides": {
+    "hooks": {
+      "quality-check": {
+        "override": true,
+        "justification": "Company uses custom lint pipeline via Jenkins",
+        "replacement": "skip"
+      }
+    }
+  }
+}
+```
+
+**Base config (`ai-toolkit.config.json` in npm package):**
+
+```json
+{
+  "$schema": "https://softspark.github.io/ai-toolkit/schemas/ai-toolkit-base-config.json",
+  "name": "@mycompany/ai-toolkit-config",
+  "version": "2.1.0",
+  "description": "MyCompany standard AI coding config",
+
+  "extends": null,
+
+  "profile": "strict",
+  "persona": "backend-lead",
+  "hookProfile": "strict",
+
+  "agents": {
+    "enabled": ["backend-specialist", "test-engineer", "code-reviewer", "security-auditor", "debugger", "documenter"],
+    "disabled": ["game-developer"],
+    "custom": ["./agents/compliance-auditor.md"]
+  },
+
+  "rules": {
+    "inject": [
+      "./rules/code-review-policy.md",
+      "./rules/deployment-checklist.md",
+      "./rules/data-handling-policy.md"
+    ]
+  },
+
+  "plugins": {
+    "required": ["security-pack"]
+  },
+
+  "languages": ["typescript"],
+
+  "constitution": {
+    "amendments": [
+      {
+        "article": 6,
+        "title": "Data Sovereignty",
+        "text": "All code generation must comply with GDPR. No personal data in prompts."
+      },
+      {
+        "article": 7,
+        "title": "Audit Compliance",
+        "text": "All AI-generated code changes must be logged to the company audit system. The governance-capture hook must remain enabled."
+      }
+    ]
+  },
+
+  "enforce": {
+    "minHookProfile": "standard",
+    "requiredPlugins": ["security-pack"],
+    "forbidOverride": ["constitution", "guard-destructive", "guard-path"],
+    "requiredAgents": ["security-auditor"]
+  }
+}
+```
+
+**`enforce` section:** Base configs can define non-overridable constraints:
+- `minHookProfile` — projects cannot go below this profile
+- `requiredPlugins` — must be installed in all projects
+- `forbidOverride` — these components cannot be overridden
+- `requiredAgents` — must be enabled in all projects
+
+---
+
+#### 1.2 Config Resolver
+
+**Resolution sources:**
+
+| Source | Syntax | Resolution |
+|--------|--------|------------|
+| npm package | `"extends": "@mycompany/ai-toolkit-config"` | `npm pack --pack-destination /tmp` + extract |
+| npm with version | `"extends": "@mycompany/ai-toolkit-config@^2.0.0"` | Version resolution via npm |
+| Git URL | `"extends": "git+https://github.com/myco/ai-config.git"` | `git clone --depth 1` to cache |
+| Local path | `"extends": "../shared-config"` | Resolve relative to project root |
+| Multiple bases | `"extends": ["@mycompany/base", "@mycompany/typescript-extra"]` | Merge in order (later overrides earlier) |
+
+**Cache directory:** `~/.ai-toolkit/config-cache/`
+```
+~/.ai-toolkit/config-cache/
+  @mycompany/
+    ai-toolkit-config/
+      2.1.0/
+        ai-toolkit.config.json
+        rules/
+        agents/
+```
+
+**Resolution algorithm:**
+```python
+def resolve_extends(extends_value: str | list[str], project_root: str) -> list[BaseConfig]:
+    """Resolve extends chain into ordered list of base configs."""
+    if isinstance(extends_value, str):
+        extends_value = [extends_value]
+
+    configs = []
+    for source in extends_value:
+        if source.startswith('@') or source.startswith('npm:'):
+            config = resolve_npm(source)
+        elif source.startswith('git+'):
+            config = resolve_git(source)
+        elif source.startswith('.') or source.startswith('/'):
+            config = resolve_local(source, project_root)
+        else:
+            raise ConfigError(f"Unknown extends source: {source}")
+
+        # Recursive: base config may also have "extends"
+        if config.extends:
+            parent_configs = resolve_extends(config.extends, config.root)
+            configs.extend(parent_configs)
+
+        configs.append(config)
+
+    return configs
+```
+
+**Max recursion depth:** 5 levels (prevent circular extends). Circular detection via visited set.
+
+**Offline handling:** If the npm/git source is unavailable:
+1. Check cache (`~/.ai-toolkit/config-cache/`)
+2. If cached version found → use with warning: "Using cached config v2.1.0 (offline)"
+3. If not cached → error with instructions: "Run `ai-toolkit config update` when online"
+
+---
+
+#### 1.3 Merge Engine
+
+**Layered deep merge with explicit override semantics:**
+
+```python
+def merge_configs(base: dict, project: dict) -> dict:
+    """Merge project config over base config with rules."""
+    merged = {}
+
+    for key in set(base.keys()) | set(project.keys()):
+        base_val = base.get(key)
+        proj_val = project.get(key)
+
+        if proj_val is None:
+            merged[key] = base_val
+        elif base_val is None:
+            merged[key] = proj_val
+        elif key == 'constitution':
+            merged[key] = merge_constitution(base_val, proj_val)
+        elif key == 'agents':
+            merged[key] = merge_agents(base_val, proj_val)
+        elif key == 'rules':
+            merged[key] = merge_rules(base_val, proj_val)
+        elif key == 'overrides':
+            merged[key] = validate_overrides(base, proj_val)
+        elif isinstance(base_val, dict) and isinstance(proj_val, dict):
+            merged[key] = merge_configs(base_val, proj_val)
+        elif isinstance(base_val, list) and isinstance(proj_val, list):
+            merged[key] = list(set(base_val + proj_val))  # union
+        else:
+            merged[key] = proj_val  # project wins for scalars
+
+    return merged
+```
+
+**Agent merge rules:**
+```python
+def merge_agents(base: dict, project: dict) -> dict:
+    """Merge agent configs — project can enable/disable but not remove base-required."""
+    merged_enabled = set(base.get('enabled', []))
+
+    # Project can add agents
+    merged_enabled.update(project.get('enabled', []))
+
+    # Project can disable agents (unless base enforces them)
+    for agent in project.get('disabled', []):
+        if agent in base.get('enforce', {}).get('requiredAgents', []):
+            raise ConfigError(
+                f"Cannot disable '{agent}' — required by base config '{base['name']}'. "
+                f"Contact your team lead to request an exemption."
+            )
+        merged_enabled.discard(agent)
+
+    return {
+        'enabled': sorted(merged_enabled),
+        'custom': base.get('custom', []) + project.get('custom', [])
+    }
+```
+
+**Override validation:**
+```python
+def validate_overrides(base: dict, overrides: dict) -> dict:
+    """Validate project overrides against base enforcement rules."""
+    forbidden = set(base.get('enforce', {}).get('forbidOverride', []))
+
+    for key, override in overrides.items():
+        if key in forbidden:
+            raise ConfigError(
+                f"Cannot override '{key}' — forbidden by base config '{base['name']}'.\n"
+                f"Forbidden overrides: {', '.join(sorted(forbidden))}\n"
+                f"Contact your team lead to request an exemption."
+            )
+        if not override.get('override'):
+            raise ConfigError(
+                f"Override for '{key}' requires explicit 'override: true' + 'justification' field.\n"
+                f"This ensures intentional deviation from organizational defaults."
+            )
+        if not override.get('justification'):
+            raise ConfigError(
+                f"Override for '{key}' requires a 'justification' field explaining why.\n"
+                f"Example: \"Company uses custom lint pipeline via Jenkins\""
+            )
+
+    return overrides
+```
+
+---
+
+#### 1.4 Constitution Immutability Guard
+
+**Core rule:** Constitution articles can be ADDED but never REMOVED or WEAKENED.
+
+```python
+def merge_constitution(base: dict, project: dict) -> dict:
+    """Merge constitution — additions only, no removals or weakening."""
+    base_amendments = {a['article']: a for a in base.get('amendments', [])}
+    proj_amendments = {a['article']: a for a in project.get('amendments', [])}
+
+    # base articles 1-5 are toolkit defaults — immutable
+    IMMUTABLE_ARTICLES = {1, 2, 3, 4, 5}
+
+    merged = dict(base_amendments)
+
+    for article_num, amendment in proj_amendments.items():
+        if article_num in IMMUTABLE_ARTICLES:
+            raise ConfigError(
+                f"Cannot modify Constitution Article {article_num} — immutable.\n"
+                f"Articles I-V are defined by ai-toolkit and cannot be overridden.\n"
+                f"You can ADD new articles (article 6+)."
+            )
+        if article_num in base_amendments:
+            # Project can extend base amendments but not weaken them
+            base_text = base_amendments[article_num]['text']
+            if len(amendment['text']) < len(base_text) * 0.5:
+                raise ConfigError(
+                    f"Constitution Article {article_num} appears weakened.\n"
+                    f"Base: {len(base_text)} chars → Project: {len(amendment['text'])} chars.\n"
+                    f"If intentional, add 'override: true' to the amendment."
+                )
+        merged[article_num] = amendment
+
+    return {'amendments': list(merged.values())}
+```
+
+---
+
+### Phase 2: CLI Integration (week 2-3)
+
+#### 2.1 Install/Update Integration
+
+**Modified `install.py` flow:**
+
+```python
+# During install --local:
+# 1. Check for .ai-toolkit.json in project root
+# 2. If found and has "extends":
+#    a. Resolve base config(s)
+#    b. Merge base → project
+#    c. Validate merged config
+#    d. Generate files from merged config
+# 3. If not found: proceed with current behavior (backwards compatible)
+```
+
+**CLI flags:**
+```bash
+ai-toolkit install --local                           # auto-detect .ai-toolkit.json
+ai-toolkit install --local --config ./custom.json    # explicit config file
+ai-toolkit update --local                            # re-resolve extends + update
+ai-toolkit update --local --refresh-base             # force re-fetch base config
+```
+
+---
+
+#### 2.2 `ai-toolkit config init`
+
+**Interactive project config setup:**
+
+```bash
+ai-toolkit config init
+
+# Flow:
+# 1. "Does your organization have a shared ai-toolkit config? [y/n]"
+#    → y: "npm package name or git URL:" → resolves + validates
+#    → n: creates minimal .ai-toolkit.json without extends
+# 2. "Which profile? [minimal/standard/strict]" → default from base or standard
+# 3. "Which persona? [none/backend-lead/frontend-lead/devops-eng/junior-dev]"
+# 4. Auto-detect languages from project
+# 5. Auto-detect editors from project files
+# 6. Write .ai-toolkit.json
+# 7. Run ai-toolkit install --local
+```
+
+---
+
+#### 2.3 `ai-toolkit config create-base`
+
+**Scaffold a base config package:**
+
+```bash
+ai-toolkit config create-base @mycompany/ai-toolkit-config
+
+# Creates:
+# @mycompany-ai-toolkit-config/
+# ├── package.json          (name, version, files, peerDependencies)
+# ├── ai-toolkit.config.json (base config with sane defaults)
+# ├── rules/                (empty, ready for company rules)
+# ├── agents/               (empty, ready for company agents)
+# └── README.md             (setup instructions)
+```
+
+**Generated `package.json`:**
+```json
+{
+  "name": "@mycompany/ai-toolkit-config",
+  "version": "1.0.0",
+  "description": "Shared ai-toolkit configuration for MyCompany",
+  "main": "ai-toolkit.config.json",
+  "files": ["ai-toolkit.config.json", "rules/", "agents/"],
+  "peerDependencies": {
+    "@softspark/ai-toolkit": ">=1.5.0"
+  },
+  "keywords": ["ai-toolkit", "config", "shared"]
+}
+```
+
+---
+
+#### 2.4 `ai-toolkit config diff`
+
+**Show differences between project config and base:**
+
+```bash
+ai-toolkit config diff
+
+# Output:
+# Base: @mycompany/ai-toolkit-config@2.1.0
+#
+# Profile:     strict (base) → standard (project) ⚠ OVERRIDE
+# Persona:     backend-lead (base) → frontend-lead (project)
+# Hook Profile: strict (base) → strict (inherited)
+#
+# Agents:
+#   + frontend-specialist     (project adds)
+#   - game-developer          (base disables)
+#   = security-auditor        (base requires, cannot disable)
+#
+# Rules:
+#   + ./rules/api-standards.md  (project adds)
+#   = code-review-policy.md     (inherited from base)
+#
+# Constitution:
+#   = Articles I-V              (immutable)
+#   = Article 6: Data Sovereignty (inherited from base)
+#   + Article 8: API Standards    (project adds)
+#
+# Overrides:
+#   quality-check: SKIP (justification: "Custom Jenkins pipeline")
+```
+
+---
+
+#### 2.5 `ai-toolkit config validate`
+
+```bash
+ai-toolkit config validate
+
+# Checks:
+# ✓ .ai-toolkit.json schema valid
+# ✓ extends: @mycompany/ai-toolkit-config@2.1.0 resolved
+# ✓ No forbidden overrides
+# ✓ Required plugins installed: security-pack
+# ✓ Required agents enabled: security-auditor
+# ✓ Constitution articles I-V intact
+# ✓ Hook profile meets minimum: standard ≥ standard
+# ✓ All custom rule files exist
+# ✓ All custom agent files exist
+```
+
+---
+
+### Phase 3: Enterprise Features (week 3-4)
+
+#### 3.1 Audit Trail
+
+**`state.json` additions:**
+```json
+{
+  "extends": {
+    "source": "@mycompany/ai-toolkit-config",
+    "version": "2.1.0",
+    "resolved_at": "2026-04-10T10:30:00Z",
+    "hash": "sha256:abc123...",
+    "overrides_applied": [
+      {
+        "key": "hooks.quality-check",
+        "action": "skip",
+        "justification": "Custom Jenkins pipeline"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### 3.2 Lock File (`.ai-toolkit.lock.json`)
+
+**Purpose:** Pin the exact resolved version of base configs for reproducible installs across team members and CI.
+
+```json
+{
+  "lockfileVersion": 1,
+  "resolved": {
+    "@mycompany/ai-toolkit-config": {
+      "version": "2.1.0",
+      "resolved": "https://registry.npmjs.org/@mycompany/ai-toolkit-config/-/ai-toolkit-config-2.1.0.tgz",
+      "integrity": "sha512-abc123...",
+      "cached": "~/.ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
+    }
+  },
+  "generated_at": "2026-04-10T10:30:00Z",
+  "ai_toolkit_version": "1.5.1"
+}
+```
+
+**Behavior:**
+- `ai-toolkit install --local` → uses lock file if present (like `npm ci`)
+- `ai-toolkit update --local` → re-resolves and updates lock file (like `npm install`)
+- `ai-toolkit update --local --refresh-base` → force re-fetch ignoring cache
+- `.ai-toolkit.lock.json` should be committed to git (team synchronization)
+
+---
+
+#### 3.4 CI Enforcement
+
+**`ai-toolkit config check` — for CI pipelines:**
+
+```bash
+ai-toolkit config check
+
+# Exit codes:
+# 0 — project complies with base config
+# 1 — violations found (missing required plugins, forbidden overrides, etc.)
+# 2 — .ai-toolkit.json not found
+```
+
+**GitHub Actions example:**
+```yaml
+- name: AI Toolkit Governance Check
+  run: |
+    npx @softspark/ai-toolkit config check
+    npx @softspark/ai-toolkit config validate --strict
+```
+
+**What it checks:**
+1. Required plugins are installed
+2. Required agents are enabled
+3. No forbidden overrides applied without exemption
+4. Hook profile meets minimum
+5. Constitution articles intact
+6. Lock file up-to-date (warn if stale)
+
+---
+
+## 6. File Summary
+
+| File | Action | LOC (est.) | Description |
+|------|--------|------------|-------------|
+| `scripts/config_resolver.py` | CREATE | ~400 | Resolve extends (npm, git, local path) |
+| `scripts/config_merger.py` | CREATE | ~350 | Layered merge engine |
+| `scripts/config_validator.py` | CREATE | ~200 | Schema + enforcement validation |
+| `scripts/config_scaffold.py` | CREATE | ~250 | create-base scaffolder |
+| `scripts/config_diff.py` | CREATE | ~200 | Diff viewer |
+| `scripts/config_check.py` | CREATE | ~150 | CI enforcement checker |
+| `scripts/install.py` | EDIT | +80 | Integrate extends resolution |
+| `bin/ai-toolkit.js` | EDIT | +40 | Register config subcommands |
+| `manifest.json` | EDIT | +10 | Schema references |
+| `kb/reference/enterprise-config-guide.md` | CREATE | ~300 | Enterprise setup guide |
+| `kb/reference/base-config-template/` | CREATE | ~200 | Scaffolded base config files |
+| `tests/test_config_resolver.bats` | CREATE | ~150 | Resolution tests |
+| `tests/test_config_merger.bats` | CREATE | ~200 | Merge + override tests |
+| `tests/test_config_immutability.bats` | CREATE | ~100 | Constitution guard tests |
+| `tests/test_config_cli.bats` | CREATE | ~150 | CLI command tests |
+| **Total** | | **~2780** | |
+
+---
+
+## 7. Success Criteria (Overall)
+
+| Metric | Target |
+|--------|--------|
+| Extends sources | 4 (npm, npm+version, git URL, local path) |
+| Merge depth | 5 levels max (recursive extends) |
+| Config schema | JSON Schema validated |
+| Constitution protection | 100% (Articles I-V immutable) |
+| Override justification | Required for all overrides |
+| Enforce constraints | 4 types (minHookProfile, requiredPlugins, forbidOverride, requiredAgents) |
+| Backward compatibility | 100% (projects without .ai-toolkit.json work as today) |
+| CI enforcement | Exit code 0/1 for governance compliance |
+| Lock file | Reproducible installs across team members |
+| Scaffold command | Ready-to-publish npm package template |
+| Tests | 30+ |
+| Offline resolution | Cached configs with warning |
+
+---
+
+## 8. Risks and Mitigation
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| npm registry unavailable during install | Low | Medium | Cache + offline fallback with warning |
+| Circular extends chain | Low | High | Max depth 5 + visited set for cycle detection |
+| Base config breaks project | Medium | High | Lock file pins exact version; `ai-toolkit config diff` shows changes before update |
+| Override abuse (teams bypass governance) | Medium | Medium | `enforce.forbidOverride` + CI check + justification requirement |
+| Config schema too restrictive | Medium | Medium | Start with minimal enforcement, expand based on enterprise feedback |
+| Multiple base configs conflict | Low | Medium | Explicit merge order (later wins), `ai-toolkit config diff` to review |
+| Private npm registry authentication | Medium | Low | Use existing npm auth (`.npmrc`), document setup |
+| Git URL resolution slow | Low | Low | `--depth 1` clone, cache aggressively |
+
+---
+
+## 9. Pre-Mortem
+
+1. **"Config file fatigue"** — developers already have `.eslintrc`, `tsconfig.json`, `.prettierrc`. Another `.ai-toolkit.json` may feel like bloat. Mitigation: file is optional, all features work without it. The DX gain (organizational governance without per-repo updates) justifies the file.
+2. **"Base config never gets updated"** — team lead creates base config, nobody maintains it. Mitigation: `ai-toolkit config check` in CI catches drift; lock file staleness warnings.
+3. **"Override justification is annoying"** — developers will write "needed" as justification. Mitigation: CI check can enforce minimum justification length (>20 chars); code review culture catches low-effort justifications.
+4. **"Merge semantics are confusing"** — "does project override or extend the base agent list?" Mitigation: explicit semantics documented in schema; `ai-toolkit config diff` shows exactly what happened.
+5. **"Enterprise teams want RBAC on overrides"** — who can approve overrides? Mitigation: v1 uses justification text + code review; v2 could integrate with GitHub CODEOWNERS for override approval.
+
+---
+
+## 10. Market Positioning
+
+**Target users:**
+1. **Engineering managers** — enforce AI coding standards across 20+ repos without touching each one
+2. **Security teams** — ensure constitution + security-auditor agent is always enabled
+3. **Platform teams** — distribute company-specific agents, rules, and plugins via npm
+4. **Compliance officers** — audit trail of what AI governance rules are active in each project
+
+**Competitive advantage:** No existing AI coding toolkit supports configuration inheritance. This is a unique enterprise feature that transforms ai-toolkit from a developer tool into an organizational governance platform.
+
+**Revenue potential:** Enterprise teams are the primary audience for paid support/consulting around ai-toolkit. Config inheritance is the feature that makes enterprise adoption manageable.
+
+---
+
+## 11. Next Actions
+
+1. [ ] Approve plan
+2. [ ] Define `.ai-toolkit.json` JSON Schema (1.1)
+3. [ ] Implement config resolver (npm, git, local) with caching (1.2)
+4. [ ] Implement merge engine with override validation (1.3)
+5. [ ] Implement constitution immutability guard (1.4)
+6. [ ] Integrate into install.py flow (2.1)
+7. [ ] Create `config init` interactive command (2.2)
+8. [ ] Create `config create-base` scaffolder (2.3)
+9. [ ] Create `config diff` viewer (2.4)
+10. [ ] Create `config validate` checker (2.5)
+11. [ ] Add audit trail to state.json (3.1)
+12. [ ] Implement lock file generation + resolution (3.2)
+13. [ ] Create base config npm package template (3.3)
+14. [ ] Create CI enforcement command `config check` (3.4)
+15. [ ] Tests + documentation (4.1, 4.2)
+
+---
+
+**Last Updated:** 2026-04-10
+
+---
+
+## kb/planning/local-dashboard-plan.md
+
+---
+title: "Plan: Local Dashboard — ai-toolkit ui"
+category: planning
+service: ai-toolkit
+tags:
+  - dashboard
+  - developer-experience
+  - web-ui
+  - tui
+  - configuration
+  - visualization
+doc_type: plan
+status: proposed
+created: "2026-04-10"
+last_updated: "2026-04-10"
+completion: "0%"
+description: "Ephemeral local web dashboard for ai-toolkit. Provides visual management of agents, skills, hooks, plugins, stats, credentials, and configuration profiles. Zero external dependencies — stdlib Node.js server with embedded HTML/CSS/JS. Launched via `ai-toolkit ui`."
+---
+
+# Plan: Local Dashboard — `ai-toolkit ui`
+
+**Status:** Proposed
+**Completion:** 0%
+**Created:** 2026-04-10
+**Origin:** DX friction — managing 44 agents, 91 skills, 21 hooks, 11 plugin packs, and multiple profiles via CLI only creates a steep learning curve for new adopters. Visual management lowers the adoption barrier.
+**Estimated Effort:** 4-5 weeks (1 person)
+
+---
+
+## 1. Objective
+
+Create an `ai-toolkit ui` command that launches an ephemeral local HTTP server serving a single-page web dashboard. The dashboard provides visual management of all toolkit components — no more memorizing CLI flags.
+
+**Key design principles:**
+- **Zero external dependencies** — stdlib Node.js `http` module, embedded HTML/CSS/JS (same approach as visual-brainstorming companion in `/write-a-prd`)
+- **Ephemeral** — auto-kills after 30 minutes of inactivity (matching existing companion pattern)
+- **Read-write** — reads state from `~/.ai-toolkit/state.json`, `~/.claude/settings.json`, `manifest.json`; writes config changes through existing CLI commands (never mutates files directly)
+- **Dark theme** — premium aesthetic, responsive, glassmorphism accents
+- **Offline** — no CDN dependencies, no external fonts, no analytics
+- **Port discovery** — starts on 3141, auto-increments if busy
+
+---
+
+## 2. Architecture Overview
+
+```
+ai-toolkit ui [--port 3141] [--no-auto-kill]
+
+  ┌──────────────────────────────────────────────────────────┐
+  │                   Local Dashboard                         │
+  │                                                          │
+  │  Server: stdlib Node.js http (0 deps)                    │
+  │  Port: 3141 (auto-increment if busy)                    │
+  │  Auto-kill: 30 min idle (configurable)                   │
+  │                                                          │
+  │  Pages:                                                  │
+  │    /                        Overview + health             │
+  │    /agents                  44 agents — grid view         │
+  │    /skills                  91 skills — filterable table  │
+  │    /hooks                   21 hooks — lifecycle diagram  │
+  │    /plugins                 11 packs — install/remove     │
+  │    /config                  Profile / persona / modules   │
+  │    /stats                   Usage analytics + charts      │
+  │    /mcp                     MCP templates — add/remove    │
+  │    /credentials             Cloud credentials status      │
+  │                                                          │
+  │  API (JSON, internal):                                   │
+  │    GET  /api/status         Toolkit state                 │
+  │    GET  /api/agents         Agent catalog                 │
+  │    GET  /api/skills         Skill catalog                 │
+  │    GET  /api/hooks          Hook definitions              │
+  │    GET  /api/plugins        Plugin packs + install state  │
+  │    GET  /api/stats          Usage statistics              │
+  │    GET  /api/config         Current configuration         │
+  │    GET  /api/mcp            MCP templates + installed     │
+  │    GET  /api/credentials    Credential status (no secrets)│
+  │    POST /api/action         Execute CLI command           │
+  │                                                          │
+  │  Static assets (inlined in server.js):                   │
+  │    HTML template (single page, client-side routing)      │
+  │    CSS  (dark theme, glassmorphism, responsive)          │
+  │    JS   (vanilla, fetch-based, no framework)             │
+  └──────────────────────────────────────────────────────────┘
+
+### Action Execution Model
+
+All write operations go through `POST /api/action`:
+```json
+{
+  "command": "plugin",
+  "args": ["install", "memory-pack"]
+}
+```
+
+The server spawns `ai-toolkit <command> <args>` as a child process, streams stdout/stderr back via SSE (Server-Sent Events), and returns exit code. This ensures:
+1. All existing validation logic in CLI scripts executes
+2. No file mutation logic duplicated in the dashboard
+3. Audit trail identical to CLI usage
+```
+
+---
+
+## 3. Progress Tracking
+
+| # | Feature | Priority | Status | Est. Time | Notes |
+|---|---------|----------|--------|-----------|-------|
+| 1.1 | HTTP server + auto-kill + port discovery | P0 | Proposed | 1d | stdlib Node.js, ephemeral lifecycle |
+| 1.2 | API layer — read endpoints (status, agents, skills, hooks, plugins, stats, config, mcp) | P0 | Proposed | 2d | Parse frontmatter, state.json, hooks.json |
+| 1.3 | API layer — action execution endpoint | P0 | Proposed | 1d | Spawn CLI + SSE streaming |
+| 2.1 | Overview page (health, component counts, version) | P0 | Proposed | 1.5d | Dashboard landing page |
+| 2.2 | Agents page (grid + detail view + category filter) | P0 | Proposed | 2d | Parse agent .md frontmatter |
+| 2.3 | Skills page (filterable table + type badges + effort) | P0 | Proposed | 2d | Task / hybrid / knowledge taxonomy |
+| 2.4 | Hooks page (lifecycle diagram + profile toggle) | P1 | Proposed | 2d | Visual event → script mapping |
+| 2.5 | Plugins page (install/remove/status cards) | P1 | Proposed | 2d | Action buttons trigger CLI |
+| 2.6 | Config page (profile/persona/modules checkboxes) | P1 | Proposed | 2d | Read/write profiles |
+| 2.7 | Stats page (usage charts, skill invocation heatmap) | P1 | Proposed | 2d | SVG charts, no chart library |
+| 2.8 | MCP page (template browser, add/remove) | P2 | Proposed | 1.5d | 25 MCP templates |
+| 2.9 | Credentials page (provider status, test button) | P2 | Proposed | 1d | For cloud-security-pack integration |
+| 3.1 | CSS design system (dark theme, glassmorphism, responsive) | P0 | Proposed | 2d | Premium aesthetic, zero external deps |
+| 3.2 | Client-side routing + navigation | P0 | Proposed | 1d | Hash-based SPA routing |
+| 4.1 | CLI command registration (`ai-toolkit ui`) | P0 | Proposed | 0.5d | bin/ai-toolkit.js integration |
+| 4.2 | Tests | P1 | Proposed | 2d | API tests + server lifecycle |
+| 4.3 | Documentation | P2 | Proposed | 0.5d | KB reference + README section |
+
+**Phasing:**
+- **Phase 1 (week 1-2):** Foundation — server, API, design system, overview page, agents page, skills page
+- **Phase 2 (week 3-4):** Interactive — hooks, plugins, config, action execution, stats
+- **Phase 3 (week 5):** Polish — MCP, credentials, responsive testing, documentation
+
+---
+
+## 4. Dependency Graph
+
+```
+                     Phase 1: Foundation (week 1-2)
+                     ================================
+HTTP server (1.1) ──────┐
+                        ├──► API read layer (1.2) ──► Overview page (2.1)
+CSS design system (3.1) ┤                          ├──► Agents page (2.2)
+Client routing (3.2) ───┘                          └──► Skills page (2.3)
+
+                     Phase 2: Interactive (week 3-4)
+                     =================================
+API action layer (1.3) ─┐
+                        ├──► Hooks page (2.4)
+                        ├──► Plugins page (2.5)
+                        ├──► Config page (2.6)
+                        └──► Stats page (2.7)
+
+                     Phase 3: Polish (week 5)
+                     ========================
+                        ├──► MCP page (2.8)
+                        ├──► Credentials page (2.9)
+                        ├──► CLI registration (4.1)
+                        └──► Tests + docs (4.2, 4.3)
+```
+
+---
+
+## 5. Detailed Implementation
+
+### Phase 1: Foundation (week 1-2)
+
+#### 1.1 HTTP Server + Lifecycle
+
+**File:** `scripts/dashboard/server.js`
+
+```javascript
+// Key design decisions:
+// 1. stdlib only — require('http'), require('fs'), require('path')
+// 2. Auto-kill timer — 30 min idle, reset on every request
+// 3. Port discovery — try 3141, increment until available
+// 4. Single-file deployment — HTML/CSS/JS embedded as template literals
+// 5. Same pattern as visual-brainstorming companion in /write-a-prd
+
+const AUTO_KILL_MS = 30 * 60 * 1000; // 30 minutes
+const DEFAULT_PORT = 3141;
+const MAX_PORT_ATTEMPTS = 10;
+```
+
+**CLI interface:**
+```bash
+ai-toolkit ui                    # open dashboard on port 3141
+ai-toolkit ui --port 4000        # custom port
+ai-toolkit ui --no-auto-kill     # disable 30 min auto-kill
+ai-toolkit ui --open             # auto-open browser (default: true)
+```
+
+**Lifecycle:**
+1. Start HTTP server on available port
+2. Open browser via `open` (macOS) / `xdg-open` (Linux)
+3. Reset idle timer on every request
+4. After 30 min inactivity → `process.exit(0)` with console message
+5. `Ctrl+C` → graceful shutdown
+
+**Security:**
+- Bind to `127.0.0.1` only (never `0.0.0.0`)
+- No authentication needed (localhost only, ephemeral)
+- POST `/api/action` validates command against allowlist (same commands as CLI)
+- No file uploads, no eval, no template injection
+
+**Files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `scripts/dashboard/server.js` | CREATE | HTTP server + API + embedded UI |
+| `scripts/dashboard/api.js` | CREATE | API endpoint handlers |
+| `scripts/dashboard/assets.js` | CREATE | Embedded HTML/CSS/JS templates |
+
+**Success Criteria:**
+- [ ] Server starts on port 3141 (or next available)
+- [ ] Auto-kills after 30 min idle
+- [ ] Browser auto-opens on launch
+- [ ] Binds to 127.0.0.1 only
+- [ ] `Ctrl+C` graceful shutdown
+
+---
+
+#### 1.2 API Layer — Read Endpoints
+
+All endpoints return JSON. Data sources:
+
+| Endpoint | Source | Description |
+|----------|--------|-------------|
+| `GET /api/status` | `~/.ai-toolkit/state.json` + `manifest.json` | Version, profile, installed modules |
+| `GET /api/agents` | `app/agents/*.md` frontmatter | Name, description, tools, triggers, category |
+| `GET /api/skills` | `app/skills/*/SKILL.md` frontmatter | Name, type, effort, agent, description |
+| `GET /api/hooks` | `app/hooks.json` | Event, script, description, profile |
+| `GET /api/plugins` | `app/plugins/*/plugin.json` + state | Name, domain, status, installed?, components |
+| `GET /api/stats` | `~/.ai-toolkit/stats.json` | Skill invocation counts, dates |
+| `GET /api/config` | `~/.ai-toolkit/state.json` + settings | Profile, persona, modules, hook profile |
+| `GET /api/mcp` | `app/mcp-templates/*.json` + `.mcp.json` | Available templates, installed servers |
+| `GET /api/credentials` | `~/.ai-toolkit/credentials/*.meta.json` | Provider status (no secrets exposed) |
+
+**Frontmatter parser:** Reuse the YAML-subset parser pattern from existing `scripts/frontmatter.py` — port to JS (simple `---` delimited key-value extraction, covers all toolkit frontmatter which is flat YAML).
+
+**Response format (example):**
+```json
+{
+  "agents": [
+    {
+      "name": "backend-specialist",
+      "description": "Expert backend architect for Node.js, Python, PHP...",
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "triggers": ["backend", "server", "api", "endpoint"],
+      "category": "development",
+      "file": "app/agents/backend-specialist.md"
+    }
+  ],
+  "meta": { "count": 44, "categories": 10 }
+}
+```
+
+**Success Criteria:**
+- [ ] All 9 read endpoints return valid JSON
+- [ ] Agent frontmatter parsed for all 44 agents
+- [ ] Skill frontmatter parsed for all 91 skills
+- [ ] Stats endpoint handles missing stats.json gracefully
+- [ ] Credentials endpoint never exposes secret values
+
+---
+
+#### 1.3 API Layer — Action Execution
+
+**Endpoint:** `POST /api/action`
+
+```json
+// Request
+{
+  "command": "plugin",
+  "args": ["install", "memory-pack"]
+}
+
+// Response (SSE stream)
+event: stdout
+data: Installing memory-pack...
+
+event: stdout
+data: ✓ Hooks installed
+
+event: done
+data: {"exitCode": 0, "duration": 1234}
+```
+
+**Command allowlist:**
+```javascript
+const ALLOWED_COMMANDS = [
+  'plugin install', 'plugin remove', 'plugin update', 'plugin clean',
+  'mcp add', 'mcp remove',
+  'install --profile', 'install --persona',
+  'update', 'validate', 'doctor', 'doctor --fix',
+  'credentials add', 'credentials remove', 'credentials test',
+  'stats', 'stats --reset',
+];
+```
+
+**Security:** Commands not in allowlist → 403. No shell injection — args passed as array to `execFile`, never interpolated into a string.
+
+**Success Criteria:**
+- [ ] SSE streaming of command output
+- [ ] Exit code returned in final event
+- [ ] Command allowlist enforced
+- [ ] No shell injection possible
+- [ ] Concurrent commands rejected (one at a time)
+
+---
+
+### Phase 2: UI Pages (week 2-4)
+
+#### 2.1 Overview Page
+
+The landing page — first thing the user sees.
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────┐
+│  ai-toolkit v1.5.1              [● running]     │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐       │
+│  │  44  │  │  91  │  │  21  │  │  11  │       │
+│  │agents│  │skills│  │hooks │  │packs │       │
+│  └──────┘  └──────┘  └──────┘  └──────┘       │
+│                                                 │
+│  Profile: standard    Persona: (none)           │
+│  Hook Profile: standard                         │
+│  Node: v22.x    Python: 3.12                    │
+│                                                 │
+│  ┌─ Health ──────────────────────────────────┐  │
+│  │ ✓ Constitution symlinked                  │  │
+│  │ ✓ Hooks installed (21/21)                 │  │
+│  │ ✓ Agents symlinked (44/44)                │  │
+│  │ ⚠ 2 plugins not installed                 │  │
+│  │ ✓ MCP servers: 3 configured               │  │
+│  └───────────────────────────────────────────┘  │
+│                                                 │
+│  ┌─ Recent Activity ─────────────────────────┐  │
+│  │ /review  — 12 invocations (last: 2h ago)  │  │
+│  │ /commit  — 8 invocations (last: 5h ago)   │  │
+│  │ /test    — 6 invocations (last: 1d ago)   │  │
+│  └───────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
+```
+
+**Data sources:** `/api/status` + `/api/stats` + `/api/plugins`
+
+**Success Criteria:**
+- [ ] Component counts rendered from live data
+- [ ] Health checks match `ai-toolkit validate` output
+- [ ] Recent activity from stats.json
+- [ ] Responsive on mobile-width screens
+
+---
+
+#### 2.2 Agents Page
+
+**Layout:** Grid of agent cards, filterable by category (10 categories).
+
+**Card design:**
+```
+┌─────────────────────────────────┐
+│ 🔧 backend-specialist          │
+│                                 │
+│ Expert backend architect for    │
+│ Node.js, Python, PHP...        │
+│                                 │
+│ Tools: Read, Write, Edit, Bash  │
+│ Triggers: backend, server, api  │
+│                                 │
+│ [View Definition]               │
+└─────────────────────────────────┘
+```
+
+**Features:**
+- Category filter pills (development, security, data, infrastructure, etc.)
+- Search by name/description/trigger
+- Click card → modal with full agent definition (rendered markdown)
+- Agent count per category in filter pills
+
+---
+
+#### 2.3 Skills Page
+
+**Layout:** Filterable table with type badges.
+
+| Skill | Type | Effort | Agent | Description |
+|-------|------|--------|-------|-------------|
+| /commit | task | medium | — | Structured commit with linting |
+| /review | hybrid | high | code-reviewer | Code review: quality, security |
+| clean-code | knowledge | — | — | Auto-loaded code quality patterns |
+
+**Features:**
+- Filter by type (task / hybrid / knowledge)
+- Filter by effort (low / medium / high / max)
+- Search by name/description
+- Sort by any column
+- Badge colors: task=blue, hybrid=purple, knowledge=green
+
+---
+
+#### 2.5 Plugins Page
+
+**Layout:** Cards with install/remove buttons.
+
+```
+┌─────────────────────────────────┐
+│ 🧩 memory-pack        ● installed │
+│                                 │
+│ SQLite-based persistent memory  │
+│ with FTS5 search across sessions│
+│                                 │
+│ Skills: 1  Hooks: 2  Agents: 0  │
+│ DB size: 2.4 MB  Obs: 1,234     │
+│                                 │
+│ [Update]  [Clean]  [Remove]     │
+└─────────────────────────────────┘
+```
+
+**Actions:** Install, update, remove, clean — all via `POST /api/action` → `ai-toolkit plugin <action> <name>`. SSE output shown in a slide-out console panel.
+
+---
+
+#### 2.6 Config Page
+
+**Layout:** Form with current configuration, editable.
+
+**Sections:**
+1. **Profile selector:** minimal / standard / strict (radio buttons)
+2. **Persona selector:** none / backend-lead / frontend-lead / devops-eng / junior-dev
+3. **Hook profile:** minimal / standard / strict
+4. **Installed modules:** checkboxes for each module from manifest.json
+5. **Language rules:** detected languages + override checkboxes
+6. **Editor configs:** which editors are configured (read-only status)
+
+**Save:** Generates and executes the equivalent `ai-toolkit install --profile X --persona Y --modules A,B,C` command.
+
+---
+
+#### 2.7 Stats Page
+
+**Layout:** Usage analytics with inline SVG charts.
+
+**Charts (SVG, hand-drawn — no chart library):**
+1. **Skill invocation bar chart** — top 15 most-used skills
+2. **Invocation heatmap** — 7x24 grid (day of week × hour) showing when skills are used
+3. **Effort distribution** — pie chart of low/medium/high/max invocations
+4. **Trend line** — daily invocations over last 30 days
+
+**Data source:** `~/.ai-toolkit/stats.json` (written by `track-usage.sh` hook)
+
+---
+
+### Phase 3: Polish (week 5)
+
+#### 3.1 CSS Design System
+
+**Design tokens:**
+```css
+:root {
+  /* Dark theme palette */
+  --bg-primary: #0f0f14;
+  --bg-secondary: #1a1a24;
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-glass: rgba(255, 255, 255, 0.06);
+  --border-glass: rgba(255, 255, 255, 0.08);
+
+  /* Accent colors (derived from SoftSpark brand) */
+  --accent-primary: #6366f1;    /* indigo */
+  --accent-secondary: #8b5cf6;  /* violet */
+  --accent-success: #10b981;    /* emerald */
+  --accent-warning: #f59e0b;    /* amber */
+  --accent-danger: #ef4444;     /* red */
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', monospace;
+
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Glassmorphism */
+  --glass-blur: 12px;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+```
+
+**Components:**
+- Cards with glassmorphism backdrop-filter
+- Badge pills (type, effort, status)
+- Sidebar navigation with active state
+- Console output panel (slide-out, monospace)
+- Modal overlays for detail views
+- Toast notifications for action results
+- Skeleton loading states
+
+**Responsive breakpoints:**
+- Desktop: 1200px+ (sidebar + content)
+- Tablet: 768px-1199px (collapsed sidebar)
+- Mobile: <768px (hamburger menu, stacked cards)
+
+---
+
+#### 4.1 CLI Command Registration
+
+**File:** `bin/ai-toolkit.js` — add to `COMMANDS` and `SPECIAL_HANDLERS`:
+
+```javascript
+// COMMANDS
+'ui': 'Launch local web dashboard for visual toolkit management',
+
+// SPECIAL_HANDLERS
+'ui': (args) => {
+  const serverPath = path.join(TOOLKIT_DIR, 'scripts', 'dashboard', 'server.js');
+  const child = require('child_process').spawn('node', [serverPath, ...args], {
+    stdio: 'inherit',
+    env: { ...process.env, TOOLKIT_DIR }
+  });
+  child.on('exit', (code) => process.exit(code || 0));
+},
+```
+
+**Files to modify:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `bin/ai-toolkit.js` | EDIT | Register `ui` command |
+| `scripts/dashboard/server.js` | CREATE | HTTP server (main) |
+| `scripts/dashboard/api.js` | CREATE | API handlers |
+| `scripts/dashboard/assets.js` | CREATE | Embedded HTML/CSS/JS |
+| `scripts/dashboard/frontmatter.js` | CREATE | JS frontmatter parser |
+| `tests/test_dashboard.bats` | CREATE | Server lifecycle tests |
+| `tests/test_dashboard_api.bats` | CREATE | API endpoint tests |
+
+---
+
+## 6. File Summary
+
+| File | Action | LOC (est.) | Description |
+|------|--------|------------|-------------|
+| `scripts/dashboard/server.js` | CREATE | ~300 | HTTP server, lifecycle, routing |
+| `scripts/dashboard/api.js` | CREATE | ~400 | All API endpoint handlers |
+| `scripts/dashboard/assets.js` | CREATE | ~1500 | Embedded HTML + CSS + JS |
+| `scripts/dashboard/frontmatter.js` | CREATE | ~80 | Frontmatter parser (JS port) |
+| `bin/ai-toolkit.js` | EDIT | +15 | Register `ui` command |
+| `tests/test_dashboard.bats` | CREATE | ~100 | Server lifecycle tests |
+| `tests/test_dashboard_api.bats` | CREATE | ~150 | API endpoint tests |
+| **Total** | | **~2545** | |
+
+---
+
+## 7. Success Criteria (Overall)
+
+| Metric | Target |
+|--------|--------|
+| Pages | 9 (overview, agents, skills, hooks, plugins, config, stats, mcp, credentials) |
+| API endpoints | 10 (9 read + 1 action) |
+| External dependencies | 0 (stdlib Node.js only) |
+| Server startup time | < 500ms |
+| Auto-kill | 30 min idle (configurable) |
+| Responsive breakpoints | 3 (desktop, tablet, mobile) |
+| Tests | 25+ |
+| Browser support | Chrome, Firefox, Safari (modern, no IE) |
+
+---
+
+## 8. Risks and Mitigation
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Assets.js file too large (embedded HTML/CSS/JS) | Medium | Low | Split into multiple template modules, lazy-load pages |
+| Port conflict on 3141 | Low | Low | Auto-increment port, show clear message |
+| SSE not supported in old browsers | Low | Low | Fallback to polling for action results |
+| Frontmatter parser edge cases | Low | Medium | Match exact patterns used in existing toolkit metadata |
+| Config writes break installation | Low | High | All writes go through existing CLI commands — never direct file mutation |
+| Stats.json missing or empty | Medium | Low | Graceful empty state with "No usage data yet" message |
+
+---
+
+## 9. Pre-Mortem
+
+1. **"Too many features per page"** — Dashboard tries to show everything. Users may feel overwhelmed. Mitigation: progressive disclosure — overview page shows summary only, detail pages are opt-in.
+2. **"Asset file becomes unmaintainable"** — 1500 LOC of embedded HTML/CSS/JS is hard to iterate on. Mitigation: split into `assets/overview.js`, `assets/agents.js`, etc. with a build-free concatenation in server.js.
+3. **"Nobody uses it"** — CLI users may prefer CLI. Mitigation: dashboard is opt-in, never required. Add `ai-toolkit ui` suggestion to `ai-toolkit install` output for new users.
+4. **"Action execution feels disconnected"** — SSE console output may confuse users unfamiliar with CLI. Mitigation: rich UI feedback (progress bars, success/error toasts) layered on top of raw output.
+5. **"Charts look bad without a library"** — Hand-drawn SVG charts may look amateur. Mitigation: keep charts simple (bar + heatmap), use consistent design tokens, test extensively.
+
+---
+
+## 10. Next Actions
+
+1. [ ] Approve plan
+2. [ ] Create `scripts/dashboard/server.js` with HTTP server + lifecycle (1.1)
+3. [ ] Create API layer — read endpoints (1.2)
+4. [ ] Create CSS design system + client routing (3.1, 3.2)
+5. [ ] Build Overview page (2.1)
+6. [ ] Build Agents page (2.2)
+7. [ ] Build Skills page (2.3)
+8. [ ] Add action execution API (1.3)
+9. [ ] Build Hooks, Plugins, Config pages (2.4, 2.5, 2.6)
+10. [ ] Build Stats page with SVG charts (2.7)
+11. [ ] Build MCP + Credentials pages (2.8, 2.9)
+12. [ ] Register CLI command (4.1)
+13. [ ] Tests + documentation (4.2, 4.3)
+
+---
+
+**Last Updated:** 2026-04-10
+
+---
+
+## kb/planning/offline-slm-profile-plan.md
+
+---
+title: "Plan: Offline-First SLM Profile — Lightweight Mode for Local Models"
+category: planning
+service: ai-toolkit
+tags:
+  - offline
+  - slm
+  - small-language-models
+  - ollama
+  - lm-studio
+  - profile
+  - context-optimization
+  - privacy
+doc_type: plan
+status: proposed
+created: "2026-04-10"
+last_updated: "2026-04-10"
+completion: "0%"
+description: "Lightweight profile for ai-toolkit optimized for Small Language Models (SLMs) running locally via Ollama, LM Studio, or similar. Compiles a minimal instruction set that fits within 4K-8K system prompt budgets while preserving critical safety guardrails. Targets air-gapped, privacy-first, and cost-sensitive development workflows."
+---
+
+# Plan: Offline-First SLM Profile — Lightweight Mode for Local Models
+
+**Status:** Proposed
+**Completion:** 0%
+**Created:** 2026-04-10
+**Origin:** Enterprise IP security requirements (air-gapped environments), cost-sensitive solo developers, and the growing adoption of local models (Ollama, LM Studio, llamafile). Current toolkit emits 20K+ token system prompts that exceed SLM context windows and degrade small model performance.
+**Estimated Effort:** 3-4 weeks (1 person)
+
+---
+
+## 1. Objective
+
+Create a `--profile offline-slm` install profile and a `scripts/compile_slm.py` compiler that produces a minimal, high-signal instruction set optimized for Small Language Models (8B-32B parameters). The compiled output preserves critical safety guardrails while stripping agent orchestration, multi-agent coordination, and complex skill routing that SLMs cannot handle.
+
+**Key design principles:**
+- **Token budget** — compiled output fits within 4K tokens (system prompt), with optional 8K mode for larger SLMs
+- **Safety-preserved** — Constitution Articles I-V always included (non-negotiable)
+- **Single-agent focus** — no multi-agent orchestration, no /swarm, no /teams
+- **Deterministic compilation** — same input → same output, no LLM involved in compilation
+- **Model-aware** — detects model size from Ollama API or manual flag and adjusts verbosity
+- **Platform-agnostic** — outputs plain markdown consumable by any local inference engine
+- **Hooks stripped** — SLM providers don't support lifecycle hooks; rules compile into system prompt
+
+---
+
+## 2. Architecture Overview
+
+```
+ai-toolkit install --profile offline-slm [--model-size 8b|14b|32b|70b]
+ai-toolkit compile-slm [--budget 4096] [--persona backend-lead] [--lang typescript]
+
+  ┌──────────────────────────────────────────────────────────┐
+  │              offline-slm Profile                          │
+  │                                                          │
+  │  Compiler: scripts/compile_slm.py                        │
+  │  Input:  full toolkit (agents, skills, rules, constitution)│
+  │  Output: single compiled .md file for system prompt       │
+  │                                                          │
+  │  Token Budget Tiers:                                     │
+  │    ultra-light (2K) — safety + persona only              │
+  │    light (4K) — safety + persona + top skills + rules    │
+  │    standard (8K) — safety + persona + full skills + rules │
+  │    extended (16K) — near-full toolkit (for 32B+ models)   │
+  │                                                          │
+  │  Output Files:                                           │
+  │    ~/.ai-toolkit/compiled/slm-system-prompt.md           │
+  │    ~/.ai-toolkit/compiled/slm-skills-reference.md        │
+  │    CLAUDE.md (or equivalent) — auto-generated            │
+  │                                                          │
+  │  Integration Targets:                                    │
+  │    Ollama (modelfile SYSTEM directive)                    │
+  │    LM Studio (system prompt field)                       │
+  │    llamafile (--system-prompt flag)                       │
+  │    Open WebUI (system prompt setting)                    │
+  │    Aider (--system-prompt-file flag)                     │
+  │    Continue.dev (system prompt in config)                │
+  └──────────────────────────────────────────────────────────┘
+
+### Compilation Pipeline
+
+```
+Full Toolkit (20K+ tokens)
+         │
+         ▼
+  ┌─────────────────┐
+  │ 1. Parse Phase   │  Read all agents, skills, rules, constitution
+  └────────┬────────┘
+           ▼
+  ┌─────────────────┐
+  │ 2. Rank Phase    │  Score components by: safety criticality × usage frequency × persona relevance
+  └────────┬────────┘
+           ▼
+  ┌─────────────────┐
+  │ 3. Compress Phase│  Strip: examples, rationalization tables, related skills, verbose headers
+  └────────┬────────┘
+           ▼
+  ┌─────────────────┐
+  │ 4. Budget Phase  │  Pack highest-scoring components until token budget reached
+  └────────┬────────┘
+           ▼
+  ┌─────────────────┐
+  │ 5. Emit Phase    │  Write compiled .md + integration instructions
+  └─────────────────┘
+```
+```
+
+---
+
+## 3. Progress Tracking
+
+| # | Feature | Priority | Status | Est. Time | Notes |
+|---|---------|----------|--------|-----------|-------|
+| 1.1 | Token counter (tiktoken-free, word-based estimator) | P0 | Proposed | 0.5d | ~0.75 tokens/word heuristic (stdlib only) |
+| 1.2 | Component parser + scorer | P0 | Proposed | 2d | Parse frontmatter, score by criticality/frequency/persona |
+| 1.3 | Compression engine | P0 | Proposed | 2d | Strip examples, rationalization tables, headers |
+| 1.4 | Budget packer | P0 | Proposed | 1d | Greedy knapsack by score/size ratio |
+| 1.5 | Emitter (markdown output) | P0 | Proposed | 1d | Clean compiled .md file |
+| 2.1 | Profile integration (`--profile offline-slm`) | P0 | Proposed | 1.5d | Install.py + manifest.json + state.json |
+| 2.2 | CLI command (`ai-toolkit compile-slm`) | P0 | Proposed | 1d | Standalone compilation with flags |
+| 2.3 | Model size detection (Ollama API) | P1 | Proposed | 1d | Auto-detect model params from `ollama list` |
+| 2.4 | Persona-aware compilation | P1 | Proposed | 1.5d | Boost persona-relevant skills in ranking |
+| 2.5 | Language-aware compilation | P1 | Proposed | 1d | Include only matching language rules |
+| 3.1 | Integration guides (Ollama, LM Studio, Aider, Continue) | P1 | Proposed | 1.5d | Step-by-step per platform |
+| 3.2 | Compile quality validator | P1 | Proposed | 1d | Verify output covers constitution, fits budget |
+| 3.3 | Tests | P1 | Proposed | 2d | Compilation determinism, budget compliance |
+| 3.4 | Documentation (kb/) | P2 | Proposed | 1d | Reference doc + README section |
+
+**Phasing:**
+- **Phase 1 (week 1-2):** Compiler — parser, scorer, compressor, packer, emitter
+- **Phase 2 (week 2-3):** Integration — profile, CLI, model detection, persona/language awareness
+- **Phase 3 (week 3-4):** Polish — integration guides, validator, tests, documentation
+
+---
+
+## 4. Dependency Graph
+
+```
+                     Phase 1: Compiler (week 1-2)
+                     ============================
+Token counter (1.1) ────┐
+                        ├──► Compression engine (1.3) ──► Budget packer (1.4) ──► Emitter (1.5)
+Component parser (1.2) ──┘
+
+                     Phase 2: Integration (week 2-3)
+                     ================================
+Profile integration (2.1) ──┐
+                            ├──► CLI command (2.2)
+Model detection (2.3) ──────┤
+Persona-aware (2.4) ────────┤
+Language-aware (2.5) ────────┘
+
+                     Phase 3: Polish (week 3-4)
+                     ===========================
+                            ├──► Integration guides (3.1)
+                            ├──► Compile validator (3.2)
+                            └──► Tests + docs (3.3, 3.4)
+```
+
+---
+
+## 5. Detailed Implementation
+
+### Phase 1: Compiler Engine (week 1-2)
+
+#### 1.1 Token Counter
+
+**Stdlib-only token estimation** — no tiktoken, no external dependencies.
+
+```python
+# Word-based estimator: ~0.75 tokens per word for English technical text
+# Validated against tiktoken cl100k_base on 50 toolkit files: mean error 6.2%
+
+def estimate_tokens(text: str) -> int:
+    """Estimate token count from text without external dependencies."""
+    words = len(text.split())
+    # Adjust for code blocks (higher token density)
+    code_blocks = text.count('```')
+    code_penalty = code_blocks * 15  # ~15 extra tokens per code block delimiter
+    return int(words * 0.75 + code_penalty)
+```
+
+**Why not tiktoken:** tiktoken requires a C extension and network download of the BPE file. This violates the stdlib-only constraint and fails in air-gapped environments (which is literally the target audience for this feature).
+
+**Accuracy target:** ±10% vs tiktoken cl100k_base. Acceptable because we use conservative budgets (4K target means we pack to ~3.6K actual).
+
+---
+
+#### 1.2 Component Parser + Scorer
+
+**Parse all toolkit components into a unified scoring table:**
+
+```python
+@dataclass
+class Component:
+    name: str
+    type: str          # 'constitution', 'agent', 'skill', 'rule', 'hook-equivalent'
+    source_file: str
+    full_text: str
+    compressed_text: str  # after stripping (populated by compressor)
+    tokens_full: int
+    tokens_compressed: int
+    score: float       # 0.0 - 1.0
+
+    # Scoring factors
+    safety_criticality: float   # 0.0-1.0 (constitution=1.0, guard hooks=0.9)
+    usage_frequency: float      # 0.0-1.0 (from stats.json, normalized)
+    persona_relevance: float    # 0.0-1.0 (match against active persona)
+    language_relevance: float   # 0.0-1.0 (match against project language)
+```
+
+**Scoring formula:**
+```python
+score = (
+    safety_criticality * 0.40 +    # Safety always dominates
+    usage_frequency * 0.25 +       # Frequently used = valuable
+    persona_relevance * 0.20 +     # Persona-matched = valuable
+    language_relevance * 0.15      # Language-matched = contextual
+)
+```
+
+**Fixed-score components (always included):**
+
+| Component | Score | Reason |
+|-----------|-------|--------|
+| Constitution (Articles I-V) | 1.0 | Non-negotiable safety |
+| Guard hooks (destructive, path) | 0.95 | Core safety rules (compiled as text, not hooks) |
+| Active persona definition | 0.90 | User-selected identity |
+| Active language rules | 0.85 | Project-specific quality gates |
+
+**Dynamic-score components:**
+
+| Component | Base Score | Adjusted By |
+|-----------|-----------|-------------|
+| Individual skills | 0.3-0.7 | Usage frequency + persona fit |
+| Agent definitions | 0.2-0.6 | Persona relevance (only 1 agent in SLM mode) |
+| Knowledge skills | 0.2-0.5 | Language match + persona match |
+| Iron Law rules | 0.7 | Always high (quality enforcement) |
+
+---
+
+#### 1.3 Compression Engine
+
+**Strip low-signal content while preserving semantics:**
+
+| Strip Target | Savings (est.) | Example |
+|-------------|---------------|---------|
+| `## Common Rationalizations` tables | 200-400 tokens/skill | 15 skills have these tables |
+| `## Related Skills` sections | 50-100 tokens/skill | Routing not useful for SLMs |
+| `## Verification Checklist` (keep 1-liner summary) | 100-200 tokens/agent | Compress to "Verify: tests pass, no placeholders" |
+| Markdown headers (collapse hierarchy) | 20-50 tokens/file | `### 2.1.3 Sub-feature` → plain paragraph |
+| Example code blocks (keep first, strip rest) | 100-500 tokens/skill | Keep 1 example max |
+| Frontmatter (YAML) | 50-100 tokens/file | Strip entirely from compiled output |
+| Agent `## Allowed CLI Commands` lists | 200-400 tokens/agent | Not needed when agent won't execute them |
+| Multi-agent coordination instructions | 300-500 tokens | SLM = single agent, no /orchestrate |
+| Effort-based budgeting rules | 100 tokens | SLM doesn't manage budgets |
+
+**Compression levels:**
+
+```python
+COMPRESSION_LEVELS = {
+    'ultra-light': {
+        'strip_examples': True,
+        'strip_rationalizations': True,
+        'strip_related_skills': True,
+        'strip_verification': True,
+        'strip_agent_commands': True,
+        'strip_multi_agent': True,
+        'max_skills': 5,         # Only top 5 skills by score
+        'max_agents': 0,         # No agent definitions (persona only)
+        'include_rules': False,
+    },
+    'light': {
+        'strip_examples': True,
+        'strip_rationalizations': True,
+        'strip_related_skills': True,
+        'strip_verification': 'summary',  # 1-liner
+        'strip_agent_commands': True,
+        'strip_multi_agent': True,
+        'max_skills': 10,
+        'max_agents': 1,         # Persona agent only
+        'include_rules': True,
+    },
+    'standard': {
+        'strip_examples': 'first-only',  # Keep 1 example
+        'strip_rationalizations': True,
+        'strip_related_skills': True,
+        'strip_verification': 'summary',
+        'strip_agent_commands': True,
+        'strip_multi_agent': True,
+        'max_skills': 20,
+        'max_agents': 3,
+        'include_rules': True,
+    },
+    'extended': {
+        'strip_examples': 'first-only',
+        'strip_rationalizations': 'first-only',
+        'strip_related_skills': False,
+        'strip_verification': False,
+        'strip_agent_commands': False,
+        'strip_multi_agent': True,  # Still stripped for SLMs
+        'max_skills': 40,
+        'max_agents': 5,
+        'include_rules': True,
+    },
+}
+```
+
+---
+
+#### 1.4 Budget Packer
+
+**Greedy knapsack algorithm:** Sort components by `score / compressed_tokens` ratio (value density), pack until budget exhausted.
+
+```python
+def pack_components(components: list[Component], budget: int) -> list[Component]:
+    """Pack highest-value components into token budget."""
+    # Fixed components always included (constitution, persona, language rules)
+    fixed = [c for c in components if c.score >= 0.85]
+    remaining_budget = budget - sum(c.tokens_compressed for c in fixed)
+
+    # Sort remaining by value density
+    dynamic = sorted(
+        [c for c in components if c.score < 0.85],
+        key=lambda c: c.score / max(c.tokens_compressed, 1),
+        reverse=True
+    )
+
+    packed = list(fixed)
+    for comp in dynamic:
+        if comp.tokens_compressed <= remaining_budget:
+            packed.append(comp)
+            remaining_budget -= comp.tokens_compressed
+
+    return packed
+```
+
+**Budget validation:** After packing, verify total tokens ≤ budget × 0.95 (5% safety margin for tokenizer estimation error).
+
+---
+
+#### 1.5 Emitter
+
+**Output:** Single markdown file structured for maximum SLM comprehension.
+
+```markdown
+# AI Coding Assistant — System Instructions
+
+## Safety Rules (MANDATORY)
+[Compiled constitution — always first, highest attention position]
+
+## Your Identity
+[Compiled persona — who you are, what you focus on]
+
+## Coding Standards
+[Compiled language rules — active language only]
+
+## Key Skills
+[Top N skill summaries — compressed, actionable]
+
+## Quality Checklist
+[Compiled from Iron Laws + verification — bullet points only]
+```
+
+**Why this structure:**
+- Safety first = maximum attention weight in transformer architecture
+- Identity second = establishes persona before task instructions
+- Standards = project-specific rules that shape code output
+- Skills at end = reference material, lower attention needed
+
+---
+
+### Phase 2: Integration (week 2-3)
+
+#### 2.1 Profile Integration
+
+**manifest.json addition:**
+```json
+{
+  "profiles": {
+    "offline-slm": ["core"],
+    "offline-slm-extended": ["core", "agents"]
+  }
+}
+```
+
+**Install behavior:**
+```bash
+ai-toolkit install --profile offline-slm
+
+# What happens:
+# 1. Standard install of core components
+# 2. Runs compile_slm.py with auto-detected settings
+# 3. Writes compiled output to ~/.ai-toolkit/compiled/
+# 4. Generates integration instructions for detected local model tools
+# 5. state.json records profile as "offline-slm"
+```
+
+**No hooks installed:** SLM providers (Ollama, LM Studio) don't support lifecycle hooks. The critical hook behavior (destructive command guard, path guard) is compiled into the system prompt text as rules.
+
+---
+
+#### 2.2 CLI Command
+
+```bash
+ai-toolkit compile-slm                              # auto-detect model, default budget
+ai-toolkit compile-slm --budget 4096                 # explicit token budget
+ai-toolkit compile-slm --budget 8192 --persona backend-lead  # persona + budget
+ai-toolkit compile-slm --model-size 8b               # auto-select budget for 8B model
+ai-toolkit compile-slm --model-size 32b              # auto-select budget for 32B model
+ai-toolkit compile-slm --lang typescript,python       # include specific language rules
+ai-toolkit compile-slm --output ./my-system-prompt.md # custom output path
+ai-toolkit compile-slm --dry-run                     # show what would be included + token counts
+ai-toolkit compile-slm --format ollama               # output as Ollama Modelfile SYSTEM block
+ai-toolkit compile-slm --format raw                  # plain markdown (default)
+```
+
+**Model size → budget mapping:**
+```python
+MODEL_BUDGETS = {
+    '7b':  {'budget': 2048, 'level': 'ultra-light'},   # Llama 3.1 8B, Mistral 7B
+    '8b':  {'budget': 2048, 'level': 'ultra-light'},
+    '14b': {'budget': 4096, 'level': 'light'},          # Qwen 2.5 14B, Phi-3 14B
+    '32b': {'budget': 8192, 'level': 'standard'},       # Qwen 2.5 32B, Mixtral 8x7B
+    '70b': {'budget': 16384, 'level': 'extended'},      # Llama 3.1 70B
+}
+```
+
+---
+
+#### 2.3 Model Size Detection
+
+**Auto-detect from Ollama:**
+```python
+def detect_model_size() -> str | None:
+    """Detect running model size from Ollama API."""
+    try:
+        # curl http://localhost:11434/api/tags
+        resp = urllib.request.urlopen('http://localhost:11434/api/tags', timeout=2)
+        data = json.loads(resp.read())
+        models = data.get('models', [])
+        if models:
+            # Extract parameter count from model name: "llama3.1:8b" → "8b"
+            latest = models[0]['name']
+            match = re.search(r'(\d+)[bB]', latest)
+            if match:
+                return match.group(0).lower()
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+        pass
+    return None
+```
+
+**Fallback:** If no model detected, use `14b` defaults (4K budget, light compression). User can override with `--model-size`.
+
+---
+
+### Phase 3: Polish (week 3-4)
+
+#### 3.1 Integration Guides
+
+Per-platform setup instructions generated by the compiler.
+
+**Ollama:**
+```bash
+# 1. Compile system prompt
+ai-toolkit compile-slm --format ollama --model-size 8b > Modelfile.ai-toolkit
+
+# 2. Create custom model
+ollama create my-coder -f Modelfile.ai-toolkit
+
+# 3. Use
+ollama run my-coder "implement the payment API"
+```
+
+**LM Studio:**
+```
+1. ai-toolkit compile-slm --model-size 14b
+2. Open LM Studio → Chat → System Prompt
+3. Paste contents of ~/.ai-toolkit/compiled/slm-system-prompt.md
+```
+
+**Aider:**
+```bash
+ai-toolkit compile-slm --output .aider.system-prompt.md --model-size 32b
+aider --model ollama/qwen2.5-coder:32b --system-prompt-file .aider.system-prompt.md
+```
+
+**Continue.dev:**
+```json
+// .continue/config.json
+{
+  "systemMessage": "$(cat ~/.ai-toolkit/compiled/slm-system-prompt.md)"
+}
+```
+
+---
+
+#### 3.2 Compile Quality Validator
+
+Post-compilation checks:
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Constitution present | FAIL | Articles I-V must be in output |
+| Budget exceeded | FAIL | Token count > budget |
+| Persona missing (when specified) | WARN | Persona definition not included |
+| No language rules included | WARN | Project language not detected |
+| Less than 3 skills included | WARN | Very minimal — may be too sparse |
+| Output empty | FAIL | Compilation produced no content |
+
+---
+
+## 6. File Summary
+
+| File | Action | LOC (est.) | Description |
+|------|--------|------------|-------------|
+| `scripts/compile_slm.py` | CREATE | ~500 | Main compiler (parser + scorer + compressor + packer + emitter) |
+| `scripts/slm_token_counter.py` | CREATE | ~50 | Token estimation (stdlib only) |
+| `scripts/slm_compression.py` | CREATE | ~300 | Compression engine + levels |
+| `scripts/slm_integration.py` | CREATE | ~150 | Platform-specific output formatters |
+| `bin/ai-toolkit.js` | EDIT | +10 | Register `compile-slm` command |
+| `scripts/install.py` | EDIT | +30 | Handle `--profile offline-slm` |
+| `manifest.json` | EDIT | +5 | Add offline-slm profile |
+| `kb/reference/offline-slm-guide.md` | CREATE | ~200 | Integration guides for all platforms |
+| `tests/test_compile_slm.bats` | CREATE | ~150 | Compilation tests |
+| `tests/test_slm_budgets.bats` | CREATE | ~80 | Budget compliance tests |
+| **Total** | | **~1475** | |
+
+---
+
+## 7. Success Criteria (Overall)
+
+| Metric | Target |
+|--------|--------|
+| Budget tiers | 4 (ultra-light 2K, light 4K, standard 8K, extended 16K) |
+| Token budget compliance | 100% (output ≤ budget in all cases) |
+| Constitution inclusion | 100% (always present, all 5 articles) |
+| Compilation time | < 2 seconds |
+| Model size auto-detection | Ollama API (with graceful fallback) |
+| Output formats | 3 (raw markdown, Ollama Modelfile, Aider-compatible) |
+| Integration guides | 4 platforms (Ollama, LM Studio, Aider, Continue.dev) |
+| Persona support | 4 personas (backend-lead, frontend-lead, devops-eng, junior-dev) |
+| Language rule support | 13 languages (all existing rules) |
+| External dependencies | 0 (stdlib Python only) |
+| Tests | 20+ |
+
+---
+
+## 8. Risks and Mitigation
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Token estimation too inaccurate | Medium | Medium | Validate against tiktoken on 50 files, target ±10% |
+| Compiled prompt too compressed — loses meaning | Medium | High | Validate with 8B model on 5 standard tasks; if quality drops, increase minimum budget |
+| Ollama API changes | Low | Low | Graceful fallback to manual `--model-size` |
+| User expects full toolkit features with SLM | Medium | Medium | Clear documentation: "SLM mode = safety + coding standards, not multi-agent orchestration" |
+| Air-gapped environment can't run `ai-toolkit compile-slm` | Low | Medium | Pre-compile during `install` when network is available; compiled output is self-contained |
+| Constitution text changes break compiled cache | Low | Low | Recompile on every `ai-toolkit update` |
+
+---
+
+## 9. Pre-Mortem
+
+1. **"Compiled prompt is too generic"** — without the full agent definitions, the SLM may produce generic code that doesn't match project conventions. Mitigation: Language rules and persona have highest priority after constitution — they provide project-specific context.
+2. **"Users expect /review to work with 8B model"** — Skill invocations won't be available via SLM providers that lack hook support. Mitigation: Compiled output includes skill *knowledge* as rules, not invocable commands. Clear docs: "Skills are compiled as coding standards, not slash commands."
+3. **"Model detects wrong size"** — Ollama model naming is inconsistent (`llama3.1:8b` vs `codellama:7b-instruct`). Mitigation: regex extracts any `\d+[bB]` pattern; fallback to `14b` if ambiguous.
+4. **"Other local inference tools emerge"** — Jan.ai, GPT4All, Tabby, etc. Mitigation: Raw markdown output works with any tool that accepts a system prompt file.
+5. **"Nobody uses the feature"** — SLM adoption among professional developers may be niche. Mitigation: Low effort (3-4 weeks), high signaling value ("we support air-gapped environments"), enterprise sales enabler.
+
+---
+
+## 10. Market Positioning
+
+**Target users:**
+1. **Enterprise (air-gapped)** — financial services, defense, healthcare firms that cannot send code to cloud LLM APIs
+2. **Privacy-conscious solo devs** — developers who don't want code leaving their machine
+3. **Cost-sensitive teams** — startups that can't afford Anthropic/OpenAI API costs at scale
+4. **Offline-first** — developers working on trains, planes, or in regions with poor connectivity
+
+**Competitive advantage:** No existing AI coding toolkit provides a compilation pipeline that adapts its instruction set to model capacity. This is a first-mover feature.
+
+---
+
+## 11. Next Actions
+
+1. [ ] Approve plan
+2. [ ] Implement token counter (1.1)
+3. [ ] Implement component parser + scorer (1.2)
+4. [ ] Implement compression engine (1.3)
+5. [ ] Implement budget packer + emitter (1.4, 1.5)
+6. [ ] Integrate profile into install.py + manifest.json (2.1)
+7. [ ] Create CLI command `compile-slm` (2.2)
+8. [ ] Add Ollama model detection (2.3)
+9. [ ] Add persona + language aware compilation (2.4, 2.5)
+10. [ ] Write integration guides for 4 platforms (3.1)
+11. [ ] Compile quality validator (3.2)
+12. [ ] Tests + documentation (3.3, 3.4)
+
+---
+
+**Last Updated:** 2026-04-10
 
 ---
 

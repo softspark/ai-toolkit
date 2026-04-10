@@ -13,12 +13,22 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dir_rules_shared import STANDARD_RULES, write_rules
+from dir_rules_shared import (
+    STANDARD_RULES,
+    build_language_rules,
+    build_registered_rules,
+    write_rules,
+)
 
 
-def generate(target_dir: Path) -> None:
+def generate(target_dir: Path, *,
+             language_modules: list[str] | None = None,
+             rules_dir: Path | None = None) -> None:
     """Write .roo/rules/*.md files to target_dir."""
-    write_rules(target_dir, STANDARD_RULES, ".roo/rules")
+    rules = dict(STANDARD_RULES)
+    rules.update(build_language_rules(language_modules))
+    rules.update(build_registered_rules(rules_dir))
+    write_rules(target_dir, rules, ".roo/rules")
 
 
 def main() -> None:

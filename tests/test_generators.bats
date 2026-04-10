@@ -440,3 +440,196 @@ teardown_file() {
     done
     [ "$failed" -eq 0 ]
 }
+
+# ── language rules: directory-based generators emit lang files ────────────────
+
+@test "windsurf generates language rule files when language_modules set" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_windsurf_rules import generate
+generate(Path('$tmp'), language_modules=['rules-python'])
+" >/dev/null 2>&1
+    [ -f "$tmp/.windsurf/rules/ai-toolkit-lang-common.md" ]
+    [ -f "$tmp/.windsurf/rules/ai-toolkit-lang-python.md" ]
+    # Standard rules still present
+    [ -f "$tmp/.windsurf/rules/ai-toolkit-code-style.md" ]
+    # Total: 6 standard + 2 lang = 8
+    count=$(ls "$tmp/.windsurf/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    [ "$count" -eq 8 ]
+    rm -rf "$tmp"
+}
+
+@test "cline generates language rule files when language_modules set" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_cline_rules import generate
+generate(Path('$tmp'), language_modules=['rules-typescript'])
+" >/dev/null 2>&1
+    [ -f "$tmp/.cline/rules/ai-toolkit-lang-common.md" ]
+    [ -f "$tmp/.cline/rules/ai-toolkit-lang-typescript.md" ]
+    rm -rf "$tmp"
+}
+
+@test "roo generates language rule files when language_modules set" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_roo_rules import generate
+generate(Path('$tmp'), language_modules=['rules-python', 'rules-golang'])
+" >/dev/null 2>&1
+    [ -f "$tmp/.roo/rules/ai-toolkit-lang-common.md" ]
+    [ -f "$tmp/.roo/rules/ai-toolkit-lang-python.md" ]
+    [ -f "$tmp/.roo/rules/ai-toolkit-lang-golang.md" ]
+    rm -rf "$tmp"
+}
+
+@test "antigravity generates language rule files when language_modules set" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_antigravity import generate
+generate(Path('$tmp'), language_modules=['rules-rust'])
+" >/dev/null 2>&1
+    [ -f "$tmp/.agent/rules/ai-toolkit-lang-common.md" ]
+    [ -f "$tmp/.agent/rules/ai-toolkit-lang-rust.md" ]
+    rm -rf "$tmp"
+}
+
+@test "cursor mdc generates language .mdc files with frontmatter" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_cursor_mdc import generate
+generate(Path('$tmp'), language_modules=['rules-python'])
+" >/dev/null 2>&1
+    [ -f "$tmp/.cursor/rules/ai-toolkit-lang-python.mdc" ]
+    [ -f "$tmp/.cursor/rules/ai-toolkit-lang-common.mdc" ]
+    # Python mdc has globs for *.py
+    grep -q 'globs:' "$tmp/.cursor/rules/ai-toolkit-lang-python.mdc"
+    grep -q '"\*\*/\*.py"' "$tmp/.cursor/rules/ai-toolkit-lang-python.mdc"
+    # Common mdc has alwaysApply: true (no globs)
+    grep -q 'alwaysApply: true' "$tmp/.cursor/rules/ai-toolkit-lang-common.mdc"
+    rm -rf "$tmp"
+}
+
+@test "augment generates language files with auto_attached frontmatter" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_augment_rules import generate
+generate(Path('$tmp'), language_modules=['rules-python'])
+" >/dev/null 2>&1
+    [ -f "$tmp/.augment/rules/ai-toolkit-lang-python.md" ]
+    grep -q 'type: auto_attached' "$tmp/.augment/rules/ai-toolkit-lang-python.md"
+    grep -q '"\*\*/\*.py"' "$tmp/.augment/rules/ai-toolkit-lang-python.md"
+    # Common has always_apply
+    grep -q 'type: always_apply' "$tmp/.augment/rules/ai-toolkit-lang-common.md"
+    rm -rf "$tmp"
+}
+
+@test "language rule files contain actual rule content (not pointers)" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_windsurf_rules import generate
+generate(Path('$tmp'), language_modules=['rules-python'])
+" >/dev/null 2>&1
+    # Python rules should contain type hints section
+    grep -q 'Type Hints' "$tmp/.windsurf/rules/ai-toolkit-lang-python.md"
+    # Common rules should contain naming section
+    grep -q 'Naming' "$tmp/.windsurf/rules/ai-toolkit-lang-common.md"
+    rm -rf "$tmp"
+}
+
+@test "language rule files strip YAML frontmatter from source" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_windsurf_rules import generate
+generate(Path('$tmp'), language_modules=['rules-python'])
+" >/dev/null 2>&1
+    # Should NOT contain source frontmatter fields like 'language: python'
+    ! grep -q '^language: python' "$tmp/.windsurf/rules/ai-toolkit-lang-python.md"
+    ! grep -q '^category: coding-style' "$tmp/.windsurf/rules/ai-toolkit-lang-python.md"
+    rm -rf "$tmp"
+}
+
+# ── registered rules: directory-based generators emit custom files ────────────
+
+@test "windsurf generates registered rule files from rules_dir" {
+    local tmp; tmp="$(mktemp -d)"
+    local rules_tmp; rules_tmp="$(mktemp -d)"
+    echo "# My Custom Rule" > "$rules_tmp/my-team-rules.md"
+    echo "# Another Rule" > "$rules_tmp/code-ownership.md"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_windsurf_rules import generate
+generate(Path('$tmp'), rules_dir=Path('$rules_tmp'))
+" >/dev/null 2>&1
+    [ -f "$tmp/.windsurf/rules/ai-toolkit-custom-my-team-rules.md" ]
+    [ -f "$tmp/.windsurf/rules/ai-toolkit-custom-code-ownership.md" ]
+    grep -q 'My Custom Rule' "$tmp/.windsurf/rules/ai-toolkit-custom-my-team-rules.md"
+    rm -rf "$tmp" "$rules_tmp"
+}
+
+@test "cursor mdc wraps registered rules with alwaysApply frontmatter" {
+    local tmp; tmp="$(mktemp -d)"
+    local rules_tmp; rules_tmp="$(mktemp -d)"
+    echo "# Team Standards" > "$rules_tmp/team-standards.md"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_cursor_mdc import generate
+generate(Path('$tmp'), rules_dir=Path('$rules_tmp'))
+" >/dev/null 2>&1
+    [ -f "$tmp/.cursor/rules/ai-toolkit-custom-team-standards.mdc" ]
+    grep -q 'alwaysApply: true' "$tmp/.cursor/rules/ai-toolkit-custom-team-standards.mdc"
+    grep -q 'Team Standards' "$tmp/.cursor/rules/ai-toolkit-custom-team-standards.mdc"
+    rm -rf "$tmp" "$rules_tmp"
+}
+
+@test "stale lang/custom files are cleaned up on re-run" {
+    local tmp; tmp="$(mktemp -d)"
+    # First run: with python
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_windsurf_rules import generate
+generate(Path('$tmp'), language_modules=['rules-python'])
+" >/dev/null 2>&1
+    [ -f "$tmp/.windsurf/rules/ai-toolkit-lang-python.md" ]
+    # Second run: without python — stale lang file should be removed
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_windsurf_rules import generate
+generate(Path('$tmp'))
+" >/dev/null 2>&1
+    [ ! -f "$tmp/.windsurf/rules/ai-toolkit-lang-python.md" ]
+    [ ! -f "$tmp/.windsurf/rules/ai-toolkit-lang-common.md" ]
+    rm -rf "$tmp"
+}
+
+@test "generators without language_modules produce only 6 standard files" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from generate_windsurf_rules import generate
+generate(Path('$tmp'))
+" >/dev/null 2>&1
+    count=$(ls "$tmp/.windsurf/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    [ "$count" -eq 6 ]
+    rm -rf "$tmp"
+}

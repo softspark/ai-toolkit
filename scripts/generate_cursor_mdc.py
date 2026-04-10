@@ -20,7 +20,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dir_rules_shared import (
+    LANG_GLOBS,
     PREFIX,
+    build_language_rules,
+    build_registered_rules,
     cleanup_stale,
     rule_agents_and_skills,
     rule_code_style,
@@ -100,21 +103,47 @@ RULES = _make_rules()
 # Main
 # ---------------------------------------------------------------------------
 
-def generate(target_dir: Path) -> None:
+def generate(target_dir: Path, *,
+             language_modules: list[str] | None = None,
+             rules_dir: Path | None = None) -> None:
     """Write .cursor/rules/*.mdc files to target_dir."""
-    rules_dir = target_dir / ".cursor" / "rules"
-    rules_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = target_dir / ".cursor" / "rules"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    all_rules: dict[str, callable] = dict(RULES)
+
+    # Add language rules wrapped in .mdc frontmatter
+    for filename, content_fn in build_language_rules(language_modules).items():
+        lang = filename.removeprefix(f"{PREFIX}lang-").removesuffix(".md")
+        globs = LANG_GLOBS.get(lang)
+        mdc_name = filename.replace(".md", ".mdc")
+        all_rules[mdc_name] = (lambda fn, l, g: lambda: _mdc(
+            fn(),
+            description=f"{l.title()} language rules",
+            globs=g if g else None,
+            always_apply=not g,
+        ))(content_fn, lang, globs)
+
+    # Add registered rules wrapped in .mdc frontmatter
+    for filename, content_fn in build_registered_rules(rules_dir).items():
+        name = filename.removeprefix(f"{PREFIX}custom-").removesuffix(".md")
+        mdc_name = filename.replace(".md", ".mdc")
+        all_rules[mdc_name] = (lambda fn, n: lambda: _mdc(
+            fn(),
+            description=f"Custom rule: {n}",
+            always_apply=True,
+        ))(content_fn, name)
 
     # Clean stale ai-toolkit-*.mdc files
-    current = set(RULES.keys())
-    if rules_dir.is_dir():
-        for f in rules_dir.iterdir():
+    current = set(all_rules.keys())
+    if out_dir.is_dir():
+        for f in out_dir.iterdir():
             if f.name.startswith(PREFIX) and f.suffix == ".mdc" and f.name not in current:
                 f.unlink()
                 print(f"  Removed stale: .cursor/rules/{f.name}")
 
-    for filename, content_fn in RULES.items():
-        (rules_dir / filename).write_text(content_fn(), encoding="utf-8")
+    for filename, content_fn in all_rules.items():
+        (out_dir / filename).write_text(content_fn(), encoding="utf-8")
         print(f"  Generated: .cursor/rules/{filename}")
 
 

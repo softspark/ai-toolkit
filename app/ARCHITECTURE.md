@@ -305,7 +305,9 @@ Lead Session (You)
 `app/plugins/mcp-templates/` ships 25 ready-to-use MCP server config templates (filesystems, databases, GitHub, Slack, etc.). Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
 ### Language Rules (70 files, 13 languages)
-`app/rules/` contains per-language coding rules injected into `CLAUDE.md`. Supported languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, and common (shared). Auto-detected from project files via `--auto-detect` or selected with `--modules rules-<lang>`.
+`app/rules/` contains per-language coding rules. Supported languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, and common (shared). Auto-detected from project files via `--auto-detect` or selected with `--modules rules-<lang>`.
+
+Language rules are propagated to **all configured editors** — not just Claude. `dir_rules_shared.build_language_rules()` reads `app/rules/<lang>/*.md`, strips frontmatter, and returns combined content per language. Each directory-based generator (Cursor, Windsurf, Cline, Roo, Augment, Antigravity) emits `ai-toolkit-lang-<lang>` files in its native format. Registered custom rules (`~/.ai-toolkit/rules/`) are similarly propagated as `ai-toolkit-custom-<name>` files via `build_registered_rules()`.
 
 ### Extension API (`inject-hook`)
 The `inject_section_cli.py` script provides a stable marker-based injection API. Any tool can add sections to `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content, using `<!-- TOOLKIT:START:<id> -->` / `<!-- TOOLKIT:END:<id> -->` markers.

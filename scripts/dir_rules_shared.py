@@ -439,3 +439,99 @@ def write_rules(target_dir: Path, rules: dict[str, callable],
         (out_dir / filename).write_text(content_fn(), encoding="utf-8")
         tag = f" ({label})" if label else ""
         print(f"  Generated: {subdir}/{filename}{tag}")
+
+
+# ---------------------------------------------------------------------------
+# Language → glob patterns for editors with file-type activation
+# ---------------------------------------------------------------------------
+
+LANG_GLOBS: dict[str, list[str]] = {
+    "python": ["**/*.py"],
+    "typescript": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+    "golang": ["**/*.go"],
+    "rust": ["**/*.rs"],
+    "java": ["**/*.java"],
+    "kotlin": ["**/*.kt", "**/*.kts"],
+    "swift": ["**/*.swift"],
+    "dart": ["**/*.dart"],
+    "csharp": ["**/*.cs"],
+    "php": ["**/*.php"],
+    "cpp": ["**/*.cpp", "**/*.cc", "**/*.cxx", "**/*.hpp", "**/*.h"],
+    "ruby": ["**/*.rb"],
+}
+
+
+def _resolve_app_rules_dir() -> Path:
+    """Resolve path to app/rules/ directory."""
+    return Path(__file__).resolve().parent.parent / "app" / "rules"
+
+
+def build_language_rules(
+    language_modules: list[str] | None,
+) -> dict[str, callable]:
+    """Build language-specific rule entries from app/rules/<lang>/.
+
+    Returns dict of filename -> callable (same shape as STANDARD_RULES).
+    Language modules use format ``rules-python``, ``rules-typescript``, etc.
+    Always includes ``common`` when any language is detected.
+    """
+    if not language_modules:
+        return {}
+
+    rules_src = _resolve_app_rules_dir()
+    if not rules_src.is_dir():
+        return {}
+
+    langs: list[str] = []
+    for mod in language_modules:
+        if mod.startswith("rules-"):
+            langs.append(mod[6:])
+    if not langs:
+        return {}
+
+    all_dirs: list[str] = ["common"]
+    for lang in langs:
+        if lang not in all_dirs:
+            all_dirs.append(lang)
+
+    result: dict[str, callable] = {}
+    for lang in all_dirs:
+        lang_path = rules_src / lang
+        if not lang_path.is_dir():
+            continue
+        parts: list[str] = []
+        for f in sorted(lang_path.glob("*.md")):
+            content = f.read_text(encoding="utf-8")
+            # Strip YAML frontmatter if present
+            if content.startswith("---"):
+                end = content.find("---", 3)
+                if end != -1:
+                    content = content[end + 3:].lstrip("\n")
+            parts.append(content.rstrip("\n"))
+
+        if parts:
+            combined = "\n\n".join(parts) + "\n"
+            filename = f"{PREFIX}lang-{lang}.md"
+            # Capture value via default arg to avoid late-binding closure
+            result[filename] = (lambda c: lambda: c)(combined)
+
+    return result
+
+
+def build_registered_rules(
+    rules_dir: Path | None,
+) -> dict[str, callable]:
+    """Build entries from user's registered rules (~/.ai-toolkit/rules/*.md).
+
+    Returns dict of filename -> callable (same shape as STANDARD_RULES).
+    """
+    if not rules_dir or not rules_dir.is_dir():
+        return {}
+
+    result: dict[str, callable] = {}
+    for rule_file in sorted(rules_dir.glob("*.md")):
+        content = rule_file.read_text(encoding="utf-8")
+        filename = f"{PREFIX}custom-{rule_file.stem}.md"
+        result[filename] = (lambda c: lambda: c)(content)
+
+    return result

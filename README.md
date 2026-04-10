@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-92-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-439%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-451%20passing-success)](tests/)
 
 ---
 
@@ -128,7 +128,7 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 | Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | `ai-toolkit install --local` | project |
 | Codex / OpenCode | `AGENTS.md` | `ai-toolkit agents-md` | project |
 
-> **Note:** Claude Code is always installed (primary platform with full feature support). Other editors are installed on demand with `--editors <list>` or auto-detected from existing project files. All platforms receive the same agent/skill catalog, guidelines, and rules. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
+> **Note:** Claude Code is always installed (primary platform with full feature support). Other editors are installed on demand with `--editors <list>` or auto-detected from existing project files. All platforms receive the same agent/skill catalog, guidelines, rules, language-specific rules, and registered custom rules. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
 
 ---
 
@@ -528,6 +528,19 @@ ai-toolkit install --local --lang go,python   # multiple languages
 ```
 
 `--local` automatically detects languages using two-phase detection: config markers (package.json, go.mod, Cargo.toml, etc.) plus source file extension scanning (.py, .ts, .go, etc.). `--lang` accepts aliases (`go`, `c++`, `cs`). Rules are injected into `CLAUDE.md` and auto-updated on `ai-toolkit update --local`.
+
+When `--editors` is used alongside detected or explicit languages, language rules are propagated to all configured editors — not just Claude. Each editor receives the full rule content in its native format:
+
+| Editor | Language rule file | Activation |
+|--------|-------------------|------------|
+| Cursor | `.cursor/rules/ai-toolkit-lang-<lang>.mdc` | `globs` per file type (e.g. `**/*.py`) |
+| Windsurf | `.windsurf/rules/ai-toolkit-lang-<lang>.md` | always loaded |
+| Cline | `.cline/rules/ai-toolkit-lang-<lang>.md` | always loaded |
+| Roo Code | `.roo/rules/ai-toolkit-lang-<lang>.md` | always loaded |
+| Augment | `.augment/rules/ai-toolkit-lang-<lang>.md` | `auto_attached` with globs |
+| Antigravity | `.agent/rules/ai-toolkit-lang-<lang>.md` | always loaded |
+
+Registered rules (`ai-toolkit add-rule`) are also propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
 
 ---
 

@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
 version: "1.4.2"
 created: "2026-03-23"
-last_updated: "2026-04-09"
+last_updated: "2026-04-10"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -36,11 +36,14 @@ ai-toolkit install --local --editors cursor,aider         # specific editors onl
 
 Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`.
 
-To restrict which language rules are injected into `CLAUDE.md`, use `--lang`:
+To restrict which language rules are injected, use `--lang`:
 
 ```bash
 ai-toolkit install --local --lang python,typescript
+ai-toolkit install --local --lang python --editors all  # language rules propagated to all editors
 ```
+
+When `--editors` is combined with `--lang` (or auto-detected languages), language rules are propagated to all configured editors as `ai-toolkit-lang-<lang>` files — not just Claude's `CLAUDE.md`. Similarly, registered custom rules (`~/.ai-toolkit/rules/`) are propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
 
 **Note:** Hooks are global-only — merged into `~/.claude/settings.json` by `ai-toolkit install`. Project-local `--local` does not install hooks; any legacy `.claude/hooks.json` is removed automatically.
 
@@ -121,7 +124,10 @@ ai-toolkit add-rule ./my-project-rules.md
 # → copies to ~/.ai-toolkit/rules/my-project-rules.md
 
 ai-toolkit update
-# → injects the rule into ~/.claude/CLAUDE.md, ~/.cursor/rules, Windsurf, Gemini
+# → injects the rule into ~/.claude/CLAUDE.md and all global editor configs
+
+ai-toolkit update --local
+# → also propagates as ai-toolkit-custom-<name> to directory-based editors (Cursor, Windsurf, Cline, Roo, Augment, Antigravity)
 ```
 
 To unregister (removes from registry **and** strips the block from CLAUDE.md):
