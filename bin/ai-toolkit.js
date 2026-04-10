@@ -83,7 +83,7 @@ const COMMANDS = {
   'copilot-instructions': 'Generate .github/copilot-instructions.md',
   'gemini-md': 'Generate GEMINI.md for Gemini CLI',
   'cline-rules': 'Generate .clinerules for Cline (legacy)',
-  'cline-dir-rules': 'Generate .cline/rules/*.md for Cline (recommended)',
+  'cline-dir-rules': 'Generate .clinerules/*.md for Cline (recommended)',
   'roo-modes': 'Generate .roomodes for Roo Code',
   'roo-dir-rules': 'Generate .roo/rules/*.md shared rules for Roo Code',
   'aider-conf': 'Generate .aider.conf.yml for Aider',

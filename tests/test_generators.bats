@@ -373,7 +373,7 @@ teardown_file() {
 }
 
 @test "generate_cline_rules.py creates 6 rule files" {
-    count=$(ls "$CL_DIR/.cline/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    count=$(ls "$CL_DIR/.clinerules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
     [ "$count" -eq 6 ]
 }
 
@@ -399,8 +399,8 @@ teardown_file() {
     [ "$count" -eq 6 ]
 }
 
-@test "generate_augment_rules.py testing.md has auto_attached type" {
-    grep -q 'type: auto_attached' "$AUG_DIR/.augment/rules/ai-toolkit-testing.md"
+@test "generate_augment_rules.py testing.md has agent_requested type" {
+    grep -q 'type: agent_requested' "$AUG_DIR/.augment/rules/ai-toolkit-testing.md"
 }
 
 @test "generate_augment_rules.py agents-and-skills.md has always_apply type" {
@@ -425,7 +425,7 @@ teardown_file() {
 # ── cross-platform: all dir-rules generators produce same file count ────────
 
 @test "all directory-based generators produce 6 rule files" {
-    for dir in "$AG_DIR/.agent/rules" "$CURSOR_DIR/.cursor/rules" "$WS_DIR/.windsurf/rules" "$CL_DIR/.cline/rules" "$ROO_DIR/.roo/rules" "$AUG_DIR/.augment/rules"; do
+    for dir in "$AG_DIR/.agent/rules" "$CURSOR_DIR/.cursor/rules" "$WS_DIR/.windsurf/rules" "$CL_DIR/.clinerules" "$ROO_DIR/.roo/rules" "$AUG_DIR/.augment/rules"; do
         count=$(ls "$dir"/ai-toolkit-*.* 2>/dev/null | wc -l | xargs)
         [ "$count" -eq 6 ] || { echo "Expected 6 in $dir, got $count"; return 1; }
     done
@@ -469,8 +469,8 @@ from pathlib import Path
 from generate_cline_rules import generate
 generate(Path('$tmp'), language_modules=['rules-typescript'])
 " >/dev/null 2>&1
-    [ -f "$tmp/.cline/rules/ai-toolkit-lang-common.md" ]
-    [ -f "$tmp/.cline/rules/ai-toolkit-lang-typescript.md" ]
+    [ -f "$tmp/.clinerules/ai-toolkit-lang-common.md" ]
+    [ -f "$tmp/.clinerules/ai-toolkit-lang-typescript.md" ]
     rm -rf "$tmp"
 }
 
@@ -519,7 +519,7 @@ generate(Path('$tmp'), language_modules=['rules-python'])
     rm -rf "$tmp"
 }
 
-@test "augment generates language files with auto_attached frontmatter" {
+@test "augment generates language files with agent_requested frontmatter" {
     local tmp; tmp="$(mktemp -d)"
     python3 -c "
 import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
@@ -528,7 +528,7 @@ from generate_augment_rules import generate
 generate(Path('$tmp'), language_modules=['rules-python'])
 " >/dev/null 2>&1
     [ -f "$tmp/.augment/rules/ai-toolkit-lang-python.md" ]
-    grep -q 'type: auto_attached' "$tmp/.augment/rules/ai-toolkit-lang-python.md"
+    grep -q 'type: agent_requested' "$tmp/.augment/rules/ai-toolkit-lang-python.md"
     grep -q '"\*\*/\*.py"' "$tmp/.augment/rules/ai-toolkit-lang-python.md"
     # Common has always_apply
     grep -q 'type: always_apply' "$tmp/.augment/rules/ai-toolkit-lang-common.md"

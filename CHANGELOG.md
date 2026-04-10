@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.6.1 — IDE Rule Format Compliance Audit (2026-04-10)
+
+### Fixed
+- **Cline rules path** — changed `.cline/rules/` to `.clinerules/` directory per official Cline 3.7+ docs. Old path was silently ignored by Cline
+- **Augment frontmatter type** — changed `auto_attached` to `agent_requested` per official Augment docs
+- **Aider config** — added `CONVENTIONS.md` to `read:` list in `.aider.conf.yml` so Aider auto-loads the conventions we generate
+
+### Changed
+- **`add-rule` help text** — now lists all supported editors (was missing Augment, Roo, Aider, Antigravity)
+- Legacy `.clinerules` single-file is auto-migrated to `.clinerules/` directory on next install
+
+---
+
 ## v1.6.0 — IDE Language Rules Propagation, Planning Docs, Cloud Security Pack (2026-04-10)
 
 ### Added

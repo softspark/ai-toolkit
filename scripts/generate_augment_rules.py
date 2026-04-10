@@ -3,7 +3,7 @@
 
 Augment supports per-file rules with frontmatter:
   - type: always_apply  — always in context
-  - type: auto_attached + globs — attached for matching files
+  - type: agent_requested + globs — attached for matching files
 
 The existing generate_augment.py creates a single always_apply file.
 This generator adds granular per-category rules with appropriate types.
@@ -72,7 +72,7 @@ def _make_rules() -> dict[str, callable]:
         f"{PREFIX}code-style.md": lambda: _augment_wrap(
             rule_code_style(),
             description="Code style conventions",
-            rule_type="auto_attached",
+            rule_type="agent_requested",
             globs=["*.py", "*.ts", "*.tsx", "*.js", "*.jsx", "*.go", "*.rs",
                    "*.java", "*.kt", "*.swift", "*.dart", "*.cs", "*.php",
                    "*.cpp", "*.cc", "*.rb"],
@@ -80,7 +80,7 @@ def _make_rules() -> dict[str, callable]:
         f"{PREFIX}testing.md": lambda: _augment_wrap(
             rule_testing(),
             description="Testing standards and patterns",
-            rule_type="auto_attached",
+            rule_type="agent_requested",
             globs=["*.test.*", "*.spec.*", "test_*", "**/tests/**",
                    "**/test/**", "**/__tests__/**"],
         ),
@@ -107,7 +107,7 @@ def generate(target_dir: Path, *,
             all_rules[filename] = (lambda fn, l, g: lambda: _augment_wrap(
                 fn(),
                 description=f"{l.title()} language rules",
-                rule_type="auto_attached",
+                rule_type="agent_requested",
                 globs=g,
             ))(content_fn, lang, globs)
         else:

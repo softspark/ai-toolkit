@@ -136,7 +136,6 @@ _EDITOR_MARKERS: dict[str, str] = {
     ".windsurfrules": "windsurf",
     ".windsurf/rules": "windsurf",
     ".clinerules": "cline",
-    ".cline/rules": "cline",
     ".roomodes": "roo",
     ".roo/rules": "roo",
     ".aider.conf.yml": "aider",
@@ -309,7 +308,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None) -> Non
         "copilot":      "  Would inject: .github/copilot-instructions.md",
         "cursor":       "  Would generate: .cursorrules + .cursor/rules/*.mdc",
         "windsurf":     "  Would generate: .windsurfrules + .windsurf/rules/*.md",
-        "cline":        "  Would generate: .clinerules + .cline/rules/*.md",
+        "cline":        "  Would generate: .clinerules/*.md",
         "roo":          "  Would generate: .roomodes + .roo/rules/*.md",
         "aider":        "  Would generate: .aider.conf.yml + CONVENTIONS.md",
         "augment":      "  Would generate: .augment/rules/ai-toolkit-*.md",
@@ -429,11 +428,11 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
                            rules_dir=rules_dir)
 
     if "cline" in eds:
-        inject_with_rules(
-            "generate-cline.sh",
-            cwd / ".clinerules",
-            rules_dir,
-        )
+        # Migrate: remove legacy .clinerules single file (replaced by directory)
+        legacy_clinerules = cwd / ".clinerules"
+        if legacy_clinerules.is_file():
+            legacy_clinerules.unlink()
+            print("  Migrated: .clinerules file → .clinerules/ directory")
         from generate_cline_rules import generate as gen_cline_rules
         gen_cline_rules(cwd, language_modules=language_modules,
                         rules_dir=rules_dir)

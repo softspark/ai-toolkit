@@ -121,7 +121,7 @@ Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies cons
 | Windsurf | `~/.codeium/.../global_rules.md` + `.windsurf/rules/*.md` | `ai-toolkit install` / `--local` | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | `ai-toolkit install` | global |
 | GitHub Copilot | `.github/copilot-instructions.md` | `ai-toolkit install --local` | project |
-| Cline | `.clinerules` + `.cline/rules/*.md` | `ai-toolkit install --local` | project |
+| Cline | `.clinerules/*.md` | `ai-toolkit install --local` | project |
 | Roo Code | `.roomodes` + `.roo/rules/*.md` | `ai-toolkit install --local` | project |
 | Aider | `.aider.conf.yml` + `CONVENTIONS.md` | `ai-toolkit install --local` | project |
 | Augment | `.augment/rules/ai-toolkit-*.md` | `ai-toolkit install --local` | project |
@@ -535,9 +535,9 @@ When `--editors` is used alongside detected or explicit languages, language rule
 |--------|-------------------|------------|
 | Cursor | `.cursor/rules/ai-toolkit-lang-<lang>.mdc` | `globs` per file type (e.g. `**/*.py`) |
 | Windsurf | `.windsurf/rules/ai-toolkit-lang-<lang>.md` | always loaded |
-| Cline | `.cline/rules/ai-toolkit-lang-<lang>.md` | always loaded |
+| Cline | `.clinerules/ai-toolkit-lang-<lang>.md` | always loaded |
 | Roo Code | `.roo/rules/ai-toolkit-lang-<lang>.md` | always loaded |
-| Augment | `.augment/rules/ai-toolkit-lang-<lang>.md` | `auto_attached` with globs |
+| Augment | `.augment/rules/ai-toolkit-lang-<lang>.md` | `agent_requested` with globs |
 | Antigravity | `.agent/rules/ai-toolkit-lang-<lang>.md` | always loaded |
 
 Registered rules (`ai-toolkit add-rule`) are also propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.

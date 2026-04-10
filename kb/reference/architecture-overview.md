@@ -108,7 +108,7 @@ Machine (global)                              Project (local)
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets both legacy single-file format (for backwards compat) and new directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.cline/rules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Hooks are global-only — not merged into project settings.
+Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Hooks are global-only — not merged into project settings.
 
 ## CLI Commands
 
@@ -132,7 +132,7 @@ Each editor gets both legacy single-file format (for backwards compat) and new d
 | `copilot-instructions` | `./` | Generates `.github/copilot-instructions.md` |
 | `gemini-md` | `./` | Generates `GEMINI.md` |
 | `cline-rules` | `./` | Generates `.clinerules` (legacy) |
-| `cline-dir-rules` | `./` | Generates `.cline/rules/*.md` |
+| `cline-dir-rules` | `./` | Generates `.clinerules/*.md` |
 | `roo-modes` | `./` | Generates `.roomodes` |
 | `roo-dir-rules` | `./` | Generates `.roo/rules/*.md` |
 | `aider-conf` | `./` | Generates `.aider.conf.yml` |

@@ -154,7 +154,7 @@ teardown() {
     [ -f "$TEST_TMP/.windsurfrules" ]
     [ -f "$TEST_TMP/.github/copilot-instructions.md" ]
     [ -f "$TEST_TMP/GEMINI.md" ]
-    [ -f "$TEST_TMP/.clinerules" ]
+    [ -d "$TEST_TMP/.clinerules" ]
     [ -f "$TEST_TMP/.roomodes" ]
     [ -f "$TEST_TMP/.aider.conf.yml" ]
     [ -f "$TEST_TMP/llms.txt" ]
