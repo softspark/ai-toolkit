@@ -2,8 +2,9 @@
 """add-rule -- Register a rule file in ~/.ai-toolkit/rules/.
 
 Registered rules are automatically injected into all AI tool configs
-(Claude, Cursor, Windsurf, Gemini) on next 'ai-toolkit install',
-and into project-local configs (Copilot, Cline) on 'ai-toolkit install --local'.
+on next 'ai-toolkit install' or 'ai-toolkit update':
+  Global: Claude, Cursor, Windsurf, Gemini, Augment
+  Local (--local): all of the above + Copilot, Cline, Roo, Aider, Antigravity
 
 Usage:
   add_rule.py <rule-file> [rule-name]
@@ -47,8 +48,8 @@ def main() -> None:
     print(f"Registered: '{rule_name}' -> {dest}")
     print()
     print("Apply now:")
-    print("  ai-toolkit update            # global (Claude, Cursor, Windsurf, Gemini)")
-    print("  ai-toolkit update --local    # project-local (Copilot, Cline)")
+    print("  ai-toolkit update            # global (Claude, Cursor, Windsurf, Gemini, Augment)")
+    print("  ai-toolkit update --local    # project-local (all editors)")
 
 
 if __name__ == "__main__":
