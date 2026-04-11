@@ -312,6 +312,9 @@ Language rules are propagated to **all configured editors** — not just Claude.
 ### Extension API (`inject-hook`)
 The `inject_section_cli.py` script provides a stable marker-based injection API. Any tool can add sections to `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content, using `<!-- TOOLKIT:START:<id> -->` / `<!-- TOOLKIT:END:<id> -->` markers.
 
+### SLM Compilation (`compile-slm`)
+`scripts/compile_slm.py` compiles the full toolkit (20K+ tokens) into a minimal system prompt for Small Language Models (2K-16K tokens). Pipeline: Parse → Score → Compress → Pack → Emit. Supports 4 compression levels (ultra-light, light, standard, extended), 4 output formats (raw, ollama, json-string, aider), persona-aware scoring, and language-aware rule filtering. Profile `offline-slm` in `manifest.json`. Constitution is always included (non-negotiable).
+
 ### Manifest Install (`--modules`, `--auto-detect`)
 `manifest.json` defines all installable components as named modules. Install individual modules with `ai-toolkit install --modules <name>` or let the installer detect which language rules to add based on project files (e.g. `package.json` → `rules-typescript`, `go.mod` → `rules-golang`).
 

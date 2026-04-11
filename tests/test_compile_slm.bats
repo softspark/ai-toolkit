@@ -656,3 +656,92 @@ print('OK')
     [ "$status" -eq 0 ]
     [ "$output" = "OK" ]
 }
+
+# ── Post-Compilation Validator ───────────────────────────────────────────────
+
+@test "compile-slm: validator passes on valid output" {
+    run python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from compile_slm import parse_components, compress_all, pack_components, emit_markdown, validate_output
+components = parse_components()
+compress_all(components, 'light')
+included, _ = pack_components(components, 4096, 'light')
+md = emit_markdown(included)
+errors = validate_output(included, md, 4096)
+fails = [e for e in errors if e.startswith('FAIL')]
+assert len(fails) == 0, f'Unexpected failures: {fails}'
+print('OK')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "OK" ]
+}
+
+@test "compile-slm: validator catches missing constitution" {
+    run python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from compile_slm import Component, validate_output
+fake = [Component(name='test', type='skill', source_file='x', full_text='x', compressed_text='hello world test', tokens_compressed=5)]
+errors = validate_output(fake, '# Test output with enough content to pass length check plus more text here', 4096)
+assert any('Constitution missing' in e for e in errors), f'Expected constitution error, got: {errors}'
+print('OK')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "OK" ]
+}
+
+@test "compile-slm: validator catches budget exceeded" {
+    run python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from compile_slm import Component, validate_output
+fake = [Component(name='Constitution', type='constitution', source_file='x', full_text='x' * 1000)]
+errors = validate_output(fake, 'x' * 10000, 10)
+assert any('exceeds budget' in e for e in errors), f'Expected budget error, got: {errors}'
+print('OK')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "OK" ]
+}
+
+@test "compile-slm: validator catches empty output" {
+    run python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from compile_slm import Component, validate_output
+fake = [Component(name='Constitution', type='constitution', source_file='x', full_text='x')]
+errors = validate_output(fake, 'short', 4096)
+assert any('suspiciously short' in e for e in errors), f'Expected short output error, got: {errors}'
+print('OK')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "OK" ]
+}
+
+@test "compile-slm: validator warns on missing guards" {
+    run python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from compile_slm import Component, validate_output
+fake = [Component(name='Constitution', type='constitution', source_file='x', full_text='x' * 200)]
+md = '# AI Coding Assistant\n\n## Safety Rules\n\nConstitution here\n' + 'x' * 200
+errors = validate_output(fake, md, 4096)
+assert any('guard hooks' in e for e in errors), f'Expected guard warning, got: {errors}'
+print('OK')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "OK" ]
+}
+
+# ── Integration Guides ──────────────────────────────────────────────────────
+
+@test "compile-slm: integration guides print after compilation" {
+    run $SCRIPT --model-size 14b --output "$TEST_TMP/output.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Ollama Setup"
+    echo "$output" | grep -q "LM Studio Setup"
+    echo "$output" | grep -q "Aider Setup"
+    echo "$output" | grep -q "Continue.dev Setup"
+}
+
+@test "compile-slm: integration guides use correct model size" {
+    run $SCRIPT --model-size 8b --output "$TEST_TMP/output.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "\-\-model-size 8b"
+}

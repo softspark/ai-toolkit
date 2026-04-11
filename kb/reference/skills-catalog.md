@@ -260,6 +260,21 @@ depends-on: clean-code, api-patterns
 - Reported in `evaluate_skills.py` quality metrics
 - No runtime autoloading — Claude loads knowledge skills contextually based on topic matching
 
+### SLM Compilation (`compile-slm`)
+
+Compiles the full toolkit into a minimal system prompt for local Small Language Models (Ollama, LM Studio, Aider, Continue.dev). Pipeline: Parse → Score → Compress → Pack → Validate → Emit.
+
+| Flag | Purpose |
+|------|---------|
+| `--model-size` | 7b/8b/14b/32b/70b — auto-selects budget + compression level |
+| `--budget` | Token budget override (2K-16K) |
+| `--persona` | Boost persona-relevant skills in scoring |
+| `--lang` | Include language-specific rules |
+| `--format` | Output: raw, ollama, json-string, aider |
+| `--dry-run` | Preview included components + token utilization |
+
+Profile `offline-slm` in `manifest.json` — installs core only, then compiles.
+
 ### Executable Scripts (18 total, stdlib-only, JSON output)
 
 | Skill | Script | Purpose |

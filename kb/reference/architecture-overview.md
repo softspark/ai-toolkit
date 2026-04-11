@@ -64,6 +64,7 @@ ai-toolkit/
     plugin.py                # Plugin pack management (install, remove, list, status)
     benchmark_ecosystem.py   # Generates ecosystem benchmark snapshot
     harvest_ecosystem.py     # Writes machine-readable ecosystem harvest JSON
+    compile_slm.py           # Compiles toolkit into minimal SLM system prompt (2K-16K tokens)
   tests/                     # Bats test suite
   benchmarks/                # Benchmark tasks + results
   kb/                        # Knowledge base

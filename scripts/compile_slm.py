@@ -763,6 +763,121 @@ def detect_model_size() -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# 3.2 — Compile Quality Validator
+# ---------------------------------------------------------------------------
+
+def validate_output(
+    included: list[Component], markdown: str, budget: int,
+) -> list[str]:
+    """Post-compilation quality checks. Returns list of errors (empty = pass)."""
+    errors: list[str] = []
+    total_tokens = estimate_tokens(markdown)
+
+    # 1. Constitution must be present
+    has_constitution = any(c.type == "constitution" for c in included)
+    if not has_constitution:
+        errors.append("FAIL: Constitution missing from compiled output")
+
+    # 2. Budget not exceeded
+    if total_tokens > budget:
+        errors.append(
+            f"FAIL: Output ({total_tokens:,} tokens) exceeds budget ({budget:,} tokens)"
+        )
+
+    # 3. No empty output
+    if len(markdown.strip()) < 100:
+        errors.append("FAIL: Compiled output is suspiciously short (<100 chars)")
+
+    # 4. Minimum component count
+    if len(included) < 2:
+        errors.append(
+            f"WARN: Only {len(included)} component(s) included — output may be too minimal"
+        )
+
+    # 5. Safety section present in output
+    if "Safety Rules" not in markdown and "Constitution" not in markdown:
+        errors.append("FAIL: No safety section found in compiled output")
+
+    # 6. Guard hooks compiled as text rules
+    has_guard = any(c.type == "hook-rule" for c in included)
+    if not has_guard:
+        errors.append("WARN: No guard hooks compiled into output — destructive commands unguarded")
+
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Integration Guides
+# ---------------------------------------------------------------------------
+
+INTEGRATION_GUIDES: dict[str, str] = {
+    "ollama": """\
+## Ollama Setup
+
+1. Compile system prompt:
+   ai-toolkit compile-slm --format ollama --model-size {model_size} > Modelfile.ai-toolkit
+
+2. Create custom model:
+   ollama create my-assistant -f Modelfile.ai-toolkit
+
+3. Run:
+   ollama run my-assistant
+
+Note: Replace the FROM line in the Modelfile with your base model (e.g., FROM llama3.1:8b).""",
+
+    "lm-studio": """\
+## LM Studio Setup
+
+1. Compile system prompt:
+   ai-toolkit compile-slm --model-size {model_size} --output system-prompt.md
+
+2. In LM Studio:
+   - Open Chat Settings (gear icon)
+   - Paste contents of system-prompt.md into "System Prompt" field
+   - Save as preset for reuse""",
+
+    "aider": """\
+## Aider Setup
+
+1. Compile system prompt:
+   ai-toolkit compile-slm --format aider --model-size {model_size} --output .ai-toolkit-system.md
+
+2. Run Aider with custom system prompt:
+   aider --system-prompt-file .ai-toolkit-system.md
+
+3. Or add to .aider.conf.yml:
+   system-prompt-file: .ai-toolkit-system.md""",
+
+    "continue-dev": """\
+## Continue.dev Setup
+
+1. Compile system prompt:
+   ai-toolkit compile-slm --model-size {model_size} --output system-prompt.md
+
+2. Edit ~/.continue/config.json, add to your model config:
+   {{
+     "models": [{{
+       "title": "Local Assistant",
+       "provider": "ollama",
+       "model": "llama3.1:8b",
+       "systemMessage": "<paste contents of system-prompt.md here>"
+     }}]
+   }}""",
+}
+
+
+def print_integration_guide(model_size: str, output_path: str) -> None:
+    """Print platform-specific integration instructions after compilation."""
+    print("\n--- Integration Guides ---", file=sys.stderr)
+    for platform, template in INTEGRATION_GUIDES.items():
+        print(f"\n{template.format(model_size=model_size)}", file=sys.stderr)
+    print(
+        f"\nCompiled prompt saved to: {output_path}",
+        file=sys.stderr,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Dry Run Table
 # ---------------------------------------------------------------------------
 
@@ -896,6 +1011,13 @@ def main(argv: list[str] | None = None) -> int:
     output = format_output(markdown, args.format)
     total_tokens = estimate_tokens(markdown)
 
+    # Validate
+    errors = validate_output(included, markdown, budget)
+    for err in errors:
+        print(err, file=sys.stderr)
+    if any(e.startswith("FAIL") for e in errors):
+        return 1
+
     # Write output
     output_path = args.output
     if not output_path:
@@ -909,6 +1031,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Compiled {len(included)} components into {total_tokens:,} tokens", file=sys.stderr)
     print(f"Level: {level} | Budget: {budget:,} | Model: {model_size}", file=sys.stderr)
     print(f"Output: {output_path}", file=sys.stderr)
+
+    # Integration guides
+    if not args.dry_run:
+        print_integration_guide(model_size, output_path)
 
     return 0
 
