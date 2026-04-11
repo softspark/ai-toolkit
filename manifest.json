@@ -9,7 +9,7 @@
       "tags": ["core", "agents"]
     },
     "skills": {
-      "description": "91 skills (28 task + 31 hybrid + 32 knowledge)",
+      "description": "92 skills (29 task + 31 hybrid + 32 knowledge)",
       "path": "app/skills",
       "target": ".claude/skills",
       "type": "symlink",
