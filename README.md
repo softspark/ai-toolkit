@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-92-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-451%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-505%20passing-success)](tests/)
 
 ---
 
@@ -109,6 +109,19 @@ ai-toolkit eject /path/to    # export to custom directory
 ```
 
 Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies constitution and architecture. After eject you can `npm uninstall -g @softspark/ai-toolkit`.
+
+### Compile for Local Models (Ollama, LM Studio, Aider)
+
+```bash
+ai-toolkit compile-slm                              # auto-detect model, default budget
+ai-toolkit compile-slm --model-size 8b              # 2K token budget for 8B models
+ai-toolkit compile-slm --model-size 32b --lang python  # 8K budget + Python rules
+ai-toolkit compile-slm --persona backend-lead       # boost backend-relevant skills
+ai-toolkit compile-slm --format ollama              # Ollama Modelfile SYSTEM block
+ai-toolkit compile-slm --dry-run                    # preview what gets included
+```
+
+Compiles the full toolkit (20K+ tokens) into a minimal system prompt that fits SLM context windows. Preserves safety constitution, compresses skills, and packs by value density. Supports 4 output formats: `raw`, `ollama`, `json-string`, `aider`.
 
 ---
 

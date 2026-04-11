@@ -31,6 +31,7 @@ Stale counts = broken user trust. This is non-negotiable.
 # Init:     ai-toolkit install --local --editors cursor,aider  (+ specific editors)
 # Doctor:   ai-toolkit doctor --fix       (auto-repair broken symlinks, hooks, artifacts)
 # Eject:    ai-toolkit eject              (standalone copy, no toolkit dependency)
+# Compile:  ai-toolkit compile-slm       (compile toolkit for SLMs: --budget, --model-size, --persona, --dry-run)
 # Deps:    python3 scripts/check_deps.py  (check system dependencies, OS-specific install hints)
 ```
 

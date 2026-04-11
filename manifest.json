@@ -154,6 +154,7 @@
     "minimal": ["core"],
     "standard": ["core", "agents", "skills", "rules-common"],
     "strict": ["core", "agents", "skills", "rules-common", "mcp-templates"],
-    "full": ["core", "agents", "skills", "rules-common", "mcp-templates"]
+    "full": ["core", "agents", "skills", "rules-common", "mcp-templates"],
+    "offline-slm": ["core"]
   }
 }

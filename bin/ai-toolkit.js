@@ -48,6 +48,7 @@ const SCRIPT_COMMANDS = {
   'benchmark-ecosystem':  { script: 'benchmark_ecosystem.py', toolkitCwd: true },
   'evaluate':             { script: 'evaluate_skills.py',    toolkitCwd: true },
   'stats':                { script: 'stats.py' },
+  'compile-slm':          { script: 'compile_slm.py' },
 };
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,7 @@ const COMMANDS = {
   'augment-dir-rules': 'Generate .augment/rules/ai-toolkit-*.md for Augment (recommended)',
   'antigravity-rules': 'Generate .agent/rules/ and .agent/workflows/ for Google Antigravity',
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
+  'compile-slm': 'Compile toolkit into a minimal SLM system prompt (--budget, --model-size, --dry-run)',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
   'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, llms)',
   help: 'Show this help message',
