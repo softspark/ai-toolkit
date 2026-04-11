@@ -90,7 +90,7 @@
       "default": true
     },
     "skills": {
-      "description": "91 skills (task, hybrid, knowledge)",
+      "description": "92 skills (task, hybrid, knowledge)",
       "default": true
     },
     "rules-common": {

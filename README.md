@@ -1,6 +1,6 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 91 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, and Google Antigravity, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 92 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, and Google Antigravity, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -21,7 +21,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 91 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 92 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 ### Update
 
@@ -172,7 +172,7 @@ ai-toolkit/
 │   │   ├── backend-specialist.md
 │   │   ├── security-architect.md
 │   │   └── ... (41 more)
-│   ├── skills/          # 91 skills (task / hybrid / knowledge)
+│   ├── skills/          # 92 skills (task / hybrid / knowledge)
 │   │   ├── commit/      # /commit slash command
 │   │   ├── review/      # /review slash command
 │   │   ├── clean-code/  # knowledge skill (auto-loaded)
