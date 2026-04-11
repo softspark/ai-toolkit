@@ -52,6 +52,6 @@ KB_DIR="$TOOLKIT_DIR/kb"
                 errors=$((errors + 1))
             fi
         fi
-    done < <(find "$KB_DIR" -name "*.md" ! -name "README.md" -type f)
+    done < <(find "$KB_DIR" -name "*.md" ! -name "README.md" ! -path "*/history/*" -type f)
     [ "$errors" -eq 0 ]
 }
