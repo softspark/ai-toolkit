@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Added
+- **`compile-slm` command** — compiles full toolkit (20K+ tokens) into a minimal system prompt for Small Language Models (2K-16K tokens). Supports 4 compression levels, 4 output formats (raw, ollama, json-string, aider), persona-aware scoring, and language-aware rule filtering. `scripts/compile_slm.py`
+- **`offline-slm` profile** — `manifest.json` profile for offline/air-gapped installs
+- **Post-compilation validator** — checks constitution presence, budget compliance, guard hooks, output sanity
+- **Integration guides** — step-by-step setup for Ollama, LM Studio, Aider, Continue.dev printed after compilation
+- **61 tests** for compile-slm (token counter, parser, compression, packer, emitter, formats, CLI, determinism, budget compliance, validator, guides)
+
+---
+
 ## v1.6.1 — IDE Rule Format Compliance Audit (2026-04-10)
 
 ### Fixed
