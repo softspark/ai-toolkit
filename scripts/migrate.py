@@ -163,8 +163,49 @@ def migrate_project_configs(dry_run: bool = False) -> int:
     return count
 
 
+def migrate_settings_json(dry_run: bool = False) -> int:
+    """Rewrite hook commands in ~/.claude/settings.json from old to new path.
+
+    Replaces ALL occurrences of .ai-toolkit/hooks/ with .softspark/ai-toolkit/hooks/
+    in hook command strings, regardless of _source tag. This catches plugin hooks
+    (memory-pack, enterprise-pack, etc.) that merge-hooks.py doesn't strip.
+
+    Returns the number of commands rewritten.
+    """
+    settings_path = Path.home() / ".claude" / "settings.json"
+    if not settings_path.is_file():
+        return 0
+
+    try:
+        with open(settings_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return 0
+
+    hooks = data.get("hooks", {})
+    old_prefix = ".ai-toolkit/hooks/"
+    new_prefix = ".softspark/ai-toolkit/hooks/"
+    count = 0
+
+    for entries in hooks.values():
+        for entry in entries:
+            for hook in entry.get("hooks", []):
+                cmd = hook.get("command", "")
+                if old_prefix in cmd and new_prefix not in cmd:
+                    hook["command"] = cmd.replace(old_prefix, new_prefix)
+                    count += 1
+
+    if count > 0 and not dry_run:
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+            f.write("\n")
+        print(f"   Rewritten: {count} hook path(s) in settings.json")
+
+    return count
+
+
 def run_full_migration(dry_run: bool = False) -> bool:
-    """Run complete migration: home directory + project configs.
+    """Run complete migration: home directory + project configs + settings.json.
 
     Returns True if any migration was performed.
     """
@@ -174,6 +215,7 @@ def run_full_migration(dry_run: bool = False) -> bool:
         count = migrate_project_configs(dry_run=dry_run)
         if count > 0:
             print(f"   Migrated {count} project config(s)")
+        migrate_settings_json(dry_run=dry_run)
 
     return migrated
 
