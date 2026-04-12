@@ -12,9 +12,9 @@ tags:
 doc_type: plan
 status: proposed
 created: "2026-04-10"
-last_updated: "2026-04-10"
+last_updated: "2026-04-12"
 completion: "0%"
-description: "Ephemeral local web dashboard for ai-toolkit. Provides visual management of agents, skills, hooks, plugins, stats, credentials, and configuration profiles. Zero external dependencies — stdlib Node.js server with embedded HTML/CSS/JS. Launched via `ai-toolkit ui`."
+description: "Ephemeral local web dashboard for ai-toolkit. Provides visual management of agents, skills, hooks, plugins, stats, config inheritance, project registry, and configuration profiles. Zero external dependencies — stdlib Node.js server with embedded HTML/CSS/JS. Launched via `ai-toolkit ui`."
 ---
 
 # Plan: Local Dashboard — `ai-toolkit ui`
@@ -22,7 +22,7 @@ description: "Ephemeral local web dashboard for ai-toolkit. Provides visual mana
 **Status:** Proposed
 **Completion:** 0%
 **Created:** 2026-04-10
-**Origin:** DX friction — managing 44 agents, 91 skills, 21 hooks, 11 plugin packs, and multiple profiles via CLI only creates a steep learning curve for new adopters. Visual management lowers the adoption barrier.
+**Origin:** DX friction — managing 44 agents, 92 skills, 21 hooks, 11 plugin packs, and multiple profiles via CLI only creates a steep learning curve for new adopters. Visual management lowers the adoption barrier.
 **Estimated Effort:** 6-7 weeks (1 person)
 
 ---
@@ -50,7 +50,7 @@ Create an `ai-toolkit ui` command that launches an ephemeral local HTTP server s
 | FR3 | Action execution via `POST /api/action` with SSE streaming | Must | Command output streamed, exit code returned |
 | FR4 | Overview page with health checks + component counts | Must | Live data, matches `ai-toolkit validate` output |
 | FR5 | Agents page with grid view + category filter | Must | All 44 agents parsed, 10 categories filterable |
-| FR6 | Skills page with type/effort filter + sortable table | Must | All 91 skills, 3 type badges |
+| FR6 | Skills page with type/effort filter + sortable table | Must | All 92 skills, 3 type badges |
 | FR7 | Hooks page with lifecycle diagram + profile toggle | Should | 21 hooks, 3 profiles toggleable |
 | FR8 | Plugins page with install/remove action buttons | Should | Action triggers CLI via POST /api/action |
 | FR9 | Config page with profile/persona management | Should | Reads + writes profiles via CLI |
@@ -78,12 +78,14 @@ ai-toolkit ui [--port 3141] [--no-auto-kill]
   │  Pages:                                                  │
   │    /                        Overview + health             │
   │    /agents                  44 agents — grid view         │
-  │    /skills                  91 skills — filterable table  │
+  │    /skills                  92 skills — filterable table  │
   │    /hooks                   21 hooks — lifecycle diagram  │
   │    /plugins                 11 packs — install/remove     │
   │    /config                  Profile / persona / modules   │
   │    /stats                   Usage analytics + charts      │
   │    /mcp                     MCP templates — add/remove    │
+  │    /extends                 Config inheritance — extends status, merge view, enforcement │
+  │    /projects                Project registry — registered projects, stale detection       │
   │    (credentials page deferred — requires cloud-security-pack CLI) │
   │                                                          │
   │  API (JSON, internal):                                   │
@@ -95,6 +97,8 @@ ai-toolkit ui [--port 3141] [--no-auto-kill]
   │    GET  /api/stats          Usage statistics              │
   │    GET  /api/config         Current configuration         │
   │    GET  /api/mcp            MCP templates + installed     │
+  │    GET  /api/extends        Config inheritance state      │
+  │    GET  /api/projects       Registered project list       │
   │    (credentials endpoint deferred — see Future section)   │
   │    POST /api/action         Execute CLI command           │
   │                                                          │
@@ -138,7 +142,9 @@ The server spawns `ai-toolkit <command> <args>` as a child process, streams stdo
 | 2.6 | Config page (profile/persona/modules checkboxes) | P1 | Proposed | 2d | Read/write profiles |
 | 2.7 | Stats page (usage charts, skill invocation heatmap) | P1 | Proposed | 3.5d | Hand-drawn SVG charts (bar, heatmap, trend), no chart library |
 | 2.8 | MCP page (template browser, add/remove) | P2 | Proposed | 1.5d | 25 MCP templates |
-| 2.9 | ~~Credentials page~~ | — | Deferred | — | Requires cloud-security-pack CLI commands (not yet implemented) |
+| 2.9 | Config Inheritance page (extends status, merge view, enforcement) | P1 | Proposed | 2d | v1.8.0 feature — extends pipeline visualization, lock file status, enforcement indicators |
+| 2.10 | Projects page (registry, stale detection, bulk update) | P1 | Proposed | 1.5d | v1.9.0 feature — registered projects list, prune action, update-all trigger |
+| 2.11 | ~~Credentials page~~ | — | Deferred | — | Requires cloud-security-pack CLI commands (not yet implemented) |
 | 3.1 | CSS design system (dark theme, glassmorphism, responsive) | P0 | Proposed | 2d | Premium aesthetic, zero external deps |
 | 3.2 | Client-side routing + navigation | P0 | Proposed | 1d | Hash-based SPA routing |
 | 4.1 | CLI command registration (`ai-toolkit ui`) | P0 | Proposed | 0.5d | bin/ai-toolkit.js integration |
@@ -170,7 +176,9 @@ API action layer (1.3) ─┐
                         ├──► Hooks page (2.4)
                         ├──► Plugins page (2.5)
                         ├──► Config page (2.6)
-                        └──► Stats page (2.7)
+                        ├──► Stats page (2.7)
+                        ├──► Config Inheritance page (2.9)
+                        └──► Projects page (2.10)
 
                      Phase 3: Polish (week 6-7)
                      ===========================
@@ -254,6 +262,8 @@ All endpoints return JSON. Data sources:
 | `GET /api/stats` | `~/.ai-toolkit/stats.json` | Skill invocation counts, dates |
 | `GET /api/config` | `~/.ai-toolkit/state.json` + settings | Profile, persona, modules, hook profile |
 | `GET /api/mcp` | `app/mcp-templates/*.json` + `.mcp.json` | Available templates, installed servers |
+| `GET /api/extends` | `.ai-toolkit.json` + `.ai-toolkit.lock.json` + `state.json` | Extends status, resolved base configs, enforcement, lock file state |
+| `GET /api/projects` | `~/.ai-toolkit/projects.json` | Registered projects with path, profile, extends, last_updated, exists status |
 | ~~`GET /api/credentials`~~ | — | Deferred — requires cloud-security-pack CLI |
 
 **Frontmatter parser:** Reuse the YAML-subset parser pattern from existing `scripts/frontmatter.py` — port to JS (simple `---` delimited key-value extraction, covers all toolkit frontmatter which is flat YAML).
@@ -278,7 +288,7 @@ All endpoints return JSON. Data sources:
 **Success Criteria:**
 - [ ] All 8 read endpoints return valid JSON
 - [ ] Agent frontmatter parsed for all 44 agents
-- [ ] Skill frontmatter parsed for all 91 skills
+- [ ] Skill frontmatter parsed for all 92 skills
 - [ ] Stats endpoint handles missing stats.json gracefully
 
 ---
@@ -313,6 +323,8 @@ const ALLOWED_COMMANDS = [
   'install --profile', 'install --persona',
   'update', 'validate', 'doctor', 'doctor --fix',
   'stats', 'stats --reset',
+  'config validate', 'config diff', 'config check', 'config init',
+  'projects', 'projects --prune',
   // 'credentials add/remove/test' — deferred until cloud-security-pack CLI ships
 ];
 ```
@@ -341,7 +353,7 @@ The landing page — first thing the user sees.
 ├─────────────────────────────────────────────────┤
 │                                                 │
 │  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐       │
-│  │  44  │  │  91  │  │  21  │  │  11  │       │
+│  │  44  │  │  92  │  │  21  │  │  11  │       │
 │  │agents│  │skills│  │hooks │  │packs │       │
 │  └──────┘  └──────┘  └──────┘  └──────┘       │
 │                                                 │
@@ -519,6 +531,108 @@ Event Timeline (horizontal flow):
 
 ---
 
+#### 2.9 Config Inheritance Page (`/extends`)
+
+**Layout:** Extends pipeline visualization + enforcement status.
+
+```
+┌─────────────────────────────────────────────────┐
+│  Config Inheritance                              │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  ┌─ Extends Chain ──────────────────────────┐   │
+│  │ @acme/ai-toolkit-config v2.1.0           │   │
+│  │   → standard profile                     │   │
+│  │   → 5 agents enabled                     │   │
+│  │   → 2 rules injected                     │   │
+│  │   → Lock: sha256:abc1... (up-to-date)    │   │
+│  └──────────────────────────────────────────┘   │
+│                                                 │
+│  ┌─ Enforcement ────────────────────────────┐   │
+│  │ ✓ Required agents: security-auditor      │   │
+│  │ ✓ Min hook profile: standard             │   │
+│  │ ✗ Forbidden overrides: constitution      │   │
+│  │ ✓ Constitution articles I-V: immutable   │   │
+│  └──────────────────────────────────────────┘   │
+│                                                 │
+│  ┌─ Constitution Amendments ────────────────┐   │
+│  │ Art. I-V — immutable (toolkit)           │   │
+│  │ Art. 6 — Data Sovereignty (base)         │   │
+│  │ Art. 7 — Audit Compliance (base)         │   │
+│  │ Art. 8 — API Standards (project) ★       │   │
+│  └──────────────────────────────────────────┘   │
+│                                                 │
+│  [Validate] [Diff] [Check]                      │
+└─────────────────────────────────────────────────┘
+```
+
+**Data source:** `/api/extends` — reads `.ai-toolkit.json`, `.ai-toolkit.lock.json`, `state.json` extends metadata.
+
+**Features:**
+- Visual extends chain (base → project) with version + integrity
+- Enforcement status indicators (pass/fail per constraint)
+- Constitution article list with source labels (toolkit/base/project)
+- Lock file freshness indicator
+- Action buttons: validate, diff, check — via `POST /api/action`
+- Empty state when no `.ai-toolkit.json`: "No config inheritance configured — run `ai-toolkit config init`"
+
+**Success Criteria:**
+- [ ] Extends chain rendered from resolved metadata
+- [ ] Enforcement constraints shown with pass/fail indicators
+- [ ] Constitution articles grouped by source
+- [ ] Lock file staleness warning when outdated
+- [ ] Action buttons trigger CLI commands via SSE
+
+---
+
+#### 2.10 Projects Page (`/projects`)
+
+**Layout:** Registered project list with status and actions.
+
+```
+┌─────────────────────────────────────────────────┐
+│  Registered Projects (5)         [Update All]   │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  ✓ ~/code/my-service                            │
+│    profile: standard | extends: @acme/config    │
+│    updated: 2026-04-12 09:00                    │
+│                                          [Remove]│
+│                                                 │
+│  ✓ ~/code/api-gateway                           │
+│    profile: strict | extends: @acme/config      │
+│    updated: 2026-04-12 09:00                    │
+│                                          [Remove]│
+│                                                 │
+│  ✗ ~/code/old-project  (MISSING)                │
+│    profile: standard                            │
+│    registered: 2026-03-15                       │
+│                                   [Prune] [Remove]│
+│                                                 │
+│  [Prune All Stale]                              │
+└─────────────────────────────────────────────────┘
+```
+
+**Data source:** `/api/projects` — reads `~/.ai-toolkit/projects.json`, checks path existence.
+
+**Features:**
+- List all registered projects with exists/missing status
+- Profile and extends info per project
+- Last updated timestamp
+- Remove button per project → `POST /api/action` `projects remove <path>`
+- Prune stale button → `POST /api/action` `projects --prune`
+- Update All button → `POST /api/action` `update` (triggers parallel update)
+- Empty state: "No registered projects — run `ai-toolkit install --local` in a project"
+
+**Success Criteria:**
+- [ ] All registered projects listed with correct status
+- [ ] Stale projects highlighted with warning
+- [ ] Prune action removes stale entries
+- [ ] Update All triggers parallel update via SSE
+- [ ] Remove button deregisters specific project
+
+---
+
 ### Phase 3: Polish (week 6-7)
 
 #### 3.1 CSS Design System
@@ -612,13 +726,13 @@ Event Timeline (horizontal flow):
 | File | Action | LOC (est.) | Description |
 |------|--------|------------|-------------|
 | `app/dashboard/server.js` | CREATE | ~300 | HTTP server, lifecycle, routing |
-| `app/dashboard/api.js` | CREATE | ~400 | All API endpoint handlers |
-| `app/dashboard/assets.js` | CREATE | ~2800 | Embedded HTML + CSS + JS. Split internally: `getOverviewHTML()`, `getAgentsHTML()`, etc. — one exported function per page. Single file, multiple functions (not multiple files — preserves single-`require` deployment). If file exceeds 3000 LOC, extract to `assets/` directory with `index.js` barrel |
+| `app/dashboard/api.js` | CREATE | ~500 | All API endpoint handlers (10 read + 1 action, incl. extends + projects) |
+| `app/dashboard/assets.js` | CREATE | ~3200 | Embedded HTML + CSS + JS for 10 pages. Split internally: `getOverviewHTML()`, `getAgentsHTML()`, `getExtendsHTML()`, `getProjectsHTML()`, etc. — one exported function per page. Single file, multiple functions (not multiple files — preserves single-`require` deployment). If file exceeds 3500 LOC, extract to `assets/` directory with `index.js` barrel |
 | `app/dashboard/frontmatter.js` | CREATE | ~80 | Frontmatter parser (JS port) |
 | `bin/ai-toolkit.js` | EDIT | +15 | Register `ui` command |
 | `tests/test_dashboard.bats` | CREATE | ~100 | Server lifecycle tests |
 | `tests/test_dashboard_api.bats` | CREATE | ~150 | API endpoint tests |
-| **Total** | | **~3845** | |
+| **Total** | | **~4345** | |
 
 ---
 
@@ -626,8 +740,8 @@ Event Timeline (horizontal flow):
 
 | Metric | Target |
 |--------|--------|
-| Pages | 8 (overview, agents, skills, hooks, plugins, config, stats, mcp) |
-| API endpoints | 9 (8 read + 1 action) |
+| Pages | 10 (overview, agents, skills, hooks, plugins, config, stats, mcp, extends, projects) |
+| API endpoints | 11 (10 read + 1 action) |
 | External dependencies | 0 (stdlib Node.js only) |
 | Server startup time | < 500ms |
 | Auto-kill | 30 min idle (configurable) |
