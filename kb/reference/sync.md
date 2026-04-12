@@ -28,8 +28,8 @@ ai-toolkit sync --import <file|url>   # Import from file or URL
 
 | Data | Included | Source |
 |------|----------|--------|
-| Custom rules | Yes | `~/.ai-toolkit/rules/*.md` |
-| Usage stats | Yes | `~/.ai-toolkit/stats.json` |
+| Custom rules | Yes | `~/.softspark/ai-toolkit/rules/*.md` |
+| Usage stats | Yes | `~/.softspark/ai-toolkit/stats.json` |
 | Toolkit version | Yes (metadata) | `package.json` |
 | Agents/skills | No | Installed via `npm` |
 | Hooks | No | Installed via `ai-toolkit install` |
@@ -39,7 +39,7 @@ ai-toolkit sync --import <file|url>   # Import from file or URL
 ### First machine (export)
 ```bash
 ai-toolkit sync --push
-# Creates secret Gist, saves ID to ~/.ai-toolkit/.gist-id
+# Creates secret Gist, saves ID to ~/.softspark/ai-toolkit/.gist-id
 ```
 
 ### Second machine (import)

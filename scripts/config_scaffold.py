@@ -2,7 +2,7 @@
 """Scaffolding for ai-toolkit config inheritance.
 
 - create_base_package(): Scaffold an npm base config package
-- create_project_config(): Generate .ai-toolkit.json for a project
+- create_project_config(): Generate .softspark-toolkit.json for a project
 
 Stdlib-only — no external dependencies.
 """
@@ -118,7 +118,7 @@ Shared ai-toolkit configuration for {org}.
 
 ### In your project
 
-Create `.ai-toolkit.json` in your project root:
+Create `.softspark-toolkit.json` in your project root:
 
 ```json
 {{
@@ -201,7 +201,7 @@ def create_project_config(
     extends: str = "",
     profile: str = "standard",
 ) -> Path:
-    """Generate .ai-toolkit.json for a project.
+    """Generate .softspark-toolkit.json for a project.
 
     Args:
         project_dir: Project root directory.
@@ -218,7 +218,7 @@ def create_project_config(
 
     config["profile"] = profile
 
-    config_path = project_dir / ".ai-toolkit.json"
+    config_path = project_dir / ".softspark-toolkit.json"
     _write_json(config_path, config)
     return config_path
 

@@ -33,7 +33,7 @@ ai-toolkit/
     agents/                  # Agent definitions (.md + YAML frontmatter)
     skills/                  # skills: task, hybrid, knowledge
     rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
-    hooks/                   # Hook scripts (copied to ~/.ai-toolkit/hooks/)
+    hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
     constitution.md          # Immutable safety rules, 5 articles (marker-injected)
     ARCHITECTURE.md          # System architecture reference (marker-injected)
@@ -80,7 +80,7 @@ All components use merge-friendly strategies — user content is never overwritt
 ```
 Machine (global)                              Project (local)
 ──────────────────────────────────────────    ──────────────────────────────────────
-~/.claude/                                    ~/.ai-toolkit/
+~/.claude/                                    ~/.softspark/ai-toolkit/
   agents/*.md    → per-file symlinks             rules/     ← registered rules
   skills/*/      → per-dir symlinks              hooks/     ← hook scripts (copied)
   settings.json  ← hooks merged here
@@ -120,8 +120,8 @@ Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
-| `add-rule <file>` | `~/.ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
-| `remove-rule <name>` | `~/.ai-toolkit/rules/` + `~/.claude/CLAUDE.md` | Unregister rule and remove its block |
+| `add-rule <file>` | `~/.softspark/ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
+| `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/CLAUDE.md` | Unregister rule and remove its block |
 | `validate` | toolkit | Integrity check |
 | `doctor` | toolkit | Install health, hooks, benchmark freshness, and artifact drift diagnostics |
 | `benchmark-ecosystem` | toolkit | Benchmark snapshot for official Claude Code and external ecosystem repos |
@@ -251,7 +251,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | PreCompact | Before compaction | `pre-compact-save.sh` | Timestamped context snapshot to audit trail |
 | SessionEnd | Session end | `session-end.sh` | Persist handoff note for the next session |
 
-Scripts at `~/.ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
+Scripts at `~/.softspark/ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
 
 ## Constitution (5 Articles)
 

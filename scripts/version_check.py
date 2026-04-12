@@ -21,7 +21,10 @@ import sys
 import time
 from pathlib import Path
 
-CACHE_FILE = Path.home() / ".ai-toolkit" / "version-check.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import VERSION_CHECK_FILE, STATE_FILE
+
+CACHE_FILE = VERSION_CHECK_FILE
 CACHE_TTL = 86400  # 24 hours
 PACKAGE_NAME = "@softspark/ai-toolkit"
 
@@ -34,7 +37,7 @@ def _get_installed_version() -> str:
     installed/updated, while package.json may be newer if the npm package
     was upgraded but `ai-toolkit update` was not run yet.
     """
-    state_file = Path.home() / ".ai-toolkit" / "state.json"
+    state_file = STATE_FILE
     if state_file.is_file():
         try:
             with open(state_file, encoding="utf-8") as f:

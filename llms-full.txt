@@ -312,10 +312,10 @@ Create a configuration inheritance system where projects can extend a shared bas
 | FR3 | Constitution immutability — Articles I-V cannot be modified | Must | 100% block rate on modification attempts |
 | FR4 | Override validation with `override: true` + `justification` | Must | Missing justification → error |
 | FR5 | `enforce` block constraints (minHookProfile, requiredPlugins, forbidOverride, requiredAgents) | Must | All 4 constraint types enforced |
-| FR6 | Install/update integration — resolve extends during install | Must | `install --local` detects `.ai-toolkit.json` |
+| FR6 | Install/update integration — resolve extends during install | Must | `install --local` detects `.softspark-toolkit.json` |
 | FR7 | `config diff` command — show project vs base differences | Must | All merge layers visible |
 | FR8 | `config validate` command — schema + enforcement validation | Must | Exit 0/1 for pass/fail |
-| FR9 | `config init` — interactive project config setup | Should | Guided flow produces valid `.ai-toolkit.json` |
+| FR9 | `config init` — interactive project config setup | Should | Guided flow produces valid `.softspark-toolkit.json` |
 | FR10 | `config create-base` — scaffold npm base config package | Should | Ready-to-publish package with `package.json` |
 | FR11 | Lock file for reproducible installs | Should | Identical resolved config across team members |
 | FR12 | Audit trail in `state.json` | Should | Resolved version + overrides recorded |
@@ -343,7 +343,7 @@ Project Level (per-repository):
 ══════════════════════════════
 
   my-service/
-  ├── .ai-toolkit.json             ← project config with "extends"
+  ├── .softspark-toolkit.json             ← project config with "extends"
   ├── .claude/
   │   ├── CLAUDE.md                ← generated (base + project merged)
   │   └── settings.json            ← generated (base hooks + project hooks merged)
@@ -358,7 +358,7 @@ Merge Pipeline:
   ai-toolkit defaults (manifest.json) ← Layer 1: toolkit defaults
           │
           ▼
-  .ai-toolkit.json                  ← Layer 2: project overrides
+  .softspark-toolkit.json                  ← Layer 2: project overrides
           │
           ▼
   Resolved Configuration             ← Final: CLAUDE.md, settings.json, etc.
@@ -369,7 +369,7 @@ Merge Pipeline:
 ```
 1. Load base config from "extends" (npm package, git URL, or local path)
 2. Merge with ai-toolkit defaults (manifest.json profiles)
-3. Apply project-level overrides from .ai-toolkit.json
+3. Apply project-level overrides from .softspark-toolkit.json
 4. Validate merged config (constitution immutability, schema validation)
 5. Generate output files (CLAUDE.md, settings.json, agent symlinks, etc.)
 ```
@@ -380,7 +380,7 @@ Merge Pipeline:
 
 | # | Feature | Priority | Status | Est. Time | Notes |
 |---|---------|----------|--------|-----------|-------|
-| 1.1 | `.ai-toolkit.json` schema definition | P0 | **Done** | 1d | `scripts/schemas/ai-toolkit-config.schema.json` |
+| 1.1 | `.softspark-toolkit.json` schema definition | P0 | **Done** | 1d | `scripts/schemas/ai-toolkit-config.schema.json` |
 | 1.2 | Config resolver (npm, git, local path) | P0 | **Done** | 3d | `scripts/config_resolver.py` (~330 LOC) |
 | 1.3 | Merge engine (layered merge with override semantics) | P0 | **Done** | 3d | `scripts/config_merger.py` (~340 LOC) |
 | 1.4 | Constitution immutability guard | P0 | **Done** | 1d | In config_merger.py `_merge_constitution()` |
@@ -389,8 +389,8 @@ Merge Pipeline:
 | 2.3 | `ai-toolkit config validate` command | P0 | **Done** | 1d | `scripts/config_cli.py` `cmd_validate()` |
 | 2.4 | `ai-toolkit config init` command | P1 | **Done** | 1.5d | Interactive + flag-driven, validates extends |
 | 2.5 | `ai-toolkit config create-base` command | P1 | **Done** | 2d | `scripts/config_scaffold.py` — full npm package scaffold |
-| 3.1 | Audit trail in state.json | P1 | **Done** | 1d | `install_state.py` extends field + `.ai-toolkit-extends.json` |
-| 3.2 | Lock file (`.ai-toolkit.lock.json`) | P1 | **Done** | 1.5d | `scripts/config_lock.py` — generate/consume/staleness check |
+| 3.1 | Audit trail in state.json | P1 | **Done** | 1d | `install_state.py` extends field + `.softspark-toolkit-extends.json` |
+| 3.2 | Lock file (`.softspark-toolkit.lock.json`) | P1 | **Done** | 1.5d | `scripts/config_lock.py` — generate/consume/staleness check |
 | 3.3 | Base config scaffolder (npm package template) | P1 | **Done** | 1.5d | Part of `config_scaffold.py` `create_base_package()` |
 | 3.4 | CI enforcement (`ai-toolkit config check`) | P2 | **Done** | 1d | `config_cli.py` `cmd_check()` — JSON output, exit codes |
 | 4.1 | Tests | P1 | **Done** | 3d | 39 tests: resolver (7), merger (13), CLI (10), install integration (9) |
@@ -448,7 +448,7 @@ Audit trail (3.1) ──┐
 
 ### Phase 1: Core Engine (week 1-2)
 
-#### 1.1 Configuration Schema (`.ai-toolkit.json`)
+#### 1.1 Configuration Schema (`.softspark-toolkit.json`)
 
 > **v1 scope:** The full schema below shows the target state. v1 implements only: `extends`, `profile`, `agents`, `rules`, `constitution`, and `enforce`. See section 6a for the v1/v2 field breakdown.
 
@@ -590,9 +590,9 @@ Audit trail (3.1) ──┐
 | Local path | `"extends": "../shared-config"` | Resolve relative to project root |
 | ~~Multiple bases~~ | ~~`"extends": ["@mycompany/base", "@mycompany/typescript-extra"]`~~ | Deferred to v2 — multi-base merge ordering is a complexity trap |
 
-**Cache directory:** `~/.ai-toolkit/config-cache/`
+**Cache directory:** `~/.softspark/ai-toolkit/config-cache/`
 ```
-~/.ai-toolkit/config-cache/
+~/.softspark/ai-toolkit/config-cache/
   @mycompany/
     ai-toolkit-config/
       2.1.0/
@@ -650,7 +650,7 @@ def resolve_extends(extends_value: str, project_root: str,
 **Max recursion depth:** 5 levels (prevent circular extends). Circular detection via visited set.
 
 **Offline handling:** If the npm/git source is unavailable:
-1. Check cache (`~/.ai-toolkit/config-cache/`)
+1. Check cache (`~/.softspark/ai-toolkit/config-cache/`)
 2. If cached version found → use with warning: "Using cached config v2.1.0 (offline)"
 3. If not cached → error with instructions: "Run `ai-toolkit config update` when online"
 
@@ -791,7 +791,7 @@ def merge_constitution(base: dict, project: dict) -> dict:
 
 ```python
 # During install --local:
-# 1. Check for .ai-toolkit.json in project root
+# 1. Check for .softspark-toolkit.json in project root
 # 2. If found and has "extends":
 #    a. Resolve base config(s)
 #    b. Merge base → project
@@ -802,7 +802,7 @@ def merge_constitution(base: dict, project: dict) -> dict:
 
 **CLI flags:**
 ```bash
-ai-toolkit install --local                           # auto-detect .ai-toolkit.json
+ai-toolkit install --local                           # auto-detect .softspark-toolkit.json
 ai-toolkit install --local --config ./custom.json    # explicit config file
 ai-toolkit update --local                            # re-resolve extends + update
 ai-toolkit update --local --refresh-base             # force re-fetch base config
@@ -850,7 +850,7 @@ ai-toolkit config diff
 ai-toolkit config validate
 
 # Checks:
-# ✓ .ai-toolkit.json schema valid
+# ✓ .softspark-toolkit.json schema valid
 # ✓ extends: @mycompany/ai-toolkit-config@2.1.0 resolved
 # ✓ No forbidden overrides
 # ✓ Required plugins installed: security-pack
@@ -875,12 +875,12 @@ ai-toolkit config init
 # Flow:
 # 1. "Does your organization have a shared ai-toolkit config? [y/n]"
 #    → y: "npm package name or git URL:" → resolves + validates
-#    → n: creates minimal .ai-toolkit.json without extends
+#    → n: creates minimal .softspark-toolkit.json without extends
 # 2. "Which profile? [minimal/standard/strict]" → default from base or standard
 # 3. "Which persona? [none/backend-lead/frontend-lead/devops-eng/junior-dev]"
 # 4. Auto-detect languages from project
 # 5. Auto-detect editors from project files
-# 6. Write .ai-toolkit.json
+# 6. Write .softspark-toolkit.json
 # 7. Run ai-toolkit install --local
 ```
 
@@ -944,7 +944,7 @@ ai-toolkit config create-base @mycompany/ai-toolkit-config
 
 ---
 
-#### 3.2 Lock File (`.ai-toolkit.lock.json`)
+#### 3.2 Lock File (`.softspark-toolkit.lock.json`)
 
 **Purpose:** Pin the exact resolved version of base configs for reproducible installs across team members and CI.
 
@@ -956,7 +956,7 @@ ai-toolkit config create-base @mycompany/ai-toolkit-config
       "version": "2.1.0",
       "resolved": "https://registry.npmjs.org/@mycompany/ai-toolkit-config/-/ai-toolkit-config-2.1.0.tgz",
       "integrity": "sha512-abc123...",
-      "cached": "~/.ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
+      "cached": "~/.softspark/ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
     }
   },
   "generated_at": "2026-04-10T10:30:00Z",
@@ -968,7 +968,7 @@ ai-toolkit config create-base @mycompany/ai-toolkit-config
 - `ai-toolkit install --local` → uses lock file if present (like `npm ci`)
 - `ai-toolkit update --local` → re-resolves and updates lock file (like `npm install`)
 - `ai-toolkit update --local --refresh-base` → force re-fetch ignoring cache
-- `.ai-toolkit.lock.json` should be committed to git (team synchronization)
+- `.softspark-toolkit.lock.json` should be committed to git (team synchronization)
 
 ---
 
@@ -982,7 +982,7 @@ ai-toolkit config check
 # Exit codes:
 # 0 — project complies with base config
 # 1 — violations found (missing required plugins, forbidden overrides, etc.)
-# 2 — .ai-toolkit.json not found
+# 2 — .softspark-toolkit.json not found
 ```
 
 **GitHub Actions example:**
@@ -1055,7 +1055,7 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 | **Offline** | Cached configs used when registry unavailable, with clear warning. |
 | **Security** | No secret exposure in config files or audit trail. npm auth via `.npmrc` (user-managed). `execFile` for npm CLI (no shell injection). |
 | **Error messages** | Every validation error includes: what failed, which config layer caused it, and what to do (e.g., "Contact your team lead to request an exemption"). |
-| **Backward compatibility** | 100% — projects without `.ai-toolkit.json` work exactly as today. Zero behavioral changes for existing users. |
+| **Backward compatibility** | 100% — projects without `.softspark-toolkit.json` work exactly as today. Zero behavioral changes for existing users. |
 | **Maintainability** | Each new schema field requires: merge logic, validation, diff output, test. Budget 0.5d per new field. |
 | **Quality gates** | `ruff check scripts/config_*.py` (0 errors), `mypy --strict scripts/config_*.py` (0 errors). Run before every commit. |
 | **Type safety** | 100% public API type hints (all function signatures). >60% internal. Use `TypedDict` for config schemas, `dataclass` for resolved configs. |
@@ -1072,7 +1072,7 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 | Constitution protection | 100% (Articles I-V immutable) |
 | Override justification | Required for all overrides |
 | Enforce constraints | 4 types (minHookProfile, requiredPlugins, forbidOverride, requiredAgents) |
-| Backward compatibility | 100% (projects without .ai-toolkit.json work as today) |
+| Backward compatibility | 100% (projects without .softspark-toolkit.json work as today) |
 | CI enforcement | Exit code 0/1 for governance compliance |
 | Lock file | Reproducible installs across team members |
 | Scaffold command | Ready-to-publish npm package template |
@@ -1098,7 +1098,7 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 
 ## 9. Pre-Mortem
 
-1. **"Config file fatigue"** — developers already have `.eslintrc`, `tsconfig.json`, `.prettierrc`. Another `.ai-toolkit.json` may feel like bloat. Mitigation: file is optional, all features work without it. The DX gain (organizational governance without per-repo updates) justifies the file.
+1. **"Config file fatigue"** — developers already have `.eslintrc`, `tsconfig.json`, `.prettierrc`. Another `.softspark-toolkit.json` may feel like bloat. Mitigation: file is optional, all features work without it. The DX gain (organizational governance without per-repo updates) justifies the file.
 2. **"Base config never gets updated"** — team lead creates base config, nobody maintains it. Mitigation: `ai-toolkit config check` in CI catches drift; lock file staleness warnings.
 3. **"Override justification is annoying"** — developers will write "needed" as justification. Mitigation: CI check can enforce minimum justification length (>20 chars); code review culture catches low-effort justifications.
 4. **"Merge semantics are confusing"** — "does project override or extend the base agent list?" Mitigation: explicit semantics documented in schema; `ai-toolkit config diff` shows exactly what happened.
@@ -1124,7 +1124,7 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 
 **MVP (ship first, ~3.5 weeks):**
 1. [x] Approve plan
-2. [x] Define `.ai-toolkit.json` JSON Schema — v1 scope only (1.1)
+2. [x] Define `.softspark-toolkit.json` JSON Schema — v1 scope only (1.1)
 3. [x] Implement config resolver (npm, git, local) with caching (1.2)
 4. [x] Implement merge engine with override validation (1.3)
 5. [x] Implement constitution immutability guard (1.4)
@@ -1269,8 +1269,8 @@ ai-toolkit compile-slm [--budget 4096] [--persona backend-lead] [--lang typescri
   │    extended (16K) — near-full toolkit (for 32B+ models)   │
   │                                                          │
   │  Output Files:                                           │
-  │    ~/.ai-toolkit/compiled/slm-system-prompt.md           │
-  │    ~/.ai-toolkit/compiled/slm-skills-reference.md        │
+  │    ~/.softspark/ai-toolkit/compiled/slm-system-prompt.md           │
+  │    ~/.softspark/ai-toolkit/compiled/slm-skills-reference.md        │
   │    CLAUDE.md (or equivalent) — auto-generated            │
   │                                                          │
   │  Integration Targets:                                    │
@@ -1610,7 +1610,7 @@ ai-toolkit install --profile offline-slm
 # What happens:
 # 1. Standard install of core components
 # 2. Runs compile_slm.py with auto-detected settings
-# 3. Writes compiled output to ~/.ai-toolkit/compiled/
+# 3. Writes compiled output to ~/.softspark/ai-toolkit/compiled/
 # 4. Generates integration instructions for detected local model tools
 # 5. state.json records profile as "offline-slm"
 ```
@@ -1713,7 +1713,7 @@ ollama run my-coder "implement the payment API"
 ```
 1. ai-toolkit compile-slm --model-size 14b
 2. Open LM Studio → Chat → System Prompt
-3. Paste contents of ~/.ai-toolkit/compiled/slm-system-prompt.md
+3. Paste contents of ~/.softspark/ai-toolkit/compiled/slm-system-prompt.md
 ```
 
 **Aider:**
@@ -1784,7 +1784,7 @@ Post-compilation checks:
 
 ## 6b. Cache Invalidation & Recompile Triggers
 
-Compiled output (`~/.ai-toolkit/compiled/slm-system-prompt.md`) is a **derived artifact** — it must be recompiled when inputs change:
+Compiled output (`~/.softspark/ai-toolkit/compiled/slm-system-prompt.md`) is a **derived artifact** — it must be recompiled when inputs change:
 
 | Trigger | Action |
 |---------|--------|
@@ -1803,7 +1803,7 @@ The offline-slm feature is purely additive — removing it is trivial:
 1. Delete `scripts/compile_slm.py`, `scripts/slm_token_counter.py`, `scripts/slm_compression.py`, `scripts/slm_integration.py`
 2. Remove `"offline-slm"` and `"offline-slm-extended"` from `manifest.json` profiles
 3. Remove `compile-slm` from `SCRIPT_COMMANDS` in `bin/ai-toolkit.js`
-4. Delete `~/.ai-toolkit/compiled/` directory (user-side)
+4. Delete `~/.softspark/ai-toolkit/compiled/` directory (user-side)
 5. No hooks, no state files, no config entries to clean up
 
 ---
@@ -1985,7 +1985,7 @@ Create `cloud-security-pack` plugin pack that provides deterministic, read-only 
 - **Deterministic** — reproducible results, no LLM-driven regex (same pattern as `hipaa_scan.py`)
 - **False positive aware** — context graph resolves "public endpoint behind gateway/App Check/WAF"
 - **CI-ready** — `--output json` + `--output sarif` (SARIF v2.1.0 for GitHub Advanced Security), exit code 1 on HIGH, 0 otherwise
-- **Credential isolation** — keys stored in `~/.ai-toolkit/credentials/`, accessible only by this pack's scripts
+- **Credential isolation** — keys stored in `~/.softspark/ai-toolkit/credentials/`, accessible only by this pack's scripts
 - **Static-first** — static mode (no credentials) is the default, live mode is opt-in upgrade
 - **Incremental** — `--changed` flag scans only files modified since last commit (PR workflow)
 - **IaC via `terraform show -json`** — wraps Terraform's own JSON output instead of parsing HCL directly
@@ -2146,7 +2146,7 @@ ai-toolkit credentials test aws
 
 **Storage structure:**
 ```
-~/.ai-toolkit/
+~/.softspark/ai-toolkit/
   credentials/
     gcp.json              # SA key file (copied, chmod 0600)
     gcp.meta.json         # { project_id, added_at, method: "file"|"gcloud" }
@@ -2171,7 +2171,7 @@ ai-toolkit credentials test aws
   - Connection works (GCP: `gcloud auth list`, AWS: `aws sts get-caller-identity`, Azure: `az account show`)
   - SA/role has **only read permissions** — **REFUSE to store** if write access detected (orchestration-review: warn-only is ignored by users). Override: `--force` flag with explicit acknowledgment
   - Project/subscription exists
-- `.gitignore`-proof — lives in `~/.ai-toolkit/`, never in project directory
+- `.gitignore`-proof — lives in `~/.softspark/ai-toolkit/`, never in project directory
 - Scripts access credentials via `gcp_auth.py` helper — single entry point, no direct file reads
 
 **Files to create/modify:**
@@ -3160,7 +3160,7 @@ ai-toolkit install --local --lang python,typescript
 ai-toolkit install --local --lang python --editors all  # language rules propagated to all editors
 ```
 
-When `--editors` is combined with `--lang` (or auto-detected languages), language rules are propagated to all configured editors as `ai-toolkit-lang-<lang>` files — not just Claude's `CLAUDE.md`. Similarly, registered custom rules (`~/.ai-toolkit/rules/`) are propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
+When `--editors` is combined with `--lang` (or auto-detected languages), language rules are propagated to all configured editors as `ai-toolkit-lang-<lang>` files — not just Claude's `CLAUDE.md`. Similarly, registered custom rules (`~/.softspark/ai-toolkit/rules/`) are propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
 
 **Note:** Hooks are global-only — merged into `~/.claude/settings.json` by `ai-toolkit install`. Project-local `--local` does not install hooks; any legacy `.claude/hooks.json` is removed automatically.
 
@@ -3238,7 +3238,7 @@ Third-party repos (jira-mcp, rag-mcp, etc.) can register their own rules globall
 
 ```bash
 ai-toolkit add-rule ./my-project-rules.md
-# → copies to ~/.ai-toolkit/rules/my-project-rules.md
+# → copies to ~/.softspark/ai-toolkit/rules/my-project-rules.md
 
 ai-toolkit update
 # → injects the rule into ~/.claude/CLAUDE.md and all global editor configs
@@ -3326,7 +3326,7 @@ Install copies hooks/scripts, verifies agents+skills are linked, merges hooks in
 
 Memory-pack auto-prunes observations older than 90 days on every session end (configurable via `MEMORY_RETENTION_DAYS`).
 
-State tracked in `~/.ai-toolkit/plugins.json`.
+State tracked in `~/.softspark/ai-toolkit/plugins.json`.
 
 ## Adding a KB Document
 
@@ -4413,7 +4413,7 @@ ai-toolkit/
     agents/                  # Agent definitions (.md + YAML frontmatter)
     skills/                  # skills: task, hybrid, knowledge
     rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
-    hooks/                   # Hook scripts (copied to ~/.ai-toolkit/hooks/)
+    hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
     constitution.md          # Immutable safety rules, 5 articles (marker-injected)
     ARCHITECTURE.md          # System architecture reference (marker-injected)
@@ -4460,7 +4460,7 @@ All components use merge-friendly strategies — user content is never overwritt
 ```
 Machine (global)                              Project (local)
 ──────────────────────────────────────────    ──────────────────────────────────────
-~/.claude/                                    ~/.ai-toolkit/
+~/.claude/                                    ~/.softspark/ai-toolkit/
   agents/*.md    → per-file symlinks             rules/     ← registered rules
   skills/*/      → per-dir symlinks              hooks/     ← hook scripts (copied)
   settings.json  ← hooks merged here
@@ -4500,8 +4500,8 @@ Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
-| `add-rule <file>` | `~/.ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
-| `remove-rule <name>` | `~/.ai-toolkit/rules/` + `~/.claude/CLAUDE.md` | Unregister rule and remove its block |
+| `add-rule <file>` | `~/.softspark/ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
+| `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/CLAUDE.md` | Unregister rule and remove its block |
 | `validate` | toolkit | Integrity check |
 | `doctor` | toolkit | Install health, hooks, benchmark freshness, and artifact drift diagnostics |
 | `benchmark-ecosystem` | toolkit | Benchmark snapshot for official Claude Code and external ecosystem repos |
@@ -4631,7 +4631,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | PreCompact | Before compaction | `pre-compact-save.sh` | Timestamped context snapshot to audit trail |
 | SessionEnd | Session end | `session-end.sh` | Persist handoff note for the next session |
 
-Scripts at `~/.ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
+Scripts at `~/.softspark/ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
 
 ## Constitution (5 Articles)
 
@@ -4750,7 +4750,7 @@ affaan-m/everything-claude-code             152     397      2
 
 ## Data Sources
 
-- User config: `~/.claude/agents/`, `~/.claude/skills/`, `~/.ai-toolkit/hooks/`
+- User config: `~/.claude/agents/`, `~/.claude/skills/`, `~/.softspark/ai-toolkit/hooks/`
 - Toolkit: `app/agents/`, `app/skills/`, `app/hooks/`
 - Ecosystem: `benchmarks/ecosystem-dashboard.json`
 
@@ -5370,7 +5370,7 @@ All entries are tagged with "_source": "<source-name>" for idempotent updates.
 | `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers | Yes |
 | `inject-hook <file.json>` | `~/.claude/settings.json` | JSON `_source` tag | Yes |
 | `remove-hook <name>` | `~/.claude/settings.json` | Strip by `_source` | Yes |
-| `add-rule <file.md>` | `~/.ai-toolkit/rules/` | File copy + re-inject all | Yes |
+| `add-rule <file.md>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all | Yes |
 
 **Success Criteria:**
 - [x] `inject-hook ./my-hooks.json` merges hooks with auto-derived `_source` tag
@@ -5449,7 +5449,7 @@ All entries are tagged with "_source": "<source-name>" for idempotent updates.
 }
 ```
 
-**State tracking (~/.ai-toolkit/state.json):**
+**State tracking (~/.softspark/ai-toolkit/state.json):**
 ```json
 {
   "installed_version": "1.2.1",
@@ -5790,7 +5790,7 @@ description: "Comprehensive guide for setting up and using ai-toolkit configurat
 
 ## Overview
 
-Configuration inheritance enables organizations to define a shared base config published as an npm package, Git URL, or local path. Individual projects extend this base via an `extends` field in `.ai-toolkit.json`. Changes to the base propagate automatically on `ai-toolkit update --local`.
+Configuration inheritance enables organizations to define a shared base config published as an npm package, Git URL, or local path. Individual projects extend this base via an `extends` field in `.softspark-toolkit.json`. Changes to the base propagate automatically on `ai-toolkit update --local`.
 
 **Pattern:** Mirrors ESLint's `extends`, TypeScript's `extends`, and Prettier's shared configs.
 
@@ -5819,7 +5819,7 @@ ai-toolkit config init --extends @mycompany/ai-toolkit-config
 ai-toolkit install --local
 ```
 
-Or manually create `.ai-toolkit.json`:
+Or manually create `.softspark-toolkit.json`:
 
 ```json
 {
@@ -5843,7 +5843,7 @@ ai-toolkit config check       # CI enforcement check
 
 ## Configuration Reference
 
-### Project config (`.ai-toolkit.json`)
+### Project config (`.softspark-toolkit.json`)
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -5967,7 +5967,7 @@ Requirements:
 
 ### `ai-toolkit config validate [path]`
 
-Validates `.ai-toolkit.json` schema, resolves extends, checks enforcement.
+Validates `.softspark-toolkit.json` schema, resolves extends, checks enforcement.
 
 ```bash
 ai-toolkit config validate
@@ -5992,7 +5992,7 @@ ai-toolkit config diff
 
 ### `ai-toolkit config init [flags]`
 
-Create `.ai-toolkit.json` interactively or with flags.
+Create `.softspark-toolkit.json` interactively or with flags.
 
 ```bash
 ai-toolkit config init                                    # interactive
@@ -6033,12 +6033,12 @@ GitHub Actions example:
 
 ## Lock File
 
-`.ai-toolkit.lock.json` pins exact resolved versions for reproducible installs.
+`.softspark-toolkit.lock.json` pins exact resolved versions for reproducible installs.
 
 - `install --local` → creates/updates lock file
 - `update --local` → re-resolves and updates lock file
 - `update --local --refresh-base` → force re-fetch ignoring cache
-- Commit `.ai-toolkit.lock.json` to git for team synchronization
+- Commit `.softspark-toolkit.lock.json` to git for team synchronization
 
 ```json
 {
@@ -6047,7 +6047,7 @@ GitHub Actions example:
     "@mycompany/ai-toolkit-config": {
       "version": "2.1.0",
       "integrity": "sha256:abc123...",
-      "cached": "~/.ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
+      "cached": "~/.softspark/ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
     }
   }
 }
@@ -6059,7 +6059,7 @@ GitHub Actions example:
 
 When npm/git is unavailable:
 
-1. Checks cache (`~/.ai-toolkit/config-cache/`)
+1. Checks cache (`~/.softspark/ai-toolkit/config-cache/`)
 2. If cached version found → uses with warning
 3. If not cached → error with instructions
 
@@ -6131,7 +6131,7 @@ This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP serv
 | `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers by block name | Yes |
 | `inject-hook <file.json>` | `~/.claude/settings.json` | JSON `_source` tag per entry | Yes |
 | `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source` | Yes |
-| `add-rule <file.md>` | `~/.ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
+| `add-rule <file.md>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
 | `mcp add <name...>` | `.mcp.json` | Merge `mcpServers` block from template | Yes |
 
 ## inject-rule
@@ -6313,8 +6313,8 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
 | `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
-| `ai-toolkit add-rule` | `~/.ai-toolkit/rules/` | register a global rule |
-| `ai-toolkit remove-rule` | `~/.ai-toolkit/rules/` | unregister a global rule |
+| `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
+| `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |
 
 ## Why global install is the default
 
@@ -6569,17 +6569,17 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.ai-toolkit/hooks/`.
+ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Installation
 
 ```bash
-ai-toolkit install    # copies scripts to ~/.ai-toolkit/hooks/, merges into settings.json
+ai-toolkit install    # copies scripts to ~/.softspark/ai-toolkit/hooks/, merges into settings.json
 ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 ```
 
 **File locations:**
-- Scripts: `~/.ai-toolkit/hooks/*.sh`
+- Scripts: `~/.softspark/ai-toolkit/hooks/*.sh`
 - Config: `~/.claude/settings.json` → `hooks` key
 - Source: `ai-toolkit/app/hooks/*.sh` + `app/hooks.json`
 
@@ -6591,7 +6591,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `SessionStart` |
 | Matcher | `startup\|compact` |
-| Script | `~/.ai-toolkit/hooks/session-start.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/session-start.sh` |
 | Fires | Session start + after context compaction |
 
 **Actions:**
@@ -6606,7 +6606,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `Notification` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/notify-waiting.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/notify-waiting.sh` |
 | Fires | Claude Code waiting for user input |
 
 **Action:** Cross-platform desktop notification ("Claude Code needs your attention"):
@@ -6620,7 +6620,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `PreToolUse` |
 | Matcher | `Bash` |
-| Script | `~/.ai-toolkit/hooks/guard-destructive.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/guard-destructive.sh` |
 | Fires | Before any Bash command |
 
 **Action:** Blocks (exit 2) commands matching destructive patterns:
@@ -6636,7 +6636,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `PreToolUse` |
 | Matcher | `Bash\|Read\|Edit\|Write\|MultiEdit\|Glob\|Grep\|NotebookEdit\|mcp__filesystem__.*` |
-| Script | `~/.ai-toolkit/hooks/guard-path.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/guard-path.sh` |
 | Fires | Before any file access tool (including Bash, MCP filesystem) |
 
 **Action:** Blocks (exit 2) when a path contains `/Users/<wrong>` or `/home/<wrong>` that doesn't match the actual `$HOME`. Prevents Claude from hallucinating or confusing similar usernames (common with non-ASCII names like Polish names).
@@ -6649,7 +6649,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `UserPromptSubmit` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/user-prompt-submit.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/user-prompt-submit.sh` |
 | Fires | Before Claude starts working on a submitted prompt |
 
 **Action:** Adds a lightweight governance reminder: plan mode for architectural work, evidence-first debugging, KB-first research, and validation expectations.
@@ -6662,10 +6662,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `UserPromptSubmit` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/track-usage.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/track-usage.sh` |
 | Fires | Before Claude starts working on a submitted prompt |
 
-**Action:** Records skill invocations (slash commands like `/commit`, `/review`) to `~/.ai-toolkit/stats.json` for local usage analytics. Non-slash prompts are ignored.
+**Action:** Records skill invocations (slash commands like `/commit`, `/review`) to `~/.softspark/ai-toolkit/stats.json` for local usage analytics. Non-slash prompts are ignored.
 
 ### PostToolUse (edit feedback) — `post-tool-use.sh`
 
@@ -6673,7 +6673,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PostToolUse` |
 | Matcher | `Edit\|MultiEdit\|Write` |
-| Script | `~/.ai-toolkit/hooks/post-tool-use.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/post-tool-use.sh` |
 | Fires | After file edit/write tool operations |
 
 **Action:** Adds a lightweight reminder to run relevant validation, tests, and documentation updates after edits.
@@ -6686,7 +6686,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `Stop` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/quality-check.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/quality-check.sh` |
 | Fires | After every Claude response |
 
 **Action:** Runs language-appropriate linter:
@@ -6704,7 +6704,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `Stop` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/save-session.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/save-session.sh` |
 | Fires | After every Claude response |
 
 **Action:** Writes enriched session context to `.claude/session-context.md` for cross-session persistence. Captures:
@@ -6720,7 +6720,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `TaskCompleted` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/quality-gate.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/quality-gate.sh` |
 | Fires | When an Agent Teams task is marked complete |
 
 **Action:** Runs lint/typecheck. **Blocks completion (exit 2)** if errors found. Strict profile also runs `mypy --strict`.
@@ -6733,7 +6733,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SubagentStart` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/subagent-start.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/subagent-start.sh` |
 | Fires | When a subagent is spawned |
 
 **Action:** Reminds subagents to stay narrow in scope, gather evidence first, and return explicit validation notes.
@@ -6746,7 +6746,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SubagentStop` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/subagent-stop.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/subagent-stop.sh` |
 | Fires | When a subagent completes |
 
 **Action:** Enforces a concise handoff checklist: findings, files touched, tests run, risks, and docs follow-up.
@@ -6759,7 +6759,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PreCompact` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/pre-compact.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/pre-compact.sh` |
 | Fires | Before context compaction |
 
 **Actions (prioritized — higher priority items survive tighter token budgets):**
@@ -6777,7 +6777,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SessionEnd` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/session-end.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/session-end.sh` |
 | Fires | When a Claude session ends |
 
 **Action:** Writes `.claude/session-end.md` with a lightweight handoff note for the next session and reminds the next session to review preserved context.
@@ -6804,7 +6804,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PreToolUse` |
 | Matcher | `Edit\|Write\|MultiEdit` |
-| Script | `~/.ai-toolkit/hooks/guard-config.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/guard-config.sh` |
 | Fires | Before any file write/edit operation |
 
 **Action:** Blocks (exit 2) edits to linter and formatter config files — `.eslintrc`, `.eslintrc.*`, `eslint.config.*`, `.prettierrc`, `.prettierrc.*`, `prettier.config.*`, `tsconfig.json`, `tsconfig.*.json` — unless the request contains an explicit acknowledgment phrase (e.g. "intentionally editing config"). Returns a human-readable explanation to Claude so it can ask the user for confirmation before retrying.
@@ -6815,7 +6815,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SessionStart` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/mcp-health.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/mcp-health.sh` |
 | Fires | Session start |
 
 **Action:** Non-blocking (always exits 0). Reads MCP server definitions from `~/.claude/settings.json` and any local `.mcp.json`. For each configured server, checks whether the required runtime command (`npx`, `uvx`, `docker`, etc.) is available in `$PATH`. Emits warnings for any missing runtimes, including install hints (e.g. "npm install -g npx"). Helps surface MCP misconfiguration early without interrupting the session.
@@ -6826,10 +6826,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PostToolUse` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/governance-capture.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/governance-capture.sh` |
 | Fires | After any tool use |
 
-**Action:** Non-blocking (always exits 0). Logs security-sensitive operations (Bash commands, file writes to sensitive paths, large writes) to `~/.ai-toolkit/governance.log` with ISO timestamp, session ID, tool name, and a content excerpt. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+**Action:** Non-blocking (always exits 0). Logs security-sensitive operations (Bash commands, file writes to sensitive paths, large writes) to `~/.softspark/ai-toolkit/governance.log` with ISO timestamp, session ID, tool name, and a content excerpt. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 ### PreCompact — `pre-compact-save.sh`
 
@@ -6837,10 +6837,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PreCompact` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/pre-compact-save.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/pre-compact-save.sh` |
 | Fires | Before context compaction |
 
-**Action:** Saves a timestamped context snapshot to `~/.ai-toolkit/compactions/YYYY-MM-DD_HH-MM-SS.txt`. Captures session ID, working directory, git branch and status, and environment metadata. Provides an audit trail of what was in context at each compaction point. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+**Action:** Saves a timestamped context snapshot to `~/.softspark/ai-toolkit/compactions/YYYY-MM-DD_HH-MM-SS.txt`. Captures session ID, working directory, git branch and status, and environment metadata. Provides an audit trail of what was in context at each compaction point. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 ### PreToolUse (commit quality) — `commit-quality.sh`
 
@@ -6848,7 +6848,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PreToolUse` |
 | Matcher | `Bash` |
-| Script | `~/.ai-toolkit/hooks/commit-quality.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/commit-quality.sh` |
 | Fires | Before any Bash command |
 
 **Action:** Non-blocking (always exits 0). Inspects Bash commands containing `git commit`. Extracts the commit message from the `-m` flag and checks it against Conventional Commits format (`type: description`, where type is one of feat/fix/docs/refactor/test/chore/ci/perf/style/revert). Emits an advisory warning if the message does not match — the commit is not blocked, only nudged. Commands without `git commit` or without a `-m` message (e.g. interactive commits) are ignored.
@@ -6859,10 +6859,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SessionStart` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/session-context.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/session-context.sh` |
 | Fires | Session start |
 
-**Action:** Captures an environment snapshot to `~/.ai-toolkit/sessions/current-context.json`. Records working directory, git branch, git status summary, Node.js version, Python version, and timestamp. Used by other hooks and tools to access session metadata without re-running discovery commands. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+**Action:** Captures an environment snapshot to `~/.softspark/ai-toolkit/sessions/current-context.json`. Records working directory, git branch, git status summary, Node.js version, Python version, and timestamp. Used by other hooks and tools to access session metadata without re-running discovery commands. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 ## Runtime Profiles
 
@@ -6881,7 +6881,7 @@ Set in `.claude/settings.local.json`:
 ## Architecture
 
 ```
-~/.ai-toolkit/
+~/.softspark/ai-toolkit/
 ├── rules/          # Registered rules (add-rule.sh)
 └── hooks/          # Hook scripts (copied on install)
     ├── _profile-check.sh    # Shared: profile skip logic (sourced by hooks)
@@ -6906,7 +6906,7 @@ Set in `.claude/settings.local.json`:
     └── session-end.sh
 
 ~/.claude/settings.json
-└── hooks:          # Hook definitions referencing ~/.ai-toolkit/hooks/
+└── hooks:          # Hook definitions referencing ~/.softspark/ai-toolkit/hooks/
     ├── SessionStart     → session-start.sh, mcp-health.sh, session-context.sh
     ├── Notification     → osascript (inline)
     ├── PreToolUse       → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh
@@ -6936,7 +6936,7 @@ Set in `.claude/settings.local.json`:
 
 **Hook script not found:**
 ```bash
-ls ~/.ai-toolkit/hooks/     # should list 21 .sh files (plus _profile-check.sh helper)
+ls ~/.softspark/ai-toolkit/hooks/     # should list 21 .sh files (plus _profile-check.sh helper)
 ai-toolkit update            # re-copies scripts
 ```
 
@@ -6977,9 +6977,9 @@ ai-toolkit add-rule ./jira-rules.md
 ai-toolkit update   # inject now
 ```
 
-After registration, `ai-toolkit update` will always re-inject the rule. Registry location: `~/.ai-toolkit/rules/`.
+After registration, `ai-toolkit update` will always re-inject the rule. Registry location: `~/.softspark/ai-toolkit/rules/`.
 
-To unregister a rule (removes from `~/.ai-toolkit/rules/` and strips the block from `CLAUDE.md`):
+To unregister a rule (removes from `~/.softspark/ai-toolkit/rules/` and strips the block from `CLAUDE.md`):
 
 ```bash
 ai-toolkit remove-rule jira-rules
@@ -7007,7 +7007,7 @@ Content outside markers is never touched. Re-running updates only the marked blo
 
 1. Create `<name>-rules.md` in your repo with Claude-relevant conventions
 2. Register it: `ai-toolkit add-rule ./<name>-rules.md`
-3. Verify it appears in: `~/.ai-toolkit/rules/<name>-rules.md`
+3. Verify it appears in: `~/.softspark/ai-toolkit/rules/<name>-rules.md`
 4. On next `install` it will be listed in: `Rules injected: ... <name>-rules`
 5. Add an entry below documenting the integration
 
@@ -7294,7 +7294,7 @@ tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
 version: "1.0.0"
 created: "2026-04-07"
 last_updated: "2026-04-07"
-description: "Reference for the manifest-driven install system: 17 modules, 4 profiles, auto-detection, and state tracking in ~/.ai-toolkit/state.json."
+description: "Reference for the manifest-driven install system: 17 modules, 4 profiles, auto-detection, and state tracking in ~/.softspark/ai-toolkit/state.json."
 ---
 
 # Manifest-Driven Install System
@@ -7395,7 +7395,7 @@ Lists all currently installed modules with version and install timestamp:
 
 ```bash
 ai-toolkit status
-# Installed modules (from ~/.ai-toolkit/state.json):
+# Installed modules (from ~/.softspark/ai-toolkit/state.json):
 #   core            v1.3.0   installed 2026-04-07T10:00:00Z
 #   agents          v1.3.0   installed 2026-04-07T10:00:00Z
 #   skills          v1.3.0   installed 2026-04-07T10:00:00Z
@@ -7409,7 +7409,7 @@ Re-applies installed modules, skipping files whose content hash has not changed 
 
 ## State Tracking
 
-Installed module state is persisted to `~/.ai-toolkit/state.json`:
+Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
 
 ```json
 {
@@ -7433,7 +7433,7 @@ Installed module state is persisted to `~/.ai-toolkit/state.json`:
 |------|---------|
 | `manifest.json` | Module and profile definitions |
 | `scripts/install_steps/detect_language.py` | Auto-detect project language from marker files |
-| `scripts/install_steps/install_state.py` | Read/write `~/.ai-toolkit/state.json` |
+| `scripts/install_steps/install_state.py` | Read/write `~/.softspark/ai-toolkit/state.json` |
 
 ## Backward Compatibility
 
@@ -7723,11 +7723,11 @@ ai-toolkit plugin status             # show installed packs with data stats
 ### What `plugin install` Does
 
 1. **Verifies** referenced agents/skills exist in `~/.claude/` (links them from core if missing)
-2. **Copies** plugin-specific hooks to `~/.ai-toolkit/hooks/plugin-<pack>-<hook>.sh`
-3. **Copies** plugin-specific scripts to `~/.ai-toolkit/plugin-scripts/<pack>/`
+2. **Copies** plugin-specific hooks to `~/.softspark/ai-toolkit/hooks/plugin-<pack>-<hook>.sh`
+3. **Copies** plugin-specific scripts to `~/.softspark/ai-toolkit/plugin-scripts/<pack>/`
 4. **Runs** init scripts if present (e.g. `init_db.py` for memory-pack — safe to re-run, preserves data)
 5. **Merges** plugin hooks into `~/.claude/settings.json` (tagged with `_source: ai-toolkit-plugin-<name>`)
-6. **Records** installed state to `~/.ai-toolkit/plugins.json`
+6. **Records** installed state to `~/.softspark/ai-toolkit/plugins.json`
 
 ### What `plugin update` Does
 
@@ -7744,8 +7744,8 @@ ai-toolkit plugin status             # show installed packs with data stats
 
 ### What `plugin remove` Does
 
-1. **Removes** plugin hooks from `~/.ai-toolkit/hooks/`
-2. **Removes** plugin scripts from `~/.ai-toolkit/plugin-scripts/`
+1. **Removes** plugin hooks from `~/.softspark/ai-toolkit/hooks/`
+2. **Removes** plugin scripts from `~/.softspark/ai-toolkit/plugin-scripts/`
 3. **Strips** plugin hook entries from `settings.json` (by `_source` tag)
 4. **Updates** `plugins.json` state
 5. **Leaves** core agents/skills untouched (they belong to the base install)
@@ -8301,7 +8301,7 @@ description: "Local usage tracking for skill invocations. CLI command, JSON form
 
 ## Overview
 
-`ai-toolkit stats` tracks how often each skill is invoked via slash commands. All data is local — stored in `~/.ai-toolkit/stats.json`. No telemetry, no network calls.
+`ai-toolkit stats` tracks how often each skill is invoked via slash commands. All data is local — stored in `~/.softspark/ai-toolkit/stats.json`. No telemetry, no network calls.
 
 ## CLI Commands
 
@@ -8317,7 +8317,7 @@ A `UserPromptSubmit` hook (`track-usage.sh`) fires on every prompt. When the pro
 
 ### Hook Details
 - **Event**: `UserPromptSubmit`
-- **Script**: `~/.ai-toolkit/hooks/track-usage.sh`
+- **Script**: `~/.softspark/ai-toolkit/hooks/track-usage.sh`
 - **Detection**: `grep -oE '^/[a-z][a-z0-9-]*'`
 - **Storage**: Atomic write via python3 `os.replace()`
 - **Overhead**: ~50ms (python3 startup + JSON read/write)
@@ -8352,7 +8352,7 @@ debug                               8  2026-03-27 16:45:00
 Total invocations: 65
 Unique skills: 3
 
-File: ~/.ai-toolkit/stats.json
+File: ~/.softspark/ai-toolkit/stats.json
 Reset: ai-toolkit stats --reset
 ```
 
@@ -8390,8 +8390,8 @@ ai-toolkit sync --import <file|url>   # Import from file or URL
 
 | Data | Included | Source |
 |------|----------|--------|
-| Custom rules | Yes | `~/.ai-toolkit/rules/*.md` |
-| Usage stats | Yes | `~/.ai-toolkit/stats.json` |
+| Custom rules | Yes | `~/.softspark/ai-toolkit/rules/*.md` |
+| Usage stats | Yes | `~/.softspark/ai-toolkit/stats.json` |
 | Toolkit version | Yes (metadata) | `package.json` |
 | Agents/skills | No | Installed via `npm` |
 | Hooks | No | Installed via `ai-toolkit install` |
@@ -8401,7 +8401,7 @@ ai-toolkit sync --import <file|url>   # Import from file or URL
 ### First machine (export)
 ```bash
 ai-toolkit sync --push
-# Creates secret Gist, saves ID to ~/.ai-toolkit/.gist-id
+# Creates secret Gist, saves ID to ~/.softspark/ai-toolkit/.gist-id
 ```
 
 ### Second machine (import)

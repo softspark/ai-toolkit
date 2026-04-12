@@ -13,7 +13,7 @@ description: "Local usage tracking for skill invocations. CLI command, JSON form
 
 ## Overview
 
-`ai-toolkit stats` tracks how often each skill is invoked via slash commands. All data is local — stored in `~/.ai-toolkit/stats.json`. No telemetry, no network calls.
+`ai-toolkit stats` tracks how often each skill is invoked via slash commands. All data is local — stored in `~/.softspark/ai-toolkit/stats.json`. No telemetry, no network calls.
 
 ## CLI Commands
 
@@ -29,7 +29,7 @@ A `UserPromptSubmit` hook (`track-usage.sh`) fires on every prompt. When the pro
 
 ### Hook Details
 - **Event**: `UserPromptSubmit`
-- **Script**: `~/.ai-toolkit/hooks/track-usage.sh`
+- **Script**: `~/.softspark/ai-toolkit/hooks/track-usage.sh`
 - **Detection**: `grep -oE '^/[a-z][a-z0-9-]*'`
 - **Storage**: Atomic write via python3 `os.replace()`
 - **Overhead**: ~50ms (python3 startup + JSON read/write)
@@ -64,6 +64,6 @@ debug                               8  2026-03-27 16:45:00
 Total invocations: 65
 Unique skills: 3
 
-File: ~/.ai-toolkit/stats.json
+File: ~/.softspark/ai-toolkit/stats.json
 Reset: ai-toolkit stats --reset
 ```

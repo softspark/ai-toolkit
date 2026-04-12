@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ai-toolkit stats -- Show skill usage statistics.
 
-Reads ~/.ai-toolkit/stats.json (populated by track-usage.sh hook)
+Reads ~/.softspark/ai-toolkit/stats.json (populated by track-usage.sh hook)
 and displays a sorted table of skill invocations.
 
 Options:
@@ -15,8 +15,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import STATS_FILE as _STATS_FILE
 
-STATS_FILE = Path.home() / ".ai-toolkit" / "stats.json"
+STATS_FILE = _STATS_FILE
 
 
 def main() -> None:

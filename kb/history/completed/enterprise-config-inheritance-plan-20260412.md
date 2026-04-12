@@ -53,10 +53,10 @@ Create a configuration inheritance system where projects can extend a shared bas
 | FR3 | Constitution immutability — Articles I-V cannot be modified | Must | 100% block rate on modification attempts |
 | FR4 | Override validation with `override: true` + `justification` | Must | Missing justification → error |
 | FR5 | `enforce` block constraints (minHookProfile, requiredPlugins, forbidOverride, requiredAgents) | Must | All 4 constraint types enforced |
-| FR6 | Install/update integration — resolve extends during install | Must | `install --local` detects `.ai-toolkit.json` |
+| FR6 | Install/update integration — resolve extends during install | Must | `install --local` detects `.softspark-toolkit.json` |
 | FR7 | `config diff` command — show project vs base differences | Must | All merge layers visible |
 | FR8 | `config validate` command — schema + enforcement validation | Must | Exit 0/1 for pass/fail |
-| FR9 | `config init` — interactive project config setup | Should | Guided flow produces valid `.ai-toolkit.json` |
+| FR9 | `config init` — interactive project config setup | Should | Guided flow produces valid `.softspark-toolkit.json` |
 | FR10 | `config create-base` — scaffold npm base config package | Should | Ready-to-publish package with `package.json` |
 | FR11 | Lock file for reproducible installs | Should | Identical resolved config across team members |
 | FR12 | Audit trail in `state.json` | Should | Resolved version + overrides recorded |
@@ -84,7 +84,7 @@ Project Level (per-repository):
 ══════════════════════════════
 
   my-service/
-  ├── .ai-toolkit.json             ← project config with "extends"
+  ├── .softspark-toolkit.json             ← project config with "extends"
   ├── .claude/
   │   ├── CLAUDE.md                ← generated (base + project merged)
   │   └── settings.json            ← generated (base hooks + project hooks merged)
@@ -99,7 +99,7 @@ Merge Pipeline:
   ai-toolkit defaults (manifest.json) ← Layer 1: toolkit defaults
           │
           ▼
-  .ai-toolkit.json                  ← Layer 2: project overrides
+  .softspark-toolkit.json                  ← Layer 2: project overrides
           │
           ▼
   Resolved Configuration             ← Final: CLAUDE.md, settings.json, etc.
@@ -110,7 +110,7 @@ Merge Pipeline:
 ```
 1. Load base config from "extends" (npm package, git URL, or local path)
 2. Merge with ai-toolkit defaults (manifest.json profiles)
-3. Apply project-level overrides from .ai-toolkit.json
+3. Apply project-level overrides from .softspark-toolkit.json
 4. Validate merged config (constitution immutability, schema validation)
 5. Generate output files (CLAUDE.md, settings.json, agent symlinks, etc.)
 ```
@@ -121,7 +121,7 @@ Merge Pipeline:
 
 | # | Feature | Priority | Status | Est. Time | Notes |
 |---|---------|----------|--------|-----------|-------|
-| 1.1 | `.ai-toolkit.json` schema definition | P0 | **Done** | 1d | `scripts/schemas/ai-toolkit-config.schema.json` |
+| 1.1 | `.softspark-toolkit.json` schema definition | P0 | **Done** | 1d | `scripts/schemas/ai-toolkit-config.schema.json` |
 | 1.2 | Config resolver (npm, git, local path) | P0 | **Done** | 3d | `scripts/config_resolver.py` (~330 LOC) |
 | 1.3 | Merge engine (layered merge with override semantics) | P0 | **Done** | 3d | `scripts/config_merger.py` (~340 LOC) |
 | 1.4 | Constitution immutability guard | P0 | **Done** | 1d | In config_merger.py `_merge_constitution()` |
@@ -130,8 +130,8 @@ Merge Pipeline:
 | 2.3 | `ai-toolkit config validate` command | P0 | **Done** | 1d | `scripts/config_cli.py` `cmd_validate()` |
 | 2.4 | `ai-toolkit config init` command | P1 | **Done** | 1.5d | Interactive + flag-driven, validates extends |
 | 2.5 | `ai-toolkit config create-base` command | P1 | **Done** | 2d | `scripts/config_scaffold.py` — full npm package scaffold |
-| 3.1 | Audit trail in state.json | P1 | **Done** | 1d | `install_state.py` extends field + `.ai-toolkit-extends.json` |
-| 3.2 | Lock file (`.ai-toolkit.lock.json`) | P1 | **Done** | 1.5d | `scripts/config_lock.py` — generate/consume/staleness check |
+| 3.1 | Audit trail in state.json | P1 | **Done** | 1d | `install_state.py` extends field + `.softspark-toolkit-extends.json` |
+| 3.2 | Lock file (`.softspark-toolkit.lock.json`) | P1 | **Done** | 1.5d | `scripts/config_lock.py` — generate/consume/staleness check |
 | 3.3 | Base config scaffolder (npm package template) | P1 | **Done** | 1.5d | Part of `config_scaffold.py` `create_base_package()` |
 | 3.4 | CI enforcement (`ai-toolkit config check`) | P2 | **Done** | 1d | `config_cli.py` `cmd_check()` — JSON output, exit codes |
 | 4.1 | Tests | P1 | **Done** | 3d | 39 tests: resolver (7), merger (13), CLI (10), install integration (9) |
@@ -189,7 +189,7 @@ Audit trail (3.1) ──┐
 
 ### Phase 1: Core Engine (week 1-2)
 
-#### 1.1 Configuration Schema (`.ai-toolkit.json`)
+#### 1.1 Configuration Schema (`.softspark-toolkit.json`)
 
 > **v1 scope:** The full schema below shows the target state. v1 implements only: `extends`, `profile`, `agents`, `rules`, `constitution`, and `enforce`. See section 6a for the v1/v2 field breakdown.
 
@@ -331,9 +331,9 @@ Audit trail (3.1) ──┐
 | Local path | `"extends": "../shared-config"` | Resolve relative to project root |
 | ~~Multiple bases~~ | ~~`"extends": ["@mycompany/base", "@mycompany/typescript-extra"]`~~ | Deferred to v2 — multi-base merge ordering is a complexity trap |
 
-**Cache directory:** `~/.ai-toolkit/config-cache/`
+**Cache directory:** `~/.softspark/ai-toolkit/config-cache/`
 ```
-~/.ai-toolkit/config-cache/
+~/.softspark/ai-toolkit/config-cache/
   @mycompany/
     ai-toolkit-config/
       2.1.0/
@@ -391,7 +391,7 @@ def resolve_extends(extends_value: str, project_root: str,
 **Max recursion depth:** 5 levels (prevent circular extends). Circular detection via visited set.
 
 **Offline handling:** If the npm/git source is unavailable:
-1. Check cache (`~/.ai-toolkit/config-cache/`)
+1. Check cache (`~/.softspark/ai-toolkit/config-cache/`)
 2. If cached version found → use with warning: "Using cached config v2.1.0 (offline)"
 3. If not cached → error with instructions: "Run `ai-toolkit config update` when online"
 
@@ -532,7 +532,7 @@ def merge_constitution(base: dict, project: dict) -> dict:
 
 ```python
 # During install --local:
-# 1. Check for .ai-toolkit.json in project root
+# 1. Check for .softspark-toolkit.json in project root
 # 2. If found and has "extends":
 #    a. Resolve base config(s)
 #    b. Merge base → project
@@ -543,7 +543,7 @@ def merge_constitution(base: dict, project: dict) -> dict:
 
 **CLI flags:**
 ```bash
-ai-toolkit install --local                           # auto-detect .ai-toolkit.json
+ai-toolkit install --local                           # auto-detect .softspark-toolkit.json
 ai-toolkit install --local --config ./custom.json    # explicit config file
 ai-toolkit update --local                            # re-resolve extends + update
 ai-toolkit update --local --refresh-base             # force re-fetch base config
@@ -591,7 +591,7 @@ ai-toolkit config diff
 ai-toolkit config validate
 
 # Checks:
-# ✓ .ai-toolkit.json schema valid
+# ✓ .softspark-toolkit.json schema valid
 # ✓ extends: @mycompany/ai-toolkit-config@2.1.0 resolved
 # ✓ No forbidden overrides
 # ✓ Required plugins installed: security-pack
@@ -616,12 +616,12 @@ ai-toolkit config init
 # Flow:
 # 1. "Does your organization have a shared ai-toolkit config? [y/n]"
 #    → y: "npm package name or git URL:" → resolves + validates
-#    → n: creates minimal .ai-toolkit.json without extends
+#    → n: creates minimal .softspark-toolkit.json without extends
 # 2. "Which profile? [minimal/standard/strict]" → default from base or standard
 # 3. "Which persona? [none/backend-lead/frontend-lead/devops-eng/junior-dev]"
 # 4. Auto-detect languages from project
 # 5. Auto-detect editors from project files
-# 6. Write .ai-toolkit.json
+# 6. Write .softspark-toolkit.json
 # 7. Run ai-toolkit install --local
 ```
 
@@ -685,7 +685,7 @@ ai-toolkit config create-base @mycompany/ai-toolkit-config
 
 ---
 
-#### 3.2 Lock File (`.ai-toolkit.lock.json`)
+#### 3.2 Lock File (`.softspark-toolkit.lock.json`)
 
 **Purpose:** Pin the exact resolved version of base configs for reproducible installs across team members and CI.
 
@@ -697,7 +697,7 @@ ai-toolkit config create-base @mycompany/ai-toolkit-config
       "version": "2.1.0",
       "resolved": "https://registry.npmjs.org/@mycompany/ai-toolkit-config/-/ai-toolkit-config-2.1.0.tgz",
       "integrity": "sha512-abc123...",
-      "cached": "~/.ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
+      "cached": "~/.softspark/ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
     }
   },
   "generated_at": "2026-04-10T10:30:00Z",
@@ -709,7 +709,7 @@ ai-toolkit config create-base @mycompany/ai-toolkit-config
 - `ai-toolkit install --local` → uses lock file if present (like `npm ci`)
 - `ai-toolkit update --local` → re-resolves and updates lock file (like `npm install`)
 - `ai-toolkit update --local --refresh-base` → force re-fetch ignoring cache
-- `.ai-toolkit.lock.json` should be committed to git (team synchronization)
+- `.softspark-toolkit.lock.json` should be committed to git (team synchronization)
 
 ---
 
@@ -723,7 +723,7 @@ ai-toolkit config check
 # Exit codes:
 # 0 — project complies with base config
 # 1 — violations found (missing required plugins, forbidden overrides, etc.)
-# 2 — .ai-toolkit.json not found
+# 2 — .softspark-toolkit.json not found
 ```
 
 **GitHub Actions example:**
@@ -796,7 +796,7 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 | **Offline** | Cached configs used when registry unavailable, with clear warning. |
 | **Security** | No secret exposure in config files or audit trail. npm auth via `.npmrc` (user-managed). `execFile` for npm CLI (no shell injection). |
 | **Error messages** | Every validation error includes: what failed, which config layer caused it, and what to do (e.g., "Contact your team lead to request an exemption"). |
-| **Backward compatibility** | 100% — projects without `.ai-toolkit.json` work exactly as today. Zero behavioral changes for existing users. |
+| **Backward compatibility** | 100% — projects without `.softspark-toolkit.json` work exactly as today. Zero behavioral changes for existing users. |
 | **Maintainability** | Each new schema field requires: merge logic, validation, diff output, test. Budget 0.5d per new field. |
 | **Quality gates** | `ruff check scripts/config_*.py` (0 errors), `mypy --strict scripts/config_*.py` (0 errors). Run before every commit. |
 | **Type safety** | 100% public API type hints (all function signatures). >60% internal. Use `TypedDict` for config schemas, `dataclass` for resolved configs. |
@@ -813,7 +813,7 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 | Constitution protection | 100% (Articles I-V immutable) |
 | Override justification | Required for all overrides |
 | Enforce constraints | 4 types (minHookProfile, requiredPlugins, forbidOverride, requiredAgents) |
-| Backward compatibility | 100% (projects without .ai-toolkit.json work as today) |
+| Backward compatibility | 100% (projects without .softspark-toolkit.json work as today) |
 | CI enforcement | Exit code 0/1 for governance compliance |
 | Lock file | Reproducible installs across team members |
 | Scaffold command | Ready-to-publish npm package template |
@@ -839,7 +839,7 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 
 ## 9. Pre-Mortem
 
-1. **"Config file fatigue"** — developers already have `.eslintrc`, `tsconfig.json`, `.prettierrc`. Another `.ai-toolkit.json` may feel like bloat. Mitigation: file is optional, all features work without it. The DX gain (organizational governance without per-repo updates) justifies the file.
+1. **"Config file fatigue"** — developers already have `.eslintrc`, `tsconfig.json`, `.prettierrc`. Another `.softspark-toolkit.json` may feel like bloat. Mitigation: file is optional, all features work without it. The DX gain (organizational governance without per-repo updates) justifies the file.
 2. **"Base config never gets updated"** — team lead creates base config, nobody maintains it. Mitigation: `ai-toolkit config check` in CI catches drift; lock file staleness warnings.
 3. **"Override justification is annoying"** — developers will write "needed" as justification. Mitigation: CI check can enforce minimum justification length (>20 chars); code review culture catches low-effort justifications.
 4. **"Merge semantics are confusing"** — "does project override or extend the base agent list?" Mitigation: explicit semantics documented in schema; `ai-toolkit config diff` shows exactly what happened.
@@ -865,7 +865,7 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 
 **MVP (ship first, ~3.5 weeks):**
 1. [x] Approve plan
-2. [x] Define `.ai-toolkit.json` JSON Schema — v1 scope only (1.1)
+2. [x] Define `.softspark-toolkit.json` JSON Schema — v1 scope only (1.1)
 3. [x] Implement config resolver (npm, git, local) with caching (1.2)
 4. [x] Implement merge engine with override validation (1.3)
 5. [x] Implement constitution immutability guard (1.4)

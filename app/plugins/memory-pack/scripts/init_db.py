@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Initialize SQLite memory database for ai-toolkit memory-pack.
 
-Creates ~/.ai-toolkit/memory.db with sessions, observations, and FTS5 tables.
+Creates ~/.softspark/ai-toolkit/memory.db with sessions, observations, and FTS5 tables.
 Safe to run multiple times (uses IF NOT EXISTS).
 
 Usage: python3 app/plugins/memory-pack/scripts/init_db.py
@@ -11,7 +11,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-DB_DIR = Path.home() / ".ai-toolkit"
+DB_DIR = Path.home() / ".softspark" / "ai-toolkit"
 DB_PATH = DB_DIR / "memory.db"
 
 SCHEMA = """

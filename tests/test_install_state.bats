@@ -17,8 +17,8 @@ teardown() {
 # ── ai-toolkit status (via CLI) ────────────────────────────────────────────
 
 @test "status: exits 0 with state.json present" {
-    mkdir -p "$TEST_TMP/.ai-toolkit"
-    cat > "$TEST_TMP/.ai-toolkit/state.json" <<'EOF'
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
+    cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'
 {
   "installed_version": "1.2.1",
   "installed_at": "2026-01-01T00:00:00Z",
@@ -32,8 +32,8 @@ EOF
 }
 
 @test "status: shows version number" {
-    mkdir -p "$TEST_TMP/.ai-toolkit"
-    cat > "$TEST_TMP/.ai-toolkit/state.json" <<'EOF'
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
+    cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'
 {
   "installed_version": "1.2.1",
   "installed_at": "2026-01-01T00:00:00Z",
@@ -65,7 +65,7 @@ record_install(
 )
 "
     [ "$status" -eq 0 ]
-    [ -f "$TEST_TMP/.ai-toolkit/state.json" ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/state.json" ]
 }
 
 @test "install_state: load_state reads back recorded data" {
@@ -87,13 +87,13 @@ print('OK')
 
 @test "version_check: exits 0 when up to date (offline)" {
     # Pre-seed cache to avoid hitting npm
-    mkdir -p "$TEST_TMP/.ai-toolkit"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
     local VERSION
     VERSION=$(python3 -c "import json; print(json.load(open('$TOOLKIT_DIR/package.json'))['version'])")
     python3 -c "
 import json, time
 data = {'installed': '$VERSION', 'latest': '$VERSION', 'checked_at': time.time()}
-with open('$TEST_TMP/.ai-toolkit/version-check.json', 'w') as f:
+with open('$TEST_TMP/.softspark/ai-toolkit/version-check.json', 'w') as f:
     json.dump(data, f)
 "
     run python3 "$TOOLKIT_DIR/scripts/version_check.py"
@@ -102,13 +102,13 @@ with open('$TEST_TMP/.ai-toolkit/version-check.json', 'w') as f:
 
 @test "version_check: --status shows installed version" {
     # Pre-seed cache to avoid hitting npm
-    mkdir -p "$TEST_TMP/.ai-toolkit"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
     local VERSION
     VERSION=$(python3 -c "import json; print(json.load(open('$TOOLKIT_DIR/package.json'))['version'])")
     python3 -c "
 import json, time
 data = {'installed': '$VERSION', 'latest': '$VERSION', 'checked_at': time.time()}
-with open('$TEST_TMP/.ai-toolkit/version-check.json', 'w') as f:
+with open('$TEST_TMP/.softspark/ai-toolkit/version-check.json', 'w') as f:
     json.dump(data, f)
 "
     run python3 "$TOOLKIT_DIR/scripts/version_check.py" --status

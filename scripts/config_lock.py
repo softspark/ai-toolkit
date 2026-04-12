@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lock file management for ai-toolkit config inheritance.
 
-Generates and consumes .ai-toolkit.lock.json for reproducible
+Generates and consumes .softspark-toolkit.lock.json for reproducible
 extends resolution across team members and CI.
 
 Stdlib-only — no external dependencies.
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 
-LOCK_FILENAME = ".ai-toolkit.lock.json"
+LOCK_FILENAME = ".softspark-toolkit.lock.json"
 LOCK_VERSION = 1
 
 
@@ -23,14 +23,22 @@ LOCK_VERSION = 1
 # Public API
 # ---------------------------------------------------------------------------
 
+LEGACY_LOCK_FILENAME = ".ai-toolkit.lock.json"
+
+
 def load_lock_file(project_dir: Path) -> dict[str, Any] | None:
     """Load lock file from project directory.
 
-    Returns None if the file doesn't exist.
+    Falls back to legacy .ai-toolkit.lock.json if the new file doesn't exist.
+    Returns None if neither file exists.
     """
     lock_path = project_dir / LOCK_FILENAME
     if not lock_path.is_file():
-        return None
+        legacy_path = project_dir / LEGACY_LOCK_FILENAME
+        if legacy_path.is_file():
+            lock_path = legacy_path
+        else:
+            return None
     try:
         with open(lock_path, encoding="utf-8") as f:
             return json.load(f)

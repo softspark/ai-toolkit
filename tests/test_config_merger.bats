@@ -46,7 +46,7 @@ teardown() {
 # ---------------------------------------------------------------------------
 
 @test "merge: project adds agents to base" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "agents": {
@@ -55,7 +55,7 @@ teardown() {
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 0 ]
     echo "$output" | python3 -c "
 import sys, json
@@ -68,7 +68,7 @@ assert 'security-auditor' in agents, f'missing security-auditor: {agents}'
 }
 
 @test "merge: project can disable non-required agents" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "agents": {
@@ -77,7 +77,7 @@ assert 'security-auditor' in agents, f'missing security-auditor: {agents}'
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 0 ]
     echo "$output" | python3 -c "
 import sys, json
@@ -89,7 +89,7 @@ assert 'security-auditor' in agents, f'security-auditor should remain: {agents}'
 }
 
 @test "merge: rules are unioned" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "rules": {
@@ -98,7 +98,7 @@ assert 'security-auditor' in agents, f'security-auditor should remain: {agents}'
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 0 ]
     echo "$output" | python3 -c "
 import sys, json
@@ -110,14 +110,14 @@ assert './rules/api-standards.md' in rules, f'missing api-standards: {rules}'
 }
 
 @test "merge: project profile overrides base" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "profile": "standard"
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 0 ]
     echo "$output" | python3 -c "
 import sys, json
@@ -127,7 +127,7 @@ assert data['merged']['profile'] == 'standard', f'expected standard, got {data[\
 }
 
 @test "merge: project adds constitution articles" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {
@@ -138,7 +138,7 @@ assert data['merged']['profile'] == 'standard', f'expected standard, got {data[\
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 0 ]
     echo "$output" | python3 -c "
 import sys, json
@@ -156,7 +156,7 @@ assert articles[8]['title'] == 'API Standards', 'project article 8 wrong'
 # ---------------------------------------------------------------------------
 
 @test "constitution: cannot modify base article" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {
@@ -167,13 +167,13 @@ assert articles[8]['title'] == 'API Standards', 'project article 8 wrong'
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Cannot modify Constitution Article 6"* ]]
 }
 
 @test "constitution: cannot modify immutable articles I-V" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {
@@ -184,7 +184,7 @@ EOF
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Cannot modify Constitution Article 3"* ]]
     [[ "$output" == *"immutable"* ]]
@@ -195,7 +195,7 @@ EOF
 # ---------------------------------------------------------------------------
 
 @test "override: forbidden override is blocked" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "overrides": {
@@ -207,14 +207,14 @@ EOF
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Cannot override 'constitution'"* ]]
     [[ "$output" == *"forbidden"* ]]
 }
 
 @test "override: missing justification is rejected" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "overrides": {
@@ -226,13 +226,13 @@ EOF
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 1 ]
     [[ "$output" == *"justification"* ]]
 }
 
 @test "override: missing override:true is rejected" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "overrides": {
@@ -243,13 +243,13 @@ EOF
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 1 ]
     [[ "$output" == *"override: true"* ]]
 }
 
 @test "override: valid override passes" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "overrides": {
@@ -262,7 +262,7 @@ EOF
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 0 ]
     echo "$output" | python3 -c "
 import sys, json
@@ -277,7 +277,7 @@ assert data['overrides_applied'][0]['key'] == 'quality-check'
 # ---------------------------------------------------------------------------
 
 @test "enforce: cannot disable required agent" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "agents": {
@@ -286,7 +286,7 @@ assert data['overrides_applied'][0]['key'] == 'quality-check'
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Cannot disable agent 'security-auditor'"* ]]
     [[ "$output" == *"required"* ]]
@@ -294,7 +294,7 @@ EOF
 
 @test "enforce: enforce blocks merge (cannot weaken)" {
     # Base has minHookProfile=standard. Project enforce tries to set minimal.
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "enforce": {
@@ -303,7 +303,7 @@ EOF
 }
 EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
-        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.ai-toolkit.json"
+        "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 0 ]
     # Merged enforce should keep the stricter profile
     echo "$output" | python3 -c "

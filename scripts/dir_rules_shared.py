@@ -521,7 +521,7 @@ def build_language_rules(
 def build_registered_rules(
     rules_dir: Path | None,
 ) -> dict[str, callable]:
-    """Build entries from user's registered rules (~/.ai-toolkit/rules/*.md).
+    """Build entries from user's registered rules (~/.softspark/ai-toolkit/rules/*.md).
 
     Returns dict of filename -> callable (same shape as STANDARD_RULES).
     """

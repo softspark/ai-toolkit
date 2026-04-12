@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""Migrate ai-toolkit data from ~/.ai-toolkit to ~/.softspark/ai-toolkit.
+
+Called automatically by install.py and ai-toolkit.js on first run.
+Can also be invoked directly: python3 scripts/migrate.py [--dry-run]
+
+Migration steps:
+  1. Detect legacy ~/.ai-toolkit directory
+  2. Create ~/.softspark/ai-toolkit/
+  3. Move all contents (state, hooks, rules, sessions, etc.)
+  4. Leave ~/.ai-toolkit/.migrated marker with pointer to new location
+  5. Migrate per-project .ai-toolkit.json → .softspark-toolkit.json (via registry)
+
+Exit codes:
+  0  Migration succeeded or nothing to migrate
+  1  Migration failed
+"""
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import (
+    LEGACY_DATA_DIR,
+    LEGACY_PROJECT_CONFIG,
+    LEGACY_PROJECT_LOCK,
+    PROJECT_CONFIG_FILENAME,
+    PROJECT_LOCK_FILENAME,
+    SOFTSPARK_DIR,
+    TOOLKIT_DATA_DIR,
+)
+
+
+MIGRATED_MARKER = LEGACY_DATA_DIR / ".migrated"
+
+
+def needs_migration() -> bool:
+    """Check if legacy directory exists and hasn't been migrated yet."""
+    if not LEGACY_DATA_DIR.is_dir():
+        return False
+    if MIGRATED_MARKER.is_file():
+        return False
+    # Don't migrate if AI_TOOLKIT_HOME is set (custom setup)
+    if os.environ.get("AI_TOOLKIT_HOME"):
+        return False
+    return True
+
+
+def migrate_home_directory(dry_run: bool = False) -> bool:
+    """Migrate ~/.ai-toolkit → ~/.softspark/ai-toolkit.
+
+    Returns True if migration was performed, False if skipped.
+    """
+    if not needs_migration():
+        return False
+
+    print()
+    print("## Migrating to new directory structure")
+    print(f"   {LEGACY_DATA_DIR} → {TOOLKIT_DATA_DIR}")
+    print()
+
+    if dry_run:
+        print("   (dry-run: no changes made)")
+        return False
+
+    # Create parent ~/.softspark/
+    SOFTSPARK_DIR.mkdir(parents=True, exist_ok=True)
+
+    if TOOLKIT_DATA_DIR.exists():
+        # New dir already exists (partial migration?) — merge carefully
+        _merge_directories(LEGACY_DATA_DIR, TOOLKIT_DATA_DIR)
+    else:
+        # Clean move
+        shutil.move(str(LEGACY_DATA_DIR), str(TOOLKIT_DATA_DIR))
+        # Recreate legacy dir for marker
+        LEGACY_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Write migration marker
+    _write_marker()
+
+    print(f"   Migrated: {TOOLKIT_DATA_DIR}")
+    return True
+
+
+def _merge_directories(src: Path, dst: Path) -> None:
+    """Merge src into dst, preferring src files (newer)."""
+    for item in src.iterdir():
+        if item.name == ".migrated":
+            continue
+        dest_item = dst / item.name
+        if item.is_dir():
+            if dest_item.is_dir():
+                _merge_directories(item, dest_item)
+            else:
+                shutil.move(str(item), str(dest_item))
+        else:
+            # Overwrite with source (legacy has the latest data)
+            shutil.move(str(item), str(dest_item))
+
+
+def _write_marker() -> None:
+    """Write .migrated marker pointing to new location."""
+    LEGACY_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    marker_data = {
+        "migrated_to": str(TOOLKIT_DATA_DIR),
+        "migrated_at": now,
+        "message": "ai-toolkit data has moved to ~/.softspark/ai-toolkit/. "
+                   "This directory is kept as a marker. Safe to delete.",
+    }
+    with open(MIGRATED_MARKER, "w", encoding="utf-8") as f:
+        json.dump(marker_data, f, indent=2)
+        f.write("\n")
+
+
+def migrate_project_configs(dry_run: bool = False) -> int:
+    """Rename .ai-toolkit.json → .softspark-toolkit.json in registered projects.
+
+    Returns the number of projects migrated.
+    """
+    registry_file = TOOLKIT_DATA_DIR / "projects.json"
+    if not registry_file.is_file():
+        return 0
+
+    try:
+        with open(registry_file, encoding="utf-8") as f:
+            data = json.load(f)
+        projects = data.get("projects", [])
+    except (json.JSONDecodeError, OSError):
+        return 0
+
+    count = 0
+    for project in projects:
+        project_path = Path(project.get("path", ""))
+        if not project_path.is_dir():
+            continue
+
+        # Migrate .ai-toolkit.json → .softspark-toolkit.json
+        old_config = project_path / LEGACY_PROJECT_CONFIG
+        new_config = project_path / PROJECT_CONFIG_FILENAME
+        if old_config.is_file() and not new_config.is_file():
+            if dry_run:
+                print(f"   Would rename: {old_config} → {new_config}")
+            else:
+                old_config.rename(new_config)
+                print(f"   Renamed: {old_config.name} → {new_config.name} in {project_path}")
+            count += 1
+
+        # Migrate .ai-toolkit.lock.json → .softspark-toolkit.lock.json
+        old_lock = project_path / LEGACY_PROJECT_LOCK
+        new_lock = project_path / PROJECT_LOCK_FILENAME
+        if old_lock.is_file() and not new_lock.is_file():
+            if dry_run:
+                print(f"   Would rename: {old_lock} → {new_lock}")
+            else:
+                old_lock.rename(new_lock)
+
+    return count
+
+
+def run_full_migration(dry_run: bool = False) -> bool:
+    """Run complete migration: home directory + project configs.
+
+    Returns True if any migration was performed.
+    """
+    migrated = migrate_home_directory(dry_run=dry_run)
+
+    if migrated and not dry_run:
+        count = migrate_project_configs(dry_run=dry_run)
+        if count > 0:
+            print(f"   Migrated {count} project config(s)")
+
+    return migrated
+
+
+def main() -> None:
+    dry_run = "--dry-run" in sys.argv
+
+    if not needs_migration():
+        print("Nothing to migrate (no legacy ~/.ai-toolkit found or already migrated).")
+        sys.exit(0)
+
+    success = run_full_migration(dry_run=dry_run)
+
+    if success:
+        print()
+        print("Migration complete. The old ~/.ai-toolkit/ directory contains only a")
+        print("migration marker and can be safely deleted.")
+    elif not dry_run:
+        print("Migration skipped.")
+
+
+if __name__ == "__main__":
+    main()

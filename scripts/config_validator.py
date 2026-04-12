@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Config validator for ai-toolkit extends system.
 
-Validates .ai-toolkit.json against schema, checks enforce constraints,
+Validates .softspark-toolkit.json against schema, checks enforce constraints,
 verifies constitution integrity, and validates referenced files exist.
 
 Stdlib-only — no external dependencies.
@@ -45,7 +45,7 @@ def validate_project_config(
     config: dict[str, Any],
     project_root: Path | None = None,
 ) -> list[str]:
-    """Validate a project-level .ai-toolkit.json.
+    """Validate a project-level .softspark-toolkit.json.
 
     Returns list of error strings (empty = valid).
     """
@@ -352,7 +352,7 @@ def _validate_file_references(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    """CLI: validate .ai-toolkit.json and print results."""
+    """CLI: validate .softspark-toolkit.json and print results."""
     if len(sys.argv) < 2:
         print("Usage: config_validator.py <config.json> [--strict]", file=sys.stderr)
         sys.exit(1)

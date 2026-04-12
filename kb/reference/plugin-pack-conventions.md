@@ -87,11 +87,11 @@ ai-toolkit plugin status             # show installed packs with data stats
 ### What `plugin install` Does
 
 1. **Verifies** referenced agents/skills exist in `~/.claude/` (links them from core if missing)
-2. **Copies** plugin-specific hooks to `~/.ai-toolkit/hooks/plugin-<pack>-<hook>.sh`
-3. **Copies** plugin-specific scripts to `~/.ai-toolkit/plugin-scripts/<pack>/`
+2. **Copies** plugin-specific hooks to `~/.softspark/ai-toolkit/hooks/plugin-<pack>-<hook>.sh`
+3. **Copies** plugin-specific scripts to `~/.softspark/ai-toolkit/plugin-scripts/<pack>/`
 4. **Runs** init scripts if present (e.g. `init_db.py` for memory-pack — safe to re-run, preserves data)
 5. **Merges** plugin hooks into `~/.claude/settings.json` (tagged with `_source: ai-toolkit-plugin-<name>`)
-6. **Records** installed state to `~/.ai-toolkit/plugins.json`
+6. **Records** installed state to `~/.softspark/ai-toolkit/plugins.json`
 
 ### What `plugin update` Does
 
@@ -108,8 +108,8 @@ ai-toolkit plugin status             # show installed packs with data stats
 
 ### What `plugin remove` Does
 
-1. **Removes** plugin hooks from `~/.ai-toolkit/hooks/`
-2. **Removes** plugin scripts from `~/.ai-toolkit/plugin-scripts/`
+1. **Removes** plugin hooks from `~/.softspark/ai-toolkit/hooks/`
+2. **Removes** plugin scripts from `~/.softspark/ai-toolkit/plugin-scripts/`
 3. **Strips** plugin hook entries from `settings.json` (by `_source` tag)
 4. **Updates** `plugins.json` state
 5. **Leaves** core agents/skills untouched (they belong to the base install)

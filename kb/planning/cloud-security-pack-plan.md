@@ -39,7 +39,7 @@ Create `cloud-security-pack` plugin pack that provides deterministic, read-only 
 - **Deterministic** — reproducible results, no LLM-driven regex (same pattern as `hipaa_scan.py`)
 - **False positive aware** — context graph resolves "public endpoint behind gateway/App Check/WAF"
 - **CI-ready** — `--output json` + `--output sarif` (SARIF v2.1.0 for GitHub Advanced Security), exit code 1 on HIGH, 0 otherwise
-- **Credential isolation** — keys stored in `~/.ai-toolkit/credentials/`, accessible only by this pack's scripts
+- **Credential isolation** — keys stored in `~/.softspark/ai-toolkit/credentials/`, accessible only by this pack's scripts
 - **Static-first** — static mode (no credentials) is the default, live mode is opt-in upgrade
 - **Incremental** — `--changed` flag scans only files modified since last commit (PR workflow)
 - **IaC via `terraform show -json`** — wraps Terraform's own JSON output instead of parsing HCL directly
@@ -200,7 +200,7 @@ ai-toolkit credentials test aws
 
 **Storage structure:**
 ```
-~/.ai-toolkit/
+~/.softspark/ai-toolkit/
   credentials/
     gcp.json              # SA key file (copied, chmod 0600)
     gcp.meta.json         # { project_id, added_at, method: "file"|"gcloud" }
@@ -225,7 +225,7 @@ ai-toolkit credentials test aws
   - Connection works (GCP: `gcloud auth list`, AWS: `aws sts get-caller-identity`, Azure: `az account show`)
   - SA/role has **only read permissions** — **REFUSE to store** if write access detected (orchestration-review: warn-only is ignored by users). Override: `--force` flag with explicit acknowledgment
   - Project/subscription exists
-- `.gitignore`-proof — lives in `~/.ai-toolkit/`, never in project directory
+- `.gitignore`-proof — lives in `~/.softspark/ai-toolkit/`, never in project directory
 - Scripts access credentials via `gcp_auth.py` helper — single entry point, no direct file reads
 
 **Files to create/modify:**

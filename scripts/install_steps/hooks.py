@@ -55,7 +55,7 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
         shutil.copy2(hook_file, dst)
         dst.chmod(dst.stat().st_mode | 0o111)
         copied += 1
-    print(f"  Copied: {copied} hook scripts to ~/.ai-toolkit/hooks/")
+    print(f"  Copied: {copied} hook scripts to ~/.softspark/ai-toolkit/hooks/")
     legacy_hooks = claude_dir / "hooks"
     if legacy_hooks.is_symlink():
         legacy_hooks.unlink()

@@ -7,7 +7,7 @@ setup() {
     TEST_DIR="$(mktemp -d)"
     TMP_HOME="$(mktemp -d)"
     export HOME="$TMP_HOME"
-    export AI_TOOLKIT_HOME="$TMP_HOME/.ai-toolkit"
+    export AI_TOOLKIT_HOME="$TMP_HOME/.softspark/ai-toolkit"
     mkdir -p "$AI_TOOLKIT_HOME" "$TMP_HOME/.claude"
 }
 
@@ -174,7 +174,7 @@ assert data['projects'][0]['path'].endswith('proj-b')
     cat > "$TEST_DIR/base-config/ai-toolkit.config.json" << 'EOF'
 {"name": "@test/base", "version": "1.0.0", "profile": "standard"}
 EOF
-    cat > "$TEST_DIR/proj-ext/.ai-toolkit.json" << 'EOF'
+    cat > "$TEST_DIR/proj-ext/.softspark-toolkit.json" << 'EOF'
 {"extends": "../base-config", "profile": "standard"}
 EOF
     cd "$TEST_DIR/proj-ext"

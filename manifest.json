@@ -18,7 +18,7 @@
     "hooks": {
       "description": "21 global hook entries across 12 lifecycle events + 5 skill-scoped lifecycle hooks",
       "path": "app/hooks.json + app/hooks/*.sh",
-      "target": "~/.claude/settings.json (merge) + ~/.ai-toolkit/hooks/ (copy)",
+      "target": "~/.claude/settings.json (merge) + ~/.softspark/ai-toolkit/hooks/ (copy)",
       "type": "merge+copy",
       "tags": ["core", "hooks", "quality"]
     },
@@ -159,9 +159,9 @@
   },
   "config_inheritance": {
     "schema": "scripts/schemas/ai-toolkit-config.schema.json",
-    "project_config": ".ai-toolkit.json",
+    "project_config": ".softspark-toolkit.json",
     "base_config": "ai-toolkit.config.json",
-    "lock_file": ".ai-toolkit.lock.json",
+    "lock_file": ".softspark-toolkit.lock.json",
     "v1_fields": ["extends", "profile", "agents", "rules", "constitution", "enforce"],
     "max_extends_depth": 5
   }

@@ -27,8 +27,8 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
 | `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
-| `ai-toolkit add-rule` | `~/.ai-toolkit/rules/` | register a global rule |
-| `ai-toolkit remove-rule` | `~/.ai-toolkit/rules/` | unregister a global rule |
+| `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
+| `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |
 
 ## Why global install is the default
 

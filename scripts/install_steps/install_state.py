@@ -1,20 +1,22 @@
-"""Track installed modules and versions in ~/.ai-toolkit/state.json."""
+"""Track installed modules and versions in ~/.softspark/ai-toolkit/state.json."""
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_FILENAME = "state.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from paths import TOOLKIT_DATA_DIR, STATE_FILE
 
 
 def _state_path() -> Path:
     """Return the canonical path to state.json."""
-    return Path.home() / ".ai-toolkit" / STATE_FILENAME
+    return STATE_FILE
 
 
 def load_state() -> dict:
-    """Load state from ~/.ai-toolkit/state.json.
+    """Load state from ~/.softspark/ai-toolkit/state.json.
 
     Returns an empty dict if the file does not exist or is malformed.
     """
@@ -32,7 +34,7 @@ def load_state() -> dict:
 
 
 def save_state(state: dict) -> None:
-    """Save state to ~/.ai-toolkit/state.json.
+    """Save state to ~/.softspark/ai-toolkit/state.json.
 
     Creates the parent directory if it does not exist.
     """
@@ -113,7 +115,7 @@ def print_status() -> None:
     """Print a human-readable summary of the install state."""
     state = load_state()
     if not state:
-        print("No install state found (~/.ai-toolkit/state.json missing).")
+        print(f"No install state found ({STATE_FILE} missing).")
         print("Run 'ai-toolkit install' to set up the toolkit.")
         return
 

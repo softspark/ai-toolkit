@@ -7,7 +7,7 @@
 # Auto-prunes observations older than RETENTION_DAYS (default 90).
 # Never blocks the user — always exits 0.
 
-DB_PATH="${HOME}/.ai-toolkit/memory.db"
+DB_PATH="${HOME}/.softspark/ai-toolkit/memory.db"
 RETENTION_DAYS="${MEMORY_RETENTION_DAYS:-90}"
 
 # Read JSON input from stdin (Claude Code hook protocol)

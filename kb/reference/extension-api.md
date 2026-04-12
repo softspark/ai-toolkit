@@ -25,7 +25,7 @@ This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP serv
 | `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers by block name | Yes |
 | `inject-hook <file.json>` | `~/.claude/settings.json` | JSON `_source` tag per entry | Yes |
 | `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source` | Yes |
-| `add-rule <file.md>` | `~/.ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
+| `add-rule <file.md>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
 | `mcp add <name...>` | `.mcp.json` | Merge `mcpServers` block from template | Yes |
 
 ## inject-rule

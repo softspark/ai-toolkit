@@ -8,7 +8,7 @@
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
 
-SAVE_DIR="$HOME/.ai-toolkit/compactions"
+SAVE_DIR="$HOME/.softspark/ai-toolkit/compactions"
 mkdir -p "$SAVE_DIR"
 
 # Read from stdin (Claude Code passes JSON with .session_id)

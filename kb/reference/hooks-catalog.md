@@ -13,17 +13,17 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.ai-toolkit/hooks/`.
+ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Installation
 
 ```bash
-ai-toolkit install    # copies scripts to ~/.ai-toolkit/hooks/, merges into settings.json
+ai-toolkit install    # copies scripts to ~/.softspark/ai-toolkit/hooks/, merges into settings.json
 ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 ```
 
 **File locations:**
-- Scripts: `~/.ai-toolkit/hooks/*.sh`
+- Scripts: `~/.softspark/ai-toolkit/hooks/*.sh`
 - Config: `~/.claude/settings.json` → `hooks` key
 - Source: `ai-toolkit/app/hooks/*.sh` + `app/hooks.json`
 
@@ -35,7 +35,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `SessionStart` |
 | Matcher | `startup\|compact` |
-| Script | `~/.ai-toolkit/hooks/session-start.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/session-start.sh` |
 | Fires | Session start + after context compaction |
 
 **Actions:**
@@ -50,7 +50,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `Notification` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/notify-waiting.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/notify-waiting.sh` |
 | Fires | Claude Code waiting for user input |
 
 **Action:** Cross-platform desktop notification ("Claude Code needs your attention"):
@@ -64,7 +64,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `PreToolUse` |
 | Matcher | `Bash` |
-| Script | `~/.ai-toolkit/hooks/guard-destructive.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/guard-destructive.sh` |
 | Fires | Before any Bash command |
 
 **Action:** Blocks (exit 2) commands matching destructive patterns:
@@ -80,7 +80,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `PreToolUse` |
 | Matcher | `Bash\|Read\|Edit\|Write\|MultiEdit\|Glob\|Grep\|NotebookEdit\|mcp__filesystem__.*` |
-| Script | `~/.ai-toolkit/hooks/guard-path.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/guard-path.sh` |
 | Fires | Before any file access tool (including Bash, MCP filesystem) |
 
 **Action:** Blocks (exit 2) when a path contains `/Users/<wrong>` or `/home/<wrong>` that doesn't match the actual `$HOME`. Prevents Claude from hallucinating or confusing similar usernames (common with non-ASCII names like Polish names).
@@ -93,7 +93,7 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 |-------|-------|
 | Event | `UserPromptSubmit` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/user-prompt-submit.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/user-prompt-submit.sh` |
 | Fires | Before Claude starts working on a submitted prompt |
 
 **Action:** Adds a lightweight governance reminder: plan mode for architectural work, evidence-first debugging, KB-first research, and validation expectations.
@@ -106,10 +106,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `UserPromptSubmit` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/track-usage.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/track-usage.sh` |
 | Fires | Before Claude starts working on a submitted prompt |
 
-**Action:** Records skill invocations (slash commands like `/commit`, `/review`) to `~/.ai-toolkit/stats.json` for local usage analytics. Non-slash prompts are ignored.
+**Action:** Records skill invocations (slash commands like `/commit`, `/review`) to `~/.softspark/ai-toolkit/stats.json` for local usage analytics. Non-slash prompts are ignored.
 
 ### PostToolUse (edit feedback) — `post-tool-use.sh`
 
@@ -117,7 +117,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PostToolUse` |
 | Matcher | `Edit\|MultiEdit\|Write` |
-| Script | `~/.ai-toolkit/hooks/post-tool-use.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/post-tool-use.sh` |
 | Fires | After file edit/write tool operations |
 
 **Action:** Adds a lightweight reminder to run relevant validation, tests, and documentation updates after edits.
@@ -130,7 +130,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `Stop` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/quality-check.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/quality-check.sh` |
 | Fires | After every Claude response |
 
 **Action:** Runs language-appropriate linter:
@@ -148,7 +148,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `Stop` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/save-session.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/save-session.sh` |
 | Fires | After every Claude response |
 
 **Action:** Writes enriched session context to `.claude/session-context.md` for cross-session persistence. Captures:
@@ -164,7 +164,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `TaskCompleted` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/quality-gate.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/quality-gate.sh` |
 | Fires | When an Agent Teams task is marked complete |
 
 **Action:** Runs lint/typecheck. **Blocks completion (exit 2)** if errors found. Strict profile also runs `mypy --strict`.
@@ -177,7 +177,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SubagentStart` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/subagent-start.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/subagent-start.sh` |
 | Fires | When a subagent is spawned |
 
 **Action:** Reminds subagents to stay narrow in scope, gather evidence first, and return explicit validation notes.
@@ -190,7 +190,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SubagentStop` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/subagent-stop.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/subagent-stop.sh` |
 | Fires | When a subagent completes |
 
 **Action:** Enforces a concise handoff checklist: findings, files touched, tests run, risks, and docs follow-up.
@@ -203,7 +203,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PreCompact` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/pre-compact.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/pre-compact.sh` |
 | Fires | Before context compaction |
 
 **Actions (prioritized — higher priority items survive tighter token budgets):**
@@ -221,7 +221,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SessionEnd` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/session-end.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/session-end.sh` |
 | Fires | When a Claude session ends |
 
 **Action:** Writes `.claude/session-end.md` with a lightweight handoff note for the next session and reminds the next session to review preserved context.
@@ -248,7 +248,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PreToolUse` |
 | Matcher | `Edit\|Write\|MultiEdit` |
-| Script | `~/.ai-toolkit/hooks/guard-config.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/guard-config.sh` |
 | Fires | Before any file write/edit operation |
 
 **Action:** Blocks (exit 2) edits to linter and formatter config files — `.eslintrc`, `.eslintrc.*`, `eslint.config.*`, `.prettierrc`, `.prettierrc.*`, `prettier.config.*`, `tsconfig.json`, `tsconfig.*.json` — unless the request contains an explicit acknowledgment phrase (e.g. "intentionally editing config"). Returns a human-readable explanation to Claude so it can ask the user for confirmation before retrying.
@@ -259,7 +259,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SessionStart` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/mcp-health.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/mcp-health.sh` |
 | Fires | Session start |
 
 **Action:** Non-blocking (always exits 0). Reads MCP server definitions from `~/.claude/settings.json` and any local `.mcp.json`. For each configured server, checks whether the required runtime command (`npx`, `uvx`, `docker`, etc.) is available in `$PATH`. Emits warnings for any missing runtimes, including install hints (e.g. "npm install -g npx"). Helps surface MCP misconfiguration early without interrupting the session.
@@ -270,10 +270,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PostToolUse` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/governance-capture.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/governance-capture.sh` |
 | Fires | After any tool use |
 
-**Action:** Non-blocking (always exits 0). Logs security-sensitive operations (Bash commands, file writes to sensitive paths, large writes) to `~/.ai-toolkit/governance.log` with ISO timestamp, session ID, tool name, and a content excerpt. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+**Action:** Non-blocking (always exits 0). Logs security-sensitive operations (Bash commands, file writes to sensitive paths, large writes) to `~/.softspark/ai-toolkit/governance.log` with ISO timestamp, session ID, tool name, and a content excerpt. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 ### PreCompact — `pre-compact-save.sh`
 
@@ -281,10 +281,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PreCompact` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/pre-compact-save.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/pre-compact-save.sh` |
 | Fires | Before context compaction |
 
-**Action:** Saves a timestamped context snapshot to `~/.ai-toolkit/compactions/YYYY-MM-DD_HH-MM-SS.txt`. Captures session ID, working directory, git branch and status, and environment metadata. Provides an audit trail of what was in context at each compaction point. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+**Action:** Saves a timestamped context snapshot to `~/.softspark/ai-toolkit/compactions/YYYY-MM-DD_HH-MM-SS.txt`. Captures session ID, working directory, git branch and status, and environment metadata. Provides an audit trail of what was in context at each compaction point. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 ### PreToolUse (commit quality) — `commit-quality.sh`
 
@@ -292,7 +292,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `PreToolUse` |
 | Matcher | `Bash` |
-| Script | `~/.ai-toolkit/hooks/commit-quality.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/commit-quality.sh` |
 | Fires | Before any Bash command |
 
 **Action:** Non-blocking (always exits 0). Inspects Bash commands containing `git commit`. Extracts the commit message from the `-m` flag and checks it against Conventional Commits format (`type: description`, where type is one of feat/fix/docs/refactor/test/chore/ci/perf/style/revert). Emits an advisory warning if the message does not match — the commit is not blocked, only nudged. Commands without `git commit` or without a `-m` message (e.g. interactive commits) are ignored.
@@ -303,10 +303,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 |-------|-------|
 | Event | `SessionStart` |
 | Matcher | *(all)* |
-| Script | `~/.ai-toolkit/hooks/session-context.sh` |
+| Script | `~/.softspark/ai-toolkit/hooks/session-context.sh` |
 | Fires | Session start |
 
-**Action:** Captures an environment snapshot to `~/.ai-toolkit/sessions/current-context.json`. Records working directory, git branch, git status summary, Node.js version, Python version, and timestamp. Used by other hooks and tools to access session metadata without re-running discovery commands. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+**Action:** Captures an environment snapshot to `~/.softspark/ai-toolkit/sessions/current-context.json`. Records working directory, git branch, git status summary, Node.js version, Python version, and timestamp. Used by other hooks and tools to access session metadata without re-running discovery commands. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 ## Runtime Profiles
 
@@ -325,7 +325,7 @@ Set in `.claude/settings.local.json`:
 ## Architecture
 
 ```
-~/.ai-toolkit/
+~/.softspark/ai-toolkit/
 ├── rules/          # Registered rules (add-rule.sh)
 └── hooks/          # Hook scripts (copied on install)
     ├── _profile-check.sh    # Shared: profile skip logic (sourced by hooks)
@@ -350,7 +350,7 @@ Set in `.claude/settings.local.json`:
     └── session-end.sh
 
 ~/.claude/settings.json
-└── hooks:          # Hook definitions referencing ~/.ai-toolkit/hooks/
+└── hooks:          # Hook definitions referencing ~/.softspark/ai-toolkit/hooks/
     ├── SessionStart     → session-start.sh, mcp-health.sh, session-context.sh
     ├── Notification     → osascript (inline)
     ├── PreToolUse       → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh
@@ -380,7 +380,7 @@ Set in `.claude/settings.local.json`:
 
 **Hook script not found:**
 ```bash
-ls ~/.ai-toolkit/hooks/     # should list 21 .sh files (plus _profile-check.sh helper)
+ls ~/.softspark/ai-toolkit/hooks/     # should list 21 .sh files (plus _profile-check.sh helper)
 ai-toolkit update            # re-copies scripts
 ```
 

@@ -7,7 +7,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/session-start.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/session-start.sh\""
                     }
                 ]
             },
@@ -17,7 +17,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/mcp-health.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/mcp-health.sh\""
                     }
                 ]
             },
@@ -27,7 +27,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/session-context.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/session-context.sh\""
                     }
                 ]
             }
@@ -39,7 +39,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "bash ~/.ai-toolkit/hooks/notify-waiting.sh"
+                        "command": "bash ~/.softspark/ai-toolkit/hooks/notify-waiting.sh"
                     }
                 ]
             }
@@ -51,7 +51,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/guard-destructive.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-destructive.sh\""
                     }
                 ]
             },
@@ -61,7 +61,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/guard-path.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-path.sh\""
                     }
                 ]
             },
@@ -71,7 +71,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/guard-config.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-config.sh\""
                     }
                 ]
             },
@@ -81,7 +81,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/commit-quality.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/commit-quality.sh\""
                     }
                 ]
             }
@@ -93,7 +93,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/user-prompt-submit.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/user-prompt-submit.sh\""
                     }
                 ]
             },
@@ -103,7 +103,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/track-usage.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/track-usage.sh\""
                     }
                 ]
             }
@@ -115,7 +115,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/post-tool-use.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/post-tool-use.sh\""
                     }
                 ]
             },
@@ -125,7 +125,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/governance-capture.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/governance-capture.sh\""
                     }
                 ]
             }
@@ -137,7 +137,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/quality-check.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\""
                     }
                 ]
             },
@@ -147,7 +147,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/save-session.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/save-session.sh\""
                     }
                 ]
             }
@@ -159,7 +159,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/quality-gate.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-gate.sh\""
                     }
                 ]
             }
@@ -183,7 +183,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/subagent-start.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/subagent-start.sh\""
                     }
                 ]
             }
@@ -195,7 +195,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/subagent-stop.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/subagent-stop.sh\""
                     }
                 ]
             }
@@ -207,7 +207,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/pre-compact.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/pre-compact.sh\""
                     }
                 ]
             },
@@ -217,7 +217,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/pre-compact-save.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/pre-compact-save.sh\""
                     }
                 ]
             }
@@ -229,7 +229,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.ai-toolkit/hooks/session-end.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/session-end.sh\""
                     }
                 ]
             }

@@ -57,7 +57,7 @@ Create a new Claude Code hook following ai-toolkit conventions.
     "hooks": [
         {
             "type": "command",
-            "command": "\"$HOME/.ai-toolkit/hooks/{script-name}.sh\""
+            "command": "\"$HOME/.softspark/ai-toolkit/hooks/{script-name}.sh\""
         }
     ]
 }
@@ -67,7 +67,7 @@ Required fields:
 - `_source`: always `"ai-toolkit"` (used by merge/strip logic)
 - `matcher`: tool name or regex for Pre/PostToolUse, empty string for global events
 - `hooks[].type`: always `"command"`
-- `hooks[].command`: path to script using `$HOME/.ai-toolkit/hooks/` prefix
+- `hooks[].command`: path to script using `$HOME/.softspark/ai-toolkit/hooks/` prefix
 
 ## Script Template
 

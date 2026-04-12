@@ -14,7 +14,7 @@ Options:
     --model-size SIZE   Model size: 7b, 8b, 14b, 32b, 70b (default: auto-detect)
     --persona NAME      Persona preset to prioritize (e.g., backend-lead)
     --lang LANGS        Comma-separated languages to include (e.g., python,typescript)
-    --output PATH       Output file path (default: ~/.ai-toolkit/compiled/slm-system-prompt.md)
+    --output PATH       Output file path (default: ~/.softspark/ai-toolkit/compiled/slm-system-prompt.md)
     --format FORMAT     Output format: raw, ollama, json-string, aider (default: raw)
     --dry-run           Show what would be included without writing output
     --level LEVEL       Compression level: ultra-light, light, standard, extended (default: auto)
@@ -171,7 +171,8 @@ class Component:
 
 def _load_usage_stats() -> dict[str, int]:
     """Load skill invocation counts from stats.json."""
-    stats_path = Path.home() / ".ai-toolkit" / "stats.json"
+    from paths import STATS_FILE
+    stats_path = STATS_FILE
     if not stats_path.is_file():
         return {}
     try:
@@ -840,13 +841,13 @@ Note: Replace the FROM line in the Modelfile with your base model (e.g., FROM ll
 ## Aider Setup
 
 1. Compile system prompt:
-   ai-toolkit compile-slm --format aider --model-size {model_size} --output .ai-toolkit-system.md
+   ai-toolkit compile-slm --format aider --model-size {model_size} --output .softspark-toolkit-system.md
 
 2. Run Aider with custom system prompt:
-   aider --system-prompt-file .ai-toolkit-system.md
+   aider --system-prompt-file .softspark-toolkit-system.md
 
 3. Or add to .aider.conf.yml:
-   system-prompt-file: .ai-toolkit-system.md""",
+   system-prompt-file: .softspark-toolkit-system.md""",
 
     "continue-dev": """\
 ## Continue.dev Setup
@@ -949,7 +950,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--output", default="",
-        help="Output file path (default: ~/.ai-toolkit/compiled/slm-system-prompt.md)",
+        help="Output file path (default: ~/.softspark/ai-toolkit/compiled/slm-system-prompt.md)",
     )
     parser.add_argument(
         "--format",
@@ -1021,7 +1022,8 @@ def main(argv: list[str] | None = None) -> int:
     # Write output
     output_path = args.output
     if not output_path:
-        compiled_dir = Path.home() / ".ai-toolkit" / "compiled"
+        from paths import COMPILED_DIR
+        compiled_dir = COMPILED_DIR
         compiled_dir.mkdir(parents=True, exist_ok=True)
         output_path = str(compiled_dir / "slm-system-prompt.md")
 

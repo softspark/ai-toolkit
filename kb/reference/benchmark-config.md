@@ -57,6 +57,6 @@ affaan-m/everything-claude-code             152     397      2
 
 ## Data Sources
 
-- User config: `~/.claude/agents/`, `~/.claude/skills/`, `~/.ai-toolkit/hooks/`
+- User config: `~/.claude/agents/`, `~/.claude/skills/`, `~/.softspark/ai-toolkit/hooks/`
 - Toolkit: `app/agents/`, `app/skills/`, `app/hooks/`
 - Ecosystem: `benchmarks/ecosystem-dashboard.json`

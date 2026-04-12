@@ -62,8 +62,8 @@ const COMMANDS = {
   status: 'Show installed modules, version, and profile from state.json',
   reset: 'Wipe and recreate project-local configs from scratch (requires --local)',
   uninstall: 'Remove ai-toolkit from ~/.claude/',
-  'add-rule': 'Register a rule file in ~/.ai-toolkit/rules/ (applied on every install/update)',
-  'remove-rule': 'Unregister a rule from ~/.ai-toolkit/rules/ and remove its block from CLAUDE.md',
+  'add-rule': 'Register a rule file in ~/.softspark/ai-toolkit/rules/ (applied on every install/update)',
+  'remove-rule': 'Unregister a rule from ~/.softspark/ai-toolkit/rules/ and remove its block from CLAUDE.md',
   'inject-hook': 'Inject external hooks into ~/.claude/settings.json (tagged with _source for idempotent updates)',
   'remove-hook': 'Remove injected hooks by source name from ~/.claude/settings.json',
   validate: 'Verify toolkit integrity',
@@ -427,7 +427,12 @@ function handleStatus(_args) {
  */
 function handleUpdate(args) {
   const isLocal = args.includes('--local');
-  const statePath = path.join(process.env.HOME, '.ai-toolkit', 'state.json');
+  let statePath = path.join(process.env.HOME, '.softspark', 'ai-toolkit', 'state.json');
+  // Fallback to legacy path for first run after upgrade (before migration runs)
+  if (!fs.existsSync(statePath)) {
+    const legacyState = path.join(process.env.HOME, '.ai-toolkit', 'state.json');
+    if (fs.existsSync(legacyState)) statePath = legacyState;
+  }
   let stateArgs = [];
 
   if (fs.existsSync(statePath)) {
@@ -452,7 +457,7 @@ function handleUpdate(args) {
 
   // After global update (not --local), propagate to all registered projects
   if (!isLocal) {
-    const registryPath = path.join(process.env.HOME, '.ai-toolkit', 'projects.json');
+    const registryPath = path.join(process.env.HOME, '.softspark', 'ai-toolkit', 'projects.json');
     if (fs.existsSync(registryPath)) {
       try {
         const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));

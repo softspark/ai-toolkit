@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""add-rule -- Register a rule file in ~/.ai-toolkit/rules/.
+"""add-rule -- Register a rule file in ~/.softspark/ai-toolkit/rules/.
 
 Registered rules are automatically injected into all AI tool configs
 on next 'ai-toolkit install' or 'ai-toolkit update':
@@ -39,7 +39,8 @@ def main() -> None:
     if not rule_name:
         print("Error: rule name is empty after sanitization", file=sys.stderr)
         sys.exit(1)
-    rules_dir = Path.home() / ".ai-toolkit" / "rules"
+    from paths import RULES_DIR
+    rules_dir = RULES_DIR
     rules_dir.mkdir(parents=True, exist_ok=True)
 
     dest = rules_dir / f"{rule_name}.md"

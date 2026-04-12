@@ -178,7 +178,7 @@ ai-toolkit/
 │   │   ├── clean-code/  # knowledge skill (auto-loaded)
 │   │   └── ... (87 more)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
-│   ├── hooks/           # Hook scripts (copied to ~/.ai-toolkit/hooks/)
+│   ├── hooks/           # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
 │   │   ├── session-start.sh      # MANDATORY reminder + session context
 │   │   ├── guard-destructive.sh  # Block rm -rf, DROP TABLE, etc.
 │   │   ├── guard-path.sh         # Block wrong-user path hallucination
@@ -210,7 +210,7 @@ ai-toolkit/
 └── CHANGELOG.md
 ```
 
-**Distribution model:** Symlink-based for agents/skills, copy-based for hooks. `~/.claude/agents/` and `~/.claude/skills/` contain per-file symlinks into the npm package. Hook scripts are copied to `~/.ai-toolkit/hooks/` and referenced from `~/.claude/settings.json`. Run `ai-toolkit update` after `npm install` — all projects pick up changes instantly. (See [Distribution Model](kb/reference/distribution-model.md))
+**Distribution model:** Symlink-based for agents/skills, copy-based for hooks. `~/.claude/agents/` and `~/.claude/skills/` contain per-file symlinks into the npm package. Hook scripts are copied to `~/.softspark/ai-toolkit/hooks/` and referenced from `~/.claude/settings.json`. Run `ai-toolkit update` after `npm install` — all projects pick up changes instantly. (See [Distribution Model](kb/reference/distribution-model.md))
 
 ---
 
@@ -309,7 +309,7 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 ### 2. Hooks as Executable Scripts
 
-Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
+Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
 **12 lifecycle events / 21 global hook entries:**
 
@@ -317,7 +317,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 |-------|--------|--------|
 | SessionStart | `session-start.sh` | MANDATORY rules reminder + session context + instincts |
 | SessionStart | `mcp-health.sh` | Check MCP server command availability (non-blocking warning) |
-| SessionStart | `session-context.sh` | Capture environment snapshot (pwd, git branch, versions) to `~/.ai-toolkit/sessions/current-context.json` |
+| SessionStart | `session-context.sh` | Capture environment snapshot (pwd, git branch, versions) to `~/.softspark/ai-toolkit/sessions/current-context.json` |
 | Notification | `notify-waiting.sh` | Cross-platform desktop notification |
 | PreToolUse | `guard-destructive.sh` | Block `rm -rf`, `DROP TABLE`, etc. |
 | PreToolUse | `guard-path.sh` | Block wrong-user path hallucination |
@@ -326,14 +326,14 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | UserPromptSubmit | `user-prompt-submit.sh` | Prompt governance reminder for planning, research, and safe execution |
 | UserPromptSubmit | `track-usage.sh` | Record skill invocations to local stats |
 | PostToolUse | `post-tool-use.sh` | Lightweight validation reminders after edits |
-| PostToolUse | `governance-capture.sh` | Log security-sensitive operations to `~/.ai-toolkit/governance.log` (JSONL) |
+| PostToolUse | `governance-capture.sh` | Log security-sensitive operations to `~/.softspark/ai-toolkit/governance.log` (JSONL) |
 | Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
 | TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
 | SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |
 | SubagentStop | `subagent-stop.sh` | Completion checklist for subagent handoff |
 | PreCompact | `pre-compact.sh` | Smart compaction: prioritized context (instincts > tasks > git state > decisions) |
-| PreCompact | `pre-compact-save.sh` | Save timestamped context backup before compaction to `~/.ai-toolkit/compactions/` |
+| PreCompact | `pre-compact-save.sh` | Save timestamped context backup before compaction to `~/.softspark/ai-toolkit/compactions/` |
 | SessionEnd | `session-end.sh` | Persist a session-end handoff note |
 | TeammateIdle | *(inline)* | Completeness reminder |
 
@@ -586,7 +586,7 @@ ai-toolkit status                         # show installed modules and versions
 ai-toolkit update                         # incremental re-install (only changed modules)
 ```
 
-Install state is tracked in `~/.ai-toolkit/state.json`. See [`kb/reference/manifest-install.md`](kb/reference/manifest-install.md).
+Install state is tracked in `~/.softspark/ai-toolkit/state.json`. See [`kb/reference/manifest-install.md`](kb/reference/manifest-install.md).
 
 ---
 
@@ -614,7 +614,7 @@ All packs have `status: experimental`. Each has a `plugin.json` manifest and `RE
 
 ## Config Inheritance (`extends`)
 
-Enterprise-grade configuration inheritance for multi-repo AI governance. Organizations define a shared base config published as an npm package, Git URL, or local path. Projects inherit via `.ai-toolkit.json`:
+Enterprise-grade configuration inheritance for multi-repo AI governance. Organizations define a shared base config published as an npm package, Git URL, or local path. Projects inherit via `.softspark-toolkit.json`:
 
 ```json
 {
@@ -628,8 +628,8 @@ Enterprise-grade configuration inheritance for multi-repo AI governance. Organiz
 - **Constitution immutability** — Articles I-V and base articles cannot be modified; projects can only ADD new articles (6+)
 - **Enforce constraints** — `requiredAgents`, `forbidOverride`, `minHookProfile`, `requiredPlugins`
 - **Override validation** — requires explicit `override: true` + justification (min 20 chars)
-- **Lock file** — `.ai-toolkit.lock.json` pins resolved versions for reproducible installs
-- **Offline fallback** — uses cached configs from `~/.ai-toolkit/config-cache/` when registry unavailable
+- **Lock file** — `.softspark-toolkit.lock.json` pins resolved versions for reproducible installs
+- **Offline fallback** — uses cached configs from `~/.softspark/ai-toolkit/config-cache/` when registry unavailable
 
 ```bash
 ai-toolkit config create-base @mycompany/ai-toolkit-config  # scaffold base package
@@ -645,7 +645,7 @@ See [Enterprise Config Guide](kb/reference/enterprise-config-guide.md) for full 
 
 ## Project Registry
 
-All projects installed with `--local` are automatically registered in `~/.ai-toolkit/projects.json`. Running `ai-toolkit update` propagates updates to all registered projects in parallel.
+All projects installed with `--local` are automatically registered in `~/.softspark/ai-toolkit/projects.json`. Running `ai-toolkit update` propagates updates to all registered projects in parallel.
 
 ```bash
 ai-toolkit projects              # list registered projects
@@ -802,17 +802,17 @@ Usage: ai-toolkit <command> [options]
 | `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
 | `update --local` | Re-apply + auto-detect editors from existing project files |
 | `reset --local` | Wipe all project-local configs and recreate from scratch (clean slate) |
-| `add-rule <rule.md> [name]` | Register rule in `~/.ai-toolkit/rules/` — auto-applied on every `update` |
-| `remove-rule <name> [dir]` | Unregister rule from `~/.ai-toolkit/rules/` and remove its block from `CLAUDE.md` |
+| `add-rule <rule.md> [name]` | Register rule in `~/.softspark/ai-toolkit/rules/` — auto-applied on every `update` |
+| `remove-rule <name> [dir]` | Unregister rule from `~/.softspark/ai-toolkit/rules/` and remove its block from `CLAUDE.md` |
 | `inject-hook <file.json>` | Inject external hooks into settings.json (idempotent, `_source` tagged) |
 | `remove-hook <name>` | Remove injected hooks by source name |
 | `mcp list` | List available MCP server templates (25 templates) |
 | `mcp add <name> [names...]` | Add MCP server template(s) to `.mcp.json` |
 | `mcp show <name>` | Show MCP template config details |
 | `mcp remove <name>` | Remove MCP server from `.mcp.json` |
-| `config validate [path]` | Validate `.ai-toolkit.json` schema + extends + enforcement |
+| `config validate [path]` | Validate `.softspark-toolkit.json` schema + extends + enforcement |
 | `config diff [path]` | Show project vs base config differences |
-| `config init [flags]` | Create `.ai-toolkit.json` (`--extends`, `--profile`, `--no-extends`) |
+| `config init [flags]` | Create `.softspark-toolkit.json` (`--extends`, `--profile`, `--no-extends`) |
 | `config create-base <name>` | Scaffold base config npm package |
 | `config check [path]` | CI enforcement gate (exit 0=pass, 1=fail, 2=no config; `--json`) |
 | `projects` | List registered projects (`--prune` to clean stale, `remove <path>`) |
@@ -882,19 +882,19 @@ Any repo can register its rules so they are automatically injected into all AI t
 ```bash
 cd /path/to/your-repo
 ai-toolkit add-rule ./jira-rules.md
-# Registered: 'jira-rules' → ~/.ai-toolkit/rules/jira-rules.md
+# Registered: 'jira-rules' → ~/.softspark/ai-toolkit/rules/jira-rules.md
 
 ai-toolkit update
 # → injects jira-rules into ~/.claude/CLAUDE.md, ~/.cursor/rules, Windsurf, Gemini
 ```
 
-Rules are stored in `~/.ai-toolkit/rules/` and re-applied on every `update`. Injection is **idempotent** — re-running updates only the marked block, never touching content outside it.
+Rules are stored in `~/.softspark/ai-toolkit/rules/` and re-applied on every `update`. Injection is **idempotent** — re-running updates only the marked block, never touching content outside it.
 
 To unregister:
 
 ```bash
 ai-toolkit remove-rule jira-rules
-# Removes from ~/.ai-toolkit/rules/ and strips the block from ~/.claude/CLAUDE.md
+# Removes from ~/.softspark/ai-toolkit/rules/ and strips the block from ~/.claude/CLAUDE.md
 ```
 
 See [`kb/reference/integrations.md`](kb/reference/integrations.md) for known integrations.

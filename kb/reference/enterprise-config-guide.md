@@ -18,7 +18,7 @@ description: "Comprehensive guide for setting up and using ai-toolkit configurat
 
 ## Overview
 
-Configuration inheritance enables organizations to define a shared base config published as an npm package, Git URL, or local path. Individual projects extend this base via an `extends` field in `.ai-toolkit.json`. Changes to the base propagate automatically on `ai-toolkit update --local`.
+Configuration inheritance enables organizations to define a shared base config published as an npm package, Git URL, or local path. Individual projects extend this base via an `extends` field in `.softspark-toolkit.json`. Changes to the base propagate automatically on `ai-toolkit update --local`.
 
 **Pattern:** Mirrors ESLint's `extends`, TypeScript's `extends`, and Prettier's shared configs.
 
@@ -47,7 +47,7 @@ ai-toolkit config init --extends @mycompany/ai-toolkit-config
 ai-toolkit install --local
 ```
 
-Or manually create `.ai-toolkit.json`:
+Or manually create `.softspark-toolkit.json`:
 
 ```json
 {
@@ -71,7 +71,7 @@ ai-toolkit config check       # CI enforcement check
 
 ## Configuration Reference
 
-### Project config (`.ai-toolkit.json`)
+### Project config (`.softspark-toolkit.json`)
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -195,7 +195,7 @@ Requirements:
 
 ### `ai-toolkit config validate [path]`
 
-Validates `.ai-toolkit.json` schema, resolves extends, checks enforcement.
+Validates `.softspark-toolkit.json` schema, resolves extends, checks enforcement.
 
 ```bash
 ai-toolkit config validate
@@ -220,7 +220,7 @@ ai-toolkit config diff
 
 ### `ai-toolkit config init [flags]`
 
-Create `.ai-toolkit.json` interactively or with flags.
+Create `.softspark-toolkit.json` interactively or with flags.
 
 ```bash
 ai-toolkit config init                                    # interactive
@@ -261,12 +261,12 @@ GitHub Actions example:
 
 ## Lock File
 
-`.ai-toolkit.lock.json` pins exact resolved versions for reproducible installs.
+`.softspark-toolkit.lock.json` pins exact resolved versions for reproducible installs.
 
 - `install --local` → creates/updates lock file
 - `update --local` → re-resolves and updates lock file
 - `update --local --refresh-base` → force re-fetch ignoring cache
-- Commit `.ai-toolkit.lock.json` to git for team synchronization
+- Commit `.softspark-toolkit.lock.json` to git for team synchronization
 
 ```json
 {
@@ -275,7 +275,7 @@ GitHub Actions example:
     "@mycompany/ai-toolkit-config": {
       "version": "2.1.0",
       "integrity": "sha256:abc123...",
-      "cached": "~/.ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
+      "cached": "~/.softspark/ai-toolkit/config-cache/@mycompany/ai-toolkit-config/2.1.0/"
     }
   }
 }
@@ -287,7 +287,7 @@ GitHub Actions example:
 
 When npm/git is unavailable:
 
-1. Checks cache (`~/.ai-toolkit/config-cache/`)
+1. Checks cache (`~/.softspark/ai-toolkit/config-cache/`)
 2. If cached version found → uses with warning
 3. If not cached → error with instructions
 

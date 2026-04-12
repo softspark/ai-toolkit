@@ -6,7 +6,7 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 setup() {
     TEST_DIR="$(mktemp -d)"
     TMP_HOME="$(mktemp -d)"
-    export AI_TOOLKIT_HOME="$TMP_HOME/.ai-toolkit"
+    export AI_TOOLKIT_HOME="$TMP_HOME/.softspark/ai-toolkit"
     mkdir -p "$AI_TOOLKIT_HOME"
 }
 
@@ -27,7 +27,7 @@ teardown() {
   "profile": "strict"
 }
 EOF
-    cat > "$TEST_DIR/project/.ai-toolkit.json" << 'EOF'
+    cat > "$TEST_DIR/project/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config"
 }
@@ -45,7 +45,7 @@ assert data['configs'][0]['version'] == '1.0.0'
 
 @test "resolver: local path not found gives error" {
     mkdir -p "$TEST_DIR/project"
-    cat > "$TEST_DIR/project/.ai-toolkit.json" << 'EOF'
+    cat > "$TEST_DIR/project/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../nonexistent"
 }
@@ -58,7 +58,7 @@ EOF
 
 @test "resolver: missing config file in extends dir gives error" {
     mkdir -p "$TEST_DIR/empty-base" "$TEST_DIR/project"
-    cat > "$TEST_DIR/project/.ai-toolkit.json" << 'EOF'
+    cat > "$TEST_DIR/project/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../empty-base"
 }
@@ -91,7 +91,7 @@ EOF
   "profile": "standard"
 }
 EOF
-    cat > "$TEST_DIR/project/.ai-toolkit.json" << 'EOF'
+    cat > "$TEST_DIR/project/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../parent"
 }
@@ -129,7 +129,7 @@ EOF
   "extends": "../config-a"
 }
 EOF
-    cat > "$TEST_DIR/project/.ai-toolkit.json" << 'EOF'
+    cat > "$TEST_DIR/project/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../config-a"
 }
@@ -145,7 +145,7 @@ EOF
 
 @test "resolver: config without extends returns empty" {
     mkdir -p "$TEST_DIR/project"
-    cat > "$TEST_DIR/project/.ai-toolkit.json" << 'EOF'
+    cat > "$TEST_DIR/project/.softspark-toolkit.json" << 'EOF'
 {
   "profile": "standard"
 }
@@ -159,9 +159,9 @@ assert data['configs'] == []
 "
 }
 
-@test "resolver: no .ai-toolkit.json returns error" {
+@test "resolver: no .softspark-toolkit.json returns error" {
     mkdir -p "$TEST_DIR/project"
     run python3 "$TOOLKIT_DIR/scripts/config_resolver.py" "$TEST_DIR/project"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"No .ai-toolkit.json"* ]]
+    [[ "$output" == *"No .softspark-toolkit.json"* ]]
 }

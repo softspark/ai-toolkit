@@ -16,7 +16,7 @@ Other tools (global config locations):
   - Windsurf: ~/.codeium/windsurf/memories/global_rules.md
   - Gemini:   ~/.gemini/GEMINI.md
 
-Registered rules (~/.ai-toolkit/rules/*.md) are also injected into
+Registered rules (~/.softspark/ai-toolkit/rules/*.md) are also injected into
 all of the above. Add rules with: ai-toolkit add-rule <rule.md>
 
 Usage:
@@ -467,9 +467,9 @@ def resolve_extends_config(
     config_path: str = "",
     refresh: bool = False,
 ) -> dict | None:
-    """Resolve .ai-toolkit.json extends and return merged config.
+    """Resolve .softspark-toolkit.json extends and return merged config.
 
-    Returns None if no .ai-toolkit.json or no extends field.
+    Returns None if no .softspark-toolkit.json or no extends field.
     Prints warnings/errors and exits on fatal errors.
     """
     if config_path:
@@ -596,6 +596,10 @@ def main() -> None:
         print_status()
         sys.exit(0)
 
+    # Auto-migrate from legacy ~/.ai-toolkit if needed
+    from migrate import run_full_migration
+    run_full_migration(dry_run=cfg.get("dry_run", False))
+
     target_dir: Path = cfg["target_dir"]
     only: str = cfg["only"]
     skip: str = cfg["skip"]
@@ -618,8 +622,9 @@ def main() -> None:
         if not local:
             local = True  # language rules are project-local
 
-    rules_dir = Path.home() / ".ai-toolkit" / "rules"
-    hooks_scripts_dir = Path.home() / ".ai-toolkit" / "hooks"
+    from paths import RULES_DIR, HOOKS_DIR, TOOLKIT_DATA_DIR
+    rules_dir = RULES_DIR
+    hooks_scripts_dir = HOOKS_DIR
 
     # --local always implies --auto-detect (why install locally without language rules?)
     if local and not auto_detect and not modules_arg:
@@ -653,7 +658,7 @@ def main() -> None:
 
     if local:
         # --local: project-local only, no global install
-        # Check for .ai-toolkit.json extends system
+        # Check for .softspark-toolkit.json extends system
         config_path_arg: str = cfg["config"]
         refresh_base: bool = cfg["refresh_base"]
         merged_config = resolve_extends_config(
@@ -716,7 +721,7 @@ def main() -> None:
                 extends=extends_source,
             )
             if is_new:
-                print(f"  Registered project in ~/.ai-toolkit/projects.json")
+                print(f"  Registered project in {TOOLKIT_DATA_DIR / 'projects.json'}")
 
     print_summary(local=local)
 

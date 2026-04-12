@@ -6,8 +6,8 @@
 # Strips private tags, truncates to 2000 chars, inserts into observations table.
 # Never blocks the user — always exits 0.
 
-DB_PATH="${HOME}/.ai-toolkit/memory.db"
-STRIP_PRIVATE="${HOME}/.ai-toolkit/plugin-scripts/memory-pack/strip_private.py"
+DB_PATH="${HOME}/.softspark/ai-toolkit/memory.db"
+STRIP_PRIVATE="${HOME}/.softspark/ai-toolkit/plugin-scripts/memory-pack/strip_private.py"
 MAX_CONTENT_LENGTH=2000
 
 # Bail silently if database does not exist

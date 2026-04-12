@@ -2,7 +2,7 @@
 """CLI dispatcher for ai-toolkit config subcommands.
 
 Usage:
-    ai-toolkit config validate [path]     — Validate .ai-toolkit.json
+    ai-toolkit config validate [path]     — Validate .softspark-toolkit.json
     ai-toolkit config diff [path]         — Show project vs base differences
     ai-toolkit config init                — Interactive config setup (MVP Phase 3)
     ai-toolkit config create-base <name>  — Scaffold base config package (MVP Phase 3)
@@ -33,7 +33,7 @@ from config_scaffold import create_base_package, create_project_config
 from config_lock import check_lock_staleness
 
 
-PROJECT_CONFIG_FILENAME = ".ai-toolkit.json"
+from paths import PROJECT_CONFIG_FILENAME
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ PROJECT_CONFIG_FILENAME = ".ai-toolkit.json"
 # ---------------------------------------------------------------------------
 
 def cmd_validate(args: list[str]) -> int:
-    """Validate .ai-toolkit.json schema and extends resolution."""
+    """Validate .softspark-toolkit.json schema and extends resolution."""
     project_dir = Path(args[0]) if args else Path.cwd()
 
     try:
@@ -350,7 +350,7 @@ def cmd_check(args: list[str]) -> int:
     Exit codes:
       0 — project complies with base config
       1 — violations found
-      2 — .ai-toolkit.json not found
+      2 — .softspark-toolkit.json not found
     """
     project_dir = Path(args[0]) if args and not args[0].startswith("-") else Path.cwd()
     json_output = "--json" in args
@@ -365,7 +365,7 @@ def cmd_check(args: list[str]) -> int:
         return 1
     if config is None:
         if json_output:
-            print(json.dumps({"status": "error", "code": 2, "message": "No .ai-toolkit.json found"}))
+            print(json.dumps({"status": "error", "code": 2, "message": "No .softspark-toolkit.json found"}))
         else:
             print(f"  ✗ No {PROJECT_CONFIG_FILENAME} found in {project_dir}")
         return 2
@@ -513,9 +513,9 @@ def main() -> None:
         print("Usage: ai-toolkit config <subcommand> [args...]")
         print()
         print("Subcommands:")
-        print("  validate [path]      Validate .ai-toolkit.json schema + extends")
+        print("  validate [path]      Validate .softspark-toolkit.json schema + extends")
         print("  diff [path]          Show project vs base config differences")
-        print("  init [flags]         Create .ai-toolkit.json (--extends, --profile, --no-extends)")
+        print("  init [flags]         Create .softspark-toolkit.json (--extends, --profile, --no-extends)")
         print("  create-base <name>   Scaffold base config npm package")
         print("  check [path]         CI enforcement check (exit 0=pass, 1=fail, 2=no config)")
         sys.exit(0)

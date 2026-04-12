@@ -8,7 +8,7 @@ Persistent session memory with SQLite storage and full-text search.
 - Scripts: `init_db.py` (database setup), `strip_private.py` (privacy filter)
 
 ## How It Works
-1. **Capture**: Every tool use is recorded to `~/.ai-toolkit/memory.db` (PostToolUse hook)
+1. **Capture**: Every tool use is recorded to `~/.softspark/ai-toolkit/memory.db` (PostToolUse hook)
 2. **Summarize**: Session summary generated on each Stop hook (tools used, observation count, time range)
 3. **Search**: `/mem-search <query>` runs FTS5 full-text search with progressive disclosure
 4. **Privacy**: Content between `<private>...</private>` tags is stripped before storage

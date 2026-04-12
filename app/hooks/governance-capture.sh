@@ -8,7 +8,7 @@
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
 
-LOG_DIR="$HOME/.ai-toolkit"
+LOG_DIR="$HOME/.softspark/ai-toolkit"
 LOG_FILE="$LOG_DIR/governance.log"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 SESSION="${CLAUDE_SESSION_ID:-unknown}"

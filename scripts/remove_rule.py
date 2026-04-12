@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """remove-rule -- Unregister a rule (opposite of add-rule).
 
-Removes the rule file from ~/.ai-toolkit/rules/ (so it is no longer
+Removes the rule file from ~/.softspark/ai-toolkit/rules/ (so it is no longer
 re-applied on future 'ai-toolkit install' runs) AND strips its injected
 block from the target CLAUDE.md.
 
@@ -29,11 +29,12 @@ def main() -> None:
 
     rule_name = sys.argv[1]
     target_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else Path.home()
-    rules_dir = Path.home() / ".ai-toolkit" / "rules"
+    from paths import RULES_DIR
+    rules_dir = RULES_DIR
 
     removed = 0
 
-    # 1. Unregister from ~/.ai-toolkit/rules/
+    # 1. Unregister from ~/.softspark/ai-toolkit/rules/
     rule_file = rules_dir / f"{rule_name}.md"
     if rule_file.is_file():
         rule_file.unlink()
@@ -51,7 +52,7 @@ def main() -> None:
     if removed == 0:
         print()
         print("Nothing to unregister. To list registered rules:")
-        print("  ls ~/.ai-toolkit/rules/")
+        print(f"  ls {rules_dir}/")
 
 
 if __name__ == "__main__":

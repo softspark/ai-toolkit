@@ -15,7 +15,7 @@ $ARGUMENTS
 
 ## How It Works
 
-This skill queries the SQLite FTS5 full-text search index at `~/.ai-toolkit/memory.db` to find relevant observations from past sessions.
+This skill queries the SQLite FTS5 full-text search index at `~/.softspark/ai-toolkit/memory.db` to find relevant observations from past sessions.
 
 ## Instructions
 
@@ -23,12 +23,12 @@ This skill queries the SQLite FTS5 full-text search index at `~/.ai-toolkit/memo
 
 2. **Initialize the database** if it does not exist:
    ```bash
-   python3 "$HOME/.ai-toolkit/hooks/../plugins/memory-pack/scripts/init_db.py" 2>/dev/null || true
+   python3 "$HOME/.softspark/ai-toolkit/hooks/../plugins/memory-pack/scripts/init_db.py" 2>/dev/null || true
    ```
 
 3. **Run the FTS5 search** against the observations table:
    ```bash
-   sqlite3 ~/.ai-toolkit/memory.db "
+   sqlite3 ~/.softspark/ai-toolkit/memory.db "
      SELECT o.id, o.session_id, o.tool_name, o.content, o.created_at,
             s.project_dir, s.summary
      FROM observations_fts fts

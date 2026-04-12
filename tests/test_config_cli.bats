@@ -8,7 +8,7 @@ setup() {
     BASE_DIR="$TEST_DIR/base-config"
     PROJECT_DIR="$TEST_DIR/project"
     TMP_HOME="$(mktemp -d)"
-    export AI_TOOLKIT_HOME="$TMP_HOME/.ai-toolkit"
+    export AI_TOOLKIT_HOME="$TMP_HOME/.softspark/ai-toolkit"
     mkdir -p "$AI_TOOLKIT_HOME" "$BASE_DIR/rules" "$PROJECT_DIR"
 
     cat > "$BASE_DIR/ai-toolkit.config.json" << 'EOF'
@@ -46,7 +46,7 @@ teardown() {
 # ---------------------------------------------------------------------------
 
 @test "cli validate: valid config returns 0" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "profile": "standard",
@@ -63,11 +63,11 @@ EOF
 @test "cli validate: missing config returns 2" {
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config validate "$TEST_DIR/empty-dir-$(date +%s)"
     [ "$status" -eq 2 ]
-    [[ "$output" == *"No .ai-toolkit.json"* ]]
+    [[ "$output" == *"No .softspark-toolkit.json"* ]]
 }
 
 @test "cli validate: blocked required agent returns 1" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "agents": {
@@ -81,7 +81,7 @@ EOF
 }
 
 @test "cli validate: constitution modification returns 1" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {
@@ -97,7 +97,7 @@ EOF
 }
 
 @test "cli validate: forbidden override returns 1" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "overrides": {
@@ -118,7 +118,7 @@ EOF
 # ---------------------------------------------------------------------------
 
 @test "cli diff: shows profile override" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "profile": "standard"
@@ -133,7 +133,7 @@ EOF
 }
 
 @test "cli diff: shows added agents" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "agents": {
@@ -148,7 +148,7 @@ EOF
 }
 
 @test "cli diff: shows constitution additions" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {
@@ -167,7 +167,7 @@ EOF
 }
 
 @test "cli diff: no extends shows message" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "profile": "standard"
 }
@@ -199,10 +199,10 @@ EOF
     cd "$INIT_DIR"
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config init --extends "../base-config" --profile strict
     [ "$status" -eq 0 ]
-    [ -f "$INIT_DIR/.ai-toolkit.json" ]
+    [ -f "$INIT_DIR/.softspark-toolkit.json" ]
     python3 -c "
 import json
-with open('$INIT_DIR/.ai-toolkit.json') as f:
+with open('$INIT_DIR/.softspark-toolkit.json') as f:
     config = json.load(f)
 assert config['extends'] == '../base-config'
 assert config['profile'] == 'strict'
@@ -215,10 +215,10 @@ assert config['profile'] == 'strict'
     cd "$INIT_DIR"
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config init --no-extends --profile standard
     [ "$status" -eq 0 ]
-    [ -f "$INIT_DIR/.ai-toolkit.json" ]
+    [ -f "$INIT_DIR/.softspark-toolkit.json" ]
     python3 -c "
 import json
-with open('$INIT_DIR/.ai-toolkit.json') as f:
+with open('$INIT_DIR/.softspark-toolkit.json') as f:
     config = json.load(f)
 assert 'extends' not in config or config.get('extends') == ''
 assert config['profile'] == 'standard'
@@ -228,7 +228,7 @@ assert config['profile'] == 'standard'
 @test "cli init: refuses to overwrite without --force" {
     INIT_DIR="$TEST_DIR/init-exists"
     mkdir -p "$INIT_DIR"
-    echo '{"profile":"standard"}' > "$INIT_DIR/.ai-toolkit.json"
+    echo '{"profile":"standard"}' > "$INIT_DIR/.softspark-toolkit.json"
     cd "$INIT_DIR"
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config init --no-extends
     [ "$status" -eq 1 ]
@@ -273,7 +273,7 @@ assert '@softspark/ai-toolkit' in pkg['peerDependencies']
 # ---------------------------------------------------------------------------
 
 @test "cli check: passes on valid config" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "profile": "standard"
@@ -292,7 +292,7 @@ EOF
 }
 
 @test "cli check: fails on constitution conflict" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {
@@ -308,7 +308,7 @@ EOF
 }
 
 @test "cli check: JSON output mode" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "profile": "standard"
@@ -330,28 +330,28 @@ assert len(data['checks']) >= 3
 # ---------------------------------------------------------------------------
 
 @test "cli validate: handles invalid JSON gracefully" {
-    echo '{broken' > "$PROJECT_DIR/.ai-toolkit.json"
+    echo '{broken' > "$PROJECT_DIR/.softspark-toolkit.json"
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config validate "$PROJECT_DIR"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Invalid JSON"* ]]
 }
 
 @test "cli check: handles invalid JSON gracefully" {
-    echo '{broken' > "$PROJECT_DIR/.ai-toolkit.json"
+    echo '{broken' > "$PROJECT_DIR/.softspark-toolkit.json"
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config check "$PROJECT_DIR"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Invalid JSON"* ]]
 }
 
 @test "cli diff: handles invalid JSON gracefully" {
-    echo '{broken' > "$PROJECT_DIR/.ai-toolkit.json"
+    echo '{broken' > "$PROJECT_DIR/.softspark-toolkit.json"
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config diff "$PROJECT_DIR"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Invalid JSON"* ]]
 }
 
 @test "cli check: reports missing lock file" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config"
 }

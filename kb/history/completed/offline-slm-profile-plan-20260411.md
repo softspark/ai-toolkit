@@ -88,8 +88,8 @@ ai-toolkit compile-slm [--budget 4096] [--persona backend-lead] [--lang typescri
   │    extended (16K) — near-full toolkit (for 32B+ models)   │
   │                                                          │
   │  Output Files:                                           │
-  │    ~/.ai-toolkit/compiled/slm-system-prompt.md           │
-  │    ~/.ai-toolkit/compiled/slm-skills-reference.md        │
+  │    ~/.softspark/ai-toolkit/compiled/slm-system-prompt.md           │
+  │    ~/.softspark/ai-toolkit/compiled/slm-skills-reference.md        │
   │    CLAUDE.md (or equivalent) — auto-generated            │
   │                                                          │
   │  Integration Targets:                                    │
@@ -429,7 +429,7 @@ ai-toolkit install --profile offline-slm
 # What happens:
 # 1. Standard install of core components
 # 2. Runs compile_slm.py with auto-detected settings
-# 3. Writes compiled output to ~/.ai-toolkit/compiled/
+# 3. Writes compiled output to ~/.softspark/ai-toolkit/compiled/
 # 4. Generates integration instructions for detected local model tools
 # 5. state.json records profile as "offline-slm"
 ```
@@ -532,7 +532,7 @@ ollama run my-coder "implement the payment API"
 ```
 1. ai-toolkit compile-slm --model-size 14b
 2. Open LM Studio → Chat → System Prompt
-3. Paste contents of ~/.ai-toolkit/compiled/slm-system-prompt.md
+3. Paste contents of ~/.softspark/ai-toolkit/compiled/slm-system-prompt.md
 ```
 
 **Aider:**
@@ -603,7 +603,7 @@ Post-compilation checks:
 
 ## 6b. Cache Invalidation & Recompile Triggers
 
-Compiled output (`~/.ai-toolkit/compiled/slm-system-prompt.md`) is a **derived artifact** — it must be recompiled when inputs change:
+Compiled output (`~/.softspark/ai-toolkit/compiled/slm-system-prompt.md`) is a **derived artifact** — it must be recompiled when inputs change:
 
 | Trigger | Action |
 |---------|--------|
@@ -622,7 +622,7 @@ The offline-slm feature is purely additive — removing it is trivial:
 1. Delete `scripts/compile_slm.py`, `scripts/slm_token_counter.py`, `scripts/slm_compression.py`, `scripts/slm_integration.py`
 2. Remove `"offline-slm"` and `"offline-slm-extended"` from `manifest.json` profiles
 3. Remove `compile-slm` from `SCRIPT_COMMANDS` in `bin/ai-toolkit.js`
-4. Delete `~/.ai-toolkit/compiled/` directory (user-side)
+4. Delete `~/.softspark/ai-toolkit/compiled/` directory (user-side)
 5. No hooks, no state files, no config entries to clean up
 
 ---

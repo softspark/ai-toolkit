@@ -66,7 +66,7 @@ def merge_config_chain(
 
     Args:
         base_configs: Ordered list of base config dicts (deepest ancestor first).
-        project_config: The project-level .ai-toolkit.json data.
+        project_config: The project-level .softspark-toolkit.json data.
 
     Returns:
         MergeResult with the final merged config.

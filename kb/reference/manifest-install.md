@@ -6,7 +6,7 @@ tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
 version: "1.0.0"
 created: "2026-04-07"
 last_updated: "2026-04-07"
-description: "Reference for the manifest-driven install system: 17 modules, 4 profiles, auto-detection, and state tracking in ~/.ai-toolkit/state.json."
+description: "Reference for the manifest-driven install system: 17 modules, 4 profiles, auto-detection, and state tracking in ~/.softspark/ai-toolkit/state.json."
 ---
 
 # Manifest-Driven Install System
@@ -107,7 +107,7 @@ Lists all currently installed modules with version and install timestamp:
 
 ```bash
 ai-toolkit status
-# Installed modules (from ~/.ai-toolkit/state.json):
+# Installed modules (from ~/.softspark/ai-toolkit/state.json):
 #   core            v1.3.0   installed 2026-04-07T10:00:00Z
 #   agents          v1.3.0   installed 2026-04-07T10:00:00Z
 #   skills          v1.3.0   installed 2026-04-07T10:00:00Z
@@ -121,7 +121,7 @@ Re-applies installed modules, skipping files whose content hash has not changed 
 
 ## State Tracking
 
-Installed module state is persisted to `~/.ai-toolkit/state.json`:
+Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
 
 ```json
 {
@@ -145,7 +145,7 @@ Installed module state is persisted to `~/.ai-toolkit/state.json`:
 |------|---------|
 | `manifest.json` | Module and profile definitions |
 | `scripts/install_steps/detect_language.py` | Auto-detect project language from marker files |
-| `scripts/install_steps/install_state.py` | Read/write `~/.ai-toolkit/state.json` |
+| `scripts/install_steps/install_state.py` | Read/write `~/.softspark/ai-toolkit/state.json` |
 
 ## Backward Compatibility
 

@@ -25,9 +25,9 @@ ai-toolkit add-rule ./jira-rules.md
 ai-toolkit update   # inject now
 ```
 
-After registration, `ai-toolkit update` will always re-inject the rule. Registry location: `~/.ai-toolkit/rules/`.
+After registration, `ai-toolkit update` will always re-inject the rule. Registry location: `~/.softspark/ai-toolkit/rules/`.
 
-To unregister a rule (removes from `~/.ai-toolkit/rules/` and strips the block from `CLAUDE.md`):
+To unregister a rule (removes from `~/.softspark/ai-toolkit/rules/` and strips the block from `CLAUDE.md`):
 
 ```bash
 ai-toolkit remove-rule jira-rules
@@ -55,7 +55,7 @@ Content outside markers is never touched. Re-running updates only the marked blo
 
 1. Create `<name>-rules.md` in your repo with Claude-relevant conventions
 2. Register it: `ai-toolkit add-rule ./<name>-rules.md`
-3. Verify it appears in: `~/.ai-toolkit/rules/<name>-rules.md`
+3. Verify it appears in: `~/.softspark/ai-toolkit/rules/<name>-rules.md`
 4. On next `install` it will be listed in: `Rules injected: ... <name>-rules`
 5. Add an entry below documenting the integration
 

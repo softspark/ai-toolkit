@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Update all registered projects in parallel.
 
-Reads ~/.ai-toolkit/projects.json and runs install.py --local in each
+Reads ~/.softspark/ai-toolkit/projects.json and runs install.py --local in each
 project directory concurrently using a thread pool.
 
 Stdlib-only — no external dependencies.

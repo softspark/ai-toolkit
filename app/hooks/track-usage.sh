@@ -2,12 +2,12 @@
 # track-usage.sh — Track skill invocations for usage stats.
 #
 # Fires on: UserPromptSubmit
-# Writes to: ~/.ai-toolkit/stats.json
+# Writes to: ~/.softspark/ai-toolkit/stats.json
 #
 # Detects /skill-name pattern from user prompt and increments counter.
 # Uses atomic write via python3 os.replace() to prevent corruption.
 
-STATS_FILE="${HOME}/.ai-toolkit/stats.json"
+STATS_FILE="${HOME}/.softspark/ai-toolkit/stats.json"
 
 # Read prompt from stdin (Claude Code passes JSON with .prompt field)
 INPUT=$(cat)

@@ -30,7 +30,7 @@ if git diff --cached -S'<<<<<<<' --name-only | grep -q '.*'; then
 fi
 
 # 2. Call the global quality-check if it exists
-QUALITY_CHECK="$HOME/.ai-toolkit/hooks/quality-check.sh"
+QUALITY_CHECK="$HOME/.softspark/ai-toolkit/hooks/quality-check.sh"
 if [ -x "$QUALITY_CHECK" ]; then
     if ! "$QUALITY_CHECK"; then
         echo "ERROR: Linter or type checks failed."

@@ -9,7 +9,7 @@ setup() {
     TEST_TMP="$(mktemp -d)"
     export HOME="$TEST_TMP"
     export TOOLKIT_HOOK_PROFILE="standard"
-    mkdir -p "$TEST_TMP/.ai-toolkit"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
 }
 
 teardown() {
@@ -356,21 +356,21 @@ run_hook_with_input() {
 @test "track-usage: ignores non-slash prompts" {
     run_hook_with_input "track-usage.sh" '{"prompt":"just a normal question"}'
     [ "$status" -eq 0 ]
-    [ ! -f "$HOME/.ai-toolkit/stats.json" ]
+    [ ! -f "$HOME/.softspark/ai-toolkit/stats.json" ]
 }
 
 @test "track-usage: tracks slash command invocation" {
     run_hook_with_input "track-usage.sh" '{"prompt":"/review src/main.py"}'
     [ "$status" -eq 0 ]
-    [ -f "$HOME/.ai-toolkit/stats.json" ]
-    run bash -c "python3 -c \"import json; d=json.load(open('$HOME/.ai-toolkit/stats.json')); assert d['review']['count']==1\""
+    [ -f "$HOME/.softspark/ai-toolkit/stats.json" ]
+    run bash -c "python3 -c \"import json; d=json.load(open('$HOME/.softspark/ai-toolkit/stats.json')); assert d['review']['count']==1\""
     [ "$status" -eq 0 ]
 }
 
 @test "track-usage: increments counter on repeated invocation" {
     run_hook_with_input "track-usage.sh" '{"prompt":"/debug error"}'
     run_hook_with_input "track-usage.sh" '{"prompt":"/debug error"}'
-    run bash -c "python3 -c \"import json; d=json.load(open('$HOME/.ai-toolkit/stats.json')); assert d['debug']['count']==2\""
+    run bash -c "python3 -c \"import json; d=json.load(open('$HOME/.softspark/ai-toolkit/stats.json')); assert d['debug']['count']==2\""
     [ "$status" -eq 0 ]
 }
 
@@ -563,23 +563,23 @@ run_hook_with_input() {
 @test "governance-capture: logs rm -rf command to governance.log" {
     run_hook_with_input "governance-capture.sh" '{"tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/danger"}}'
     [ "$status" -eq 0 ]
-    [ -f "$TEST_TMP/.ai-toolkit/governance.log" ]
-    grep -q "dangerous-command" "$TEST_TMP/.ai-toolkit/governance.log"
-    grep -q "rm -rf" "$TEST_TMP/.ai-toolkit/governance.log"
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/governance.log" ]
+    grep -q "dangerous-command" "$TEST_TMP/.softspark/ai-toolkit/governance.log"
+    grep -q "rm -rf" "$TEST_TMP/.softspark/ai-toolkit/governance.log"
 }
 
 @test "governance-capture: does not log regular command" {
     run_hook_with_input "governance-capture.sh" '{"tool_name":"Bash","tool_input":{"command":"ls -la /tmp"}}'
     [ "$status" -eq 0 ]
-    [ ! -f "$TEST_TMP/.ai-toolkit/governance.log" ] || ! grep -q "dangerous-command" "$TEST_TMP/.ai-toolkit/governance.log"
+    [ ! -f "$TEST_TMP/.softspark/ai-toolkit/governance.log" ] || ! grep -q "dangerous-command" "$TEST_TMP/.softspark/ai-toolkit/governance.log"
 }
 
 @test "governance-capture: creates governance.log directory if missing" {
-    rm -rf "$TEST_TMP/.ai-toolkit"
+    rm -rf "$TEST_TMP/.softspark/ai-toolkit"
     run_hook_with_input "governance-capture.sh" '{"tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/danger"}}'
     [ "$status" -eq 0 ]
-    [ -d "$TEST_TMP/.ai-toolkit" ]
-    [ -f "$TEST_TMP/.ai-toolkit/governance.log" ]
+    [ -d "$TEST_TMP/.softspark/ai-toolkit" ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/governance.log" ]
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -605,7 +605,7 @@ run_hook_with_input() {
 @test "session-context: creates session JSON file with session_id from stdin" {
     run_hook_with_input "session-context.sh" '{"session_id":"test-123","source":"startup"}'
     [ "$status" -eq 0 ]
-    [ -f "$TEST_TMP/.ai-toolkit/sessions/test-123.json" ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/sessions/test-123.json" ]
 }
 
 @test "session-context: JSON contains pwd and git_branch fields" {
@@ -613,7 +613,7 @@ run_hook_with_input() {
     [ "$status" -eq 0 ]
     python3 -c "
 import json
-with open('$TEST_TMP/.ai-toolkit/sessions/test-456.json') as f:
+with open('$TEST_TMP/.softspark/ai-toolkit/sessions/test-456.json') as f:
     d = json.load(f)
 assert 'pwd' in d, 'missing pwd field'
 assert 'git_branch' in d, 'missing git_branch field'
@@ -627,9 +627,9 @@ assert 'git_branch' in d, 'missing git_branch field'
 @test "pre-compact-save: creates timestamped file in compactions/ directory" {
     run_hook_with_input "pre-compact-save.sh" '{"session_id":"test-789"}'
     [ "$status" -eq 0 ]
-    [ -d "$TEST_TMP/.ai-toolkit/compactions" ]
+    [ -d "$TEST_TMP/.softspark/ai-toolkit/compactions" ]
     local found
-    found=$(ls "$TEST_TMP/.ai-toolkit/compactions/"*test-789*.txt 2>/dev/null | wc -l)
+    found=$(ls "$TEST_TMP/.softspark/ai-toolkit/compactions/"*test-789*.txt 2>/dev/null | wc -l)
     [ "$found" -ge 1 ]
 }
 
@@ -638,7 +638,7 @@ assert 'git_branch' in d, 'missing git_branch field'
     run_hook_with_input "pre-compact-save.sh" '{"session_id":"test-abc"}'
     [ "$status" -eq 0 ]
     local file
-    file=$(ls "$TEST_TMP/.ai-toolkit/compactions/"*test-abc*.txt 2>/dev/null | head -1)
+    file=$(ls "$TEST_TMP/.softspark/ai-toolkit/compactions/"*test-abc*.txt 2>/dev/null | head -1)
     [ -n "$file" ]
     grep -q "test-session-abc" "$file"
     unset CLAUDE_SESSION_ID

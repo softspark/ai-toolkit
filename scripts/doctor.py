@@ -27,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import toolkit_dir
+from paths import HOOKS_DIR as _HOOKS_DIR, RULES_DIR as _RULES_DIR
 
 
 # ---------------------------------------------------------------------------
@@ -34,8 +35,8 @@ from _common import toolkit_dir
 # ---------------------------------------------------------------------------
 
 CLAUDE_DIR = Path.home() / ".claude"
-HOOKS_DIR = Path.home() / ".ai-toolkit" / "hooks"
-RULES_DIR = Path.home() / ".ai-toolkit" / "rules"
+HOOKS_DIR = _HOOKS_DIR
+RULES_DIR = _RULES_DIR
 BENCHMARK_DASHBOARD = toolkit_dir / "benchmarks" / "ecosystem-dashboard.json"
 
 VALID_EVENTS = frozenset({

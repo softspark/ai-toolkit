@@ -10,7 +10,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## v1.9.0 — Project Registry & Doc Sync (2026-04-12)
 
 ### Added
-- **Project registry** — `install --local` automatically registers project path in `~/.ai-toolkit/projects.json`. `ai-toolkit update` propagates updates to all registered projects in parallel via `ThreadPoolExecutor`
+- **Project registry** — `install --local` automatically registers project path in `~/.softspark/ai-toolkit/projects.json`. `ai-toolkit update` propagates updates to all registered projects in parallel via `ThreadPoolExecutor`
 - **`ai-toolkit projects`** — list registered projects, `--prune` to remove stale (deleted directories), `remove <path>` to unregister specific project
 - **Parallel update propagation** — `ai-toolkit update` (global) now auto-updates all registered local projects concurrently (max 8 workers)
 
@@ -25,21 +25,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## v1.8.0 — Enterprise Config Inheritance (2026-04-12)
 
 ### Added
-- **Configuration inheritance system** — `extends` pattern (like ESLint/TypeScript) for multi-repo AI governance. Organizations define a shared base config published as npm package, git URL, or local path; projects inherit via `.ai-toolkit.json`
+- **Configuration inheritance system** — `extends` pattern (like ESLint/TypeScript) for multi-repo AI governance. Organizations define a shared base config published as npm package, git URL, or local path; projects inherit via `.softspark-toolkit.json`
 - **`ai-toolkit config validate`** — schema validation + extends resolution + enforcement check
 - **`ai-toolkit config diff`** — visual diff of project vs base config (profile, agents, rules, constitution, overrides)
-- **`ai-toolkit config init`** — interactive or flag-driven `.ai-toolkit.json` creation with extends validation
+- **`ai-toolkit config init`** — interactive or flag-driven `.softspark-toolkit.json` creation with extends validation
 - **`ai-toolkit config create-base`** — scaffolds ready-to-publish npm base config package (package.json, ai-toolkit.config.json, rules/, agents/, README)
 - **`ai-toolkit config check`** — CI enforcement gate with JSON output and exit codes (0=pass, 1=fail, 2=no config)
 - **Merge engine** — layered deep merge (base → project) with special handling for agents (requiredAgents enforcement), rules (union), constitution (immutability), enforce blocks (cannot weaken)
 - **Constitution immutability guard** — Articles I-V absolutely immutable; base config articles immutable; projects can only ADD new articles (6+)
 - **Override validation** — `override: true` + justification (min 20 chars) required; `forbidOverride` enforcement
 - **Enforce constraints** — 4 types: `minHookProfile`, `requiredPlugins`, `forbidOverride`, `requiredAgents`
-- **Lock file** (`.ai-toolkit.lock.json`) — pins resolved base config versions for reproducible installs across team; generated on `install --local`, updated on `update --local`
-- **Audit trail** — extends metadata recorded in `state.json` and `.ai-toolkit-extends.json`
-- **Offline fallback** — uses cached configs from `~/.ai-toolkit/config-cache/` when registry unavailable
+- **Lock file** (`.softspark-toolkit.lock.json`) — pins resolved base config versions for reproducible installs across team; generated on `install --local`, updated on `update --local`
+- **Audit trail** — extends metadata recorded in `state.json` and `.softspark-toolkit-extends.json`
+- **Offline fallback** — uses cached configs from `~/.softspark/ai-toolkit/config-cache/` when registry unavailable
 - **Cycle detection** — max 5-level extends chain with circular reference detection
-- **Install integration** — `install --local` and `update --local` auto-detect `.ai-toolkit.json`, resolve extends, merge, validate, inject rules + constitution amendments into generated files
+- **Install integration** — `install --local` and `update --local` auto-detect `.softspark-toolkit.json`, resolve extends, merge, validate, inject rules + constitution amendments into generated files
 - **New CLI flags** — `--config <path>` (explicit config file), `--refresh-base` (force re-fetch)
 - **JSON Schema** — `scripts/schemas/ai-toolkit-config.schema.json` for editor autocompletion
 - **Enterprise config guide** — `kb/reference/enterprise-config-guide.md` comprehensive documentation
@@ -214,7 +214,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 - **Version check**: `ai-toolkit status` and session-start hook now read installed version from `state.json` instead of `package.json`, fixing false "up to date" when npm package was upgraded but `ai-toolkit update` not yet run.
 - **Version check**: `status` forces a fresh npm check (no 24h cache) so user always sees real state.
-- **Session-start hook**: `TOOLKIT_DIR` resolved via `npm root -g` instead of broken `../../` relative path from `~/.ai-toolkit/hooks/`.
+- **Session-start hook**: `TOOLKIT_DIR` resolved via `npm root -g` instead of broken `../../` relative path from `~/.softspark/ai-toolkit/hooks/`.
 
 ### Changed
 - **Notification hook**: replaced inline macOS-only `osascript` with cross-platform `notify-waiting.sh` script (macOS/Linux/Windows WSL).
@@ -240,7 +240,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## v1.3.10 — Patch (2026-04-07)
 
 ### Fixed
-- **Version cache**: `install` and `update` now clear `~/.ai-toolkit/version-check.json` so `status` shows correct "Latest" immediately after upgrade.
+- **Version cache**: `install` and `update` now clear `~/.softspark/ai-toolkit/version-check.json` so `status` shows correct "Latest" immediately after upgrade.
 
 ---
 
@@ -284,7 +284,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## v1.3.5 — Patch (2026-04-07)
 
 ### Fixed
-- **Stats not counting**: `track-usage.sh` and `user-prompt-submit.sh` now read prompt from stdin JSON (`.prompt` field) instead of non-existent `CLAUDE_USER_PROMPT` env var. Skill invocations are now properly tracked in `~/.ai-toolkit/stats.json`.
+- **Stats not counting**: `track-usage.sh` and `user-prompt-submit.sh` now read prompt from stdin JSON (`.prompt` field) instead of non-existent `CLAUDE_USER_PROMPT` env var. Skill invocations are now properly tracked in `~/.softspark/ai-toolkit/stats.json`.
 
 ---
 
@@ -319,7 +319,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **Language Rules System**: 70 language-specific coding rules across 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby) + 5 common rules. 5 categories per language: coding-style, testing, patterns, frameworks, security.
 - **MCP Templates**: 25 ready-to-use MCP server configuration templates (GitHub, PostgreSQL, Slack, Sentry, Context7, etc.) with CLI management (`ai-toolkit mcp add/list/show/remove`).
 - **Extension API**: `inject-hook` / `remove-hook` commands for external tools to inject hooks into settings.json with unique `_source` tags. Parallels existing `inject-rule` / `remove-rule`.
-- **Manifest-Driven Install**: Module-level install granularity (`--modules`), language auto-detection (`--auto-detect`), install state tracking (`~/.ai-toolkit/state.json`), `status` and `update` commands.
+- **Manifest-Driven Install**: Module-level install granularity (`--modules`), language auto-detection (`--auto-detect`), install state tracking (`~/.softspark/ai-toolkit/state.json`), `status` and `update` commands.
 - **6 new hooks**: `guard-config.sh` (config file protection), `mcp-health.sh` (MCP server health check), `governance-capture.sh` (security audit logging), `commit-quality.sh` (conventional commits advisory), `session-context.sh` (environment snapshot), `pre-compact-save.sh` (pre-compaction backup).
 - **`/council` skill**: 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) for architectural decisions.
 - **`/introspect` skill**: Agent self-debugging with 7 failure pattern classification and recovery actions.
@@ -419,7 +419,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **`npx @softspark/ai-toolkit install`** — zero-friction trial without global install
 - `--dry-run` flag as alias for `--list` in install/update
 - MIT license — full open source, use/modify/distribute freely
-- Global install into `~/.claude/` with merge-friendly propagation; hooks merged into `settings.json`, scripts copied into `~/.ai-toolkit/hooks/`
+- Global install into `~/.claude/` with merge-friendly propagation; hooks merged into `settings.json`, scripts copied into `~/.softspark/ai-toolkit/hooks/`
 - Idempotent generators with `<!-- TOOLKIT:ai-toolkit START/END -->` markers
 - CI: auto-regenerate `AGENTS.md` and `llms.txt` on push to main; publish on tags
 - **DRY refactoring**: `scripts/_common.py` shared library for all generators and CLI scripts; `app/hooks/_profile-check.sh` for 9 hooks; CLI uses data-driven `GENERATORS` map
@@ -432,7 +432,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **Visual companion** for `/write-a-prd` and `/design-an-interface` — ephemeral local HTTP server renders mockups, diagrams, and comparisons in browser during brainstorming
 - **Memory plugin pack** (`app/plugins/memory-pack/`) — SQLite-based persistent memory across sessions with FTS5 full-text search, PostToolUse observation capture, Stop session summary, `<private>` tag privacy controls, and progressive disclosure (summary → details → full)
 - **`validate.py --strict`** — CI-grade validation treating warnings as errors, plus content quality checks (name=directory, non-empty body)
-- **`doctor.py` stale rules detection** (Check 8) — detects rules in CLAUDE.md whose source files no longer exist in `~/.ai-toolkit/rules/`
+- **`doctor.py` stale rules detection** (Check 8) — detects rules in CLAUDE.md whose source files no longer exist in `~/.softspark/ai-toolkit/rules/`
 - **Reasoning engine template** (`app/skills/skill-creator/templates/reasoning-engine/`) — generic Python stdlib search for domain skills with >50 categorized items, anti-pattern filtering, JSON stdout
 - **Dashboard template** (`app/skills/skill-creator/templates/dashboard/index.html`) — single-file HTML dashboard parsing `stats.json` with skill usage charts
 - **Anti-pattern registry format** documented at `kb/reference/anti-pattern-registry-format.md` — structured JSON schema with severity, auto-fixability, and conflict rules

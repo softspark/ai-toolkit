@@ -1,6 +1,6 @@
 """Project registry — tracks which directories have ai-toolkit installed locally.
 
-Stores registry in ~/.ai-toolkit/projects.json.
+Stores registry in ~/.softspark/ai-toolkit/projects.json.
 Used by `ai-toolkit update` to propagate updates to all registered projects,
 and by `ai-toolkit projects` to list/manage them.
 
@@ -9,18 +9,18 @@ Stdlib-only — no external dependencies.
 from __future__ import annotations
 
 import json
-import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
-REGISTRY_FILENAME = "projects.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from paths import PROJECTS_FILE
 
 
 def _registry_path() -> Path:
     """Return the canonical path to projects.json."""
-    return Path(os.environ.get("AI_TOOLKIT_HOME", Path.home() / ".ai-toolkit")) / REGISTRY_FILENAME
+    return PROJECTS_FILE
 
 
 def _now_iso() -> str:

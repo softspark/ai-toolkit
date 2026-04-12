@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Integration tests for install --local with .ai-toolkit.json extends
+# Integration tests for install --local with .softspark-toolkit.json extends
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
@@ -9,7 +9,7 @@ setup() {
     PROJECT_DIR="$TEST_DIR/project"
     TMP_HOME="$(mktemp -d)"
     export HOME="$TMP_HOME"
-    mkdir -p "$TMP_HOME/.ai-toolkit" "$TMP_HOME/.claude"
+    mkdir -p "$TMP_HOME/.softspark/ai-toolkit" "$TMP_HOME/.claude"
     mkdir -p "$BASE_DIR/rules" "$PROJECT_DIR"
 
     # Base config
@@ -47,21 +47,21 @@ teardown() {
 # Backwards compatibility
 # ---------------------------------------------------------------------------
 
-@test "install --local: works without .ai-toolkit.json (backwards compat)" {
+@test "install --local: works without .softspark-toolkit.json (backwards compat)" {
     cd "$PROJECT_DIR"
     run python3 "$TOOLKIT_DIR/scripts/install.py" --local --skip agents,skills,hooks
     [ "$status" -eq 0 ]
     [ -f "$PROJECT_DIR/.claude/CLAUDE.md" ] || [ -f "$PROJECT_DIR/CLAUDE.md" ]
     # No extends metadata file
-    [ ! -f "$PROJECT_DIR/.ai-toolkit-extends.json" ]
+    [ ! -f "$PROJECT_DIR/.softspark-toolkit-extends.json" ]
 }
 
 # ---------------------------------------------------------------------------
 # Basic extends integration
 # ---------------------------------------------------------------------------
 
-@test "install --local: detects .ai-toolkit.json and resolves extends" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+@test "install --local: detects .softspark-toolkit.json and resolves extends" {
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "profile": "standard"
@@ -75,7 +75,7 @@ EOF
 }
 
 @test "install --local: generates extends metadata file" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config"
 }
@@ -83,11 +83,11 @@ EOF
     cd "$PROJECT_DIR"
     run python3 "$TOOLKIT_DIR/scripts/install.py" --local --skip agents,skills,hooks
     [ "$status" -eq 0 ]
-    [ -f "$PROJECT_DIR/.ai-toolkit-extends.json" ]
+    [ -f "$PROJECT_DIR/.softspark-toolkit-extends.json" ]
     # Check metadata contains base config info
     python3 -c "
 import json
-with open('$PROJECT_DIR/.ai-toolkit-extends.json') as f:
+with open('$PROJECT_DIR/.softspark-toolkit-extends.json') as f:
     meta = json.load(f)
 assert meta['source'] == '../base-config'
 assert len(meta['configs']) == 1
@@ -101,7 +101,7 @@ assert meta['configs'][0]['version'] == '2.0.0'
 # ---------------------------------------------------------------------------
 
 @test "install --local: injects constitution amendments from base" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {
@@ -129,7 +129,7 @@ EOF
 # ---------------------------------------------------------------------------
 
 @test "install --local: injects rules from base config" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config"
 }
@@ -155,7 +155,7 @@ EOF
 # ---------------------------------------------------------------------------
 
 @test "install --local: blocks disabling required agent" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "agents": {
@@ -170,7 +170,7 @@ EOF
 }
 
 @test "install --local: blocks constitution modification" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {
@@ -191,7 +191,7 @@ EOF
 # ---------------------------------------------------------------------------
 
 @test "install --local: records extends info in state.json" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config"
 }
@@ -202,7 +202,7 @@ EOF
 
     python3 -c "
 import json
-with open('$TMP_HOME/.ai-toolkit/state.json') as f:
+with open('$TMP_HOME/.softspark/ai-toolkit/state.json') as f:
     state = json.load(f)
 assert 'extends' in state, f'no extends in state: {list(state.keys())}'
 assert state['extends']['source'] == '../base-config'
@@ -215,7 +215,7 @@ assert len(state['extends']['configs']) == 1
 # ---------------------------------------------------------------------------
 
 @test "install --local: idempotent with extends (run twice)" {
-    cat > "$PROJECT_DIR/.ai-toolkit.json" << 'EOF'
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",
   "constitution": {

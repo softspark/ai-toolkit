@@ -230,12 +230,12 @@ teardown() {
 
 # ── add-rule ─────────────────────────────────────────────────────────────────
 
-@test "cli: add-rule registers rule file in ~/.ai-toolkit/rules/" {
+@test "cli: add-rule registers rule file in ~/.softspark/ai-toolkit/rules/" {
     export HOME="$TEST_TMP"
     printf '# Test rule\nDo something.\n' > "$TEST_TMP/my-rule.md"
     run $CLI add-rule "$TEST_TMP/my-rule.md"
     [ "$status" -eq 0 ]
-    [ -f "$TEST_TMP/.ai-toolkit/rules/my-rule.md" ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/my-rule.md" ]
 }
 
 @test "cli: add-rule with custom name registers under that name" {
@@ -243,7 +243,7 @@ teardown() {
     printf '# Test rule\nDo something.\n' > "$TEST_TMP/source.md"
     run $CLI add-rule "$TEST_TMP/source.md" custom-name
     [ "$status" -eq 0 ]
-    [ -f "$TEST_TMP/.ai-toolkit/rules/custom-name.md" ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/custom-name.md" ]
 }
 
 @test "cli: add-rule without arguments exits non-zero" {
@@ -253,15 +253,15 @@ teardown() {
 
 # ── remove-rule ──────────────────────────────────────────────────────────────
 
-@test "cli: remove-rule unregisters rule from ~/.ai-toolkit/rules/" {
+@test "cli: remove-rule unregisters rule from ~/.softspark/ai-toolkit/rules/" {
     export HOME="$TEST_TMP"
     printf '# Test rule\n' > "$TEST_TMP/rm-test.md"
     run $CLI add-rule "$TEST_TMP/rm-test.md"
-    [ -f "$TEST_TMP/.ai-toolkit/rules/rm-test.md" ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/rm-test.md" ]
 
     run $CLI remove-rule rm-test
     [ "$status" -eq 0 ]
-    [ ! -f "$TEST_TMP/.ai-toolkit/rules/rm-test.md" ]
+    [ ! -f "$TEST_TMP/.softspark/ai-toolkit/rules/rm-test.md" ]
 }
 
 @test "cli: remove-rule also strips injected block from CLAUDE.md" {
@@ -270,7 +270,7 @@ teardown() {
     printf '# Test rule\nSome content.\n' > "$TEST_TMP/strip-test.md"
     run $CLI add-rule "$TEST_TMP/strip-test.md"
 
-    python3 "$TOOLKIT_DIR/scripts/inject_rule_cli.py" "$TEST_TMP/.ai-toolkit/rules/strip-test.md" "$TEST_TMP"
+    python3 "$TOOLKIT_DIR/scripts/inject_rule_cli.py" "$TEST_TMP/.softspark/ai-toolkit/rules/strip-test.md" "$TEST_TMP"
     grep -q 'TOOLKIT:strip-test' "$TEST_TMP/.claude/CLAUDE.md"
 
     run $CLI remove-rule strip-test "$TEST_TMP"
@@ -450,41 +450,41 @@ teardown() {
 }
 
 @test "cli: sync export+import roundtrip preserves rules" {
-    mkdir -p "$TEST_TMP/.ai-toolkit/rules"
-    printf '# Test Rule\nDo something.' > "$TEST_TMP/.ai-toolkit/rules/test-rule.md"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/rules"
+    printf '# Test Rule\nDo something.' > "$TEST_TMP/.softspark/ai-toolkit/rules/test-rule.md"
 
     run $CLI sync --export
     echo "$output" > "$TEST_TMP/sync-snapshot.json"
 
-    mv "$TEST_TMP/.ai-toolkit/rules" "$TEST_TMP/.ai-toolkit/rules-bak"
+    mv "$TEST_TMP/.softspark/ai-toolkit/rules" "$TEST_TMP/.softspark/ai-toolkit/rules-bak"
 
     run $CLI sync --import "$TEST_TMP/sync-snapshot.json"
     [ "$status" -eq 0 ]
 
-    [ -f "$TEST_TMP/.ai-toolkit/rules/test-rule.md" ]
-    grep -q 'Test Rule' "$TEST_TMP/.ai-toolkit/rules/test-rule.md"
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/test-rule.md" ]
+    grep -q 'Test Rule' "$TEST_TMP/.softspark/ai-toolkit/rules/test-rule.md"
 }
 
 # ── track-usage hook ──────────────────────────────────────────────────────────
 
 @test "track-usage.sh records skill invocation" {
-    mkdir -p "$TEST_TMP/.ai-toolkit"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
     echo '{"prompt":"/commit some message"}' | HOME="$TEST_TMP" \
         bash "$TOOLKIT_DIR/app/hooks/track-usage.sh"
-    [ -f "$TEST_TMP/.ai-toolkit/stats.json" ]
-    grep -q '"commit"' "$TEST_TMP/.ai-toolkit/stats.json"
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/stats.json" ]
+    grep -q '"commit"' "$TEST_TMP/.softspark/ai-toolkit/stats.json"
 }
 
 @test "track-usage.sh ignores non-slash prompts" {
-    mkdir -p "$TEST_TMP/.ai-toolkit"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
     echo '{"prompt":"just a regular question"}' | HOME="$TEST_TMP" \
         bash "$TOOLKIT_DIR/app/hooks/track-usage.sh"
-    [ ! -f "$TEST_TMP/.ai-toolkit/stats.json" ]
+    [ ! -f "$TEST_TMP/.softspark/ai-toolkit/stats.json" ]
 }
 
 @test "cli: stats reads existing stats file" {
-    mkdir -p "$TEST_TMP/.ai-toolkit"
-    printf '{"commit": {"count": 5, "last_used": "2026-03-29 10:00:00"}}' > "$TEST_TMP/.ai-toolkit/stats.json"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
+    printf '{"commit": {"count": 5, "last_used": "2026-03-29 10:00:00"}}' > "$TEST_TMP/.softspark/ai-toolkit/stats.json"
     run $CLI stats
     [ "$status" -eq 0 ]
     echo "$output" | grep -q 'commit'

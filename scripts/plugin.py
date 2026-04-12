@@ -35,10 +35,12 @@ from _common import toolkit_dir, app_dir
 from plugin_schema import resolve_hook_event, validate_manifest, validate_references
 
 
+from paths import TOOLKIT_DATA_DIR, HOOKS_DIR as _HOOKS_DIR
+
 PLUGINS_DIR = app_dir / "plugins"
 CLAUDE_DIR = Path.home() / ".claude"
-HOOKS_DIR = Path.home() / ".ai-toolkit" / "hooks"
-PLUGINS_STATE_FILE = Path.home() / ".ai-toolkit" / "plugins.json"
+HOOKS_DIR = _HOOKS_DIR
+PLUGINS_STATE_FILE = TOOLKIT_DATA_DIR / "plugins.json"
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +158,7 @@ def _copy_scripts(name: str, pack_dir: Path, installed_items: list[str]) -> None
     plugin_scripts_dir = pack_dir / "scripts"
     if not plugin_scripts_dir.is_dir():
         return
-    scripts_dest = Path.home() / ".ai-toolkit" / "plugin-scripts" / name
+    scripts_dest = TOOLKIT_DATA_DIR / "plugin-scripts" / name
     scripts_dest.mkdir(parents=True, exist_ok=True)
     for script_file in sorted(plugin_scripts_dir.iterdir()):
         if script_file.name.startswith("__"):
@@ -282,7 +284,7 @@ def remove_pack(name: str) -> bool:
 
     print(f"  Removing: {name}")
 
-    # 1. Remove plugin hooks from ~/.ai-toolkit/hooks/
+    # 1. Remove plugin hooks from ~/.softspark/ai-toolkit/hooks/
     removed = 0
     for hook in HOOKS_DIR.glob(f"plugin-{name}-*.sh"):
         hook.unlink()
@@ -290,7 +292,7 @@ def remove_pack(name: str) -> bool:
         removed += 1
 
     # 2. Remove plugin scripts
-    scripts_dir = Path.home() / ".ai-toolkit" / "plugin-scripts" / name
+    scripts_dir = TOOLKIT_DATA_DIR / "plugin-scripts" / name
     if scripts_dir.is_dir():
         shutil.rmtree(scripts_dir)
         print(f"    Removed scripts: {scripts_dir}")
@@ -358,7 +360,7 @@ def update_pack(name: str) -> bool:
 # Clean
 # ---------------------------------------------------------------------------
 
-MEMORY_DB = Path.home() / ".ai-toolkit" / "memory.db"
+MEMORY_DB = TOOLKIT_DATA_DIR / "memory.db"
 
 # Map plugin names to their clean logic
 CLEANABLE_PLUGINS = {"memory-pack"}

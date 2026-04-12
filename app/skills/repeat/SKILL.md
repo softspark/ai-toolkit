@@ -77,7 +77,7 @@ After loop ends:
 
 ## Stats Logging
 
-Each iteration MUST be logged to `~/.ai-toolkit/stats.json`:
+Each iteration MUST be logged to `~/.softspark/ai-toolkit/stats.json`:
 
 ```json
 {

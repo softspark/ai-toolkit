@@ -9,7 +9,7 @@ SCRIPT="python3 $TOOLKIT_DIR/scripts/compile_slm.py"
 setup() {
     TEST_TMP="$(mktemp -d)"
     export HOME="$TEST_TMP"
-    mkdir -p "$TEST_TMP/.ai-toolkit/compiled"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/compiled"
 }
 
 teardown() {

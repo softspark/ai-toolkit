@@ -43,7 +43,7 @@ ai-toolkit install --local --lang python,typescript
 ai-toolkit install --local --lang python --editors all  # language rules propagated to all editors
 ```
 
-When `--editors` is combined with `--lang` (or auto-detected languages), language rules are propagated to all configured editors as `ai-toolkit-lang-<lang>` files — not just Claude's `CLAUDE.md`. Similarly, registered custom rules (`~/.ai-toolkit/rules/`) are propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
+When `--editors` is combined with `--lang` (or auto-detected languages), language rules are propagated to all configured editors as `ai-toolkit-lang-<lang>` files — not just Claude's `CLAUDE.md`. Similarly, registered custom rules (`~/.softspark/ai-toolkit/rules/`) are propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
 
 **Note:** Hooks are global-only — merged into `~/.claude/settings.json` by `ai-toolkit install`. Project-local `--local` does not install hooks; any legacy `.claude/hooks.json` is removed automatically.
 
@@ -121,7 +121,7 @@ Third-party repos (jira-mcp, rag-mcp, etc.) can register their own rules globall
 
 ```bash
 ai-toolkit add-rule ./my-project-rules.md
-# → copies to ~/.ai-toolkit/rules/my-project-rules.md
+# → copies to ~/.softspark/ai-toolkit/rules/my-project-rules.md
 
 ai-toolkit update
 # → injects the rule into ~/.claude/CLAUDE.md and all global editor configs
@@ -209,7 +209,7 @@ Install copies hooks/scripts, verifies agents+skills are linked, merges hooks in
 
 Memory-pack auto-prunes observations older than 90 days on every session end (configurable via `MEMORY_RETENTION_DAYS`).
 
-State tracked in `~/.ai-toolkit/plugins.json`.
+State tracked in `~/.softspark/ai-toolkit/plugins.json`.
 
 ## Adding a KB Document
 

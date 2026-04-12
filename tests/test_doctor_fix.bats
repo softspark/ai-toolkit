@@ -43,19 +43,19 @@ teardown() {
 }
 
 @test "doctor --fix makes non-executable hook executable" {
-    chmod -x "$TEST_TMP/.ai-toolkit/hooks/guard-destructive.sh"
-    [ ! -x "$TEST_TMP/.ai-toolkit/hooks/guard-destructive.sh" ]
+    chmod -x "$TEST_TMP/.softspark/ai-toolkit/hooks/guard-destructive.sh"
+    [ ! -x "$TEST_TMP/.softspark/ai-toolkit/hooks/guard-destructive.sh" ]
     run python3 "$TOOLKIT_DIR/scripts/doctor.py" --fix
     echo "$output" | grep -q "FIXED.*executable"
-    [ -x "$TEST_TMP/.ai-toolkit/hooks/guard-destructive.sh" ]
+    [ -x "$TEST_TMP/.softspark/ai-toolkit/hooks/guard-destructive.sh" ]
 }
 
 @test "doctor --fix restores missing hook script" {
-    rm "$TEST_TMP/.ai-toolkit/hooks/guard-destructive.sh"
-    [ ! -f "$TEST_TMP/.ai-toolkit/hooks/guard-destructive.sh" ]
+    rm "$TEST_TMP/.softspark/ai-toolkit/hooks/guard-destructive.sh"
+    [ ! -f "$TEST_TMP/.softspark/ai-toolkit/hooks/guard-destructive.sh" ]
     run python3 "$TOOLKIT_DIR/scripts/doctor.py" --fix
     echo "$output" | grep -q "FIXED.*restored"
-    [ -x "$TEST_TMP/.ai-toolkit/hooks/guard-destructive.sh" ]
+    [ -x "$TEST_TMP/.softspark/ai-toolkit/hooks/guard-destructive.sh" ]
 }
 
 @test "doctor --fix regenerates missing llms-full.txt" {

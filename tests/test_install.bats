@@ -75,7 +75,7 @@ teardown() {
 
     # Hook scripts installed and executable
     for script in pre-compact.sh post-tool-use.sh user-prompt-submit.sh subagent-start.sh subagent-stop.sh session-end.sh; do
-        [ -x "$HOME/.ai-toolkit/hooks/$script" ] || { echo "MISSING/non-executable: $script"; return 1; }
+        [ -x "$HOME/.softspark/ai-toolkit/hooks/$script" ] || { echo "MISSING/non-executable: $script"; return 1; }
     done
 }
 

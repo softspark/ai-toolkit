@@ -12,7 +12,7 @@ source "$(dirname "$0")/_profile-check.sh"
 INPUT=$(cat)
 SESSION=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 [ -z "$SESSION" ] && SESSION="$$"
-SESSIONS_DIR="$HOME/.ai-toolkit/sessions"
+SESSIONS_DIR="$HOME/.softspark/ai-toolkit/sessions"
 mkdir -p "$SESSIONS_DIR"
 
 CONTEXT_FILE="$SESSIONS_DIR/${SESSION}.json"

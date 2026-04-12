@@ -21,9 +21,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import toolkit_dir
+from paths import TOOLKIT_DATA_DIR, RULES_DIR as _RULES_DIR
 
-CONFIG_DIR = Path.home() / ".ai-toolkit"
-RULES_DIR = CONFIG_DIR / "rules"
+CONFIG_DIR = TOOLKIT_DATA_DIR
+RULES_DIR = _RULES_DIR
 GIST_ID_FILE = CONFIG_DIR / ".gist-id"
 
 

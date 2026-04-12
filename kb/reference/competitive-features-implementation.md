@@ -347,7 +347,7 @@ All entries are tagged with "_source": "<source-name>" for idempotent updates.
 | `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers | Yes |
 | `inject-hook <file.json>` | `~/.claude/settings.json` | JSON `_source` tag | Yes |
 | `remove-hook <name>` | `~/.claude/settings.json` | Strip by `_source` | Yes |
-| `add-rule <file.md>` | `~/.ai-toolkit/rules/` | File copy + re-inject all | Yes |
+| `add-rule <file.md>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all | Yes |
 
 **Success Criteria:**
 - [x] `inject-hook ./my-hooks.json` merges hooks with auto-derived `_source` tag
@@ -426,7 +426,7 @@ All entries are tagged with "_source": "<source-name>" for idempotent updates.
 }
 ```
 
-**State tracking (~/.ai-toolkit/state.json):**
+**State tracking (~/.softspark/ai-toolkit/state.json):**
 ```json
 {
   "installed_version": "1.2.1",

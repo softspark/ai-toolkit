@@ -2,7 +2,7 @@
 """Config resolver for ai-toolkit extends system.
 
 Resolves base configs from npm packages, git URLs, or local paths.
-Caches resolved configs in ~/.ai-toolkit/config-cache/.
+Caches resolved configs in ~/.softspark/ai-toolkit/config-cache/.
 
 Stdlib-only — no external dependencies.
 """
@@ -25,15 +25,23 @@ from typing import Any
 # Constants
 # ---------------------------------------------------------------------------
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import (
+    BASE_CONFIG_FILENAME,
+    CONFIG_CACHE_DIR,
+    LEGACY_PROJECT_CONFIG,
+    PROJECT_CONFIG_FILENAME as _PROJECT_CONFIG,
+)
+
 MAX_EXTENDS_DEPTH = 5
-CONFIG_FILENAME = "ai-toolkit.config.json"
-PROJECT_CONFIG_FILENAME = ".ai-toolkit.json"
+CONFIG_FILENAME = BASE_CONFIG_FILENAME
+PROJECT_CONFIG_FILENAME = _PROJECT_CONFIG
 CACHE_DIR_NAME = "config-cache"
 
 
 def _cache_root() -> Path:
     """Return the cache root directory."""
-    return Path(os.environ.get("AI_TOOLKIT_HOME", Path.home() / ".ai-toolkit")) / CACHE_DIR_NAME
+    return CONFIG_CACHE_DIR
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +92,7 @@ def resolve_extends(
     """Resolve an extends chain into an ordered list of base configs.
 
     Args:
-        extends_value: The extends string from .ai-toolkit.json.
+        extends_value: The extends string from .softspark-toolkit.json.
         project_root: The project directory (for resolving relative paths).
         refresh: Force re-fetch ignoring cache.
 
@@ -100,12 +108,17 @@ def resolve_extends(
 
 
 def load_project_config(project_root: str | Path) -> dict[str, Any] | None:
-    """Load .ai-toolkit.json from the project root.
+    """Load .softspark-toolkit.json from the project root.
 
-    Returns None if the file doesn't exist.
+    Falls back to legacy .ai-toolkit.json if the new file doesn't exist.
+    Returns None if neither file exists.
     """
     config_path = Path(project_root) / PROJECT_CONFIG_FILENAME
     if not config_path.is_file():
+        # Fallback to legacy filename
+        legacy_path = Path(project_root) / LEGACY_PROJECT_CONFIG
+        if legacy_path.is_file():
+            return _load_json(legacy_path)
         return None
     return _load_json(config_path)
 

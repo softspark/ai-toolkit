@@ -182,7 +182,7 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
     - ``--editors cursor,aider``: install only these
     - (empty): auto-detect from existing project files, install only those
 
-    If ``merged_config`` is provided (from .ai-toolkit.json extends resolution),
+    If ``merged_config`` is provided (from .softspark-toolkit.json extends resolution),
     additional rules and constitution amendments from the base config are injected.
     """
     cwd = Path.cwd()
@@ -192,7 +192,7 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
     print(f"## Project-local ({cwd})")
     if merged_config and merged_config.get("_extends_meta"):
         meta = merged_config["_extends_meta"]
-        print(f"   Config: .ai-toolkit.json (extends: {meta['source']})")
+        print(f"   Config: .softspark-toolkit.json (extends: {meta['source']})")
     if reset:
         print("   Mode: RESET (all local configs will be wiped and recreated)")
     if resolved_editors:
@@ -326,9 +326,9 @@ def _apply_extends_config(cwd: Path, merged: dict) -> None:
     # Record merged config summary
     meta = merged.get("_extends_meta")
     if meta:
-        state_file = cwd / ".ai-toolkit-extends.json"
+        state_file = cwd / ".softspark-toolkit-extends.json"
         state_file.write_text(_json.dumps(meta, indent=2) + "\n", encoding="utf-8")
-        print(f"  Saved: .ai-toolkit-extends.json (resolution metadata)")
+        print(f"  Saved: .softspark-toolkit-extends.json (resolution metadata)")
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
