@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.9.0 — Project Registry & Doc Sync (2026-04-12)
+
+### Added
+- **Project registry** — `install --local` automatically registers project path in `~/.ai-toolkit/projects.json`. `ai-toolkit update` propagates updates to all registered projects in parallel via `ThreadPoolExecutor`
+- **`ai-toolkit projects`** — list registered projects, `--prune` to remove stale (deleted directories), `remove <path>` to unregister specific project
+- **Parallel update propagation** — `ai-toolkit update` (global) now auto-updates all registered local projects concurrently (max 8 workers)
+
+### Fixed
+- **README.md** — skill count 91→92 in comparison table, added Augment/Antigravity to cross-tool tables, fixed Notification hook description (inline→`notify-waiting.sh`)
+- **README.md** — added Config Inheritance section, Project Registry section, 6 new CLI commands to reference table
+- **ARCHITECTURE.md** — added Config Inheritance and Project Registry to Extension Points
+- **CLAUDE.md** — added `config` and `projects` commands
+
+---
+
 ## v1.8.0 — Enterprise Config Inheritance (2026-04-12)
 
 ### Added
