@@ -315,6 +315,12 @@ The `inject_section_cli.py` script provides a stable marker-based injection API.
 ### SLM Compilation (`compile-slm`)
 `scripts/compile_slm.py` compiles the full toolkit (20K+ tokens) into a minimal system prompt for Small Language Models (2K-16K tokens). Pipeline: Parse → Score → Compress → Pack → Emit. Supports 4 compression levels (ultra-light, light, standard, extended), 4 output formats (raw, ollama, json-string, aider), persona-aware scoring, and language-aware rule filtering. Profile `offline-slm` in `manifest.json`. Constitution is always included (non-negotiable).
 
+### Config Inheritance (`extends`)
+`scripts/config_resolver.py`, `config_merger.py`, `config_validator.py`, `config_cli.py`, `config_scaffold.py`, `config_lock.py`. Enterprise configuration inheritance via `.ai-toolkit.json` `extends` field. Resolves base configs from npm packages, Git URLs, or local paths. Layered deep merge with constitution immutability (Articles I-V absolute), enforce constraints (`requiredAgents`, `forbidOverride`, `minHookProfile`), override validation (`override: true` + justification), and lock file (`.ai-toolkit.lock.json`). CLI: `config validate`, `config diff`, `config init`, `config create-base`, `config check`. Integrated into `install --local` and `update --local` flows.
+
+### Project Registry
+`scripts/install_steps/project_registry.py`, `scripts/update_projects.py`, `scripts/projects_cli.py`. Tracks all `--local` installed projects in `~/.ai-toolkit/projects.json`. `ai-toolkit update` propagates to all registered projects in parallel via `ThreadPoolExecutor`. CLI: `ai-toolkit projects`, `--prune`, `remove <path>`.
+
 ### Manifest Install (`--modules`, `--auto-detect`)
 `manifest.json` defines all installable components as named modules. Install individual modules with `ai-toolkit install --modules <name>` or let the installer detect which language rules to add based on project files (e.g. `package.json` → `rules-typescript`, `go.mod` → `rules-golang`).
 

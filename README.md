@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-92-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-564%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-575%20passing-success)](tests/)
 
 ---
 
@@ -318,7 +318,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | SessionStart | `session-start.sh` | MANDATORY rules reminder + session context + instincts |
 | SessionStart | `mcp-health.sh` | Check MCP server command availability (non-blocking warning) |
 | SessionStart | `session-context.sh` | Capture environment snapshot (pwd, git branch, versions) to `~/.ai-toolkit/sessions/current-context.json` |
-| Notification | *(inline)* | macOS desktop notification |
+| Notification | `notify-waiting.sh` | Cross-platform desktop notification |
 | PreToolUse | `guard-destructive.sh` | Block `rm -rf`, `DROP TABLE`, etc. |
 | PreToolUse | `guard-path.sh` | Block wrong-user path hallucination |
 | PreToolUse | `guard-config.sh` | Block edits to linter/formatter config files unless explicitly requested |
@@ -612,18 +612,62 @@ All packs have `status: experimental`. Each has a `plugin.json` manifest and `RE
 
 ---
 
+## Config Inheritance (`extends`)
+
+Enterprise-grade configuration inheritance for multi-repo AI governance. Organizations define a shared base config published as an npm package, Git URL, or local path. Projects inherit via `.ai-toolkit.json`:
+
+```json
+{
+  "extends": "@mycompany/ai-toolkit-config",
+  "profile": "standard"
+}
+```
+
+**Key capabilities:**
+- **Layered merge** — base config + project overrides, with deep merge for dicts, union for lists, project-wins for scalars
+- **Constitution immutability** — Articles I-V and base articles cannot be modified; projects can only ADD new articles (6+)
+- **Enforce constraints** — `requiredAgents`, `forbidOverride`, `minHookProfile`, `requiredPlugins`
+- **Override validation** — requires explicit `override: true` + justification (min 20 chars)
+- **Lock file** — `.ai-toolkit.lock.json` pins resolved versions for reproducible installs
+- **Offline fallback** — uses cached configs from `~/.ai-toolkit/config-cache/` when registry unavailable
+
+```bash
+ai-toolkit config create-base @mycompany/ai-toolkit-config  # scaffold base package
+ai-toolkit config init --extends @mycompany/ai-toolkit-config # setup project
+ai-toolkit config validate    # schema + extends + enforcement
+ai-toolkit config diff        # project vs base differences
+ai-toolkit config check       # CI enforcement gate (exit 0/1/2, --json)
+```
+
+See [Enterprise Config Guide](kb/reference/enterprise-config-guide.md) for full documentation.
+
+---
+
+## Project Registry
+
+All projects installed with `--local` are automatically registered in `~/.ai-toolkit/projects.json`. Running `ai-toolkit update` propagates updates to all registered projects in parallel.
+
+```bash
+ai-toolkit projects              # list registered projects
+ai-toolkit projects --prune      # remove stale (deleted) entries
+ai-toolkit projects remove /path # unregister specific project
+ai-toolkit update                # global update + parallel update ALL projects
+```
+
+---
+
 ## Comparison
 
 | Feature | ai-toolkit | everything-claude-code | wshobson/agents | ruflo |
 |---------|---------------|----------------------|-----------------|-------|
-| Skills | 91 | 100+ | 146 | 20+ |
+| Skills | 92 | 100+ | 146 | 20+ |
 | Agents | 44 | 30+ | 112 | 20+ |
 | Machine-enforced constitution | **Yes** | No (docs only) | No | No |
 | Skill-scoped lifecycle hooks | **Yes** | No | No | No |
 | Effort-based model budgeting | **Yes** | No | No | No |
 | Test suite | Yes (bats) | Yes (997 tests) | No | Yes |
 | npm/npx install | Yes | Yes | Yes | Yes |
-| Cross-tool support | **Cursor, Windsurf, Copilot, Gemini, Cline, Roo, Aider, Codex** | 5+ tools | Smithery | Limited |
+| Cross-tool support | **Cursor, Windsurf, Copilot, Gemini, Cline, Roo, Aider, Augment, Antigravity** | 5+ tools | Smithery | Limited |
 | Selective install | Yes | Yes | Yes (72 plugins) | No |
 | Session persistence | Yes | Yes | No | No |
 | Architecture notes | **Yes** | No | No | No |
@@ -662,6 +706,8 @@ Pre-configured team presets via `/teams`:
 | Cline | `.clinerules` | project |
 | Roo Code | `.roomodes` | project |
 | Aider | `.aider.conf.yml` | project |
+| Augment | `.augment/rules/ai-toolkit-*.md` | project |
+| Google Antigravity | `.agent/rules/` + `.agent/workflows/` | project |
 | Codex / OpenCode | `AGENTS.md` | project |
 
 ```bash
@@ -764,8 +810,14 @@ Usage: ai-toolkit <command> [options]
 | `mcp add <name> [names...]` | Add MCP server template(s) to `.mcp.json` |
 | `mcp show <name>` | Show MCP template config details |
 | `mcp remove <name>` | Remove MCP server from `.mcp.json` |
+| `config validate [path]` | Validate `.ai-toolkit.json` schema + extends + enforcement |
+| `config diff [path]` | Show project vs base config differences |
+| `config init [flags]` | Create `.ai-toolkit.json` (`--extends`, `--profile`, `--no-extends`) |
+| `config create-base <name>` | Scaffold base config npm package |
+| `config check [path]` | CI enforcement gate (exit 0=pass, 1=fail, 2=no config; `--json`) |
+| `projects` | List registered projects (`--prune` to clean stale, `remove <path>`) |
 | `status` | Show installed modules and version |
-| `update` | Re-install with saved modules (incremental) |
+| `update` | Re-install with saved modules + update all registered projects |
 | `validate` | Verify toolkit integrity (`--strict` for CI-grade, warnings = errors) |
 | `doctor` | Diagnose install health, hooks, quick-win assets, and artifact drift |
 | `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |
