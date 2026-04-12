@@ -902,17 +902,15 @@ v1 ships with a minimal schema. Each additional field adds merge logic, validati
 
 ## 13. Cross-Plan Dependencies
 
-This plan shares modification targets with two other proposed plans:
+This plan shares modification targets with the Offline SLM plan:
 
-| Shared File | This Plan | Local Dashboard Plan | Offline SLM Plan |
-|-------------|-----------|---------------------|-----------------|
-| `scripts/install.py` | +80 LOC (extends resolution) | — | +30 LOC (offline-slm profile) |
-| `manifest.json` | +10 LOC (schema refs) | — | +5 LOC (offline-slm profile) |
-| `bin/ai-toolkit.js` | +40 LOC (config subcommands) | +15 LOC (ui command) | +10 LOC (compile-slm command) |
+| Shared File | This Plan | Offline SLM Plan |
+|-------------|-----------|-----------------|
+| `scripts/install.py` | +80 LOC (extends resolution) | +30 LOC (offline-slm profile) |
+| `manifest.json` | +10 LOC (schema refs) | +5 LOC (offline-slm profile) |
+| `bin/ai-toolkit.js` | +40 LOC (config subcommands) | +10 LOC (compile-slm command) |
 
-**If implementing in parallel:** coordinate merge order for shared files. Recommended sequence: Offline SLM (smallest changes) → Enterprise Config → Dashboard (no install.py changes).
-
-**Dashboard integration note:** If this plan ships before the Dashboard plan, the Dashboard's Config page (2.6) should display `.ai-toolkit.json` / `extends` status and the `config diff` output.
+**If implementing in parallel:** coordinate merge order for shared files. Recommended sequence: Offline SLM (smallest changes) → Enterprise Config.
 
 ---
 

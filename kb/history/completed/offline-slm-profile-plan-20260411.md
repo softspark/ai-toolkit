@@ -727,13 +727,13 @@ For teams needing enforcement, recommend `--profile offline-slm` combined with a
 
 ## 13. Cross-Plan Dependencies
 
-This plan shares modification targets with two other proposed plans:
+This plan shares modification targets with the Enterprise Config plan:
 
-| Shared File | This Plan | Enterprise Config Plan | Local Dashboard Plan |
-|-------------|-----------|----------------------|---------------------|
-| `scripts/install.py` | +30 LOC (offline-slm profile) | +80 LOC (extends resolution) | — |
-| `manifest.json` | +5 LOC (offline-slm profile) | +10 LOC (schema refs) | — |
-| `bin/ai-toolkit.js` | +10 LOC (compile-slm command) | +40 LOC (config subcommands) | +15 LOC (ui command) |
+| Shared File | This Plan | Enterprise Config Plan |
+|-------------|-----------|----------------------|
+| `scripts/install.py` | +30 LOC (offline-slm profile) | +80 LOC (extends resolution) |
+| `manifest.json` | +5 LOC (offline-slm profile) | +10 LOC (schema refs) |
+| `bin/ai-toolkit.js` | +10 LOC (compile-slm command) | +40 LOC (config subcommands) |
 
 **If implementing in parallel:** this plan has the smallest changes to shared files — merge first to minimize conflicts.
 
