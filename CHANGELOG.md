@@ -7,6 +7,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.8.0 — Enterprise Config Inheritance (2026-04-12)
+
+### Added
+- **Configuration inheritance system** — `extends` pattern (like ESLint/TypeScript) for multi-repo AI governance. Organizations define a shared base config published as npm package, git URL, or local path; projects inherit via `.ai-toolkit.json`
+- **`ai-toolkit config validate`** — schema validation + extends resolution + enforcement check
+- **`ai-toolkit config diff`** — visual diff of project vs base config (profile, agents, rules, constitution, overrides)
+- **`ai-toolkit config init`** — interactive or flag-driven `.ai-toolkit.json` creation with extends validation
+- **`ai-toolkit config create-base`** — scaffolds ready-to-publish npm base config package (package.json, ai-toolkit.config.json, rules/, agents/, README)
+- **`ai-toolkit config check`** — CI enforcement gate with JSON output and exit codes (0=pass, 1=fail, 2=no config)
+- **Merge engine** — layered deep merge (base → project) with special handling for agents (requiredAgents enforcement), rules (union), constitution (immutability), enforce blocks (cannot weaken)
+- **Constitution immutability guard** — Articles I-V absolutely immutable; base config articles immutable; projects can only ADD new articles (6+)
+- **Override validation** — `override: true` + justification (min 20 chars) required; `forbidOverride` enforcement
+- **Enforce constraints** — 4 types: `minHookProfile`, `requiredPlugins`, `forbidOverride`, `requiredAgents`
+- **Lock file** (`.ai-toolkit.lock.json`) — pins resolved base config versions for reproducible installs across team; generated on `install --local`, updated on `update --local`
+- **Audit trail** — extends metadata recorded in `state.json` and `.ai-toolkit-extends.json`
+- **Offline fallback** — uses cached configs from `~/.ai-toolkit/config-cache/` when registry unavailable
+- **Cycle detection** — max 5-level extends chain with circular reference detection
+- **Install integration** — `install --local` and `update --local` auto-detect `.ai-toolkit.json`, resolve extends, merge, validate, inject rules + constitution amendments into generated files
+- **New CLI flags** — `--config <path>` (explicit config file), `--refresh-base` (force re-fetch)
+- **JSON Schema** — `scripts/schemas/ai-toolkit-config.schema.json` for editor autocompletion
+- **Enterprise config guide** — `kb/reference/enterprise-config-guide.md` comprehensive documentation
+- **52 new tests** — resolver (7), merger (13), CLI (23), install integration (9)
+
+### Changed
+- **`manifest.json`** — added `config_inheritance` section with schema references and v1 field list
+
+---
+
 ## v1.7.0 — Offline-First SLM Compilation (2026-04-11)
 
 ### Added
