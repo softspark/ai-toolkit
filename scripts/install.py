@@ -58,6 +58,16 @@ from install_steps.install_state import (
 )
 from install_steps.detect_language import detect_languages
 
+# Config inheritance (extends system)
+from config_resolver import (
+    ConfigResolverError,
+    load_project_config,
+    resolve_extends,
+)
+from config_merger import ConfigMergeError, merge_config_chain
+from config_validator import validate_project_config
+from config_lock import save_lock_file
+
 
 # ---------------------------------------------------------------------------
 # Manifest helpers
@@ -199,6 +209,8 @@ def parse_args(argv: list[str]) -> dict:
         "status": False,
         "lang": "",
         "editors": "",
+        "config": "",
+        "refresh_base": False,
     }
     i = 0
     while i < len(argv):
@@ -248,6 +260,13 @@ def parse_args(argv: list[str]) -> dict:
         elif arg == "--editors":
             i += 1
             cfg["editors"] = argv[i] if i < len(argv) else ""
+        elif arg.startswith("--config="):
+            cfg["config"] = arg.split("=", 1)[1]
+        elif arg == "--config":
+            i += 1
+            cfg["config"] = argv[i] if i < len(argv) else ""
+        elif arg == "--refresh-base":
+            cfg["refresh_base"] = True
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -442,6 +461,117 @@ def install_strict_git_hooks(profile: str, local: bool, dry_run: bool) -> None:
 # Version helper
 # ---------------------------------------------------------------------------
 
+def resolve_extends_config(
+    project_dir: Path,
+    config_path: str = "",
+    refresh: bool = False,
+) -> dict | None:
+    """Resolve .ai-toolkit.json extends and return merged config.
+
+    Returns None if no .ai-toolkit.json or no extends field.
+    Prints warnings/errors and exits on fatal errors.
+    """
+    if config_path:
+        config_file = Path(config_path)
+        if not config_file.is_file():
+            print(f"  Error: config file not found: {config_path}")
+            sys.exit(1)
+        import json as _json
+        with open(config_file, encoding="utf-8") as f:
+            project_config = _json.load(f)
+        config_root = config_file.parent
+    else:
+        project_config = load_project_config(project_dir)
+        config_root = project_dir
+
+    if project_config is None:
+        return None
+
+    # Validate project config schema
+    errors = validate_project_config(project_config, config_root)
+    if errors:
+        print("  Config validation errors:")
+        for e in errors:
+            print(f"    ✗ {e}")
+        sys.exit(1)
+
+    extends = project_config.get("extends")
+    if not extends:
+        # Config without extends — just use its settings directly
+        return project_config
+
+    print(f"  Resolving extends: {extends}...")
+
+    try:
+        result = resolve_extends(extends, config_root, refresh=refresh)
+    except ConfigResolverError as e:
+        print(f"  ✗ Resolution failed: {e}")
+        sys.exit(1)
+
+    for w in result.warnings:
+        print(f"  ⚠ {w}")
+
+    # Merge
+    try:
+        base_datas = [c.data for c in result.configs]
+        merge_result = merge_config_chain(base_datas, project_config)
+    except ConfigMergeError as e:
+        print(f"  ✗ Merge failed: {e}")
+        sys.exit(1)
+
+    for c in result.configs:
+        version_str = f" v{c.version}" if c.version else ""
+        print(f"  ✓ Resolved: {c.name}{version_str}")
+
+    # Attach resolution metadata for state.json recording
+    config_metas = [
+        {
+            "source": c.source,
+            "name": c.name,
+            "version": c.version,
+            "integrity": c.integrity,
+            "root": str(c.root),
+        }
+        for c in result.configs
+    ]
+    merge_result.merged["_extends_meta"] = {
+        "source": extends,
+        "configs": config_metas,
+        "overrides_applied": merge_result.overrides_applied,
+    }
+
+    # Generate lock file
+    lock_path = save_lock_file(
+        config_root,
+        config_metas,
+        ai_toolkit_version=_get_toolkit_version(),
+    )
+    print(f"  Saved: {lock_path.name}")
+
+    return merge_result.merged
+
+
+def _apply_merged_config(
+    merged: dict,
+    cfg: dict,
+) -> dict:
+    """Apply merged config settings back into the install cfg dict.
+
+    Overrides profile and modules based on merged config.
+    Returns the modified cfg.
+    """
+    # Profile from merged config
+    merged_profile = merged.get("profile")
+    if merged_profile and not cfg["profile"]:
+        cfg["profile"] = merged_profile
+
+    # Agents: filter based on merged enabled/disabled lists
+    # (stored for use by install_local_project)
+    cfg["_merged_config"] = merged
+
+    return cfg
+
+
 def _get_toolkit_version() -> str:
     """Read version from package.json."""
     pkg = toolkit_dir / "package.json"
@@ -522,10 +652,21 @@ def main() -> None:
 
     if local:
         # --local: project-local only, no global install
+        # Check for .ai-toolkit.json extends system
+        config_path_arg: str = cfg["config"]
+        refresh_base: bool = cfg["refresh_base"]
+        merged_config = resolve_extends_config(
+            project_dir, config_path=config_path_arg, refresh=refresh_base,
+        )
+        if merged_config:
+            cfg = _apply_merged_config(merged_config, cfg)
+            profile = cfg["profile"]
+
         lang_modules = [m for m in (resolved_modules or []) if m.startswith("rules-")]
         editors_arg: str = cfg["editors"]
         install_local_project(rules_dir, dry_run, reset, lang_modules or None,
-                              editors=editors_arg)
+                              editors=editors_arg,
+                              merged_config=merged_config)
         install_strict_git_hooks(profile, local, dry_run)
     else:
         # Global install
@@ -549,11 +690,18 @@ def main() -> None:
             # Legacy mode: infer modules from profile/only
             record_modules = _infer_modules_from_legacy(profile, only)
 
+        # Extract extends metadata if available
+        extends_info = None
+        merged = cfg.get("_merged_config")
+        if merged and merged.get("_extends_meta"):
+            extends_info = merged["_extends_meta"]
+
         record_install(
             version=_get_toolkit_version(),
             modules=record_modules,
             profile=profile or "standard",
             auto_detected=auto_detected,
+            extends_info=extends_info,
         )
 
     print_summary(local=local)

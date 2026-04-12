@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://softspark.github.io/ai-toolkit/schemas/ai-toolkit-config.json",
+  "title": "ai-toolkit project configuration",
+  "description": "Project-level configuration for ai-toolkit with optional inheritance via extends.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference (ignored at runtime)."
+    },
+    "extends": {
+      "type": "string",
+      "description": "Base config to inherit from. npm package name (@scope/pkg or @scope/pkg@version), git URL (git+https://...), or local path (./path or ../path).",
+      "examples": [
+        "@mycompany/ai-toolkit-config",
+        "@mycompany/ai-toolkit-config@^2.0.0",
+        "git+https://github.com/myco/ai-config.git",
+        "../shared-config"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Config identity (required for base configs published as npm packages)."
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (required for base configs).",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?(\\+[a-zA-Z0-9.]+)?$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of this configuration."
+    },
+    "profile": {
+      "type": "string",
+      "enum": ["minimal", "standard", "strict", "full", "offline-slm"],
+      "default": "standard",
+      "description": "Installation profile controlling which modules are installed."
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Agent configuration — enable, disable, or add custom agents.",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Agent names to enable (merged with base)."
+        },
+        "disabled": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Agent names to disable (blocked if base enforces them)."
+        },
+        "custom": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths to custom agent .md files (relative to config root)."
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Rule injection configuration.",
+      "properties": {
+        "inject": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths to rule .md files to inject into CLAUDE.md."
+        },
+        "remove": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Rule names to remove from base config."
+        }
+      }
+    },
+    "constitution": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Constitution amendments. Articles I-V are immutable. Base articles are immutable. Projects can only ADD new articles.",
+      "properties": {
+        "amendments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["article", "title", "text"],
+            "additionalProperties": false,
+            "properties": {
+              "article": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Article number. 1-5 are reserved (immutable). Base articles are also immutable."
+              },
+              "title": {
+                "type": "string",
+                "description": "Article title."
+              },
+              "text": {
+                "type": "string",
+                "description": "Article text."
+              }
+            }
+          }
+        }
+      }
+    },
+    "enforce": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Non-overridable constraints (base configs only). Projects inheriting this config must comply.",
+      "properties": {
+        "minHookProfile": {
+          "type": "string",
+          "enum": ["minimal", "standard", "strict"],
+          "description": "Minimum hook profile — projects cannot go below this."
+        },
+        "requiredPlugins": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Plugins that must be installed in all inheriting projects."
+        },
+        "forbidOverride": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Components that cannot be overridden by inheriting projects."
+        },
+        "requiredAgents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Agents that must be enabled in all inheriting projects."
+        }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["override", "justification"],
+        "properties": {
+          "override": {
+            "type": "boolean",
+            "const": true,
+            "description": "Must be true to confirm intentional override."
+          },
+          "justification": {
+            "type": "string",
+            "minLength": 20,
+            "description": "Explanation for why this override is needed (min 20 chars)."
+          },
+          "replacement": {
+            "type": "string",
+            "description": "Replacement value or 'skip' to disable."
+          }
+        }
+      },
+      "description": "Explicit overrides of base config components. Each override requires override:true + justification."
+    }
+  }
+}

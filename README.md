@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-92-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-512%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-564%20passing-success)](tests/)
 
 ---
 

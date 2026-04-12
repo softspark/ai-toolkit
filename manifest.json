@@ -156,5 +156,13 @@
     "strict": ["core", "agents", "skills", "rules-common", "mcp-templates"],
     "full": ["core", "agents", "skills", "rules-common", "mcp-templates"],
     "offline-slm": ["core"]
+  },
+  "config_inheritance": {
+    "schema": "scripts/schemas/ai-toolkit-config.schema.json",
+    "project_config": ".ai-toolkit.json",
+    "base_config": "ai-toolkit.config.json",
+    "lock_file": ".ai-toolkit.lock.json",
+    "v1_fields": ["extends", "profile", "agents", "rules", "constitution", "enforce"],
+    "max_extends_depth": 5
   }
 }

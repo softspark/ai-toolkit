@@ -75,6 +75,7 @@ const COMMANDS = {
   stats: 'Show skill usage statistics (--reset to clear, --json for raw output)',
   create: 'Scaffold new skill from template (e.g. create skill my-lint --template=linter)',
   mcp: 'Manage MCP server templates (list, show, add, remove)',
+  config: 'Manage config inheritance (validate, diff, init, create-base, check)',
   plugin: 'Manage plugin packs (install, remove, update, clean, list, status)',
   sync: 'Sync config to/from GitHub Gist (--export, --push, --pull, --import)',
   'cursor-rules': 'Generate .cursorrules for Cursor IDE (legacy)',
@@ -377,6 +378,17 @@ function handleMcp(args) {
 }
 
 /**
+ * Handle `ai-toolkit config <subcommand>` -- config inheritance management.
+ * @param {string[]} args - Subcommand and its arguments
+ */
+function handleConfig(args) {
+  if (args.length === 0) {
+    args = ['--help'];
+  }
+  run(scriptPath('config_cli.py'), args);
+}
+
+/**
  * Handle `ai-toolkit generate-all` -- runs every generator plus llms-txt.
  * @param {string[]} _args - Unused, kept for signature consistency
  */
@@ -446,6 +458,7 @@ const SPECIAL_HANDLERS = {
   'create':       handleCreate,
   'sync':         handleSync,
   'mcp':          handleMcp,
+  'config':       handleConfig,
   'plugin':       (args) => run(scriptPath('plugin.py'), args),
   'remove-rule':  handleRemoveRule,
   'add-rule':     handleAddRule,

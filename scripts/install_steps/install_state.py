@@ -68,11 +68,15 @@ def record_install(
     modules: list[str],
     profile: str,
     auto_detected: list[str] | None = None,
+    extends_info: dict | None = None,
 ) -> None:
     """Record a successful install in state.json.
 
     If state already exists, preserves ``installed_at`` and updates
     ``last_updated``. Otherwise sets both timestamps.
+
+    ``extends_info`` (optional) records config inheritance metadata:
+    source, version, resolved_at, hash, overrides_applied.
     """
     state = load_state()
     now = _now_iso()
@@ -85,6 +89,17 @@ def record_install(
     state["profile"] = profile
     if auto_detected is not None:
         state["auto_detected_languages"] = sorted(auto_detected)
+
+    if extends_info is not None:
+        state["extends"] = {
+            "source": extends_info.get("source", ""),
+            "configs": extends_info.get("configs", []),
+            "resolved_at": now,
+            "overrides_applied": extends_info.get("overrides_applied", []),
+        }
+    elif "extends" in state:
+        # Clear extends if no longer using it
+        del state["extends"]
 
     save_state(state)
 
@@ -120,6 +135,15 @@ def print_status() -> None:
         # Strip "rules-" prefix for readability
         langs = [m.replace("rules-", "") for m in detected]
         print(f"  Detected:   {', '.join(langs)}")
+
+    extends = state.get("extends")
+    if extends:
+        print(f"  Extends:    {extends.get('source', 'unknown')}")
+        for cfg in extends.get("configs", []):
+            version_str = f" v{cfg['version']}" if cfg.get("version") else ""
+            print(f"              → {cfg.get('name', cfg.get('source', '?'))}{version_str}")
+        if extends.get("resolved_at"):
+            print(f"  Resolved:   {extends['resolved_at']}")
 
     # Check for updates
     try:

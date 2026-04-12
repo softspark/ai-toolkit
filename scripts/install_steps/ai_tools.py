@@ -172,7 +172,8 @@ def _resolve_editors(editors_arg: str, cwd: Path) -> list[str]:
 
 def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
                           language_modules: list[str] | None = None,
-                          editors: str = "") -> None:
+                          editors: str = "",
+                          merged_config: dict | None = None) -> None:
     """Install project-local configs.
 
     Claude Code configs (CLAUDE.md, settings, constitution) are always installed.
@@ -180,12 +181,18 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
     - ``--editors all``: install all editors
     - ``--editors cursor,aider``: install only these
     - (empty): auto-detect from existing project files, install only those
+
+    If ``merged_config`` is provided (from .ai-toolkit.json extends resolution),
+    additional rules and constitution amendments from the base config are injected.
     """
     cwd = Path.cwd()
     resolved_editors = _resolve_editors(editors, cwd)
 
     print()
     print(f"## Project-local ({cwd})")
+    if merged_config and merged_config.get("_extends_meta"):
+        meta = merged_config["_extends_meta"]
+        print(f"   Config: .ai-toolkit.json (extends: {meta['source']})")
     if reset:
         print("   Mode: RESET (all local configs will be wiped and recreated)")
     if resolved_editors:
@@ -198,6 +205,8 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
         _install_local_dry_run(reset, resolved_editors)
         if language_modules:
             print(f"  Would inject language rules: {', '.join(language_modules)}")
+        if merged_config:
+            print(f"  Would apply merged config from extends")
         return
 
     (cwd / ".claude").mkdir(parents=True, exist_ok=True)
@@ -223,12 +232,103 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
         )
         print("  Injected: .claude/constitution.md")
 
+    # Apply extends: inject base rules and constitution amendments
+    if merged_config:
+        _apply_extends_config(cwd, merged_config)
+
     # Inject language-specific rules into project CLAUDE.md
     _inject_language_rules(cwd, language_modules)
 
     # Install editor configs only for resolved editors
     _create_local_ai_tool_configs(cwd, rules_dir, resolved_editors,
                                   language_modules=language_modules)
+
+
+def _apply_extends_config(cwd: Path, merged: dict) -> None:
+    """Apply merged extends config — inject base rules and constitution amendments."""
+    import json as _json
+
+    # Inject base rules into CLAUDE.md
+    rules = merged.get("rules", {})
+    inject_rules = rules.get("inject", [])
+    if inject_rules:
+        claude_md = cwd / ".claude" / "CLAUDE.md"
+        if claude_md.is_file():
+            content = claude_md.read_text(encoding="utf-8")
+        else:
+            content = ""
+
+        # Add extends rules section if not already present
+        marker_start = "<!-- TOOLKIT:extends-rules START -->"
+        marker_end = "<!-- TOOLKIT:extends-rules END -->"
+
+        rules_block = f"\n{marker_start}\n"
+        rules_block += "# Inherited Rules (from base config)\n\n"
+        for rule_path in inject_rules:
+            rules_block += f"- Rule: `{rule_path}`\n"
+        rules_block += f"{marker_end}\n"
+
+        if marker_start in content:
+            # Replace existing section
+            import re
+            content = re.sub(
+                f"{re.escape(marker_start)}.*?{re.escape(marker_end)}",
+                f"{marker_start}\n# Inherited Rules (from base config)\n\n"
+                + "".join(f"- Rule: `{r}`\n" for r in inject_rules)
+                + marker_end,
+                content,
+                flags=re.DOTALL,
+            )
+        else:
+            content += rules_block
+
+        claude_md.write_text(content, encoding="utf-8")
+        print(f"  Injected: {len(inject_rules)} rule(s) from base config")
+
+    # Inject constitution amendments
+    amendments = merged.get("constitution", {}).get("amendments", [])
+    # Filter to non-toolkit articles (6+)
+    custom_amendments = [a for a in amendments if a.get("article", 0) >= 6]
+    if custom_amendments:
+        constitution_file = cwd / ".claude" / "constitution.md"
+        if constitution_file.is_file():
+            content = constitution_file.read_text(encoding="utf-8")
+        else:
+            content = ""
+
+        marker_start = "<!-- TOOLKIT:extends-constitution START -->"
+        marker_end = "<!-- TOOLKIT:extends-constitution END -->"
+
+        amendments_block = f"\n{marker_start}\n"
+        for a in custom_amendments:
+            amendments_block += f"\n## Article {a['article']}: {a['title']}\n\n"
+            amendments_block += f"{a['text']}\n"
+        amendments_block += f"\n{marker_end}\n"
+
+        if marker_start in content:
+            import re
+            new_inner = ""
+            for a in custom_amendments:
+                new_inner += f"\n## Article {a['article']}: {a['title']}\n\n"
+                new_inner += f"{a['text']}\n"
+            content = re.sub(
+                f"{re.escape(marker_start)}.*?{re.escape(marker_end)}",
+                f"{marker_start}{new_inner}\n{marker_end}",
+                content,
+                flags=re.DOTALL,
+            )
+        else:
+            content += amendments_block
+
+        constitution_file.write_text(content, encoding="utf-8")
+        print(f"  Injected: {len(custom_amendments)} constitution amendment(s) from base config")
+
+    # Record merged config summary
+    meta = merged.get("_extends_meta")
+    if meta:
+        state_file = cwd / ".ai-toolkit-extends.json"
+        state_file.write_text(_json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+        print(f"  Saved: .ai-toolkit-extends.json (resolution metadata)")
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
