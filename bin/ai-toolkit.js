@@ -76,6 +76,7 @@ const COMMANDS = {
   create: 'Scaffold new skill from template (e.g. create skill my-lint --template=linter)',
   mcp: 'Manage MCP server templates (list, show, add, remove)',
   config: 'Manage config inheritance (validate, diff, init, create-base, check)',
+  projects: 'List and manage registered projects (--prune, remove <path>)',
   plugin: 'Manage plugin packs (install, remove, update, clean, list, status)',
   sync: 'Sync config to/from GitHub Gist (--export, --push, --pull, --import)',
   'cursor-rules': 'Generate .cursorrules for Cursor IDE (legacy)',
@@ -425,6 +426,7 @@ function handleStatus(_args) {
  * @param {string[]} args
  */
 function handleUpdate(args) {
+  const isLocal = args.includes('--local');
   const statePath = path.join(process.env.HOME, '.ai-toolkit', 'state.json');
   let stateArgs = [];
 
@@ -447,6 +449,27 @@ function handleUpdate(args) {
 
   // User-provided args override state-derived args
   run(scriptPath('install.py'), [...stateArgs, ...args]);
+
+  // After global update (not --local), propagate to all registered projects
+  if (!isLocal) {
+    const registryPath = path.join(process.env.HOME, '.ai-toolkit', 'projects.json');
+    if (fs.existsSync(registryPath)) {
+      try {
+        const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+        const projects = registry.projects || [];
+        if (projects.length > 0) {
+          console.log('');
+          console.log('## Updating registered projects');
+          console.log('');
+          // Pass through --skip, --refresh-base flags to project updates
+          const passthrough = args.filter(a => a.startsWith('--skip') || a === '--refresh-base');
+          run(scriptPath('update_projects.py'), passthrough);
+        }
+      } catch (_err) {
+        // Registry corrupt -- skip project updates
+      }
+    }
+  }
 }
 
 /** @type {Record<string, (args: string[]) => void>} */
@@ -459,6 +482,7 @@ const SPECIAL_HANDLERS = {
   'sync':         handleSync,
   'mcp':          handleMcp,
   'config':       handleConfig,
+  'projects':     (args) => run(scriptPath('projects_cli.py'), args),
   'plugin':       (args) => run(scriptPath('plugin.py'), args),
   'remove-rule':  handleRemoveRule,
   'add-rule':     handleAddRule,

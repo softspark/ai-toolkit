@@ -57,6 +57,7 @@ from install_steps.install_state import (
     print_status,
 )
 from install_steps.detect_language import detect_languages
+from install_steps.project_registry import register_project
 
 # Config inheritance (extends system)
 from config_resolver import (
@@ -703,6 +704,19 @@ def main() -> None:
             auto_detected=auto_detected,
             extends_info=extends_info,
         )
+
+        # Register project in global registry (for `ai-toolkit update` propagation)
+        if local:
+            extends_source = ""
+            if extends_info:
+                extends_source = extends_info.get("source", "")
+            is_new = register_project(
+                project_dir,
+                profile=profile or "standard",
+                extends=extends_source,
+            )
+            if is_new:
+                print(f"  Registered project in ~/.ai-toolkit/projects.json")
 
     print_summary(local=local)
 
