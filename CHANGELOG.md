@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.0.2 — Clean Legacy Directory Removal (2026-04-12)
+
+### Fixed
+- **Migration cleanup** — `~/.ai-toolkit/` is now fully removed after migration instead of leaving an empty directory with a `.migrated` marker
+
+---
+
 ## v2.0.1 — Migration Hook Path Fix (2026-04-12)
 
 ### Fixed

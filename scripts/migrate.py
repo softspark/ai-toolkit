@@ -21,7 +21,6 @@ import json
 import os
 import shutil
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -36,14 +35,16 @@ from paths import (
 )
 
 
-MIGRATED_MARKER = LEGACY_DATA_DIR / ".migrated"
-
-
 def needs_migration() -> bool:
-    """Check if legacy directory exists and hasn't been migrated yet."""
+    """Check if legacy directory exists and needs migration.
+
+    Returns True only when ~/.ai-toolkit/ exists AND contains real data
+    (not just an empty dir). After migration the directory is removed entirely.
+    """
     if not LEGACY_DATA_DIR.is_dir():
         return False
-    if MIGRATED_MARKER.is_file():
+    # Empty dir (or only hidden files) — nothing to migrate
+    if not any(LEGACY_DATA_DIR.iterdir()):
         return False
     # Don't migrate if AI_TOOLKIT_HOME is set (custom setup)
     if os.environ.get("AI_TOOLKIT_HOME"):
@@ -77,11 +78,10 @@ def migrate_home_directory(dry_run: bool = False) -> bool:
     else:
         # Clean move
         shutil.move(str(LEGACY_DATA_DIR), str(TOOLKIT_DATA_DIR))
-        # Recreate legacy dir for marker
-        LEGACY_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Write migration marker
-    _write_marker()
+    # Remove legacy directory entirely
+    if LEGACY_DATA_DIR.exists():
+        shutil.rmtree(str(LEGACY_DATA_DIR), ignore_errors=True)
 
     print(f"   Migrated: {TOOLKIT_DATA_DIR}")
     return True
@@ -101,21 +101,6 @@ def _merge_directories(src: Path, dst: Path) -> None:
         else:
             # Overwrite with source (legacy has the latest data)
             shutil.move(str(item), str(dest_item))
-
-
-def _write_marker() -> None:
-    """Write .migrated marker pointing to new location."""
-    LEGACY_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    marker_data = {
-        "migrated_to": str(TOOLKIT_DATA_DIR),
-        "migrated_at": now,
-        "message": "ai-toolkit data has moved to ~/.softspark/ai-toolkit/. "
-                   "This directory is kept as a marker. Safe to delete.",
-    }
-    with open(MIGRATED_MARKER, "w", encoding="utf-8") as f:
-        json.dump(marker_data, f, indent=2)
-        f.write("\n")
 
 
 def migrate_project_configs(dry_run: bool = False) -> int:
@@ -231,8 +216,7 @@ def main() -> None:
 
     if success:
         print()
-        print("Migration complete. The old ~/.ai-toolkit/ directory contains only a")
-        print("migration marker and can be safely deleted.")
+        print("Migration complete. ~/.ai-toolkit/ has been removed.")
     elif not dry_run:
         print("Migration skipped.")
 
