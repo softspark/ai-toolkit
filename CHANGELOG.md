@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.0.1 — Migration Hook Path Fix (2026-04-12)
+
+### Fixed
+- **settings.json hook paths** — migration now rewrites ALL hook commands (including plugin hooks with non-toolkit `_source` tags like `memory-pack`, `enterprise-pack`) from `~/.ai-toolkit/hooks/` to `~/.softspark/ai-toolkit/hooks/`
+
+---
+
 ## v2.0.0 — SoftSpark Namespace Migration (2026-04-12)
 
 ### BREAKING CHANGES
