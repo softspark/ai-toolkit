@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.0.0 — SoftSpark Namespace Migration (2026-04-12)
+
+### BREAKING CHANGES
+- **Home directory moved** — `~/.ai-toolkit/` → `~/.softspark/ai-toolkit/`. Prepares the namespace for sibling tools (`jira-mcp`, etc.) under `~/.softspark/`
+- **Per-project config renamed** — `.ai-toolkit.json` → `.softspark-toolkit.json`
+- **Per-project lock file renamed** — `.ai-toolkit.lock.json` → `.softspark-toolkit.lock.json`
+
+### Added
+- **Auto-migration** — on first `install`/`update` after upgrade, data is automatically migrated from legacy path. A `.migrated` marker is left in `~/.ai-toolkit/` pointing to the new location
+- **`scripts/paths.py`** — centralized path constants module; all scripts import from here instead of hardcoding paths
+- **`scripts/migrate.py`** — standalone migration script (`python3 scripts/migrate.py [--dry-run]`)
+- **Legacy fallback** — `config_resolver` and `config_lock` transparently read old filenames (`.ai-toolkit.json`, `.ai-toolkit.lock.json`) if new ones don't exist
+- **JS CLI fallback** — `ai-toolkit update` checks legacy `state.json` location for seamless first upgrade
+
+### Changed
+- All Python scripts, Bash hooks, JS CLI, hooks.json, manifest.json, tests, and documentation updated to use `~/.softspark/ai-toolkit/` paths
+- `AI_TOOLKIT_HOME` env var still supported as override
+
+---
+
 ## v1.9.0 — Project Registry & Doc Sync (2026-04-12)
 
 ### Added
