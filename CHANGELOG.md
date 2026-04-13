@@ -7,6 +7,36 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.1.0 — Codex CLI Support & Native Editor MCP Install (2026-04-13)
+
+### Added
+- **Codex CLI as 10th editor** — full support via `--editors codex`: `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*`, `.codex/hooks.json`
+- **Codex skill translation layer** — Claude-only orchestration skills (orchestrate, workflow, swarm, teams, subagent-development) are automatically translated to Codex-native `spawn_agent`/`update_plan` wrappers; native skills are symlinked directly
+- **Native editor MCP install** — `ai-toolkit mcp install --editor <name> --scope project|global` renders canonical `.mcp.json` templates into 8 editor-native config formats (Claude, Cursor, Copilot, Gemini, Windsurf, Cline, Augment, Codex)
+- **MCP auto-sync on local install** — `install --local` mirrors `.mcp.json` into `.claude/settings.local.json` plus selected project editors (Cursor, Copilot)
+- **`mcp editors` subcommand** — lists all supported native MCP adapters with scope/path info
+- **Cross-editor verification SOP** — mandatory check against official docs before adding any component
+- **Runtime-aware plugin installs** — `ai-toolkit plugin install|update|remove|status --editor claude|codex|all` now targets Claude and a global Codex plugin layer consistently
+- **Global Codex plugin layer** — plugin packs can bootstrap `~/AGENTS.md`, `~/.agents/`, and `~/.codex/hooks.json` without changing the default project-local Codex core install model
+- **Plugin lifecycle tests** — coverage for install/update/remove behavior across Claude and Codex runtimes, including shared asset retention
+- **Safe Codex and Cline rule regeneration** — `generate_codex_rules.py` and `generate_cline_rules.py` now support `--skip-cleanup` to refresh standard generated rules without deleting custom overlays
+
+### New Files
+- `scripts/mcp_editors.py` — 8 native MCP config adapters
+- `scripts/codex_skill_adapter.py` — skill translation layer for Codex
+- `scripts/generate_codex.py` — AGENTS.md generator with Codex orchestration guidance
+- `scripts/generate_codex_hooks.py` — `.codex/hooks.json` generator
+- `scripts/generate_codex_rules.py` — `.agents/rules/*.md` generator
+- `kb/reference/codex-cli-compatibility.md` — Codex mapping reference
+- `kb/reference/mcp-editor-compatibility.md` — native MCP support matrix
+- `tests/test_plugin.bats` — runtime-aware plugin install/remove coverage
+
+### Changed
+- **Release workflow** — `generate:all` now refreshes tracked Codex rules and uses the directory-based Cline generator that matches the current repository layout
+- **Documentation** — README, KB references, maintenance SOPs, and generated artifacts now consistently describe the Claude + global Codex plugin model
+
+---
+
 ## v2.0.2 — Clean Legacy Directory Removal (2026-04-12)
 
 ### Fixed
