@@ -3,9 +3,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "1.4.2"
+version: "1.4.4"
 created: "2026-03-23"
-last_updated: "2026-04-10"
+last_updated: "2026-04-13"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -34,7 +34,7 @@ ai-toolkit install --local --editors all                  # all supported editor
 ai-toolkit install --local --editors cursor,aider         # specific editors only
 ```
 
-Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`.
+Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`, `codex`.
 
 To restrict which language rules are injected, use `--lang`:
 
@@ -228,6 +228,51 @@ Follow the `documentation-standards` knowledge skill (`app/skills/documentation-
 1. Create `app/skills/<skill-name>/scripts/<script>.py` (stdlib only, JSON output)
 2. `chmod +x` the script
 3. Reference: `` python3 ${CLAUDE_SKILL_DIR}/scripts/script.py . ``
+
+## Cross-Editor Verification (Mandatory)
+
+**Every addition — skill, hook, MCP template, agent, rule — MUST be verified against all supported editors before merge.**
+
+This toolkit targets 10 platforms. Each has its own config format, file path conventions, and runtime capabilities. A feature that works in Claude Code may silently break in Cursor, Codex, or Copilot if the editor's official spec diverges.
+
+### Verification checklist
+
+When adding or modifying any toolkit component:
+
+1. **Check official docs** — before implementing, fetch the editor's current documentation (web search or Context7) to confirm the config format, file path, and feature support haven't changed
+2. **Validate output format** — ensure the generated file matches what the editor expects (JSON schema, TOML structure, MDC frontmatter, directory naming)
+3. **Test scope rules** — verify project-local vs global behavior matches the editor's own scope model
+4. **Confirm feature parity** — if the feature relies on runtime primitives (hooks, MCP, agent delegation), check whether the target editor supports them; document gaps in `kb/reference/` if not
+
+### Editor documentation sources
+
+| Editor | Where to verify |
+|--------|----------------|
+| Claude Code | `docs.anthropic.com/claude-code` |
+| Cursor | `docs.cursor.com` |
+| Windsurf | `docs.codeium.com/windsurf` |
+| GitHub Copilot | `docs.github.com/copilot` |
+| Gemini CLI | `github.com/google-gemini/gemini-cli` |
+| Cline | `github.com/cline/cline` |
+| Roo Code | `github.com/RooVetGit/Roo-Code` |
+| Aider | `aider.chat` |
+| Augment | `docs.augmentcode.com` |
+| Codex CLI | `github.com/openai/codex` |
+| Google Antigravity | `developers.google.com/project-idx` |
+
+### When to do this
+
+- Adding a new skill → verify it renders correctly for Codex `.agents/skills/` and all directory-based editors
+- Adding a new hook → verify event name is valid in Claude and check `.codex/hooks.json` compatibility
+- Adding a new MCP template → verify it installs correctly for all 8 native adapters (`mcp_editors.py`)
+- Modifying generator output → check that every editor-specific generator still produces valid output
+- Adding a new editor → verify ALL existing features render correctly for the new target
+
+### Anti-pattern
+
+Do NOT assume an editor's format based on memory or past behavior. Editors ship breaking changes to their config surfaces. Always verify against current official docs before implementation.
+
+---
 
 ## Quality Checks
 
