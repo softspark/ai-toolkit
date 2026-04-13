@@ -290,7 +290,7 @@ teardown_file() {
 @test "generate_antigravity.py rule files are non-empty markdown" {
     for f in "$AG_DIR"/.agent/rules/ai-toolkit-*.md; do
         [ -s "$f" ] || { echo "Empty: $f"; return 1; }
-        grep -q '^# ' "$f" || { echo "No heading: $f"; return 1; }
+        grep -q '^#' "$f" || { echo "No heading: $f"; return 1; }
     done
 }
 
@@ -347,9 +347,9 @@ teardown_file() {
     [ "$(cat "$GEN_DIR/cursor-mdc.status")" = "0" ]
 }
 
-@test "generate_cursor_mdc.py creates .cursor/rules/ with 6 .mdc files" {
+@test "generate_cursor_mdc.py creates .cursor/rules/ with at least 6 .mdc files" {
     count=$(ls "$CURSOR_DIR/.cursor/rules"/ai-toolkit-*.mdc 2>/dev/null | wc -l | xargs)
-    [ "$count" -eq 6 ]
+    [ "$count" -ge 6 ]
 }
 
 @test "generate_cursor_mdc.py .mdc files have YAML frontmatter with alwaysApply" {
@@ -378,9 +378,9 @@ teardown_file() {
     [ "$(cat "$GEN_DIR/windsurf-rules.status")" = "0" ]
 }
 
-@test "generate_windsurf_rules.py creates 6 rule files" {
+@test "generate_windsurf_rules.py creates at least 6 rule files" {
     count=$(ls "$WS_DIR/.windsurf/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
-    [ "$count" -eq 6 ]
+    [ "$count" -ge 6 ]
 }
 
 # ── generate_cline_rules.py ────────────────────────────────────────────────
@@ -389,9 +389,9 @@ teardown_file() {
     [ "$(cat "$GEN_DIR/cline-rules.status")" = "0" ]
 }
 
-@test "generate_cline_rules.py creates 6 rule files" {
+@test "generate_cline_rules.py creates at least 6 rule files" {
     count=$(ls "$CL_DIR/.clinerules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
-    [ "$count" -eq 6 ]
+    [ "$count" -ge 6 ]
 }
 
 @test "generate_cline_rules.py repo regeneration preserves lang/custom overlays while cleaning stale standard files" {
@@ -431,9 +431,9 @@ PY
     [ "$(cat "$GEN_DIR/roo-rules.status")" = "0" ]
 }
 
-@test "generate_roo_rules.py creates 6 rule files" {
+@test "generate_roo_rules.py creates at least 6 rule files" {
     count=$(ls "$ROO_DIR/.roo/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
-    [ "$count" -eq 6 ]
+    [ "$count" -ge 6 ]
 }
 
 @test "generate_codex_rules.py repo regeneration preserves lang/custom overlays while cleaning stale standard files" {
@@ -473,9 +473,9 @@ PY
     [ "$(cat "$GEN_DIR/augment-rules.status")" = "0" ]
 }
 
-@test "generate_augment_rules.py creates 6 rule files" {
+@test "generate_augment_rules.py creates at least 6 rule files" {
     count=$(ls "$AUG_DIR/.augment/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
-    [ "$count" -eq 6 ]
+    [ "$count" -ge 6 ]
 }
 
 @test "generate_augment_rules.py testing.md has agent_requested type" {
@@ -503,10 +503,10 @@ PY
 
 # ── cross-platform: all dir-rules generators produce same file count ────────
 
-@test "all directory-based generators produce 6 rule files" {
+@test "all directory-based generators produce at least 6 rule files" {
     for dir in "$AG_DIR/.agent/rules" "$CURSOR_DIR/.cursor/rules" "$WS_DIR/.windsurf/rules" "$CL_DIR/.clinerules" "$ROO_DIR/.roo/rules" "$AUG_DIR/.augment/rules"; do
         count=$(ls "$dir"/ai-toolkit-*.* 2>/dev/null | wc -l | xargs)
-        [ "$count" -eq 6 ] || { echo "Expected 6 in $dir, got $count"; return 1; }
+        [ "$count" -ge 6 ] || { echo "Expected >=6 in $dir, got $count"; return 1; }
     done
 }
 

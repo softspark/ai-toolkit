@@ -404,7 +404,9 @@ function handleConfig(args) {
  * @param {string[]} _args - Unused, kept for signature consistency
  */
 function handleGenerateAll(_args) {
-  for (const gen of Object.values(GENERATORS)) {
+  for (const [name, gen] of Object.entries(GENERATORS)) {
+    // Skip agents-md — codex-md generates a superset to the same AGENTS.md
+    if (name === 'agents-md') continue;
     writeGeneratorOutput(gen);
   }
   // Directory-based generators (multi-file output)
