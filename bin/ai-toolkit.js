@@ -405,8 +405,9 @@ function handleConfig(args) {
  */
 function handleGenerateAll(_args) {
   for (const [name, gen] of Object.entries(GENERATORS)) {
-    // Skip agents-md — codex-md generates a superset to the same AGENTS.md
-    if (name === 'agents-md') continue;
+    // Skip codex-md — it injects a Codex config block via markers (used by install --local --editors codex)
+    // agents-md generates the full agent list which is the standalone AGENTS.md
+    if (name === 'codex-md') continue;
     writeGeneratorOutput(gen);
   }
   // Directory-based generators (multi-file output)

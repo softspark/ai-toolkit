@@ -6,6 +6,7 @@ Usage: ./scripts/generate_agents_md.py > AGENTS.md
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -87,16 +88,17 @@ def main() -> None:
         print("---")
         print()
 
-    # Registered custom rules from ~/.softspark/ai-toolkit/rules/
-    if RULES_DIR.is_dir():
-        for rule_file in sorted(RULES_DIR.glob("*.md")):
-            rule_name = rule_file.stem
-            print(f"<!-- TOOLKIT:{rule_name} START -->")
-            print("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
-            print()
-            print(rule_file.read_text(encoding="utf-8").rstrip())
-            print()
-            print(f"<!-- TOOLKIT:{rule_name} END -->")
+    # Registered custom rules — skip when called by inject_with_rules()
+    if not os.environ.get("_TOOLKIT_INJECT_MODE"):
+        if RULES_DIR.is_dir():
+            for rule_file in sorted(RULES_DIR.glob("*.md")):
+                rule_name = rule_file.stem
+                print(f"<!-- TOOLKIT:{rule_name} START -->")
+                print("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
+                print()
+                print(rule_file.read_text(encoding="utf-8").rstrip())
+                print()
+                print(f"<!-- TOOLKIT:{rule_name} END -->")
             print()
 
 

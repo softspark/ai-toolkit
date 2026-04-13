@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.1.2 — Idempotent Update Fix (2026-04-13)
+
+### Fixed
+- **`ai-toolkit update` no longer dirties git** — generators now skip custom rule emission when called by `inject_with_rules()` (which handles injection separately). Previously, `update` caused AGENTS.md and other generated files to gain extra blank lines on every run.
+
+---
+
 ## v2.1.1 — Custom Rules in Generators & README Restructure (2026-04-13)
 
 ### Fixed

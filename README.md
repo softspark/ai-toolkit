@@ -10,12 +10,12 @@
 
 ---
 
-## What's New in v2.1.1
+## What's New in v2.1.2
 
-- **Custom rules in generators** — `generate:all` now preserves registered rules from other repos across all platforms
-- **README restructured** — 951 → 292 lines with TOC, "What's New" section, and links to KB docs
-- **CLI help completeness** — added missing `--persona` option and `codex` to `--editors`
-- **3 new KB docs** — CLI Reference, Unique Features, Ecosystem Comparison (moved from README)
+- **Idempotent update** — `ai-toolkit update` no longer dirties git with extra blank lines in generated files
+- **Custom rules in generators** — `generate:all` preserves registered rules from other repos across all platforms
+- **README restructured** — 951 → 292 lines with TOC, links to KB docs
+- **3 new KB docs** — CLI Reference, Unique Features, Ecosystem Comparison
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

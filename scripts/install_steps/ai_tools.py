@@ -1,6 +1,7 @@
 """Install AI tool configs (Cursor, Windsurf, Gemini, Augment, Codex) and local project setup."""
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -78,7 +79,8 @@ def inject_with_rules(
     else:
         cmd = ["bash", str(scripts_dir / generator_script)]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    env = {**os.environ, "_TOOLKIT_INJECT_MODE": "1"}
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if result.returncode != 0:
         print(f"  ERROR: {generator_script} failed: {result.stderr.strip()}")
         return
