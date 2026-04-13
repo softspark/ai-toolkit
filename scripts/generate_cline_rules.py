@@ -48,7 +48,8 @@ def generate(target_dir: Path, *,
 
 def main() -> None:
     target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
-    generate(target)
+    from paths import RULES_DIR
+    generate(target, rules_dir=RULES_DIR)
 
 
 if __name__ == "__main__":

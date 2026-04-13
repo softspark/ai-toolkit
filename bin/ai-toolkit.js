@@ -420,6 +420,14 @@ function handleGenerateAll(_args) {
   fs.writeFileSync(path.join(CWD, 'CONVENTIONS.md'), conventionsOut);
   console.log('Generated: CONVENTIONS.md');
   generateLlmsTxt();
+  // Re-inject registered custom rules into .claude/CLAUDE.md (idempotent markers)
+  const rulesDir = path.join(process.env.HOME, '.softspark', 'ai-toolkit', 'rules');
+  if (fs.existsSync(rulesDir)) {
+    const ruleFiles = fs.readdirSync(rulesDir).filter(f => f.endsWith('.md')).sort();
+    for (const rf of ruleFiles) {
+      run(scriptPath('inject_rule_cli.py'), [path.join(rulesDir, rf), CWD]);
+    }
+  }
 }
 
 /**

@@ -22,6 +22,7 @@ from emission import (
     print_toolkit_start,
 )
 from frontmatter import frontmatter_field
+from paths import RULES_DIR
 
 
 def _emit_agents() -> str:
@@ -86,6 +87,18 @@ def main() -> None:
     print(generate_workflow_guidelines())
 
     print_toolkit_end()
+
+    # Registered custom rules from ~/.softspark/ai-toolkit/rules/
+    if RULES_DIR.is_dir():
+        for rule_file in sorted(RULES_DIR.glob("*.md")):
+            rule_name = rule_file.stem
+            print()
+            print(f"<!-- TOOLKIT:{rule_name} START -->")
+            print("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
+            print()
+            print(rule_file.read_text(encoding="utf-8").rstrip())
+            print()
+            print(f"<!-- TOOLKIT:{rule_name} END -->")
 
 
 if __name__ == "__main__":

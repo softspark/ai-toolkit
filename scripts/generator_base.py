@@ -27,6 +27,9 @@ Usage::
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+
+from paths import RULES_DIR
 
 from emission import (
     count_agents_and_skills,
@@ -138,3 +141,15 @@ def render_generator(config: dict) -> None:
     if config.get("use_markers", True):
         print()
         print_toolkit_end()
+
+    # Registered custom rules from ~/.softspark/ai-toolkit/rules/
+    if RULES_DIR.is_dir():
+        for rule_file in sorted(RULES_DIR.glob("*.md")):
+            rule_name = rule_file.stem
+            print()
+            print(f"<!-- TOOLKIT:{rule_name} START -->")
+            print("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
+            print()
+            print(rule_file.read_text(encoding="utf-8").rstrip())
+            print()
+            print(f"<!-- TOOLKIT:{rule_name} END -->")
