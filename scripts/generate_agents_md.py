@@ -96,7 +96,6 @@ def main() -> None:
     )
     if result.returncode == 0 and result.stdout.strip():
         print(result.stdout.rstrip())
-        print()
 
     # Note: custom rules are included via generate_codex.py output above
 

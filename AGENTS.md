@@ -625,4 +625,3 @@ Default tool: `smart_query()`. Use `hybrid_search_kb()` for speed, `crag_search(
 ALWAYS check `kb/procedures/` first: `smart_query("SOP for <task>")`.
 
 <!-- TOOLKIT:rag-mcp-rules END -->
-
