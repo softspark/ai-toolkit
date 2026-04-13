@@ -319,6 +319,7 @@ Follow this sequence before every `npm publish` / `git tag`:
 
 ```bash
 # Edit package.json version field (semver: X.Y.Z)
+# Sync package-lock.json: npm install --package-lock-only
 # Add entry to CHANGELOG.md
 ```
 
