@@ -10,7 +10,7 @@
 
 ---
 
-## What's New in v2.1.2
+## What's New in v2.1.3
 
 - **Idempotent update** — `ai-toolkit update` no longer dirties git with extra blank lines in generated files
 - **Custom rules in generators** — `generate:all` preserves registered rules from other repos across all platforms
