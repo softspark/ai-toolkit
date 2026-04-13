@@ -6,7 +6,7 @@ Each .md file inside .clinerules/ is automatically loaded.
 The legacy .clinerules single-file format is replaced by this directory.
 
 Usage:
-  python3 scripts/generate_cline_rules.py [target-dir]
+  python3 scripts/generate_cline_rules.py [target-dir] [--skip-cleanup]
 """
 from __future__ import annotations
 
@@ -24,7 +24,8 @@ from dir_rules_shared import (
 
 def generate(target_dir: Path, *,
              language_modules: list[str] | None = None,
-             rules_dir: Path | None = None) -> None:
+             rules_dir: Path | None = None,
+             cleanup: bool = True) -> None:
     """Write .clinerules/*.md files to target_dir."""
     # Migrate: if .clinerules exists as a single file, remove it
     # so the directory can be created (Cline 3.7+ uses directory format)
@@ -34,12 +35,18 @@ def generate(target_dir: Path, *,
     rules = dict(STANDARD_RULES)
     rules.update(build_language_rules(language_modules))
     rules.update(build_registered_rules(rules_dir))
-    write_rules(target_dir, rules, ".clinerules")
+    write_rules(target_dir, rules, ".clinerules", cleanup=cleanup)
 
 
 def main() -> None:
-    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
-    generate(target)
+    args = sys.argv[1:]
+    cleanup = True
+    if "--skip-cleanup" in args:
+        cleanup = False
+        args = [arg for arg in args if arg != "--skip-cleanup"]
+
+    target = Path(args[0]) if args else Path.cwd()
+    generate(target, cleanup=cleanup)
 
 
 if __name__ == "__main__":

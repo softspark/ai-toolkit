@@ -1,6 +1,6 @@
 ---
 name: plugin-creator
-description: "Creates experimental opt-in Claude Code plugin packs with manifests, conventions, and optional module scaffolding"
+description: "Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes"
 effort: high
 disable-model-invocation: true
 argument-hint: "[plugin pack name or domain]"
@@ -11,7 +11,7 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 
 $ARGUMENTS
 
-Create a new experimental opt-in Claude Code plugin pack following ai-toolkit conventions.
+Create a new experimental opt-in plugin pack following ai-toolkit conventions.
 
 ## Workflow
 
@@ -64,7 +64,7 @@ app/plugins/<plugin-name>/
 - Prefer referencing existing toolkit assets before duplicating them
 - Pack manifests must be valid JSON with `name`, `description`, `version`, `domain`, `type`, `status`, and `includes`
 - Optional hooks must be executable and documented in the pack README
-- If the pack introduces policy or hook behavior, document install/opt-in semantics clearly, including that the pack is not part of the default install
+- If the pack introduces policy or hook behavior, document install/opt-in semantics clearly, including supported runtimes (`claude`, `codex`, or `all`) and that the pack is not part of the default install
 - Experimental packs should remain opt-in and must not silently alter default global install behavior
 
 ## Validation Checklist
@@ -75,4 +75,3 @@ app/plugins/<plugin-name>/
 - [ ] Optional hooks are executable and use `#!/bin/bash`
 - [ ] `scripts/validate.py` passes
 - [ ] Public docs mention the pack only after the manifest and README exist
-

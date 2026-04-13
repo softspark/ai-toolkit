@@ -194,22 +194,22 @@ Use `PreToolUse` for blocking validations, `PostToolUse` for non-blocking feedba
 ## Managing Plugins
 
 ```bash
-ai-toolkit plugin list               # show available packs
-ai-toolkit plugin install <name>     # install a single pack
-ai-toolkit plugin install --all      # install all 11 packs
-ai-toolkit plugin update <name>      # update a pack (preserves data)
-ai-toolkit plugin update --all       # update all installed packs
-ai-toolkit plugin clean <name>       # prune data older than 90 days
+ai-toolkit plugin list                             # show available packs
+ai-toolkit plugin install --editor claude <name>  # install for Claude global target
+ai-toolkit plugin install --editor codex <name>   # install for Codex global target
+ai-toolkit plugin install --editor all --all      # install all 11 packs for both runtimes
+ai-toolkit plugin update --editor all --all       # re-apply all installed packs after toolkit updates
+ai-toolkit plugin clean <name>                    # prune data older than 90 days
 ai-toolkit plugin clean <name> --days 30  # custom retention
-ai-toolkit plugin remove <name>      # remove a pack
-ai-toolkit plugin status             # show installed packs with data stats
+ai-toolkit plugin remove --editor codex <name>    # remove from one runtime only
+ai-toolkit plugin status --editor all             # show installed packs with runtime details
 ```
 
-Install copies hooks/scripts, verifies agents+skills are linked, merges hooks into `settings.json`, and runs init scripts. Update removes and reinstalls from current source (data preserved). Clean prunes old plugin data. Remove reverses install but leaves data intact. Core agents/skills are never removed.
+Install copies hooks/scripts, verifies agents+skills are linked, merges hooks into the selected runtime config, and runs init scripts. For Codex, the selected runtime is the global `HOME` layer (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`). Update removes and reinstalls from current source while preserving plugin data. Clean prunes old plugin data. Remove reverses install for the selected runtime but leaves plugin data intact. Core agents/skills are never removed.
 
 Memory-pack auto-prunes observations older than 90 days on every session end (configurable via `MEMORY_RETENTION_DAYS`).
 
-State tracked in `~/.softspark/ai-toolkit/plugins.json`.
+State is tracked per runtime in `~/.softspark/ai-toolkit/plugins.json`. After every `ai-toolkit update`, also run `ai-toolkit plugin update --editor all --all` if plugin packs are installed.
 
 ## Adding a KB Document
 
@@ -299,14 +299,18 @@ ai-toolkit benchmark-ecosystem --offline   # benchmark snapshot
 Changes propagate instantly to all machines via symlinks. After any change:
 
 ```bash
-npm run generate:all          # FIRST: regenerate AGENTS.md, llms.txt, all platform configs
+npm run generate:all          # FIRST: regenerate AGENTS.md, Codex rules, llms.txt, and platform configs
 scripts/validate.py           # then validate — must pass before commit
 npm test                      # then test — must pass before commit
 ```
 
 Run `generate:all` before validate and test so that generated artifacts are current when
-the metadata contract tests run. Committing without regenerating first causes artifact
-drift and fails CI.
+the metadata contract tests run. This includes `.agents/rules/ai-toolkit-*.md` via
+`generate_codex_rules.py . --skip-cleanup` and `.clinerules/ai-toolkit-*.md` via
+`generate_cline_rules.py . --skip-cleanup`, which refresh the standard generated rule
+sets without deleting custom overlays such as registered repo-specific rules or
+language-specific files. Committing without regenerating first causes artifact drift and
+fails CI.
 
 ## Release Checklist
 

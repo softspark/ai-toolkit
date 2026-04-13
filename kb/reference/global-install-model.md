@@ -2,11 +2,11 @@
 title: "Global Install Model"
 category: reference
 service: ai-toolkit
-tags: [install, global, claude, local-setup]
+tags: [install, global, claude, codex, plugins, local-setup]
 version: "1.4.4"
 created: "2026-03-26"
-last_updated: "2026-04-12"
-description: "Reference description of the global install target, local project setup, editor-aware MCP sync, and command responsibilities in ai-toolkit."
+last_updated: "2026-04-13"
+description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
 # Global Install Model
@@ -16,6 +16,10 @@ description: "Reference description of the global install target, local project 
 `ai-toolkit` installs globally into `~/.claude/` by default.
 
 That means one machine-level install provides agents, skills, hooks, and rules to every project without committing toolkit boilerplate into each repository.
+
+Codex remains project-local for the core toolkit install, but experimental
+plugin packs can now layer a global Codex target in `HOME` when explicitly
+installed with `ai-toolkit plugin install --editor codex`.
 
 ## Command Responsibilities
 
@@ -31,6 +35,9 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 | `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |
 | `ai-toolkit mcp add <name...>` | current project | merge MCP templates into `.mcp.json` |
 | `ai-toolkit mcp install --editor <name...>` | editor-native config | render MCP templates into editor-specific config files |
+| `ai-toolkit plugin install --editor claude|codex|all <name>` | runtime-native config | install plugin pack for selected runtime(s) |
+| `ai-toolkit plugin update --editor claude|codex|all <name>` | runtime-native config | re-apply plugin pack after toolkit updates |
+| `ai-toolkit plugin remove --editor claude|codex|all <name>` | runtime-native config | remove plugin pack from selected runtime(s) |
 
 ## Why global install is the default
 
@@ -41,17 +48,17 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 
 ## What remains project-local
 
-These files still stay local to a repository:
+These files still stay local to a repository as part of the core install model:
 - `CLAUDE.md`
 - `.claude/settings.local.json`
 - `.mcp.json`
 - `.cursor/mcp.json`
 - `.github/mcp.json`
 - `.claude/constitution.md`
-- `AGENTS.md`
-- `.agents/rules/*.md`
-- `.agents/skills/*`
-- `.codex/hooks.json`
+- project `AGENTS.md`
+- project `.agents/rules/*.md`
+- project `.agents/skills/*`
+- project `.codex/hooks.json`
 - `.github/copilot-instructions.md`
 - `.clinerules`
 - `.roomodes`
@@ -79,6 +86,19 @@ Codex is the exception in terms of file location, not hook ownership: its local
 Native Codex-compatible skills are linked directly. Claude-oriented skills that
 depend on `Agent`, `Team*`, or `Task*` primitives are translated into generated
 Codex wrappers so the project still receives the full skill catalog.
+
+## Codex Global Plugin Layer
+
+`ai-toolkit plugin install --editor codex <pack>` additionally targets:
+
+- `~/AGENTS.md`
+- `~/.agents/rules/*.md`
+- `~/.agents/skills/*`
+- `~/.codex/hooks.json`
+
+This is not the default core install path. It is an explicit, opt-in plugin
+layer used only for plugin packs. Runtime state is tracked in
+`~/.softspark/ai-toolkit/plugins.json` per target (`claude`, `codex`).
 
 ## MCP Local Sync Behavior
 

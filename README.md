@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-92-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-591%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-596%20passing-success)](tests/)
 
 ---
 
@@ -45,13 +45,19 @@ ai-toolkit update --local                      # auto-detects editors from exist
 
 ```bash
 ai-toolkit plugin list             # show available packs
-ai-toolkit plugin install --all    # install all packs
-ai-toolkit plugin update --all     # re-apply after toolkit updates
-ai-toolkit plugin status           # show what's installed
+ai-toolkit plugin install --editor all --all   # install all packs for Claude + Codex
+ai-toolkit plugin install --editor codex memory-pack   # Codex global target
+ai-toolkit plugin update --editor all --all    # re-apply after toolkit updates
+ai-toolkit plugin status --editor all          # show what's installed per runtime
 ai-toolkit plugin clean memory-pack --days 30  # prune old data
 ```
 
-After each `ai-toolkit update`, also run `ai-toolkit plugin update --all` to keep plugin hooks and scripts in sync.
+`plugin` is editor-aware:
+- `--editor claude` targets global Claude install in `~/.claude/`
+- `--editor codex` targets global Codex assets in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`)
+- `--editor all` applies both
+
+After each `ai-toolkit update`, also run `ai-toolkit plugin update --editor all --all` to keep plugin hooks and scripts in sync.
 
 ### Install Profiles
 
@@ -139,9 +145,9 @@ Compiles the full toolkit (20K+ tokens) into a minimal system prompt that fits S
 | Aider | `.aider.conf.yml` + `CONVENTIONS.md` | `ai-toolkit install --local` | project |
 | Augment | `.augment/rules/ai-toolkit-*.md` | `ai-toolkit install --local` | project |
 | Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | `ai-toolkit install --local` | project |
-| Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.codex/hooks.json` | `ai-toolkit install --local` | project |
+| Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.agents/skills/*` + `.codex/hooks.json` | `ai-toolkit install --local` for project files, `ai-toolkit plugin install --editor codex` for global plugin layer | project + optional global plugin layer |
 
-> **Note:** Claude Code is always installed (primary platform with full feature support). Other editors are installed on demand with `--editors <list>` or auto-detected from existing project files. All platforms receive the same agent/skill catalog, guidelines, rules, language-specific rules, and registered custom rules. Codex CLI receives all 92 skills via `.agents/skills/`: native Codex-compatible skills are symlinked directly, while Claude-native orchestration skills are translated into Codex subagent workflows during install. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
+> **Note:** Claude Code is always installed (primary platform with full feature support). Other editors are installed on demand with `--editors <list>` or auto-detected from existing project files. All platforms receive the same agent/skill catalog, guidelines, rules, language-specific rules, and registered custom rules. Codex CLI core install remains project-local and receives all 92 skills via `.agents/skills/`: native Codex-compatible skills are symlinked directly, while Claude-native orchestration skills are translated into Codex subagent workflows during install. Experimental plugin packs can additionally target a global Codex surface in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`). For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
 
 ---
 
@@ -726,7 +732,7 @@ Pre-configured team presets via `/teams`:
 | Aider | `.aider.conf.yml` | project |
 | Augment | `.augment/rules/ai-toolkit-*.md` | project |
 | Google Antigravity | `.agent/rules/` + `.agent/workflows/` | project |
-| Codex CLI | `AGENTS.md` + `.agents/rules/` + `.codex/hooks.json` | project |
+| Codex CLI | `AGENTS.md` + `.agents/rules/` + `.agents/skills/` + `.codex/hooks.json` | project + optional global plugin layer in `HOME` |
 
 ```bash
 # First-time install (Claude + Cursor + Windsurf + Gemini)
@@ -843,13 +849,13 @@ Usage: ai-toolkit <command> [options]
 | `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |
 | `eject [dir]` | Export standalone config (no symlinks, no toolkit dependency) |
 | `plugin list` | Show available plugin packs with install status |
-| `plugin install <name>` | Install a plugin pack (hooks, scripts, verify agents/skills) |
-| `plugin install --all` | Install all 11 plugin packs |
-| `plugin update <name>` | Update a plugin pack (remove + reinstall, preserves data) |
-| `plugin update --all` | Update all installed plugin packs |
+| `plugin install <name> [--editor claude|codex|all]` | Install a plugin pack for selected runtime(s) |
+| `plugin install --all [--editor claude|codex|all]` | Install all 11 plugin packs for selected runtime(s) |
+| `plugin update <name> [--editor claude|codex|all]` | Update a plugin pack (remove + reinstall, preserves data) |
+| `plugin update --all [--editor claude|codex|all]` | Update all installed plugin packs for selected runtime(s) |
 | `plugin clean <name> [--days N]` | Prune old plugin data (default: 90 days) |
-| `plugin remove <name>` | Remove a plugin pack |
-| `plugin status` | Show installed plugins with data stats (DB size, observation count) |
+| `plugin remove <name> [--editor claude|codex|all]` | Remove a plugin pack from selected runtime(s) |
+| `plugin status [--editor claude|codex|all]` | Show installed plugins with runtime-specific details |
 | `stats` | Show skill usage statistics (`--reset` to clear, `--json` for raw output) |
 | `benchmark --my-config` | Compare your installed config vs toolkit defaults vs ecosystem |
 | `benchmark-ecosystem` | Generate a benchmark snapshot for official Claude Code and external ecosystem repos |

@@ -118,7 +118,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **persona**: Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
 - **plan**: Plan implementation with tasks and success criteria
 - **plan-writing**: Loaded when user asks to write an implementation plan or pre-mortem
-- **plugin-creator**: Creates experimental opt-in Claude Code plugin packs with manifests, conventions, and optional module scaffolding
+- **plugin-creator**: Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes
 - **pr**: Create pull requests with pre-flight validation
 - **prd-to-issues**: Break a PRD into independently-grabbable GitHub issues using vertical slices with HITL/AFK tagging and dependency ordering. Use when user wants to convert a PRD to issues, create tickets, or break down a PRD into work items.
 - **prd-to-plan**: Convert a PRD into a phased implementation plan using tracer-bullet vertical slices. Use when user wants to break down a PRD, create an implementation plan, plan phases from a PRD, or mentions tracer bullets.

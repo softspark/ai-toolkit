@@ -5,8 +5,8 @@ service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
 version: "1.0.0"
 created: "2026-04-12"
-last_updated: "2026-04-12"
-description: "Reference for how ai-toolkit maps Claude-oriented skills and hooks to Codex CLI."
+last_updated: "2026-04-13"
+description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
 # AI Toolkit - Codex CLI Compatibility
@@ -20,6 +20,11 @@ that depend on Claude-only orchestration primitives are generated as Codex
 wrappers that preserve the original workflow intent while translating execution
 to Codex subagents and plan tracking.
 
+Experimental plugin packs can also target a global Codex surface with
+`ai-toolkit plugin install --editor codex`, which layers plugin-specific skills,
+rules, and hooks into `HOME` without changing the project-local core install
+model.
+
 ## Local Install Outputs
 
 `ai-toolkit install --local --editors codex` generates:
@@ -28,6 +33,19 @@ to Codex subagents and plan tracking.
 - `.agents/rules/*.md`
 - `.agents/skills/*`
 - `.codex/hooks.json`
+
+## Global Plugin Outputs
+
+`ai-toolkit plugin install --editor codex <pack>` bootstraps or reuses:
+
+- `~/AGENTS.md`
+- `~/.agents/rules/*.md`
+- `~/.agents/skills/*`
+- `~/.codex/hooks.json`
+
+Plugin packs only add their own runtime-specific layer on top of the generated
+Codex base. Shared hook scripts and plugin scripts still live in
+`~/.softspark/ai-toolkit/`.
 
 ## Skill Translation Model
 
@@ -81,6 +99,7 @@ generator emits only the events supported by Codex runtime integration:
 
 - `SessionStart`
 - `PreToolUse`
+- `PostToolUse`
 - `UserPromptSubmit`
 - `Stop`
 
@@ -107,7 +126,8 @@ The Codex compatibility path is verified by:
 
 1. Generator contract tests for `generate_codex.py`
 2. Local install tests for `.agents/skills/` and `.codex/hooks.json`
-3. CLI tests for `codex-md` and `codex-hooks`
+3. Plugin install tests for global Codex rules, hooks, and cleanup paths
+4. CLI tests for `codex-md` and `codex-hooks`
 
 ## Related
 

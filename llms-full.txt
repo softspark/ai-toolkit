@@ -27,6 +27,7 @@
 - [CI Integration](kb/reference/ci-integration.md)
 - [Claude Ecosystem Benchmark Snapshot](kb/reference/claude-ecosystem-benchmark-snapshot.md)
 - [Claude Ecosystem Expansion Foundations](kb/reference/claude-ecosystem-expansion-foundations.md)
+- [AI Toolkit - Codex CLI Compatibility](kb/reference/codex-cli-compatibility.md)
 - [Plan: Competitive Features — ai-toolkit](kb/reference/competitive-features-implementation.md)
 - [Distribution Model](kb/reference/distribution-model.md)
 - [Enterprise Config Inheritance Guide](kb/reference/enterprise-config-guide.md)
@@ -38,6 +39,7 @@
 - [Language Plugin Packs](kb/reference/language-packs.md)
 - [Language Rules System](kb/reference/language-rules.md)
 - [Manifest-Driven Install System](kb/reference/manifest-install.md)
+- [MCP Editor Compatibility](kb/reference/mcp-editor-compatibility.md)
 - [MCP Server Templates](kb/reference/mcp-templates.md)
 - [Merge-Friendly Install Model](kb/reference/merge-friendly-install-model.md)
 - [Plugin Pack Conventions](kb/reference/plugin-pack-conventions.md)
@@ -111,7 +113,7 @@
 - **persona**: Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
 - **plan**: Plan implementation with tasks and success criteria
 - **plan-writing**: Loaded when user asks to write an implementation plan or pre-mortem
-- **plugin-creator**: Creates experimental opt-in Claude Code plugin packs with manifests, conventions, and optional module scaffolding
+- **plugin-creator**: Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes
 - **pr**: Create pull requests with pre-flight validation
 - **prd-to-issues**: Break a PRD into independently-grabbable GitHub issues using vertical slices with HITL/AFK tagging and dependency ordering. Use when user wants to convert a PRD to issues, create tickets, or break down a PRD into work items.
 - **prd-to-plan**: Convert a PRD into a phased implementation plan using tracer-bullet vertical slices. Use when user wants to break down a PRD, create an implementation plan, plan phases from a PRD, or mentions tracer bullets.
@@ -3120,9 +3122,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "1.4.2"
+version: "1.4.4"
 created: "2026-03-23"
-last_updated: "2026-04-10"
+last_updated: "2026-04-13"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -3151,7 +3153,7 @@ ai-toolkit install --local --editors all                  # all supported editor
 ai-toolkit install --local --editors cursor,aider         # specific editors only
 ```
 
-Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`.
+Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`, `codex`.
 
 To restrict which language rules are injected, use `--lang`:
 
@@ -3311,22 +3313,22 @@ Use `PreToolUse` for blocking validations, `PostToolUse` for non-blocking feedba
 ## Managing Plugins
 
 ```bash
-ai-toolkit plugin list               # show available packs
-ai-toolkit plugin install <name>     # install a single pack
-ai-toolkit plugin install --all      # install all 11 packs
-ai-toolkit plugin update <name>      # update a pack (preserves data)
-ai-toolkit plugin update --all       # update all installed packs
-ai-toolkit plugin clean <name>       # prune data older than 90 days
+ai-toolkit plugin list                             # show available packs
+ai-toolkit plugin install --editor claude <name>  # install for Claude global target
+ai-toolkit plugin install --editor codex <name>   # install for Codex global target
+ai-toolkit plugin install --editor all --all      # install all 11 packs for both runtimes
+ai-toolkit plugin update --editor all --all       # re-apply all installed packs after toolkit updates
+ai-toolkit plugin clean <name>                    # prune data older than 90 days
 ai-toolkit plugin clean <name> --days 30  # custom retention
-ai-toolkit plugin remove <name>      # remove a pack
-ai-toolkit plugin status             # show installed packs with data stats
+ai-toolkit plugin remove --editor codex <name>    # remove from one runtime only
+ai-toolkit plugin status --editor all             # show installed packs with runtime details
 ```
 
-Install copies hooks/scripts, verifies agents+skills are linked, merges hooks into `settings.json`, and runs init scripts. Update removes and reinstalls from current source (data preserved). Clean prunes old plugin data. Remove reverses install but leaves data intact. Core agents/skills are never removed.
+Install copies hooks/scripts, verifies agents+skills are linked, merges hooks into the selected runtime config, and runs init scripts. For Codex, the selected runtime is the global `HOME` layer (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`). Update removes and reinstalls from current source while preserving plugin data. Clean prunes old plugin data. Remove reverses install for the selected runtime but leaves plugin data intact. Core agents/skills are never removed.
 
 Memory-pack auto-prunes observations older than 90 days on every session end (configurable via `MEMORY_RETENTION_DAYS`).
 
-State tracked in `~/.softspark/ai-toolkit/plugins.json`.
+State is tracked per runtime in `~/.softspark/ai-toolkit/plugins.json`. After every `ai-toolkit update`, also run `ai-toolkit plugin update --editor all --all` if plugin packs are installed.
 
 ## Adding a KB Document
 
@@ -3345,6 +3347,51 @@ Follow the `documentation-standards` knowledge skill (`app/skills/documentation-
 1. Create `app/skills/<skill-name>/scripts/<script>.py` (stdlib only, JSON output)
 2. `chmod +x` the script
 3. Reference: `` python3 ${CLAUDE_SKILL_DIR}/scripts/script.py . ``
+
+## Cross-Editor Verification (Mandatory)
+
+**Every addition — skill, hook, MCP template, agent, rule — MUST be verified against all supported editors before merge.**
+
+This toolkit targets 10 platforms. Each has its own config format, file path conventions, and runtime capabilities. A feature that works in Claude Code may silently break in Cursor, Codex, or Copilot if the editor's official spec diverges.
+
+### Verification checklist
+
+When adding or modifying any toolkit component:
+
+1. **Check official docs** — before implementing, fetch the editor's current documentation (web search or Context7) to confirm the config format, file path, and feature support haven't changed
+2. **Validate output format** — ensure the generated file matches what the editor expects (JSON schema, TOML structure, MDC frontmatter, directory naming)
+3. **Test scope rules** — verify project-local vs global behavior matches the editor's own scope model
+4. **Confirm feature parity** — if the feature relies on runtime primitives (hooks, MCP, agent delegation), check whether the target editor supports them; document gaps in `kb/reference/` if not
+
+### Editor documentation sources
+
+| Editor | Where to verify |
+|--------|----------------|
+| Claude Code | `docs.anthropic.com/claude-code` |
+| Cursor | `docs.cursor.com` |
+| Windsurf | `docs.codeium.com/windsurf` |
+| GitHub Copilot | `docs.github.com/copilot` |
+| Gemini CLI | `github.com/google-gemini/gemini-cli` |
+| Cline | `github.com/cline/cline` |
+| Roo Code | `github.com/RooVetGit/Roo-Code` |
+| Aider | `aider.chat` |
+| Augment | `docs.augmentcode.com` |
+| Codex CLI | `github.com/openai/codex` |
+| Google Antigravity | `developers.google.com/project-idx` |
+
+### When to do this
+
+- Adding a new skill → verify it renders correctly for Codex `.agents/skills/` and all directory-based editors
+- Adding a new hook → verify event name is valid in Claude and check `.codex/hooks.json` compatibility
+- Adding a new MCP template → verify it installs correctly for all 8 native adapters (`mcp_editors.py`)
+- Modifying generator output → check that every editor-specific generator still produces valid output
+- Adding a new editor → verify ALL existing features render correctly for the new target
+
+### Anti-pattern
+
+Do NOT assume an editor's format based on memory or past behavior. Editors ship breaking changes to their config surfaces. Always verify against current official docs before implementation.
+
+---
 
 ## Quality Checks
 
@@ -3371,14 +3418,16 @@ ai-toolkit benchmark-ecosystem --offline   # benchmark snapshot
 Changes propagate instantly to all machines via symlinks. After any change:
 
 ```bash
-npm run generate:all          # FIRST: regenerate AGENTS.md, llms.txt, all platform configs
+npm run generate:all          # FIRST: regenerate AGENTS.md, Codex rules, llms.txt, and platform configs
 scripts/validate.py           # then validate — must pass before commit
 npm test                      # then test — must pass before commit
 ```
 
 Run `generate:all` before validate and test so that generated artifacts are current when
-the metadata contract tests run. Committing without regenerating first causes artifact
-drift and fails CI.
+the metadata contract tests run. This includes `.agents/rules/ai-toolkit-*.md` via
+`generate_codex_rules.py . --skip-cleanup`, which refreshes the standard generated Codex
+rules without deleting custom overlays such as registered repo-specific rules. Committing
+without regenerating first causes artifact drift and fails CI.
 
 ## Release Checklist
 
@@ -3463,7 +3512,7 @@ service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver]
 version: "1.5.0"
 created: "2026-04-10"
-last_updated: "2026-04-10"
+last_updated: "2026-04-13"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag."
 ---
 
@@ -3496,6 +3545,7 @@ python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
 # 3. Write CHANGELOG.md entry
 # 4. Regenerate artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
+python3 scripts/generate_codex_rules.py . --skip-cleanup
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
@@ -3619,6 +3669,7 @@ Add entry at the top of `CHANGELOG.md` (after the header, before previous releas
 
 ```bash
 python3 scripts/generate_agents_md.py > AGENTS.md
+python3 scripts/generate_codex_rules.py . --skip-cleanup
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 ```
@@ -3726,7 +3777,7 @@ git push origin --delete vX.Y.Z
 | 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
 | 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
 | 7 | CHANGELOG.md | Add release entry | Entry exists for vX.Y.Z |
-| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_llms_txt.py` | No unexpected diff |
+| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py --skip-cleanup`, `generate_llms_txt.py` | No unexpected diff |
 | 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
 | 10 | Security audit | `audit_skills.py --ci` | 0 HIGH |
 | 11 | Tests | `npm test` | All pass |
@@ -3745,7 +3796,7 @@ service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa]
 version: "1.1.0"
 created: "2026-04-08"
-last_updated: "2026-04-08"
+last_updated: "2026-04-13"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, and eject from user perspective."
 ---
 
@@ -3771,21 +3822,22 @@ Verifies all critical paths from the user's perspective.
 
 ## Quick Checklist (TL;DR)
 
-9 commands — if all pass, the release is ready:
+10 commands — if all pass, the release is ready:
 
 ```bash
 # Pre-commit (Phase 0)
-python3 scripts/generate_agents_md.py > AGENTS.md   # 1. Regenerate artifacts
-python3 scripts/generate_llms_txt.py > llms.txt      # 2. Regenerate llms.txt
-python3 scripts/validate.py --strict                 # 3. Validation passed?
-npm test                                             # 4. All tests passed?
+python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGENTS.md
+python3 scripts/generate_codex_rules.py . --skip-cleanup    # 2. Refresh standard Codex rules
+python3 scripts/generate_llms_txt.py > llms.txt             # 3. Regenerate llms.txt
+python3 scripts/validate.py --strict                        # 4. Validation passed?
+npm test                                                    # 5. All tests passed?
 
 # Post-install verification (Phases 1-7)
-ai-toolkit --version                                 # 5. Version OK?
-ai-toolkit status                                    # 6. Status OK?
-ai-toolkit doctor                                    # 7. Health check passed?
-ai-toolkit install --dry-run                         # 8. Global install OK?
-python3 scripts/audit_skills.py --ci                 # 9. Security audit clean?
+ai-toolkit --version                                        # 6. Version OK?
+ai-toolkit status                                           # 7. Status OK?
+ai-toolkit doctor                                           # 8. Health check passed?
+ai-toolkit install --dry-run                                # 9. Global install OK?
+python3 scripts/audit_skills.py --ci                        # 10. Security audit clean?
 ```
 
 ---
@@ -3798,6 +3850,7 @@ counts but does NOT auto-regenerate — you must do it locally.
 ```bash
 # 1. Regenerate generated artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
+python3 scripts/generate_codex_rules.py . --skip-cleanup
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
@@ -3811,7 +3864,7 @@ python3 scripts/audit_skills.py --ci
 npm test
 
 # 5. Stage and commit
-git add AGENTS.md llms.txt llms-full.txt
+git add AGENTS.md .agents/rules/ai-toolkit-*.md llms.txt llms-full.txt
 git add -p  # stage your other changes
 git commit -m "feat: your change description"
 ```
@@ -3822,7 +3875,7 @@ by the developer as part of their PR.
 
 **One-liner (copy-paste):**
 ```bash
-python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_codex_rules.py . --skip-cleanup && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---
@@ -4383,10 +4436,10 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.4.2"
+version: "1.4.4"
 created: "2026-03-23"
-last_updated: "2026-04-09"
-description: "Architecture of ai-toolkit: directory layout, global install model, skill tiers, and integration with projects."
+last_updated: "2026-04-13"
+description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
 # AI Toolkit Architecture
@@ -4485,11 +4538,13 @@ Machine (global)                              Project (local)
 **`ai-toolkit update`** — re-apply after `npm install -g @softspark/ai-toolkit@latest` or after `add-rule` / `remove-rule`. Same as `install` but semantically correct for update flows.
 
 **`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, constitution.md, language rules). Editor configs are opt-in via `--editors`:
-- `--editors all` — install all 8 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+- `--editors all` — install all 9 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex)
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Hooks are global-only — not merged into project settings.
+Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Codex local install additionally generates `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
+
+If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
 
 ## CLI Commands
 
@@ -4502,6 +4557,8 @@ Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
 | `add-rule <file>` | `~/.softspark/ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
 | `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/CLAUDE.md` | Unregister rule and remove its block |
+| `mcp add <name...>` | `./.mcp.json` | Merge canonical MCP template(s) into project config |
+| `mcp install --editor <name...>` | native editor config | Render MCP template(s) into editor-native config files |
 | `validate` | toolkit | Integrity check |
 | `doctor` | toolkit | Install health, hooks, benchmark freshness, and artifact drift diagnostics |
 | `benchmark-ecosystem` | toolkit | Benchmark snapshot for official Claude Code and external ecosystem repos |
@@ -4520,6 +4577,9 @@ Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules
 | `conventions-md` | `./` | Generates `CONVENTIONS.md` (Aider auto-loaded) |
 | `augment-dir-rules` | `./` | Generates `.augment/rules/ai-toolkit-*.md` |
 | `antigravity-rules` | `./` | Generates `.agent/rules/` + `.agent/workflows/` |
+| `codex-md` | `./` | Generates Codex-facing `AGENTS.md` |
+| `codex-rules` | `./` | Generates `.agents/rules/*.md` |
+| `codex-hooks` | `./` | Generates `.codex/hooks.json` |
 | `agents-md` | toolkit | Regenerates `AGENTS.md` |
 | `llms-txt` | `./` | Generates `llms.txt` |
 | `generate-all` | `./` | Generates all platform configs at once |
@@ -4570,6 +4630,38 @@ Skills that spawn real parallel agents use:
 - `Agent` tool — spawns subagents in parallel within the agent's response
 
 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` must be set for Agent Teams (tmux-based) support.
+
+### Codex Translation Layer
+
+Codex does not expose Claude's `Agent`, `Team*`, and `Task*` primitives with the
+same runtime semantics. To keep the skill catalog aligned, local Codex install
+uses a translation layer:
+
+- native Codex-compatible skills are linked directly
+- Claude-only orchestration skills are emitted as generated wrappers
+- wrapper guidance maps delegation to `spawn_agent`, `send_input`, `wait_agent`, `close_agent`, and `update_plan`
+
+Codex therefore receives the full skill catalog, but not the full Claude hook
+surface or tmux-backed Agent Teams lifecycle. Plugin packs reuse the same
+translation and hook-compatibility model when targeting the global Codex layer.
+
+See `kb/reference/codex-cli-compatibility.md` for the detailed mapping.
+
+## MCP Rendering Layer
+
+`.mcp.json` is the canonical project-level template format. ai-toolkit can render that configuration into editor-native MCP files through `scripts/mcp_editors.py`.
+
+Current native adapters:
+- Claude Code: `.claude/settings.local.json` and `~/.claude/settings.json`
+- Cursor: `.cursor/mcp.json` and `~/.cursor/mcp.json`
+- GitHub Copilot: `.github/mcp.json` and `~/.copilot/mcp-config.json`
+- Gemini CLI: `.gemini/settings.json` and `~/.gemini/settings.json`
+- Windsurf: `~/.codeium/windsurf/mcp_config.json`
+- Cline: `~/.cline/data/settings/cline_mcp_settings.json`
+- Augment: `~/.augment/settings.json`
+- Codex CLI: `~/.codex/config.toml`
+
+See `kb/reference/mcp-editor-compatibility.md` for the support matrix and scope rules.
 
 ## Quality Guardrails
 
@@ -4921,8 +5013,8 @@ service: ai-toolkit
 tags: [benchmark, claude-code, ecosystem, hooks, plugins, architecture]
 version: "1.0.0"
 created: "2026-03-27"
-last_updated: "2026-04-01"
-description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit."
+last_updated: "2026-04-13"
+description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit, including runtime-aware plugin packaging."
 ---
 
 # Claude Ecosystem Expansion Foundations
@@ -4935,13 +5027,13 @@ This document captures the architectural foundations adopted in `ai-toolkit` aft
 2. official Claude Code patterns,
 3. selected external benchmark repositories.
 
-The outcome is a toolkit that is now positioned as a more modular, Claude-native, benchmark-backed system with stronger lifecycle automation and extension tooling.
+The outcome is a toolkit that is now positioned as a more modular, Claude-first, benchmark-backed system with stronger lifecycle automation and extension tooling.
 
 ## Implemented Foundations
 
 ### 1. Plugin-oriented structure
 
-`ai-toolkit` now treats plugin packaging as a first-class capability.
+`ai-toolkit` now treats plugin packaging as a first-class capability, with runtime-aware install surfaces for Claude and optional global Codex layering.
 
 Implemented artifacts:
 - `app/.claude-plugin/plugin.json`
@@ -5016,6 +5108,147 @@ The reference benchmark set is intentionally curated:
 ## Current Position
 
 `ai-toolkit` is now documented and implemented as a complete, production-ready toolkit baseline rather than a staged roadmap. Future changes should be treated as normal product evolution, not backlog catch-up.
+
+---
+
+## kb/reference/codex-cli-compatibility.md
+
+---
+title: "AI Toolkit - Codex CLI Compatibility"
+category: reference
+service: ai-toolkit
+tags: [codex, compatibility, install, skills, hooks]
+version: "1.0.0"
+created: "2026-04-12"
+last_updated: "2026-04-13"
+description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
+---
+
+# AI Toolkit - Codex CLI Compatibility
+
+## Summary
+
+Codex CLI now receives the full `ai-toolkit` skill catalog during local install.
+
+Native Codex-compatible skills are linked directly into `.agents/skills/`. Skills
+that depend on Claude-only orchestration primitives are generated as Codex
+wrappers that preserve the original workflow intent while translating execution
+to Codex subagents and plan tracking.
+
+Experimental plugin packs can also target a global Codex surface with
+`ai-toolkit plugin install --editor codex`, which layers plugin-specific skills,
+rules, and hooks into `HOME` without changing the project-local core install
+model.
+
+## Local Install Outputs
+
+`ai-toolkit install --local --editors codex` generates:
+
+- `AGENTS.md`
+- `.agents/rules/*.md`
+- `.agents/skills/*`
+- `.codex/hooks.json`
+
+## Global Plugin Outputs
+
+`ai-toolkit plugin install --editor codex <pack>` bootstraps or reuses:
+
+- `~/AGENTS.md`
+- `~/.agents/rules/*.md`
+- `~/.agents/skills/*`
+- `~/.codex/hooks.json`
+
+Plugin packs only add their own runtime-specific layer on top of the generated
+Codex base. Shared hook scripts and plugin scripts still live in
+`~/.softspark/ai-toolkit/`.
+
+## Skill Translation Model
+
+Two delivery modes are used for Codex:
+
+| Mode | How it is installed | Use case |
+|------|----------------------|----------|
+| Native | Symlink to `app/skills/<name>/` | Skills whose `allowed-tools` are already supported in Codex |
+| Adapted | Generated wrapper directory in `.agents/skills/<name>/` | Skills that rely on Claude-only `Agent`, `Team*`, or `Task*` primitives |
+
+Adapted skills keep the same support assets (`reference/`, `scripts/`, `assets/`)
+via symlinks, but rewrite `SKILL.md` to Codex-native guidance.
+
+## Claude-to-Codex Tool Mapping
+
+The adapter rewrites Claude-specific delegation guidance to the closest Codex
+runtime primitives:
+
+| Claude-oriented primitive | Codex replacement |
+|---------------------------|------------------|
+| `Agent(...)` | `spawn_agent(..., fork_context=True, ...)` |
+| `SendMessage` | `send_input` |
+| `TaskCreate` / `TaskList` / `TaskUpdate` | `update_plan` or explicit checklist tracking |
+| `TaskGet` / `TaskOutput` | `wait_agent` |
+| `TaskStop` / `TeamDelete` | `close_agent` |
+| Agent teams | Multiple spawned subagents with explicit file ownership |
+
+## Adapted Skill Classes
+
+The main adapted group is multi-agent orchestration:
+
+- `/orchestrate`
+- `/workflow`
+- `/swarm`
+- `/teams`
+- `/subagent-development`
+
+The adapter also covers skills that previously depended only on Claude's
+`Agent` primitive, such as:
+
+- `/tdd`
+- `/write-a-prd`
+- `/qa-session`
+- `/triage-issue`
+- `/architecture-audit`
+
+## Hook Compatibility
+
+Codex does not expose the full Claude hook event surface. The Codex hook
+generator emits only the events supported by Codex runtime integration:
+
+- `SessionStart`
+- `PreToolUse`
+- `PostToolUse`
+- `UserPromptSubmit`
+- `Stop`
+
+This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
+`SubagentStart`, `SubagentStop`, `PreCompact`, `SessionEnd`, and
+`Notification` are not available in `.codex/hooks.json`.
+
+## Behavioral Limits
+
+Codex wrappers preserve workflow intent, but not every Claude runtime behavior
+has a perfect one-to-one equivalent.
+
+Known limits:
+
+- No native Codex equivalent of tmux-backed Agent Teams lifecycle events
+- No separate task object model equivalent to Claude `Task*` APIs
+- Hook event coverage is narrower than Claude Code
+
+These are runtime platform limits, not installation defects.
+
+## Verification
+
+The Codex compatibility path is verified by:
+
+1. Generator contract tests for `generate_codex.py`
+2. Local install tests for `.agents/skills/` and `.codex/hooks.json`
+3. Plugin install tests for global Codex rules, hooks, and cleanup paths
+4. CLI tests for `codex-md` and `codex-hooks`
+
+## Related
+
+- `kb/reference/skills-catalog.md`
+- `kb/reference/architecture-overview.md`
+- `kb/reference/global-install-model.md`
 
 ---
 
@@ -6108,11 +6341,11 @@ Run `ai-toolkit update --local` to re-resolve and update the lock file.
 title: "Extension API Reference"
 category: reference
 service: ai-toolkit
-tags: [extension-api, inject-rule, inject-hook, mcp-templates, integration]
-version: "1.3.8"
+tags: [extension-api, inject-rule, inject-hook, mcp-templates, integration, editors]
+version: "1.3.9"
 created: "2026-04-07"
-last_updated: "2026-04-07"
-description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, remove-rule, remove-hook, and mcp template management."
+last_updated: "2026-04-12"
+description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, remove-rule, remove-hook, and editor-aware MCP template management."
 ---
 
 # Extension API Reference
@@ -6133,6 +6366,7 @@ This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP serv
 | `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source` | Yes |
 | `add-rule <file.md>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
 | `mcp add <name...>` | `.mcp.json` | Merge `mcpServers` block from template | Yes |
+| `mcp install --editor <name...>` | Native editor MCP config | Render canonical template into editor format | Yes |
 
 ## inject-rule
 
@@ -6209,7 +6443,7 @@ npx @softspark/ai-toolkit remove-hook my-tool-hooks
 
 The argument is the source name (file stem used during `inject-hook`). If no entries with that source are present, the command exits 0 silently.
 
-## mcp add
+## mcp add / install
 
 Merges one or more MCP server templates from `app/mcp-templates/` into the project's `.mcp.json`.
 
@@ -6217,13 +6451,24 @@ Merges one or more MCP server templates from `app/mcp-templates/` into the proje
 ai-toolkit mcp add github                # add a single template
 ai-toolkit mcp add github postgres slack  # add multiple at once
 ai-toolkit mcp list                       # list all available templates
+ai-toolkit mcp editors                    # list supported native adapters
 ai-toolkit mcp show github                # print a template's JSON
+ai-toolkit mcp install --editor cursor --scope project github --target .
+ai-toolkit mcp install --editor codex context7
 ai-toolkit mcp remove github             # remove an entry from .mcp.json
+ai-toolkit mcp remove github --editor cursor --scope project --target .
 ```
 
 **Implementation:** `scripts/mcp_manager.py`.
 
-The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist, it is created. If the server name already exists, the entry is overwritten. See [mcp-templates.md](mcp-templates.md) for the full list of available templates.
+The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist, it is created. If the server name already exists, the entry is overwritten.
+
+The `install` command renders the same canonical template into a native editor config format. Supported adapters currently cover:
+- JSON clients with `mcpServers`: Claude Code, Cursor, Gemini CLI, Windsurf, Cline, Augment
+- JSON clients with additional required metadata: GitHub Copilot
+- TOML clients: Codex CLI
+
+When `install` runs with `--scope project`, ai-toolkit also updates `.mcp.json` so the project-level config remains the source of truth for later sync and local install flows.
 
 ## Architecture
 
@@ -6238,6 +6483,7 @@ The `add` command merges the `mcpServers` block from the template into `.mcp.jso
 │    remove-hook  <name>        → settings.json        │
 │    add-rule     <file.md>     → rules/ registry      │
 │    mcp add      <template>    → .mcp.json            │
+│    mcp install  <template>    → editor-native MCP    │
 │                                                      │
 │  Idempotent: markers (rules) / _source tags (hooks)  │
 │  ai-toolkit NEVER calls external services            │
@@ -6263,6 +6509,9 @@ npx @softspark/ai-toolkit inject-hook ./hooks/my-tool-hooks.json
 
 # Add an MCP server template
 npx @softspark/ai-toolkit mcp add github
+
+# Render the same template into Cursor project config
+npx @softspark/ai-toolkit mcp install --editor cursor --scope project github --target .
 ```
 
 To uninstall:
@@ -6278,6 +6527,7 @@ All operations are idempotent — safe to run on every install or update.
 
 - [PATH: kb/reference/hooks-catalog.md] — built-in hooks reference
 - [PATH: kb/reference/mcp-templates.md] — available MCP server templates
+- [PATH: kb/reference/mcp-editor-compatibility.md] — native editor MCP support matrix
 - [PATH: kb/reference/architecture-overview.md] — overall install model
 
 ---
@@ -6288,11 +6538,11 @@ All operations are idempotent — safe to run on every install or update.
 title: "Global Install Model"
 category: reference
 service: ai-toolkit
-tags: [install, global, claude, local-setup]
-version: "1.4.2"
+tags: [install, global, claude, codex, plugins, local-setup]
+version: "1.4.4"
 created: "2026-03-26"
-last_updated: "2026-04-09"
-description: "Reference description of the global install target, local project setup, and command responsibilities in ai-toolkit."
+last_updated: "2026-04-13"
+description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
 # Global Install Model
@@ -6302,6 +6552,10 @@ description: "Reference description of the global install target, local project 
 `ai-toolkit` installs globally into `~/.claude/` by default.
 
 That means one machine-level install provides agents, skills, hooks, and rules to every project without committing toolkit boilerplate into each repository.
+
+Codex remains project-local for the core toolkit install, but experimental
+plugin packs can now layer a global Codex target in `HOME` when explicitly
+installed with `ai-toolkit plugin install --editor codex`.
 
 ## Command Responsibilities
 
@@ -6315,6 +6569,11 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 | `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
 | `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |
+| `ai-toolkit mcp add <name...>` | current project | merge MCP templates into `.mcp.json` |
+| `ai-toolkit mcp install --editor <name...>` | editor-native config | render MCP templates into editor-specific config files |
+| `ai-toolkit plugin install --editor claude|codex|all <name>` | runtime-native config | install plugin pack for selected runtime(s) |
+| `ai-toolkit plugin update --editor claude|codex|all <name>` | runtime-native config | re-apply plugin pack after toolkit updates |
+| `ai-toolkit plugin remove --editor claude|codex|all <name>` | runtime-native config | remove plugin pack from selected runtime(s) |
 
 ## Why global install is the default
 
@@ -6325,10 +6584,17 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 
 ## What remains project-local
 
-These files still stay local to a repository:
+These files still stay local to a repository as part of the core install model:
 - `CLAUDE.md`
 - `.claude/settings.local.json`
+- `.mcp.json`
+- `.cursor/mcp.json`
+- `.github/mcp.json`
 - `.claude/constitution.md`
+- project `AGENTS.md`
+- project `.agents/rules/*.md`
+- project `.agents/skills/*`
+- project `.codex/hooks.json`
 - `.github/copilot-instructions.md`
 - `.clinerules`
 - `.roomodes`
@@ -6340,10 +6606,51 @@ These files still stay local to a repository:
 
 Hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`.
 
+Codex is the exception in terms of file location, not hook ownership: its local
+`.codex/hooks.json` points to hook scripts already installed globally in
+`~/.softspark/ai-toolkit/hooks/`.
+
+## Codex Local Install Behavior
+
+`ai-toolkit install --local --editors codex` creates:
+
+- `AGENTS.md`
+- `.agents/rules/*.md`
+- `.agents/skills/*`
+- `.codex/hooks.json`
+
+Native Codex-compatible skills are linked directly. Claude-oriented skills that
+depend on `Agent`, `Team*`, or `Task*` primitives are translated into generated
+Codex wrappers so the project still receives the full skill catalog.
+
+## Codex Global Plugin Layer
+
+`ai-toolkit plugin install --editor codex <pack>` additionally targets:
+
+- `~/AGENTS.md`
+- `~/.agents/rules/*.md`
+- `~/.agents/skills/*`
+- `~/.codex/hooks.json`
+
+This is not the default core install path. It is an explicit, opt-in plugin
+layer used only for plugin packs. Runtime state is tracked in
+`~/.softspark/ai-toolkit/plugins.json` per target (`claude`, `codex`).
+
+## MCP Local Sync Behavior
+
+If `.mcp.json` exists in the current project, `ai-toolkit install --local` mirrors its `mcpServers` block into:
+- `.claude/settings.local.json`
+- `.cursor/mcp.json` when `--editors cursor` is selected
+- `.github/mcp.json` when `--editors copilot` is selected
+
+Global-only editor MCP configs are not written during `install --local`. Use `ai-toolkit mcp install --editor <name...>` for those targets.
+
 ## Related Documents
 
 - `kb/reference/distribution-model.md`
 - `kb/reference/merge-friendly-install-model.md`
+- `kb/reference/codex-cli-compatibility.md`
+- `kb/reference/mcp-editor-compatibility.md`
 
 ---
 
@@ -7454,38 +7761,130 @@ No existing install scripts or CI configurations need changes.
 
 ---
 
+## kb/reference/mcp-editor-compatibility.md
+
+---
+title: "AI Toolkit - MCP Editor Compatibility"
+category: reference
+service: ai-toolkit
+tags: [mcp, editors, compatibility, codex, cursor]
+version: "1.0.0"
+created: "2026-04-12"
+last_updated: "2026-04-12"
+description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
+---
+
+# MCP Editor Compatibility
+
+## Overview
+
+ai-toolkit keeps `.mcp.json` as the project-level canonical template format and can render that config into native editor MCP files where the editor exposes a stable, documented configuration surface.
+
+## Supported Native Adapters
+
+| Editor | Scope | Native Config Path | Adapter Behavior |
+|--------|-------|--------------------|------------------|
+| Claude Code | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` | Merges `mcpServers` while preserving other settings keys |
+| Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
+| GitHub Copilot | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` | Adds Copilot-required `type` and `tools` fields |
+| Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Merges `mcpServers` into settings JSON |
+| Windsurf | global | `~/.codeium/windsurf/mcp_config.json` | Global-only JSON config |
+| Cline | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only JSON config |
+| Augment | global | `~/.augment/settings.json` | Global-only JSON settings file |
+| Codex CLI | global | `~/.codex/config.toml` | Renders JSON templates as TOML `mcp_servers` tables |
+
+## Unsupported for Automatic Install
+
+These editors are still supported by ai-toolkit for rules and instructions, but ai-toolkit does not currently auto-write MCP config because a stable official file target was not adopted:
+
+| Editor | Reason |
+|--------|--------|
+| Roo Code | MCP support exists, but no verified official file path was adopted in ai-toolkit |
+| Aider | No verified native MCP config surface was adopted in ai-toolkit |
+| Google Antigravity | MCP can be configured via UI/import flows, but no stable file target was adopted in ai-toolkit |
+
+## CLI
+
+```bash
+ai-toolkit mcp editors
+ai-toolkit mcp install --editor cursor --scope project github --target .
+ai-toolkit mcp install --editor codex context7
+ai-toolkit mcp remove github --editor cursor --scope project --target .
+```
+
+## Install Flow Integration
+
+When `.mcp.json` exists in a project, `ai-toolkit install --local` mirrors its servers into:
+- `.claude/settings.local.json`
+- `.cursor/mcp.json` when `--editors cursor` is selected
+- `.github/mcp.json` when `--editors copilot` is selected
+
+Global-only clients are configured explicitly via `ai-toolkit mcp install --editor ...`.
+
+## Related
+
+- [PATH: kb/reference/mcp-templates.md] — template catalog and CLI
+- [PATH: kb/reference/extension-api.md] — extension API surface
+
+---
+
 ## kb/reference/mcp-templates.md
 
 ---
 title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
-tags: [mcp, templates, servers, configuration]
-version: "1.0.0"
+tags: [mcp, templates, servers, configuration, editors]
+version: "1.1.0"
 created: "2026-04-07"
-last_updated: "2026-04-07"
-description: "Reference for 25 MCP server configuration templates: GitHub, PostgreSQL, Slack, Sentry, and more."
+last_updated: "2026-04-12"
+description: "Reference for 25 MCP server templates plus native editor MCP installation support."
 ---
 
 # MCP Server Templates
 
 ## Overview
 
-ai-toolkit ships 25 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the `mcpServers` block for a specific service. Templates are merged into the project's `.mcp.json` via the `ai-toolkit mcp` CLI subcommand.
+ai-toolkit ships 25 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
 
 ## CLI
 
 ```bash
 ai-toolkit mcp list               # List all available templates
+ai-toolkit mcp editors            # List editors with native MCP adapters
 ai-toolkit mcp show <name>        # Print a template's JSON config
 ai-toolkit mcp add <name>         # Merge a template into .mcp.json
 ai-toolkit mcp add <n1> <n2>      # Add multiple templates at once
-ai-toolkit mcp remove <name>      # Remove a server entry from .mcp.json
+ai-toolkit mcp install --editor cursor --scope project github --target .
+ai-toolkit mcp install --editor codex context7
+ai-toolkit mcp remove <name>      # Remove from .mcp.json or native editor config
 ```
 
 **Implementation:** `scripts/mcp_manager.py`
 
 The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist it is created. If the server name already exists in `.mcp.json`, the entry is overwritten with the template version.
+
+The `install` command renders the same canonical template into an editor-native config format:
+- JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Windsurf, Cline, Augment
+- JSON clients with additional transport metadata: GitHub Copilot
+- TOML clients: Codex CLI (`[mcp_servers.<name>]`)
+
+When `install` runs with `--scope project`, ai-toolkit also updates the project's `.mcp.json` so it remains the source of truth for later syncs.
+
+## Editor Support Matrix
+
+| Editor | Scope | Native Config Path | Notes |
+|--------|-------|--------------------|-------|
+| `claude` | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` | Preserves existing hooks and env keys |
+| `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
+| `copilot` | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` | Adds `type` and `tools: ["*"]` automatically |
+| `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
+| `windsurf` | global | `~/.codeium/windsurf/mcp_config.json` | Global-only official config |
+| `cline` | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only official config |
+| `augment` | global | `~/.augment/settings.json` | Global-only settings file |
+| `codex` | global | `~/.codex/config.toml` | Rendered as TOML `mcp_servers` tables |
+
+Project-local `ai-toolkit install --local` also mirrors `.mcp.json` into Claude project settings plus selected project editors that have official repository/workspace MCP files (`cursor`, `copilot`).
 
 ## Template List
 
@@ -7566,6 +7965,7 @@ export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_...
 
 - [PATH: kb/reference/extension-api.md] — `mcp add` as part of the extension API
 - [PATH: kb/reference/architecture-overview.md] — overall install model
+- [PATH: kb/reference/mcp-editor-compatibility.md] — native editor MCP support matrix
 
 ---
 
@@ -7641,15 +8041,15 @@ service: ai-toolkit
 tags: [plugins, plugin-packs, conventions, manifests, hooks, policy-packs]
 version: "1.0.0"
 created: "2026-03-28"
-last_updated: "2026-04-02"
-description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding."
+last_updated: "2026-04-13"
+description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across Claude and Codex runtimes."
 ---
 
 # Plugin Pack Conventions
 
 ## Purpose
 
-`ai-toolkit` now includes experimental plugin packs under `app/plugins/` to formalize a Claude Code-compatible plugin direction without changing the default global install surface.
+`ai-toolkit` now includes experimental plugin packs under `app/plugins/` to formalize a runtime-aware plugin direction for Claude and optional global Codex layering without changing the default core install surface.
 
 ## Pack Types
 
@@ -7709,32 +8109,34 @@ Required keys:
 
 ```bash
 ai-toolkit plugin list               # show all 11 packs with install status
-ai-toolkit plugin install <name>     # install a single pack
-ai-toolkit plugin install --all      # install all 11 packs
-ai-toolkit plugin update <name>      # update a pack (remove + reinstall, preserves data)
-ai-toolkit plugin update --all       # update all installed packs
+ai-toolkit plugin install --editor claude <name>   # Claude global target
+ai-toolkit plugin install --editor codex <name>    # Codex global target
+ai-toolkit plugin install --editor all --all       # install all 11 packs for both runtimes
+ai-toolkit plugin update --editor all --all        # update all installed packs
 ai-toolkit plugin clean <name>       # prune data older than 90 days (default)
 ai-toolkit plugin clean <name> --days 30  # prune data older than 30 days
-ai-toolkit plugin remove <name>      # remove a pack
-ai-toolkit plugin remove --all       # remove all installed packs
-ai-toolkit plugin status             # show installed packs with data stats
+ai-toolkit plugin remove --editor codex <name>     # remove from one runtime only
+ai-toolkit plugin remove --editor all --all        # remove all installed packs everywhere
+ai-toolkit plugin status --editor all              # show installed packs with runtime details
 ```
 
 ### What `plugin install` Does
 
-1. **Verifies** referenced agents/skills exist in `~/.claude/` (links them from core if missing)
+1. **Parses** `--editor claude|codex|all` (default: `claude`)
 2. **Copies** plugin-specific hooks to `~/.softspark/ai-toolkit/hooks/plugin-<pack>-<hook>.sh`
 3. **Copies** plugin-specific scripts to `~/.softspark/ai-toolkit/plugin-scripts/<pack>/`
 4. **Runs** init scripts if present (e.g. `init_db.py` for memory-pack — safe to re-run, preserves data)
-5. **Merges** plugin hooks into `~/.claude/settings.json` (tagged with `_source: ai-toolkit-plugin-<name>`)
-6. **Records** installed state to `~/.softspark/ai-toolkit/plugins.json`
+5. **Claude target**: links missing agents/skills into `~/.claude/`, injects plugin-local rules into `~/.claude/CLAUDE.md`, and merges plugin hook entries into `~/.claude/settings.json`
+6. **Codex target**: bootstraps global Codex assets in `HOME` (`~/AGENTS.md`, `~/.agents/skills`, `~/.agents/rules`, `~/.codex/hooks.json`) and then layers plugin-specific rules/hooks on top
+7. **Records** installed state per runtime in `~/.softspark/ai-toolkit/plugins.json`
 
 ### What `plugin update` Does
 
-1. **Removes** existing plugin hooks, scripts, and settings.json entries (same as `remove`)
+1. **Removes** existing plugin runtime entries for the selected editor(s) (same as `remove`)
 2. **Reinstalls** from the current source (same as `install`)
 3. **Preserves plugin data** (e.g. memory-pack SQLite database is never deleted)
-4. `--all` updates only currently installed packs (not all available)
+4. Shared plugin scripts/hooks are kept if another runtime still has the same pack installed
+5. `--all` updates only currently installed packs for the selected runtime(s)
 
 ### What `plugin clean` Does
 
@@ -7744,10 +8146,10 @@ ai-toolkit plugin status             # show installed packs with data stats
 
 ### What `plugin remove` Does
 
-1. **Removes** plugin hooks from `~/.softspark/ai-toolkit/hooks/`
-2. **Removes** plugin scripts from `~/.softspark/ai-toolkit/plugin-scripts/`
-3. **Strips** plugin hook entries from `settings.json` (by `_source` tag)
-4. **Updates** `plugins.json` state
+1. **Claude target**: strips plugin hook entries from `~/.claude/settings.json` and removes plugin-local rule sections from `~/.claude/CLAUDE.md`
+2. **Codex target**: strips plugin hook entries from `~/.codex/hooks.json` and removes `~/.agents/rules/plugin-<pack>-*.md`
+3. **Shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
+4. **Updates** `plugins.json` state per runtime
 5. **Leaves** core agents/skills untouched (they belong to the base install)
 6. **Leaves** plugin data intact (e.g. `memory.db` — use `clean` to prune)
 
@@ -7755,7 +8157,7 @@ ai-toolkit plugin status             # show installed packs with data stats
 
 - **Auto-retention**: `session-summary.sh` hook auto-prunes observations older than 90 days on every session end (configurable via `MEMORY_RETENTION_DAYS` env var)
 - **Manual clean**: `ai-toolkit plugin clean memory-pack --days 30`
-- **Status**: `ai-toolkit plugin status` shows DB size, observation count, date range
+- **Status**: `ai-toolkit plugin status --editor claude|codex|all` shows runtime-specific install details plus DB size, observation count, and date range where relevant
 
 ## Current Experimental Packs
 
@@ -7784,7 +8186,6 @@ ai-toolkit plugin status             # show installed packs with data stats
 - `hooks/session-summary.sh` — summarizes session on Stop
 
 These are intentionally excluded from the default install until explicitly enabled via `ai-toolkit plugin install`.
-
 
 ---
 
@@ -7925,10 +8326,10 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.4.2"
+version: "1.4.3"
 created: "2026-03-23"
-last_updated: "2026-04-09"
-description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
+last_updated: "2026-04-12"
+description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
 # Skills Catalog
@@ -7995,9 +8396,9 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **docs** | `/docs` | high | Generate/update docs: README, API docs, architecture notes, changelogs (Tier 1 — single agent) |
 | **search** | `/search` | medium | Search knowledge base (MCP tools with local fallback) |
 | **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |
-| **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, spawns agents via Agent tool |
+| **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, native in Claude, Codex-adapted to `spawn_agent` workflows |
 | **swarm** | `/swarm` | max | Massive parallelism: map-reduce, consensus, relay — Tier 3 |
-| **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2 |
+| **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2, Codex-adapted to native subagent orchestration |
 | **instinct-review** | `/instinct-review` | low | Review, curate, and manage learned instincts from past sessions |
 | **teams** | `/teams` | max | Launch pre-configured Agent Teams compositions for common workflows |
 | **write-a-prd** | `/write-a-prd` | high | Create PRD through interactive interview, codebase exploration, and module design |
@@ -8171,6 +8572,28 @@ Step 0 interview before setup — 5 targeted questions to capture undocumented p
 - `context: fork` — runs skill in isolated forked context
 - `allowed-tools: ...` — tools available to the agent when processing this skill
 - `depends-on: skill-a, skill-b` — declares dependencies on other skills (validated by `validate.py`)
+
+### Codex CLI Adaptation
+
+Codex CLI receives the full skill catalog during `ai-toolkit install --local --editors codex`.
+
+- Native Codex-compatible skills are symlinked directly into `.agents/skills/`
+- Claude-oriented orchestration skills are generated as Codex wrappers
+- Adapted wrappers translate `Agent`, `Team*`, and `Task*` guidance to `spawn_agent`, `send_input`, `wait_agent`, `close_agent`, and `update_plan`
+
+Common adapted skills:
+
+- `/orchestrate`
+- `/workflow`
+- `/swarm`
+- `/teams`
+- `/subagent-development`
+- `/tdd`
+
+The translated skill content keeps the original support assets (`reference/`,
+`scripts/`, `assets/`) while replacing Claude-specific runtime instructions.
+
+See `kb/reference/codex-cli-compatibility.md` for the detailed mapping and hook limits.
 
 ### Skill Dependencies (`depends-on`)
 Skills can declare dependencies on other skills (primarily knowledge skills) for documentation and validation:

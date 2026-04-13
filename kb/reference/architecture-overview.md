@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [architecture, overview, design, structure]
 version: "1.4.4"
 created: "2026-03-23"
-last_updated: "2026-04-12"
+last_updated: "2026-04-13"
 description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -109,7 +109,7 @@ Machine (global)                              Project (local)
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Codex local install additionally generates `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`.
+Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Codex local install additionally generates `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
 
@@ -209,7 +209,8 @@ uses a translation layer:
 - wrapper guidance maps delegation to `spawn_agent`, `send_input`, `wait_agent`, `close_agent`, and `update_plan`
 
 Codex therefore receives the full skill catalog, but not the full Claude hook
-surface or tmux-backed Agent Teams lifecycle.
+surface or tmux-backed Agent Teams lifecycle. Plugin packs reuse the same
+translation and hook-compatibility model when targeting the global Codex layer.
 
 See `kb/reference/codex-cli-compatibility.md` for the detailed mapping.
 

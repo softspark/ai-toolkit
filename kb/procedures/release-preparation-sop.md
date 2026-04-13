@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver]
 version: "1.5.0"
 created: "2026-04-10"
-last_updated: "2026-04-10"
+last_updated: "2026-04-13"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag."
 ---
 
@@ -38,6 +38,7 @@ python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
 # 3. Write CHANGELOG.md entry
 # 4. Regenerate artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
+python3 scripts/generate_codex_rules.py . --skip-cleanup
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
@@ -161,6 +162,7 @@ Add entry at the top of `CHANGELOG.md` (after the header, before previous releas
 
 ```bash
 python3 scripts/generate_agents_md.py > AGENTS.md
+python3 scripts/generate_codex_rules.py . --skip-cleanup
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 ```
@@ -268,7 +270,7 @@ git push origin --delete vX.Y.Z
 | 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
 | 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
 | 7 | CHANGELOG.md | Add release entry | Entry exists for vX.Y.Z |
-| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_llms_txt.py` | No unexpected diff |
+| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py --skip-cleanup`, `generate_llms_txt.py` | No unexpected diff |
 | 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
 | 10 | Security audit | `audit_skills.py --ci` | 0 HIGH |
 | 11 | Tests | `npm test` | All pass |

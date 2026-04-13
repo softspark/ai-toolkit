@@ -5,8 +5,8 @@ service: ai-toolkit
 tags: [benchmark, claude-code, ecosystem, hooks, plugins, architecture]
 version: "1.0.0"
 created: "2026-03-27"
-last_updated: "2026-04-01"
-description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit."
+last_updated: "2026-04-13"
+description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit, including runtime-aware plugin packaging."
 ---
 
 # Claude Ecosystem Expansion Foundations
@@ -19,13 +19,13 @@ This document captures the architectural foundations adopted in `ai-toolkit` aft
 2. official Claude Code patterns,
 3. selected external benchmark repositories.
 
-The outcome is a toolkit that is now positioned as a more modular, Claude-native, benchmark-backed system with stronger lifecycle automation and extension tooling.
+The outcome is a toolkit that is now positioned as a more modular, Claude-first, benchmark-backed system with stronger lifecycle automation and extension tooling.
 
 ## Implemented Foundations
 
 ### 1. Plugin-oriented structure
 
-`ai-toolkit` now treats plugin packaging as a first-class capability.
+`ai-toolkit` now treats plugin packaging as a first-class capability, with runtime-aware install surfaces for Claude and optional global Codex layering.
 
 Implemented artifacts:
 - `app/.claude-plugin/plugin.json`

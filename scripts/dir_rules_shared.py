@@ -426,14 +426,16 @@ def cleanup_stale(directory: Path, current_files: set[str]) -> None:
 
 
 def write_rules(target_dir: Path, rules: dict[str, callable],
-                subdir: str = "rules", label: str = "") -> None:
+                subdir: str = "rules", label: str = "",
+                cleanup: bool = True) -> None:
     """Write rule files to target_dir/<subdir>/.
 
     Only writes ai-toolkit-* files. User files are never touched.
     """
     out_dir = target_dir / subdir
     out_dir.mkdir(parents=True, exist_ok=True)
-    cleanup_stale(out_dir, set(rules.keys()))
+    if cleanup:
+        cleanup_stale(out_dir, set(rules.keys()))
 
     for filename, content_fn in rules.items():
         (out_dir / filename).write_text(content_fn(), encoding="utf-8")

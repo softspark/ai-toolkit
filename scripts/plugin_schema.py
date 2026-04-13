@@ -17,7 +17,15 @@ REQUIRED_FIELDS = ("name", "description", "version", "domain", "type", "status")
 VALID_STATUSES = frozenset({"stable", "experimental", "deprecated"})
 
 # Valid plugin types
-VALID_TYPES = frozenset({"behavioral", "language", "domain", "integration"})
+VALID_TYPES = frozenset({
+    "behavioral",
+    "language",
+    "domain",
+    "integration",
+    "plugin-pack",
+    "policy-pack",
+    "hook-pack",
+})
 
 # Valid hook event names (must match validate.py VALID_HOOK_EVENTS)
 VALID_HOOK_EVENTS = frozenset({
@@ -43,6 +51,13 @@ def validate_manifest(data: dict, pack_dir: Path | None = None) -> list[str]:
     status = data.get("status", "")
     if status and status not in VALID_STATUSES:
         errors.append(f"Invalid status '{status}' (valid: {', '.join(sorted(VALID_STATUSES))})")
+
+    # Validate type
+    plugin_type = data.get("type", "")
+    if plugin_type and plugin_type not in VALID_TYPES:
+        errors.append(
+            f"Invalid type '{plugin_type}' (valid: {', '.join(sorted(VALID_TYPES))})"
+        )
 
     # Validate includes structure
     includes = data.get("includes")

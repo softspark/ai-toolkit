@@ -248,6 +248,11 @@ teardown() {
     echo "$output" | grep -q 'editors'
 }
 
+@test "cli: help lists plugin editor option" {
+    run $CLI help
+    echo "$output" | grep -q -- '--editor <list> Runtime target: claude, codex, or all'
+}
+
 @test "cli: mcp editors exits 0" {
     run $CLI mcp editors
     [ "$status" -eq 0 ]
