@@ -582,8 +582,12 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             legacy_clinerules.unlink()
             print("  Migrated: .clinerules file → .clinerules/ directory")
         from generate_cline_rules import generate as gen_cline_rules
-        gen_cline_rules(cwd, language_modules=language_modules,
-                        rules_dir=rules_dir)
+        gen_cline_rules(
+            cwd,
+            language_modules=language_modules,
+            rules_dir=rules_dir,
+            managed_scopes=("standard", "lang", "custom"),
+        )
 
     if "roo" in eds:
         roo_output = run_script("generate-roo-modes.sh", capture=True)
@@ -618,8 +622,12 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         )
         # .agents/rules/ — directory-based rules
         from generate_codex_rules import generate as gen_codex_rules
-        gen_codex_rules(cwd, language_modules=language_modules,
-                        rules_dir=rules_dir)
+        gen_codex_rules(
+            cwd,
+            language_modules=language_modules,
+            rules_dir=rules_dir,
+            managed_scopes=("standard", "lang", "custom"),
+        )
         # .codex/hooks.json — Codex lifecycle hooks
         from generate_codex_hooks import generate as gen_codex_hooks
         gen_codex_hooks(cwd)

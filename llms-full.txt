@@ -3424,10 +3424,11 @@ npm test                      # then test — must pass before commit
 ```
 
 Run `generate:all` before validate and test so that generated artifacts are current when
-the metadata contract tests run. This includes `.agents/rules/ai-toolkit-*.md` via
-`generate_codex_rules.py . --skip-cleanup`, which refreshes the standard generated Codex
-rules without deleting custom overlays such as registered repo-specific rules. Committing
-without regenerating first causes artifact drift and fails CI.
+the metadata contract tests run. Directory-based rule generators now use ownership-aware
+cleanup: repo regeneration manages only standard generated files, while `install/update`
+manages standard, language, and custom overlays together. That keeps regeneration safe
+without leaving stale standard artifacts behind. Committing without regenerating first
+causes artifact drift and fails CI.
 
 ## Release Checklist
 
@@ -3545,7 +3546,7 @@ python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
 # 3. Write CHANGELOG.md entry
 # 4. Regenerate artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py . --skip-cleanup
+python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
@@ -3669,7 +3670,7 @@ Add entry at the top of `CHANGELOG.md` (after the header, before previous releas
 
 ```bash
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py . --skip-cleanup
+python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 ```
@@ -3777,7 +3778,7 @@ git push origin --delete vX.Y.Z
 | 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
 | 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
 | 7 | CHANGELOG.md | Add release entry | Entry exists for vX.Y.Z |
-| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py --skip-cleanup`, `generate_llms_txt.py` | No unexpected diff |
+| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py`, `generate_llms_txt.py` | No unexpected diff |
 | 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
 | 10 | Security audit | `audit_skills.py --ci` | 0 HIGH |
 | 11 | Tests | `npm test` | All pass |
@@ -3827,7 +3828,7 @@ Verifies all critical paths from the user's perspective.
 ```bash
 # Pre-commit (Phase 0)
 python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGENTS.md
-python3 scripts/generate_codex_rules.py . --skip-cleanup    # 2. Refresh standard Codex rules
+python3 scripts/generate_codex_rules.py .                   # 2. Refresh standard Codex rules
 python3 scripts/generate_llms_txt.py > llms.txt             # 3. Regenerate llms.txt
 python3 scripts/validate.py --strict                        # 4. Validation passed?
 npm test                                                    # 5. All tests passed?
@@ -3850,7 +3851,7 @@ counts but does NOT auto-regenerate — you must do it locally.
 ```bash
 # 1. Regenerate generated artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py . --skip-cleanup
+python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
@@ -3875,7 +3876,7 @@ by the developer as part of their PR.
 
 **One-liner (copy-paste):**
 ```bash
-python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_codex_rules.py . --skip-cleanup && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_codex_rules.py . && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---

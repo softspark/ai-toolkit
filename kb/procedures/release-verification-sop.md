@@ -36,7 +36,7 @@ Verifies all critical paths from the user's perspective.
 ```bash
 # Pre-commit (Phase 0)
 python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGENTS.md
-python3 scripts/generate_codex_rules.py . --skip-cleanup    # 2. Refresh standard Codex rules
+python3 scripts/generate_codex_rules.py .                   # 2. Refresh standard Codex rules
 python3 scripts/generate_llms_txt.py > llms.txt             # 3. Regenerate llms.txt
 python3 scripts/validate.py --strict                        # 4. Validation passed?
 npm test                                                    # 5. All tests passed?
@@ -59,7 +59,7 @@ counts but does NOT auto-regenerate — you must do it locally.
 ```bash
 # 1. Regenerate generated artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py . --skip-cleanup
+python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
@@ -84,7 +84,7 @@ by the developer as part of their PR.
 
 **One-liner (copy-paste):**
 ```bash
-python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_codex_rules.py . --skip-cleanup && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_codex_rules.py . && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---

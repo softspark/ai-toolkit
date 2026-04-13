@@ -305,12 +305,11 @@ npm test                      # then test — must pass before commit
 ```
 
 Run `generate:all` before validate and test so that generated artifacts are current when
-the metadata contract tests run. This includes `.agents/rules/ai-toolkit-*.md` via
-`generate_codex_rules.py . --skip-cleanup` and `.clinerules/ai-toolkit-*.md` via
-`generate_cline_rules.py . --skip-cleanup`, which refresh the standard generated rule
-sets without deleting custom overlays such as registered repo-specific rules or
-language-specific files. Committing without regenerating first causes artifact drift and
-fails CI.
+the metadata contract tests run. Directory-based rule generators now use ownership-aware
+cleanup: repo regeneration manages only standard generated files, while `install/update`
+manages standard, language, and custom overlays together. That keeps regeneration safe
+without leaving stale standard artifacts behind. Committing without regenerating first
+causes artifact drift and fails CI.
 
 ## Release Checklist
 

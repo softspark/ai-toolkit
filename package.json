@@ -52,10 +52,10 @@
     "generate:windsurf": "python3 scripts/generate_windsurf.py > .windsurfrules",
     "generate:copilot": "python3 scripts/generate_copilot.py > .github/copilot-instructions.md",
     "generate:gemini": "python3 scripts/generate_gemini.py > GEMINI.md",
-    "generate:cline": "python3 scripts/generate_cline_rules.py . --skip-cleanup",
+    "generate:cline": "python3 scripts/generate_cline_rules.py .",
     "generate:roo": "python3 scripts/generate_roo_modes.py > .roomodes",
     "generate:aider": "python3 scripts/generate_aider_conf.py > .aider.conf.yml",
-    "generate:codex-rules": "python3 scripts/generate_codex_rules.py . --skip-cleanup",
+    "generate:codex-rules": "python3 scripts/generate_codex_rules.py .",
     "generate:all": "npm run generate:agents && npm run generate:codex-rules && npm run generate:cursor && npm run generate:windsurf && npm run generate:copilot && npm run generate:gemini && npm run generate:cline && npm run generate:roo && npm run generate:aider && npm run generate:llms"
   },
   "files": [

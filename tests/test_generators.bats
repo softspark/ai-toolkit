@@ -394,6 +394,37 @@ teardown_file() {
     [ "$count" -eq 6 ]
 }
 
+@test "generate_cline_rules.py repo regeneration preserves lang/custom overlays while cleaning stale standard files" {
+    local tmp rules_dir
+    tmp="$(mktemp -d)"
+    rules_dir="$(mktemp -d)"
+    cat > "$rules_dir/demo-rule.md" <<'EOF'
+# Demo Rule
+EOF
+    python3 - <<PY >/dev/null 2>&1
+import sys
+from pathlib import Path
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+from generate_cline_rules import generate
+
+target = Path("$tmp")
+rules_dir = Path("$rules_dir")
+generate(
+    target,
+    language_modules=["rules-python"],
+    rules_dir=rules_dir,
+    managed_scopes=("standard", "lang", "custom"),
+)
+(target / ".clinerules" / "ai-toolkit-obsolete.md").write_text("stale\n", encoding="utf-8")
+generate(target)
+PY
+    [ -f "$tmp/.clinerules/ai-toolkit-lang-common.md" ]
+    [ -f "$tmp/.clinerules/ai-toolkit-lang-python.md" ]
+    [ -f "$tmp/.clinerules/ai-toolkit-custom-demo-rule.md" ]
+    [ ! -f "$tmp/.clinerules/ai-toolkit-obsolete.md" ]
+    rm -rf "$tmp" "$rules_dir"
+}
+
 # ── generate_roo_rules.py ──────────────────────────────────────────────────
 
 @test "generate_roo_rules.py exits 0" {
@@ -403,6 +434,37 @@ teardown_file() {
 @test "generate_roo_rules.py creates 6 rule files" {
     count=$(ls "$ROO_DIR/.roo/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
     [ "$count" -eq 6 ]
+}
+
+@test "generate_codex_rules.py repo regeneration preserves lang/custom overlays while cleaning stale standard files" {
+    local tmp rules_dir
+    tmp="$(mktemp -d)"
+    rules_dir="$(mktemp -d)"
+    cat > "$rules_dir/demo-rule.md" <<'EOF'
+# Demo Rule
+EOF
+    python3 - <<PY >/dev/null 2>&1
+import sys
+from pathlib import Path
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+from generate_codex_rules import generate
+
+target = Path("$tmp")
+rules_dir = Path("$rules_dir")
+generate(
+    target,
+    language_modules=["rules-typescript"],
+    rules_dir=rules_dir,
+    managed_scopes=("standard", "lang", "custom"),
+)
+(target / ".agents" / "rules" / "ai-toolkit-obsolete.md").write_text("stale\n", encoding="utf-8")
+generate(target)
+PY
+    [ -f "$tmp/.agents/rules/ai-toolkit-lang-common.md" ]
+    [ -f "$tmp/.agents/rules/ai-toolkit-lang-typescript.md" ]
+    [ -f "$tmp/.agents/rules/ai-toolkit-custom-demo-rule.md" ]
+    [ ! -f "$tmp/.agents/rules/ai-toolkit-obsolete.md" ]
+    rm -rf "$tmp" "$rules_dir"
 }
 
 # ── generate_augment_rules.py ──────────────────────────────────────────────

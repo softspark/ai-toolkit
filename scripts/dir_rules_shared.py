@@ -20,6 +20,11 @@ from emission import (
 )
 
 PREFIX = "ai-toolkit-"
+LANG_PREFIX = f"{PREFIX}lang-"
+CUSTOM_PREFIX = f"{PREFIX}custom-"
+STANDARD_SCOPE = "standard"
+LANG_SCOPE = "lang"
+CUSTOM_SCOPE = "custom"
 
 
 # ---------------------------------------------------------------------------
@@ -415,19 +420,46 @@ STANDARD_WORKFLOWS: dict[str, callable] = {
 # Shared file generation helpers
 # ---------------------------------------------------------------------------
 
-def cleanup_stale(directory: Path, current_files: set[str]) -> None:
-    """Remove ai-toolkit-* files that are no longer in the registry."""
+def rule_scope(filename: str) -> str | None:
+    """Classify a generated rule file by ownership scope."""
+    if filename.startswith(LANG_PREFIX):
+        return LANG_SCOPE
+    if filename.startswith(CUSTOM_PREFIX):
+        return CUSTOM_SCOPE
+    if filename.startswith(PREFIX):
+        return STANDARD_SCOPE
+    return None
+
+
+def cleanup_stale(
+    directory: Path,
+    current_files: set[str],
+    *,
+    managed_scopes: tuple[str, ...] = (STANDARD_SCOPE, LANG_SCOPE, CUSTOM_SCOPE),
+    extra_managed_names: set[str] | None = None,
+) -> None:
+    """Remove managed files that are no longer in the active registry."""
     if not directory.is_dir():
         return
+    scope_set = set(managed_scopes)
+    extra_names = extra_managed_names or set()
     for f in directory.iterdir():
-        if f.name.startswith(PREFIX) and f.name not in current_files:
+        if f.name in current_files:
+            continue
+        if f.name in extra_names:
+            f.unlink()
+            print(f"  Removed stale: {f.relative_to(directory.parent.parent)}")
+            continue
+        if rule_scope(f.name) in scope_set:
             f.unlink()
             print(f"  Removed stale: {f.relative_to(directory.parent.parent)}")
 
 
 def write_rules(target_dir: Path, rules: dict[str, callable],
                 subdir: str = "rules", label: str = "",
-                cleanup: bool = True) -> None:
+                cleanup: bool = True,
+                managed_scopes: tuple[str, ...] = (STANDARD_SCOPE, LANG_SCOPE, CUSTOM_SCOPE),
+                extra_managed_names: set[str] | None = None) -> None:
     """Write rule files to target_dir/<subdir>/.
 
     Only writes ai-toolkit-* files. User files are never touched.
@@ -435,7 +467,12 @@ def write_rules(target_dir: Path, rules: dict[str, callable],
     out_dir = target_dir / subdir
     out_dir.mkdir(parents=True, exist_ok=True)
     if cleanup:
-        cleanup_stale(out_dir, set(rules.keys()))
+        cleanup_stale(
+            out_dir,
+            set(rules.keys()),
+            managed_scopes=managed_scopes,
+            extra_managed_names=extra_managed_names,
+        )
 
     for filename, content_fn in rules.items():
         (out_dir / filename).write_text(content_fn(), encoding="utf-8")
@@ -513,7 +550,7 @@ def build_language_rules(
 
         if parts:
             combined = "\n\n".join(parts) + "\n"
-            filename = f"{PREFIX}lang-{lang}.md"
+            filename = f"{LANG_PREFIX}{lang}.md"
             # Capture value via default arg to avoid late-binding closure
             result[filename] = (lambda c: lambda: c)(combined)
 
@@ -533,7 +570,7 @@ def build_registered_rules(
     result: dict[str, callable] = {}
     for rule_file in sorted(rules_dir.glob("*.md")):
         content = rule_file.read_text(encoding="utf-8")
-        filename = f"{PREFIX}custom-{rule_file.stem}.md"
+        filename = f"{CUSTOM_PREFIX}{rule_file.stem}.md"
         result[filename] = (lambda c: lambda: c)(content)
 
     return result
