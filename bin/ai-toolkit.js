@@ -29,6 +29,7 @@ const GENERATORS = {
   'aider-conf':           { script: 'generate_aider_conf.py',    dest: '.aider.conf.yml' },
   'augment-rules':        { script: 'generate_augment.py',       dest: path.join('.augment', 'rules', 'ai-toolkit.md'), mkdir: '.augment/rules' },
   'agents-md':            { script: 'generate_agents_md.py',     dest: 'AGENTS.md' },
+  'codex-md':             { script: 'generate_codex.py',         dest: 'AGENTS.md' },
 };
 
 // ---------------------------------------------------------------------------
@@ -74,7 +75,7 @@ const COMMANDS = {
   evaluate: 'Run skill evaluation suite',
   stats: 'Show skill usage statistics (--reset to clear, --json for raw output)',
   create: 'Scaffold new skill from template (e.g. create skill my-lint --template=linter)',
-  mcp: 'Manage MCP server templates (list, show, add, remove)',
+  mcp: 'Manage MCP templates and install native editor MCP configs',
   config: 'Manage config inheritance (validate, diff, init, create-base, check)',
   projects: 'List and manage registered projects (--prune, remove <path>)',
   plugin: 'Manage plugin packs (install, remove, update, clean, list, status)',
@@ -94,10 +95,13 @@ const COMMANDS = {
   'augment-rules': 'Generate .augment/rules/ai-toolkit.md for Augment (legacy)',
   'augment-dir-rules': 'Generate .augment/rules/ai-toolkit-*.md for Augment (recommended)',
   'antigravity-rules': 'Generate .agent/rules/ and .agent/workflows/ for Google Antigravity',
+  'codex-md': 'Generate AGENTS.md for OpenAI Codex CLI',
+  'codex-rules': 'Generate .agents/rules/ for OpenAI Codex CLI',
+  'codex-hooks': 'Generate .codex/hooks.json for OpenAI Codex CLI',
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
   'compile-slm': 'Compile toolkit into a minimal SLM system prompt (--budget, --model-size, --dry-run)',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
-  'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, llms)',
+  'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, llms)',
   help: 'Show this help message',
 };
 
@@ -241,9 +245,13 @@ function showHelp() {
   console.log('  status          Show currently installed plugins with data stats');
   console.log('\nOptions for mcp:');
   console.log('  list                          List available MCP templates');
+  console.log('  editors                       List editors with native MCP config adapters');
   console.log('  show <name>                   Show template details');
   console.log('  add <name> [names..] [--target <path>]  Add servers to .mcp.json');
-  console.log('  remove <name>                 Remove a server from .mcp.json');
+  console.log('  install --editor <name[,..]> [--scope project|global] [--target <path>] [names..]');
+  console.log('                                Install templates into native editor MCP config');
+  console.log('  remove <name> [--editor <name[,..]>] [--scope project|global] [--target <path>]');
+  console.log('                                Remove from .mcp.json or native editor configs');
   console.log('\nOptions for doctor:');
   console.log('  --fix           Auto-repair detected issues');
   console.log('\nOptions for eject:');
@@ -372,7 +380,7 @@ function handleRemoveHook(args) {
  */
 function handleMcp(args) {
   if (args.length === 0) {
-    console.error('Usage: ai-toolkit mcp <list|show|add|remove> [args..]');
+    console.error('Usage: ai-toolkit mcp <list|editors|show|add|install|remove> [args..]');
     process.exit(1);
   }
   run(scriptPath('mcp_manager.py'), args);
@@ -404,6 +412,8 @@ function handleGenerateAll(_args) {
   run(scriptPath('generate_cline_rules.py'), [CWD]);
   run(scriptPath('generate_roo_rules.py'), [CWD]);
   run(scriptPath('generate_augment_rules.py'), [CWD]);
+  run(scriptPath('generate_codex_rules.py'), [CWD]);
+  run(scriptPath('generate_codex_hooks.py'), [CWD]);
   // Single-file generators
   const conventionsOut = runGenerator('generate_conventions.py');
   fs.writeFileSync(path.join(CWD, 'CONVENTIONS.md'), conventionsOut);
@@ -501,6 +511,8 @@ const SPECIAL_HANDLERS = {
   'roo-dir-rules': (_args) => run(scriptPath('generate_roo_rules.py'), [CWD]),
   'conventions-md': (_args) => { const out = runGenerator('generate_conventions.py'); fs.writeFileSync(path.join(CWD, 'CONVENTIONS.md'), out); console.log('Generated: CONVENTIONS.md'); },
   'augment-dir-rules': (_args) => run(scriptPath('generate_augment_rules.py'), [CWD]),
+  'codex-rules': (_args) => run(scriptPath('generate_codex_rules.py'), [CWD]),
+  'codex-hooks': (_args) => run(scriptPath('generate_codex_hooks.py'), [CWD]),
   'generate-all': handleGenerateAll,
 };
 

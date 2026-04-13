@@ -3,10 +3,10 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.4.2"
+version: "1.4.3"
 created: "2026-03-23"
-last_updated: "2026-04-09"
-description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
+last_updated: "2026-04-12"
+description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
 # Skills Catalog
@@ -73,9 +73,9 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **docs** | `/docs` | high | Generate/update docs: README, API docs, architecture notes, changelogs (Tier 1 — single agent) |
 | **search** | `/search` | medium | Search knowledge base (MCP tools with local fallback) |
 | **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |
-| **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, spawns agents via Agent tool |
+| **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, native in Claude, Codex-adapted to `spawn_agent` workflows |
 | **swarm** | `/swarm` | max | Massive parallelism: map-reduce, consensus, relay — Tier 3 |
-| **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2 |
+| **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2, Codex-adapted to native subagent orchestration |
 | **instinct-review** | `/instinct-review` | low | Review, curate, and manage learned instincts from past sessions |
 | **teams** | `/teams` | max | Launch pre-configured Agent Teams compositions for common workflows |
 | **write-a-prd** | `/write-a-prd` | high | Create PRD through interactive interview, codebase exploration, and module design |
@@ -249,6 +249,28 @@ Step 0 interview before setup — 5 targeted questions to capture undocumented p
 - `context: fork` — runs skill in isolated forked context
 - `allowed-tools: ...` — tools available to the agent when processing this skill
 - `depends-on: skill-a, skill-b` — declares dependencies on other skills (validated by `validate.py`)
+
+### Codex CLI Adaptation
+
+Codex CLI receives the full skill catalog during `ai-toolkit install --local --editors codex`.
+
+- Native Codex-compatible skills are symlinked directly into `.agents/skills/`
+- Claude-oriented orchestration skills are generated as Codex wrappers
+- Adapted wrappers translate `Agent`, `Team*`, and `Task*` guidance to `spawn_agent`, `send_input`, `wait_agent`, `close_agent`, and `update_plan`
+
+Common adapted skills:
+
+- `/orchestrate`
+- `/workflow`
+- `/swarm`
+- `/teams`
+- `/subagent-development`
+- `/tdd`
+
+The translated skill content keeps the original support assets (`reference/`,
+`scripts/`, `assets/`) while replacing Claude-specific runtime instructions.
+
+See `kb/reference/codex-cli-compatibility.md` for the detailed mapping and hook limits.
 
 ### Skill Dependencies (`depends-on`)
 Skills can declare dependencies on other skills (primarily knowledge skills) for documentation and validation:

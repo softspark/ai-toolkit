@@ -20,6 +20,7 @@ setup_file() {
     python3 "$TOOLKIT_DIR/scripts/generate_augment_rules.py" "$AUG_DIR" > "$GEN_DIR/augment-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/augment-rules.status"
     python3 "$TOOLKIT_DIR/scripts/generate_conventions.py" > "$GEN_DIR/conventions" 2>/dev/null; echo $? > "$GEN_DIR/conventions.status"
     python3 "$TOOLKIT_DIR/scripts/generate_agents_md.py" > "$GEN_DIR/agents-md" 2>/dev/null; echo $? > "$GEN_DIR/agents-md.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_codex.py" > "$GEN_DIR/codex-md" 2>/dev/null; echo $? > "$GEN_DIR/codex-md.status"
     python3 "$TOOLKIT_DIR/scripts/generate_llms_txt.py" > "$GEN_DIR/llms" 2>/dev/null; echo $? > "$GEN_DIR/llms.status"
     python3 "$TOOLKIT_DIR/scripts/generate_llms_txt.py" --full > "$GEN_DIR/llms-full" 2>/dev/null; echo $? > "$GEN_DIR/llms-full.status"
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_rules.py" > "$GEN_DIR/cursor" 2>/dev/null; echo $? > "$GEN_DIR/cursor.status"
@@ -64,6 +65,22 @@ teardown_file() {
 
 @test "generate_agents_md.py output mentions subagent_type" {
     grep -q 'subagent_type' "$GEN_DIR/agents-md"
+}
+
+# ── generate_codex.py ───────────────────────────────────────────────────────
+
+@test "generate_codex.py exits 0" {
+    [ "$(cat "$GEN_DIR/codex-md.status")" = "0" ]
+}
+
+@test "generate_codex.py output includes adapted orchestration skills" {
+    grep -q '\*\*orchestrate\*\*' "$GEN_DIR/codex-md"
+    grep -q '\*\*workflow\*\*' "$GEN_DIR/codex-md"
+    grep -q '\*\*swarm\*\*' "$GEN_DIR/codex-md"
+}
+
+@test "generate_codex.py output mentions Codex-adapted delegation" {
+    grep -q 'Codex-adapted' "$GEN_DIR/codex-md"
 }
 
 # ── generate_llms_txt.py ────────────────────────────────────────────────────

@@ -3,10 +3,10 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.4.2"
+version: "1.4.4"
 created: "2026-03-23"
-last_updated: "2026-04-09"
-description: "Architecture of ai-toolkit: directory layout, global install model, skill tiers, and integration with projects."
+last_updated: "2026-04-12"
+description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
 # AI Toolkit Architecture
@@ -105,11 +105,13 @@ Machine (global)                              Project (local)
 **`ai-toolkit update`** — re-apply after `npm install -g @softspark/ai-toolkit@latest` or after `add-rule` / `remove-rule`. Same as `install` but semantically correct for update flows.
 
 **`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, constitution.md, language rules). Editor configs are opt-in via `--editors`:
-- `--editors all` — install all 8 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+- `--editors all` — install all 9 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex)
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Hooks are global-only — not merged into project settings.
+Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Codex local install additionally generates `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`.
+
+If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
 
 ## CLI Commands
 
@@ -122,6 +124,8 @@ Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
 | `add-rule <file>` | `~/.softspark/ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
 | `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/CLAUDE.md` | Unregister rule and remove its block |
+| `mcp add <name...>` | `./.mcp.json` | Merge canonical MCP template(s) into project config |
+| `mcp install --editor <name...>` | native editor config | Render MCP template(s) into editor-native config files |
 | `validate` | toolkit | Integrity check |
 | `doctor` | toolkit | Install health, hooks, benchmark freshness, and artifact drift diagnostics |
 | `benchmark-ecosystem` | toolkit | Benchmark snapshot for official Claude Code and external ecosystem repos |
@@ -140,6 +144,9 @@ Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules
 | `conventions-md` | `./` | Generates `CONVENTIONS.md` (Aider auto-loaded) |
 | `augment-dir-rules` | `./` | Generates `.augment/rules/ai-toolkit-*.md` |
 | `antigravity-rules` | `./` | Generates `.agent/rules/` + `.agent/workflows/` |
+| `codex-md` | `./` | Generates Codex-facing `AGENTS.md` |
+| `codex-rules` | `./` | Generates `.agents/rules/*.md` |
+| `codex-hooks` | `./` | Generates `.codex/hooks.json` |
 | `agents-md` | toolkit | Regenerates `AGENTS.md` |
 | `llms-txt` | `./` | Generates `llms.txt` |
 | `generate-all` | `./` | Generates all platform configs at once |
@@ -190,6 +197,37 @@ Skills that spawn real parallel agents use:
 - `Agent` tool — spawns subagents in parallel within the agent's response
 
 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` must be set for Agent Teams (tmux-based) support.
+
+### Codex Translation Layer
+
+Codex does not expose Claude's `Agent`, `Team*`, and `Task*` primitives with the
+same runtime semantics. To keep the skill catalog aligned, local Codex install
+uses a translation layer:
+
+- native Codex-compatible skills are linked directly
+- Claude-only orchestration skills are emitted as generated wrappers
+- wrapper guidance maps delegation to `spawn_agent`, `send_input`, `wait_agent`, `close_agent`, and `update_plan`
+
+Codex therefore receives the full skill catalog, but not the full Claude hook
+surface or tmux-backed Agent Teams lifecycle.
+
+See `kb/reference/codex-cli-compatibility.md` for the detailed mapping.
+
+## MCP Rendering Layer
+
+`.mcp.json` is the canonical project-level template format. ai-toolkit can render that configuration into editor-native MCP files through `scripts/mcp_editors.py`.
+
+Current native adapters:
+- Claude Code: `.claude/settings.local.json` and `~/.claude/settings.json`
+- Cursor: `.cursor/mcp.json` and `~/.cursor/mcp.json`
+- GitHub Copilot: `.github/mcp.json` and `~/.copilot/mcp-config.json`
+- Gemini CLI: `.gemini/settings.json` and `~/.gemini/settings.json`
+- Windsurf: `~/.codeium/windsurf/mcp_config.json`
+- Cline: `~/.cline/data/settings/cline_mcp_settings.json`
+- Augment: `~/.augment/settings.json`
+- Codex CLI: `~/.codex/config.toml`
+
+See `kb/reference/mcp-editor-compatibility.md` for the support matrix and scope rules.
 
 ## Quality Guardrails
 

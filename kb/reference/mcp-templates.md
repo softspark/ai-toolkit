@@ -2,32 +2,57 @@
 title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
-tags: [mcp, templates, servers, configuration]
-version: "1.0.0"
+tags: [mcp, templates, servers, configuration, editors]
+version: "1.1.0"
 created: "2026-04-07"
-last_updated: "2026-04-07"
-description: "Reference for 25 MCP server configuration templates: GitHub, PostgreSQL, Slack, Sentry, and more."
+last_updated: "2026-04-12"
+description: "Reference for 25 MCP server templates plus native editor MCP installation support."
 ---
 
 # MCP Server Templates
 
 ## Overview
 
-ai-toolkit ships 25 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the `mcpServers` block for a specific service. Templates are merged into the project's `.mcp.json` via the `ai-toolkit mcp` CLI subcommand.
+ai-toolkit ships 25 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
 
 ## CLI
 
 ```bash
 ai-toolkit mcp list               # List all available templates
+ai-toolkit mcp editors            # List editors with native MCP adapters
 ai-toolkit mcp show <name>        # Print a template's JSON config
 ai-toolkit mcp add <name>         # Merge a template into .mcp.json
 ai-toolkit mcp add <n1> <n2>      # Add multiple templates at once
-ai-toolkit mcp remove <name>      # Remove a server entry from .mcp.json
+ai-toolkit mcp install --editor cursor --scope project github --target .
+ai-toolkit mcp install --editor codex context7
+ai-toolkit mcp remove <name>      # Remove from .mcp.json or native editor config
 ```
 
 **Implementation:** `scripts/mcp_manager.py`
 
 The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist it is created. If the server name already exists in `.mcp.json`, the entry is overwritten with the template version.
+
+The `install` command renders the same canonical template into an editor-native config format:
+- JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Windsurf, Cline, Augment
+- JSON clients with additional transport metadata: GitHub Copilot
+- TOML clients: Codex CLI (`[mcp_servers.<name>]`)
+
+When `install` runs with `--scope project`, ai-toolkit also updates the project's `.mcp.json` so it remains the source of truth for later syncs.
+
+## Editor Support Matrix
+
+| Editor | Scope | Native Config Path | Notes |
+|--------|-------|--------------------|-------|
+| `claude` | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` | Preserves existing hooks and env keys |
+| `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
+| `copilot` | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` | Adds `type` and `tools: ["*"]` automatically |
+| `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
+| `windsurf` | global | `~/.codeium/windsurf/mcp_config.json` | Global-only official config |
+| `cline` | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only official config |
+| `augment` | global | `~/.augment/settings.json` | Global-only settings file |
+| `codex` | global | `~/.codex/config.toml` | Rendered as TOML `mcp_servers` tables |
+
+Project-local `ai-toolkit install --local` also mirrors `.mcp.json` into Claude project settings plus selected project editors that have official repository/workspace MCP files (`cursor`, `copilot`).
 
 ## Template List
 
@@ -108,3 +133,4 @@ export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_...
 
 - [PATH: kb/reference/extension-api.md] — `mcp add` as part of the extension API
 - [PATH: kb/reference/architecture-overview.md] — overall install model
+- [PATH: kb/reference/mcp-editor-compatibility.md] — native editor MCP support matrix

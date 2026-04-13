@@ -1,7 +1,7 @@
 # ai-toolkit
 
 ## Overview
-Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, and Google Antigravity — skills, agents, lifecycle hooks, persona presets, experimental opt-in plugin packs, and safety constitution, distributed as a global npm package.
+Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, and Codex CLI — skills, agents, lifecycle hooks, persona presets, experimental opt-in plugin packs, and safety constitution, distributed as a global npm package.
 
 ## CRITICAL: Documentation & Count Accuracy
 **Every change to skills, agents, hooks, or editors MUST be reflected in ALL docs:**
@@ -27,13 +27,16 @@ Stale counts = broken user trust. This is non-negotiable.
 # Install:  ai-toolkit install            (global → ~/.claude/settings.json hooks + ~/.softspark/ai-toolkit/hooks/ scripts)
 # Install:  ai-toolkit install --profile minimal|standard|strict
 # Init:     ai-toolkit install --local    (project-local Claude Code configs only)
-# Init:     ai-toolkit install --local --editors all  (+ all editors: cursor, windsurf, cline, roo, aider, augment, copilot, antigravity)
+# Init:     ai-toolkit install --local --editors all  (+ all editors: cursor, windsurf, cline, roo, aider, augment, copilot, antigravity, codex)
 # Init:     ai-toolkit install --local --editors cursor,aider  (+ specific editors)
 # Doctor:   ai-toolkit doctor --fix       (auto-repair broken symlinks, hooks, artifacts)
 # Eject:    ai-toolkit eject              (standalone copy, no toolkit dependency)
 # Compile:  ai-toolkit compile-slm       (compile toolkit for SLMs: --budget, --model-size, --persona, --dry-run)
 # Config:   ai-toolkit config validate|diff|init|create-base|check  (config inheritance)
 # Projects: ai-toolkit projects           (list/prune/remove registered local projects)
+# Codex:   ai-toolkit codex-md            (generate AGENTS.md with marker injection for Codex CLI)
+# Codex:   ai-toolkit codex-rules         (generate .agents/rules/*.md for Codex CLI)
+# Codex:   ai-toolkit codex-hooks         (generate .codex/hooks.json for Codex CLI)
 # Deps:    python3 scripts/check_deps.py  (check system dependencies, OS-specific install hints)
 ```
 

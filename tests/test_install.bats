@@ -236,6 +236,51 @@ assert d['env']['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] == '1', 'toolkit env var
     [ "$status" -eq 0 ]
 }
 
+@test "install --local --editors codex installs translated Codex skills" {
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors codex) >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/.codex/hooks.json" ]
+    [ -f "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md" ]
+    [ -f "$TEST_PROJECT/.agents/skills/workflow/SKILL.md" ]
+    [ -f "$TEST_PROJECT/.agents/skills/tdd/SKILL.md" ]
+    [ -L "$TEST_PROJECT/.agents/skills/tdd/reference" ]
+
+    grep -q 'Codex Translation Layer' "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
+    grep -q 'spawn_agent' "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
+    grep -q 'update_plan' "$TEST_PROJECT/.agents/skills/workflow/SKILL.md"
+    ! grep -q 'allowed-tools:.*Agent' "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
+
+    expected_skills=$(find "$TOOLKIT_DIR/app/skills" -mindepth 1 -maxdepth 1 -type d ! -name '_*' | wc -l | xargs)
+    actual_skills=$(find "$TEST_PROJECT/.agents/skills" -mindepth 1 -maxdepth 1 | wc -l | xargs)
+    [ "$actual_skills" -eq "$expected_skills" ]
+}
+
+@test "install --local syncs .mcp.json into Claude and selected project editors" {
+    cat > "$TEST_PROJECT/.mcp.json" <<'JSON'
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"]
+    }
+  }
+}
+JSON
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors cursor,copilot) >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/.claude/settings.local.json" ]
+    [ -f "$TEST_PROJECT/.cursor/mcp.json" ]
+    [ -f "$TEST_PROJECT/.github/mcp.json" ]
+
+    python3 -c "
+import json
+assert 'github' in json.load(open('$TEST_PROJECT/.claude/settings.local.json'))['mcpServers']
+assert 'github' in json.load(open('$TEST_PROJECT/.cursor/mcp.json'))['mcpServers']
+assert 'github' in json.load(open('$TEST_PROJECT/.github/mcp.json'))['mcpServers']
+"
+}
+
 # ── Orphan cleanup ─────────────────────────────────────────────────────────────
 
 @test "install cleans orphaned agent symlinks" {

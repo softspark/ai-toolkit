@@ -41,6 +41,13 @@ teardown() {
     echo "$output" | grep -q 'slack'
 }
 
+@test "mcp editors: lists codex and cursor adapters" {
+    run $MCP_MANAGER editors
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'codex'
+    echo "$output" | grep -q 'cursor'
+}
+
 # ── show ────────────────────────────────────────────────────────────────────
 
 @test "mcp show github: exits 0 and shows mcpServers config" {
@@ -99,6 +106,78 @@ assert list(cfg['mcpServers'].keys()).count('github') == 1
     [ "$status" -eq 0 ]
 }
 
+@test "mcp install project cursor github: writes .cursor/mcp.json and .mcp.json" {
+    run $MCP_MANAGER install --editor cursor --scope project --target "$TEST_TMP" github
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.mcp.json" ]
+    [ -f "$TEST_TMP/.cursor/mcp.json" ]
+    run python3 -c "
+import json
+cfg = json.load(open('$TEST_TMP/.cursor/mcp.json'))
+assert 'github' in cfg['mcpServers']
+"
+    [ "$status" -eq 0 ]
+}
+
+@test "mcp install project copilot context7: writes .github/mcp.json with tools and type" {
+    run $MCP_MANAGER install --editor copilot --scope project --target "$TEST_TMP" context7
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.github/mcp.json" ]
+    run python3 -c "
+import json
+cfg = json.load(open('$TEST_TMP/.github/mcp.json'))
+server = cfg['mcpServers']['context7']
+assert server['type'] == 'local'
+assert server['tools'] == ['*']
+"
+    [ "$status" -eq 0 ]
+}
+
+@test "mcp install global codex github: writes ~/.codex/config.toml" {
+    run $MCP_MANAGER install --editor codex github
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.codex/config.toml" ]
+    grep -q '\[mcp_servers.github\]' "$TEST_TMP/.codex/config.toml"
+    grep -q 'command = "npx"' "$TEST_TMP/.codex/config.toml"
+}
+
+@test "mcp install global codex preserves quoted project path tables" {
+    mkdir -p "$TEST_TMP/.codex"
+    cat > "$TEST_TMP/.codex/config.toml" <<'TOML'
+personality = "pragmatic"
+
+[mcp_servers]
+
+[projects."/Users/example/Workspace Foo"]
+trust_level = "trusted"
+TOML
+
+    run $MCP_MANAGER install --editor codex github
+    [ "$status" -eq 0 ]
+    run python3 -c "
+import tomllib
+from pathlib import Path
+cfg = tomllib.loads(Path('$TEST_TMP/.codex/config.toml').read_text(encoding='utf-8'))
+assert cfg['projects']['/Users/example/Workspace Foo']['trust_level'] == 'trusted'
+assert 'github' in cfg['mcp_servers']
+"
+    [ "$status" -eq 0 ]
+}
+
+@test "mcp install project without names syncs existing .mcp.json into Claude settings" {
+    run $MCP_MANAGER add github --target "$TEST_TMP"
+    [ "$status" -eq 0 ]
+    run $MCP_MANAGER install --editor claude --scope project --target "$TEST_TMP"
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.claude/settings.local.json" ]
+    run python3 -c "
+import json
+cfg = json.load(open('$TEST_TMP/.claude/settings.local.json'))
+assert 'github' in cfg['mcpServers']
+"
+    [ "$status" -eq 0 ]
+}
+
 # ── remove ──────────────────────────────────────────────────────────────────
 
 @test "mcp remove github: removes server from .mcp.json" {
@@ -113,6 +192,21 @@ assert list(cfg['mcpServers'].keys()).count('github') == 1
 import json
 cfg = json.load(open('$TEST_TMP/.mcp.json'))
 assert 'github' not in cfg['mcpServers'], 'github still present after remove'
+"
+    [ "$status" -eq 0 ]
+}
+
+@test "mcp remove github --editor cursor: removes from project editor config and .mcp.json" {
+    run $MCP_MANAGER install --editor cursor --scope project --target "$TEST_TMP" github
+    [ "$status" -eq 0 ]
+    run $MCP_MANAGER remove github --editor cursor --scope project --target "$TEST_TMP"
+    [ "$status" -eq 0 ]
+    run python3 -c "
+import json
+cfg = json.load(open('$TEST_TMP/.mcp.json'))
+assert 'github' not in cfg['mcpServers']
+cfg = json.load(open('$TEST_TMP/.cursor/mcp.json'))
+assert 'github' not in cfg['mcpServers']
 "
     [ "$status" -eq 0 ]
 }

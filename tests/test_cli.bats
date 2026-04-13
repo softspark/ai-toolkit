@@ -129,6 +129,21 @@ teardown() {
     [ -s "$TEST_TMP/AGENTS.md" ]
 }
 
+@test "cli: codex-md generates AGENTS.md with orchestration skills" {
+    cd "$TEST_TMP"
+    run $CLI codex-md
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/AGENTS.md" ]
+    grep -q '\*\*orchestrate\*\*' "$TEST_TMP/AGENTS.md"
+}
+
+@test "cli: codex-hooks generates .codex/hooks.json" {
+    cd "$TEST_TMP"
+    run $CLI codex-hooks
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.codex/hooks.json" ]
+}
+
 # ── llms-txt (merged: generates files + size comparison) ─────────────────────
 
 @test "cli: llms-txt generates llms.txt and llms-full.txt with correct sizes" {
@@ -226,6 +241,17 @@ teardown() {
 @test "cli: help lists aider-conf command" {
     run $CLI help
     echo "$output" | grep -q 'aider-conf'
+}
+
+@test "cli: help lists mcp editors subcommand" {
+    run $CLI help
+    echo "$output" | grep -q 'editors'
+}
+
+@test "cli: mcp editors exits 0" {
+    run $CLI mcp editors
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'codex'
 }
 
 # ── add-rule ─────────────────────────────────────────────────────────────────

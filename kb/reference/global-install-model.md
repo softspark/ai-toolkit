@@ -3,10 +3,10 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, local-setup]
-version: "1.4.2"
+version: "1.4.4"
 created: "2026-03-26"
-last_updated: "2026-04-09"
-description: "Reference description of the global install target, local project setup, and command responsibilities in ai-toolkit."
+last_updated: "2026-04-12"
+description: "Reference description of the global install target, local project setup, editor-aware MCP sync, and command responsibilities in ai-toolkit."
 ---
 
 # Global Install Model
@@ -29,6 +29,8 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 | `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
 | `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |
+| `ai-toolkit mcp add <name...>` | current project | merge MCP templates into `.mcp.json` |
+| `ai-toolkit mcp install --editor <name...>` | editor-native config | render MCP templates into editor-specific config files |
 
 ## Why global install is the default
 
@@ -42,7 +44,14 @@ That means one machine-level install provides agents, skills, hooks, and rules t
 These files still stay local to a repository:
 - `CLAUDE.md`
 - `.claude/settings.local.json`
+- `.mcp.json`
+- `.cursor/mcp.json`
+- `.github/mcp.json`
 - `.claude/constitution.md`
+- `AGENTS.md`
+- `.agents/rules/*.md`
+- `.agents/skills/*`
+- `.codex/hooks.json`
 - `.github/copilot-instructions.md`
 - `.clinerules`
 - `.roomodes`
@@ -54,7 +63,35 @@ These files still stay local to a repository:
 
 Hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`.
 
+Codex is the exception in terms of file location, not hook ownership: its local
+`.codex/hooks.json` points to hook scripts already installed globally in
+`~/.softspark/ai-toolkit/hooks/`.
+
+## Codex Local Install Behavior
+
+`ai-toolkit install --local --editors codex` creates:
+
+- `AGENTS.md`
+- `.agents/rules/*.md`
+- `.agents/skills/*`
+- `.codex/hooks.json`
+
+Native Codex-compatible skills are linked directly. Claude-oriented skills that
+depend on `Agent`, `Team*`, or `Task*` primitives are translated into generated
+Codex wrappers so the project still receives the full skill catalog.
+
+## MCP Local Sync Behavior
+
+If `.mcp.json` exists in the current project, `ai-toolkit install --local` mirrors its `mcpServers` block into:
+- `.claude/settings.local.json`
+- `.cursor/mcp.json` when `--editors cursor` is selected
+- `.github/mcp.json` when `--editors copilot` is selected
+
+Global-only editor MCP configs are not written during `install --local`. Use `ai-toolkit mcp install --editor <name...>` for those targets.
+
 ## Related Documents
 
 - `kb/reference/distribution-model.md`
 - `kb/reference/merge-friendly-install-model.md`
+- `kb/reference/codex-cli-compatibility.md`
+- `kb/reference/mcp-editor-compatibility.md`

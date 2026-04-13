@@ -2,11 +2,11 @@
 title: "Extension API Reference"
 category: reference
 service: ai-toolkit
-tags: [extension-api, inject-rule, inject-hook, mcp-templates, integration]
-version: "1.3.8"
+tags: [extension-api, inject-rule, inject-hook, mcp-templates, integration, editors]
+version: "1.3.9"
 created: "2026-04-07"
-last_updated: "2026-04-07"
-description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, remove-rule, remove-hook, and mcp template management."
+last_updated: "2026-04-12"
+description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, remove-rule, remove-hook, and editor-aware MCP template management."
 ---
 
 # Extension API Reference
@@ -27,6 +27,7 @@ This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP serv
 | `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source` | Yes |
 | `add-rule <file.md>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
 | `mcp add <name...>` | `.mcp.json` | Merge `mcpServers` block from template | Yes |
+| `mcp install --editor <name...>` | Native editor MCP config | Render canonical template into editor format | Yes |
 
 ## inject-rule
 
@@ -103,7 +104,7 @@ npx @softspark/ai-toolkit remove-hook my-tool-hooks
 
 The argument is the source name (file stem used during `inject-hook`). If no entries with that source are present, the command exits 0 silently.
 
-## mcp add
+## mcp add / install
 
 Merges one or more MCP server templates from `app/mcp-templates/` into the project's `.mcp.json`.
 
@@ -111,13 +112,24 @@ Merges one or more MCP server templates from `app/mcp-templates/` into the proje
 ai-toolkit mcp add github                # add a single template
 ai-toolkit mcp add github postgres slack  # add multiple at once
 ai-toolkit mcp list                       # list all available templates
+ai-toolkit mcp editors                    # list supported native adapters
 ai-toolkit mcp show github                # print a template's JSON
+ai-toolkit mcp install --editor cursor --scope project github --target .
+ai-toolkit mcp install --editor codex context7
 ai-toolkit mcp remove github             # remove an entry from .mcp.json
+ai-toolkit mcp remove github --editor cursor --scope project --target .
 ```
 
 **Implementation:** `scripts/mcp_manager.py`.
 
-The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist, it is created. If the server name already exists, the entry is overwritten. See [mcp-templates.md](mcp-templates.md) for the full list of available templates.
+The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist, it is created. If the server name already exists, the entry is overwritten.
+
+The `install` command renders the same canonical template into a native editor config format. Supported adapters currently cover:
+- JSON clients with `mcpServers`: Claude Code, Cursor, Gemini CLI, Windsurf, Cline, Augment
+- JSON clients with additional required metadata: GitHub Copilot
+- TOML clients: Codex CLI
+
+When `install` runs with `--scope project`, ai-toolkit also updates `.mcp.json` so the project-level config remains the source of truth for later sync and local install flows.
 
 ## Architecture
 
@@ -132,6 +144,7 @@ The `add` command merges the `mcpServers` block from the template into `.mcp.jso
 │    remove-hook  <name>        → settings.json        │
 │    add-rule     <file.md>     → rules/ registry      │
 │    mcp add      <template>    → .mcp.json            │
+│    mcp install  <template>    → editor-native MCP    │
 │                                                      │
 │  Idempotent: markers (rules) / _source tags (hooks)  │
 │  ai-toolkit NEVER calls external services            │
@@ -157,6 +170,9 @@ npx @softspark/ai-toolkit inject-hook ./hooks/my-tool-hooks.json
 
 # Add an MCP server template
 npx @softspark/ai-toolkit mcp add github
+
+# Render the same template into Cursor project config
+npx @softspark/ai-toolkit mcp install --editor cursor --scope project github --target .
 ```
 
 To uninstall:
@@ -172,4 +188,5 @@ All operations are idempotent — safe to run on every install or update.
 
 - [PATH: kb/reference/hooks-catalog.md] — built-in hooks reference
 - [PATH: kb/reference/mcp-templates.md] — available MCP server templates
+- [PATH: kb/reference/mcp-editor-compatibility.md] — native editor MCP support matrix
 - [PATH: kb/reference/architecture-overview.md] — overall install model

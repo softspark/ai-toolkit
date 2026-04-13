@@ -1,4 +1,4 @@
-"""Install AI tool configs (Cursor, Windsurf, Gemini, Augment) and local project setup."""
+"""Install AI tool configs (Cursor, Windsurf, Gemini, Augment, Codex) and local project setup."""
 from __future__ import annotations
 
 import shutil
@@ -6,6 +6,11 @@ import subprocess
 from pathlib import Path
 
 from _common import app_dir, inject_section, should_install, toolkit_dir
+from codex_skill_adapter import (
+    cleanup_codex_skills,
+    sync_codex_skill,
+)
+from mcp_editors import sync_project_mcp_to_editors
 from injection import (
     collapse_blank_runs as _collapse_blank_runs,
     strip_section as _strip_section,
@@ -125,7 +130,7 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
 # All known editor identifiers for --editors flag
 ALL_EDITORS = [
     "copilot", "cursor", "windsurf", "cline", "roo",
-    "aider", "augment", "antigravity",
+    "aider", "augment", "antigravity", "codex",
 ]
 
 # Map of project files/dirs → editor names for auto-detection
@@ -142,6 +147,9 @@ _EDITOR_MARKERS: dict[str, str] = {
     "CONVENTIONS.md": "aider",
     ".augment/rules": "augment",
     ".agent/rules": "antigravity",
+    ".agents/skills": "codex",
+    ".codex": "codex",
+    "AGENTS.md": "codex",
 }
 
 
@@ -495,6 +503,46 @@ def _create_local_settings(cwd: Path, reset: bool) -> None:
         print("  Kept: .claude/settings.local.json (already exists)")
 
 
+def _install_codex_skills(cwd: Path) -> None:
+    """Install all skills to `.agents/skills/` for Codex.
+
+    Native Codex-compatible skills are symlinked directly. Skills that rely on
+    Claude-only orchestration primitives are rendered into generated wrappers
+    with Codex-native delegation guidance.
+    """
+    skills_src = app_dir / "skills"
+    if not skills_src.is_dir():
+        return
+
+    skills_dst = cwd / ".agents" / "skills"
+    skills_dst.mkdir(parents=True, exist_ok=True)
+
+    linked = 0
+    adapted = 0
+    skipped = 0
+    for skill_dir in sorted(skills_src.iterdir()):
+        if not skill_dir.is_dir() or skill_dir.name.startswith("_"):
+            continue
+        skill_md = skill_dir / "SKILL.md"
+        if not skill_md.is_file():
+            continue
+
+        mode = sync_codex_skill(skill_dir, skills_dst)
+        if mode == "linked":
+            linked += 1
+        elif mode == "adapted":
+            adapted += 1
+        else:
+            skipped += 1
+
+    cleanup_codex_skills(skills_dst, skills_src)
+
+    print(
+        f"  Installed: {linked + adapted} skills to .agents/skills/"
+        f" ({linked} linked, {adapted} adapted, {skipped} skipped)"
+    )
+
+
 def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
                                    editors: list[str],
                                    language_modules: list[str] | None = None) -> None:
@@ -560,5 +608,28 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         from generate_antigravity import generate as gen_antigravity
         gen_antigravity(cwd, language_modules=language_modules,
                         rules_dir=rules_dir)
+
+    if "codex" in eds:
+        # AGENTS.md — marker injection (like CLAUDE.md)
+        inject_with_rules(
+            "generate_codex.py",
+            cwd / "AGENTS.md",
+            rules_dir,
+        )
+        # .agents/rules/ — directory-based rules
+        from generate_codex_rules import generate as gen_codex_rules
+        gen_codex_rules(cwd, language_modules=language_modules,
+                        rules_dir=rules_dir)
+        # .codex/hooks.json — Codex lifecycle hooks
+        from generate_codex_hooks import generate as gen_codex_hooks
+        gen_codex_hooks(cwd)
+        print("  Created: .codex/hooks.json")
+        # .agents/skills/ — filtered symlinks (Codex-compatible skills only)
+        _install_codex_skills(cwd)
+
+    synced_paths = sync_project_mcp_to_editors(cwd, sorted(eds))
+    for path in synced_paths:
+        rel = path.relative_to(cwd)
+        print(f"  Synced: {rel} (from .mcp.json)")
 
     run_script("install-git-hooks.sh", str(cwd))

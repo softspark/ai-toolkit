@@ -1,12 +1,12 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 92 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, and Google Antigravity, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 92 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, and Codex CLI, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-92-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-575%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-591%20passing-success)](tests/)
 
 ---
 
@@ -36,7 +36,7 @@ After global install, run `--local` in each project. By default, only Claude Cod
 ```bash
 cd your-project/
 ai-toolkit install --local                     # Claude Code only
-ai-toolkit install --local --editors all       # + all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+ai-toolkit install --local --editors all       # + all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex)
 ai-toolkit install --local --editors cursor,aider  # + specific editors
 ai-toolkit update --local                      # auto-detects editors from existing project files
 ```
@@ -139,9 +139,9 @@ Compiles the full toolkit (20K+ tokens) into a minimal system prompt that fits S
 | Aider | `.aider.conf.yml` + `CONVENTIONS.md` | `ai-toolkit install --local` | project |
 | Augment | `.augment/rules/ai-toolkit-*.md` | `ai-toolkit install --local` | project |
 | Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | `ai-toolkit install --local` | project |
-| Codex / OpenCode | `AGENTS.md` | `ai-toolkit agents-md` | project |
+| Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.codex/hooks.json` | `ai-toolkit install --local` | project |
 
-> **Note:** Claude Code is always installed (primary platform with full feature support). Other editors are installed on demand with `--editors <list>` or auto-detected from existing project files. All platforms receive the same agent/skill catalog, guidelines, rules, language-specific rules, and registered custom rules. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
+> **Note:** Claude Code is always installed (primary platform with full feature support). Other editors are installed on demand with `--editors <list>` or auto-detected from existing project files. All platforms receive the same agent/skill catalog, guidelines, rules, language-specific rules, and registered custom rules. Codex CLI receives all 92 skills via `.agents/skills/`: native Codex-compatible skills are symlinked directly, while Claude-native orchestration skills are translated into Codex subagent workflows during install. For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
 
 ---
 
@@ -524,9 +524,26 @@ Agents follow a research-before-action protocol enforced via rules:
 ai-toolkit mcp add github slack           # add GitHub + Slack MCP servers
 ai-toolkit mcp list                       # browse all 25 templates
 ai-toolkit mcp show postgres              # inspect config before adding
+ai-toolkit mcp install --editor cursor --scope project github --target .
+ai-toolkit mcp install --editor codex context7
 ```
 
 Templates include: GitHub, PostgreSQL, Slack, Sentry, Context7, Brave Search, Supabase, Cloudflare, Vercel, and 16 more. Each is a validated JSON config fragment merged into `.mcp.json`.
+
+Native editor MCP install is available where the client exposes a stable config format:
+
+| Editor | Scope | Native MCP Config |
+|--------|-------|-------------------|
+| Claude Code | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` |
+| Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` |
+| GitHub Copilot | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` |
+| Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` |
+| Windsurf | global | `~/.codeium/windsurf/mcp_config.json` |
+| Cline | global | `~/.cline/data/settings/cline_mcp_settings.json` |
+| Augment | global | `~/.augment/settings.json` |
+| Codex CLI | global | `~/.codex/config.toml` |
+
+`install --local` now auto-syncs project `.mcp.json` into Claude project settings plus selected project editors that support repository/workspace MCP configs (`cursor`, `copilot`). Global-only clients are configured explicitly with `ai-toolkit mcp install --editor ...`.
 
 ---
 
@@ -552,6 +569,7 @@ When `--editors` is used alongside detected or explicit languages, language rule
 | Roo Code | `.roo/rules/ai-toolkit-lang-<lang>.md` | always loaded |
 | Augment | `.augment/rules/ai-toolkit-lang-<lang>.md` | `agent_requested` with globs |
 | Antigravity | `.agent/rules/ai-toolkit-lang-<lang>.md` | always loaded |
+| Codex CLI | `.agents/rules/ai-toolkit-lang-<lang>.md` | always loaded |
 
 Registered rules (`ai-toolkit add-rule`) are also propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
 
@@ -667,7 +685,7 @@ ai-toolkit update                # global update + parallel update ALL projects
 | Effort-based model budgeting | **Yes** | No | No | No |
 | Test suite | Yes (bats) | Yes (997 tests) | No | Yes |
 | npm/npx install | Yes | Yes | Yes | Yes |
-| Cross-tool support | **Cursor, Windsurf, Copilot, Gemini, Cline, Roo, Aider, Augment, Antigravity** | 5+ tools | Smithery | Limited |
+| Cross-tool support | **Cursor, Windsurf, Copilot, Gemini, Cline, Roo, Aider, Augment, Antigravity, Codex** | 5+ tools | Smithery | Limited |
 | Selective install | Yes | Yes | Yes (72 plugins) | No |
 | Session persistence | Yes | Yes | No | No |
 | Architecture notes | **Yes** | No | No | No |
@@ -708,7 +726,7 @@ Pre-configured team presets via `/teams`:
 | Aider | `.aider.conf.yml` | project |
 | Augment | `.augment/rules/ai-toolkit-*.md` | project |
 | Google Antigravity | `.agent/rules/` + `.agent/workflows/` | project |
-| Codex / OpenCode | `AGENTS.md` | project |
+| Codex CLI | `AGENTS.md` + `.agents/rules/` + `.codex/hooks.json` | project |
 
 ```bash
 # First-time install (Claude + Cursor + Windsurf + Gemini)
@@ -720,7 +738,7 @@ ai-toolkit update
 # Init project (Claude Code configs only: CLAUDE.md, settings, constitution, language rules)
 ai-toolkit install --local
 
-# Init with all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+# Init with all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex)
 ai-toolkit install --local --editors all
 
 # Update project — auto-detects editors from existing config files
@@ -807,9 +825,11 @@ Usage: ai-toolkit <command> [options]
 | `inject-hook <file.json>` | Inject external hooks into settings.json (idempotent, `_source` tagged) |
 | `remove-hook <name>` | Remove injected hooks by source name |
 | `mcp list` | List available MCP server templates (25 templates) |
+| `mcp editors` | List editors with native MCP config adapters and scopes |
 | `mcp add <name> [names...]` | Add MCP server template(s) to `.mcp.json` |
+| `mcp install --editor <name[,..]> [names...]` | Install templates into native editor MCP config |
 | `mcp show <name>` | Show MCP template config details |
-| `mcp remove <name>` | Remove MCP server from `.mcp.json` |
+| `mcp remove <name>` | Remove MCP server from `.mcp.json` or editor MCP config |
 | `config validate [path]` | Validate `.softspark-toolkit.json` schema + extends + enforcement |
 | `config diff [path]` | Show project vs base config differences |
 | `config init [flags]` | Create `.softspark-toolkit.json` (`--extends`, `--profile`, `--no-extends`) |
@@ -852,6 +872,9 @@ Usage: ai-toolkit <command> [options]
 | `cline-dir-rules` | Generate `.cline/rules/*.md` for Cline |
 | `roo-dir-rules` | Generate `.roo/rules/*.md` for Roo Code |
 | `antigravity-rules` | Generate `.agent/rules/` and `.agent/workflows/` for Google Antigravity |
+| `codex-md` | Generate `AGENTS.md` with marker injection for Codex CLI |
+| `codex-rules` | Generate `.agents/rules/*.md` for Codex CLI |
+| `codex-hooks` | Generate `.codex/hooks.json` for Codex CLI (9 hooks in 4 events) |
 | `agents-md` | Regenerate `AGENTS.md` from agent definitions |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
 | `generate-all` | Generate all platform configs at once |
@@ -865,7 +888,7 @@ ai-toolkit install --skip hooks          # skip listed components
 ai-toolkit install --profile minimal     # profile preset: minimal | standard | strict
 ai-toolkit install --persona backend-lead # persona preset: backend-lead | frontend-lead | devops-eng | junior-dev
 ai-toolkit install --local               # Claude Code only (CLAUDE.md, settings, constitution, language rules)
-ai-toolkit install --local --editors all # Claude Code + all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity)
+ai-toolkit install --local --editors all # Claude Code + all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex)
 ai-toolkit install --local --editors cursor,aider  # Claude Code + specific editors
 ai-toolkit update --local                # re-apply; auto-detects editors from existing project files
 ai-toolkit install --list                # dry-run: show what would be applied
