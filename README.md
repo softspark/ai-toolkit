@@ -10,6 +10,32 @@
 
 ---
 
+## What's New in v2.1.0
+
+- **Codex CLI as 11th platform** — full support: `AGENTS.md`, `.agents/rules/`, `.agents/skills/`, `.codex/hooks.json`
+- **Native editor MCP install** — `mcp install --editor <name>` renders templates into 8 editor-native config formats
+- **Runtime-aware plugin system** — `--editor claude|codex|all` targets Claude and global Codex plugin layer
+- **Codex skill translation** — Claude-only orchestration skills auto-translated to Codex-native wrappers
+- **Custom rules in generators** — `generate:all` now preserves registered rules from other repos across all platforms
+
+See [CHANGELOG.md](CHANGELOG.md) for full history.
+
+---
+
+## Table of Contents
+
+- [Install](#install)
+- [Platform Support](#platform-support)
+- [What You Get](#what-you-get)
+- [Architecture](#architecture)
+- [Key Features](#key-features)
+- [Key Slash Commands](#key-slash-commands)
+- [Getting Started](#getting-started)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+
+---
+
 ## Install
 
 ```bash
@@ -31,123 +57,58 @@ npm install -g @softspark/ai-toolkit@latest && ai-toolkit update
 
 ### Per-Project Setup
 
-After global install, run `--local` in each project. By default, only Claude Code configs are installed (CLAUDE.md, settings, constitution, language rules). Add `--editors` for other tools:
-
 ```bash
 cd your-project/
-ai-toolkit install --local                     # Claude Code only
-ai-toolkit install --local --editors all       # + all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex)
-ai-toolkit install --local --editors cursor,aider  # + specific editors
-ai-toolkit update --local                      # auto-detects editors from existing project files
+ai-toolkit install --local                        # Claude Code only
+ai-toolkit install --local --editors all          # + all editors
+ai-toolkit install --local --editors cursor,aider # + specific editors
+ai-toolkit update --local                         # auto-detects editors
 ```
 
 ### Plugin Management
 
 ```bash
-ai-toolkit plugin list             # show available packs
-ai-toolkit plugin install --editor all --all   # install all packs for Claude + Codex
-ai-toolkit plugin install --editor codex memory-pack   # Codex global target
-ai-toolkit plugin update --editor all --all    # re-apply after toolkit updates
-ai-toolkit plugin status --editor all          # show what's installed per runtime
-ai-toolkit plugin clean memory-pack --days 30  # prune old data
+ai-toolkit plugin list                            # show available packs
+ai-toolkit plugin install --editor all --all      # install all for Claude + Codex
+ai-toolkit plugin status --editor all             # show what's installed
 ```
-
-`plugin` is editor-aware:
-- `--editor claude` targets global Claude install in `~/.claude/`
-- `--editor codex` targets global Codex assets in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`)
-- `--editor all` applies both
-
-After each `ai-toolkit update`, also run `ai-toolkit plugin update --editor all --all` to keep plugin hooks and scripts in sync.
 
 ### Install Profiles
 
 ```bash
-ai-toolkit install --profile minimal    # agents + skills only (no hooks, no constitution)
+ai-toolkit install --profile minimal    # agents + skills only
 ai-toolkit install --profile standard   # full install (default)
-ai-toolkit install --profile strict     # full install + git hooks even without --local
-```
-
-### Persona Presets
-
-Personas adjust communication style, preferred skills, and code review priorities per engineering role.
-
-**Install-time (persistent — injected into CLAUDE.md):**
-
-```bash
-ai-toolkit install --persona backend-lead    # system design, API stability, data integrity
-ai-toolkit install --persona frontend-lead   # component architecture, a11y, Core Web Vitals
-ai-toolkit install --persona devops-eng      # infra-as-code, CI/CD, rollback safety
-ai-toolkit install --persona junior-dev      # step-by-step explanations, learning focus
-```
-
-**Runtime (session-scoped — no reinstall needed):**
-
-```bash
-/persona backend-lead     # activate for this session
-/persona --list           # show available personas
-/persona --clear          # reset to default
-```
-
-### Selective Install / Update
-
-```bash
-ai-toolkit install --only agents,hooks   # first-time: only listed components
-ai-toolkit install --skip hooks          # first-time: skip listed components
-ai-toolkit update --only agents,hooks    # re-apply: only listed components
-ai-toolkit update --skip cursor          # re-apply: skip listed components
-ai-toolkit install --list                # dry-run: show what would be applied
+ai-toolkit install --profile strict     # full + git hooks
 ```
 
 ### Verify & Repair
 
 ```bash
-ai-toolkit validate           # check toolkit integrity
-ai-toolkit validate --strict  # CI-grade: warnings = errors
-ai-toolkit doctor             # diagnose install health, hooks, and artifact drift
-ai-toolkit doctor --fix  # auto-repair: broken symlinks, missing hooks, stale artifacts
+ai-toolkit validate          # check integrity
+ai-toolkit doctor --fix      # auto-repair
 ```
 
-### Eject (standalone, no toolkit dependency)
-
-```bash
-ai-toolkit eject              # export to current directory
-ai-toolkit eject /path/to    # export to custom directory
-```
-
-Replaces all symlinks with real files, inlines rules into CLAUDE.md, copies constitution and architecture. After eject you can `npm uninstall -g @softspark/ai-toolkit`.
-
-### Compile for Local Models (Ollama, LM Studio, Aider)
-
-```bash
-ai-toolkit compile-slm                              # auto-detect model, default budget
-ai-toolkit compile-slm --model-size 8b              # 2K token budget for 8B models
-ai-toolkit compile-slm --model-size 32b --lang python  # 8K budget + Python rules
-ai-toolkit compile-slm --persona backend-lead       # boost backend-relevant skills
-ai-toolkit compile-slm --format ollama              # Ollama Modelfile SYSTEM block
-ai-toolkit compile-slm --dry-run                    # preview what gets included
-```
-
-Compiles the full toolkit (20K+ tokens) into a minimal system prompt that fits SLM context windows. Preserves safety constitution, compresses skills, and packs by value density. Supports 4 output formats: `raw`, `ollama`, `json-string`, `aider`.
+See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 
 ---
 
 ## Platform Support
 
-| Platform | Config Files | How | Scope |
-|----------|-------------|-----|-------|
-| Claude Code | `~/.claude/` | `ai-toolkit install` | global |
-| Cursor | `~/.cursor/rules` + `.cursor/rules/*.mdc` | `ai-toolkit install` / `--local` | global + project |
-| Windsurf | `~/.codeium/.../global_rules.md` + `.windsurf/rules/*.md` | `ai-toolkit install` / `--local` | global + project |
-| Gemini CLI | `~/.gemini/GEMINI.md` | `ai-toolkit install` | global |
-| GitHub Copilot | `.github/copilot-instructions.md` | `ai-toolkit install --local` | project |
-| Cline | `.clinerules/*.md` | `ai-toolkit install --local` | project |
-| Roo Code | `.roomodes` + `.roo/rules/*.md` | `ai-toolkit install --local` | project |
-| Aider | `.aider.conf.yml` + `CONVENTIONS.md` | `ai-toolkit install --local` | project |
-| Augment | `.augment/rules/ai-toolkit-*.md` | `ai-toolkit install --local` | project |
-| Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | `ai-toolkit install --local` | project |
-| Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.agents/skills/*` + `.codex/hooks.json` | `ai-toolkit install --local` for project files, `ai-toolkit plugin install --editor codex` for global plugin layer | project + optional global plugin layer |
+| Platform | Config Files | Scope |
+|----------|-------------|-------|
+| Claude Code | `~/.claude/` | global |
+| Cursor | `~/.cursor/rules` + `.cursor/rules/*.mdc` | global + project |
+| Windsurf | `~/.codeium/.../global_rules.md` + `.windsurf/rules/*.md` | global + project |
+| Gemini CLI | `~/.gemini/GEMINI.md` | global |
+| GitHub Copilot | `.github/copilot-instructions.md` | project |
+| Cline | `.clinerules/*.md` | project |
+| Roo Code | `.roomodes` + `.roo/rules/*.md` | project |
+| Aider | `.aider.conf.yml` + `CONVENTIONS.md` | project |
+| Augment | `.augment/rules/ai-toolkit-*.md` | project |
+| Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | project |
+| Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.agents/skills/*` + `.codex/hooks.json` | project + global plugin |
 
-> **Note:** Claude Code is always installed (primary platform with full feature support). Other editors are installed on demand with `--editors <list>` or auto-detected from existing project files. All platforms receive the same agent/skill catalog, guidelines, rules, language-specific rules, and registered custom rules. Codex CLI core install remains project-local and receives all 92 skills via `.agents/skills/`: native Codex-compatible skills are symlinked directly, while Claude-native orchestration skills are translated into Codex subagent workflows during install. Experimental plugin packs can additionally target a global Codex surface in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`). For editors lacking native bash lifecycle hooks, `--local` installs a Git hooks fallback (`.git/hooks/pre-commit`) to enforce quality gates pre-commit.
+> Claude Code is always installed (primary platform). Other editors on demand with `--editors`. All platforms receive the same agent/skill catalog, guidelines, and registered custom rules.
 
 ---
 
@@ -155,16 +116,15 @@ Compiles the full toolkit (20K+ tokens) into a minimal system prompt that fits S
 
 | Component | Count | Description |
 |-----------|-------|-------------|
-| `skills/` (task) | 29 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, `/hipaa-validate`, ... |
+| `skills/` (task) | 29 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
 | `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 32 | Domain knowledge auto-loaded by agents |
 | `agents/` | 44 | Specialized agents across 10 categories |
-| `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, CLAUDE.md enforcement, notifications, prompt governance, subagent lifecycle, session-end handoff, usage tracking, config protection, MCP health, governance audit |
-| `plugins/` | 11 experimental opt-in packs | Domain bundles for security, research, frontend, enterprise, and 6 language packs (not part of the default install) |
-| `output-styles/` | 1 style | System prompt output style overrides (e.g. Golden Rules) |
+| `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
+| `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
 | `constitution.md` | 5 articles | Machine-enforced safety rules |
-| `rules/` | auto-injected | Rules injected into your CLAUDE.md on `install` / `update` |
-| `kb/` | reference docs | Architecture, operating models, procedures, and best practices |
+| `rules/` | auto-injected | Language-specific and custom rules injected into your configs |
+| `kb/` | reference docs | Architecture, procedures, and best practices |
 
 ---
 
@@ -174,49 +134,50 @@ Compiles the full toolkit (20K+ tokens) into a minimal system prompt that fits S
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   │   ├── orchestrator.md
-│   │   ├── backend-specialist.md
-│   │   ├── security-architect.md
-│   │   └── ... (41 more)
 │   ├── skills/          # 92 skills (task / hybrid / knowledge)
-│   │   ├── commit/      # /commit slash command
-│   │   ├── review/      # /review slash command
-│   │   ├── clean-code/  # knowledge skill (auto-loaded)
-│   │   └── ... (87 more)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
-│   ├── hooks/           # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
-│   │   ├── session-start.sh      # MANDATORY reminder + session context
-│   │   ├── guard-destructive.sh  # Block rm -rf, DROP TABLE, etc.
-│   │   ├── guard-path.sh         # Block wrong-user path hallucination
-│   │   ├── guard-config.sh       # Block edits to linter/formatter configs
-│   │   ├── user-prompt-submit.sh # Prompt governance reminder
-│   │   ├── quality-check.sh      # Multi-language lint on stop
-│   │   ├── quality-gate.sh       # Block task completion on errors
-│   │   ├── save-session.sh       # Persist session context
-│   │   ├── subagent-start.sh     # Subagent scope reminder
-│   │   ├── subagent-stop.sh      # Subagent completion checklist
-│   │   ├── pre-compact.sh        # Save context before compaction
-│   │   ├── pre-compact-save.sh   # Timestamped backup before compaction
-│   │   ├── session-end.sh        # Session handoff snapshot
-│   │   ├── post-tool-use.sh      # Lightweight feedback after edits
-│   │   ├── mcp-health.sh         # MCP server availability check
-│   │   ├── governance-capture.sh # Security-sensitive op logging
-│   │   ├── commit-quality.sh     # Conventional commit advisory
-│   │   ├── session-context.sh    # Environment snapshot on start
-│   │   ├── track-usage.sh        # Skill invocation tracking
-│   │   └── notify-waiting.sh     # Cross-platform "Claude waiting" notification
-│   ├── hooks.json       # Hook definitions (merged into settings.json)
-│   ├── plugins/         # Experimental plugin packs (opt-in, not part of default install)
+│   ├── hooks/           # Hook scripts (21 entries, 12 lifecycle events)
+│   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
 │   ├── constitution.md  # 5 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design
-├── kb/                  # Reference docs, architecture notes, procedures, plans
+├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite
+├── tests/               # Bats test suite (598 tests)
 └── CHANGELOG.md
 ```
 
-**Distribution model:** Symlink-based for agents/skills, copy-based for hooks. `~/.claude/agents/` and `~/.claude/skills/` contain per-file symlinks into the npm package. Hook scripts are copied to `~/.softspark/ai-toolkit/hooks/` and referenced from `~/.claude/settings.json`. Run `ai-toolkit update` after `npm install` — all projects pick up changes instantly. (See [Distribution Model](kb/reference/distribution-model.md))
+**Distribution:** Symlink-based for agents/skills, copy-based for hooks. Run `ai-toolkit update` after `npm install` — all projects pick up changes instantly. See [Distribution Model](kb/reference/distribution-model.md).
+
+---
+
+## Key Features
+
+**Machine-enforced constitution** — 5-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
+
+**21 lifecycle hooks** — Executable scripts across 12 events (SessionStart → SessionEnd). Guards, governance, quality gates, session persistence, MCP health checks. See [Hooks Catalog](kb/reference/hooks-catalog.md).
+
+**Security scanning** — `/skill-audit` for code-level risks, `/cve-scan` for dependency CVEs. Both CI-ready with exit codes.
+
+**Iron Law enforcement** — `/tdd`, `debugging-tactics`, and `verification-before-completion` enforce non-negotiable gates with anti-rationalization tables. 15 skills total include rationalization resistance.
+
+**Multi-language quality gates** — `Stop` hook runs lint + type checks across Python, TypeScript, PHP, Dart, Go after every response.
+
+**Agent verification checklists** — 10 agents include exit criteria that must be met before presenting results.
+
+**Two-stage review** — `/subagent-development` runs Implementer → Spec Review → Quality Review per task.
+
+**Persistent memory** — `memory-pack` plugin: SQLite + FTS5 search across past sessions.
+
+**Persona presets** — 4 roles (backend-lead, frontend-lead, devops-eng, junior-dev) adjust style and priorities.
+
+**Config inheritance** — Enterprise `extends` system with constitution immutability and enforcement constraints. See [Enterprise Config Guide](kb/reference/enterprise-config-guide.md).
+
+**68 language rules** — 13 languages, 5 categories each. Auto-detected or explicit `--lang`. See [Language Rules](kb/reference/language-rules.md).
+
+**25 MCP templates** — Ready-to-use configs for GitHub, PostgreSQL, Slack, Sentry, and more. See [MCP Templates](kb/reference/mcp-templates.md).
+
+See [Unique Features](kb/reference/unique-features.md) for detailed descriptions of all differentiators.
 
 ---
 
@@ -224,71 +185,38 @@ ai-toolkit/
 
 | Command | Purpose | Effort |
 |---------|---------|--------|
-| `/workflow <type>` | Pre-defined multi-agent workflow (15 types — see below) | max |
-| `/orchestrate` | Custom multi-agent coordination (3–6 agents, you define domains) | max |
-| `/swarm` | Parallel Agent Teams: `map-reduce`, `consensus`, or `relay` | max |
+| `/workflow <type>` | Pre-defined multi-agent workflow (15 types) | max |
+| `/orchestrate` | Custom multi-agent coordination (3–6 agents) | max |
+| `/swarm` | Parallel Agent Teams: `map-reduce`, `consensus`, `relay` | max |
 | `/plan` | Implementation plan with task breakdown | high |
 | `/review` | Code review: quality, security, performance | high |
 | `/debug` | Systematic debugging with diagnostics | medium |
 | `/refactor` | Safe refactoring with pattern analysis | high |
-| `/explore` | Interactive codebase visualization and discovery | medium |
-| `/test` | Run tests (Python, JS/TS, PHP, Flutter, Go, Rust) | medium |
-| `/deploy` | Deploy with pre-flight checks | medium |
-| `/rollback` | Rollback deployment with state verification | medium |
-| `/ci` | Generate CI/CD pipeline configuration | medium |
-| `/migrate` | Database migration workflow | medium |
+| `/tdd` | Test-driven development with red-green-refactor | high |
 | `/commit` | Structured commit with linting | medium |
 | `/pr` | Pull request with generated checklist | medium |
-| `/docs` | Generate README, API docs, architecture notes, changelogs | high |
-| `/hook-creator` | Scaffold a new Claude Code hook with validation conventions | high |
-| `/command-creator` | Scaffold a new slash command with frontmatter and workflow guidance | high |
-| `/agent-creator` | Scaffold a new specialized agent with tools and trigger guidance | high |
-| `/plugin-creator` | Scaffold an experimental plugin pack with manifest and optional modules | high |
-| `/skill-audit` | Scan skills/agents for security risks: dangerous patterns, secrets, permissions | medium |
-| `/cve-scan` | Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, ruby, dart) | medium |
-| `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, missing BAA references | medium |
-| `/analyze` | Code quality, complexity, and pattern analysis | medium |
-| `/fix` | Auto-fix lint/type errors | low |
-| `/build` | Build with issue detection | low |
-| `/lint` | Run linters and report issues | low |
-| `/health` | Service health report | medium |
-| `/panic` | Emergency halt all autonomous operations | low |
-| `/write-a-prd` | Create PRD through interactive interview and module design | high |
-| `/prd-to-plan` | Convert PRD into phased vertical-slice implementation plan | high |
-| `/prd-to-issues` | Break PRD into GitHub issues with HITL/AFK tagging | medium |
-| `/tdd` | Test-driven development with red-green-refactor loop | high |
-| `/design-an-interface` | Generate 3+ radically different interface designs (parallel agents) | high |
-| `/grill-me` | Stress-test a plan through relentless Socratic questioning | medium |
-| `/ubiquitous-language` | Extract DDD-style glossary from conversation | medium |
-| `/refactor-plan` | Plan refactor with tiny commits via interview | high |
-| `/qa-session` | Interactive QA — report bugs, file GitHub issues | high |
+| `/docs` | Generate README, API docs, architecture notes | high |
+| `/explore` | Interactive codebase visualization | medium |
+| `/write-a-prd` | Create PRD through interactive interview | high |
+| `/prd-to-plan` | Convert PRD into vertical-slice implementation plan | high |
+| `/design-an-interface` | Generate 3+ radically different interface designs | high |
+| `/grill-me` | Stress-test a plan through Socratic questioning | medium |
 | `/triage-issue` | Triage bug with deep investigation and TDD fix plan | high |
-| `/architecture-audit` | Discover shallow modules, propose deepening refactors | high |
-| `/subagent-development` | Execute plans with 2-stage review (spec + quality) per task | high |
-| `/repeat` | Autonomous loop with safety controls (Ralph Wiggum pattern) | medium |
-| `/mem-search` | Search past coding sessions via natural language (memory-pack) | medium |
-| `/persona` | Switch engineering persona at runtime (session-scoped) | low |
-| `/council` | 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) | high |
-| `/introspect` | Agent self-debugging with 7 failure pattern classification and recovery actions | medium |
+| `/architecture-audit` | Discover shallow modules, propose refactors | high |
+| `/council` | 4-perspective decision evaluation | high |
+| `/cve-scan` | Scan dependencies for known CVEs | medium |
+| `/skill-audit` | Scan skills/agents for security risks | medium |
+| `/repeat` | Autonomous loop with safety controls | medium |
+| `/persona` | Switch engineering persona at runtime | low |
 
 ### `/workflow` Types
 
-```bash
-/workflow feature-development    # New feature, full stack
-/workflow backend-feature        # API + logic + tests
-/workflow frontend-feature       # UI component + state + tests
-/workflow api-design             # Design → implement → document
-/workflow database-evolution     # Schema change + migration + code
-/workflow test-coverage          # Boost coverage for a module
-/workflow security-audit         # Multi-vector security assessment
-/workflow codebase-onboarding    # Understand unfamiliar codebase
-/workflow spike                  # Time-boxed research → architecture note
-/workflow debugging              # Bug spanning multiple layers
-/workflow incident-response      # Production down
-/workflow performance-optimization  # Degradation >50%
-/workflow infrastructure-change  # Docker, CI/CD, infra
-/workflow application-deploy     # Full deploy workflow
-/workflow proactive-troubleshooting  # Warning / trend analysis
+```
+feature-development    backend-feature       frontend-feature
+api-design             database-evolution    test-coverage
+security-audit         codebase-onboarding   spike
+debugging              incident-response     performance-optimization
+infrastructure-change  application-deploy    proactive-troubleshooting
 ```
 
 ### Multi-Agent Skill Selection
@@ -304,629 +232,42 @@ Need multi-agent coordination?
 
 ---
 
-## Unique Differentiators
+## Getting Started
 
-### 1. Machine-Enforced Constitution
+1. **Customize CLAUDE.md** — add your project's tech stack, commands, and conventions at the top (above toolkit markers).
 
-Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 5-article constitution via `PreToolUse` hooks. The hook actually **blocks** execution of:
-- Mass deletion (`rm -rf`, `DROP TABLE`)
-- Blind overwrites of uncommitted work
-- Any action that could cause irreversible data loss
-
-### 2. Hooks as Executable Scripts
-
-Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
-
-**12 lifecycle events / 21 global hook entries:**
-
-| Event | Script | Action |
-|-------|--------|--------|
-| SessionStart | `session-start.sh` | MANDATORY rules reminder + session context + instincts |
-| SessionStart | `mcp-health.sh` | Check MCP server command availability (non-blocking warning) |
-| SessionStart | `session-context.sh` | Capture environment snapshot (pwd, git branch, versions) to `~/.softspark/ai-toolkit/sessions/current-context.json` |
-| Notification | `notify-waiting.sh` | Cross-platform desktop notification |
-| PreToolUse | `guard-destructive.sh` | Block `rm -rf`, `DROP TABLE`, etc. |
-| PreToolUse | `guard-path.sh` | Block wrong-user path hallucination |
-| PreToolUse | `guard-config.sh` | Block edits to linter/formatter config files unless explicitly requested |
-| PreToolUse | `commit-quality.sh` | Advisory validation of git commit messages (conventional commits, length, no WIP) |
-| UserPromptSubmit | `user-prompt-submit.sh` | Prompt governance reminder for planning, research, and safe execution |
-| UserPromptSubmit | `track-usage.sh` | Record skill invocations to local stats |
-| PostToolUse | `post-tool-use.sh` | Lightweight validation reminders after edits |
-| PostToolUse | `governance-capture.sh` | Log security-sensitive operations to `~/.softspark/ai-toolkit/governance.log` (JSONL) |
-| Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
-| Stop | `save-session.sh` | Persist session context for cross-session continuity |
-| TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
-| SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |
-| SubagentStop | `subagent-stop.sh` | Completion checklist for subagent handoff |
-| PreCompact | `pre-compact.sh` | Smart compaction: prioritized context (instincts > tasks > git state > decisions) |
-| PreCompact | `pre-compact-save.sh` | Save timestamped context backup before compaction to `~/.softspark/ai-toolkit/compactions/` |
-| SessionEnd | `session-end.sh` | Persist a session-end handoff note |
-| TeammateIdle | *(inline)* | Completeness reminder |
-
-**5 skill-scoped hooks:**
-
-| Skill | Hook | Action |
-|-------|------|--------|
-| `/commit` | Pre | Run linter, block on failure |
-| `/test` | Post | Coverage check, report threshold |
-| `/deploy` | Post | Health check, rollback if degraded |
-| `/migrate` | Pre | Backup verification |
-| `/rollback` | Post | State verification |
-
-### 3. Security Scanning
-
-Two complementary security tools:
-
-**`/skill-audit`** — scan skills and agents for code-level risks:
-
-```bash
-/skill-audit                              # Interactive (Claude remediation)
-python3 scripts/audit_skills.py --ci      # CI mode: exit 1 on HIGH
-```
-
-Detects: `eval()`/`exec()`, hardcoded secrets, permission issues, bash risks.
-
-**`/cve-scan`** — scan project dependencies for known CVEs:
-
-```bash
-/cve-scan                                 # Auto-detect ecosystems, scan all
-python3 app/skills/cve-scan/scripts/cve_scan.py          # Direct invocation
-python3 app/skills/cve-scan/scripts/cve_scan.py --json   # Machine-readable
-```
-
-Supports: npm, pip, composer, cargo, go, ruby, dart. Uses native audit tools — zero external deps.
-
-**Severity levels:** HIGH (blocks CI), WARN (should fix), INFO (review)
-
-### 4. Effort-Based Model Budgeting
-
-Every skill declares an effort level used for model token budgeting:
-- `low` — lint, build, fix (fast, cheap)
-- `medium` — debug, analyze, ci
-- `high` — review, plan, refactor, docs
-- `max` — orchestrate, swarm, workflow
-
-### 5. Multi-Language Quality Gates
-
-The `Stop` hook runs after every response across 5 languages:
-
-| Language | Lint | Type Check |
-|----------|------|-----------|
-| Python | ruff | mypy --strict |
-| TypeScript | ESLint/tsc | tsc --noEmit |
-| PHP | phpstan | phpstan |
-| Dart | dart analyze | dart analyze |
-| Go | go vet | go vet |
-
-### 6. Iron Law Enforcement
-
-Three skills enforce non-negotiable quality gates with anti-rationalization tables:
-
-| Skill | Iron Law | What it prevents |
-|-------|----------|-----------------|
-| `/tdd` | `NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST` | Code written before test? Delete it. Start over. No exceptions. |
-| `debugging-tactics` | `NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST` | 4-phase debugging: root cause → pattern → hypothesis → fix. 3+ failed fixes → question architecture. |
-| `verification-before-completion` | `NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE` | Gate function: IDENTIFY → RUN → READ → VERIFY → CLAIM. "Should work now" is not evidence. |
-
-Additionally, **15 core skills** include `## Common Rationalizations` tables — domain-specific excuses with rebuttals that prevent agent drift and shortcut-taking. Skills with rationalization tables: `/review`, `/debug`, `/refactor`, `/tdd`, `/plan`, `/docs`, `/analyze`, `security-patterns`, `testing-patterns`, `api-patterns`, `ci-cd-patterns`, `clean-code`, `performance-profiling`, `git-mastery`, `database-patterns`.
-
-### Confidence Scoring & Self-Evaluation (`/review`)
-
-The `/review` skill outputs findings with per-issue confidence scores (1-10) and severity classification (critical/major/minor/nit). After completing a review, an LLM-as-Judge self-evaluation pass checks for blind spots: anchoring bias, assumption vs verification, missing unhappy paths, and calibrates confidence scores.
-
-### Agent Verification Checklists
-
-10 key agents include `## Verification Checklist` — exit criteria that MUST be met before presenting results. Each checklist is domain-specific:
-
-| Agent | Key exit criteria |
-|-------|------------------|
-| `code-reviewer` | Every finding has file:line + evidence, not just opinion |
-| `security-auditor` | Each finding includes proof-of-concept or exploit path |
-| `test-engineer` | No empty/placeholder tests, mocks only at boundaries |
-| `debugger` | Root cause identified, regression test added |
-| `backend-specialist` | Input validation, error format, query optimization |
-| `frontend-specialist` | Empty/loading/error states, accessibility, responsive |
-| `database-architect` | Migration tested on prod-like volume, rollback tested |
-| `performance-optimizer` | Baseline measured, profiler evidence attached |
-| `devops-implementer` | Dry run passed, rollback documented, no hardcoded secrets |
-| `documenter` | Code examples runnable, no placeholders, valid links |
-
-### Skill Reference Routing
-
-7 core skills include `## Related Skills` sections that suggest logical follow-up skills, improving discoverability:
-
-```
-/review → found issues? → /debug, /tdd, /cve-scan, /analyze
-/debug  → bug fixed?   → /review, /tdd, /workflow incident-response
-/plan   → approved?    → /orchestrate, /write-a-prd, /grill-me
-```
-
-### Intent Capture Interview (`/onboard`)
-
-The `/onboard` skill now includes a Step 0 interview phase before setup — asking 5 targeted questions to capture undocumented project intent (common contributor mistakes, protected files, deployment model, non-obvious constraints, review culture). Answers customize the generated `CLAUDE.md`.
-
-### 7. Two-Stage Review (`/subagent-development`)
-
-Per-task review pipeline inspired by [obra/superpowers](https://github.com/obra/superpowers):
-
-```
-Implementer → Spec Compliance Review → Code Quality Review → Next Task
-```
-
-- Implementer reports status: `DONE` / `DONE_WITH_CONCERNS` / `NEEDS_CONTEXT` / `BLOCKED`
-- Spec reviewer verifies: all requirements met, nothing extra, nothing missing
-- Quality reviewer checks: SOLID, naming, error handling, tests, security
-- Prompt templates included: `reference/implementer-prompt.md`, `spec-reviewer-prompt.md`, `code-quality-reviewer-prompt.md`
-
-### 8. Ralph Wiggum Loop (`/repeat`)
-
-Autonomous agent loop with safety controls:
-
-```bash
-/repeat 5m /test          # run tests every 5 min until all pass
-/repeat --iterations 3 /review   # max 3 review passes
-```
-
-| Safety Control | Default |
-|----------------|---------|
-| Max iterations | 5 |
-| Circuit breaker | 3 consecutive failures → halt |
-| Min interval | 1 minute |
-| Exit detection | DONE / COMPLETE / ALL PASS |
-| Stats logging | Every iteration to `stats.json` |
-
-Constitution Article I, Section 4 enforces these limits.
-
-### 9. Visual Brainstorming Companion
-
-Optional browser-based companion for `/write-a-prd` and `/design-an-interface`:
-
-- Ephemeral Node.js HTTP server (auto-kills after 30min idle)
-- Dark theme, responsive, zero external dependencies
-- Per-question routing: mockups/diagrams → browser, text/conceptual → terminal
-- Consent-based: offered once as its own message, never forced
-
-### 10. Persistent Memory (`memory-pack` plugin)
-
-SQLite-based session memory (opt-in plugin pack):
-
-| Component | Purpose |
-|-----------|---------|
-| `observation-capture.sh` | PostToolUse hook — captures tool actions to SQLite |
-| `session-summary.sh` | Stop hook — AI-compress session observations |
-| `mem-search` skill | FTS5 full-text search across past sessions |
-| `<private>` tags | Content between tags stripped before storage |
-| Progressive disclosure | Summary (~500 tok) → relevant (~2k tok) → full |
-
-
-
-### 11. Persona Presets
-
-4 engineering personas that adjust Claude's communication style per role:
-
-| Persona | Focus | Key Skills |
-|---------|-------|------------|
-| `backend-lead` | System design, scalability, data integrity | `/workflow backend-feature`, `/tdd` |
-| `frontend-lead` | Component architecture, a11y, Core Web Vitals | `/design-an-interface`, `/review` |
-| `devops-eng` | IaC, CI/CD, blast radius, rollback safety | `/workflow infrastructure-change`, `/deploy` |
-| `junior-dev` | Step-by-step explanations, learning focus | `/explain`, `/explore`, `/debug` |
-
-Persistent via `--persona` at install time, or session-scoped via `/persona` runtime command.
-
-### 12. KB Integration Protocol
-
-Agents follow a research-before-action protocol enforced via rules:
-1. `smart_query()` or `hybrid_search_kb()` before any technical answer
-2. Source citation mandatory (`[PATH: kb/...]`)
-3. Strict order: KB → Files → External Docs → General Knowledge
-
----
-
-## MCP Templates
-
-25 ready-to-use MCP server configuration templates. Install any with a single command:
-
-```bash
-ai-toolkit mcp add github slack           # add GitHub + Slack MCP servers
-ai-toolkit mcp list                       # browse all 25 templates
-ai-toolkit mcp show postgres              # inspect config before adding
-ai-toolkit mcp install --editor cursor --scope project github --target .
-ai-toolkit mcp install --editor codex context7
-```
-
-Templates include: GitHub, PostgreSQL, Slack, Sentry, Context7, Brave Search, Supabase, Cloudflare, Vercel, and 16 more. Each is a validated JSON config fragment merged into `.mcp.json`.
-
-Native editor MCP install is available where the client exposes a stable config format:
-
-| Editor | Scope | Native MCP Config |
-|--------|-------|-------------------|
-| Claude Code | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` |
-| Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` |
-| GitHub Copilot | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` |
-| Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` |
-| Windsurf | global | `~/.codeium/windsurf/mcp_config.json` |
-| Cline | global | `~/.cline/data/settings/cline_mcp_settings.json` |
-| Augment | global | `~/.augment/settings.json` |
-| Codex CLI | global | `~/.codex/config.toml` |
-
-`install --local` now auto-syncs project `.mcp.json` into Claude project settings plus selected project editors that support repository/workspace MCP configs (`cursor`, `copilot`). Global-only clients are configured explicitly with `ai-toolkit mcp install --editor ...`.
-
----
-
-## Language Rules
-
-68 language-specific coding rules across 13 languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, plus common rules. Each language has 5 rule categories: coding-style, testing, patterns, frameworks, security.
-
-```bash
-ai-toolkit install --local                   # auto-detects project language, installs matching rules
-ai-toolkit install --local --lang typescript  # explicit language selection
-ai-toolkit install --local --lang go,python   # multiple languages
-```
-
-`--local` automatically detects languages using two-phase detection: config markers (package.json, go.mod, Cargo.toml, etc.) plus source file extension scanning (.py, .ts, .go, etc.). `--lang` accepts aliases (`go`, `c++`, `cs`). Rules are injected into `CLAUDE.md` and auto-updated on `ai-toolkit update --local`.
-
-When `--editors` is used alongside detected or explicit languages, language rules are propagated to all configured editors — not just Claude. Each editor receives the full rule content in its native format:
-
-| Editor | Language rule file | Activation |
-|--------|-------------------|------------|
-| Cursor | `.cursor/rules/ai-toolkit-lang-<lang>.mdc` | `globs` per file type (e.g. `**/*.py`) |
-| Windsurf | `.windsurf/rules/ai-toolkit-lang-<lang>.md` | always loaded |
-| Cline | `.clinerules/ai-toolkit-lang-<lang>.md` | always loaded |
-| Roo Code | `.roo/rules/ai-toolkit-lang-<lang>.md` | always loaded |
-| Augment | `.augment/rules/ai-toolkit-lang-<lang>.md` | `agent_requested` with globs |
-| Antigravity | `.agent/rules/ai-toolkit-lang-<lang>.md` | always loaded |
-| Codex CLI | `.agents/rules/ai-toolkit-lang-<lang>.md` | always loaded |
-
-Registered rules (`ai-toolkit add-rule`) are also propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
-
----
-
-## Extension API
-
-Generic API for external tools to inject rules and hooks into the toolkit:
-
-```bash
-# Rules — injected into CLAUDE.md with HTML markers
-ai-toolkit inject-rule ./jira-rules.md    # idempotent, source-tagged block
-ai-toolkit remove-rule jira-rules
-
-# Hooks — injected into settings.json with _source tags
-ai-toolkit inject-hook ./my-hooks.json    # idempotent, _source tagged
-ai-toolkit remove-hook my-hooks
-```
-
-Injection is idempotent — re-running updates only the marked block, never touching content outside it. See [`kb/reference/extension-api.md`](kb/reference/extension-api.md).
-
----
-
-## Manifest Install
-
-Module-level install granularity. Install only what you need:
-
-```bash
-ai-toolkit install --modules core,agents,rules-typescript
-ai-toolkit install --local                # auto-detects language, installs matching rules
-ai-toolkit status                         # show installed modules and versions
-ai-toolkit update                         # incremental re-install (only changed modules)
-```
-
-Install state is tracked in `~/.softspark/ai-toolkit/state.json`. See [`kb/reference/manifest-install.md`](kb/reference/manifest-install.md).
-
----
-
-## Plugin Packs (Opt-in)
-
-11 experimental plugin packs — domain bundles not part of the default install. Each pack bundles agents, skills, hooks, and/or rules for a specific domain.
-
-| Pack | Domain | Agents | Skills | Hooks | Description |
-|------|--------|--------|--------|-------|-------------|
-| `security-pack` | security | 3 | 3 | 2 | Security auditing, threat modeling, OWASP checks |
-| `research-pack` | research | 4 | 4 | 1 | Multi-source research, synthesis, fact-checking |
-| `frontend-pack` | frontend | 3 | 3 | 1 | React/Vue/CSS craft, SEO, design engineering |
-| `enterprise-pack` | enterprise | 3 | 3 | 3 | Executive briefings, infra architecture, status reporting |
-| `memory-pack` | memory | 0 | 1 | 2 | SQLite-based persistent memory with FTS5 search across sessions |
-| `rust-pack` | rust | 0 | 1 | 0 | Rust ownership, borrowing, Cargo, tokio, serde patterns |
-| `java-pack` | java | 0 | 1 | 0 | Records, sealed classes, Spring Boot, JUnit 5 |
-| `csharp-pack` | csharp | 0 | 1 | 0 | Nullable refs, async/await, ASP.NET Core, EF Core |
-| `kotlin-pack` | kotlin | 0 | 1 | 0 | Coroutines, DSLs, sealed classes, Ktor, MockK |
-| `swift-pack` | swift | 0 | 1 | 0 | Protocol-oriented, SwiftUI, async/await, SPM |
-| `ruby-pack` | ruby | 0 | 1 | 0 | Blocks, Rails conventions, RSpec, ActiveRecord |
-
-All packs have `status: experimental`. Each has a `plugin.json` manifest and `README.md` with installation instructions.
-
----
-
-## Config Inheritance (`extends`)
-
-Enterprise-grade configuration inheritance for multi-repo AI governance. Organizations define a shared base config published as an npm package, Git URL, or local path. Projects inherit via `.softspark-toolkit.json`:
-
-```json
-{
-  "extends": "@mycompany/ai-toolkit-config",
-  "profile": "standard"
-}
-```
-
-**Key capabilities:**
-- **Layered merge** — base config + project overrides, with deep merge for dicts, union for lists, project-wins for scalars
-- **Constitution immutability** — Articles I-V and base articles cannot be modified; projects can only ADD new articles (6+)
-- **Enforce constraints** — `requiredAgents`, `forbidOverride`, `minHookProfile`, `requiredPlugins`
-- **Override validation** — requires explicit `override: true` + justification (min 20 chars)
-- **Lock file** — `.softspark-toolkit.lock.json` pins resolved versions for reproducible installs
-- **Offline fallback** — uses cached configs from `~/.softspark/ai-toolkit/config-cache/` when registry unavailable
-
-```bash
-ai-toolkit config create-base @mycompany/ai-toolkit-config  # scaffold base package
-ai-toolkit config init --extends @mycompany/ai-toolkit-config # setup project
-ai-toolkit config validate    # schema + extends + enforcement
-ai-toolkit config diff        # project vs base differences
-ai-toolkit config check       # CI enforcement gate (exit 0/1/2, --json)
-```
-
-See [Enterprise Config Guide](kb/reference/enterprise-config-guide.md) for full documentation.
-
----
-
-## Project Registry
-
-All projects installed with `--local` are automatically registered in `~/.softspark/ai-toolkit/projects.json`. Running `ai-toolkit update` propagates updates to all registered projects in parallel.
-
-```bash
-ai-toolkit projects              # list registered projects
-ai-toolkit projects --prune      # remove stale (deleted) entries
-ai-toolkit projects remove /path # unregister specific project
-ai-toolkit update                # global update + parallel update ALL projects
-```
-
----
-
-## Comparison
-
-| Feature | ai-toolkit | everything-claude-code | wshobson/agents | ruflo |
-|---------|---------------|----------------------|-----------------|-------|
-| Skills | 92 | 100+ | 146 | 20+ |
-| Agents | 44 | 30+ | 112 | 20+ |
-| Machine-enforced constitution | **Yes** | No (docs only) | No | No |
-| Skill-scoped lifecycle hooks | **Yes** | No | No | No |
-| Effort-based model budgeting | **Yes** | No | No | No |
-| Test suite | Yes (bats) | Yes (997 tests) | No | Yes |
-| npm/npx install | Yes | Yes | Yes | Yes |
-| Cross-tool support | **Cursor, Windsurf, Copilot, Gemini, Cline, Roo, Aider, Augment, Antigravity, Codex** | 5+ tools | Smithery | Limited |
-| Selective install | Yes | Yes | Yes (72 plugins) | No |
-| Session persistence | Yes | Yes | No | No |
-| Architecture notes | **Yes** | No | No | No |
-| KB/RAG integration | **Yes** | No | No | Yes |
-| License | MIT | MIT | MIT | MIT |
-
----
-
-## Agent Teams
-
-Native support for `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` — automatically enabled during `ai-toolkit install` / `update` via `env` in `~/.claude/settings.json`.
-
-Pre-configured team presets via `/teams`:
-
-| Preset | Agents | Use Case |
-|--------|--------|----------|
-| `review` | code-reviewer, security-auditor, performance-optimizer | PR review |
-| `debug` | debugger, backend-specialist, incident-responder | Multi-file bug |
-| `feature` | orchestrator, backend-specialist, frontend-specialist, test-engineer | Full feature |
-| `fullstack` | backend-specialist, frontend-specialist, database-architect, devops-implementer | Stack feature |
-| `research` | technical-researcher, data-analyst, prompt-engineer | Deep research |
-| `security` | security-architect, security-auditor, backend-specialist | Security audit |
-| `migration` | database-architect, backend-specialist, devops-implementer | DB migration |
-
----
-
-## Cross-Tool Support
-
-| Tool | Config | Scope |
-|------|--------|-------|
-| Claude Code | `~/.claude/settings.json` (hooks), `~/.claude/` (agents, skills, constitution) | global |
-| Cursor | `~/.cursor/rules` | global |
-| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | global |
-| Gemini CLI | `~/.gemini/GEMINI.md` | global |
-| GitHub Copilot | `.github/copilot-instructions.md` | project |
-| Cline | `.clinerules` | project |
-| Roo Code | `.roomodes` | project |
-| Aider | `.aider.conf.yml` | project |
-| Augment | `.augment/rules/ai-toolkit-*.md` | project |
-| Google Antigravity | `.agent/rules/` + `.agent/workflows/` | project |
-| Codex CLI | `AGENTS.md` + `.agents/rules/` + `.agents/skills/` + `.codex/hooks.json` | project + optional global plugin layer in `HOME` |
-
-```bash
-# First-time install (Claude + Cursor + Windsurf + Gemini)
-ai-toolkit install
-
-# After npm update — re-apply updated components
-ai-toolkit update
-
-# Init project (Claude Code configs only: CLAUDE.md, settings, constitution, language rules)
-ai-toolkit install --local
-
-# Init with all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex)
-ai-toolkit install --local --editors all
-
-# Update project — auto-detects editors from existing config files
-ai-toolkit update --local
-```
-
-> `install --local` prepares project files only. Hooks stay global and remain merged into `~/.claude/settings.json`. Git hooks are added as a safety fallback for editors without native hooks.
-
----
-
-## Session Persistence
-
-Context survives across Claude Code sessions:
-
-```bash
-# Enabled by default after install
-# Saved to: .claude/session-context.md
-# Loaded on: SessionStart hook
-```
-
----
-
-## Hook Runtime Profiles
-
-```bash
-# In .claude/settings.local.json
-{
-  "env": {
-    "TOOLKIT_HOOK_PROFILE": "minimal"  # minimal | standard | strict
-  }
-}
-```
-
-| Profile | Description |
-|---------|-------------|
-| `minimal` | Destructive command guard only |
-| `standard` | All hooks (default) |
-| `strict` | Standard + coverage enforcement + strict type checks |
-
----
-
-## Post-Install Setup
-
-1. **Customize CLAUDE.md** — add your project's tech stack, commands, and conventions at the top (above the toolkit markers).
-
-2. **Configure settings**:
-   ```bash
-   # .claude/settings.local.json
-   {
-     "mcpServers": { ... },
-     "env": { "TOOLKIT_HOOK_PROFILE": "standard" }
-   }
+2. **Start using skills:**
    ```
-
-3. **Verify**:
-   ```bash
-   ai-toolkit validate
-   ```
-
-4. **Start**:
-   ```
-   /onboard     # guided setup
+   /onboard     # guided setup interview
    /explore     # understand your codebase
    /plan        # plan a feature
    ```
 
----
-
-## CLI Reference
-
-```
-Usage: ai-toolkit <command> [options]
-```
-
-| Command | Description |
-|---------|-------------|
-| `install` | First-time global install into `~/.claude/` + Cursor, Windsurf, Gemini |
-| `install --local` | Claude Code configs only; add `--editors all` or `--editors cursor,aider` for other tools |
-| `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
-| `update --local` | Re-apply + auto-detect editors from existing project files |
-| `reset --local` | Wipe all project-local configs and recreate from scratch (clean slate) |
-| `add-rule <rule.md> [name]` | Register rule in `~/.softspark/ai-toolkit/rules/` — auto-applied on every `update` |
-| `remove-rule <name> [dir]` | Unregister rule from `~/.softspark/ai-toolkit/rules/` and remove its block from `CLAUDE.md` |
-| `inject-hook <file.json>` | Inject external hooks into settings.json (idempotent, `_source` tagged) |
-| `remove-hook <name>` | Remove injected hooks by source name |
-| `mcp list` | List available MCP server templates (25 templates) |
-| `mcp editors` | List editors with native MCP config adapters and scopes |
-| `mcp add <name> [names...]` | Add MCP server template(s) to `.mcp.json` |
-| `mcp install --editor <name[,..]> [names...]` | Install templates into native editor MCP config |
-| `mcp show <name>` | Show MCP template config details |
-| `mcp remove <name>` | Remove MCP server from `.mcp.json` or editor MCP config |
-| `config validate [path]` | Validate `.softspark-toolkit.json` schema + extends + enforcement |
-| `config diff [path]` | Show project vs base config differences |
-| `config init [flags]` | Create `.softspark-toolkit.json` (`--extends`, `--profile`, `--no-extends`) |
-| `config create-base <name>` | Scaffold base config npm package |
-| `config check [path]` | CI enforcement gate (exit 0=pass, 1=fail, 2=no config; `--json`) |
-| `projects` | List registered projects (`--prune` to clean stale, `remove <path>`) |
-| `status` | Show installed modules and version |
-| `update` | Re-install with saved modules + update all registered projects |
-| `validate` | Verify toolkit integrity (`--strict` for CI-grade, warnings = errors) |
-| `doctor` | Diagnose install health, hooks, quick-win assets, and artifact drift |
-| `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |
-| `eject [dir]` | Export standalone config (no symlinks, no toolkit dependency) |
-| `plugin list` | Show available plugin packs with install status |
-| `plugin install <name> [--editor claude|codex|all]` | Install a plugin pack for selected runtime(s) |
-| `plugin install --all [--editor claude|codex|all]` | Install all 11 plugin packs for selected runtime(s) |
-| `plugin update <name> [--editor claude|codex|all]` | Update a plugin pack (remove + reinstall, preserves data) |
-| `plugin update --all [--editor claude|codex|all]` | Update all installed plugin packs for selected runtime(s) |
-| `plugin clean <name> [--days N]` | Prune old plugin data (default: 90 days) |
-| `plugin remove <name> [--editor claude|codex|all]` | Remove a plugin pack from selected runtime(s) |
-| `plugin status [--editor claude|codex|all]` | Show installed plugins with runtime-specific details |
-| `stats` | Show skill usage statistics (`--reset` to clear, `--json` for raw output) |
-| `benchmark --my-config` | Compare your installed config vs toolkit defaults vs ecosystem |
-| `benchmark-ecosystem` | Generate a benchmark snapshot for official Claude Code and external ecosystem repos |
-| `create skill <name>` | Scaffold new skill from template (`--template=linter\|reviewer\|generator\|workflow\|knowledge`) |
-| `sync` | Config portability via GitHub Gist (`--export`, `--push`, `--pull`, `--import`) |
-| `evaluate` | Run skill evaluation suite |
-| `uninstall` | Remove toolkit from `~/.claude/` |
-| `cursor-rules` | Generate `.cursorrules` in current dir |
-| `windsurf-rules` | Generate `.windsurfrules` in current dir |
-| `copilot-instructions` | Generate `.github/copilot-instructions.md` in current dir |
-| `gemini-md` | Generate `GEMINI.md` in current dir |
-| `cline-rules` | Generate `.clinerules` in current dir |
-| `roo-modes` | Generate `.roomodes` in current dir |
-| `aider-conf` | Generate `.aider.conf.yml` in current dir |
-| `conventions-md` | Generate `CONVENTIONS.md` for Aider (auto-loaded) |
-| `augment-rules` | Generate `.augment/rules/ai-toolkit.md` (legacy single file) |
-| `augment-dir-rules` | Generate `.augment/rules/ai-toolkit-*.md` (recommended) |
-| `cursor-mdc` | Generate `.cursor/rules/*.mdc` for Cursor (recommended) |
-| `windsurf-dir-rules` | Generate `.windsurf/rules/*.md` for Windsurf |
-| `cline-dir-rules` | Generate `.cline/rules/*.md` for Cline |
-| `roo-dir-rules` | Generate `.roo/rules/*.md` for Roo Code |
-| `antigravity-rules` | Generate `.agent/rules/` and `.agent/workflows/` for Google Antigravity |
-| `codex-md` | Generate `AGENTS.md` with marker injection for Codex CLI |
-| `codex-rules` | Generate `.agents/rules/*.md` for Codex CLI |
-| `codex-hooks` | Generate `.codex/hooks.json` for Codex CLI (9 hooks in 4 events) |
-| `agents-md` | Regenerate `AGENTS.md` from agent definitions |
-| `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
-| `generate-all` | Generate all platform configs at once |
-| `help` | Show help |
-
-**Options for `install` and `update`:**
-
-```bash
-ai-toolkit install --only agents,hooks   # apply only listed components
-ai-toolkit install --skip hooks          # skip listed components
-ai-toolkit install --profile minimal     # profile preset: minimal | standard | strict
-ai-toolkit install --persona backend-lead # persona preset: backend-lead | frontend-lead | devops-eng | junior-dev
-ai-toolkit install --local               # Claude Code only (CLAUDE.md, settings, constitution, language rules)
-ai-toolkit install --local --editors all # Claude Code + all editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex)
-ai-toolkit install --local --editors cursor,aider  # Claude Code + specific editors
-ai-toolkit update --local                # re-apply; auto-detects editors from existing project files
-ai-toolkit install --list                # dry-run: show what would be applied
-ai-toolkit install --modules core,agents,rules-typescript  # selective module install
-ai-toolkit install --lang typescript     # explicit language for rules install
-```
+3. **Verify your install:**
+   ```bash
+   ai-toolkit validate
+   ```
 
 ---
 
-## Injecting Rules from Another Repo
+## Documentation
 
-Any repo can register its rules so they are automatically injected into all AI tool configs on every `update`:
-
-```bash
-cd /path/to/your-repo
-ai-toolkit add-rule ./jira-rules.md
-# Registered: 'jira-rules' → ~/.softspark/ai-toolkit/rules/jira-rules.md
-
-ai-toolkit update
-# → injects jira-rules into ~/.claude/CLAUDE.md, ~/.cursor/rules, Windsurf, Gemini
-```
-
-Rules are stored in `~/.softspark/ai-toolkit/rules/` and re-applied on every `update`. Injection is **idempotent** — re-running updates only the marked block, never touching content outside it.
-
-To unregister:
-
-```bash
-ai-toolkit remove-rule jira-rules
-# Removes from ~/.softspark/ai-toolkit/rules/ and strips the block from ~/.claude/CLAUDE.md
-```
-
-See [`kb/reference/integrations.md`](kb/reference/integrations.md) for known integrations.
+| Topic | Link |
+|-------|------|
+| CLI Reference | [kb/reference/cli-reference.md](kb/reference/cli-reference.md) |
+| Unique Features | [kb/reference/unique-features.md](kb/reference/unique-features.md) |
+| Architecture Overview | [kb/reference/architecture-overview.md](kb/reference/architecture-overview.md) |
+| Hooks Catalog | [kb/reference/hooks-catalog.md](kb/reference/hooks-catalog.md) |
+| Language Rules | [kb/reference/language-rules.md](kb/reference/language-rules.md) |
+| MCP Templates | [kb/reference/mcp-templates.md](kb/reference/mcp-templates.md) |
+| Extension API | [kb/reference/extension-api.md](kb/reference/extension-api.md) |
+| Manifest Install | [kb/reference/manifest-install.md](kb/reference/manifest-install.md) |
+| Plugin Packs | [kb/reference/plugin-pack-conventions.md](kb/reference/plugin-pack-conventions.md) |
+| Enterprise Config | [kb/reference/enterprise-config-guide.md](kb/reference/enterprise-config-guide.md) |
+| Distribution Model | [kb/reference/distribution-model.md](kb/reference/distribution-model.md) |
+| Ecosystem Comparison | [kb/reference/comparison.md](kb/reference/comparison.md) |
+| Codex CLI Compatibility | [kb/reference/codex-cli-compatibility.md](kb/reference/codex-cli-compatibility.md) |
+| Maintenance SOP | [kb/procedures/maintenance-sop.md](kb/procedures/maintenance-sop.md) |
 
 ---
 
@@ -940,7 +281,7 @@ See [SECURITY.md](SECURITY.md) for responsible disclosure policy.
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
 ## Changelog
 

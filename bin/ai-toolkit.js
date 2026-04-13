@@ -203,11 +203,12 @@ function showHelp() {
   console.log('\nOptions for install / update:');
   console.log('  --only <list>   Apply only listed components (e.g. agents,hooks,cursor,windsurf,gemini)');
   console.log('  --skip <list>   Skip listed components');
-  console.log('  --local         Also set up project-local configs (CLAUDE.md, settings, constitution, copilot, cline, roo, aider, git hooks)');
+  console.log('  --local         Also set up project-local configs (CLAUDE.md, settings, constitution, language rules, git hooks)');
   console.log('  --profile <p>   Install profile: minimal (agents+skills), standard (default), strict (all+git hooks)');
+  console.log('  --persona <p>   Persona preset: backend-lead, frontend-lead, devops-eng, junior-dev');
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
   console.log('  --lang <list>   Explicitly select language rules (e.g. typescript, go,python)');
-  console.log('  --editors <list> Install editor configs: cursor,windsurf,cline,roo,aider,augment,copilot,antigravity (or "all")');
+  console.log('  --editors <list> Install editor configs: cursor,windsurf,cline,roo,aider,augment,copilot,antigravity,codex (or "all")');
   console.log('                  Default with --local: auto-detect from existing project files');
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
