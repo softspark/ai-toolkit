@@ -106,6 +106,7 @@ def inject_with_rules(
     parts: list[str] = []
     if existing.strip():
         parts.append(existing)
+        parts.append("")  # blank line separator
     parts.append(generated.rstrip("\n"))
 
     output = "\n".join(parts) + "\n"
