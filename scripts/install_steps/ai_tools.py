@@ -1,7 +1,6 @@
 """Install AI tool configs (Cursor, Windsurf, Gemini, Augment, Codex) and local project setup."""
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -79,14 +78,12 @@ def inject_with_rules(
     else:
         cmd = ["bash", str(scripts_dir / generator_script)]
 
-    env = {**os.environ, "_TOOLKIT_INJECT_MODE": "1"}
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"  ERROR: {generator_script} failed: {result.stderr.strip()}")
         return
 
     generated = result.stdout
-    start_marker = "<!-- TOOLKIT:ai-toolkit START -->"
 
     target_file = Path(target_file)
     target_file.parent.mkdir(parents=True, exist_ok=True)
@@ -94,26 +91,27 @@ def inject_with_rules(
         target_file.touch()
 
     existing = target_file.read_text(encoding="utf-8")
-    if start_marker in existing:
-        existing = _strip_section(existing, "ai-toolkit")
+    # Strip ALL toolkit sections from existing — generated output is the
+    # complete source of truth (includes ai-toolkit block + custom rules)
+    import re
+    existing = re.sub(
+        r"<!-- TOOLKIT:[^ ]+ START -->.*?<!-- TOOLKIT:[^ ]+ END -->\n?",
+        "",
+        existing,
+        flags=re.DOTALL,
+    )
     existing = _trim_trailing_blanks(existing)
-    existing = existing.lstrip("\n")  # no leading blank lines
+    existing = existing.lstrip("\n")
 
     parts: list[str] = []
     if existing.strip():
         parts.append(existing)
-        parts.append("")
     parts.append(generated.rstrip("\n"))
 
     output = "\n".join(parts) + "\n"
     output = _collapse_blank_runs(output)
-    output = output.lstrip("\n")  # no leading blank lines
+    output = output.lstrip("\n")
     target_file.write_text(output, encoding="utf-8")
-
-    if rules_dir.is_dir():
-        for rule_file in sorted(rules_dir.glob("*.md")):
-            inject_section(rule_file, target_file, rule_file.stem)
-
     print(f"  Updated: {target_file}")
 
 
