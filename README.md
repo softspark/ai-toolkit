@@ -10,13 +10,12 @@
 
 ---
 
-## What's New in v2.1.0
+## What's New in v2.1.1
 
-- **Codex CLI as 11th platform** — full support: `AGENTS.md`, `.agents/rules/`, `.agents/skills/`, `.codex/hooks.json`
-- **Native editor MCP install** — `mcp install --editor <name>` renders templates into 8 editor-native config formats
-- **Runtime-aware plugin system** — `--editor claude|codex|all` targets Claude and global Codex plugin layer
-- **Codex skill translation** — Claude-only orchestration skills auto-translated to Codex-native wrappers
 - **Custom rules in generators** — `generate:all` now preserves registered rules from other repos across all platforms
+- **README restructured** — 951 → 292 lines with TOC, "What's New" section, and links to KB docs
+- **CLI help completeness** — added missing `--persona` option and `codex` to `--editors`
+- **3 new KB docs** — CLI Reference, Unique Features, Ecosystem Comparison (moved from README)
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

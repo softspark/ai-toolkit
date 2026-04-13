@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.1.1 — Custom Rules in Generators & README Restructure (2026-04-13)
+
+### Fixed
+- **Custom rules in generators** — `generate:all` now includes registered custom rules (from `ai-toolkit add-rule`) in all single-file generators (Cursor, Windsurf, Copilot, Gemini, AGENTS.md) and directory-based generators (Cline, Roo, Codex, Augment, Antigravity, Cursor MDC). Previously custom rules were lost on regeneration.
+- **AGENTS.md double generation** — `generate-all` CLI no longer generates AGENTS.md twice; uses `codex-md` (superset) only
+- **CLI help completeness** — added missing `--persona` option and `codex` to `--editors` list in `ai-toolkit help`
+
+### Changed
+- **README restructured** — reduced from 951 to 292 lines with Table of Contents, "What's New" section, and links to KB docs. Detailed content moved to dedicated KB documents.
+- **npm `generate:agents`** — now uses `generate_codex.py` (consistent with CLI `generate-all`)
+- **Test assertions** — generator file count tests use `>= 6` to accommodate registered custom rules
+
+### New Files
+- `kb/reference/cli-reference.md` — complete CLI command reference (moved from README)
+- `kb/reference/unique-features.md` — detailed differentiators documentation (moved from README)
+- `kb/reference/comparison.md` — ecosystem comparison table (moved from README)
+
+---
+
 ## v2.1.0 — Codex CLI Support & Native Editor MCP Install (2026-04-13)
 
 ### Added
