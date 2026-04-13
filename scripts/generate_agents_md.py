@@ -10,8 +10,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import subprocess
+
 from _common import agents_dir, frontmatter_field
-from paths import RULES_DIR
 
 
 def main() -> None:
@@ -87,17 +88,17 @@ def main() -> None:
         print("---")
         print()
 
-    # Registered custom rules from ~/.softspark/ai-toolkit/rules/
-    if RULES_DIR.is_dir():
-        for rule_file in sorted(RULES_DIR.glob("*.md")):
-            rule_name = rule_file.stem
-            print(f"<!-- TOOLKIT:{rule_name} START -->")
-            print("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
-            print()
-            print(rule_file.read_text(encoding="utf-8").rstrip())
-            print()
-            print(f"<!-- TOOLKIT:{rule_name} END -->")
+    # Codex CLI configuration block (agents, skills, guidelines)
+    codex_script = Path(__file__).resolve().parent / "generate_codex.py"
+    result = subprocess.run(
+        ["python3", str(codex_script)],
+        capture_output=True, text=True,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        print(result.stdout.rstrip())
         print()
+
+    # Note: custom rules are included via generate_codex.py output above
 
 
 if __name__ == "__main__":
