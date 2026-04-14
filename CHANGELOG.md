@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.3.0 — Jira MCP Template & Cross-Editor Sync (2026-04-14)
+
+### Added
+- **Jira MCP template** — `ai-toolkit mcp add jira` installs `@softspark/jira-mcp` via global binary. Templates now support `postInstall` field for first-time setup hints shown after `mcp add`, `mcp install`, and `mcp show`. MCP template count: 25 → 26.
+- **MCP template tracking** — globally installed templates are recorded in `state.json`. `ai-toolkit update` automatically syncs tracked templates to Claude global config. `ai-toolkit status` shows tracked MCP templates. "Install once, sync everywhere."
+
+### Fixed
+- **Claude MCP config paths** — corrected to `~/.claude.json` (global) and `.mcp.json` (project) per official Claude Code docs. Previously wrote to `~/.claude/settings.json` and `.claude/settings.local.json`.
+- **Jira MCP template uses global binary** — `jira-mcp` instead of `npx -y` for faster startup and offline support
+
+---
+
 ## v2.2.0 — URL Rules & Registry Safety (2026-04-14)
 
 ### Added
