@@ -227,6 +227,40 @@ assert 'github' not in cfg['mcpServers']
     [ "$status" -ne 0 ]
 }
 
+# ── MCP template tracking in state.json ───────────────────────────────────
+
+@test "mcp install global: tracks template in state.json" {
+    export AI_TOOLKIT_HOME="$TEST_TMP/.softspark/ai-toolkit"
+    mkdir -p "$AI_TOOLKIT_HOME"
+    run $MCP_MANAGER install jira --editor claude --scope global
+    [ "$status" -eq 0 ]
+    run python3 -c "
+import json
+with open('$AI_TOOLKIT_HOME/state.json') as f:
+    state = json.load(f)
+assert 'jira' in state.get('mcp_templates', []), f'jira not tracked: {state}'
+"
+    [ "$status" -eq 0 ]
+}
+
+@test "mcp remove global: unregisters template from state.json" {
+    export AI_TOOLKIT_HOME="$TEST_TMP/.softspark/ai-toolkit"
+    mkdir -p "$AI_TOOLKIT_HOME"
+    # Install first
+    run $MCP_MANAGER install jira --editor claude --scope global
+    [ "$status" -eq 0 ]
+    # Remove
+    run $MCP_MANAGER remove jira --editor claude --scope global
+    [ "$status" -eq 0 ]
+    run python3 -c "
+import json
+with open('$AI_TOOLKIT_HOME/state.json') as f:
+    state = json.load(f)
+assert 'jira' not in state.get('mcp_templates', []), f'jira still tracked: {state}'
+"
+    [ "$status" -eq 0 ]
+}
+
 # ── template validation ────────────────────────────────────────────────────
 
 @test "mcp: all template JSON files are valid" {

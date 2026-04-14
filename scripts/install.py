@@ -432,6 +432,38 @@ def install_claude_code(target_dir: Path, hooks_scripts_dir: Path,
     inject_rules(claude_dir, target_dir, rules_dir, only, skip, dry_run,
                  refresh_urls=True)
 
+    _sync_mcp_templates(dry_run)
+
+
+def _sync_mcp_templates(dry_run: bool) -> None:
+    """Re-install tracked MCP templates into Claude global config."""
+    from install_steps.install_state import get_mcp_templates
+
+    templates = get_mcp_templates()
+    if not templates:
+        return
+
+    if dry_run:
+        print(f"  Would sync MCP templates: {', '.join(templates)}")
+        return
+
+    from mcp_editors import install_servers
+
+    servers: dict = {}
+    for name in templates:
+        try:
+            tpl_path = app_dir / "mcp-templates" / f"{name}.json"
+            if tpl_path.is_file():
+                import json as _json
+                data = _json.loads(tpl_path.read_text(encoding="utf-8"))
+                servers.update(data.get("mcpServers", {}))
+        except Exception:
+            pass  # Skip broken templates silently
+
+    if servers:
+        install_servers(["claude"], servers, scope="global")
+        print(f"  MCP synced: {', '.join(templates)}")
+
 
 VALID_PERSONAS = ("backend-lead", "frontend-lead", "devops-eng", "junior-dev")
 

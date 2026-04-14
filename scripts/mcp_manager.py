@@ -215,6 +215,12 @@ def cmd_install(
     for path in updated:
         print(f"Updated: {path}")
 
+    # Track globally installed templates in state.json
+    if eff_scope == "global" and names:
+        from install_steps.install_state import record_mcp_template
+        for name in names:
+            record_mcp_template(name)
+
     # Show postInstall hints from installed templates
     if names:
         for name in names:
@@ -243,6 +249,9 @@ def cmd_remove(name: str, target_dir: Path | None, *, editors: list[str], scope:
             )
         else:
             updated = remove_servers(editors, [name], scope="global")
+            # Untrack globally removed template from state.json
+            from install_steps.install_state import remove_mcp_template
+            remove_mcp_template(name)
         for path in updated:
             print(f"Updated: {path}")
         print(f"Removed: {name}")

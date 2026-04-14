@@ -60,6 +60,31 @@ def get_installed_profile() -> str:
     return state.get("profile", "")
 
 
+def get_mcp_templates() -> list[str]:
+    """Return list of globally tracked MCP template names."""
+    state = load_state()
+    templates = state.get("mcp_templates", [])
+    return templates if isinstance(templates, list) else []
+
+
+def record_mcp_template(name: str) -> None:
+    """Add a template name to the tracked set in state.json."""
+    state = load_state()
+    templates = set(state.get("mcp_templates", []))
+    templates.add(name)
+    state["mcp_templates"] = sorted(templates)
+    save_state(state)
+
+
+def remove_mcp_template(name: str) -> None:
+    """Remove a template name from the tracked set in state.json."""
+    state = load_state()
+    templates = set(state.get("mcp_templates", []))
+    templates.discard(name)
+    state["mcp_templates"] = sorted(templates)
+    save_state(state)
+
+
 def _now_iso() -> str:
     """Return current UTC time in ISO 8601 format."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -137,6 +162,10 @@ def print_status() -> None:
         # Strip "rules-" prefix for readability
         langs = [m.replace("rules-", "") for m in detected]
         print(f"  Detected:   {', '.join(langs)}")
+
+    mcp = state.get("mcp_templates", [])
+    if mcp:
+        print(f"  MCP:        {', '.join(mcp)}")
 
     extends = state.get("extends")
     if extends:
