@@ -4774,7 +4774,7 @@ Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practic
 ## Extension Points
 
 ### MCP Templates
-`app/plugins/mcp-templates/` contains 25 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
+`app/plugins/mcp-templates/` contains 26 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
 ### Language Rules
 `app/rules/` provides language-specific rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`. See README.md for current count.
@@ -5164,7 +5164,7 @@ Usage: ai-toolkit <command> [options]
 
 | Command | Description |
 |---------|-------------|
-| `mcp list` | List available MCP server templates (25 templates) |
+| `mcp list` | List available MCP server templates (26 templates) |
 | `mcp editors` | List editors with native MCP config adapters and scopes |
 | `mcp add <name> [names...]` | Add MCP server template(s) to `.mcp.json` |
 | `mcp install --editor <name[,..]> [names...]` | Install templates into native editor MCP config |
@@ -7814,7 +7814,7 @@ Modules are defined in `manifest.json` at the repository root. There are 17 modu
 | `rules-php` | PHP-specific rules (5 files) | auto-detect |
 | `rules-cpp` | C++-specific rules (5 files) | auto-detect |
 | `rules-ruby` | Ruby-specific rules (5 files) | auto-detect |
-| `mcp-templates` | 25 MCP server config templates | strict, full |
+| `mcp-templates` | 26 MCP server config templates | strict, full |
 
 ## Profiles
 
@@ -8018,14 +8018,14 @@ tags: [mcp, templates, servers, configuration, editors]
 version: "1.1.0"
 created: "2026-04-07"
 last_updated: "2026-04-12"
-description: "Reference for 25 MCP server templates plus native editor MCP installation support."
+description: "Reference for 26 MCP server templates plus native editor MCP installation support."
 ---
 
 # MCP Server Templates
 
 ## Overview
 
-ai-toolkit ships 25 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
+ai-toolkit ships 26 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
 
 ## CLI
 
