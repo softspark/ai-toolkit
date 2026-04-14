@@ -164,15 +164,15 @@ assert 'github' in cfg['mcp_servers']
     [ "$status" -eq 0 ]
 }
 
-@test "mcp install project without names syncs existing .mcp.json into Claude settings" {
+@test "mcp install project without names syncs existing .mcp.json into Claude .mcp.json" {
     run $MCP_MANAGER add github --target "$TEST_TMP"
     [ "$status" -eq 0 ]
     run $MCP_MANAGER install --editor claude --scope project --target "$TEST_TMP"
     [ "$status" -eq 0 ]
-    [ -f "$TEST_TMP/.claude/settings.local.json" ]
+    [ -f "$TEST_TMP/.mcp.json" ]
     run python3 -c "
 import json
-cfg = json.load(open('$TEST_TMP/.claude/settings.local.json'))
+cfg = json.load(open('$TEST_TMP/.mcp.json'))
 assert 'github' in cfg['mcpServers']
 "
     [ "$status" -eq 0 ]

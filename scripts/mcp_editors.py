@@ -15,8 +15,8 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.11+ should have tomll
 EDITOR_SPECS: dict[str, dict[str, str | None]] = {
     "claude": {
         "label": "Claude Code",
-        "project_path": ".claude/settings.local.json",
-        "global_path": ".claude/settings.json",
+        "project_path": ".mcp.json",
+        "global_path": ".claude.json",
         "format": "json",
         "doc_scope": "project + global",
     },
