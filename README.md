@@ -10,12 +10,13 @@
 
 ---
 
-## What's New in v2.1.3
+## What's New in v2.3.0
 
-- **Idempotent update** — `ai-toolkit update` no longer dirties git with extra blank lines in generated files
-- **Custom rules in generators** — `generate:all` preserves registered rules from other repos across all platforms
-- **README restructured** — 951 → 292 lines with TOC, links to KB docs
-- **3 new KB docs** — CLI Reference, Unique Features, Ecosystem Comparison
+- **URL rule registration** — `ai-toolkit add-rule https://...` with auto-refresh on every update
+- **Jira MCP template** — `ai-toolkit mcp add jira` with `postInstall` setup hints
+- **MCP template tracking** — globally installed templates saved in `state.json`, auto-synced on `update`
+- **Race condition fix** — parallel project updates no longer drop registry entries (fcntl.flock + atomic writes)
+- **Claude MCP paths fixed** — now uses `~/.claude.json` (global) and `.mcp.json` (project) per official docs
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

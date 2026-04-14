@@ -646,6 +646,23 @@ def _validate_version_sync(tk_dir: Path, vr: ValidationResult) -> None:
         detail = ", ".join(f"{k}={v}" for k, v in versions.items())
         vr.error(f"Version mismatch across files: {detail}")
 
+    # Check README "What's New" section matches current version
+    pkg_version = versions.get("package.json", "")
+    if pkg_version:
+        readme = tk_dir / "README.md"
+        if readme.is_file():
+            content = readme.read_text(encoding="utf-8")
+            m = re.search(r"## What's New in v([\d.]+)", content)
+            if m:
+                whats_new_ver = m.group(1)
+                if whats_new_ver == pkg_version:
+                    print(f"  OK: README \"What's New\" (v{whats_new_ver})")
+                else:
+                    vr.error(
+                        f"README \"What's New in v{whats_new_ver}\" "
+                        f"is stale (package.json is v{pkg_version})"
+                    )
+
 
 def validate_content_quality(tk_dir: Path, vr: ValidationResult) -> None:
     """Check content quality: name matches directory, non-empty body."""
