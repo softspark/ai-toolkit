@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.2.0 — URL Rules & Registry Safety (2026-04-14)
+
+### Added
+- **URL rule registration** — `ai-toolkit add-rule https://...` registers rules from HTTPS URLs. URL-sourced rules are tracked in `rules/sources.json` and auto-refreshed on every `ai-toolkit update`. Falls back to cached local copy on network failure.
+- **Version consistency validation** — `validate.py --strict` now cross-checks `package.json`, `manifest.json`, and `plugin.json` versions match
+
+### Fixed
+- **Project registry race condition** — parallel `install --local` during `ai-toolkit update` could silently drop registry entries. Fixed with `fcntl.flock` exclusive lock, atomic writes (tempfile + rename), and deferred sequential registration after parallel phase.
+- **Version drift** — `manifest.json` and `plugin.json` were stuck at 1.9.0 since v2.0.0, now synced
+- **Language rules count** — ARCHITECTURE.md claimed 70 files, actual is 68
+- **Skills catalog tiers** — added missing Tier 1.5 (planning pipeline + design/architecture)
+
+---
+
 ## v2.1.3 — Idempotent Update Fix (2026-04-13)
 
 ### Fixed

@@ -3441,6 +3441,7 @@ Follow this sequence before every `npm publish` / `git tag`:
 
 ```bash
 # Edit package.json version field (semver: X.Y.Z)
+# Sync package-lock.json: npm install --package-lock-only
 # Add entry to CHANGELOG.md
 ```
 
@@ -3619,8 +3620,9 @@ The canonical version lives in `package.json`. These files **must** match:
 | `README.md` | Badge counts, "What You Get" table |
 | `app/ARCHITECTURE.md` | Section headings with counts |
 
-> **Tip:** `validate.py --strict` and `npm test` (metadata contract tests) catch
-> count drift automatically. If tests pass, counts are correct.
+> **Tip:** `validate.py --strict` catches count drift AND version mismatches
+> (package.json vs manifest.json vs plugin.json) automatically.
+> If validation passes, counts and versions are correct.
 
 ### Verification command
 
@@ -8518,7 +8520,9 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 
 | Tier | Skills | When |
 |------|--------|------|
-| **1 — Quick single-agent** | `/debug`, `/review`, `/refactor`, `/analyze`, `/docs`, `/plan`, `/explain` | One concern, fast |
+| **1 — Quick single-agent** | `/debug`, `/review`, `/refactor`, `/analyze`, `/docs`, `/plan`, `/explain`, `/tdd`, `/grill-me`, `/triage-issue` | One concern, fast |
+| **1.5 — Product planning** | `/write-a-prd` → `/prd-to-plan` → `/prd-to-issues` | Interview-driven PRD → vertical-slice plan → GitHub issues |
+| **1.5 — Design & architecture** | `/design-an-interface`, `/architecture-audit`, `/refactor-plan`, `/ubiquitous-language`, `/qa-session` | Parallel sub-agent exploration |
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
