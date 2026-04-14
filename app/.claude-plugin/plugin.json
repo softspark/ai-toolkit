@@ -1,7 +1,7 @@
 {
   "name": "ai-toolkit",
   "description": "Professional-grade Claude Code toolkit with persona presets, skill security auditor, expanded lifecycle hooks, experimental opt-in plugin packs, benchmark harvesting, and multi-tool support.",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "author": {
     "name": "SoftSpark",
     "url": "https://github.com/softspark"

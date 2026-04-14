@@ -10,7 +10,7 @@
 
 ---
 
-## What's New in v2.3.0
+## What's New in v2.3.1
 
 - **URL rule registration** — `ai-toolkit add-rule https://...` with auto-refresh on every update
 - **Jira MCP template** — `ai-toolkit mcp add jira` with `postInstall` setup hints

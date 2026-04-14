@@ -7,6 +7,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.3.1 — Release Quality Gate (2026-04-14)
+
+### Fixed
+- **README "What's New" section** — was stuck at v2.1.3, now auto-validated by `validate.py --strict`
+- **Release SOP** — added mandatory "Update README What's New" step to Phase 3 checklist
+
+---
+
 ## v2.3.0 — Jira MCP Template & Cross-Editor Sync (2026-04-14)
 
 ### Added

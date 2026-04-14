@@ -3669,6 +3669,18 @@ Add entry at the top of `CHANGELOG.md` (after the header, before previous releas
 - Date format: `YYYY-MM-DD`
 - Title: short, descriptive, no version number repetition
 
+### Update README "What's New" section
+
+**MANDATORY on every release.** Update the `## What's New in vX.Y.Z` section in `README.md`:
+
+1. Change the heading version: `## What's New in vX.Y.Z`
+2. Replace bullet points with 3-5 highlights from this release
+3. Keep the `See [CHANGELOG.md](CHANGELOG.md) for full history.` link
+
+> **Warning:** This section is the first thing users see after the badges.
+> A stale version here (e.g., "What's New in v2.1.3" when shipping v2.3.0)
+> signals an unmaintained project. Do NOT skip this step.
+
 ---
 
 ## Phase 4: Regenerate Artifacts
