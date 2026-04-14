@@ -610,8 +610,41 @@ def validate_metadata_contracts(
     else:
         print(f"  OK: tests ({actual_tests})")
 
+    # Cross-validate versions: package.json vs manifest.json vs plugin.json
+    _validate_version_sync(tk_dir, vr)
+
     print()
     return actual_tests
+
+
+def _validate_version_sync(tk_dir: Path, vr: ValidationResult) -> None:
+    """Ensure package.json, manifest.json, and plugin.json versions match."""
+    import json as _json
+
+    version_files = {
+        "package.json": tk_dir / "package.json",
+        "manifest.json": tk_dir / "manifest.json",
+        "plugin.json": tk_dir / "app" / ".claude-plugin" / "plugin.json",
+    }
+
+    versions: dict[str, str] = {}
+    for name, path in version_files.items():
+        if path.is_file():
+            try:
+                data = _json.loads(path.read_text(encoding="utf-8"))
+                versions[name] = data.get("version", "")
+            except Exception:
+                pass
+
+    if len(versions) < 2:
+        return  # Not enough files to compare (e.g., installed copy without source)
+
+    unique = set(versions.values())
+    if len(unique) == 1:
+        print(f"  OK: version sync ({unique.pop()})")
+    else:
+        detail = ", ".join(f"{k}={v}" for k, v in versions.items())
+        vr.error(f"Version mismatch across files: {detail}")
 
 
 def validate_content_quality(tk_dir: Path, vr: ValidationResult) -> None:

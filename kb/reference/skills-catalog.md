@@ -17,7 +17,9 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 
 | Tier | Skills | When |
 |------|--------|------|
-| **1 — Quick single-agent** | `/debug`, `/review`, `/refactor`, `/analyze`, `/docs`, `/plan`, `/explain` | One concern, fast |
+| **1 — Quick single-agent** | `/debug`, `/review`, `/refactor`, `/analyze`, `/docs`, `/plan`, `/explain`, `/tdd`, `/grill-me`, `/triage-issue` | One concern, fast |
+| **1.5 — Product planning** | `/write-a-prd` → `/prd-to-plan` → `/prd-to-issues` | Interview-driven PRD → vertical-slice plan → GitHub issues |
+| **1.5 — Design & architecture** | `/design-an-interface`, `/architecture-audit`, `/refactor-plan`, `/ubiquitous-language`, `/qa-session` | Parallel sub-agent exploration |
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 

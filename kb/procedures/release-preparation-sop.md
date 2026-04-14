@@ -108,8 +108,9 @@ The canonical version lives in `package.json`. These files **must** match:
 | `README.md` | Badge counts, "What You Get" table |
 | `app/ARCHITECTURE.md` | Section headings with counts |
 
-> **Tip:** `validate.py --strict` and `npm test` (metadata contract tests) catch
-> count drift automatically. If tests pass, counts are correct.
+> **Tip:** `validate.py --strict` catches count drift AND version mismatches
+> (package.json vs manifest.json vs plugin.json) automatically.
+> If validation passes, counts and versions are correct.
 
 ### Verification command
 

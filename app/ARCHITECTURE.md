@@ -304,7 +304,7 @@ Lead Session (You)
 ### MCP Templates (25)
 `app/plugins/mcp-templates/` ships 25 ready-to-use MCP server config templates (filesystems, databases, GitHub, Slack, etc.). Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
-### Language Rules (70 files, 13 languages)
+### Language Rules (68 files, 13 languages)
 `app/rules/` contains per-language coding rules. Supported languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, and common (shared). Auto-detected from project files via `--auto-detect` or selected with `--modules rules-<lang>`.
 
 Language rules are propagated to **all configured editors** — not just Claude. `dir_rules_shared.build_language_rules()` reads `app/rules/<lang>/*.md`, strips frontmatter, and returns combined content per language. Each directory-based generator (Cursor, Windsurf, Cline, Roo, Augment, Antigravity, Codex) emits `ai-toolkit-lang-<lang>` files in its native format. Registered custom rules (`~/.softspark/ai-toolkit/rules/`) are similarly propagated as `ai-toolkit-custom-<name>` files via `build_registered_rules()`.
