@@ -3,9 +3,9 @@
   "description": "Jira integration — multi-instance routing, ADF formatting, task caching, and comment templates",
   "mcpServers": {
     "jira": {
-      "command": "npx",
-      "args": ["-y", "@softspark/jira-mcp"]
+      "command": "jira-mcp",
+      "args": []
     }
   },
-  "postInstall": "Run 'npx @softspark/jira-mcp config init' to set up credentials and project mappings."
+  "postInstall": "Run 'npm install -g @softspark/jira-mcp && jira-mcp config init' to install and set up credentials."
 }
