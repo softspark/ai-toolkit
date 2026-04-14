@@ -32,13 +32,22 @@ def install_marker_files(claude_dir: Path, only: str, skip: str,
 
 
 def inject_rules(claude_dir: Path, target_dir: Path, rules_dir: Path,
-                 only: str, skip: str, dry_run: bool) -> None:
-    """Inject rules into CLAUDE.md."""
+                 only: str, skip: str, dry_run: bool,
+                 refresh_urls: bool = False) -> None:
+    """Inject rules into CLAUDE.md.
+
+    When refresh_urls is True, re-fetches URL-sourced rules before injection.
+    Only the global install path should set this to True (once per update).
+    """
     claude_md = claude_dir / "CLAUDE.md"
 
     if dry_run:
         _inject_rules_dry_run(rules_dir)
         return
+
+    # Refresh URL-sourced rules before injection (global update only)
+    if refresh_urls:
+        _refresh_url_rules(rules_dir)
 
     if not claude_md.is_file():
         claude_md.touch()
@@ -64,6 +73,30 @@ def inject_rules(claude_dir: Path, target_dir: Path, rules_dir: Path,
                 rules_injected.append(rule_name)
 
     print(f"  Rules injected: {' '.join(rules_injected)}")
+
+
+def _refresh_url_rules(rules_dir: Path) -> None:
+    """Re-fetch all URL-sourced rules. Warn on failure, use cached copy."""
+    from rule_sources import get_url_rules, fetch_url, register_url_source
+
+    url_rules = get_url_rules(rules_dir)
+    if not url_rules:
+        return
+
+    for rule_name, url in url_rules.items():
+        rule_file = rules_dir / f"{rule_name}.md"
+        try:
+            data = fetch_url(url)
+            rule_file.write_bytes(data)
+            register_url_source(rules_dir, rule_name, url)
+            print(f"  Refreshed: {rule_name} (from {url})")
+        except Exception as exc:
+            if rule_file.is_file():
+                print(f"  Warning: could not refresh '{rule_name}' from {url}: {exc}")
+                print(f"           Using cached version.")
+            else:
+                print(f"  Warning: could not fetch '{rule_name}' from {url}: {exc}")
+                print(f"           No cached version — rule will be skipped.")
 
 
 def _inject_rules_dry_run(rules_dir: Path) -> None:

@@ -63,7 +63,7 @@ const COMMANDS = {
   status: 'Show installed modules, version, and profile from state.json',
   reset: 'Wipe and recreate project-local configs from scratch (requires --local)',
   uninstall: 'Remove ai-toolkit from ~/.claude/',
-  'add-rule': 'Register a rule file in ~/.softspark/ai-toolkit/rules/ (applied on every install/update)',
+  'add-rule': 'Register a rule file or URL in ~/.softspark/ai-toolkit/rules/ (URL rules auto-refresh on update)',
   'remove-rule': 'Unregister a rule from ~/.softspark/ai-toolkit/rules/ and remove its block from CLAUDE.md',
   'inject-hook': 'Inject external hooks into ~/.claude/settings.json (tagged with _source for idempotent updates)',
   'remove-hook': 'Remove injected hooks by source name from ~/.claude/settings.json',
@@ -232,8 +232,8 @@ function showHelp() {
   console.log('  <source-name>   Source tag to remove (derived from hooks filename stem)');
   console.log('  [target-dir]    Target dir containing .claude/settings.json (default: $HOME)');
   console.log('\nOptions for add-rule:');
-  console.log('  <rule-file>     Path to .md rule file to register globally');
-  console.log('  [rule-name]     Override rule name (default: filename without .md)');
+  console.log('  <rule-file>     Path to .md rule file or HTTPS URL to register globally');
+  console.log('  [rule-name]     Override rule name (default: filename/URL stem without .md)');
   console.log('\nOptions for plugin:');
   console.log('  install <name>  Install a plugin pack (--editor claude|codex|all)');
   console.log('  install --all   Install all available plugin packs for selected editor(s)');
@@ -333,16 +333,18 @@ function handleRemoveRule(args) {
 }
 
 /**
- * Handle `ai-toolkit add-rule` -- validates rule file, resolves absolute path.
+ * Handle `ai-toolkit add-rule` -- validates rule file/URL, resolves absolute path.
  * @param {string[]} args
  */
 function handleAddRule(args) {
   const ruleFile = args[0];
   if (!ruleFile) {
-    console.error('Usage: ai-toolkit add-rule <rule-file> [rule-name]');
+    console.error('Usage: ai-toolkit add-rule <rule-file-or-url> [rule-name]');
     process.exit(1);
   }
-  const absRuleFile = path.resolve(CWD, ruleFile);
+  // Pass URLs through directly (don't resolve as filesystem path)
+  const isUrl = ruleFile.startsWith('https://') || ruleFile.startsWith('http://');
+  const absRuleFile = isUrl ? ruleFile : path.resolve(CWD, ruleFile);
   const ruleName = args[1];
   run(scriptPath('add_rule.py'), ruleName ? [absRuleFile, ruleName] : [absRuleFile]);
 }

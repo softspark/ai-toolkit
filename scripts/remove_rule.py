@@ -43,6 +43,11 @@ def main() -> None:
     else:
         print(f"Not registered: '{rule_name}' not found in {rules_dir}")
 
+    # 1b. Clean up URL source metadata (if any)
+    from rule_sources import unregister_source
+    if unregister_source(rules_dir, rule_name):
+        print(f"Removed URL source for '{rule_name}'")
+
     # 2. Strip injected block from .claude/CLAUDE.md
     found = remove_rule_section(rule_name, target_dir)
     if found:

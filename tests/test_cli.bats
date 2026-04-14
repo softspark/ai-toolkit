@@ -282,6 +282,86 @@ teardown() {
     [ "$status" -ne 0 ]
 }
 
+@test "cli: add-rule rejects HTTP URLs" {
+    export HOME="$TEST_TMP"
+    run $CLI add-rule "http://example.com/rule.md"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -qi 'https'
+}
+
+@test "cli: add-rule with URL stores source in sources.json" {
+    export HOME="$TEST_TMP"
+    # Use a known public raw GitHub URL (small file, always available)
+    run $CLI add-rule "https://raw.githubusercontent.com/softspark/ai-toolkit/main/LICENSE" license-rule
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/license-rule.md" ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/sources.json" ]
+    python3 -c "
+import json
+with open('$TEST_TMP/.softspark/ai-toolkit/rules/sources.json') as f:
+    data = json.load(f)
+assert 'license-rule' in data['rules'], f'Missing entry: {data}'
+assert 'url' in data['rules']['license-rule']
+assert data['rules']['license-rule']['url'].startswith('https://')
+"
+}
+
+@test "cli: remove-rule cleans up sources.json" {
+    export HOME="$TEST_TMP"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/rules"
+    printf '# URL rule\n' > "$TEST_TMP/.softspark/ai-toolkit/rules/url-rule.md"
+    # Register URL source manually
+    python3 -c "
+import sys, os
+os.environ['HOME'] = '$TEST_TMP'
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from rule_sources import register_url_source
+rules_dir = Path('$TEST_TMP/.softspark/ai-toolkit/rules')
+register_url_source(rules_dir, 'url-rule', 'https://example.com/rule.md')
+"
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/sources.json" ]
+
+    run $CLI remove-rule url-rule
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json
+with open('$TEST_TMP/.softspark/ai-toolkit/rules/sources.json') as f:
+    data = json.load(f)
+assert 'url-rule' not in data.get('rules', {}), f'Entry still present: {data}'
+"
+}
+
+@test "cli: add-rule offline fallback uses cached rule" {
+    export HOME="$TEST_TMP"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/rules"
+    # Pre-populate cached rule and sources.json with unreachable URL
+    printf '# Cached content\n' > "$TEST_TMP/.softspark/ai-toolkit/rules/offline-rule.md"
+    python3 -c "
+import sys, os
+os.environ['HOME'] = '$TEST_TMP'
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from pathlib import Path
+from rule_sources import register_url_source
+rules_dir = Path('$TEST_TMP/.softspark/ai-toolkit/rules')
+register_url_source(rules_dir, 'offline-rule', 'https://localhost:1/nonexistent.md')
+"
+    # _refresh_url_rules should warn but not fail
+    python3 -c "
+import sys, os
+os.environ['HOME'] = '$TEST_TMP'
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+sys.path.insert(0, '$TOOLKIT_DIR/scripts/install_steps')
+from pathlib import Path
+from markers import _refresh_url_rules
+rules_dir = Path('$TEST_TMP/.softspark/ai-toolkit/rules')
+_refresh_url_rules(rules_dir)
+# Cached file must still exist
+assert rules_dir.joinpath('offline-rule.md').read_text().strip() == '# Cached content'
+print('OK: cached rule preserved after failed refresh')
+"
+}
+
 # ── remove-rule ──────────────────────────────────────────────────────────────
 
 @test "cli: remove-rule unregisters rule from ~/.softspark/ai-toolkit/rules/" {
