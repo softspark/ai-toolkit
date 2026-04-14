@@ -77,6 +77,7 @@ Example -- adding GitHub to `.mcp.json`:
 | `vercel` | Vercel deployments and settings |
 | `datadog` | Datadog monitoring and metrics |
 | `grafana` | Grafana dashboards and alerting |
+| `jira` | Jira multi-instance routing, ADF, caching, comment templates |
 | `custom-template` | Empty template for custom servers |
 
 ## Contributing a new template
@@ -100,6 +101,7 @@ Example -- adding GitHub to `.mcp.json`:
 ```
 
 2. Use `${ENV_VAR}` syntax for any secrets or tokens
-3. Keep the `name` field matching the filename (without `.json`)
-4. Update this README table
-5. Run `python3 scripts/validate.py` to verify
+3. Optional: add `"postInstall": "setup instructions"` for first-time config hints
+4. Keep the `name` field matching the filename (without `.json`)
+5. Update this README table
+6. Run `python3 scripts/validate.py` to verify

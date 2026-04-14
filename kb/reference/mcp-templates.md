@@ -6,14 +6,14 @@ tags: [mcp, templates, servers, configuration, editors]
 version: "1.1.0"
 created: "2026-04-07"
 last_updated: "2026-04-12"
-description: "Reference for 25 MCP server templates plus native editor MCP installation support."
+description: "Reference for 26 MCP server templates plus native editor MCP installation support."
 ---
 
 # MCP Server Templates
 
 ## Overview
 
-ai-toolkit ships 25 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
+ai-toolkit ships 26 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
 
 ## CLI
 

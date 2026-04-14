@@ -146,7 +146,7 @@
       "auto_detect": ["Gemfile", "*.gemspec"]
     },
     "mcp-templates": {
-      "description": "25 MCP server config templates",
+      "description": "26 MCP server config templates",
       "default": false
     }
   },

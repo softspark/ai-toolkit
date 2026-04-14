@@ -39,7 +39,7 @@ Modules are defined in `manifest.json` at the repository root. There are 17 modu
 | `rules-php` | PHP-specific rules (5 files) | auto-detect |
 | `rules-cpp` | C++-specific rules (5 files) | auto-detect |
 | `rules-ruby` | Ruby-specific rules (5 files) | auto-detect |
-| `mcp-templates` | 25 MCP server config templates | strict, full |
+| `mcp-templates` | 26 MCP server config templates | strict, full |
 
 ## Profiles
 

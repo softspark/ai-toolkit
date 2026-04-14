@@ -43,7 +43,7 @@ Usage: ai-toolkit <command> [options]
 
 | Command | Description |
 |---------|-------------|
-| `mcp list` | List available MCP server templates (25 templates) |
+| `mcp list` | List available MCP server templates (26 templates) |
 | `mcp editors` | List editors with native MCP config adapters and scopes |
 | `mcp add <name> [names...]` | Add MCP server template(s) to `.mcp.json` |
 | `mcp install --editor <name[,..]> [names...]` | Install templates into native editor MCP config |

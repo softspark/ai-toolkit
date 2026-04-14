@@ -130,6 +130,11 @@ def cmd_show(name: str) -> None:
         for key, val in env_vars:
             print(f"  {key} = {val}")
 
+    post_install = data.get("postInstall")
+    if post_install:
+        print()
+        print(f"Setup: {post_install}")
+
 
 def cmd_add(names: list[str], target_dir: Path) -> None:
     """Add one or more MCP templates to .mcp.json."""
@@ -154,6 +159,13 @@ def cmd_add(names: list[str], target_dir: Path) -> None:
 
     write_mcp_config(target_dir, config)
     print(f"Added: {', '.join(added)}")
+
+    # Show postInstall hints from added templates
+    for name in names:
+        data = load_template(name)
+        post_install = data.get("postInstall")
+        if post_install:
+            print(f"\n  Note ({name}): {post_install}")
 
 
 def cmd_install(
@@ -202,6 +214,14 @@ def cmd_install(
 
     for path in updated:
         print(f"Updated: {path}")
+
+    # Show postInstall hints from installed templates
+    if names:
+        for name in names:
+            data = load_template(name)
+            post_install = data.get("postInstall")
+            if post_install:
+                print(f"\n  Note ({name}): {post_install}")
 
 
 def cmd_remove(name: str, target_dir: Path | None, *, editors: list[str], scope: str | None) -> None:

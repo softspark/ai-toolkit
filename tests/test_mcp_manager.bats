@@ -21,9 +21,9 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
-@test "mcp list: shows 25 templates" {
+@test "mcp list: shows 26 templates" {
     run $MCP_MANAGER list
-    echo "$output" | grep -q '25 templates available'
+    echo "$output" | grep -q '26 templates available'
 }
 
 @test "mcp list: output contains github" {

@@ -174,7 +174,7 @@ ai-toolkit/
 
 **68 language rules** — 13 languages, 5 categories each. Auto-detected or explicit `--lang`. See [Language Rules](kb/reference/language-rules.md).
 
-**25 MCP templates** — Ready-to-use configs for GitHub, PostgreSQL, Slack, Sentry, and more. See [MCP Templates](kb/reference/mcp-templates.md).
+**26 MCP templates** — Ready-to-use configs for GitHub, PostgreSQL, Slack, Jira, Sentry, and more. See [MCP Templates](kb/reference/mcp-templates.md).
 
 See [Unique Features](kb/reference/unique-features.md) for detailed descriptions of all differentiators.
 

@@ -335,7 +335,7 @@ Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practic
 ## Extension Points
 
 ### MCP Templates
-`app/plugins/mcp-templates/` contains 25 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
+`app/plugins/mcp-templates/` contains 26 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
 ### Language Rules
 `app/rules/` provides language-specific rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`. See README.md for current count.
