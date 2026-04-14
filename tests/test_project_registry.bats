@@ -169,6 +169,46 @@ assert data['projects'][0]['path'].endswith('proj-b')
 # Extends info in registry
 # ---------------------------------------------------------------------------
 
+@test "registry: --skip-register prevents registration" {
+    mkdir -p "$TEST_DIR/proj-skip"
+    cd "$TEST_DIR/proj-skip"
+    run python3 "$TOOLKIT_DIR/scripts/install.py" --local --skip agents,skills,hooks --skip-register
+    [ "$status" -eq 0 ]
+    # projects.json should not exist (no registration happened)
+    [ ! -f "$AI_TOOLKIT_HOME/projects.json" ]
+}
+
+@test "registry: concurrent register_project does not lose entries" {
+    # Simulate the race condition that caused projects to disappear:
+    # multiple threads calling register_project() simultaneously.
+    python3 -c "
+import sys, os, tempfile, json
+from pathlib import Path
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+os.environ['HOME'] = '$TMP_HOME'
+from install_steps.project_registry import register_project, load_registry
+
+# Create 8 project directories (resolve symlinks for macOS /var -> /private/var)
+dirs = []
+for i in range(8):
+    d = str(Path(tempfile.mkdtemp(prefix=f'proj-{i}-')).resolve())
+    dirs.append(d)
+
+# Register all concurrently
+from concurrent.futures import ThreadPoolExecutor
+with ThreadPoolExecutor(max_workers=8) as pool:
+    list(pool.map(register_project, dirs))
+
+# All 8 must survive
+projects = load_registry()
+paths = {p['path'] for p in projects}
+for d in dirs:
+    assert d in paths, f'Missing: {d}, got: {paths}'
+assert len(projects) == 8, f'Expected 8, got {len(projects)}'
+print('OK: all 8 entries survived concurrent registration')
+"
+}
+
 @test "registry: records extends source" {
     mkdir -p "$TEST_DIR/base-config" "$TEST_DIR/proj-ext"
     cat > "$TEST_DIR/base-config/ai-toolkit.config.json" << 'EOF'

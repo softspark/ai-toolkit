@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from install_steps.project_registry import get_active_projects, prune_stale
+from install_steps.project_registry import get_active_projects, prune_stale, register_project
 
 
 def _update_project(project: dict[str, Any], install_script: str, extra_args: list[str]) -> dict:
@@ -91,13 +91,17 @@ def main() -> None:
         print(f"  Updating {len(projects)} registered project(s)...")
         print()
 
+    # --skip-register: parallel installs must NOT write to projects.json
+    # concurrently. We re-register sequentially after all installs complete.
+    parallel_args = extra_args + ["--skip-register"]
+
     # Run in parallel (max 8 workers — don't overwhelm the system)
     max_workers = min(len(projects), 8)
     results: list[dict] = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {
-            pool.submit(_update_project, p, install_script, extra_args): p
+            pool.submit(_update_project, p, install_script, parallel_args): p
             for p in projects
         }
         for future in as_completed(futures):
@@ -117,6 +121,15 @@ def main() -> None:
                 if result.get("error"):
                     for line in result["error"].strip().split("\n"):
                         print(f"      ERROR: {line}")
+
+    # Re-register projects sequentially (safe — no concurrent writes)
+    for result in results:
+        if result["success"]:
+            register_project(
+                result["path"],
+                profile=result.get("profile", "standard"),
+                extends=result.get("extends", ""),
+            )
 
     # Summary
     passed = sum(1 for r in results if r["success"])

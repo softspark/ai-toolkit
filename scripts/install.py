@@ -212,6 +212,7 @@ def parse_args(argv: list[str]) -> dict:
         "editors": "",
         "config": "",
         "refresh_base": False,
+        "skip_register": False,
     }
     i = 0
     while i < len(argv):
@@ -268,6 +269,8 @@ def parse_args(argv: list[str]) -> dict:
             cfg["config"] = argv[i] if i < len(argv) else ""
         elif arg == "--refresh-base":
             cfg["refresh_base"] = True
+        elif arg == "--skip-register":
+            cfg["skip_register"] = True
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -426,7 +429,8 @@ def install_claude_code(target_dir: Path, hooks_scripts_dir: Path,
     print()
     print(f"  Available: {count_agents()} agents, {count_skills()} skills")
 
-    inject_rules(claude_dir, target_dir, rules_dir, only, skip, dry_run)
+    inject_rules(claude_dir, target_dir, rules_dir, only, skip, dry_run,
+                 refresh_urls=True)
 
 
 VALID_PERSONAS = ("backend-lead", "frontend-lead", "devops-eng", "junior-dev")
@@ -711,7 +715,9 @@ def main() -> None:
         )
 
         # Register project in global registry (for `ai-toolkit update` propagation)
-        if local:
+        # Skipped when called from update_projects.py (--skip-register) to avoid
+        # concurrent writes to projects.json during parallel updates.
+        if local and not cfg.get("skip_register"):
             extends_source = ""
             if extends_info:
                 extends_source = extends_info.get("source", "")
