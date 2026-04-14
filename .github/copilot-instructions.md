@@ -460,7 +460,7 @@ Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `
 3. `get_task_details(task_key="PROJ-123")` -- deep dive (description + comments as markdown)
 4. `update_task_status(...)` / `add_task_comment(...)` / `log_task_time(...)` -- mutate
 
-## Comment Templates (8 built-in)
+## Comment Templates (built-in)
 
 | ID | Use for |
 |----|---------|
