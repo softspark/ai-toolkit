@@ -23,7 +23,7 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (29)
+## Task Skills (30)
 
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
@@ -58,6 +58,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 | **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references |
+| **a11y-validate** | `/a11y-validate` | medium | Scan codebase for accessibility violations: WCAG 2.1 Level AA, EN 301 549, European Accessibility Act (EAA / EU 2019/882). Covers semantics, keyboard, focus, color contrast, forms, media, ARIA, motion, mobile (React Native + Flutter), and EAA accessibility-statement documentation. |
 
 ## Hybrid Skills (31)
 
