@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [architecture, overview, design, structure]
 version: "1.4.4"
 created: "2026-03-23"
-last_updated: "2026-04-13"
+last_updated: "2026-04-15"
 description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -335,7 +335,7 @@ Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practic
 ## Extension Points
 
 ### MCP Templates
-`app/plugins/mcp-templates/` contains 26 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
+`app/mcp-templates/` contains 26 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
 ### Language Rules
 `app/rules/` provides language-specific rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`. See README.md for current count.

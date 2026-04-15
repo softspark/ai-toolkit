@@ -49,6 +49,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # Protected source tag -- this CLI must never touch ai-toolkit's own entries.
 PROTECTED_SOURCE = "ai-toolkit"
 
+# Codex CLI supports only these 5 hook events.
+CODEX_EVENTS = {"SessionStart", "PreToolUse", "PostToolUse", "UserPromptSubmit", "Stop"}
+
 
 # ---------------------------------------------------------------------------
 # JSON helpers (same style as merge-hooks.py)
@@ -180,6 +183,70 @@ def merge_hooks(new_hooks: dict, existing_hooks: dict, source: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Codex propagation
+# ---------------------------------------------------------------------------
+
+def _codex_hooks_path(target_dir: str) -> Path:
+    """Return the global Codex hooks.json path."""
+    return Path(target_dir) / ".codex" / "hooks.json"
+
+
+def _filter_codex_events(hooks: dict) -> dict:
+    """Keep only events supported by Codex CLI."""
+    return {event: entries for event, entries in hooks.items()
+            if event in CODEX_EVENTS}
+
+
+def _inject_codex(tagged_hooks: dict, source: str, target_dir: str) -> None:
+    """Propagate hook entries to ~/.codex/hooks.json (Codex global layer).
+
+    Only events in CODEX_EVENTS are propagated. Non-Codex events are silently
+    skipped.
+    """
+    codex_hooks = _filter_codex_events(tagged_hooks)
+    if not codex_hooks:
+        return
+
+    codex_path = _codex_hooks_path(target_dir)
+    codex_path.parent.mkdir(parents=True, exist_ok=True)
+
+    existing: dict = {}
+    if codex_path.is_file():
+        try:
+            data = load_json(str(codex_path))
+            existing = data.get("hooks", {})
+        except (json.JSONDecodeError, OSError):
+            existing = {}
+
+    merged = merge_hooks(codex_hooks, existing, source)
+    save_json(str(codex_path), {"hooks": merged})
+    events = ", ".join(sorted(codex_hooks.keys()))
+    print(f"Propagated to Codex: {codex_path} (events: {events})")
+
+
+def _remove_codex(source_name: str, target_dir: str) -> None:
+    """Remove hook entries from ~/.codex/hooks.json."""
+    codex_path = _codex_hooks_path(target_dir)
+    if not codex_path.is_file():
+        return
+
+    try:
+        data = load_json(str(codex_path))
+    except (json.JSONDecodeError, OSError):
+        return
+
+    existing = data.get("hooks", {})
+    cleaned = strip_source(existing, source_name)
+
+    if cleaned:
+        save_json(str(codex_path), {"hooks": cleaned})
+    else:
+        save_json(str(codex_path), {"hooks": {}})
+
+    print(f"Removed '{source_name}' from Codex: {codex_path}")
+
+
+# ---------------------------------------------------------------------------
 # CLI actions
 # ---------------------------------------------------------------------------
 
@@ -213,7 +280,7 @@ def _fetch_and_cache(url: str, source: str) -> str:
         sys.exit(2)
 
     if "hooks" not in parsed:
-        print(f"Warning: no 'hooks' key found in URL response", file=sys.stderr)
+        print("Warning: no 'hooks' key found in URL response", file=sys.stderr)
 
     cached_path = EXTERNAL_HOOKS_DIR / f"{source}.json"
     cached_path.write_bytes(data)
@@ -310,6 +377,9 @@ def inject(hooks_file: str, target_dir: str, source_override: str = "") -> None:
     save_json(str(settings_path), settings)
     print(f"Injected hooks from '{source}' into {settings_path}")
 
+    # Propagate Codex-compatible events to ~/.codex/hooks.json
+    _inject_codex(tagged, source, target_dir)
+
 
 def remove(source_name: str, target_dir: str) -> None:
     """Remove all hook entries tagged with *source_name*.
@@ -353,6 +423,9 @@ def remove(source_name: str, target_dir: str) -> None:
 
     save_json(str(settings_path), settings)
     print(f"Removed hooks with source '{source_name}' from {settings_path}")
+
+    # Remove from Codex global hooks
+    _remove_codex(source_name, target_dir)
 
     # Unregister URL source if present
     try:

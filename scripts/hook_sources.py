@@ -80,6 +80,9 @@ def save_sources(hooks_dir: Path | None = None,
 
 def register_url_source(hooks_dir: Path | None, hook_name: str, url: str) -> None:
     """Add or update a URL source entry."""
+    import re
+    if not hook_name or not re.fullmatch(r"[a-zA-Z0-9_-]+", hook_name):
+        raise ValueError(f"Invalid hook name: {hook_name!r}")
     hooks_dir = hooks_dir or EXTERNAL_HOOKS_DIR
     sources = load_sources(hooks_dir)
     sources[hook_name] = {

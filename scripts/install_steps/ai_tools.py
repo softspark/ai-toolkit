@@ -19,50 +19,113 @@ from injection import (
 
 
 def install_ai_tools(target_dir: Path, rules_dir: Path,
-                     only: str, skip: str, dry_run: bool) -> None:
-    """Install Cursor, Windsurf, Gemini global configs."""
+                     dry_run: bool,
+                     editors: list[str] | None = None) -> list[str]:
+    """Install global editor configs.
+
+    Args:
+        editors: Explicit list of editors to install globally. If None,
+                 uses DEFAULT_GLOBAL_EDITORS (empty = Claude only).
+
+    Returns:
+        List of editors that were actually installed (for state tracking).
+    """
+    from install_steps.install_state import DEFAULT_GLOBAL_EDITORS, GLOBAL_CAPABLE_EDITORS
+
+    if editors is None:
+        eds = set(DEFAULT_GLOBAL_EDITORS)
+    else:
+        eds = set(editors)
+
+    # Filter to only globally-capable editors
+    eds = eds & set(GLOBAL_CAPABLE_EDITORS)
+
+    if not eds:
+        return []
+
     print()
     print("## Other AI Tools (global)")
     print()
 
-    if should_install("cursor", only, skip):
+    installed: list[str] = []
+
+    # Editors are opt-in via --editors, not filtered by --only/--skip (those
+    # control Claude components like agents, hooks, rules).  If an editor is
+    # in the requested set, install it unconditionally.
+
+    if "cursor" in eds:
         cursor_file = target_dir / ".cursor" / "rules"
         if dry_run:
             print("  Would inject: ~/.cursor/rules")
         else:
             inject_with_rules("generate-cursor-rules.sh", cursor_file, rules_dir)
-    else:
-        print("  Skipped: cursor")
+        installed.append("cursor")
 
-    if should_install("windsurf", only, skip):
+    if "windsurf" in eds:
         windsurf_file = target_dir / ".codeium" / "windsurf" / "memories" / "global_rules.md"
         if dry_run:
             print("  Would inject: ~/.codeium/windsurf/memories/global_rules.md")
         else:
             inject_with_rules("generate-windsurf.sh", windsurf_file, rules_dir)
-    else:
-        print("  Skipped: windsurf")
+        installed.append("windsurf")
 
-    if should_install("gemini", only, skip):
+    if "gemini" in eds:
         gemini_file = target_dir / ".gemini" / "GEMINI.md"
         if dry_run:
             print("  Would inject: ~/.gemini/GEMINI.md")
         else:
             inject_with_rules("generate-gemini.sh", gemini_file, rules_dir)
-    else:
-        print("  Skipped: gemini")
+        installed.append("gemini")
 
-    if should_install("augment", only, skip):
+    if "augment" in eds:
         augment_file = target_dir / ".augment" / "rules" / "ai-toolkit.md"
         if dry_run:
             print("  Would inject: ~/.augment/rules/ai-toolkit.md")
         else:
             inject_with_rules("generate-augment.sh", augment_file, rules_dir)
-    else:
-        print("  Skipped: augment")
+        installed.append("augment")
+
+    if "codex" in eds:
+        if dry_run:
+            print("  Would inject: ~/AGENTS.md, ~/.agents/, ~/.codex/hooks.json")
+        else:
+            _install_codex_global(target_dir, rules_dir)
+        installed.append("codex")
 
     print()
-    print("  Note: Copilot, Cline, Roo Code, and Aider have no global config -- use 'ai-toolkit install --local' per project")
+    print(f"  Available: {', '.join(GLOBAL_CAPABLE_EDITORS)}")
+    print("  Note: Copilot, Cline, Roo Code, Aider, Antigravity have no global config -- use 'ai-toolkit install --local' per project")
+
+    return installed
+
+
+def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
+    """Install Codex at the global level (~/ layer).
+
+    Creates:
+      - ~/AGENTS.md (marker injection with rules)
+      - ~/.agents/rules/*.md (directory-based rules)
+      - ~/.agents/skills/* (skill symlinks)
+      - ~/.codex/hooks.json (lifecycle hooks)
+    """
+    inject_with_rules(
+        "generate_codex.py",
+        target_dir / "AGENTS.md",
+        rules_dir,
+    )
+
+    from generate_codex_rules import generate as gen_codex_rules
+    gen_codex_rules(
+        target_dir,
+        rules_dir=rules_dir,
+        managed_scopes=("standard", "custom"),
+    )
+
+    from generate_codex_hooks import generate as gen_codex_hooks
+    gen_codex_hooks(target_dir)
+    print("  Created: ~/.codex/hooks.json")
+
+    _install_codex_skills(target_dir)
 
 
 def inject_with_rules(
@@ -131,7 +194,7 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
 # All known editor identifiers for --editors flag
 ALL_EDITORS = [
     "copilot", "cursor", "windsurf", "cline", "roo",
-    "aider", "augment", "antigravity", "codex",
+    "aider", "augment", "antigravity", "codex", "gemini",
 ]
 
 # Map of project files/dirs → editor names for auto-detection

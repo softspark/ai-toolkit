@@ -130,11 +130,17 @@ def register_project(
     project_path: str | Path,
     profile: str = "",
     extends: str = "",
+    editors: list[str] | None = None,
 ) -> bool:
     """Register a project directory. Returns True if newly added, False if updated.
 
     Idempotent — updates existing entry if path already registered.
     Uses file lock to prevent concurrent read-modify-write races.
+
+    Args:
+        editors: List of editors installed locally (e.g. ["codex", "cursor"]).
+                 If provided, replaces the stored editors list. If None, keeps
+                 existing editors (or empty for new projects).
     """
     project_path = str(Path(project_path).resolve())
 
@@ -153,6 +159,8 @@ def register_project(
                 elif "extends" in p and not extends:
                     # Clear extends if project no longer uses it
                     pass
+                if editors is not None:
+                    p["editors"] = sorted(set(editors))
                 save_registry(projects)
                 return False
 
@@ -163,6 +171,7 @@ def register_project(
             "last_updated": now,
             "profile": profile or "standard",
             "extends": extends or "",
+            "editors": sorted(set(editors)) if editors else [],
         })
         save_registry(projects)
         return True

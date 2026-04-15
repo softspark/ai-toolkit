@@ -105,7 +105,7 @@ def refresh_url_hooks(target_dir: str | None = None) -> None:
     Called during ``ai-toolkit update`` to keep URL-sourced hooks current.
     On fetch failure, warns and keeps the cached version.
     """
-    from hook_sources import get_url_hooks
+    from hook_sources import get_url_hooks, register_url_source
     from paths import EXTERNAL_HOOKS_DIR
     from url_fetch import fetch_url
     import json
@@ -124,6 +124,7 @@ def refresh_url_hooks(target_dir: str | None = None) -> None:
             # Validate JSON before caching
             json.loads(data)
             cached_file.write_bytes(data)
+            register_url_source(None, hook_name, url)
             print(f"  Refreshed: {hook_name} (from {url})")
         except Exception as exc:
             if cached_file.is_file():

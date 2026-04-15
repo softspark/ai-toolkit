@@ -25,9 +25,15 @@ def _update_project(project: dict[str, Any], install_script: str, extra_args: li
     project_path = project["path"]
     start = time.monotonic()
 
+    # Pass saved editors from registry so update re-installs the same editors
+    cmd_args = ["python3", install_script, "--local"] + extra_args
+    project_editors = project.get("editors", [])
+    if project_editors:
+        cmd_args.extend(["--editors", ",".join(project_editors)])
+
     try:
         proc = subprocess.run(
-            ["python3", install_script, "--local"] + extra_args,
+            cmd_args,
             cwd=project_path,
             capture_output=True,
             text=True,

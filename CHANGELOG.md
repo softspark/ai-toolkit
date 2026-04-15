@@ -7,6 +7,28 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.4.1 — Codex Global Install, Security Hardening & Editor Tracking (2026-04-15)
+
+### Added
+- **Codex hook propagation** — `inject-hook` auto-propagates Codex-compatible events (`SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`) to `~/.codex/hooks.json`. `remove-hook` cleans both targets.
+- **Global editor tracking** — `ai-toolkit install --editors codex` installs editors globally (opt-in). Tracked in `state.json`, auto-refreshed on `update`. Default: Claude only.
+- **Per-project editor tracking** — `install --local --editors` records editors in `projects.json`. `update` re-installs saved editors per project.
+- **Auto-propagation** — `add-rule`, `remove-rule`, `mcp add` auto-propagate to globally installed editors via `propagate_global.py`.
+- **Doctor Check 9** — URL hook sources health check with `--fix` re-fetch support.
+
+### Fixed
+- **Tarball path traversal** — `_extract_tarball` rejects symlinks, absolute paths, and paths escaping dest directory.
+- **Git clone URL validation** — `_resolve_git` enforces HTTPS-only, rejects `file://`, `ssh://`.
+- **`dr.error()` crash** — `DiagResult` has no `error()` method; fixed to `dr.fail()`.
+- **`refresh_url_hooks` missing timestamp update** — now calls `register_url_source` after re-fetch.
+- **Defense-in-depth name validation** — `register_url_source()` rejects path traversal chars in both `hook_sources` and `rule_sources`.
+- **Unused `execSync` import** — removed from CLI entry point.
+- **URL truncation detection** — `url_fetch.py` raises `ValueError` when response exceeds 10MB.
+- **MCP templates path** — corrected `app/plugins/mcp-templates/` → `app/mcp-templates/` in ARCHITECTURE docs.
+- **MCP templates header count** — corrected 25 → 26 in `app/ARCHITECTURE.md`.
+
+---
+
 ## v2.4.0 — URL Hook Injection & Karpathy Coding Rules (2026-04-15)
 
 ### Added

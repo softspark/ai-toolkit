@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp]
 created: "2026-04-13"
-last_updated: "2026-04-13"
+last_updated: "2026-04-15"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 

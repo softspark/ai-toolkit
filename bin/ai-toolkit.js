@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const { execFileSync, spawnSync, execSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -58,8 +58,8 @@ const SCRIPT_COMMANDS = {
 
 /** @type {Record<string, string>} */
 const COMMANDS = {
-  install: 'First-time global install into ~/.claude/ (use --local to also set up project configs)',
-  update: 'Re-apply toolkit with saved modules from state.json (use --local to also refresh project configs)',
+  install: 'First-time global install into ~/.claude/ (use --local for project-local configs only)',
+  update: 'Re-apply toolkit with saved modules from state.json (use --local for project-local only)',
   status: 'Show installed modules, version, and profile from state.json',
   reset: 'Wipe and recreate project-local configs from scratch (requires --local)',
   uninstall: 'Remove ai-toolkit from ~/.claude/',
@@ -152,6 +152,23 @@ function run(script, args = [], opts = {}) {
 }
 
 /**
+ * Propagate changes to globally installed editors (from state.json).
+ * Silently skips if no global editors are configured.
+ * @param {...string} flags - Flags to pass: --rules, --hooks, --mcp
+ */
+function propagateGlobal(...flags) {
+  const result = spawnSync('python3', [scriptPath('propagate_global.py'), ...flags], {
+    stdio: 'inherit',
+    cwd: CWD,
+    env: { ...process.env },
+  });
+  // Non-fatal — propagation failure shouldn't block the primary operation
+  if (result.status !== 0) {
+    console.error('Warning: global editor propagation had issues (non-fatal)');
+  }
+}
+
+/**
  * Generic dispatcher for SCRIPT_COMMANDS entries.
  * Resolves the script path and selects the correct cwd.
  * @param {string} command - Command name (key in SCRIPT_COMMANDS)
@@ -201,9 +218,9 @@ function showHelp() {
     console.log(`  ${cmd.padEnd(16)} ${desc}`);
   }
   console.log('\nOptions for install / update:');
-  console.log('  --only <list>   Apply only listed components (e.g. agents,hooks,cursor,windsurf,gemini)');
+  console.log('  --only <list>   Apply only listed components (e.g. agents,hooks,rules,skills,constitution)');
   console.log('  --skip <list>   Skip listed components');
-  console.log('  --local         Also set up project-local configs (CLAUDE.md, settings, constitution, language rules, git hooks)');
+  console.log('  --local         Project-local configs only (CLAUDE.md, settings, constitution, language rules, git hooks)');
   console.log('  --profile <p>   Install profile: minimal (agents+skills), standard (default), strict (all+git hooks)');
   console.log('  --persona <p>   Persona preset: backend-lead, frontend-lead, devops-eng, junior-dev');
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
@@ -331,6 +348,7 @@ function handleRemoveRule(args) {
   }
   const targetDir = args[1] || process.env.HOME;
   run(scriptPath('remove_rule.py'), [ruleName, targetDir]);
+  propagateGlobal('--rules');
 }
 
 /**
@@ -345,9 +363,14 @@ function handleAddRule(args) {
   }
   // Pass URLs through directly (don't resolve as filesystem path)
   const isUrl = ruleFile.startsWith('https://') || ruleFile.startsWith('http://');
+  if (ruleFile.startsWith('http://')) {
+    console.error('Error: only HTTPS URLs are supported. Use https:// for security.');
+    process.exit(1);
+  }
   const absRuleFile = isUrl ? ruleFile : path.resolve(CWD, ruleFile);
   const ruleName = args[1];
   run(scriptPath('add_rule.py'), ruleName ? [absRuleFile, ruleName] : [absRuleFile]);
+  propagateGlobal('--rules');
 }
 
 /**
@@ -392,6 +415,10 @@ function handleMcp(args) {
     process.exit(1);
   }
   run(scriptPath('mcp_manager.py'), args);
+  // After `mcp add`, propagate to global editors
+  if (args[0] === 'add') {
+    propagateGlobal('--mcp');
+  }
 }
 
 /**

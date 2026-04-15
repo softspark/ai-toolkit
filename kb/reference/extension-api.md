@@ -103,6 +103,8 @@ npx @softspark/ai-toolkit inject-hook https://example.com/hooks.json my-tool-hoo
 
 **Safety:** Entries tagged `"_source": "ai-toolkit"` are never modified or removed by this command. External tools cannot affect the toolkit's own hooks. Only HTTPS URLs are accepted.
 
+**Codex propagation:** Codex-compatible events (`SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`) are automatically propagated to `~/.codex/hooks.json`. Non-Codex events are silently skipped. No extra flags needed.
+
 ## remove-hook
 
 Strips all hook entries from `~/.claude/settings.json` that carry a given `_source` tag. If the hook was URL-sourced, also unregisters the URL from `sources.json` and removes the cached file.
