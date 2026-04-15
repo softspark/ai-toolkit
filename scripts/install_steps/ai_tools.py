@@ -194,7 +194,7 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
 # All known editor identifiers for --editors flag
 ALL_EDITORS = [
     "copilot", "cursor", "windsurf", "cline", "roo",
-    "aider", "augment", "antigravity", "codex",
+    "aider", "augment", "antigravity", "codex", "gemini",
 ]
 
 # Map of project files/dirs → editor names for auto-detection
