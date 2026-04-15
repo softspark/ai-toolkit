@@ -66,7 +66,8 @@ hybrid_search_kb("[UI patterns, accessibility]")
 | Rapid development | Tailwind CSS |
 | Component library | CSS Modules |
 | Design tokens | CSS Variables + Tailwind |
-| Animation heavy | Framer Motion |
+| Color space | OKLCH (perceptually uniform; native CSS `oklch()` / Tailwind v4) |
+| Animation heavy | Framer Motion (purpose-driven easing, no bounce) |
 
 ### State Management
 
@@ -103,6 +104,19 @@ hybrid_search_kb("[UI patterns, accessibility]")
 - Image optimization
 - Bundle analysis
 
+### Design Craft (impeccable-inspired — guidance, not mandate)
+Frontend is craft as much as system. Seven domains, one concrete rule each:
+- **Typography** — reject Arial/Inter defaults; pair display + text on a modular scale; enable OpenType features when they serve content
+- **Color** — prefer OKLCH; tint neutrals; no pure `#000`; verify gray-on-color contrast
+- **Spatial** — consistent spacing scale (4/8/12/16/24/32/48); do not nest cards in cards
+- **Motion** — no bounce/elastic easing; stagger reveals; respect `prefers-reduced-motion`
+- **Interaction** — replace default focus outlines, never just remove; loaders show progress; errors name the remedy
+- **Responsive** — mobile-first; `clamp()` for fluid type; container queries for component-level behavior
+- **UX Writing** — button labels = verb + object; errors = cause + remedy; empty states earn their screen
+
+### AI-Native UI (inspired by 21st.dev)
+For agentic / LLM-powered products: streaming messages, tool-call expandables, agent-plan visualizations, prompt boxes with inline controls, spending guardrails in UI, retry/stop affordances, draft preservation across navigation.
+
 ## What You Do
 
 ### Component Design
@@ -130,10 +144,22 @@ hybrid_search_kb("[UI patterns, accessibility]")
 
 ## Anti-Patterns You Avoid
 
+### Engineering
 ❌ **Prop drilling** → Use context or state management
 ❌ **Unnecessary re-renders** → Memoize appropriately
 ❌ **Layout shift** → Reserve space, use skeleton
 ❌ **Giant components** → Split into smaller units
+
+### Taste (the LLM defaults — reject on sight)
+❌ Arial / Inter / system-default type with no intentional pairing
+❌ Gray text on colored backgrounds (contrast failure)
+❌ Pure `#000` black — use tinted near-black
+❌ Cards nested inside cards — flatten with type + spacing hierarchy
+❌ Bounce / elastic easing curves (feel dated)
+❌ Purple gradients (the generic-LLM tell)
+❌ Motion that ignores `prefers-reduced-motion`
+❌ Generic stock illustrations for empty states
+❌ Emoji standing in for proper icons
 
 ## 🔴 MANDATORY: Post-Code Validation
 
@@ -207,6 +233,11 @@ Before presenting implementation:
 - [ ] No console errors or warnings in dev tools
 - [ ] Responsive behavior verified at mobile/tablet/desktop breakpoints
 - [ ] Bundle size impact assessed for new dependencies
+- [ ] Type scale is intentional (not random px values); line-height + measure readable
+- [ ] Color contrast verified in **both** light and dark modes (not just one)
+- [ ] Motion respects `prefers-reduced-motion`; no bounce/elastic easing
+- [ ] Focus states are visible and replace (not remove) default outlines
+- [ ] Copy reviewed: button labels use verb+object, errors name the remedy
 
 ## KB Integration
 
