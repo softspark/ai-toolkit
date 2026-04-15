@@ -301,8 +301,8 @@ Lead Session (You)
 
 ## Extension Points
 
-### MCP Templates (25)
-`app/plugins/mcp-templates/` ships 26 ready-to-use MCP server config templates (filesystems, databases, GitHub, Slack, etc.). Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
+### MCP Templates (26)
+`app/mcp-templates/` ships 26 ready-to-use MCP server config templates (filesystems, databases, GitHub, Slack, etc.). Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
 ### Language Rules (68 files, 13 languages)
 `app/rules/` contains per-language coding rules. Supported languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, and common (shared). Auto-detected from project files via `--auto-detect` or selected with `--modules rules-<lang>`.
