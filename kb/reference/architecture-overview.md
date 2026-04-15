@@ -185,7 +185,7 @@ Three tiers determine how to approach a task:
 
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
-| Task | `disable-model-invocation: true` | User via `/skill` only | 30 |
+| Task | `disable-model-invocation: true` | User via `/skill` only | 31 |
 | Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
 | Knowledge | `user-invocable: false` | Claude auto-loads | 32 |
 
