@@ -107,6 +107,10 @@ This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
 `SubagentStart`, `SubagentStop`, `PreCompact`, `SessionEnd`, and
 `Notification` are not available in `.codex/hooks.json`.
 
+`inject-hook` automatically propagates Codex-compatible events to
+`~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
+`remove-hook` cleans both Claude and Codex targets.
+
 ## Behavioral Limits
 
 Codex wrappers preserve workflow intent, but not every Claude runtime behavior

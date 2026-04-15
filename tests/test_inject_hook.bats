@@ -388,6 +388,114 @@ assert unregister_source(None, 'nonexistent') == False
 "
 }
 
+# ── Codex propagation ────────────────────────────────────────────────────
+
+@test "inject_hook_cli.py propagates Codex-compatible events to .codex/hooks.json" {
+    _make_hooks_file "$TEST_DIR/codex-test.json" "PreToolUse" "echo codex"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/codex-test.json" "$TEST_DIR"
+
+    # Verify Claude settings.json
+    python3 -c "
+import json
+with open('$TEST_DIR/.claude/settings.json') as f:
+    data = json.load(f)
+assert 'codex-test' in [e.get('_source') for e in data['hooks']['PreToolUse']]
+"
+    # Verify Codex hooks.json
+    [ -f "$TEST_DIR/.codex/hooks.json" ]
+    python3 -c "
+import json
+with open('$TEST_DIR/.codex/hooks.json') as f:
+    data = json.load(f)
+assert 'PreToolUse' in data['hooks']
+sources = [e.get('_source') for e in data['hooks']['PreToolUse']]
+assert 'codex-test' in sources, f'Expected codex-test in Codex hooks: {sources}'
+"
+}
+
+@test "inject_hook_cli.py skips non-Codex events in .codex/hooks.json" {
+    # SessionEnd is not a Codex-supported event
+    _make_hooks_file "$TEST_DIR/non-codex.json" "SessionEnd" "echo bye"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/non-codex.json" "$TEST_DIR"
+
+    # Claude should have it
+    python3 -c "
+import json
+with open('$TEST_DIR/.claude/settings.json') as f:
+    data = json.load(f)
+assert 'SessionEnd' in data['hooks']
+"
+    # Codex should NOT have it (file may not exist or have empty hooks)
+    if [ -f "$TEST_DIR/.codex/hooks.json" ]; then
+        python3 -c "
+import json
+with open('$TEST_DIR/.codex/hooks.json') as f:
+    data = json.load(f)
+assert 'SessionEnd' not in data.get('hooks', {}), 'SessionEnd should not be in Codex'
+"
+    fi
+}
+
+@test "inject_hook_cli.py Codex is idempotent" {
+    _make_hooks_file "$TEST_DIR/idempotent-codex.json" "Stop" "echo once"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/idempotent-codex.json" "$TEST_DIR"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/idempotent-codex.json" "$TEST_DIR"
+
+    count=$(python3 -c "
+import json
+with open('$TEST_DIR/.codex/hooks.json') as f:
+    data = json.load(f)
+print(len([e for e in data['hooks']['Stop'] if e.get('_source') == 'idempotent-codex']))
+")
+    [ "$count" -eq 1 ]
+}
+
+@test "remove-hook also removes from .codex/hooks.json" {
+    _make_hooks_file "$TEST_DIR/rm-codex.json" "PreToolUse" "echo rm"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/rm-codex.json" "$TEST_DIR"
+    [ -f "$TEST_DIR/.codex/hooks.json" ]
+
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" --remove rm-codex "$TEST_DIR"
+
+    python3 -c "
+import json
+with open('$TEST_DIR/.codex/hooks.json') as f:
+    data = json.load(f)
+entries = data.get('hooks', {}).get('PreToolUse', [])
+sources = [e.get('_source') for e in entries]
+assert 'rm-codex' not in sources, f'rm-codex still in Codex: {sources}'
+"
+}
+
+@test "inject_hook_cli.py preserves ai-toolkit entries in .codex/hooks.json" {
+    # Pre-populate Codex with ai-toolkit entry
+    mkdir -p "$TEST_DIR/.codex"
+    cat > "$TEST_DIR/.codex/hooks.json" <<'JSON'
+{
+    "hooks": {
+        "PreToolUse": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Bash",
+                "hooks": [{ "type": "command", "command": "echo guard" }]
+            }
+        ]
+    }
+}
+JSON
+    _make_hooks_file "$TEST_DIR/ext-codex.json" "PreToolUse" "echo ext"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/ext-codex.json" "$TEST_DIR"
+
+    python3 -c "
+import json
+with open('$TEST_DIR/.codex/hooks.json') as f:
+    data = json.load(f)
+sources = [e.get('_source') for e in data['hooks']['PreToolUse']]
+assert 'ai-toolkit' in sources, f'ai-toolkit missing: {sources}'
+assert 'ext-codex' in sources, f'ext-codex missing: {sources}'
+"
+}
+
 @test "inject_hook_cli.py with source_override uses custom name" {
     _make_hooks_file "$TEST_DIR/generic.json" "Stop" "echo custom"
     # Inject with explicit hook-name (simulated by calling Python directly)
