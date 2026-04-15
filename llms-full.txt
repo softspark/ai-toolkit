@@ -5380,6 +5380,10 @@ This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
 `SubagentStart`, `SubagentStop`, `PreCompact`, `SessionEnd`, and
 `Notification` are not available in `.codex/hooks.json`.
 
+`inject-hook` automatically propagates Codex-compatible events to
+`~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
+`remove-hook` cleans both Claude and Codex targets.
+
 ## Behavioral Limits
 
 Codex wrappers preserve workflow intent, but not every Claude runtime behavior
@@ -6633,6 +6637,8 @@ npx @softspark/ai-toolkit inject-hook https://example.com/hooks.json my-tool-hoo
 **Idempotency:** Re-running strips all existing entries with the same source name, then appends the new ones. No duplicates accumulate.
 
 **Safety:** Entries tagged `"_source": "ai-toolkit"` are never modified or removed by this command. External tools cannot affect the toolkit's own hooks. Only HTTPS URLs are accepted.
+
+**Codex propagation:** Codex-compatible events (`SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`) are automatically propagated to `~/.codex/hooks.json`. Non-Codex events are silently skipped. No extra flags needed.
 
 ## remove-hook
 
