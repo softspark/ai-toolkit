@@ -86,7 +86,7 @@ Legacy code investigation and understanding specialist. Trigger words: legacy co
 
 Code review and security audit expert. Use for security reviews, Devil's Advocate analysis, quality audits, best practices validation. Triggers: review, security, audit, quality, best practices, vulnerability.
 
-**Tools:** `Read, Edit`
+**Tools:** `Read, Edit, Grep, Glob`
 
 ---
 
