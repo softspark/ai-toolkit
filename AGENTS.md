@@ -446,6 +446,7 @@ Specialized agent personas — apply their expertise for relevant tasks:
 
 Skills are invocable commands or auto-loaded knowledge sources:
 
+- **a11y-validate**: Validate code against accessibility standards: WCAG 2.1 Level AA, EN 301 549, and the European Accessibility Act (EAA / Directive EU 2019/882). Covers semantics, text alternatives, keyboard/focus, color/contrast, forms, media, ARIA, motion, mobile, and EAA documentation requirements. Framework-aware (React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/React Native/Flutter/static HTML).
 - **agent-creator**: Creates new specialized agents with frontmatter, tool selection, and delegation guidance
 - **analyze**: Analyze code quality, complexity, and patterns
 - **api-patterns**: Loaded when user asks about REST API design or GraphQL patterns

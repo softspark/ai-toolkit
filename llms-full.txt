@@ -56,6 +56,7 @@
 
 ## Skills
 
+- **a11y-validate**: Validate code against accessibility standards: WCAG 2.1 Level AA, EN 301 549, and the European Accessibility Act (EAA / Directive EU 2019/882). Covers semantics, text alternatives, keyboard/focus, color/contrast, forms, media, ARIA, motion, mobile, and EAA documentation requirements. Framework-aware (React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/React Native/Flutter/static HTML).
 - **agent-creator**: Creates new specialized agents with frontmatter, tool selection, and delegation guidance
 - **analyze**: Analyze code quality, complexity, and patterns
 - **api-patterns**: Loaded when user asks about REST API design or GraphQL patterns
@@ -133,6 +134,7 @@
 - **rust-patterns**: Loaded when user asks about Rust development patterns
 - **search**: Search the knowledge base with semantic and hybrid modes
 - **security-patterns**: Loaded when user asks about security, OWASP, or auth patterns
+- **seo-validate**: Validate code against SEO best practices: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Supports React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML.
 - **skill-audit**: Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions
 - **skill-creator**: Create new skills from templates with guided workflow
 - **subagent-development**: Execute implementation plans using fresh subagents per task with two-stage review: spec compliance first, then code quality. Use when executing plans with independent tasks.
@@ -4636,7 +4638,7 @@ Three tiers determine how to approach a task:
 
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
-| Task | `disable-model-invocation: true` | User via `/skill` only | 29 |
+| Task | `disable-model-invocation: true` | User via `/skill` only | 30 |
 | Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
 | Knowledge | `user-invocable: false` | Claude auto-loads | 32 |
 
@@ -8553,7 +8555,7 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (29)
+## Task Skills (30)
 
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
@@ -8588,6 +8590,8 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 | **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references |
+| **a11y-validate** | `/a11y-validate` | medium | Scan codebase for accessibility violations: WCAG 2.1 Level AA, EN 301 549, European Accessibility Act (EAA / EU 2019/882). Covers semantics, keyboard, focus, color contrast, forms, media, ARIA, motion, mobile (React Native + Flutter), and EAA accessibility-statement documentation. |
+| **seo-validate** | `/seo-validate` | medium | Scan codebase for SEO issues: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Framework-aware (Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML). |
 
 ## Hybrid Skills (31)
 
