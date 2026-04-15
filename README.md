@@ -10,13 +10,12 @@
 
 ---
 
-## What's New in v2.3.1
+## What's New in v2.4.0
 
-- **URL rule registration** — `ai-toolkit add-rule https://...` with auto-refresh on every update
-- **Jira MCP template** — `ai-toolkit mcp add jira` with `postInstall` setup hints
-- **MCP template tracking** — globally installed templates saved in `state.json`, auto-synced on `update`
-- **Race condition fix** — parallel project updates no longer drop registry entries (fcntl.flock + atomic writes)
-- **Claude MCP paths fixed** — now uses `~/.claude.json` (global) and `.mcp.json` (project) per official docs
+- **URL hook injection** — `ai-toolkit inject-hook https://...` with auto-refresh on every update (mirrors `add-rule` URL support)
+- **Shared URL fetch** — extracted `url_fetch.py` for reuse across rule and hook URL sources
+- **Surgical Changes rule** — orphan cleanup protocol and "match existing style" in `common/coding-style.md`
+- **Goal-Driven Execution rule** — `step → verify: check` pattern for multi-step tasks
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
