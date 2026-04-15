@@ -20,6 +20,8 @@
 - [ ] `bats tests/` passes
 - [ ] New code has no external dependencies (stdlib only)
 - [ ] No secrets, tokens, or API keys in the code
+- [ ] I did **not** modify generated files (AGENTS.md, llms.txt, llms-full.txt, GEMINI.md, .roomodes, .aider.conf.yml)
+- [ ] I did **not** update README counts/badges or ARCHITECTURE.md counts (maintainer handles these)
 
 ## Notes for Maintainer
 
