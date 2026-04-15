@@ -8,6 +8,7 @@ Scans HTML/JSX/TSX/Vue/Astro/Svelte files for common a11y issues across
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -76,7 +77,7 @@ FOCUSABLE_ELEMENTS = {"a", "button", "input", "select", "textarea", "details", "
 def collect_files(scan_path: Path) -> list[Path]:
     """Collect all matching source files under scan_path."""
     files: list[Path] = []
-    for dirpath, dirnames, filenames in __import__("os").walk(scan_path):
+    for dirpath, dirnames, filenames in os.walk(scan_path):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         dp = Path(dirpath)
         for fname in filenames:

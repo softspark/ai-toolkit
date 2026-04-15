@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.5.0 — Community Skills, Automated Scanners & Design Craft (2026-04-15)
+
+### Added
+- **`/seo-validate` skill** (community PR #2) — 9-category SEO scanner: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals, GEO, SPA/SSG crawlability. Framework-aware (React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue).
+- **`/a11y-validate` skill** (community PR #3) — 10-category accessibility scanner: WCAG 2.1 AA, WCAG 2.2 AA, EN 301 549, European Accessibility Act (EAA). Mobile-aware (React Native/Flutter).
+- **`seo-scanner.py`** — automated stdlib-only SEO scanner script (9 checks, JSON output, CI exit codes).
+- **`a11y-scanner.py`** — automated stdlib-only accessibility scanner script (10 checks, WCAG criterion mapping, contrast calculation, CI exit codes).
+- **`wcag-2-2-aa.md`** reference — all 9 new WCAG 2.2 success criteria with failure patterns, grep patterns, and framework notes.
+- **`geo-aeo-patterns.md`** reference — Answer Engine Optimization: AI answer engines, llms.txt, robots.txt AI bot directives, E-E-A-T signals.
+- **Design Craft vocabulary** (community PR #4) — 7-domain impeccable design guidance in `frontend-specialist` agent and `frontend-lead` persona: typography, OKLCH color, spatial scale, motion, interaction, responsive, UX writing. AI-Native UI patterns section.
+
+### Changed
+- **`code-reviewer` agent** — added Grep/Glob tools, rewrote Mandatory Protocol to use actual tools. Expanded review checklist: full OWASP Top 10, API/contract, concurrency/async, migration/schema.
+- **`clean-code` python reference** — fixed invalid `any` type hint, modernized to PEP 604 syntax.
+- **`design-engineering` skill** — fixed CSS hold-to-delete example (duplicate selector → proper `:active` override).
+- **`review` skill** — fixed script path to use `CLAUDE_SKILL_DIR`.
+- **`.gitattributes`** — added `merge=ours` for generated files to prevent contributor PR conflicts.
+- **Misleading CLI outputs** fixed — plugin.py Codex status glob, --only help examples, install/update --local descriptions, doctor stale rules dr.warn(), config_cli phantom check.
+- **`gemini` added to ALL_EDITORS** — `--editors gemini` no longer rejected by CLI validation.
+- Skill count: 92 → 94 (31 task + 31 hybrid + 32 knowledge).
+
+---
+
 ## v2.4.1 — Codex Global Install, Security Hardening & Editor Tracking (2026-04-15)
 
 ### Added

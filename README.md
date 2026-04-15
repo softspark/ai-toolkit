@@ -10,13 +10,13 @@
 
 ---
 
-## What's New in v2.4.1
+## What's New in v2.5.0
 
-- **Global editor tracking** — `ai-toolkit install --editors codex` installs Codex globally, tracked in `state.json`, auto-refreshed on `update`
-- **Codex hook propagation** — `inject-hook` auto-propagates to `~/.codex/hooks.json` for Codex-compatible events
-- **Auto-propagation** — `add-rule`, `remove-rule`, `mcp add` auto-propagate to all globally installed editors
-- **Security hardening** — tarball path traversal fix, git URL scheme validation, defense-in-depth name validation
-- **Doctor Check 9** — URL hook sources health check with `--fix` re-fetch support
+- **`/seo-validate`** — 9-category SEO scanner with automated `seo-scanner.py` script (community contribution)
+- **`/a11y-validate`** — WCAG 2.1/2.2 + EAA accessibility scanner with `a11y-scanner.py` script (community contribution)
+- **Design Craft** — 7-domain impeccable design vocabulary in `frontend-specialist` + `frontend-lead` persona
+- **GEO/AEO reference** — Answer Engine Optimization patterns for AI answer engines
+- **94 skills** — 31 task + 31 hybrid + 32 knowledge
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
