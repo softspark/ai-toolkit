@@ -1,10 +1,10 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 92 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, and Codex CLI, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 93 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, and Codex CLI, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-92-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-93-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-618%20passing-success)](tests/)
 
@@ -47,7 +47,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 92 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 93 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 ### Update
 
@@ -116,7 +116,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 
 | Component | Count | Description |
 |-----------|-------|-------------|
-| `skills/` (task) | 29 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
+| `skills/` (task) | 30 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
 | `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 32 | Domain knowledge auto-loaded by agents |
 | `agents/` | 44 | Specialized agents across 10 categories |
@@ -134,7 +134,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   ├── skills/          # 92 skills (task / hybrid / knowledge)
+│   ├── skills/          # 93 skills (task / hybrid / knowledge)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
 │   ├── hooks/           # Hook scripts (21 entries, 12 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
