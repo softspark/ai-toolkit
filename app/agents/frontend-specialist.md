@@ -4,7 +4,7 @@ description: "Senior Frontend Architect for React, Next.js, Vue, and modern web 
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
 color: blue
-skills: clean-code, testing-patterns, design-engineering
+skills: clean-code, testing-patterns, design-engineering, a11y-validate
 ---
 
 # Senior Frontend Architect

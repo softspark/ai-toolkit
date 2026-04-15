@@ -58,6 +58,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 | **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references |
+| **a11y-validate** | `/a11y-validate` | medium | Scan codebase for accessibility violations: WCAG 2.1 Level AA, EN 301 549, European Accessibility Act (EAA / EU 2019/882). Covers semantics, keyboard, focus, color contrast, forms, media, ARIA, motion, mobile (React Native + Flutter), and EAA accessibility-statement documentation. |
 | **seo-validate** | `/seo-validate` | medium | Scan codebase for SEO issues: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Framework-aware (Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML). |
 
 ## Hybrid Skills (31)
