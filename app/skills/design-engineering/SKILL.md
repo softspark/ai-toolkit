@@ -138,14 +138,11 @@ Stack tab lists, clip the active copy, animate clip-path on change for seamless 
 ```css
 .delete-overlay {
   clip-path: inset(0 100% 0 0);
-  transition: clip-path 2s linear;
+  transition: clip-path 200ms ease-out; /* fast snap-back on release */
 }
 .delete-button:active .delete-overlay {
   clip-path: inset(0 0 0 0);
-}
-/* Release snaps back fast */
-.delete-overlay {
-  transition: clip-path 200ms ease-out;
+  transition: clip-path 2s linear; /* slow fill while holding */
 }
 ```
 

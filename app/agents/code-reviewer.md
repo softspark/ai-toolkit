@@ -3,7 +3,7 @@ name: code-reviewer
 description: "Code review and security audit expert. Use for security reviews, Devil's Advocate analysis, quality audits, best practices validation. Triggers: review, security, audit, quality, best practices, vulnerability."
 model: opus
 color: teal
-tools: Read, Edit
+tools: Read, Edit, Grep, Glob
 skills: clean-code, design-engineering
 ---
 
@@ -15,12 +15,11 @@ Review code and configurations for security vulnerabilities, quality issues, and
 
 ## Mandatory Protocol (EXECUTE FIRST)
 
-```python
-# ALWAYS call this FIRST - NO TEXT BEFORE
-smart_query(query="security best practices: {technology}")
-get_document(path="kb/best-practices/security-checklist.md")
-hybrid_search_kb(query="vulnerability {issue_type}", limit=10)
-```
+Before reviewing, gather context using available tools:
+1. **Read** the files under review and their tests
+2. **Grep** for related patterns across the codebase (error handling, auth, validation)
+3. **Glob** for related test files and config files
+4. If RAG MCP is available, query KB for relevant security best practices
 
 ## When to Use This Agent
 

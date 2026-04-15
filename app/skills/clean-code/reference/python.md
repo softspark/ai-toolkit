@@ -3,13 +3,13 @@
 ## Type Hints (Required for Public APIs)
 
 ```python
-from typing import Optional, List, Dict
+from typing import Any
 
 def search(
     query: str,
     limit: int = 10,
-    filters: Optional[Dict[str, str]] = None
-) -> List[Dict[str, any]]:
+    filters: dict[str, str] | None = None,
+) -> list[dict[str, Any]]:
     """Search the knowledge base.
 
     Args:
