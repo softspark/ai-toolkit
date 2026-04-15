@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [architecture, overview, design, structure]
 version: "1.4.4"
 created: "2026-03-23"
-last_updated: "2026-04-13"
+last_updated: "2026-04-15"
 description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 

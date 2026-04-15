@@ -37,6 +37,11 @@ def fetch_url(url: str) -> bytes:
     ctx = ssl.create_default_context()
     with urllib.request.urlopen(url, timeout=_FETCH_TIMEOUT, context=ctx) as resp:
         data = resp.read(_FETCH_MAX_BYTES)
+        # Detect truncation — if there's more data, the response exceeds the limit
+        if resp.read(1):
+            raise ValueError(
+                f"Response exceeds {_FETCH_MAX_BYTES} byte limit: {url}"
+            )
 
     # Basic binary detection — reject if null bytes present
     if b"\x00" in data:

@@ -280,7 +280,7 @@ def _fetch_and_cache(url: str, source: str) -> str:
         sys.exit(2)
 
     if "hooks" not in parsed:
-        print(f"Warning: no 'hooks' key found in URL response", file=sys.stderr)
+        print("Warning: no 'hooks' key found in URL response", file=sys.stderr)
 
     cached_path = EXTERNAL_HOOKS_DIR / f"{source}.json"
     cached_path.write_bytes(data)

@@ -23,8 +23,6 @@ from paths import RULES_DIR
 from url_fetch import fetch_url as fetch_url  # noqa: F811 — re-export
 
 _SOURCES_FILENAME = "sources.json"
-_FETCH_TIMEOUT = 30  # seconds
-_FETCH_MAX_BYTES = 10 * 1024 * 1024  # 10MB
 
 
 # ---------------------------------------------------------------------------

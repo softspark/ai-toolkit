@@ -10,6 +10,7 @@ Checks:
   6. Planned assets
   7. Benchmark freshness
   8. Stale rules
+  9. URL hook sources
 
 Exit codes:
   0  all checks pass
@@ -27,7 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import toolkit_dir
-from paths import HOOKS_DIR as _HOOKS_DIR, RULES_DIR as _RULES_DIR
+from paths import HOOKS_DIR as _HOOKS_DIR, RULES_DIR as _RULES_DIR, EXTERNAL_HOOKS_DIR as _EXTERNAL_HOOKS_DIR
 
 
 # ---------------------------------------------------------------------------
@@ -37,6 +38,7 @@ from paths import HOOKS_DIR as _HOOKS_DIR, RULES_DIR as _RULES_DIR
 CLAUDE_DIR = Path.home() / ".claude"
 HOOKS_DIR = _HOOKS_DIR
 RULES_DIR = _RULES_DIR
+EXTERNAL_HOOKS_DIR = _EXTERNAL_HOOKS_DIR
 BENCHMARK_DASHBOARD = toolkit_dir / "benchmarks" / "ecosystem-dashboard.json"
 
 VALID_EVENTS = frozenset({
@@ -466,6 +468,75 @@ def check_stale_rules(dr: DiagResult, fix_mode: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check 9: URL Hook Sources
+# ---------------------------------------------------------------------------
+
+def check_url_hooks(dr: DiagResult, fix_mode: bool) -> None:
+    """Check URL-sourced hook cache integrity."""
+    print()
+    print("## 9. URL Hook Sources")
+
+    sources_file = EXTERNAL_HOOKS_DIR / "sources.json"
+    if not sources_file.is_file():
+        dr.skip("No URL hook sources registered")
+        return
+
+    try:
+        with open(sources_file, encoding="utf-8") as f:
+            data = json.load(f)
+        sources = data.get("hooks", {})
+    except (json.JSONDecodeError, OSError) as exc:
+        dr.error(f"Corrupt sources.json: {exc}")
+        return
+
+    if not sources:
+        dr.ok("No URL hook sources registered")
+        return
+
+    issues = 0
+    for name, entry in sources.items():
+        cached = EXTERNAL_HOOKS_DIR / f"{name}.json"
+        url = entry.get("url", "")
+
+        if not cached.is_file():
+            dr.warn(f"Missing cached file for '{name}' ({url})")
+            issues += 1
+            if fix_mode:
+                try:
+                    from url_fetch import fetch_url
+                    content = fetch_url(url)
+                    json.loads(content)  # validate
+                    EXTERNAL_HOOKS_DIR.mkdir(parents=True, exist_ok=True)
+                    cached.write_bytes(content)
+                    print(f"    FIXED: re-fetched {name}")
+                except Exception as exc:
+                    print(f"    Could not re-fetch: {exc}")
+            continue
+
+        # Validate cached file is valid JSON with hooks key
+        try:
+            with open(cached, encoding="utf-8") as f:
+                hook_data = json.load(f)
+            if "hooks" not in hook_data:
+                dr.warn(f"Cached file '{name}' missing 'hooks' key")
+                issues += 1
+            else:
+                dr.ok(f"{name} ({url})")
+        except json.JSONDecodeError:
+            dr.warn(f"Corrupt cached file: {cached}")
+            issues += 1
+            if fix_mode:
+                try:
+                    from url_fetch import fetch_url
+                    content = fetch_url(url)
+                    json.loads(content)
+                    cached.write_bytes(content)
+                    print(f"    FIXED: re-fetched {name}")
+                except Exception as exc:
+                    print(f"    Could not re-fetch: {exc}")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -486,6 +557,7 @@ def main() -> None:
     check_planned_assets(dr)
     check_benchmark_freshness(dr)
     check_stale_rules(dr, fix_mode)
+    check_url_hooks(dr, fix_mode)
 
     # Summary
     print("========================")
