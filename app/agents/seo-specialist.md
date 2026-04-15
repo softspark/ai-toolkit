@@ -4,7 +4,7 @@ description: "Search engine optimization specialist. Trigger words: SEO, search 
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
 color: cyan
-skills: clean-code
+skills: clean-code, seo-validate
 ---
 
 # SEO Specialist

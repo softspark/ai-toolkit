@@ -523,6 +523,7 @@ Skills are invocable commands or auto-loaded knowledge sources:
 - **rust-patterns**: Loaded when user asks about Rust development patterns
 - **search**: Search the knowledge base with semantic and hybrid modes
 - **security-patterns**: Loaded when user asks about security, OWASP, or auth patterns
+- **seo-validate**: Validate code against SEO best practices: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Supports React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML.
 - **skill-audit**: Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions
 - **skill-creator**: Create new skills from templates with guided workflow
 - **subagent-development**: Execute implementation plans using fresh subagents per task with two-stage review: spec compliance first, then code quality. Use when executing plans with independent tasks. Codex-adapted: uses native subagents and plan tracking.

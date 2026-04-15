@@ -5426,7 +5426,7 @@ description: "Feature comparison of ai-toolkit vs other Claude Code toolkits and
 
 | Feature | ai-toolkit | everything-claude-code | wshobson/agents | ruflo |
 |---------|---------------|----------------------|-----------------|-------|
-| Skills | 92 | 100+ | 146 | 20+ |
+| Skills | 93 | 100+ | 146 | 20+ |
 | Agents | 44 | 30+ | 112 | 20+ |
 | Machine-enforced constitution | **Yes** | No (docs only) | No | No |
 | Skill-scoped lifecycle hooks | **Yes** | No | No | No |
