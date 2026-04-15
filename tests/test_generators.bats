@@ -12,12 +12,18 @@ setup_file() {
     export CL_DIR; CL_DIR="$(mktemp -d)"
     export ROO_DIR; ROO_DIR="$(mktemp -d)"
     export AUG_DIR; AUG_DIR="$(mktemp -d)"
+    export OC_DIR; OC_DIR="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" > "$GEN_DIR/antigravity.log" 2>/dev/null; echo $? > "$GEN_DIR/antigravity.status"
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_mdc.py" "$CURSOR_DIR" > "$GEN_DIR/cursor-mdc.log" 2>/dev/null; echo $? > "$GEN_DIR/cursor-mdc.status"
     python3 "$TOOLKIT_DIR/scripts/generate_windsurf_rules.py" "$WS_DIR" > "$GEN_DIR/windsurf-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/windsurf-rules.status"
     python3 "$TOOLKIT_DIR/scripts/generate_cline_rules.py" "$CL_DIR" > "$GEN_DIR/cline-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/cline-rules.status"
     python3 "$TOOLKIT_DIR/scripts/generate_roo_rules.py" "$ROO_DIR" > "$GEN_DIR/roo-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/roo-rules.status"
     python3 "$TOOLKIT_DIR/scripts/generate_augment_rules.py" "$AUG_DIR" > "$GEN_DIR/augment-rules.log" 2>/dev/null; echo $? > "$GEN_DIR/augment-rules.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_opencode.py" > "$GEN_DIR/opencode-md" 2>/dev/null; echo $? > "$GEN_DIR/opencode-md.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_opencode_agents.py" "$OC_DIR" > "$GEN_DIR/opencode-agents.log" 2>/dev/null; echo $? > "$GEN_DIR/opencode-agents.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_opencode_commands.py" "$OC_DIR" > "$GEN_DIR/opencode-commands.log" 2>/dev/null; echo $? > "$GEN_DIR/opencode-commands.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_opencode_plugin.py" "$OC_DIR" > "$GEN_DIR/opencode-plugin.log" 2>/dev/null; echo $? > "$GEN_DIR/opencode-plugin.status"
+    python3 "$TOOLKIT_DIR/scripts/generate_opencode_json.py" "$OC_DIR" > "$GEN_DIR/opencode-json.log" 2>/dev/null; echo $? > "$GEN_DIR/opencode-json.status"
     python3 "$TOOLKIT_DIR/scripts/generate_conventions.py" > "$GEN_DIR/conventions" 2>/dev/null; echo $? > "$GEN_DIR/conventions.status"
     python3 "$TOOLKIT_DIR/scripts/generate_agents_md.py" > "$GEN_DIR/agents-md" 2>/dev/null; echo $? > "$GEN_DIR/agents-md.status"
     python3 "$TOOLKIT_DIR/scripts/generate_codex.py" > "$GEN_DIR/codex-md" 2>/dev/null; echo $? > "$GEN_DIR/codex-md.status"
@@ -36,7 +42,7 @@ setup_file() {
 }
 
 teardown_file() {
-    rm -rf "$GEN_DIR" "$AG_DIR" "$CURSOR_DIR" "$WS_DIR" "$CL_DIR" "$ROO_DIR" "$AUG_DIR"
+    rm -rf "$GEN_DIR" "$AG_DIR" "$CURSOR_DIR" "$WS_DIR" "$CL_DIR" "$ROO_DIR" "$AUG_DIR" "$OC_DIR"
 }
 
 # ── generate_agents_md.py ───────────────────────────────────────────────────
@@ -711,4 +717,169 @@ generate(Path('$tmp'))
     count=$(ls "$tmp/.windsurf/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
     [ "$count" -eq 6 ]
     rm -rf "$tmp"
+}
+
+# ── generate_opencode.py ────────────────────────────────────────────────────
+
+@test "generate_opencode.py exits 0" {
+    [ "$(cat "$GEN_DIR/opencode-md.status")" = "0" ]
+}
+
+@test "generate_opencode.py output has opencode heading" {
+    grep -q 'opencode Configuration' "$GEN_DIR/opencode-md"
+}
+
+@test "generate_opencode.py output lists subagents" {
+    grep -q '## Available Subagents' "$GEN_DIR/opencode-md"
+    grep -q '\*\*backend-specialist\*\*' "$GEN_DIR/opencode-md"
+    grep -q '\*\*frontend-specialist\*\*' "$GEN_DIR/opencode-md"
+}
+
+@test "generate_opencode.py output lists slash commands" {
+    grep -q '## Available Commands' "$GEN_DIR/opencode-md"
+    grep -q '\*\*debug\*\*' "$GEN_DIR/opencode-md"
+    grep -q '\*\*plan\*\*' "$GEN_DIR/opencode-md"
+}
+
+@test "generate_opencode.py mentions adapted orchestration skills" {
+    grep -q 'Codex-adapted' "$GEN_DIR/opencode-md"
+}
+
+@test "generate_opencode.py output wrapped in toolkit markers" {
+    grep -q '<!-- TOOLKIT:ai-toolkit START -->' "$GEN_DIR/opencode-md"
+    grep -q '<!-- TOOLKIT:ai-toolkit END -->' "$GEN_DIR/opencode-md"
+}
+
+# ── generate_opencode_agents.py ─────────────────────────────────────────────
+
+@test "generate_opencode_agents.py exits 0" {
+    [ "$(cat "$GEN_DIR/opencode-agents.status")" = "0" ]
+}
+
+@test "generate_opencode_agents.py produces one file per agent" {
+    count=$(ls "$OC_DIR/.opencode/agents"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    src=$(ls "$TOOLKIT_DIR/app/agents"/*.md | wc -l | xargs)
+    [ "$count" -eq "$src" ]
+}
+
+@test "generated opencode agents have required frontmatter" {
+    local f="$OC_DIR/.opencode/agents/ai-toolkit-frontend-specialist.md"
+    [ -f "$f" ]
+    grep -q '^description: ' "$f"
+    grep -q '^mode: subagent$' "$f"
+}
+
+# ── generate_opencode_commands.py ───────────────────────────────────────────
+
+@test "generate_opencode_commands.py exits 0" {
+    [ "$(cat "$GEN_DIR/opencode-commands.status")" = "0" ]
+}
+
+@test "generate_opencode_commands.py emits user-invocable skills only" {
+    # debug is user-invocable → should exist
+    [ -f "$OC_DIR/.opencode/commands/ai-toolkit-debug.md" ]
+    # rag-patterns has user-invocable: false → must NOT exist
+    [ ! -f "$OC_DIR/.opencode/commands/ai-toolkit-rag-patterns.md" ]
+}
+
+@test "generated opencode commands have template field" {
+    local f="$OC_DIR/.opencode/commands/ai-toolkit-debug.md"
+    [ -f "$f" ]
+    grep -q '^template: |' "$f"
+    grep -q '^description: ' "$f"
+}
+
+# ── generate_opencode_plugin.py ─────────────────────────────────────────────
+
+@test "generate_opencode_plugin.py exits 0" {
+    [ "$(cat "$GEN_DIR/opencode-plugin.status")" = "0" ]
+}
+
+@test "generate_opencode_plugin.py writes .opencode/plugins/ai-toolkit-hooks.js" {
+    [ -f "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js" ]
+}
+
+@test "opencode plugin exports AiToolkitHooks and default" {
+    grep -q 'export const AiToolkitHooks' "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+    grep -q 'export default AiToolkitHooks' "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+}
+
+@test "opencode plugin invokes toolkit hooks directory" {
+    grep -q '.softspark/ai-toolkit/hooks' "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+}
+
+@test "opencode plugin handles session, tool, and message events" {
+    local f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+    grep -q 'session.created' "$f"
+    grep -q 'tool.execute.before' "$f"
+    grep -q 'message.updated' "$f"
+}
+
+# ── generate_opencode_json.py ───────────────────────────────────────────────
+
+@test "generate_opencode_json.py exits 0" {
+    [ "$(cat "$GEN_DIR/opencode-json.status")" = "0" ]
+}
+
+@test "generate_opencode_json.py writes $schema when no .mcp.json" {
+    [ -f "$OC_DIR/opencode.json" ]
+    grep -q 'opencode.ai/config.json' "$OC_DIR/opencode.json"
+}
+
+@test "generate_opencode_json.py preserves user keys and merges MCP servers" {
+    local tmp; tmp="$(mktemp -d)"
+    cat > "$tmp/.mcp.json" <<EOF
+{
+  "mcpServers": {
+    "fs": {"command": "npx", "args": ["-y", "@mcp/fs", "/tmp"]},
+    "gh": {"url": "https://mcp.github.com", "headers": {"Authorization": "Bearer X"}}
+  }
+}
+EOF
+    printf '{"$schema":"https://opencode.ai/config.json","model":"anthropic/claude-sonnet-4","userKey":"keep"}' > "$tmp/opencode.json"
+    python3 "$TOOLKIT_DIR/scripts/generate_opencode_json.py" "$tmp" >/dev/null
+    python3 - "$tmp/opencode.json" <<'PYEOF'
+import json, sys
+data = json.load(open(sys.argv[1]))
+assert data.get("model") == "anthropic/claude-sonnet-4", "user model preserved"
+assert data.get("userKey") == "keep", "arbitrary user key preserved"
+assert "mcp" in data, "mcp block added"
+assert data["mcp"]["fs"]["type"] == "local", "local server translated"
+assert data["mcp"]["fs"]["command"][0] == "npx", "command list merged with args"
+assert data["mcp"]["gh"]["type"] == "remote", "remote server translated"
+assert data["mcp"]["gh"]["url"].startswith("https://"), "remote url preserved"
+assert data["mcp"]["fs"]["enabled"] is True, "enabled default set"
+PYEOF
+    # Idempotency: re-running should not duplicate or mutate
+    python3 "$TOOLKIT_DIR/scripts/generate_opencode_json.py" "$tmp" >/dev/null
+    python3 - "$tmp/opencode.json" <<'PYEOF'
+import json, sys
+data = json.load(open(sys.argv[1]))
+assert list(data["mcp"].keys()) == ["fs", "gh"], "no duplicate keys after re-run"
+PYEOF
+    rm -rf "$tmp"
+}
+
+# ── install_steps: opencode editor registration ────────────────────────────
+
+@test "install_steps: opencode listed in ALL_EDITORS" {
+    grep -q '"opencode"' "$TOOLKIT_DIR/scripts/install_steps/ai_tools.py"
+}
+
+@test "install_steps: opencode listed in GLOBAL_CAPABLE_EDITORS" {
+    grep -q '"opencode"' "$TOOLKIT_DIR/scripts/install_steps/install_state.py"
+}
+
+@test "install_steps: opencode auto-detected via opencode.json marker" {
+    python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+sys.path.insert(0, '$TOOLKIT_DIR/scripts/install_steps')
+from install_steps.ai_tools import _detect_editors
+from pathlib import Path
+import tempfile, os
+d = Path(tempfile.mkdtemp())
+(d / 'opencode.json').write_text('{}')
+found = _detect_editors(d)
+assert 'opencode' in found, f'expected opencode in {found}'
+"
 }

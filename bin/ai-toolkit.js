@@ -30,6 +30,7 @@ const GENERATORS = {
   'augment-rules':        { script: 'generate_augment.py',       dest: path.join('.augment', 'rules', 'ai-toolkit.md'), mkdir: '.augment/rules' },
   'agents-md':            { script: 'generate_agents_md.py',     dest: 'AGENTS.md' },
   'codex-md':             { script: 'generate_codex.py',         dest: 'AGENTS.md' },
+  'opencode-md':          { script: 'generate_opencode.py',      dest: 'AGENTS.md' },
 };
 
 // ---------------------------------------------------------------------------
@@ -98,10 +99,15 @@ const COMMANDS = {
   'codex-md': 'Generate AGENTS.md for OpenAI Codex CLI',
   'codex-rules': 'Generate .agents/rules/ for OpenAI Codex CLI',
   'codex-hooks': 'Generate .codex/hooks.json for OpenAI Codex CLI',
+  'opencode-md': 'Generate AGENTS.md for opencode',
+  'opencode-agents': 'Generate .opencode/agents/ for opencode (subagents)',
+  'opencode-commands': 'Generate .opencode/commands/ for opencode (slash commands)',
+  'opencode-plugin': 'Generate .opencode/plugins/ai-toolkit-hooks.js (lifecycle bridge)',
+  'opencode-json': 'Merge .mcp.json servers into opencode.json',
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
   'compile-slm': 'Compile toolkit into a minimal SLM system prompt (--budget, --model-size, --dry-run)',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
-  'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, llms)',
+  'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, opencode, llms)',
   help: 'Show this help message',
 };
 
@@ -225,7 +231,7 @@ function showHelp() {
   console.log('  --persona <p>   Persona preset: backend-lead, frontend-lead, devops-eng, junior-dev');
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
   console.log('  --lang <list>   Explicitly select language rules (e.g. typescript, go,python)');
-  console.log('  --editors <list> Install editor configs: cursor,windsurf,cline,roo,aider,augment,copilot,antigravity,codex (or "all")');
+  console.log('  --editors <list> Install editor configs: cursor,windsurf,cline,roo,aider,augment,copilot,antigravity,codex,opencode (or "all")');
   console.log('                  Default with --local: auto-detect from existing project files');
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
@@ -438,9 +444,10 @@ function handleConfig(args) {
  */
 function handleGenerateAll(_args) {
   for (const [name, gen] of Object.entries(GENERATORS)) {
-    // Skip codex-md — it injects a Codex config block via markers (used by install --local --editors codex)
-    // agents-md generates the full agent list which is the standalone AGENTS.md
-    if (name === 'codex-md') continue;
+    // Skip codex-md and opencode-md — they inject into AGENTS.md via markers
+    // (used by install --local --editors codex|opencode), not as standalone files.
+    // agents-md generates the full agent list which is the standalone AGENTS.md.
+    if (name === 'codex-md' || name === 'opencode-md') continue;
     writeGeneratorOutput(gen);
   }
   // Directory-based generators (multi-file output)
@@ -452,6 +459,10 @@ function handleGenerateAll(_args) {
   run(scriptPath('generate_augment_rules.py'), [CWD]);
   run(scriptPath('generate_codex_rules.py'), [CWD]);
   run(scriptPath('generate_codex_hooks.py'), [CWD]);
+  run(scriptPath('generate_opencode_agents.py'), [CWD]);
+  run(scriptPath('generate_opencode_commands.py'), [CWD]);
+  run(scriptPath('generate_opencode_plugin.py'), [CWD]);
+  run(scriptPath('generate_opencode_json.py'), [CWD]);
   // Single-file generators
   const conventionsOut = runGenerator('generate_conventions.py');
   fs.writeFileSync(path.join(CWD, 'CONVENTIONS.md'), conventionsOut);
@@ -559,6 +570,10 @@ const SPECIAL_HANDLERS = {
   'augment-dir-rules': (_args) => run(scriptPath('generate_augment_rules.py'), [CWD]),
   'codex-rules': (_args) => run(scriptPath('generate_codex_rules.py'), [CWD]),
   'codex-hooks': (_args) => run(scriptPath('generate_codex_hooks.py'), [CWD]),
+  'opencode-agents': (_args) => run(scriptPath('generate_opencode_agents.py'), [CWD]),
+  'opencode-commands': (_args) => run(scriptPath('generate_opencode_commands.py'), [CWD]),
+  'opencode-plugin': (_args) => run(scriptPath('generate_opencode_plugin.py'), [CWD]),
+  'opencode-json': (_args) => run(scriptPath('generate_opencode_json.py'), [CWD]),
   'generate-all': handleGenerateAll,
 };
 

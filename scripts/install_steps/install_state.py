@@ -89,7 +89,7 @@ def remove_mcp_template(name: str) -> None:
 DEFAULT_GLOBAL_EDITORS: list[str] = []
 
 # All editors that support global install (opt-in via --editors)
-GLOBAL_CAPABLE_EDITORS = ["augment", "codex", "cursor", "gemini", "windsurf"]
+GLOBAL_CAPABLE_EDITORS = ["augment", "codex", "cursor", "gemini", "opencode", "windsurf"]
 
 
 def get_global_editors() -> list[str]:

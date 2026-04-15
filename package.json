@@ -1,7 +1,7 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "2.5.0",
-  "description": "Professional-grade AI coding toolkit: 94 skills, 44 agents, multi-platform support (Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI), machine-enforced safety constitution, persona presets, skill security auditor, expanded lifecycle hooks, 11 plugin packs, and benchmark tooling.",
+  "version": "2.6.0",
+  "description": "Professional-grade AI coding toolkit: 94 skills, 44 agents, multi-platform support (Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, opencode), machine-enforced safety constitution, persona presets, skill security auditor, expanded lifecycle hooks, 11 plugin packs, and benchmark tooling.",
   "keywords": [
     "claude",
     "claude-code",
@@ -23,6 +23,7 @@
     "augment",
     "antigravity",
     "google-antigravity",
+    "opencode",
     "multi-platform"
   ],
   "homepage": "https://github.com/softspark/ai-toolkit",
@@ -56,7 +57,9 @@
     "generate:roo": "python3 scripts/generate_roo_modes.py > .roomodes",
     "generate:aider": "python3 scripts/generate_aider_conf.py > .aider.conf.yml",
     "generate:codex-rules": "python3 scripts/generate_codex_rules.py .",
-    "generate:all": "npm run generate:agents && npm run generate:codex-rules && npm run generate:cursor && npm run generate:windsurf && npm run generate:copilot && npm run generate:gemini && npm run generate:cline && npm run generate:roo && npm run generate:aider && npm run generate:llms"
+    "generate:opencode-agents": "python3 scripts/generate_opencode_agents.py .",
+    "generate:opencode-commands": "python3 scripts/generate_opencode_commands.py .",
+    "generate:all": "npm run generate:agents && npm run generate:codex-rules && npm run generate:opencode-agents && npm run generate:opencode-commands && npm run generate:cursor && npm run generate:windsurf && npm run generate:copilot && npm run generate:gemini && npm run generate:cline && npm run generate:roo && npm run generate:aider && npm run generate:llms"
   },
   "files": [
     "bin/",
