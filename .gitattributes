@@ -6,3 +6,4 @@ llms-full.txt merge=ours
 GEMINI.md merge=ours
 .roomodes merge=ours
 .aider.conf.yml merge=ours
+package-lock.json merge=ours
