@@ -299,14 +299,28 @@ def _find_cached_npm(cache_dir: Path) -> Path | None:
 
 
 def _extract_tarball(tarball: Path, dest: Path) -> None:
-    """Extract npm tarball (which has a package/ prefix) to dest."""
+    """Extract npm tarball (which has a package/ prefix) to dest.
+
+    Validates that extracted paths stay within dest to prevent path traversal.
+    Rejects symlinks and absolute paths.
+    """
+    dest_resolved = dest.resolve()
     with tarfile.open(tarball, "r:gz") as tf:
         for member in tf.getmembers():
             # npm tarballs have a "package/" prefix
-            if member.name.startswith("package/"):
-                member.name = member.name[len("package/"):]
-                if member.name:  # skip empty (the "package/" dir itself)
-                    tf.extract(member, dest)
+            if not member.name.startswith("package/"):
+                continue
+            member.name = member.name[len("package/"):]
+            if not member.name:  # skip empty (the "package/" dir itself)
+                continue
+            # Reject symlinks and absolute paths
+            if member.issym() or member.islnk() or member.name.startswith("/"):
+                continue
+            # Path traversal protection
+            target = (dest / member.name).resolve()
+            if not str(target).startswith(str(dest_resolved)):
+                continue
+            tf.extract(member, dest)
 
 
 def _extract_version_from_tarball(filename: str, package_name: str) -> str:
@@ -332,6 +346,10 @@ def _resolve_git(
 ) -> BaseConfig:
     """Resolve from git URL (git+https://...)."""
     url = source.removeprefix("git+")
+    if not url.startswith("https://"):
+        raise ConfigResolverError(
+            f"Only HTTPS git URLs are supported (got: {url.split('://')[0]}://)"
+        )
     cache_key = hashlib.sha256(url.encode()).hexdigest()[:16]
     cache_dir = _cache_root() / "git" / cache_key
 

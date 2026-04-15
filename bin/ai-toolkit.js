@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const { execFileSync, spawnSync, execSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -363,6 +363,10 @@ function handleAddRule(args) {
   }
   // Pass URLs through directly (don't resolve as filesystem path)
   const isUrl = ruleFile.startsWith('https://') || ruleFile.startsWith('http://');
+  if (ruleFile.startsWith('http://')) {
+    console.error('Error: only HTTPS URLs are supported. Use https:// for security.');
+    process.exit(1);
+  }
   const absRuleFile = isUrl ? ruleFile : path.resolve(CWD, ruleFile);
   const ruleName = args[1];
   run(scriptPath('add_rule.py'), ruleName ? [absRuleFile, ruleName] : [absRuleFile]);

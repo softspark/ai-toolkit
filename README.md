@@ -10,12 +10,13 @@
 
 ---
 
-## What's New in v2.4.0
+## What's New in v2.4.1
 
-- **URL hook injection** — `ai-toolkit inject-hook https://...` with auto-refresh on every update (mirrors `add-rule` URL support)
-- **Shared URL fetch** — extracted `url_fetch.py` for reuse across rule and hook URL sources
-- **Surgical Changes rule** — orphan cleanup protocol and "match existing style" in `common/coding-style.md`
-- **Goal-Driven Execution rule** — `step → verify: check` pattern for multi-step tasks
+- **Global editor tracking** — `ai-toolkit install --editors codex` installs Codex globally, tracked in `state.json`, auto-refreshed on `update`
+- **Codex hook propagation** — `inject-hook` auto-propagates to `~/.codex/hooks.json` for Codex-compatible events
+- **Auto-propagation** — `add-rule`, `remove-rule`, `mcp add` auto-propagate to all globally installed editors
+- **Security hardening** — tarball path traversal fix, git URL scheme validation, defense-in-depth name validation
+- **Doctor Check 9** — URL hook sources health check with `--fix` re-fetch support
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

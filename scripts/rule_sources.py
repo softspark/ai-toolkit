@@ -23,8 +23,6 @@ from paths import RULES_DIR
 from url_fetch import fetch_url as fetch_url  # noqa: F811 — re-export
 
 _SOURCES_FILENAME = "sources.json"
-_FETCH_TIMEOUT = 30  # seconds
-_FETCH_MAX_BYTES = 10 * 1024 * 1024  # 10MB
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +81,9 @@ def save_sources(rules_dir: Path | None = None,
 
 def register_url_source(rules_dir: Path | None, rule_name: str, url: str) -> None:
     """Add or update a URL source entry."""
+    import re
+    if not rule_name or not re.fullmatch(r"[a-zA-Z0-9_-]+", rule_name):
+        raise ValueError(f"Invalid rule name: {rule_name!r}")
     rules_dir = rules_dir or RULES_DIR
     sources = load_sources(rules_dir)
     sources[rule_name] = {
