@@ -54,7 +54,10 @@ from install_steps.install_state import (
     record_install,
     get_installed_modules,
     get_installed_profile,
+    get_global_editors,
+    record_global_editors,
     print_status,
+    GLOBAL_CAPABLE_EDITORS,
 )
 from install_steps.detect_language import detect_languages
 from install_steps.project_registry import register_project
@@ -708,17 +711,31 @@ def main() -> None:
             profile = cfg["profile"]
 
         lang_modules = [m for m in (resolved_modules or []) if m.startswith("rules-")]
-        editors_arg: str = cfg["editors"]
+        local_editors_arg: str = cfg["editors"]
         install_local_project(rules_dir, dry_run, reset, lang_modules or None,
-                              editors=editors_arg,
+                              editors=local_editors_arg,
                               merged_config=merged_config)
+        installed_eds: list[str] = []  # local install doesn't track global editors
         install_strict_git_hooks(profile, local, dry_run)
     else:
         # Global install
         print_banner(target_dir, rules_dir, profile, only, skip, dry_run,
                      modules=resolved_modules)
         install_claude_code(target_dir, hooks_scripts_dir, rules_dir, only, skip, dry_run)
-        install_ai_tools(target_dir, rules_dir, only, skip, dry_run)
+
+        # Determine global editors: --editors flag > state > default (none)
+        editors_arg: str = cfg["editors"]
+        if editors_arg:
+            if editors_arg == "all":
+                global_eds = list(GLOBAL_CAPABLE_EDITORS)
+            else:
+                global_eds = [e.strip() for e in editors_arg.split(",") if e.strip()]
+        else:
+            # On update: use editors from state; on fresh install: none
+            global_eds = get_global_editors() or None
+
+        installed_eds = install_ai_tools(target_dir, rules_dir, dry_run,
+                                         editors=global_eds)
         install_persona(target_dir, persona, dry_run)
         install_strict_git_hooks(profile, local, dry_run)
 
@@ -749,6 +766,10 @@ def main() -> None:
             extends_info=extends_info,
         )
 
+        # Record global editors (only for global install, not --local)
+        if not local and installed_eds:
+            record_global_editors(installed_eds)
+
         # Register project in global registry (for `ai-toolkit update` propagation)
         # Skipped when called from update_projects.py (--skip-register) to avoid
         # concurrent writes to projects.json during parallel updates.
@@ -756,10 +777,20 @@ def main() -> None:
             extends_source = ""
             if extends_info:
                 extends_source = extends_info.get("source", "")
+            # Determine editors to record for this project
+            local_eds_for_registry: list[str] | None = None
+            if local and local_editors_arg:
+                if local_editors_arg == "all":
+                    from install_steps.ai_tools import ALL_EDITORS
+                    local_eds_for_registry = list(ALL_EDITORS)
+                else:
+                    local_eds_for_registry = [e.strip() for e in local_editors_arg.split(",") if e.strip()]
+
             is_new = register_project(
                 project_dir,
                 profile=profile or "standard",
                 extends=extends_source,
+                editors=local_eds_for_registry,
             )
             if is_new:
                 print(f"  Registered project in {TOOLKIT_DATA_DIR / 'projects.json'}")

@@ -85,6 +85,27 @@ def remove_mcp_template(name: str) -> None:
     save_state(state)
 
 
+# Default global install: Claude only — no other editors unless --editors is used
+DEFAULT_GLOBAL_EDITORS: list[str] = []
+
+# All editors that support global install (opt-in via --editors)
+GLOBAL_CAPABLE_EDITORS = ["augment", "codex", "cursor", "gemini", "windsurf"]
+
+
+def get_global_editors() -> list[str]:
+    """Return list of globally installed editor names from state."""
+    state = load_state()
+    editors = state.get("global_editors", [])
+    return editors if isinstance(editors, list) else []
+
+
+def record_global_editors(editors: list[str]) -> None:
+    """Record which editors are installed globally in state.json."""
+    state = load_state()
+    state["global_editors"] = sorted(set(editors))
+    save_state(state)
+
+
 def _now_iso() -> str:
     """Return current UTC time in ISO 8601 format."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -162,6 +183,10 @@ def print_status() -> None:
         # Strip "rules-" prefix for readability
         langs = [m.replace("rules-", "") for m in detected]
         print(f"  Detected:   {', '.join(langs)}")
+
+    editors = state.get("global_editors", [])
+    if editors:
+        print(f"  Editors:    {', '.join(editors)}")
 
     mcp = state.get("mcp_templates", [])
     if mcp:

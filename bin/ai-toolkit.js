@@ -152,6 +152,23 @@ function run(script, args = [], opts = {}) {
 }
 
 /**
+ * Propagate changes to globally installed editors (from state.json).
+ * Silently skips if no global editors are configured.
+ * @param {...string} flags - Flags to pass: --rules, --hooks, --mcp
+ */
+function propagateGlobal(...flags) {
+  const result = spawnSync('python3', [scriptPath('propagate_global.py'), ...flags], {
+    stdio: 'inherit',
+    cwd: CWD,
+    env: { ...process.env },
+  });
+  // Non-fatal — propagation failure shouldn't block the primary operation
+  if (result.status !== 0) {
+    console.error('Warning: global editor propagation had issues (non-fatal)');
+  }
+}
+
+/**
  * Generic dispatcher for SCRIPT_COMMANDS entries.
  * Resolves the script path and selects the correct cwd.
  * @param {string} command - Command name (key in SCRIPT_COMMANDS)
@@ -331,6 +348,7 @@ function handleRemoveRule(args) {
   }
   const targetDir = args[1] || process.env.HOME;
   run(scriptPath('remove_rule.py'), [ruleName, targetDir]);
+  propagateGlobal('--rules');
 }
 
 /**
@@ -348,6 +366,7 @@ function handleAddRule(args) {
   const absRuleFile = isUrl ? ruleFile : path.resolve(CWD, ruleFile);
   const ruleName = args[1];
   run(scriptPath('add_rule.py'), ruleName ? [absRuleFile, ruleName] : [absRuleFile]);
+  propagateGlobal('--rules');
 }
 
 /**
@@ -392,6 +411,10 @@ function handleMcp(args) {
     process.exit(1);
   }
   run(scriptPath('mcp_manager.py'), args);
+  // After `mcp add`, propagate to global editors
+  if (args[0] === 'add') {
+    propagateGlobal('--mcp');
+  }
 }
 
 /**
