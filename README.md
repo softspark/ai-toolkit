@@ -115,7 +115,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 
 | Component | Count | Description |
 |-----------|-------|-------------|
-| `skills/` (task) | 29 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
+| `skills/` (task) | 30 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
 | `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 32 | Domain knowledge auto-loaded by agents |
 | `agents/` | 44 | Specialized agents across 10 categories |
