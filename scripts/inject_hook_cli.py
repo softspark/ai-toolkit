@@ -7,15 +7,20 @@ hooks alongside ai-toolkit's hooks.  Each injected file is tagged with a
 and removal is safe.
 
 Usage:
-    inject_hook_cli.py <hooks-file.json> [target-dir]
+    inject_hook_cli.py <hooks-file-or-url> [hook-name] [target-dir]
     inject_hook_cli.py --remove <hook-source-name> [target-dir]
 
 Arguments:
-    hooks-file    Path to a JSON file with ``{"hooks": {"EventName": [...]}}``
-    target-dir    Directory containing ``.claude/settings.json`` (default: $HOME)
+    hooks-file-or-url  Path to a JSON file or HTTPS URL with
+                       ``{"hooks": {"EventName": [...]}}``
+    hook-name          Override the source name (default: filename stem or
+                       URL last segment)
+    target-dir         Directory containing ``.claude/settings.json``
+                       (default: $HOME)
 
 Flags:
     --remove      Remove all hook entries tagged with the given source name
+                  (also unregisters URL source if present)
 
 The source name is derived from the filename stem (e.g.,
 ``rag-mcp-hooks.json`` becomes ``"rag-mcp-hooks"``).  All entries are tagged
@@ -34,8 +39,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
+import urllib.parse
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # Protected source tag -- this CLI must never touch ai-toolkit's own entries.
 PROTECTED_SOURCE = "ai-toolkit"
@@ -68,6 +77,23 @@ def save_json(path: str, data: dict) -> None:
     with open(path, "w") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
         f.write("\n")
+
+
+# ---------------------------------------------------------------------------
+# URL helpers
+# ---------------------------------------------------------------------------
+
+def _is_url(source: str) -> bool:
+    """Check if source looks like an HTTP(S) URL."""
+    return source.startswith("https://") or source.startswith("http://")
+
+
+def _name_from_url(url: str) -> str:
+    """Derive a hook source name from a URL's last path segment."""
+    parsed = urllib.parse.urlparse(url)
+    filename = parsed.path.rstrip("/").split("/")[-1]
+    stem = filename.rsplit(".", 1)[0] if "." in filename else filename
+    return re.sub(r"[^a-zA-Z0-9_-]", "", stem)
 
 
 # ---------------------------------------------------------------------------
@@ -157,22 +183,92 @@ def merge_hooks(new_hooks: dict, existing_hooks: dict, source: str) -> dict:
 # CLI actions
 # ---------------------------------------------------------------------------
 
-def inject(hooks_file: str, target_dir: str) -> None:
-    """Inject hooks from *hooks_file* into the target settings.json.
+def _fetch_and_cache(url: str, source: str) -> str:
+    """Fetch hooks JSON from URL, cache locally, register source.
 
     Args:
-        hooks_file: Path to the external hooks JSON file.
-        target_dir: Directory containing ``.claude/settings.json``.
+        url: HTTPS URL to fetch.
+        source: Source name for caching and registry.
+
+    Returns:
+        Path to the cached hooks JSON file.
     """
-    # Derive source name from filename stem
-    source = Path(hooks_file).stem
-    if source == PROTECTED_SOURCE:
-        print(
-            f"Error: source name '{PROTECTED_SOURCE}' is reserved. "
-            "Rename your hooks file.",
-            file=sys.stderr,
-        )
+    from url_fetch import fetch_url
+    from hook_sources import register_url_source
+    from paths import EXTERNAL_HOOKS_DIR
+
+    EXTERNAL_HOOKS_DIR.mkdir(parents=True, exist_ok=True)
+
+    try:
+        data = fetch_url(url)
+    except Exception as exc:
+        print(f"Error fetching URL: {exc}", file=sys.stderr)
         sys.exit(1)
+
+    # Validate JSON before caching
+    try:
+        parsed = json.loads(data)
+    except json.JSONDecodeError as exc:
+        print(f"Error: URL returned invalid JSON: {exc}", file=sys.stderr)
+        sys.exit(2)
+
+    if "hooks" not in parsed:
+        print(f"Warning: no 'hooks' key found in URL response", file=sys.stderr)
+
+    cached_path = EXTERNAL_HOOKS_DIR / f"{source}.json"
+    cached_path.write_bytes(data)
+    register_url_source(None, source, url)
+
+    return str(cached_path)
+
+
+def inject(hooks_file: str, target_dir: str, source_override: str = "") -> None:
+    """Inject hooks from *hooks_file* (or URL) into the target settings.json.
+
+    Args:
+        hooks_file: Path to the external hooks JSON file, or an HTTPS URL.
+        target_dir: Directory containing ``.claude/settings.json``.
+        source_override: Explicit source name (overrides filename-derived name).
+    """
+    is_url = _is_url(hooks_file)
+
+    if is_url:
+        if hooks_file.startswith("http://"):
+            print(
+                "Error: only HTTPS URLs are supported. Use https:// for security.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        source = source_override or _name_from_url(hooks_file)
+        source = re.sub(r"[^a-zA-Z0-9_-]", "", source)
+        if not source:
+            print(
+                "Error: could not derive hook name from URL. "
+                "Provide one explicitly.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        if source == PROTECTED_SOURCE:
+            print(
+                f"Error: source name '{PROTECTED_SOURCE}' is reserved.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        hooks_file = _fetch_and_cache(hooks_file, source)
+        print(f"Fetched hooks from URL (source: '{source}')")
+    else:
+        # Derive source name from filename stem
+        source = source_override or Path(hooks_file).stem
+        if source == PROTECTED_SOURCE:
+            print(
+                f"Error: source name '{PROTECTED_SOURCE}' is reserved. "
+                "Rename your hooks file.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     # Load the hooks file
     try:
@@ -218,6 +314,8 @@ def inject(hooks_file: str, target_dir: str) -> None:
 def remove(source_name: str, target_dir: str) -> None:
     """Remove all hook entries tagged with *source_name*.
 
+    Also unregisters the URL source if it was URL-sourced.
+
     Args:
         source_name: The ``_source`` tag to remove.
         target_dir: Directory containing ``.claude/settings.json``.
@@ -256,6 +354,21 @@ def remove(source_name: str, target_dir: str) -> None:
     save_json(str(settings_path), settings)
     print(f"Removed hooks with source '{source_name}' from {settings_path}")
 
+    # Unregister URL source if present
+    try:
+        from hook_sources import unregister_source
+        from paths import EXTERNAL_HOOKS_DIR
+
+        if unregister_source(None, source_name):
+            print(f"Unregistered URL source '{source_name}'")
+
+        # Remove cached file if exists
+        cached = EXTERNAL_HOOKS_DIR / f"{source_name}.json"
+        if cached.is_file():
+            cached.unlink()
+    except ImportError:
+        pass
+
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -265,16 +378,19 @@ def _parse_args(argv: list[str]) -> dict:
     """Parse CLI arguments.
 
     Returns:
-        Dict with keys: remove_mode, remove_name, source_file, target_dir.
+        Dict with keys: remove_mode, remove_name, source_file, hook_name,
+        target_dir.
     """
     result: dict = {
         "remove_mode": False,
         "remove_name": "",
         "source_file": "",
+        "hook_name": "",
         "target_dir": str(Path.home()),
     }
 
     i = 0
+    positional = 0
     while i < len(argv):
         arg = argv[i]
         if arg == "--remove":
@@ -287,10 +403,25 @@ def _parse_args(argv: list[str]) -> dict:
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}", file=sys.stderr)
             sys.exit(1)
-        elif not result["source_file"] and not result["remove_mode"]:
-            result["source_file"] = arg
         else:
-            result["target_dir"] = arg
+            if positional == 0:
+                if not result["remove_mode"]:
+                    result["source_file"] = arg
+                else:
+                    result["target_dir"] = arg
+            elif positional == 1:
+                if _is_url(result["source_file"]):
+                    # Second positional after URL could be hook-name or target-dir
+                    # If it looks like a path (starts with / or ~ or .), it's target-dir
+                    if arg.startswith(("/", "~", ".")):
+                        result["target_dir"] = arg
+                    else:
+                        result["hook_name"] = arg
+                else:
+                    result["target_dir"] = arg
+            elif positional == 2:
+                result["target_dir"] = arg
+            positional += 1
         i += 1
 
     return result
@@ -309,7 +440,7 @@ def main() -> None:
     source_file = args["source_file"]
     if not source_file:
         print(
-            "Usage: inject_hook_cli.py <hooks-file.json> [target-dir]",
+            "Usage: inject_hook_cli.py <hooks-file-or-url> [hook-name] [target-dir]",
             file=sys.stderr,
         )
         print(
@@ -318,12 +449,13 @@ def main() -> None:
         )
         sys.exit(1)
 
-    source_path = Path(source_file)
-    if not source_path.is_file():
-        print(f"Hooks file not found: {source_path}", file=sys.stderr)
-        sys.exit(1)
+    if not _is_url(source_file):
+        source_path = Path(source_file)
+        if not source_path.is_file():
+            print(f"Hooks file not found: {source_path}", file=sys.stderr)
+            sys.exit(1)
 
-    inject(source_file, args["target_dir"])
+    inject(source_file, args["target_dir"], source_override=args["hook_name"])
 
 
 if __name__ == "__main__":

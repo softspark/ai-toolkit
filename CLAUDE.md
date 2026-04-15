@@ -54,6 +54,7 @@ Stale counts = broken user trust. This is non-negotiable.
 - All scripts live in `scripts/` (Python) and `app/hooks/` (Bash) — never at repo root
 - `install` / `update` = global (`~/.claude/`); add `--local` for project-local setup
 - `inject_rule_cli.py` always writes to `$TARGET_DIR/.claude/CLAUDE.md`
+- `inject_hook_cli.py` injects hooks into `$TARGET_DIR/.claude/settings.json` — supports local files and HTTPS URLs
 - Skill names: lowercase-hyphen, max 64 chars, unique across `app/skills/`
 - Task skills: `disable-model-invocation: true` | Knowledge skills: `user-invocable: false` | Explicit hybrid skills: `user-invocable: true` (used by `instinct-review` and `teams` — explicit user-invocable slash commands with LLM response)
 - All scripts (skills + CLI) are Python stdlib only, JSON to stdout, zero external deps

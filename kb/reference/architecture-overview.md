@@ -340,8 +340,8 @@ Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practic
 ### Language Rules
 `app/rules/` provides language-specific rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`. See README.md for current count.
 
-### Extension API (`inject-hook`)
-`inject_section_cli.py` provides a stable marker-based API for injecting content into `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content.
+### Extension API (`inject-hook`, `inject-rule`)
+`inject_section_cli.py` provides a stable marker-based API for injecting content into `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content. `inject_hook_cli.py` injects hooks into `settings.json` with `_source` tags — supports both local files and HTTPS URLs (cached in `~/.softspark/ai-toolkit/hooks/external/`, auto-refreshed on `update`).
 
 ### Manifest Install (`--modules`, `--auto-detect`)
 `manifest.json` defines all installable components as named modules. Install individual modules with `ai-toolkit install --modules <name>` or enable auto-detection to select language rules based on files found in the project.

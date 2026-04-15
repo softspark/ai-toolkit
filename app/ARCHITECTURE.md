@@ -309,8 +309,8 @@ Lead Session (You)
 
 Language rules are propagated to **all configured editors** — not just Claude. `dir_rules_shared.build_language_rules()` reads `app/rules/<lang>/*.md`, strips frontmatter, and returns combined content per language. Each directory-based generator (Cursor, Windsurf, Cline, Roo, Augment, Antigravity, Codex) emits `ai-toolkit-lang-<lang>` files in its native format. Registered custom rules (`~/.softspark/ai-toolkit/rules/`) are similarly propagated as `ai-toolkit-custom-<name>` files via `build_registered_rules()`.
 
-### Extension API (`inject-hook`)
-The `inject_section_cli.py` script provides a stable marker-based injection API. Any tool can add sections to `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content, using `<!-- TOOLKIT:START:<id> -->` / `<!-- TOOLKIT:END:<id> -->` markers.
+### Extension API (`inject-hook`, `inject-rule`)
+The `inject_section_cli.py` script provides a stable marker-based injection API. Any tool can add sections to `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content, using `<!-- TOOLKIT:START:<id> -->` / `<!-- TOOLKIT:END:<id> -->` markers. `inject_hook_cli.py` injects hooks into `settings.json` with `_source` tags — supports both local files and HTTPS URLs (cached in `~/.softspark/ai-toolkit/hooks/external/`, auto-refreshed on `update`). Shared URL fetch logic lives in `url_fetch.py`.
 
 ### SLM Compilation (`compile-slm`)
 `scripts/compile_slm.py` compiles the full toolkit (20K+ tokens) into a minimal system prompt for Small Language Models (2K-16K tokens). Pipeline: Parse → Score → Compress → Pack → Emit. Supports 4 compression levels (ultra-light, light, standard, extended), 4 output formats (raw, ollama, json-string, aider), persona-aware scoring, and language-aware rule filtering. Profile `offline-slm` in `manifest.json`. Constitution is always included (non-negotiable).

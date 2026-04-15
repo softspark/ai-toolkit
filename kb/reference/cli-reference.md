@@ -34,10 +34,10 @@ Usage: ai-toolkit <command> [options]
 
 | Command | Description |
 |---------|-------------|
-| `add-rule <rule.md> [name]` | Register rule in `~/.softspark/ai-toolkit/rules/` — auto-applied on every `update` |
+| `add-rule <rule.md\|url> [name]` | Register rule in `~/.softspark/ai-toolkit/rules/` — auto-applied on every `update` |
 | `remove-rule <name> [dir]` | Unregister rule and remove its block from `CLAUDE.md` |
-| `inject-hook <file.json>` | Inject external hooks into settings.json (idempotent, `_source` tagged) |
-| `remove-hook <name>` | Remove injected hooks by source name |
+| `inject-hook <file.json\|url> [name]` | Inject external hooks (file or URL) into settings.json (idempotent, `_source` tagged, URL hooks auto-refresh on update) |
+| `remove-hook <name>` | Remove injected hooks by source name (also unregisters URL source if present) |
 
 ## MCP Management
 

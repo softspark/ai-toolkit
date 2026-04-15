@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Added
+- **URL hook injection** — `ai-toolkit inject-hook https://...` fetches, caches, and injects hooks from HTTPS URLs. Cached in `~/.softspark/ai-toolkit/hooks/external/`, auto-refreshed on every `update`. `remove-hook` also unregisters URL source and cleans cache.
+- **Shared URL fetch module** — extracted `url_fetch.py` from `rule_sources.py` for reuse by both rule and hook URL sources.
+- **Hook URL source registry** — `hook_sources.py` tracks URL-sourced hooks in `sources.json` (analogous to `rule_sources.py`).
+
+---
+
 ## v2.3.1 — Release Quality Gate (2026-04-14)
 
 ### Fixed

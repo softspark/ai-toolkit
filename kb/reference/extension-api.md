@@ -3,9 +3,9 @@ title: "Extension API Reference"
 category: reference
 service: ai-toolkit
 tags: [extension-api, inject-rule, inject-hook, mcp-templates, integration, editors]
-version: "1.3.9"
+version: "1.4.0"
 created: "2026-04-07"
-last_updated: "2026-04-12"
+last_updated: "2026-04-15"
 description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, remove-rule, remove-hook, and editor-aware MCP template management."
 ---
 
@@ -23,9 +23,9 @@ This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP serv
 |---------|-------------|-----------|------------|
 | `inject-rule <file.md>` | `~/.claude/CLAUDE.md` | HTML comment markers (`<!-- TOOLKIT:name -->`) | Yes |
 | `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers by block name | Yes |
-| `inject-hook <file.json>` | `~/.claude/settings.json` | JSON `_source` tag per entry | Yes |
-| `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source` | Yes |
-| `add-rule <file.md>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
+| `inject-hook <file.json\|url> [name]` | `~/.claude/settings.json` | JSON `_source` tag per entry, URL cached + registered | Yes |
+| `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source`, unregister URL source | Yes |
+| `add-rule <file.md\|url>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
 | `mcp add <name...>` | `.mcp.json` | Merge `mcpServers` block from template | Yes |
 | `mcp install --editor <name...>` | Native editor MCP config | Render canonical template into editor format | Yes |
 
@@ -60,13 +60,20 @@ The argument is the block name (file stem used during `inject-rule`). If the blo
 
 ## inject-hook
 
-Injects hook entries from a JSON file into `~/.claude/settings.json`. Every injected entry is tagged with `"_source": "<source-name>"` where the source name is derived from the filename stem.
+Injects hook entries from a JSON file or HTTPS URL into `~/.claude/settings.json`. Every injected entry is tagged with `"_source": "<source-name>"` where the source name is derived from the filename stem or URL last segment.
 
 ```bash
+# From local file
 npx @softspark/ai-toolkit inject-hook ./my-tool-hooks.json
+
+# From URL (HTTPS only) — cached locally, auto-refreshed on update
+npx @softspark/ai-toolkit inject-hook https://example.com/my-tool-hooks.json
+
+# With explicit source name
+npx @softspark/ai-toolkit inject-hook https://example.com/hooks.json my-tool-hooks
 ```
 
-**Implementation:** `scripts/inject_hook_cli.py`.
+**Implementation:** `scripts/inject_hook_cli.py`, `scripts/hook_sources.py`, `scripts/url_fetch.py`.
 
 **Input format:**
 ```json
@@ -88,15 +95,17 @@ npx @softspark/ai-toolkit inject-hook ./my-tool-hooks.json
 }
 ```
 
-**Source name derivation:** `my-tool-hooks.json` → source name `"my-tool-hooks"`. All entries are tagged `"_source": "my-tool-hooks"` in settings.json.
+**Source name derivation:** `my-tool-hooks.json` → source name `"my-tool-hooks"`. For URLs: `https://example.com/path/my-tool-hooks.json` → `"my-tool-hooks"`. All entries are tagged `"_source": "my-tool-hooks"` in settings.json.
+
+**URL support:** When an HTTPS URL is provided, the JSON is fetched, validated, cached in `~/.softspark/ai-toolkit/hooks/external/<name>.json`, and registered in `sources.json`. On every `ai-toolkit update`, URL-sourced hooks are re-fetched and re-injected automatically. If the fetch fails during update, the cached version is used.
 
 **Idempotency:** Re-running strips all existing entries with the same source name, then appends the new ones. No duplicates accumulate.
 
-**Safety:** Entries tagged `"_source": "ai-toolkit"` are never modified or removed by this command. External tools cannot affect the toolkit's own hooks.
+**Safety:** Entries tagged `"_source": "ai-toolkit"` are never modified or removed by this command. External tools cannot affect the toolkit's own hooks. Only HTTPS URLs are accepted.
 
 ## remove-hook
 
-Strips all hook entries from `~/.claude/settings.json` that carry a given `_source` tag.
+Strips all hook entries from `~/.claude/settings.json` that carry a given `_source` tag. If the hook was URL-sourced, also unregisters the URL from `sources.json` and removes the cached file.
 
 ```bash
 npx @softspark/ai-toolkit remove-hook my-tool-hooks
@@ -140,14 +149,14 @@ When `install` runs with `--scope project`, ai-toolkit also updates `.mcp.json` 
 │  Public Extension API:                               │
 │    inject-rule  <file.md>     → CLAUDE.md            │
 │    remove-rule  <name>        → CLAUDE.md            │
-│    inject-hook  <file.json>   → settings.json        │
+│    inject-hook  <file|url>    → settings.json        │
 │    remove-hook  <name>        → settings.json        │
-│    add-rule     <file.md>     → rules/ registry      │
+│    add-rule     <file|url>    → rules/ registry      │
 │    mcp add      <template>    → .mcp.json            │
 │    mcp install  <template>    → editor-native MCP    │
 │                                                      │
 │  Idempotent: markers (rules) / _source tags (hooks)  │
-│  ai-toolkit NEVER calls external services            │
+│  URL sources: cached + auto-refreshed on update      │
 └──────────────────────────────────────────────────────┘
                         ▲
                         │ uses API

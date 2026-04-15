@@ -256,3 +256,152 @@ assert 'hooks' not in data, f'hooks key should be removed: {data}'
     run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" --remove
     [ "$status" -ne 0 ]
 }
+
+# ── URL support ──────────────────────────────────────────────────────────
+
+@test "inject_hook_cli.py rejects http:// URLs (HTTPS only)" {
+    run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "http://example.com/hooks.json" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HTTPS"* ]]
+}
+
+@test "inject_hook_cli.py _name_from_url derives correct name" {
+    python3 -c "
+import sys
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from inject_hook_cli import _name_from_url
+assert _name_from_url('https://example.com/my-hooks.json') == 'my-hooks'
+assert _name_from_url('https://example.com/path/to/rag-mcp-hooks.json') == 'rag-mcp-hooks'
+assert _name_from_url('https://example.com/hooks') == 'hooks'
+"
+}
+
+@test "inject_hook_cli.py URL fetch caches file and registers source" {
+    # Use a local file-based approach: start a tiny HTTP server
+    _make_hooks_file "$TEST_DIR/served-hooks.json" "Stop" "echo url-test"
+
+    # Start a local HTTPS-less server; since we can't easily do HTTPS in test,
+    # test the cache + registry logic directly via Python
+    export AI_TOOLKIT_HOME="$TEST_DIR/toolkit-data"
+    mkdir -p "$AI_TOOLKIT_HOME/hooks/external"
+
+    python3 -c "
+import sys, json, os
+os.environ['AI_TOOLKIT_HOME'] = '$TEST_DIR/toolkit-data'
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+
+# Simulate what _fetch_and_cache does (without actual HTTP)
+from hook_sources import register_url_source, load_sources, get_url_hooks
+from paths import EXTERNAL_HOOKS_DIR
+
+EXTERNAL_HOOKS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Write a cached hooks file
+import shutil
+shutil.copy('$TEST_DIR/served-hooks.json', str(EXTERNAL_HOOKS_DIR / 'test-remote.json'))
+register_url_source(None, 'test-remote', 'https://example.com/test-remote.json')
+
+# Verify sources.json was created
+sources = load_sources()
+assert 'test-remote' in sources, f'Expected test-remote in {sources}'
+assert sources['test-remote']['url'] == 'https://example.com/test-remote.json'
+
+# Verify get_url_hooks
+url_hooks = get_url_hooks()
+assert url_hooks == {'test-remote': 'https://example.com/test-remote.json'}
+"
+}
+
+@test "remove-hook also unregisters URL source" {
+    export AI_TOOLKIT_HOME="$TEST_DIR/toolkit-data"
+    mkdir -p "$AI_TOOLKIT_HOME/hooks/external"
+
+    # Register a URL source and inject its hooks
+    _make_hooks_file "$AI_TOOLKIT_HOME/hooks/external/url-hook.json" "Stop" "echo url"
+
+    python3 -c "
+import sys, os
+os.environ['AI_TOOLKIT_HOME'] = '$TEST_DIR/toolkit-data'
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from hook_sources import register_url_source
+register_url_source(None, 'url-hook', 'https://example.com/url-hook.json')
+"
+    # Inject from cached file
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$AI_TOOLKIT_HOME/hooks/external/url-hook.json" "$TEST_DIR"
+
+    # Verify it was injected
+    python3 -c "
+import json
+with open('$TEST_DIR/.claude/settings.json') as f:
+    data = json.load(f)
+sources = [e.get('_source') for e in data['hooks']['Stop']]
+assert 'url-hook' in sources
+"
+
+    # Remove it
+    AI_TOOLKIT_HOME="$TEST_DIR/toolkit-data" \
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" --remove url-hook "$TEST_DIR"
+
+    # Verify hook removed from settings.json
+    python3 -c "
+import json
+with open('$TEST_DIR/.claude/settings.json') as f:
+    data = json.load(f)
+assert 'hooks' not in data or 'Stop' not in data.get('hooks', {})
+"
+
+    # Verify URL source unregistered
+    python3 -c "
+import sys, os
+os.environ['AI_TOOLKIT_HOME'] = '$TEST_DIR/toolkit-data'
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from hook_sources import load_sources
+sources = load_sources()
+assert 'url-hook' not in sources, f'url-hook still in sources: {sources}'
+"
+
+    # Verify cached file removed
+    [ ! -f "$AI_TOOLKIT_HOME/hooks/external/url-hook.json" ]
+}
+
+@test "hook_sources load_sources returns empty on missing file" {
+    export AI_TOOLKIT_HOME="$TEST_DIR/toolkit-data"
+    python3 -c "
+import sys, os
+os.environ['AI_TOOLKIT_HOME'] = '$TEST_DIR/toolkit-data'
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from hook_sources import load_sources
+assert load_sources() == {}
+"
+}
+
+@test "hook_sources unregister returns False for unknown name" {
+    export AI_TOOLKIT_HOME="$TEST_DIR/toolkit-data"
+    mkdir -p "$AI_TOOLKIT_HOME/hooks/external"
+    python3 -c "
+import sys, os
+os.environ['AI_TOOLKIT_HOME'] = '$TEST_DIR/toolkit-data'
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from hook_sources import unregister_source
+assert unregister_source(None, 'nonexistent') == False
+"
+}
+
+@test "inject_hook_cli.py with source_override uses custom name" {
+    _make_hooks_file "$TEST_DIR/generic.json" "Stop" "echo custom"
+    # Inject with explicit hook-name (simulated by calling Python directly)
+    python3 -c "
+import sys
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from inject_hook_cli import inject
+inject('$TEST_DIR/generic.json', '$TEST_DIR', source_override='my-custom-name')
+"
+    python3 -c "
+import json
+with open('$TEST_DIR/.claude/settings.json') as f:
+    data = json.load(f)
+sources = [e.get('_source') for e in data['hooks']['Stop']]
+assert 'my-custom-name' in sources, f'Expected my-custom-name in {sources}'
+"
+}

@@ -65,8 +65,8 @@ const COMMANDS = {
   uninstall: 'Remove ai-toolkit from ~/.claude/',
   'add-rule': 'Register a rule file or URL in ~/.softspark/ai-toolkit/rules/ (URL rules auto-refresh on update)',
   'remove-rule': 'Unregister a rule from ~/.softspark/ai-toolkit/rules/ and remove its block from CLAUDE.md',
-  'inject-hook': 'Inject external hooks into ~/.claude/settings.json (tagged with _source for idempotent updates)',
-  'remove-hook': 'Remove injected hooks by source name from ~/.claude/settings.json',
+  'inject-hook': 'Inject external hooks (file or URL) into ~/.claude/settings.json (URL hooks auto-refresh on update)',
+  'remove-hook': 'Remove injected hooks by source name from ~/.claude/settings.json (also unregisters URL source)',
   validate: 'Verify toolkit integrity',
   doctor: 'Check install health, hooks, and artifact drift',
   eject: 'Export standalone config (no symlinks, no toolkit dependency)',
@@ -226,10 +226,11 @@ function showHelp() {
   console.log('  <rule-name>     Name of rule to unregister (filename without .md)');
   console.log('  [target-dir]    Target dir containing .claude/CLAUDE.md (default: $HOME)');
   console.log('\nOptions for inject-hook:');
-  console.log('  <hooks-file>    Path to JSON file with {"hooks": {"EventName": [...]}} format');
-  console.log('  [target-dir]    Target dir containing .claude/settings.json (default: $HOME)');
+  console.log('  <hooks-file-or-url>  Path to JSON file or HTTPS URL with {"hooks": {"EventName": [...]}}');
+  console.log('  [hook-name]          Override source name (default: filename/URL stem)');
+  console.log('  [target-dir]         Target dir containing .claude/settings.json (default: $HOME)');
   console.log('\nOptions for remove-hook:');
-  console.log('  <source-name>   Source tag to remove (derived from hooks filename stem)');
+  console.log('  <source-name>   Source tag to remove (also unregisters URL source if present)');
   console.log('  [target-dir]    Target dir containing .claude/settings.json (default: $HOME)');
   console.log('\nOptions for add-rule:');
   console.log('  <rule-file>     Path to .md rule file or HTTPS URL to register globally');
@@ -350,18 +351,21 @@ function handleAddRule(args) {
 }
 
 /**
- * Handle `ai-toolkit inject-hook` -- injects external hooks into settings.json.
+ * Handle `ai-toolkit inject-hook` -- injects external hooks (file or URL) into settings.json.
  * @param {string[]} args
  */
 function handleInjectHook(args) {
-  const hooksFile = args[0];
-  if (!hooksFile) {
-    console.error('Usage: ai-toolkit inject-hook <hooks-file.json> [target-dir]');
+  const source = args[0];
+  if (!source) {
+    console.error('Usage: ai-toolkit inject-hook <hooks-file-or-url> [hook-name] [target-dir]');
     process.exit(1);
   }
-  const absHooksFile = path.resolve(CWD, hooksFile);
-  const targetDir = args[1] || process.env.HOME;
-  run(scriptPath('inject_hook_cli.py'), [absHooksFile, targetDir]);
+  const isUrl = source.startsWith('https://') || source.startsWith('http://');
+  // For URLs pass as-is; for files resolve to absolute path
+  const resolvedSource = isUrl ? source : path.resolve(CWD, source);
+  // Pass remaining args through — Python CLI handles positional parsing
+  const remaining = args.slice(1);
+  run(scriptPath('inject_hook_cli.py'), [resolvedSource, ...remaining]);
 }
 
 /**

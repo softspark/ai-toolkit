@@ -99,6 +99,47 @@ def _refresh_url_rules(rules_dir: Path) -> None:
                 print(f"           No cached version — rule will be skipped.")
 
 
+def refresh_url_hooks(target_dir: str | None = None) -> None:
+    """Re-fetch all URL-sourced hooks and re-inject them.
+
+    Called during ``ai-toolkit update`` to keep URL-sourced hooks current.
+    On fetch failure, warns and keeps the cached version.
+    """
+    from hook_sources import get_url_hooks
+    from paths import EXTERNAL_HOOKS_DIR
+    from url_fetch import fetch_url
+    import json
+
+    url_hooks = get_url_hooks()
+    if not url_hooks:
+        return
+
+    print("  Refreshing URL-sourced hooks...")
+    target = target_dir or str(Path.home())
+
+    for hook_name, url in url_hooks.items():
+        cached_file = EXTERNAL_HOOKS_DIR / f"{hook_name}.json"
+        try:
+            data = fetch_url(url)
+            # Validate JSON before caching
+            json.loads(data)
+            cached_file.write_bytes(data)
+            print(f"  Refreshed: {hook_name} (from {url})")
+        except Exception as exc:
+            if cached_file.is_file():
+                print(f"  Warning: could not refresh '{hook_name}' from {url}: {exc}")
+                print(f"           Using cached version.")
+            else:
+                print(f"  Warning: could not fetch '{hook_name}' from {url}: {exc}")
+                print(f"           No cached version — hook will be skipped.")
+                continue
+
+        # Re-inject from cached file
+        if cached_file.is_file():
+            from inject_hook_cli import inject
+            inject(str(cached_file), target, source_override=hook_name)
+
+
 def _inject_rules_dry_run(rules_dir: Path) -> None:
     rules_src = app_dir / "rules"
     rule_names = " ".join(
