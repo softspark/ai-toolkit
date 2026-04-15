@@ -96,17 +96,11 @@ def cmd_validate(args: list[str]) -> int:
             print(f"  ✗ Merge failed: {e}")
             return 1
 
-    checks = [
-        ("schema valid", True),
-        ("no forbidden overrides", True),
-        ("constitution articles intact", True),
-    ]
-
+    # Summary — these passed because validation above would have returned 1
+    print(f"  ✓ schema valid")
+    print(f"  ✓ no forbidden overrides")
     if extends:
-        checks.append(("extends resolved", True))
-
-    for label, ok in checks:
-        print(f"  {'✓' if ok else '✗'} {label}")
+        print(f"  ✓ extends resolved")
 
     print("\n  Config valid ✓")
     return 0

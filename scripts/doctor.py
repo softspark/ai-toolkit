@@ -454,13 +454,13 @@ def check_stale_rules(dr: DiagResult, fix_mode: bool) -> None:
     for rule_file in sorted(RULES_DIR.iterdir()):
         # Check for stale symlinks
         if rule_file.is_symlink() and not rule_file.exists():
-            print(f"  WARNING: Stale symlink: {rule_file}")
+            dr.warn(f"Stale symlink: {rule_file}")
             stale += 1
             if fix_mode:
                 rule_file.unlink()
-                print("    FIXED: removed stale symlink")
+                dr.fixed(f"removed stale symlink: {rule_file.name}")
         elif rule_file.is_file() and rule_file.stat().st_size == 0:
-            print(f"  WARNING: Empty rule file: {rule_file}")
+            dr.warn(f"Empty rule file: {rule_file}")
             stale += 1
 
     if stale == 0:

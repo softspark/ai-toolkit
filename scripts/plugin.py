@@ -912,7 +912,7 @@ def cmd_status(editors: list[str]) -> None:
                     print(f"    Hooks: {', '.join(h.name for h in hooks)}")
             elif editor == "codex":
                 rules_dir = CODEX_ROOT / ".agents" / "rules"
-                rule_files = sorted(rules_dir.glob(f"ai-toolkit-plugin-{name}-*.md")) if rules_dir.is_dir() else []
+                rule_files = sorted(rules_dir.glob(f"plugin-{name}-*.md")) if rules_dir.is_dir() else []
                 if rule_files:
                     print(f"    Rules: {', '.join(f.name for f in rule_files)}")
             if name == "memory-pack":

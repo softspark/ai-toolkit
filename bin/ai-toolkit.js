@@ -58,8 +58,8 @@ const SCRIPT_COMMANDS = {
 
 /** @type {Record<string, string>} */
 const COMMANDS = {
-  install: 'First-time global install into ~/.claude/ (use --local to also set up project configs)',
-  update: 'Re-apply toolkit with saved modules from state.json (use --local to also refresh project configs)',
+  install: 'First-time global install into ~/.claude/ (use --local for project-local configs only)',
+  update: 'Re-apply toolkit with saved modules from state.json (use --local for project-local only)',
   status: 'Show installed modules, version, and profile from state.json',
   reset: 'Wipe and recreate project-local configs from scratch (requires --local)',
   uninstall: 'Remove ai-toolkit from ~/.claude/',
@@ -218,9 +218,9 @@ function showHelp() {
     console.log(`  ${cmd.padEnd(16)} ${desc}`);
   }
   console.log('\nOptions for install / update:');
-  console.log('  --only <list>   Apply only listed components (e.g. agents,hooks,cursor,windsurf,gemini)');
+  console.log('  --only <list>   Apply only listed components (e.g. agents,hooks,rules,skills,constitution)');
   console.log('  --skip <list>   Skip listed components');
-  console.log('  --local         Also set up project-local configs (CLAUDE.md, settings, constitution, language rules, git hooks)');
+  console.log('  --local         Project-local configs only (CLAUDE.md, settings, constitution, language rules, git hooks)');
   console.log('  --profile <p>   Install profile: minimal (agents+skills), standard (default), strict (all+git hooks)');
   console.log('  --persona <p>   Persona preset: backend-lead, frontend-lead, devops-eng, junior-dev');
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
