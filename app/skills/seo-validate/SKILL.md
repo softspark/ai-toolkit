@@ -455,5 +455,6 @@ See: reference/spa-ssg-patterns.md#react-spa-migration
 - [reference/w3c-guidelines.md](reference/w3c-guidelines.md) — HTML5 semantic requirements, meta tag specs, language tag rules.
 - [reference/core-web-vitals.md](reference/core-web-vitals.md) — LCP/INP/CLS thresholds, resource hints, above-the-fold heuristic, per-framework image components.
 - [reference/geo-guidelines.md](reference/geo-guidelines.md) — GEO principles, `speakable` schema, citation/source markup, AI-extractable content structure.
+- [reference/geo-aeo-patterns.md](reference/geo-aeo-patterns.md) — AEO (Answer Engine Optimization): `FAQPage`/`HowTo`/`QAPage` schema, `llms.txt`, AI bot `robots.txt` directives, E-E-A-T signals, automated grep patterns for Category 6.
 - [reference/schema-types.md](reference/schema-types.md) — Schema.org JSON-LD templates (Article, FAQ, BreadcrumbList, Organization, Product, LocalBusiness) with required properties.
 - [reference/spa-ssg-patterns.md](reference/spa-ssg-patterns.md) — Rendering-mode decision tree, SPA pitfalls, per-framework detection patterns, prerendering strategies.
