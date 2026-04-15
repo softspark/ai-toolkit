@@ -24,7 +24,7 @@ Reviews code changes for quality and issues.
 Before starting manual review, run the diff analyzer script to get a structured risk assessment:
 
 ```bash
-python3 "$(dirname "$0")/scripts/diff-analyzer.py" [base_branch]
+python3 ${CLAUDE_SKILL_DIR}/scripts/diff-analyzer.py [base_branch]
 # Default base branch: main
 # Example: python3 scripts/diff-analyzer.py develop
 ```
@@ -90,11 +90,35 @@ After all reviewers complete:
 - [ ] No code duplication
 - [ ] Appropriate abstractions
 
-### Security
-- [ ] No hardcoded secrets
-- [ ] Input validation
-- [ ] Proper auth checks
-- [ ] SQL injection prevention
+### Security (OWASP Top 10)
+- [ ] A01: Proper auth/authorization on all endpoints
+- [ ] A02: No weak crypto, HTTPS for external comms
+- [ ] A03: Input validation, parameterized queries, output encoding (XSS)
+- [ ] A04: Threat model assumptions documented for new features
+- [ ] A05: No debug mode, default credentials, or verbose errors in prod config
+- [ ] A06: Dependencies checked for known CVEs
+- [ ] A07: No hardcoded secrets, session management correct
+- [ ] A08: Integrity checks on deserialized data, CI/CD pipeline safety
+- [ ] A09: Security-relevant events logged (without PII)
+- [ ] A10: External URL handling validates scheme/host (SSRF prevention)
+
+### API / Contract Changes
+- [ ] Backward compatibility preserved (no silent breaking changes)
+- [ ] API versioning updated if contract changed
+- [ ] Schema validation on request/response
+- [ ] Error responses follow project convention
+
+### Concurrency / Async
+- [ ] Shared mutable state protected (locks, atomics, channels)
+- [ ] No fire-and-forget promises without error handling
+- [ ] Database transactions scoped correctly (no long-held locks)
+- [ ] Race condition risk assessed for concurrent access paths
+
+### Migrations / Schema Changes
+- [ ] Migration is reversible (has rollback path)
+- [ ] No table locks on large tables during peak hours
+- [ ] Data backfill handles NULL/missing values
+- [ ] Indexes added for new query patterns
 
 ### Performance
 - [ ] No N+1 queries

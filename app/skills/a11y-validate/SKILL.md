@@ -365,6 +365,7 @@ For these, use: `axe-core`, `pa11y`, Lighthouse accessibility audit, manual assi
 ## Reference Documents
 
 - [reference/wcag-2-1-aa.md](reference/wcag-2-1-aa.md) — All 50 Level A + AA success criteria with detection status (statically detectable vs runtime-only).
+- [reference/wcag-2-2-aa.md](reference/wcag-2-2-aa.md) — 9 new WCAG 2.2 success criteria (2.4.11, 2.4.12, 2.4.13, 2.5.7, 2.5.8, 3.2.6, 3.3.7, 3.3.8, 3.3.9) with failure patterns, grep patterns, and framework notes.
 - [reference/eaa-compliance.md](reference/eaa-compliance.md) — EU Directive 2019/882 articles, EN 301 549 v3.2.1 mapping, 28 June 2025 timeline, member-state transposition deltas, accessibility-statement templates.
 - [reference/aria-patterns.md](reference/aria-patterns.md) — ARIA 1.2 Authoring Practices: landmarks, roles, states/properties, common anti-patterns, framework-specific helpers (`@react-aria`, `@angular/cdk/a11y`).
 - [reference/mobile-eaa.md](reference/mobile-eaa.md) — EN 301 549 mobile chapter + React Native `AccessibilityInfo` / Flutter `Semantics()` patterns.
