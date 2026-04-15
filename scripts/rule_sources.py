@@ -81,6 +81,9 @@ def save_sources(rules_dir: Path | None = None,
 
 def register_url_source(rules_dir: Path | None, rule_name: str, url: str) -> None:
     """Add or update a URL source entry."""
+    import re
+    if not rule_name or not re.fullmatch(r"[a-zA-Z0-9_-]+", rule_name):
+        raise ValueError(f"Invalid rule name: {rule_name!r}")
     rules_dir = rules_dir or RULES_DIR
     sources = load_sources(rules_dir)
     sources[rule_name] = {

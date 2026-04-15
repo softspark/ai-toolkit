@@ -486,7 +486,7 @@ def check_url_hooks(dr: DiagResult, fix_mode: bool) -> None:
             data = json.load(f)
         sources = data.get("hooks", {})
     except (json.JSONDecodeError, OSError) as exc:
-        dr.error(f"Corrupt sources.json: {exc}")
+        dr.fail(f"Corrupt sources.json: {exc}")
         return
 
     if not sources:
