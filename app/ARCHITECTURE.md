@@ -309,6 +309,17 @@ Lead Session (You)
 
 Language rules are propagated to **all configured editors** — not just Claude. `dir_rules_shared.build_language_rules()` reads `app/rules/<lang>/*.md`, strips frontmatter, and returns combined content per language. Each directory-based generator (Cursor, Windsurf, Cline, Roo, Augment, Antigravity, Codex) emits `ai-toolkit-lang-<lang>` files in its native format. Registered custom rules (`~/.softspark/ai-toolkit/rules/`) are similarly propagated as `ai-toolkit-custom-<name>` files via `build_registered_rules()`.
 
+### opencode Integration (v2.5.0+)
+opencode is the 11th supported editor. Five generators handle its integration surface:
+
+- `generate_opencode.py` → `AGENTS.md` body (shared with Codex; separate marker section prevents clobbering).
+- `generate_opencode_agents.py` → `.opencode/agents/ai-toolkit-*.md` (one per ai-toolkit agent, `mode: subagent`).
+- `generate_opencode_commands.py` → `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill, uses required `template: |` field; knowledge-only skills excluded).
+- `generate_opencode_plugin.py` → `.opencode/plugins/ai-toolkit-hooks.js` (bridges `session.created`, `tool.execute.before/after`, `message.updated`, `session.deleted` to the shared Bash hooks in `~/.softspark/ai-toolkit/hooks/` via Bun `$` — argv-array invocation, no shell string interpolation).
+- `generate_opencode_json.py` → `opencode.json` MCP merge (translates `.mcp.json` local/remote shapes; preserves user-authored keys; idempotent).
+
+Skill adaptation for Claude-only orchestration primitives (`Agent`/`TeamCreate`/`TaskCreate`) is handled by reusing `codex_skill_adapter.py` — opencode, like Codex CLI, lacks these primitives, so the same translation layer applies (no duplication). Global install: `~/.config/opencode/{AGENTS.md,agents/,commands/}`. Auto-detection markers: `opencode.json`, `.opencode/`, `.opencode/agents`, `.opencode/commands`.
+
 ### Extension API (`inject-hook`, `inject-rule`)
 The `inject_section_cli.py` script provides a stable marker-based injection API. Any tool can add sections to `CLAUDE.md`, `constitution.md`, or `ARCHITECTURE.md` without overwriting user content, using `<!-- TOOLKIT:START:<id> -->` / `<!-- TOOLKIT:END:<id> -->` markers. `inject_hook_cli.py` injects hooks into `settings.json` with `_source` tags — supports both local files and HTTPS URLs (cached in `~/.softspark/ai-toolkit/hooks/external/`, auto-refreshed on `update`). Shared URL fetch logic lives in `url_fetch.py`.
 

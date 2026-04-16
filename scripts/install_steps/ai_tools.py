@@ -92,6 +92,14 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
             _install_codex_global(target_dir, rules_dir)
         installed.append("codex")
 
+    if "opencode" in eds:
+        if dry_run:
+            print("  Would inject: ~/.config/opencode/AGENTS.md, "
+                  "~/.config/opencode/agents/, ~/.config/opencode/commands/")
+        else:
+            _install_opencode_global(target_dir, rules_dir)
+        installed.append("opencode")
+
     print()
     print(f"  Available: {', '.join(GLOBAL_CAPABLE_EDITORS)}")
     print("  Note: Copilot, Cline, Roo Code, Aider, Antigravity have no global config -- use 'ai-toolkit install --local' per project")
@@ -126,6 +134,38 @@ def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
     print("  Created: ~/.codex/hooks.json")
 
     _install_codex_skills(target_dir)
+
+
+def _install_opencode_global(target_dir: Path, rules_dir: Path) -> None:
+    """Install opencode at the global level (~/.config/opencode/).
+
+    Creates:
+      - ~/.config/opencode/AGENTS.md (marker injection with rules)
+      - ~/.config/opencode/agents/ai-toolkit-*.md (subagents)
+      - ~/.config/opencode/commands/ai-toolkit-*.md (slash commands)
+    """
+    opencode_home = target_dir / ".config" / "opencode"
+    inject_with_rules(
+        "generate_opencode.py",
+        opencode_home / "AGENTS.md",
+        rules_dir,
+    )
+
+    from generate_opencode_agents import generate as gen_opencode_agents
+    written, removed = gen_opencode_agents(opencode_home)
+    msg = f"  Created: ~/.config/opencode/agents/ ({written} agents"
+    if removed:
+        msg += f", {removed} stale removed"
+    msg += ")"
+    print(msg)
+
+    from generate_opencode_commands import generate as gen_opencode_commands
+    written, removed = gen_opencode_commands(opencode_home)
+    msg = f"  Created: ~/.config/opencode/commands/ ({written} commands"
+    if removed:
+        msg += f", {removed} stale removed"
+    msg += ")"
+    print(msg)
 
 
 def inject_with_rules(
@@ -194,7 +234,7 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
 # All known editor identifiers for --editors flag
 ALL_EDITORS = [
     "copilot", "cursor", "windsurf", "cline", "roo",
-    "aider", "augment", "antigravity", "codex", "gemini",
+    "aider", "augment", "antigravity", "codex", "gemini", "opencode",
 ]
 
 # Map of project files/dirs → editor names for auto-detection
@@ -213,7 +253,15 @@ _EDITOR_MARKERS: dict[str, str] = {
     ".agent/rules": "antigravity",
     ".agents/skills": "codex",
     ".codex": "codex",
+    # NOTE: AGENTS.md alone is ambiguous (Codex + opencode both read it);
+    # prefer the dedicated .opencode/ and opencode.json markers when
+    # disambiguating. If only AGENTS.md is present, Codex takes precedence
+    # to preserve v2.4.x behavior.
     "AGENTS.md": "codex",
+    "opencode.json": "opencode",
+    ".opencode": "opencode",
+    ".opencode/agents": "opencode",
+    ".opencode/commands": "opencode",
 }
 
 
@@ -485,6 +533,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None) -> Non
         "aider":        "  Would generate: .aider.conf.yml + CONVENTIONS.md",
         "augment":      "  Would generate: .augment/rules/ai-toolkit-*.md",
         "antigravity":  "  Would generate: .agent/rules/ + .agent/workflows/",
+        "opencode":     "  Would generate: AGENTS.md + .opencode/{agents,commands,plugins}/ + opencode.json",
     }
     for ed, msg in _EDITOR_DRY_RUN.items():
         if ed in eds:
@@ -510,6 +559,24 @@ def _reset_local_configs(cwd: Path) -> None:
         if p.is_file():
             p.unlink()
             print(f"  Removed: {rel}")
+
+    # opencode: remove only ai-toolkit-prefixed generated files so the
+    # user's own .opencode/agents/ or commands/ entries are preserved.
+    # opencode.json is left alone — it may contain user MCP servers and other
+    # project settings; reinstall re-merges our MCP entries idempotently.
+    opencode_plugin = cwd / ".opencode" / "plugins" / "ai-toolkit-hooks.js"
+    if opencode_plugin.is_file():
+        opencode_plugin.unlink()
+        print("  Removed: .opencode/plugins/ai-toolkit-hooks.js")
+    for sub in ("agents", "commands"):
+        sub_dir = cwd / ".opencode" / sub
+        if sub_dir.is_dir():
+            removed_any = False
+            for f in sorted(sub_dir.glob("ai-toolkit-*.md")):
+                f.unlink()
+                removed_any = True
+            if removed_any:
+                print(f"  Removed: .opencode/{sub}/ai-toolkit-*.md")
 
 
 def _create_local_claude_md(cwd: Path, reset: bool) -> None:
@@ -698,6 +765,42 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         print("  Created: .codex/hooks.json")
         # .agents/skills/ — filtered symlinks (Codex-compatible skills only)
         _install_codex_skills(cwd)
+
+    if "opencode" in eds:
+        # AGENTS.md — shared with Codex via marker injection (opencode reads same file)
+        # Use a dedicated section tag so Codex and opencode don't clobber each other.
+        inject_with_rules(
+            "generate_opencode.py",
+            cwd / "AGENTS.md",
+            rules_dir,
+        )
+        # .opencode/agents/ — native subagents
+        from generate_opencode_agents import generate as gen_opencode_agents
+        written, removed = gen_opencode_agents(cwd)
+        msg = f"  Created: .opencode/agents/ ({written} agents"
+        if removed:
+            msg += f", {removed} stale removed"
+        msg += ")"
+        print(msg)
+        # .opencode/commands/ — native slash commands
+        from generate_opencode_commands import generate as gen_opencode_commands
+        written, removed = gen_opencode_commands(cwd)
+        msg = f"  Created: .opencode/commands/ ({written} commands"
+        if removed:
+            msg += f", {removed} stale removed"
+        msg += ")"
+        print(msg)
+        # .opencode/plugins/ai-toolkit-hooks.js — lifecycle hook bridge
+        from generate_opencode_plugin import generate as gen_opencode_plugin
+        gen_opencode_plugin(cwd)
+        print("  Created: .opencode/plugins/ai-toolkit-hooks.js")
+        # opencode.json — merge MCP servers from .mcp.json (preserves user keys)
+        from generate_opencode_json import merge_into_opencode_json
+        _, mcp_count = merge_into_opencode_json(cwd)
+        if mcp_count:
+            print(f"  Updated: opencode.json ({mcp_count} MCP server(s) from .mcp.json)")
+        else:
+            print("  Updated: opencode.json ($schema set)")
 
     synced_paths = sync_project_mcp_to_editors(cwd, sorted(eds))
     for path in synced_paths:

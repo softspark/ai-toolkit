@@ -1,14 +1,21 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 94 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, and Codex CLI, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 94 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-94-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-618%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-641%20passing-success)](tests/)
 
 ---
+
+## What's New in v2.6.0
+
+- **opencode integration** — `ai-toolkit install --editors opencode` generates `AGENTS.md`, `.opencode/agents/`, `.opencode/commands/`, plus a JS plugin bridging our Bash hooks to opencode's lifecycle events
+- **opencode MCP merge** — `.mcp.json` servers are translated into `opencode.json` under the `mcp` key, preserving user-authored entries
+- **Global opencode configs** — `~/.config/opencode/{AGENTS.md,agents/,commands/}` managed from `state.json`, auto-refreshed on `update`
+- **Shared AGENTS.md** — opencode and Codex CLI both read the same `AGENTS.md` via distinct marker sections; installing both does not clobber either
 
 ## What's New in v2.5.0
 
@@ -143,7 +150,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (618 tests)
+├── tests/               # Bats test suite (641 tests)
 └── CHANGELOG.md
 ```
 

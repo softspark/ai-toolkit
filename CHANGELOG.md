@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.6.0 — opencode Integration (2026-04-15)
+
+### Added
+- **opencode editor support** — `ai-toolkit install --editors opencode` generates a full native integration: `AGENTS.md` (shared with Codex via distinct marker sections), `.opencode/agents/ai-toolkit-*.md` (44 subagents), `.opencode/commands/ai-toolkit-*.md` (62 slash commands), `.opencode/plugins/ai-toolkit-hooks.js` (JS plugin bridging Bash hooks to opencode lifecycle events), and `opencode.json` with MCP servers merged from `.mcp.json`.
+- **Global opencode configs** — `ai-toolkit install --editors opencode` (without `--local`) installs to `~/.config/opencode/{AGENTS.md,agents/,commands/}`. Tracked in `state.json`, auto-refreshed on `update`.
+- **Auto-detection** — projects with `opencode.json` or `.opencode/` are detected by `ai-toolkit install --local` (no explicit `--editors` needed).
+- **MCP translation** — `generate_opencode_json.py` translates Claude-style `.mcp.json` into opencode's `mcp` shape (local `command` + args flattened, remote `url` + headers preserved, `enabled: true` default). User-authored keys in `opencode.json` are preserved; re-runs are idempotent.
+- **New CLI commands** — `ai-toolkit opencode-md`, `opencode-agents`, `opencode-commands`, `opencode-plugin`, `opencode-json`. Included in `generate-all`.
+- **Skill reuse** — opencode reuses the Codex skill adapter (`codex_skill_adapter.py`) for Claude-only orchestration primitives since both lack `Agent`/`TeamCreate`/`TaskCreate` — no duplication.
+
+### Changed
+- README `What's New`, package.json description, manifest.json, and `app/.claude-plugin/plugin.json` all list opencode as a supported editor.
+
+---
+
 ## v2.5.0 — Community Skills, Automated Scanners & Design Craft (2026-04-15)
 
 ### Added
