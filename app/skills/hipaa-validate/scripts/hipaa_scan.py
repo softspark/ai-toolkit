@@ -75,6 +75,12 @@ CAT1_PATTERNS = [
     # Python
     (r"print\(.*\b(patient|ssn|social.security)", "HIGH", "python", "PHI in print statement", "1"),
     (r"logging\.\w+\(.*\b(patient|ssn|mrn|dob)", "HIGH", "python", "PHI fields in logger", "1"),
+    (r"logger\.\w+\(.*\b(patient|ssn|mrn|dob)", "HIGH", "python", "PHI fields in named logger", "1"),
+    (r"pprint\.\w+\(.*\b(patient|ssn|mrn|dob)", "HIGH", "python", "PHI in pprint output", "1"),
+    (r"print\(.*request\.(data|json|form|POST|body)", "WARN", "python", "Raw request body may contain PHI", "1"),
+    (r"logging\.\w+\(.*request\.(data|json|form|POST|body)", "WARN", "python", "Raw request body in logger", "1"),
+    (r"repr\(.*\b(patient|ssn|mrn)", "WARN", "python", "repr() may expose PHI fields", "1"),
+    (r"vars\(.*\b(patient|ssn|mrn)", "WARN", "python", "vars() dumps all PHI fields", "1"),
     # Go
     (r"fmt\.Print.*\b(patient|ssn|mrn)", "HIGH", "go", "PHI in fmt output", "1"),
     (r"log\.\w+\(.*\b(patient|ssn|mrn)", "HIGH", "go", "PHI in log call", "1"),
@@ -101,6 +107,11 @@ CAT3_PATTERNS = [
     (r"NODE_TLS_REJECT_UNAUTHORIZED.*0", "HIGH", "js", "TLS rejection disabled globally", "3"),
     (r"verify\s*=\s*False", "HIGH", "python", "TLS verification disabled (requests)", "3"),
     (r"InsecureRequestWarning", "WARN", "python", "TLS warning suppressed", "3"),
+    (r"ssl\s*=\s*False", "HIGH", "python", "SSL explicitly disabled", "3"),
+    (r"CERT_NONE", "HIGH", "python", "TLS certificate verification disabled", "3"),
+    (r"check_hostname\s*=\s*False", "HIGH", "python", "TLS hostname verification disabled", "3"),
+    (r"urllib3\.disable_warnings", "WARN", "python", "TLS warnings suppressed (urllib3)", "3"),
+    (r"SECURE_SSL_REDIRECT\s*=\s*False", "HIGH", "python", "Django HTTPS redirect disabled", "3"),
 ]
 
 # Category 4: Hardcoded PHI/Test Data
@@ -119,6 +130,9 @@ CAT7_PATTERNS = [
     (r"sessionStorage\.setItem\(.*\b(patient|ssn|mrn|phi|health)", "HIGH", "js", "PHI in session storage", "7"),
     (r"SharedPreferences.*\b(patient|ssn|mrn|phi|health)", "HIGH", "java", "PHI in unencrypted mobile storage", "7"),
     (r"UserDefaults.*\b(patient|ssn|mrn|phi|health)", "HIGH", "any", "PHI in unencrypted UserDefaults", "7"),
+    # Python
+    (r"pickle\.(dump|dumps)\(.*\b(patient|phi|health|ssn|mrn)", "HIGH", "python", "PHI in unencrypted pickle", "7"),
+    (r"shelve\.open\(.*\b(patient|phi|health|ssn|mrn)", "HIGH", "python", "PHI in unencrypted shelve storage", "7"),
 ]
 
 # Category 8: PHI Temp File Exposure
@@ -132,12 +146,17 @@ CAT8_PATTERNS = [
 CAT5_AUTH_KEYWORDS = [
     "auth", "authenticate", "requireAuth", "isAuthenticated",
     "protect", "guard", "Authorize", "login_required", "Permission",
+    # Python frameworks
+    "permission_required", "LoginRequiredMixin", "PermissionRequiredMixin",
+    "IsAuthenticated", "Depends", "Security",
 ]
 
 CAT5_PATTERNS = [
     (r"Access-Control-Allow-Origin:\s*\*", "HIGH", "any", "Unrestricted CORS on PHI endpoint", "5"),
     (r"origin:\s*(true|\*)", "HIGH", "any", "Unrestricted CORS origin", "5"),
     (r"\b(public|noAuth|anonymous)\b.*\b(patient|phi|health|medical)", "HIGH", "any", "Public route exposing PHI", "5"),
+    # Python
+    (r"permission_classes\s*=.*AllowAny", "WARN", "python", "DRF AllowAny — verify no PHI exposed", "5"),
 ]
 
 # HIPAA rule citations per category
@@ -333,7 +352,11 @@ def scan_cat2_audit_gaps(phi_files: list[Path], root: Path) -> list[dict]:
         r"@(Request|Get|Post|Put|Delete)Mapping|"
         r"Model\.(find|save|update|delete)|"
         r"db\.(query|execute)|cursor\.execute|"
-        r"repository\.|findBy|\.save\(|\.delete\()",
+        r"repository\.|findBy|\.save\(|\.delete\(|"
+        # Python frameworks
+        r"@app\.route|@blueprint\.route|"
+        r"@api_view|ViewSet|APIView|"
+        r"session\.(query|add|execute|delete|merge))",
         re.IGNORECASE,
     )
     audit_kw = re.compile(
@@ -382,7 +405,11 @@ def scan_cat5_access_gaps(phi_files: list[Path], languages: set[str],
     )
     data_ops = re.compile(
         r"(router|app\.(get|post|put|delete)|"
-        r"@(Request|Get|Post|Put|Delete)Mapping)",
+        r"@(Request|Get|Post|Put|Delete)Mapping|"
+        # Python frameworks
+        r"@app\.route|@blueprint\.route|"
+        r"@api_view|ViewSet|APIView|"
+        r"cursor\.execute|session\.(query|execute))",
         re.IGNORECASE,
     )
 
