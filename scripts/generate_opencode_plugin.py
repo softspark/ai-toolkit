@@ -1,33 +1,37 @@
 #!/usr/bin/env python3
-"""Generate .opencode/plugins/ai-toolkit-hooks.js for opencode.
+"""Generate the ai-toolkit opencode plugin at ``.opencode/plugins/ai-toolkit-hooks.js``.
 
-opencode plugins are JS/TS modules that receive a context with ``$`` (Bun
-shell), ``project``, ``client``, ``directory``, ``worktree`` and return a
-hooks object. Docs: https://opencode.ai/docs/plugins/
+opencode plugins are JS/TS modules with a NAMED export that receive a
+context (``$``, ``project``, ``client``, ``directory``, ``worktree``) and
+return a hooks object. Docs: https://opencode.ai/docs/plugins/
 
 This generator emits a single-file plugin that bridges ai-toolkit's
-shared Bash hooks (``~/.softspark/ai-toolkit/hooks/*.sh``) to opencode
-lifecycle events. Mapping:
+shared Bash hooks (``$HOME/.softspark/ai-toolkit/hooks/*.sh``) to
+opencode lifecycle events. Coverage map:
 
   opencode event              -> ai-toolkit Bash hook(s)
   ---------------------------------------------------------------
   session.created             -> session-start.sh + session-context.sh + mcp-health.sh
-  tool.execute.before (Bash)  -> guard-destructive.sh + commit-quality.sh
-  tool.execute.after          -> post-tool-use.sh
-  message.updated             -> user-prompt-submit.sh + track-usage.sh
+  session.compacted           -> pre-compact.sh + pre-compact-save.sh
   session.deleted             -> session-end.sh + save-session.sh
+  message.updated             -> user-prompt-submit.sh + track-usage.sh
+  message.part.updated        -> user-prompt-submit.sh + track-usage.sh
+  tool.execute.before (bash)  -> guard-destructive.sh + commit-quality.sh
+  tool.execute.after          -> post-tool-use.sh
+  permission.asked            -> guard-destructive.sh
+  command.executed            -> post-tool-use.sh
 
-Security: hooks are invoked via ``$`` with an argv array (no shell string
-concatenation), so opencode event payloads cannot be coerced into shell
-metacharacters. Non-zero exit codes are logged to stderr but never block
-opencode (the toolkit's own Bash ``exit 2`` semantics are preserved for
-PreToolUse guards — opencode receives the exit code via the return value).
+Security: hooks are invoked via ``$`` with the script path bound to a
+JS constant (no opencode-payload interpolation into the command). Event
+payloads are passed on stdin as JSON. Non-zero exit codes are logged to
+stderr; ``exit 2`` is preserved as a block signal for PreToolUse guards.
 
 Usage:
-  python3 scripts/generate_opencode_plugin.py [target-dir]
+  python3 scripts/generate_opencode_plugin.py [target-dir] [--config-root PATH]
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -38,8 +42,9 @@ PLUGIN_BODY = r"""// ai-toolkit opencode plugin — bridges shared Bash hooks to
 //
 // Hooks live at $HOME/.softspark/ai-toolkit/hooks/*.sh and are shared with
 // Claude Code and Codex CLI. This plugin invokes them via Bun's `$` shell
-// with an argv array — no string interpolation into the shell, so opencode
-// event payloads cannot inject shell metacharacters.
+// with the script path bound as a JS constant — no string interpolation of
+// opencode event payloads into the shell, so event data cannot inject
+// shell metacharacters. Payloads are passed on stdin as JSON.
 
 const HOOKS_DIR = `${process.env.HOME}/.softspark/ai-toolkit/hooks`;
 
@@ -48,7 +53,6 @@ async function runHook($, script, payload) {
   const scriptPath = `${HOOKS_DIR}/${script}`;
   try {
     const input = JSON.stringify(payload ?? {});
-    // `$` runs Bash; passing argv as an array avoids shell-metachar injection.
     const proc = $`bash ${scriptPath}`.env({
       ...process.env,
       AI_TOOLKIT_EVENT: payload?.event || "unknown",
@@ -78,6 +82,10 @@ export const AiToolkitHooks = async ({ $, project, directory, worktree }) => ({
         await runHook($, "session-context.sh", payload);
         await runHook($, "mcp-health.sh", payload);
         break;
+      case "session.compacted":
+        await runHook($, "pre-compact.sh", payload);
+        await runHook($, "pre-compact-save.sh", payload);
+        break;
       case "session.deleted":
         await runHook($, "session-end.sh", payload);
         await runHook($, "save-session.sh", payload);
@@ -86,6 +94,12 @@ export const AiToolkitHooks = async ({ $, project, directory, worktree }) => ({
       case "message.part.updated":
         await runHook($, "user-prompt-submit.sh", payload);
         await runHook($, "track-usage.sh", payload);
+        break;
+      case "permission.asked":
+        await runHook($, "guard-destructive.sh", payload);
+        break;
+      case "command.executed":
+        await runHook($, "post-tool-use.sh", payload);
         break;
     }
   },
@@ -113,14 +127,19 @@ export const AiToolkitHooks = async ({ $, project, directory, worktree }) => ({
     await runHook($, "post-tool-use.sh", payload);
   },
 });
-
-export default AiToolkitHooks;
 """
 
 
-def generate(target_dir: Path) -> Path:
-    """Write .opencode/plugins/ai-toolkit-hooks.js and return its path."""
-    plugins_dir = target_dir / ".opencode" / "plugins"
+def generate(target_dir: Path, config_root: Path | None = None) -> Path:
+    """Write the opencode plugin file and return its path.
+
+    ``config_root`` lets the caller override the default project-local
+    layout. When omitted, writes to ``target_dir/.opencode/plugins/``.
+    Pass ``config_root=~/.config/opencode`` to lay down the plugin
+    globally at ``~/.config/opencode/plugins/ai-toolkit-hooks.js``.
+    """
+    base = config_root if config_root is not None else target_dir / ".opencode"
+    plugins_dir = base / "plugins"
     plugins_dir.mkdir(parents=True, exist_ok=True)
     path = plugins_dir / "ai-toolkit-hooks.js"
     path.write_text(PLUGIN_BODY, encoding="utf-8")
@@ -128,9 +147,21 @@ def generate(target_dir: Path) -> Path:
 
 
 def main() -> None:
-    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
-    path = generate(target)
-    rel = path.relative_to(target) if path.is_relative_to(target) else path
+    parser = argparse.ArgumentParser(description="Generate opencode plugin")
+    parser.add_argument("target", nargs="?", default=".", help="Target directory")
+    parser.add_argument(
+        "--config-root",
+        type=Path,
+        default=None,
+        help="Override base (e.g. ~/.config/opencode for global install).",
+    )
+    args = parser.parse_args()
+    target = Path(args.target)
+    path = generate(target, config_root=args.config_root)
+    try:
+        rel = path.relative_to(target)
+    except ValueError:
+        rel = path
     print(f"Generated: {rel}")
 
 

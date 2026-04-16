@@ -94,8 +94,8 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
 
     if "opencode" in eds:
         if dry_run:
-            print("  Would inject: ~/.config/opencode/AGENTS.md, "
-                  "~/.config/opencode/agents/, ~/.config/opencode/commands/")
+            print("  Would inject: ~/.config/opencode/{AGENTS.md, agents/, "
+                  "commands/, plugins/ai-toolkit-hooks.js, opencode.json}")
         else:
             _install_opencode_global(target_dir, rules_dir)
         installed.append("opencode")
@@ -143,6 +143,8 @@ def _install_opencode_global(target_dir: Path, rules_dir: Path) -> None:
       - ~/.config/opencode/AGENTS.md (marker injection with rules)
       - ~/.config/opencode/agents/ai-toolkit-*.md (subagents)
       - ~/.config/opencode/commands/ai-toolkit-*.md (slash commands)
+      - ~/.config/opencode/plugins/ai-toolkit-hooks.js (hook bridge)
+      - ~/.config/opencode/opencode.json (MCP merge, preserves user keys)
     """
     opencode_home = target_dir / ".config" / "opencode"
     inject_with_rules(
@@ -152,7 +154,7 @@ def _install_opencode_global(target_dir: Path, rules_dir: Path) -> None:
     )
 
     from generate_opencode_agents import generate as gen_opencode_agents
-    written, removed = gen_opencode_agents(opencode_home)
+    written, removed = gen_opencode_agents(target_dir, config_root=opencode_home)
     msg = f"  Created: ~/.config/opencode/agents/ ({written} agents"
     if removed:
         msg += f", {removed} stale removed"
@@ -160,12 +162,23 @@ def _install_opencode_global(target_dir: Path, rules_dir: Path) -> None:
     print(msg)
 
     from generate_opencode_commands import generate as gen_opencode_commands
-    written, removed = gen_opencode_commands(opencode_home)
+    written, removed = gen_opencode_commands(target_dir, config_root=opencode_home)
     msg = f"  Created: ~/.config/opencode/commands/ ({written} commands"
     if removed:
         msg += f", {removed} stale removed"
     msg += ")"
     print(msg)
+
+    from generate_opencode_plugin import generate as gen_opencode_plugin
+    gen_opencode_plugin(target_dir, config_root=opencode_home)
+    print("  Created: ~/.config/opencode/plugins/ai-toolkit-hooks.js")
+
+    from generate_opencode_json import merge_into_opencode_json
+    _, count = merge_into_opencode_json(
+        target_dir, output_path=opencode_home / "opencode.json"
+    )
+    suffix = f" ({count} MCP server(s) merged)" if count else " (no MCP servers)"
+    print(f"  Created: ~/.config/opencode/opencode.json{suffix}")
 
 
 def inject_with_rules(

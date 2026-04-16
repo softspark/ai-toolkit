@@ -44,6 +44,7 @@
 - [MCP Editor Compatibility](kb/reference/mcp-editor-compatibility.md)
 - [MCP Server Templates](kb/reference/mcp-templates.md)
 - [Merge-Friendly Install Model](kb/reference/merge-friendly-install-model.md)
+- [AI Toolkit - opencode Compatibility](kb/reference/opencode-compatibility.md)
 - [Plugin Pack Conventions](kb/reference/plugin-pack-conventions.md)
 - [Quick Wins Implementation Summary](kb/reference/quick-wins-implementation-summary.md)
 - [Skill Templates](kb/reference/skill-templates.md)

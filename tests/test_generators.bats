@@ -799,9 +799,11 @@ generate(Path('$tmp'))
     [ -f "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js" ]
 }
 
-@test "opencode plugin exports AiToolkitHooks and default" {
-    grep -q 'export const AiToolkitHooks' "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
-    grep -q 'export default AiToolkitHooks' "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+@test "opencode plugin uses named export only (no default export)" {
+    local f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+    grep -q 'export const AiToolkitHooks' "$f"
+    # opencode requires named exports; a default export is non-spec.
+    ! grep -q 'export default' "$f"
 }
 
 @test "opencode plugin invokes toolkit hooks directory" {
@@ -813,6 +815,66 @@ generate(Path('$tmp'))
     grep -q 'session.created' "$f"
     grep -q 'tool.execute.before' "$f"
     grep -q 'message.updated' "$f"
+}
+
+@test "opencode plugin bridges session.compacted to pre-compact hooks" {
+    local f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+    grep -q 'session.compacted' "$f"
+    grep -q 'pre-compact.sh' "$f"
+    grep -q 'pre-compact-save.sh' "$f"
+}
+
+@test "opencode plugin bridges permission.asked to guard hook" {
+    local f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+    grep -q 'permission.asked' "$f"
+}
+
+@test "opencode plugin bridges command.executed to post-tool-use hook" {
+    local f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+    grep -q 'command.executed' "$f"
+}
+
+@test "opencode plugin passes payloads via stdin (no shell interpolation)" {
+    local f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+    # proc.stdin.write(input) — payload on stdin, not argv
+    grep -q 'proc.stdin.write' "$f"
+    # scriptPath bound separately from payload — no template literal for payload
+    grep -q 'bash \${scriptPath}' "$f"
+}
+
+@test "opencode agent files do not emit source-model-hint comments" {
+    # Regression: earlier versions emitted `# source model hint...` which is
+    # not a valid opencode frontmatter field. Ensure it's gone.
+    ! grep -r 'source model hint' "$OC_DIR/.opencode/agents/" 2>/dev/null
+}
+
+# ── opencode global layout (no .opencode/ prefix) ───────────────────────────
+
+@test "opencode generators honor --config-root for global layout" {
+    local tmp; tmp="$(mktemp -d)"
+    local home="$tmp/.config/opencode"
+    python3 - "$TOOLKIT_DIR" "$tmp" "$home" <<'PYEOF'
+import sys
+from pathlib import Path
+sys.path.insert(0, f"{sys.argv[1]}/scripts")
+from generate_opencode_agents import generate as gen_a
+from generate_opencode_commands import generate as gen_c
+from generate_opencode_plugin import generate as gen_p
+from generate_opencode_json import merge_into_opencode_json
+target = Path(sys.argv[2]); home = Path(sys.argv[3])
+gen_a(target, config_root=home)
+gen_c(target, config_root=home)
+gen_p(target, config_root=home)
+merge_into_opencode_json(target, output_path=home / "opencode.json")
+PYEOF
+    # Global layout MUST be at ~/.config/opencode/<subdir>/ — NOT nested under .opencode/
+    [ -d "$home/agents" ]
+    [ -d "$home/commands" ]
+    [ -f "$home/plugins/ai-toolkit-hooks.js" ]
+    [ -f "$home/opencode.json" ]
+    # Must NOT create the project-local .opencode/ tree inside the global dir
+    [ ! -d "$home/.opencode" ]
+    rm -rf "$tmp"
 }
 
 # ── generate_opencode_json.py ───────────────────────────────────────────────
