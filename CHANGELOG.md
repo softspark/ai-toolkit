@@ -11,7 +11,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **opencode editor support** — `ai-toolkit install --editors opencode` generates a full native integration: `AGENTS.md` (shared with Codex via distinct marker sections), `.opencode/agents/ai-toolkit-*.md` (44 subagents), `.opencode/commands/ai-toolkit-*.md` (62 slash commands), `.opencode/plugins/ai-toolkit-hooks.js` (JS plugin bridging Bash hooks to opencode lifecycle events), and `opencode.json` with MCP servers merged from `.mcp.json`.
-- **Global opencode configs** — `ai-toolkit install --editors opencode` (without `--local`) installs to `~/.config/opencode/{AGENTS.md,agents/,commands/}`. Tracked in `state.json`, auto-refreshed on `update`.
+- **Global opencode configs** — `ai-toolkit install --editors opencode` (without `--local`) installs the **complete surface** to `~/.config/opencode/{AGENTS.md, agents/, commands/, plugins/ai-toolkit-hooks.js, opencode.json}`. Tracked in `state.json`, auto-refreshed on `update`. (Earlier pre-release iteration shipped only AGENTS.md/agents/commands globally; plugin and opencode.json are now also installed globally so hooks and MCP work without `--local`.)
+- **Expanded hook coverage** — plugin now bridges `session.compacted` → `pre-compact.sh` + `pre-compact-save.sh`, `permission.asked` → `guard-destructive.sh`, and `command.executed` → `post-tool-use.sh` on top of the original session/tool/message events. Maximises opencode lifecycle coverage without introducing new Bash hooks.
 - **Auto-detection** — projects with `opencode.json` or `.opencode/` are detected by `ai-toolkit install --local` (no explicit `--editors` needed).
 - **MCP translation** — `generate_opencode_json.py` translates Claude-style `.mcp.json` into opencode's `mcp` shape (local `command` + args flattened, remote `url` + headers preserved, `enabled: true` default). User-authored keys in `opencode.json` are preserved; re-runs are idempotent.
 - **New CLI commands** — `ai-toolkit opencode-md`, `opencode-agents`, `opencode-commands`, `opencode-plugin`, `opencode-json`. Included in `generate-all`.
@@ -19,6 +20,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - README `What's New`, package.json description, manifest.json, and `app/.claude-plugin/plugin.json` all list opencode as a supported editor.
+- **Plugin exports** — `.opencode/plugins/ai-toolkit-hooks.js` now uses a single named export (`AiToolkitHooks`) per opencode spec. The prior redundant `export default` was removed.
+- **Agent frontmatter** — `model` field and source-model-hint comment are no longer emitted because opencode requires `provider/model-id` format, which ai-toolkit does not store. opencode falls back to the user's configured default model.
+- **Global install layout fix** — global generators now write directly under `~/.config/opencode/{agents,commands,plugins}/` instead of the incorrect `~/.config/opencode/.opencode/…` nesting. Generators accept a `config_root` parameter to distinguish project vs global layout.
+- **Test suite** — grew from 641 to 647 tests covering new event bridges, named-export invariant, missing-source-model-hint regression, and global-layout contract.
 
 ---
 

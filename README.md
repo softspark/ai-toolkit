@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-94-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-641%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-647%20passing-success)](tests/)
 
 ---
 
@@ -114,6 +114,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Augment | `.augment/rules/ai-toolkit-*.md` | project |
 | Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | project |
 | Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.agents/skills/*` + `.codex/hooks.json` | project + global plugin |
+| opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | project + global (`~/.config/opencode/`) |
 
 > Claude Code is always installed (primary platform). Other editors on demand with `--editors`. All platforms receive the same agent/skill catalog, guidelines, and registered custom rules.
 
@@ -150,7 +151,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (641 tests)
+├── tests/               # Bats test suite (647 tests)
 └── CHANGELOG.md
 ```
 
@@ -274,6 +275,7 @@ Need multi-agent coordination?
 | Distribution Model | [kb/reference/distribution-model.md](kb/reference/distribution-model.md) |
 | Ecosystem Comparison | [kb/reference/comparison.md](kb/reference/comparison.md) |
 | Codex CLI Compatibility | [kb/reference/codex-cli-compatibility.md](kb/reference/codex-cli-compatibility.md) |
+| opencode Compatibility | [kb/reference/opencode-compatibility.md](kb/reference/opencode-compatibility.md) |
 | Maintenance SOP | [kb/procedures/maintenance-sop.md](kb/procedures/maintenance-sop.md) |
 
 ---

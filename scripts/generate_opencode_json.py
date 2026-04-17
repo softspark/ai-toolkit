@@ -89,14 +89,20 @@ def _read_mcp_servers(project_dir: Path) -> dict:
     return servers
 
 
-def merge_into_opencode_json(target_dir: Path) -> tuple[Path, int]:
-    """Merge .mcp.json servers into target_dir/opencode.json.
+def merge_into_opencode_json(
+    target_dir: Path, output_path: Path | None = None
+) -> tuple[Path, int]:
+    """Merge .mcp.json servers into an opencode.json file.
+
+    Reads ``target_dir/.mcp.json`` as the canonical source. By default
+    writes to ``target_dir/opencode.json`` (project-local). Pass
+    ``output_path=~/.config/opencode/opencode.json`` for the global layout.
 
     Returns (path, server_count). If no .mcp.json exists, still ensures
-    opencode.json has the $schema key set (creates a minimal file).
+    the output has the $schema key set (creates a minimal file).
     """
     servers = _read_mcp_servers(target_dir)
-    path = target_dir / "opencode.json"
+    path = output_path if output_path is not None else target_dir / "opencode.json"
     data = _load_json(path)
     data.setdefault("$schema", SCHEMA_URL)
 

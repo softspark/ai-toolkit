@@ -111,12 +111,17 @@ def _cleanup_stale(commands_out: Path) -> int:
     return removed
 
 
-def generate(target_dir: Path) -> tuple[int, int]:
-    """Write .opencode/commands/ai-toolkit-*.md files to target_dir.
+def generate(
+    target_dir: Path, config_root: Path | None = None
+) -> tuple[int, int]:
+    """Write opencode command files and return (written, removed_stale).
 
-    Returns (written, removed_stale).
+    By default writes to ``target_dir/.opencode/commands/`` (project-local).
+    Pass ``config_root=~/.config/opencode`` for the global layout, which
+    lives directly under ``commands/`` (no ``.opencode/`` prefix).
     """
-    commands_out = target_dir / ".opencode" / "commands"
+    base = config_root if config_root is not None else target_dir / ".opencode"
+    commands_out = base / "commands"
     commands_out.mkdir(parents=True, exist_ok=True)
 
     written = 0

@@ -55,9 +55,11 @@ def _render_opencode_agent(agent_file: Path) -> str:
     lines: list[str] = ["---"]
     lines.append(f'description: "{safe_desc}"')
     lines.append("mode: subagent")
-    if model:
-        # opencode expects `provider/model` — pass the Claude value through as a hint
-        lines.append(f"# source model hint from ai-toolkit: {model}")
+    # opencode requires `provider/model-id` for the `model` field. ai-toolkit
+    # only stores a short alias (opus/sonnet/haiku) which is not mappable
+    # without assuming a provider, so we deliberately omit it — opencode falls
+    # back to the user's `default_agent` / top-level `model` config.
+    _ = model  # intentionally unused
     if color:
         lines.append(f"color: {color}")
     lines.append("---")
@@ -83,12 +85,17 @@ def _cleanup_stale(agents_out: Path) -> int:
     return removed
 
 
-def generate(target_dir: Path) -> tuple[int, int]:
-    """Write .opencode/agents/ai-toolkit-*.md files to target_dir.
+def generate(
+    target_dir: Path, config_root: Path | None = None
+) -> tuple[int, int]:
+    """Write opencode agent files and return (written, removed_stale).
 
-    Returns (written, removed_stale).
+    By default writes to ``target_dir/.opencode/agents/`` (project-local).
+    Pass ``config_root=~/.config/opencode`` for the global layout, which
+    lives directly under ``agents/`` (no ``.opencode/`` prefix).
     """
-    agents_out = target_dir / ".opencode" / "agents"
+    base = config_root if config_root is not None else target_dir / ".opencode"
+    agents_out = base / "agents"
     agents_out.mkdir(parents=True, exist_ok=True)
 
     written = 0
