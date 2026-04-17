@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.6.1 — HIPAA Scanner Precision (2026-04-17)
+
+### Changed
+- **`hipaa-validate` Cat 3 regexes tightened to cut false positives** — `CERT_NONE` → `ssl\.CERT_NONE` (module-anchored, no longer matches constants like `USE_CERT_NONE_MODE`); `ssl\s*=\s*False` → `[,(]\s*ssl\s*=\s*False\b` (argument-position anchored, no longer matches feature flags like `is_ssl_enabled = False`).
+- **`SECURE_SSL_REDIRECT = False` severity HIGH → WARN** — commonly `False` in dev/local Django settings; compliance reviewer must confirm production config.
+- **Cat 1 Python logger patterns merged** — three overlapping regexes (`logging.*`, `logger.*`, `pprint.*`) collapsed into one `(logging|logger|pprint)\.\w+\(...` pattern; eliminates duplicate findings on the same line.
+- **SQLAlchemy session data-op regexes word-anchored** in Cat 2 and Cat 5 (`\bsession.(query|add|execute|delete|merge)\b`) — prevents false matches on unrelated identifiers.
+
+### Added
+- **`LANG_EXTENSIONS` file-extension filter** in `scripts/hipaa_scan.py` — language-tagged patterns now fire only when the file's extension matches the tag. Eliminates cross-language double-flagging (e.g. Python `logger.\w+` regex no longer triggers on `.java` files in mixed projects).
+- **`tests/test_hipaa_scan.bats`** — 11 fixture-driven tests covering Python positive/negative cases for the new patterns and the cross-language isolation guarantee. Test count: 647 → 658.
+
+---
+
 ## v2.6.0 — opencode Integration (2026-04-15)
 
 ### Added

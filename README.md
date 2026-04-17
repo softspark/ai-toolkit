@@ -6,24 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-94-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-647%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-658%20passing-success)](tests/)
 
 ---
 
-## What's New in v2.6.0
+## What's New in v2.6.1
 
-- **opencode integration** — `ai-toolkit install --editors opencode` generates `AGENTS.md`, `.opencode/agents/`, `.opencode/commands/`, plus a JS plugin bridging our Bash hooks to opencode's lifecycle events
-- **opencode MCP merge** — `.mcp.json` servers are translated into `opencode.json` under the `mcp` key, preserving user-authored entries
-- **Global opencode configs** — `~/.config/opencode/{AGENTS.md,agents/,commands/}` managed from `state.json`, auto-refreshed on `update`
-- **Shared AGENTS.md** — opencode and Codex CLI both read the same `AGENTS.md` via distinct marker sections; installing both does not clobber either
-
-## What's New in v2.5.0
-
-- **`/seo-validate`** — 9-category SEO scanner with automated `seo-scanner.py` script (community contribution)
-- **`/a11y-validate`** — WCAG 2.1/2.2 + EAA accessibility scanner with `a11y-scanner.py` script (community contribution)
-- **Design Craft** — 7-domain impeccable design vocabulary in `frontend-specialist` + `frontend-lead` persona
-- **GEO/AEO reference** — Answer Engine Optimization patterns for AI answer engines
-- **94 skills** — 31 task + 31 hybrid + 32 knowledge
+- **HIPAA scanner precision** — Cat 3 TLS regexes anchored (`ssl.CERT_NONE`, `[,(] ssl=False`) to eliminate false positives on feature flags and constant names
+- **Cross-language isolation** — new `LANG_EXTENSIONS` filter ensures Python regexes don't match `.java` files in mixed projects, and vice versa
+- **`SECURE_SSL_REDIRECT = False` HIGH → WARN** — commonly False in dev settings; reviewer confirms prod config instead of flooding every Django project with HIGH findings
+- **11 new bats tests** (`tests/test_hipaa_scan.bats`) — fixture-driven positive/negative cases covering the Python pattern expansion and isolation guarantee. Test count: 647 → 658
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -151,7 +143,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (647 tests)
+├── tests/               # Bats test suite (658 tests)
 └── CHANGELOG.md
 ```
 

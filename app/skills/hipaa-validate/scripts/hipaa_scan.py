@@ -62,6 +62,19 @@ LANGUAGE_INDICATORS = {
     "*.csproj": "csharp",
 }
 
+# Map language tag to file extensions. Used by scan_patterns to avoid
+# cross-language double-flagging when the same regex is valid for more
+# than one language (e.g. `logger.info(...)` in Python vs Java).
+LANG_EXTENSIONS = {
+    "js": {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"},
+    "ts": {".ts", ".tsx"},
+    "python": {".py", ".pyi"},
+    "java": {".java", ".kt", ".scala"},
+    "go": {".go"},
+    "ruby": {".rb", ".erb"},
+    "csharp": {".cs"},
+}
+
 # ---------------------------------------------------------------------------
 # Pattern definitions per category
 # ---------------------------------------------------------------------------
@@ -72,15 +85,15 @@ CAT1_PATTERNS = [
     (r"console\.log\(.*patient", "HIGH", "js", "Patient data in console.log", "1"),
     (r"console\.\w+\(.*req\.body", "WARN", "js", "Raw request body may contain PHI", "1"),
     (r"JSON\.stringify\(.*patient", "WARN", "js", "Full patient object serialization", "1"),
-    # Python
+    # Python (logger pattern covers logging.*, logger.*, and pprint.* in one regex
+    # to avoid overlapping findings and double-flag with the Java `logger.` pattern.
+    # Language is enforced by file extension via LANG_EXTENSIONS.)
     (r"print\(.*\b(patient|ssn|social.security)", "HIGH", "python", "PHI in print statement", "1"),
-    (r"logging\.\w+\(.*\b(patient|ssn|mrn|dob)", "HIGH", "python", "PHI fields in logger", "1"),
-    (r"logger\.\w+\(.*\b(patient|ssn|mrn|dob)", "HIGH", "python", "PHI fields in named logger", "1"),
-    (r"pprint\.\w+\(.*\b(patient|ssn|mrn|dob)", "HIGH", "python", "PHI in pprint output", "1"),
+    (r"(logging|logger|pprint)\.\w+\(.*\b(patient|ssn|mrn|dob)", "HIGH", "python", "PHI in Python logger/pprint", "1"),
     (r"print\(.*request\.(data|json|form|POST|body)", "WARN", "python", "Raw request body may contain PHI", "1"),
-    (r"logging\.\w+\(.*request\.(data|json|form|POST|body)", "WARN", "python", "Raw request body in logger", "1"),
-    (r"repr\(.*\b(patient|ssn|mrn)", "WARN", "python", "repr() may expose PHI fields", "1"),
-    (r"vars\(.*\b(patient|ssn|mrn)", "WARN", "python", "vars() dumps all PHI fields", "1"),
+    (r"(logging|logger)\.\w+\(.*request\.(data|json|form|POST|body)", "WARN", "python", "Raw request body in logger", "1"),
+    (r"\brepr\(.*\b(patient|ssn|mrn)", "WARN", "python", "repr() may expose PHI fields", "1"),
+    (r"\bvars\(.*\b(patient|ssn|mrn)", "WARN", "python", "vars() dumps all PHI fields", "1"),
     # Go
     (r"fmt\.Print.*\b(patient|ssn|mrn)", "HIGH", "go", "PHI in fmt output", "1"),
     (r"log\.\w+\(.*\b(patient|ssn|mrn)", "HIGH", "go", "PHI in log call", "1"),
@@ -107,11 +120,14 @@ CAT3_PATTERNS = [
     (r"NODE_TLS_REJECT_UNAUTHORIZED.*0", "HIGH", "js", "TLS rejection disabled globally", "3"),
     (r"verify\s*=\s*False", "HIGH", "python", "TLS verification disabled (requests)", "3"),
     (r"InsecureRequestWarning", "WARN", "python", "TLS warning suppressed", "3"),
-    (r"ssl\s*=\s*False", "HIGH", "python", "SSL explicitly disabled", "3"),
-    (r"CERT_NONE", "HIGH", "python", "TLS certificate verification disabled", "3"),
+    # Anchored to argument position ([, or () to avoid matching `is_ssl_enabled = False`
+    (r"[,(]\s*ssl\s*=\s*False\b", "HIGH", "python", "SSL disabled in connector call", "3"),
+    (r"ssl\.CERT_NONE", "HIGH", "python", "TLS certificate verification disabled (ssl.CERT_NONE)", "3"),
     (r"check_hostname\s*=\s*False", "HIGH", "python", "TLS hostname verification disabled", "3"),
     (r"urllib3\.disable_warnings", "WARN", "python", "TLS warnings suppressed (urllib3)", "3"),
-    (r"SECURE_SSL_REDIRECT\s*=\s*False", "HIGH", "python", "Django HTTPS redirect disabled", "3"),
+    # WARN (not HIGH): commonly False in DEBUG/dev settings — compliance reviewer
+    # must confirm production config. Avoids flooding every Django project.
+    (r"SECURE_SSL_REDIRECT\s*=\s*False", "WARN", "python", "Django HTTPS redirect disabled (verify prod config)", "3"),
 ]
 
 # Category 4: Hardcoded PHI/Test Data
@@ -303,7 +319,15 @@ def detect_languages(root: Path) -> set[str]:
 
 def scan_patterns(files: list[Path], patterns: list[tuple],
                   languages: set[str], root: Path) -> list[dict]:
-    """Run regex patterns against files, return findings."""
+    """Run regex patterns against files, return findings.
+
+    Language-tagged patterns fire only when:
+      1. The project's detected languages include the tag, AND
+      2. The file's extension matches that language (per LANG_EXTENSIONS).
+
+    This prevents cross-language double-flagging when two languages share
+    a regex (e.g. `logger.info(patient)` valid in both Python and Java).
+    """
     findings = []
     for fpath in files:
         try:
@@ -311,11 +335,16 @@ def scan_patterns(files: list[Path], patterns: list[tuple],
         except (OSError, PermissionError):
             continue
         rel = str(fpath.relative_to(root))
+        ext = fpath.suffix.lower()
 
         for line_num, line in enumerate(lines, 1):
             for pat, severity, lang, desc, cat in patterns:
-                if lang != "any" and lang not in languages:
-                    continue
+                if lang != "any":
+                    if lang not in languages:
+                        continue
+                    exts = LANG_EXTENSIONS.get(lang)
+                    if exts and ext not in exts:
+                        continue
                 if re.search(pat, line, re.IGNORECASE):
                     findings.append({
                         "file": rel,
@@ -353,10 +382,11 @@ def scan_cat2_audit_gaps(phi_files: list[Path], root: Path) -> list[dict]:
         r"Model\.(find|save|update|delete)|"
         r"db\.(query|execute)|cursor\.execute|"
         r"repository\.|findBy|\.save\(|\.delete\(|"
-        # Python frameworks
+        # Python frameworks (SQLAlchemy session methods only — avoids matching
+        # Express req.session.save/destroy which use different method names)
         r"@app\.route|@blueprint\.route|"
         r"@api_view|ViewSet|APIView|"
-        r"session\.(query|add|execute|delete|merge))",
+        r"\bsession\.(query|add|execute|delete|merge)\b)",
         re.IGNORECASE,
     )
     audit_kw = re.compile(
@@ -406,10 +436,10 @@ def scan_cat5_access_gaps(phi_files: list[Path], languages: set[str],
     data_ops = re.compile(
         r"(router|app\.(get|post|put|delete)|"
         r"@(Request|Get|Post|Put|Delete)Mapping|"
-        # Python frameworks
+        # Python frameworks (session methods anchored to SQLAlchemy)
         r"@app\.route|@blueprint\.route|"
         r"@api_view|ViewSet|APIView|"
-        r"cursor\.execute|session\.(query|execute))",
+        r"cursor\.execute|\bsession\.(query|execute)\b)",
         re.IGNORECASE,
     )
 
