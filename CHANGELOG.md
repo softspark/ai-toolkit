@@ -7,6 +7,35 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.7.0 — Anthropic Ecosystem Alignment (2026-04-17)
+
+### Added
+- **`/mcp-builder` task skill** — opinionated 4-phase MCP server build workflow (Phase 1 research & planning, Phase 2 implementation with Zod/Pydantic schemas, Phase 3 review & testing via MCP Inspector, Phase 4 eval set of 10 realistic questions). Complements the existing `mcp-patterns` knowledge skill.
+- **4 knowledge skills for Claude API work**, auto-loaded by relevant agents:
+  - `prompt-caching-patterns` — TTL, cache breakpoints, 4-layer stacking, hit-rate measurement, anti-patterns.
+  - `json-mode-patterns` — tool-use forcing as idiomatic JSON mode, schema design, partial-output recovery.
+  - `content-moderation-patterns` — 2-stage pre-filter + Haiku classifier, category design, threshold router, HIL queue.
+  - `model-routing-patterns` — Haiku/Sonnet/Opus routing, confidence-based escalation, Opus-planner-with-Haiku-workers sub-agent delegation, task-specific routing table.
+- **2 output styles** in `app/output-styles/`:
+  - `learning.md` — interactive "⟶ Your turn" prompts on meaningful decisions, ★ Insight educational blocks.
+  - `explanatory.md` — one-way ★ Insight blocks exposing implementation trade-offs, no user prompts.
+- **`app/ARCHITECTURE.md` → Frontmatter Schema section** — documents ai-toolkit's spec-defined fields (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`) and top-level extensions (`user-invocable`, `disable-model-invocation`, `effort`, `agent`, `context`, `argument-hint`, `color`). Explains the comma-separated `allowed-tools` convention enforced by `scripts/codex_skill_adapter.py:70` and `scripts/audit_skills.py:157`.
+- **`kb/reference/agent-skills-spec.md` (rag-mcp KB)** — canonical mirror of `agentskills.io/specification` with ai-toolkit extension mapping, validation commands, and progressive-disclosure tiers.
+- **4 fixture tests in `tests/test_review_diff_analyzer.bats`** — category ordering (docs vs security), false-positive guard for unquoted identifier assignments (e.g. `request_token = generate_token_v2_legacy()` no longer flagged), quoted + unquoted env-style detection with accurate file/line tracking, rename record parsing in `git diff --numstat -z`. Test count: 660 → 664.
+
+### Changed
+- **`/review` diff analyzer (`app/skills/review/scripts/diff-analyzer.py`) hardened end-to-end:**
+  - Secret scan now tracks the actual file line number per hunk (parses `@@ -a,b +c,d @@`) and reports `{"file": path, "line": file_line, "preview": snippet}`. Previously reported `line` was the offset in the unified diff text.
+  - Base ref existence verified via `git rev-parse --verify` before diffing. Silent fallback to `--cached` now emits a stderr notice and a `warnings[]` entry in the JSON output, so callers see the reduced scope explicitly.
+  - `git diff --numstat -z` parser replaces naive tab-split; rename entries (three NUL-separated tokens) are handled correctly.
+  - Secret pattern list expanded: JWT (three-segment), PEM private key header (`-----BEGIN … PRIVATE KEY-----`), Google API key (`AIza…`), Slack tokens (`xox[baprs]-…`), GitHub fine-grained PAT (`github_pat_…`), unquoted env-style assignments.
+  - Unquoted env-style pattern tightened so `request_token = generate_token_v2_legacy()` (snake_case identifier on RHS) is not flagged while `API_KEY=abcdef1234567890` and `API_KEY=SECRET_VALUE_XYZ` are. Uses scoped `(?-i:…)` for the ALL_CAPS constant alternative.
+  - Category regex reordered (`docs` and `test` checked before `security`) and anchored with word boundaries and path segments (`(^|/)…` / `\b…\b`). Files like `docs/role-permissions.md`, `roles_and_responsibilities.md`, `accessor.py` are now categorised correctly; `authentication_config_loader.py` resolves to `security`; `notification_settings.py` resolves to `logic` (not `config`).
+  - New output fields: `scope` (`"{base}...HEAD"` or `"staged"`), `warnings[]`.
+- **Doc-count sync** — README, package.json, manifest.json, `app/.claude-plugin/plugin.json`, `app/ARCHITECTURE.md`, `kb/reference/skills-catalog.md`, `AGENTS.md`, `llms-full.txt` all advance to 99 skills (32 task / 31 hybrid / 36 knowledge) and 664 tests.
+
+---
+
 ## v2.6.2 — Eject Count Fix (2026-04-17)
 
 ### Fixed

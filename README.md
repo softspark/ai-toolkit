@@ -1,19 +1,22 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 94 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 99 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-94-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-99-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-660%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-664%20passing-success)](tests/)
 
 ---
 
-## What's New in v2.6.2
+## What's New in v2.7.0
 
-- **`ai-toolkit eject` skill count** now matches `validate.py` — previously reported `95 skills` because the shared `_lib/` helper directory (no `SKILL.md`) was counted. Now skips underscore-prefixed dirs and requires `SKILL.md`; `_lib/` is still copied so dependent skills (`ci`, `test`, `build`, `lint`) keep working after eject.
-- **Two new eject tests** — `eject reports skill count matching validate.py` and `eject still copies _lib helper directory for dependent skills`. Test count: 658 → 660.
+- **5 new skills aligned with Anthropic ecosystem** — `/mcp-builder` (task skill: 4-phase MCP server build methodology, research → implement → test → evaluate) and 4 knowledge skills auto-loaded for Claude API work: `prompt-caching-patterns`, `json-mode-patterns`, `content-moderation-patterns`, `model-routing-patterns`. Skill count: 94 → 99.
+- **2 new output styles** in `app/output-styles/` — `learning` (interactive "your turn" prompts on meaningful decisions) and `explanatory` (★ Insight blocks surfacing implementation trade-offs). Both stack with the existing `golden-rules` style.
+- **`/review` secrets scanner hardened** — `diff-analyzer.py` now tracks actual file line numbers (not diff offsets) per hunk, detects renames via `git diff --numstat -z`, surfaces a `warnings[]` array when falling back from branch diff to staged, and expands secret patterns (JWT, PEM private keys, Google API, Slack tokens, GitHub fine-grained PAT, unquoted env-style). Category regex tightened with word boundaries and anchored path patterns (`docs/role-permissions.md` is no longer miscategorised as security). 4 fixture tests in `tests/test_review_diff_analyzer.bats`.
+- **Frontmatter Schema reference** — new section in `app/ARCHITECTURE.md` and canonical spec mirror at `kb/reference/agent-skills-spec.md` (in rag-mcp KB). Documents ai-toolkit's extensions beyond `agentskills.io/specification` and the comma-separated `allowed-tools` convention enforced by `codex_skill_adapter.py` and `audit_skills.py`.
+- **Test count:** 660 → 664.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -44,7 +47,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 94 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 99 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 ### Update
 
@@ -114,9 +117,9 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 
 | Component | Count | Description |
 |-----------|-------|-------------|
-| `skills/` (task) | 31 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
+| `skills/` (task) | 32 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/mcp-builder`, ... |
 | `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
-| `skills/` (knowledge) | 32 | Domain knowledge auto-loaded by agents |
+| `skills/` (knowledge) | 36 | Domain knowledge auto-loaded by agents |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
@@ -132,7 +135,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   ├── skills/          # 94 skills (task / hybrid / knowledge)
+│   ├── skills/          # 99 skills (task / hybrid / knowledge)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
 │   ├── hooks/           # Hook scripts (21 entries, 12 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
@@ -141,7 +144,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (660 tests)
+├── tests/               # Bats test suite (664 tests)
 └── CHANGELOG.md
 ```
 
