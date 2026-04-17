@@ -1,19 +1,20 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 94 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 99 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-94-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-99-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-660%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-666%20passing-success)](tests/)
 
 ---
 
-## What's New in v2.6.2
+## What's New in v2.7.2
 
-- **`ai-toolkit eject` skill count** now matches `validate.py` — previously reported `95 skills` because the shared `_lib/` helper directory (no `SKILL.md`) was counted. Now skips underscore-prefixed dirs and requires `SKILL.md`; `_lib/` is still copied so dependent skills (`ci`, `test`, `build`, `lint`) keep working after eject.
-- **Two new eject tests** — `eject reports skill count matching validate.py` and `eject still copies _lib helper directory for dependent skills`. Test count: 658 → 660.
+- **Centralized Claude model IDs** in `scripts/_common.py` (`DEFAULT_CLAUDE_MODELS` dict). Next Anthropic model bump touches one file instead of hunting through generators.
+- **`GEMINI.md` regenerated** to include 5 skills missed at v2.7.0 tag: `prompt-caching-patterns`, `json-mode-patterns`, `content-moderation-patterns`, `model-routing-patterns`, `/mcp-builder`.
+- **`manifest.json` skill count corrected** — `94 skills (31/31/32)` → `99 skills (32/31/36)` in both component and module descriptions.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -44,7 +45,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 94 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 99 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 ### Update
 
@@ -114,9 +115,9 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 
 | Component | Count | Description |
 |-----------|-------|-------------|
-| `skills/` (task) | 31 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/skill-audit`, ... |
+| `skills/` (task) | 32 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/mcp-builder`, ... |
 | `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
-| `skills/` (knowledge) | 32 | Domain knowledge auto-loaded by agents |
+| `skills/` (knowledge) | 36 | Domain knowledge auto-loaded by agents |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
@@ -132,7 +133,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   ├── skills/          # 94 skills (task / hybrid / knowledge)
+│   ├── skills/          # 99 skills (task / hybrid / knowledge)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
 │   ├── hooks/           # Hook scripts (21 entries, 12 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
@@ -141,7 +142,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (660 tests)
+├── tests/               # Bats test suite (666 tests)
 └── CHANGELOG.md
 ```
 

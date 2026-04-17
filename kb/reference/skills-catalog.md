@@ -23,7 +23,7 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (30)
+## Task Skills (32)
 
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
@@ -60,6 +60,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references |
 | **a11y-validate** | `/a11y-validate` | medium | Scan codebase for accessibility violations: WCAG 2.1 Level AA, EN 301 549, European Accessibility Act (EAA / EU 2019/882). Covers semantics, keyboard, focus, color contrast, forms, media, ARIA, motion, mobile (React Native + Flutter), and EAA accessibility-statement documentation. |
 | **seo-validate** | `/seo-validate` | medium | Scan codebase for SEO issues: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Framework-aware (Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML). |
+| **mcp-builder** | `/mcp-builder` | high | Build production-grade MCP servers using the 4-phase methodology (research, implement, test, evaluate). TypeScript/Python, stdio/streamable-http. |
 
 ## Hybrid Skills (31)
 
@@ -151,12 +152,16 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **testing-patterns** | `skills/testing-patterns/` | Multi-language TDD: pytest, vitest, phpunit, go test, flutter |
 | **migration-patterns** | `skills/migration-patterns/` | Database migrations, API versioning, zero-downtime |
 
-## Knowledge Skills - AI/RAG (2)
+## Knowledge Skills - AI/RAG (6)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **rag-patterns** | `skills/rag-patterns/` | RAG pipelines, chunking, reranking, evaluation |
 | **mcp-patterns** | `skills/mcp-patterns/` | MCP protocol, server/client design, tools |
+| **prompt-caching-patterns** | `skills/prompt-caching-patterns/` | Anthropic prompt caching: TTL, breakpoints, hit rate, anti-patterns |
+| **json-mode-patterns** | `skills/json-mode-patterns/` | Structured JSON output via tool-use; schema design; partial recovery |
+| **content-moderation-patterns** | `skills/content-moderation-patterns/` | Two-stage moderation: pre-filter + LLM classifier; categories; thresholds |
+| **model-routing-patterns** | `skills/model-routing-patterns/` | Haiku/Sonnet/Opus routing; escalation; sub-agent delegation; fallback |
 
 ## Knowledge Skills - Process (7)
 

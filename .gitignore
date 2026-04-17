@@ -49,3 +49,4 @@ dist/
 /.agents/
 /.codex/
 /.opencode/
+/opencode.json

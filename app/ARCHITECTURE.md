@@ -102,7 +102,7 @@ Universal multi-agent system for software development. Works across all reposito
 
 ## Skills
 
-### Task Skills (29)
+### Task Skills (32)
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `commit` | `/commit` | Create well-structured git commits (Conventional Commits) |
@@ -134,6 +134,7 @@ Universal multi-agent system for software development. Works across all reposito
 | `prd-to-issues` | `/prd-to-issues` | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
 | `skill-audit` | `/skill-audit` | Scan skills and agents for security risks, dangerous patterns, secrets |
 | `hipaa-validate` | `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, missing BAA references |
+| `mcp-builder` | `/mcp-builder` | Build production-grade MCP servers using 4-phase methodology (research, implement, test, evaluate) |
 
 ### Hybrid Skills (31)
 | Skill | Slash Command | Purpose |
@@ -200,11 +201,15 @@ Universal multi-agent system for software development. Works across all reposito
 | `testing-patterns` | Multi-language testing strategies |
 | `migration-patterns` | Database & API migration patterns |
 
-### Knowledge Skills - AI/RAG (2)
+### Knowledge Skills - AI/RAG (6)
 | Skill | Purpose |
 |-------|---------|
 | `rag-patterns` | RAG, retrieval optimization |
 | `mcp-patterns` | MCP server patterns |
+| `prompt-caching-patterns` | Anthropic prompt caching: TTL, breakpoints, hit rate |
+| `json-mode-patterns` | Structured JSON output via tool-use forcing |
+| `content-moderation-patterns` | Two-stage moderation: pre-filter + LLM classifier |
+| `model-routing-patterns` | Haiku/Sonnet/Opus routing, escalation, fallback |
 
 ### Knowledge Skills - Process (7)
 | Skill | Purpose |
@@ -346,3 +351,43 @@ The `inject_section_cli.py` script provides a stable marker-based injection API.
 5. **Read-Only Exploration**: Explorer agent never writes
 6. **Cite Sources**: Always include `[PATH: ...]`
 7. **Multi-Language**: All tools, hooks, and skills support multiple tech stacks
+
+---
+
+## Frontmatter Schema (Agent Skills spec + ai-toolkit extensions)
+
+Canonical spec: https://agentskills.io/specification. ai-toolkit is spec-conformant on required fields and adds extensions at the top level for Claude Code integration.
+
+### Spec-defined fields (agentskills.io)
+
+| Field | Required | Constraints |
+|-------|----------|-------------|
+| `name` | Yes | 1-64 chars, lowercase `a-z0-9` + hyphens, no leading/trailing hyphen, no `--`, must match parent directory |
+| `description` | Yes | 1-1024 chars |
+| `license` | No | License name or bundled file reference |
+| `compatibility` | No | Max 500 chars; environment requirements |
+| `metadata` | No | String-keyed map |
+| `allowed-tools` | No | Space-separated per spec; ai-toolkit uses comma-separated (see below) |
+
+### ai-toolkit extensions (beyond spec)
+
+These live at the top level for convenience. If a future strict spec parser is adopted, move them under `metadata:`.
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `user-invocable` | bool | Surfaces the skill as a slash command. `false` = knowledge skill. |
+| `disable-model-invocation` | bool | Task skill flag; prevents auto-invocation by the model. |
+| `effort` | enum | `low`/`medium`/`high`/`max` — planner and SLM compiler hint. |
+| `agent` | string | Delegates the skill to a specialized agent. |
+| `context` | string | `fork` runs the skill in an isolated forked context. |
+| `argument-hint` | string | Argument pattern for the CLI (e.g. `[symptom]`). |
+| `color` | string | Visual tag for agent cards. |
+
+### `allowed-tools` format note
+
+Spec example uses space separation: `allowed-tools: Bash(git:*) Read`. Claude Code parses several formats leniently: comma-separated, JSON array, and space-separated. **ai-toolkit uses comma-separated** because `scripts/codex_skill_adapter.py:70` and `scripts/audit_skills.py:157` split on `,`. Do not mass-convert unless adapter parsers change first.
+
+### Validation
+
+Internal: `python3 scripts/validate.py --strict` + `python3 scripts/audit_skills.py --ci`.
+External (optional): `skills-ref validate app/skills/` from https://github.com/agentskills/agentskills.

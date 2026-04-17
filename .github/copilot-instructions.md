@@ -196,6 +196,9 @@ Creates new Claude Code slash commands with frontmatter, workflow guidance, and 
 ### commit
 Create Conventional Commits with pre-commit validation
 
+### content-moderation-patterns
+Loaded when user builds content moderation, safety filters, or policy enforcement with Claude. Covers pre-filter vs LLM-classify, category design, confidence thresholds, and human-in-the-loop.
+
 ### council
 4-perspective decision evaluation for architecture choices. Use when user wants multi-angle analysis, needs to decide between alternatives, or mentions 'council', 'evaluate decision', 'pros cons'.
 
@@ -283,11 +286,17 @@ Agent self-debugging and recovery. Use when stuck in loops, making repeated erro
 ### java-patterns
 Loaded when user asks about Java development patterns
 
+### json-mode-patterns
+Loaded when user needs structured JSON output from Claude. Covers tool-use-as-JSON-mode, schema design, parsing, partial recovery, and validation.
+
 ### kotlin-patterns
 Loaded when user asks about Kotlin development patterns
 
 ### lint
 Lint code with auto-detected tools and fix suggestions
+
+### mcp-builder
+Build production-grade MCP (Model Context Protocol) servers from scratch using the 4-phase methodology: research, implement, test, evaluate. Use when creating new MCP integrations for external APIs, databases, or internal services.
 
 ### mcp-patterns
 Loaded when user asks about MCP servers or tool protocol design
@@ -300,6 +309,9 @@ Run database migrations with backup verification
 
 ### migration-patterns
 Loaded when user asks about database migrations or zero-downtime deploys
+
+### model-routing-patterns
+Loaded when user builds multi-model pipelines (Haiku/Sonnet/Opus). Covers cost-optimized routing, escalation, sub-agent delegation, and fallback chains.
 
 ### night-watch
 Run autonomous maintenance and dependency updates
@@ -342,6 +354,9 @@ Convert a PRD into a phased implementation plan using tracer-bullet vertical sli
 
 ### predict
 Predict regressions and impact before changes land
+
+### prompt-caching-patterns
+Loaded when user builds with Anthropic API and needs to cut cost or latency via prompt caching. Covers TTL, cache breakpoints, stacking, invalidation, and measuring hit rate.
 
 ### qa-session
 Interactive QA session where user reports bugs conversationally and agent files GitHub issues with domain language. Explores codebase in background for context. Use when user wants to report bugs, do QA, file issues conversationally, or mentions QA session.
