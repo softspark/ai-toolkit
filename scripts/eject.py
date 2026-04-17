@@ -69,7 +69,11 @@ def main() -> None:
             if dest.exists():
                 shutil.rmtree(dest)
             shutil.copytree(skill, dest)
-            skill_count += 1
+            # Count only real skills. Underscore-prefixed dirs (e.g. `_lib/`)
+            # are shared helpers that must be copied so dependent skills keep
+            # working, but are not skills themselves — matches validate.py.
+            if not skill.name.startswith("_") and (skill / "SKILL.md").is_file():
+                skill_count += 1
     print(f"  Copied: {skill_count} skills")
 
     # -- CLAUDE.md: inline all rules -----------------------------------------
