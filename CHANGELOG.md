@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.7.1 — Eject Output-Styles Fix (2026-04-17)
+
+### Fixed
+- **`ai-toolkit eject` now exports `app/output-styles/*.md`** — pre-existing gap dating back to when output-styles were introduced. `scripts/eject.py` copied agents, skills, rules, constitution, and ARCHITECTURE, but silently skipped the `output-styles/` directory. Standalone `.claude/` produced by eject had no system-prompt styles (no `golden-rules`, and after v2.7.0 no `learning`/`explanatory`). Now eject writes `.claude/output-styles/` with all source `.md` files and includes the count in the summary line: `Ejected: N agents, N skills, N rules, N output style(s)`.
+
+### Added
+- **2 `tests/test_eject.bats` cases** — `eject copies output-styles directory with all source styles` (also asserts `golden-rules.md` baseline) and `eject reports output-style count in summary line`. Test count: 664 → 666.
+
+---
+
 ## v2.7.0 — Anthropic Ecosystem Alignment (2026-04-17)
 
 ### Added

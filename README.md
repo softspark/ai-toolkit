@@ -6,17 +6,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-99-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-664%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-666%20passing-success)](tests/)
 
 ---
 
-## What's New in v2.7.0
+## What's New in v2.7.1
 
-- **5 new skills aligned with Anthropic ecosystem** — `/mcp-builder` (task skill: 4-phase MCP server build methodology, research → implement → test → evaluate) and 4 knowledge skills auto-loaded for Claude API work: `prompt-caching-patterns`, `json-mode-patterns`, `content-moderation-patterns`, `model-routing-patterns`. Skill count: 94 → 99.
-- **2 new output styles** in `app/output-styles/` — `learning` (interactive "your turn" prompts on meaningful decisions) and `explanatory` (★ Insight blocks surfacing implementation trade-offs). Both stack with the existing `golden-rules` style.
-- **`/review` secrets scanner hardened** — `diff-analyzer.py` now tracks actual file line numbers (not diff offsets) per hunk, detects renames via `git diff --numstat -z`, surfaces a `warnings[]` array when falling back from branch diff to staged, and expands secret patterns (JWT, PEM private keys, Google API, Slack tokens, GitHub fine-grained PAT, unquoted env-style). Category regex tightened with word boundaries and anchored path patterns (`docs/role-permissions.md` is no longer miscategorised as security). 4 fixture tests in `tests/test_review_diff_analyzer.bats`.
-- **Frontmatter Schema reference** — new section in `app/ARCHITECTURE.md` and canonical spec mirror at `kb/reference/agent-skills-spec.md` (in rag-mcp KB). Documents ai-toolkit's extensions beyond `agentskills.io/specification` and the comma-separated `allowed-tools` convention enforced by `codex_skill_adapter.py` and `audit_skills.py`.
-- **Test count:** 660 → 664.
+- **`ai-toolkit eject` now copies `app/output-styles/*.md`** — pre-existing gap since output-styles were introduced: eject produced a standalone `.claude/` without any system-prompt styles, so `golden-rules`, `learning`, and `explanatory` silently dropped out after ejecting. Now eject writes `.claude/output-styles/` with all source `.md` files and reports the count in the summary line: `Ejected: N agents, N skills, N rules, N output style(s)`.
+- **2 new `tests/test_eject.bats` cases** covering output-styles: directory created + file count matches source + `golden-rules.md` baseline, and summary line reports correct count. Test count: 664 → 666.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -144,7 +141,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (664 tests)
+├── tests/               # Bats test suite (666 tests)
 └── CHANGELOG.md
 ```
 

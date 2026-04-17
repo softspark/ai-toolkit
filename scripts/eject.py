@@ -7,6 +7,7 @@ target directory with no symlinks and no dependency on ai-toolkit.
 What it exports:
   - .claude/agents/*.md (real files, not symlinks)
   - .claude/skills/*/   (real directories, not symlinks)
+  - .claude/output-styles/*.md (system-prompt styles)
   - .claude/CLAUDE.md   (inlined rules)
   - .claude/constitution.md (full content)
   - .claude/ARCHITECTURE.md (full content)
@@ -90,6 +91,21 @@ def main() -> None:
             rule_count += 1
     print(f"  Inlined: {rule_count} rules into CLAUDE.md")
 
+    # -- Output styles: copy as real files -----------------------------------
+    print("## Output Styles")
+    style_count = 0
+    styles_src = app_dir / "output-styles"
+    if styles_src.is_dir():
+        styles_out = claude_dir / "output-styles"
+        styles_out.mkdir(parents=True, exist_ok=True)
+        for style in sorted(styles_src.glob("*.md")):
+            dest = styles_out / style.name
+            if dest.is_symlink():
+                dest.unlink()
+            shutil.copy2(style, dest)
+            style_count += 1
+    print(f"  Copied: {style_count} output style(s)")
+
     # -- Constitution and Architecture ---------------------------------------
     print("## Config Files")
     for filename in ("constitution.md", "ARCHITECTURE.md"):
@@ -104,7 +120,7 @@ def main() -> None:
     # -- Summary -------------------------------------------------------------
     print()
     print("========================")
-    print(f"Ejected: {agent_count} agents, {skill_count} skills, {rule_count} rules")
+    print(f"Ejected: {agent_count} agents, {skill_count} skills, {rule_count} rules, {style_count} output style(s)")
     print()
     print(f"The toolkit is now standalone in {target_dir.resolve()}/.claude/")
     print("You can safely run: npm uninstall -g @softspark/ai-toolkit")

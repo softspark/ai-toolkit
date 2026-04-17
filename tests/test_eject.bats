@@ -120,6 +120,23 @@ teardown() {
     [ -f "$EJECT_TMP/.claude/skills/_lib/detect_utils.py" ]
 }
 
+@test "eject copies output-styles directory with all source styles" {
+    [ -d "$TOOLKIT_DIR/app/output-styles" ] || skip "output-styles not present in source"
+    [ -d "$EJECT_TMP/.claude/output-styles" ]
+    expected=$(ls "$TOOLKIT_DIR/app/output-styles"/*.md 2>/dev/null | wc -l | xargs)
+    actual=$(ls "$EJECT_TMP/.claude/output-styles"/*.md 2>/dev/null | wc -l | xargs)
+    [ "$expected" -eq "$actual" ]
+    # Specific files: golden-rules baseline + v2.7.0 additions
+    [ -f "$EJECT_TMP/.claude/output-styles/golden-rules.md" ]
+}
+
+@test "eject reports output-style count in summary line" {
+    echo "$EJECT_OUTPUT" | grep -qE 'Ejected: [0-9]+ agents, [0-9]+ skills, [0-9]+ rules, [0-9]+ output style'
+    reported=$(echo "$EJECT_OUTPUT" | grep -E '^Ejected:' | grep -oE '[0-9]+ output style' | grep -oE '[0-9]+' | xargs)
+    expected=$(ls "$TOOLKIT_DIR/app/output-styles"/*.md 2>/dev/null | wc -l | xargs)
+    [ "$reported" = "$expected" ]
+}
+
 @test "cli: help lists eject command" {
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" help
     [ "$status" -eq 0 ]

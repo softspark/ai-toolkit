@@ -4647,9 +4647,9 @@ Three tiers determine how to approach a task:
 
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
-| Task | `disable-model-invocation: true` | User via `/skill` only | 31 |
+| Task | `disable-model-invocation: true` | User via `/skill` only | 32 |
 | Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
-| Knowledge | `user-invocable: false` | Claude auto-loads | 32 |
+| Knowledge | `user-invocable: false` | Claude auto-loads | 36 |
 
 ## Multi-Agent Execution
 
