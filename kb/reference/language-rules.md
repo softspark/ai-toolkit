@@ -6,14 +6,14 @@ tags: [rules, languages, coding-style, testing, patterns, security]
 version: "1.0.0"
 created: "2026-04-07"
 last_updated: "2026-04-07"
-description: "Reference for the language-specific rules system: 13 languages, 5 categories per language, auto-detection."
+description: "Reference for the language-specific rules system: 14 languages, 5 categories per language, auto-detection."
 ---
 
 # Language Rules System
 
 ## Overview
 
-ai-toolkit ships language-specific rule files covering 13 programming languages plus a common set (see README.md for current count). Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
+ai-toolkit ships language-specific rule files covering 14 languages/platforms plus a common set (see README.md for current count). Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
 
 Rules are distinct from skills: rules are injected as static text into `CLAUDE.md` and are always visible to Claude, whereas skills are loaded contextually by agents.
 
@@ -48,10 +48,11 @@ app/rules/
 ├── csharp/
 ├── php/
 ├── cpp/
-└── ruby/
+├── ruby/
+└── medplum/
 ```
 
-**Total: 13 directories × 5 files each + 3 standalone = 68 rule files** (see README.md for canonical count)
+**Total: 14 directories × 5 files each + 3 standalone = 73 rule files** (see README.md for canonical count)
 
 ## Supported Languages
 
@@ -70,6 +71,7 @@ app/rules/
 | PHP | `rules/php/` | `composer.json` |
 | C++ | `rules/cpp/` | `CMakeLists.txt`, `Makefile`, `*.cpp` |
 | Ruby | `rules/ruby/` | `Gemfile`, `*.gemspec` |
+| Medplum | `rules/medplum/` | `medplum.config.mts`, `medplum.config.ts` |
 
 ## Rule Categories
 
@@ -107,6 +109,7 @@ Scans for configuration files defined in each module's `auto_detect` list in `ma
 10. `Package.swift` → Swift
 11. `*.csproj` or `*.sln` → C#
 12. `CMakeLists.txt` or `Makefile` → C++
+13. `medplum.config.mts` or `medplum.config.ts` → Medplum
 
 ### Phase 2: Source file extensions (actual code presence)
 
@@ -163,6 +166,7 @@ Language rules are tracked as modules in `manifest.json`:
 | `rules-php` | PHP-specific rules |
 | `rules-cpp` | C++-specific rules |
 | `rules-ruby` | Ruby-specific rules |
+| `rules-medplum` | Medplum/FHIR healthcare platform rules |
 
 ## Rules vs Skills
 
