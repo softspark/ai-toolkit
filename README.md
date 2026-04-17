@@ -17,21 +17,6 @@
 - **`SECURE_SSL_REDIRECT = False` HIGH → WARN** — commonly False in dev settings; reviewer confirms prod config instead of flooding every Django project with HIGH findings
 - **11 new bats tests** (`tests/test_hipaa_scan.bats`) — fixture-driven positive/negative cases covering the Python pattern expansion and isolation guarantee. Test count: 647 → 658
 
-## What's New in v2.6.0
-
-- **opencode integration** — `ai-toolkit install --editors opencode` generates `AGENTS.md`, `.opencode/agents/`, `.opencode/commands/`, plus a JS plugin bridging our Bash hooks to opencode's lifecycle events
-- **opencode MCP merge** — `.mcp.json` servers are translated into `opencode.json` under the `mcp` key, preserving user-authored entries
-- **Global opencode configs** — `~/.config/opencode/{AGENTS.md,agents/,commands/}` managed from `state.json`, auto-refreshed on `update`
-- **Shared AGENTS.md** — opencode and Codex CLI both read the same `AGENTS.md` via distinct marker sections; installing both does not clobber either
-
-## What's New in v2.5.0
-
-- **`/seo-validate`** — 9-category SEO scanner with automated `seo-scanner.py` script (community contribution)
-- **`/a11y-validate`** — WCAG 2.1/2.2 + EAA accessibility scanner with `a11y-scanner.py` script (community contribution)
-- **Design Craft** — 7-domain impeccable design vocabulary in `frontend-specialist` + `frontend-lead` persona
-- **GEO/AEO reference** — Answer Engine Optimization patterns for AI answer engines
-- **94 skills** — 31 task + 31 hybrid + 32 knowledge
-
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ---

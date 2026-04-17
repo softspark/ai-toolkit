@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-04-10"
-last_updated: "2026-04-13"
+last_updated: "2026-04-17"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag."
 ---
 
@@ -163,11 +163,14 @@ Add entry at the top of `CHANGELOG.md` (after the header, before previous releas
 
 1. Change the heading version: `## What's New in vX.Y.Z`
 2. Replace bullet points with 3-5 highlights from this release
-3. Keep the `See [CHANGELOG.md](CHANGELOG.md) for full history.` link
+3. **Keep only the latest version block.** Delete the previous `## What's New in vA.B.C` section(s). README is the shop window, not the archive — users see the current release, full history lives in `CHANGELOG.md`.
+4. Keep the `See [CHANGELOG.md](CHANGELOG.md) for full history.` link directly below the bullet list.
 
 > **Warning:** This section is the first thing users see after the badges.
 > A stale version here (e.g., "What's New in v2.1.3" when shipping v2.3.0)
 > signals an unmaintained project. Do NOT skip this step.
+
+> **Single-version rule:** README.md must contain **exactly one** `## What's New in vX.Y.Z` heading at any time. If you find multiple stacked (e.g. v2.6.1 + v2.6.0 + v2.5.0), that is a SOP drift — collapse to the latest on the next release commit.
 
 ---
 
