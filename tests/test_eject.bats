@@ -102,6 +102,24 @@ teardown() {
     echo "$EJECT_OUTPUT" | grep -q "skills"
 }
 
+@test "eject reports skill count matching validate.py (excludes _lib helpers)" {
+    # Count real skills: dirs with SKILL.md, skipping underscore-prefixed
+    expected=0
+    for d in "$TOOLKIT_DIR/app/skills"/*/; do
+        name=$(basename "$d")
+        case "$name" in _*) continue ;; esac
+        [ -f "$d/SKILL.md" ] && expected=$((expected + 1))
+    done
+    reported=$(echo "$EJECT_OUTPUT" | grep -oE 'Ejected: [0-9]+ agents, [0-9]+ skills' | grep -oE '[0-9]+ skills' | grep -oE '[0-9]+')
+    [ "$reported" = "$expected" ]
+}
+
+@test "eject still copies _lib helper directory for dependent skills" {
+    [ -d "$TOOLKIT_DIR/app/skills/_lib" ] || skip "_lib not present in source"
+    [ -d "$EJECT_TMP/.claude/skills/_lib" ]
+    [ -f "$EJECT_TMP/.claude/skills/_lib/detect_utils.py" ]
+}
+
 @test "cli: help lists eject command" {
     run node "$TOOLKIT_DIR/bin/ai-toolkit.js" help
     [ "$status" -eq 0 ]

@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.6.2 — Eject Count Fix (2026-04-17)
+
+### Fixed
+- **`ai-toolkit eject` skill count** — reported `95 skills` while `validate.py` reported `94`. Root cause: eject iterated every directory under `app/skills/`, including the shared `_lib/` helper (no `SKILL.md`). Now matches `validate.py` semantics — skips underscore-prefixed dirs and requires `SKILL.md` for the count. `_lib/` is still copied so dependent skills (`ci`, `test`, `build`, `lint`) keep working after eject.
+
+### Added
+- **Two eject tests** in `tests/test_eject.bats` — `eject reports skill count matching validate.py (excludes _lib helpers)` and `eject still copies _lib helper directory for dependent skills`. Test count: 658 → 660.
+
+---
+
 ## v2.6.1 — HIPAA Scanner Precision (2026-04-17)
 
 ### Changed

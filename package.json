@@ -1,6 +1,6 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "Professional-grade AI coding toolkit: 94 skills, 44 agents, multi-platform support (Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, opencode), machine-enforced safety constitution, persona presets, skill security auditor, expanded lifecycle hooks, 11 plugin packs, and benchmark tooling.",
   "keywords": [
     "claude",
