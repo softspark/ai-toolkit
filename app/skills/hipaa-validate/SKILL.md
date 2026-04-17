@@ -100,13 +100,11 @@ Scan the full project for log/print statements that reference PHI keywords.
 | `console\.\w+\(.*req\.body` | WARN | JS/TS | Raw request body may contain PHI |
 | `JSON\.stringify\(.*patient` | WARN | JS/TS | Full patient object serialization |
 | `print\(.*\b(patient\|ssn\|social.security)` | HIGH | Python | PHI in print statements |
-| `logging\.\w+\(.*\b(patient\|ssn\|mrn\|dob)` | HIGH | Python | PHI fields in logger calls |
-| `logger\.\w+\(.*\b(patient\|ssn\|mrn\|dob)` | HIGH | Python | PHI fields in named logger (logging.getLogger) |
-| `pprint\.\w+\(.*\b(patient\|ssn\|mrn\|dob)` | HIGH | Python | PHI in pprint output |
+| `(logging\|logger\|pprint)\.\w+\(.*\b(patient\|ssn\|mrn\|dob)` | HIGH | Python | PHI in logger/named logger/pprint output |
 | `print\(.*request\.(data\|json\|form\|POST\|body)` | WARN | Python | Raw request body may contain PHI (Django/Flask/FastAPI) |
-| `logging\.\w+\(.*request\.(data\|json\|form\|POST\|body)` | WARN | Python | Raw request body in logger |
-| `repr\(.*\b(patient\|ssn\|mrn)` | WARN | Python | repr() may expose PHI fields |
-| `vars\(.*\b(patient\|ssn\|mrn)` | WARN | Python | vars() dumps all PHI fields |
+| `(logging\|logger)\.\w+\(.*request\.(data\|json\|form\|POST\|body)` | WARN | Python | Raw request body in logger |
+| `\brepr\(.*\b(patient\|ssn\|mrn)` | WARN | Python | repr() may expose PHI fields |
+| `\bvars\(.*\b(patient\|ssn\|mrn)` | WARN | Python | vars() dumps all PHI fields |
 | `fmt\.Print.*\b(patient\|ssn\|mrn)` | HIGH | Go | PHI in fmt output |
 | `log\.\w+\(.*\b(patient\|ssn\|mrn)` | HIGH | Go/Any | PHI in log calls |
 | `System\.out\.print.*\b(patient\|ssn\|mrn)` | HIGH | Java | PHI in stdout |
@@ -141,7 +139,7 @@ Scan the full project for files that handle PHI data operations but lack audit-r
 
 **PHI route file definition**: A file qualifies if it contains BOTH:
 1. A healthcare keyword from Step 0 (`patient`, `diagnosis`, `medication`, etc.)
-2. A data operation pattern: `router`, `app.get`, `app.post`, `app.put`, `app.delete`, `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `Model.find`, `Model.save`, `Model.update`, `db.query`, `db.execute`, `cursor.execute`, `repository.`, `findBy`, `save(`, `delete(`, `@app.route`, `@blueprint.route`, `@api_view`, `ViewSet`, `APIView`, `session.query`, `session.add`, `session.execute`, `session.delete`, `session.merge`
+2. A data operation pattern: `router`, `app.get`, `app.post`, `app.put`, `app.delete`, `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `Model.find`, `Model.save`, `Model.update`, `db.query`, `db.execute`, `cursor.execute`, `repository.`, `findBy`, `save(`, `delete(`, `@app.route`, `@blueprint.route`, `@api_view`, `ViewSet`, `APIView`, `\bsession.(query|add|execute|delete|merge)\b` (word-anchored — SQLAlchemy only, avoids matching Express `req.session.save`)
 
 Files with a healthcare keyword but no data operation pattern are excluded.
 
@@ -172,11 +170,11 @@ See: [reference/hipaa-rules.md](reference/hipaa-rules.md) §164.312(b) for audit
 | `ws://` (WebSocket without TLS) | WARN | Any | Unencrypted WebSocket may carry PHI |
 | `verify\s*=\s*False` | HIGH | Python | TLS verification disabled (requests/httpx) |
 | `InsecureRequestWarning` | WARN | Python | TLS warning suppressed |
-| `ssl\s*=\s*False` | HIGH | Python | SSL explicitly disabled (DB/async connections) |
-| `CERT_NONE` | HIGH | Python | ssl.CERT_NONE disables certificate verification |
+| `[,(]\s*ssl\s*=\s*False\b` | HIGH | Python | SSL disabled in connector call (anchored to arg position to avoid matching `is_ssl_enabled = False`) |
+| `ssl\.CERT_NONE` | HIGH | Python | TLS certificate verification disabled (anchored to `ssl.` module) |
 | `check_hostname\s*=\s*False` | HIGH | Python | TLS hostname verification disabled |
 | `urllib3\.disable_warnings` | WARN | Python | TLS warnings suppressed (urllib3) |
-| `SECURE_SSL_REDIRECT\s*=\s*False` | HIGH | Python | Django HTTPS redirect disabled |
+| `SECURE_SSL_REDIRECT\s*=\s*False` | WARN | Python | Django HTTPS redirect disabled (commonly False in dev settings — verify production config) |
 | `NODE_TLS_REJECT_UNAUTHORIZED.*0` | HIGH | JS/TS | TLS rejection disabled globally |
 
 See: [reference/hipaa-rules.md](reference/hipaa-rules.md) §164.312(e)(1) for transmission security requirements.
@@ -209,7 +207,7 @@ See: [reference/phi-identifiers.md](reference/phi-identifiers.md) for the full l
 
 **Auth keywords** (co-occurrence check): `auth`, `authenticate`, `requireAuth`, `isAuthenticated`, `protect`, `guard`, `Authorize`, `login_required`, `Permission`, `permission_required`, `LoginRequiredMixin`, `PermissionRequiredMixin`, `IsAuthenticated`, `Depends`, `Security`
 
-**Data operation patterns** (Python frameworks): `@app.route`, `@blueprint.route`, `@api_view`, `ViewSet`, `APIView`, `cursor.execute`, `session.query`, `session.execute`
+**Data operation patterns** (Python frameworks): `@app.route`, `@blueprint.route`, `@api_view`, `ViewSet`, `APIView`, `cursor.execute`, `\bsession.(query|execute)\b` (word-anchored — SQLAlchemy only)
 
 | Pattern | Severity | Language | Description |
 |---------|----------|----------|-------------|
