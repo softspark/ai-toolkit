@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.7.3 — Regenerate llms after Medplum Merge (2026-04-17)
+
+### Fixed
+- **`llms.txt` + `llms-full.txt` stale after PR #7 (Medplum/FHIR rules)** — contributor did not re-run `npm run generate:all` before merge, so the machine-readable catalogs did not list `kb/reference/medplum-docs-map.md`, and `kb/reference/language-rules.md` still advertised `13 languages / 68 rule files` instead of `14 languages / 73 rule files`. Validator passes regardless (it does not diff generated text), so the drift slipped past CI. Regenerated from source; added Medplum row to the languages table.
+
+---
+
 ## v2.7.2 — Doc & Model-ID Consistency (2026-04-17)
 
 ### Changed

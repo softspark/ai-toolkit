@@ -10,11 +10,9 @@
 
 ---
 
-## What's New in v2.7.2
+## What's New in v2.7.3
 
-- **Centralized Claude model IDs** in `scripts/_common.py` (`DEFAULT_CLAUDE_MODELS` dict). Next Anthropic model bump touches one file instead of hunting through generators.
-- **`GEMINI.md` regenerated** to include 5 skills missed at v2.7.0 tag: `prompt-caching-patterns`, `json-mode-patterns`, `content-moderation-patterns`, `model-routing-patterns`, `/mcp-builder`.
-- **`manifest.json` skill count corrected** — `94 skills (31/31/32)` → `99 skills (32/31/36)` in both component and module descriptions.
+- **`llms.txt` + `llms-full.txt` regenerated** after PR #7 (Medplum/FHIR rules) — catalogs now list `medplum-docs-map.md` and the language-rules reference advertises the correct counts: `14 languages / 73 rule files` (was `13 / 68`).
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
