@@ -101,6 +101,12 @@ Scan the full project for log/print statements that reference PHI keywords.
 | `JSON\.stringify\(.*patient` | WARN | JS/TS | Full patient object serialization |
 | `print\(.*\b(patient\|ssn\|social.security)` | HIGH | Python | PHI in print statements |
 | `logging\.\w+\(.*\b(patient\|ssn\|mrn\|dob)` | HIGH | Python | PHI fields in logger calls |
+| `logger\.\w+\(.*\b(patient\|ssn\|mrn\|dob)` | HIGH | Python | PHI fields in named logger (logging.getLogger) |
+| `pprint\.\w+\(.*\b(patient\|ssn\|mrn\|dob)` | HIGH | Python | PHI in pprint output |
+| `print\(.*request\.(data\|json\|form\|POST\|body)` | WARN | Python | Raw request body may contain PHI (Django/Flask/FastAPI) |
+| `logging\.\w+\(.*request\.(data\|json\|form\|POST\|body)` | WARN | Python | Raw request body in logger |
+| `repr\(.*\b(patient\|ssn\|mrn)` | WARN | Python | repr() may expose PHI fields |
+| `vars\(.*\b(patient\|ssn\|mrn)` | WARN | Python | vars() dumps all PHI fields |
 | `fmt\.Print.*\b(patient\|ssn\|mrn)` | HIGH | Go | PHI in fmt output |
 | `log\.\w+\(.*\b(patient\|ssn\|mrn)` | HIGH | Go/Any | PHI in log calls |
 | `System\.out\.print.*\b(patient\|ssn\|mrn)` | HIGH | Java | PHI in stdout |
@@ -110,7 +116,7 @@ Scan the full project for log/print statements that reference PHI keywords.
 | `Console\.Write.*\b(patient\|ssn\|mrn)` | HIGH | C# | PHI in Console output |
 | `_logger\.\w+\(.*\b(patient\|ssn\|mrn\|dob)` | HIGH | C# | PHI in ILogger calls |
 
-> **Language coverage note**: JS/TS patterns are the most comprehensive. Go, Ruby, and Java have baseline coverage for common log patterns. Contributions for additional language-specific patterns are welcome.
+> **Language coverage note**: JS/TS and Python patterns are the most comprehensive. Go, Ruby, and Java have baseline coverage for common log patterns. Contributions for additional language-specific patterns are welcome.
 
 **Minimum Necessary violations** (§164.502(b)):
 
@@ -135,7 +141,7 @@ Scan the full project for files that handle PHI data operations but lack audit-r
 
 **PHI route file definition**: A file qualifies if it contains BOTH:
 1. A healthcare keyword from Step 0 (`patient`, `diagnosis`, `medication`, etc.)
-2. A data operation pattern: `router`, `app.get`, `app.post`, `app.put`, `app.delete`, `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `Model.find`, `Model.save`, `Model.update`, `db.query`, `db.execute`, `cursor.execute`, `repository.`, `findBy`, `save(`, `delete(`
+2. A data operation pattern: `router`, `app.get`, `app.post`, `app.put`, `app.delete`, `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, `Model.find`, `Model.save`, `Model.update`, `db.query`, `db.execute`, `cursor.execute`, `repository.`, `findBy`, `save(`, `delete(`, `@app.route`, `@blueprint.route`, `@api_view`, `ViewSet`, `APIView`, `session.query`, `session.add`, `session.execute`, `session.delete`, `session.merge`
 
 Files with a healthcare keyword but no data operation pattern are excluded.
 
@@ -158,13 +164,20 @@ See: [reference/hipaa-rules.md](reference/hipaa-rules.md) §164.312(b) for audit
 
 *Context-gated: scans PHI-adjacent files only.*
 
-| Pattern | Severity | Description |
-|---------|----------|-------------|
-| `http://` in API calls (not `localhost`/`127.0.0.1`) | HIGH | §164.312(e)(1) requires encryption in transit |
-| Missing TLS/SSL config in database connections | HIGH | Database connections must be encrypted |
-| `rejectUnauthorized:\s*false` | HIGH | TLS verification disabled |
-| `ws://` (WebSocket without TLS) | WARN | Unencrypted WebSocket may carry PHI |
-| Email sending without TLS config | WARN | PHI in email must use TLS |
+| Pattern | Severity | Language | Description |
+|---------|----------|----------|-------------|
+| `http://` in API calls (not `localhost`/`127.0.0.1`) | HIGH | Any | §164.312(e)(1) requires encryption in transit |
+| Missing TLS/SSL config in database connections | HIGH | Any | Database connections must be encrypted |
+| `rejectUnauthorized:\s*false` | HIGH | Any | TLS verification disabled |
+| `ws://` (WebSocket without TLS) | WARN | Any | Unencrypted WebSocket may carry PHI |
+| `verify\s*=\s*False` | HIGH | Python | TLS verification disabled (requests/httpx) |
+| `InsecureRequestWarning` | WARN | Python | TLS warning suppressed |
+| `ssl\s*=\s*False` | HIGH | Python | SSL explicitly disabled (DB/async connections) |
+| `CERT_NONE` | HIGH | Python | ssl.CERT_NONE disables certificate verification |
+| `check_hostname\s*=\s*False` | HIGH | Python | TLS hostname verification disabled |
+| `urllib3\.disable_warnings` | WARN | Python | TLS warnings suppressed (urllib3) |
+| `SECURE_SSL_REDIRECT\s*=\s*False` | HIGH | Python | Django HTTPS redirect disabled |
+| `NODE_TLS_REJECT_UNAUTHORIZED.*0` | HIGH | JS/TS | TLS rejection disabled globally |
 
 See: [reference/hipaa-rules.md](reference/hipaa-rules.md) §164.312(e)(1) for transmission security requirements.
 
@@ -194,13 +207,16 @@ See: [reference/phi-identifiers.md](reference/phi-identifiers.md) for the full l
 
 *Context-gated: scans PHI-adjacent files only. Heuristic — flags potential gaps.*
 
-**Auth keywords** (co-occurrence check): `auth`, `authenticate`, `requireAuth`, `isAuthenticated`, `protect`, `guard`, `Authorize`, `login_required`, `Permission`
+**Auth keywords** (co-occurrence check): `auth`, `authenticate`, `requireAuth`, `isAuthenticated`, `protect`, `guard`, `Authorize`, `login_required`, `Permission`, `permission_required`, `LoginRequiredMixin`, `PermissionRequiredMixin`, `IsAuthenticated`, `Depends`, `Security`
 
-| Pattern | Severity | Description |
-|---------|----------|-------------|
-| PHI route file without any auth keywords in same file | WARN | POTENTIAL access control gap — verify auth middleware covers these routes (§164.312(d)) |
-| `Access-Control-Allow-Origin:\s*\*` or `origin:\s*(true\|\*)` in PHI-adjacent files | HIGH | Unrestricted cross-origin access to PHI endpoints |
-| Routes marked `public`, `noAuth`, `anonymous` exposing PHI keywords | HIGH | PHI must require authentication |
+**Data operation patterns** (Python frameworks): `@app.route`, `@blueprint.route`, `@api_view`, `ViewSet`, `APIView`, `cursor.execute`, `session.query`, `session.execute`
+
+| Pattern | Severity | Language | Description |
+|---------|----------|----------|-------------|
+| PHI route file without any auth keywords in same file | WARN | Any | POTENTIAL access control gap — verify auth middleware covers these routes (§164.312(d)) |
+| `Access-Control-Allow-Origin:\s*\*` or `origin:\s*(true\|\*)` in PHI-adjacent files | HIGH | Any | Unrestricted cross-origin access to PHI endpoints |
+| Routes marked `public`, `noAuth`, `anonymous` exposing PHI keywords | HIGH | Any | PHI must require authentication |
+| `permission_classes\s*=.*AllowAny` | WARN | Python | DRF AllowAny — verify no PHI exposed |
 
 > **Note**: Auth middleware is commonly applied at router-level or app-level. The co-occurrence heuristic checks the same file only. False positives expected when auth is configured globally. Use `.hipaaignore` to suppress.
 
@@ -253,13 +269,15 @@ Instead of per-finding rows, emit a single **BAA Verification Checklist** in the
 
 Detects PHI storage patterns without encryption references. Per §164.312(a)(2)(iv), ePHI must be encrypted when stored.
 
-| Pattern | Severity | Description |
-|---------|----------|-------------|
-| `encrypt\s*[:=]\s*false` in database config files | HIGH | §164.312(a)(2)(iv) — Encryption explicitly disabled |
-| File write operations (`writeFile`, `fs.write`, `open(.*w`, `File.Create`) in PHI-adjacent code without encryption references | WARN | PHI written to disk may lack encryption at rest |
-| Database connection without `ssl`, `encrypt`, or `tls` keywords in PHI-adjacent config | WARN | Database storing PHI should enforce encrypted connections |
-| `localStorage.setItem` or `sessionStorage.setItem` with PHI keywords | HIGH | Browser storage is unencrypted — PHI must not be stored client-side without encryption |
-| `SharedPreferences` or `UserDefaults` with PHI keywords | HIGH | Mobile local storage is unencrypted by default |
+| Pattern | Severity | Language | Description |
+|---------|----------|----------|-------------|
+| `encrypt\s*[:=]\s*false` in database config files | HIGH | Any | §164.312(a)(2)(iv) — Encryption explicitly disabled |
+| File write operations (`writeFile`, `fs.write`, `open(.*w`, `File.Create`) in PHI-adjacent code without encryption references | WARN | Any | PHI written to disk may lack encryption at rest |
+| Database connection without `ssl`, `encrypt`, or `tls` keywords in PHI-adjacent config | WARN | Any | Database storing PHI should enforce encrypted connections |
+| `localStorage.setItem` or `sessionStorage.setItem` with PHI keywords | HIGH | JS/TS | Browser storage is unencrypted — PHI must not be stored client-side without encryption |
+| `SharedPreferences` or `UserDefaults` with PHI keywords | HIGH | Java/Any | Mobile local storage is unencrypted by default |
+| `pickle\.(dump\|dumps)\(` with PHI keywords | HIGH | Python | pickle serialization is unencrypted — PHI must be encrypted at rest |
+| `shelve\.open\(` with PHI keywords | HIGH | Python | shelve storage is unencrypted — PHI must be encrypted at rest |
 
 See: [reference/hipaa-rules.md](reference/hipaa-rules.md) §164.312(a)(2)(iv) for encryption requirements.
 
