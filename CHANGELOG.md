@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.7.2 — Doc & Model-ID Consistency (2026-04-17)
+
+### Changed
+- **Centralized Claude model IDs** — introduced `DEFAULT_CLAUDE_MODELS` dict in `scripts/_common.py` (single source of truth: `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5`). `scripts/generate_aider_conf.py` now imports the constant instead of hardcoding `claude-sonnet-4-6`. Next Anthropic model bump touches one file. Agent frontmatter aliases (`opus`/`sonnet`/`haiku`) stay version-free and are resolved at runtime.
+- **`app/agents/ai-engineer.md`** now points to the `model-routing-patterns` skill as the single source of truth for current Claude IDs, cost tiers, and fallback chains instead of duplicating a tier table that would drift with every Anthropic release.
+
+### Fixed
+- **`GEMINI.md` missed 5 skills from v2.7.0** — `generate:all` was not re-run before the v2.7.0 release tag, so `GEMINI.md` did not list `prompt-caching-patterns`, `json-mode-patterns`, `content-moderation-patterns`, `model-routing-patterns`, or `/mcp-builder`. Regenerated.
+- **`manifest.json` stale skill counts** — `components.skills.description` and `modules.skills.description` still reported `94 skills (31 task + 31 hybrid + 32 knowledge)` instead of the current `99 skills (32 task + 31 hybrid + 36 knowledge)`. Fixed in 2 places.
+
+---
+
 ## v2.7.1 — Eject Output-Styles Fix (2026-04-17)
 
 ### Fixed

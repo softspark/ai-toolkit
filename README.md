@@ -10,10 +10,11 @@
 
 ---
 
-## What's New in v2.7.1
+## What's New in v2.7.2
 
-- **`ai-toolkit eject` now copies `app/output-styles/*.md`** — pre-existing gap since output-styles were introduced: eject produced a standalone `.claude/` without any system-prompt styles, so `golden-rules`, `learning`, and `explanatory` silently dropped out after ejecting. Now eject writes `.claude/output-styles/` with all source `.md` files and reports the count in the summary line: `Ejected: N agents, N skills, N rules, N output style(s)`.
-- **2 new `tests/test_eject.bats` cases** covering output-styles: directory created + file count matches source + `golden-rules.md` baseline, and summary line reports correct count. Test count: 664 → 666.
+- **Centralized Claude model IDs** in `scripts/_common.py` (`DEFAULT_CLAUDE_MODELS` dict). Next Anthropic model bump touches one file instead of hunting through generators.
+- **`GEMINI.md` regenerated** to include 5 skills missed at v2.7.0 tag: `prompt-caching-patterns`, `json-mode-patterns`, `content-moderation-patterns`, `model-routing-patterns`, `/mcp-builder`.
+- **`manifest.json` skill count corrected** — `94 skills (31/31/32)` → `99 skills (32/31/36)` in both component and module descriptions.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
