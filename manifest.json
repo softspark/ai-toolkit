@@ -145,6 +145,10 @@
       "description": "Ruby-specific rules",
       "auto_detect": ["Gemfile", "*.gemspec"]
     },
+    "rules-medplum": {
+      "description": "Medplum/FHIR healthcare platform rules",
+      "auto_detect": ["medplum.config.mts", "medplum.config.ts"]
+    },
     "mcp-templates": {
       "description": "26 MCP server config templates",
       "default": false
