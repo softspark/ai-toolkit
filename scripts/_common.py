@@ -73,6 +73,19 @@ skills_dir: Path = app_dir / "skills"
 
 
 # ---------------------------------------------------------------------------
+# Default Claude model IDs (single source of truth — bump on Anthropic release)
+# Consumed by generators that need to emit a concrete model string.
+# Aliases like "opus"/"sonnet"/"haiku" in agent frontmatter are resolved by
+# the client at runtime and do NOT need updating here.
+# ---------------------------------------------------------------------------
+DEFAULT_CLAUDE_MODELS: dict[str, str] = {
+    "opus": "claude-opus-4-7",
+    "sonnet": "claude-sonnet-4-6",
+    "haiku": "claude-haiku-4-5",
+}
+
+
+# ---------------------------------------------------------------------------
 # Component filtering (for install/update)
 # ---------------------------------------------------------------------------
 

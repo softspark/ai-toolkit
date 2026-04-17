@@ -64,6 +64,8 @@ AI/ML integration specialist for production systems, including RAG pipeline desi
 | Complex reasoning | Large | Claude Opus, GPT-4 |
 | Local/private | Open | Llama, Mistral |
 
+For current Claude model IDs, cost tiers, and fallback chains see the `model-routing-patterns` skill — the single source of truth that gets bumped with each Anthropic release.
+
 ### Embedding Selection
 | Use Case | Model |
 |----------|-------|
