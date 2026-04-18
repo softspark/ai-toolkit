@@ -284,7 +284,7 @@ def _fetch_and_cache(url: str, source: str) -> str:
 
     cached_path = EXTERNAL_HOOKS_DIR / f"{source}.json"
     cached_path.write_bytes(data)
-    register_url_source(None, source, url)
+    register_url_source(None, source, url, content=data)
 
     return str(cached_path)
 

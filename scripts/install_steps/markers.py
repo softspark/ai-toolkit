@@ -88,7 +88,7 @@ def _refresh_url_rules(rules_dir: Path) -> None:
         try:
             data = fetch_url(url)
             rule_file.write_bytes(data)
-            register_url_source(rules_dir, rule_name, url)
+            register_url_source(rules_dir, rule_name, url, content=data)
             print(f"  Refreshed: {rule_name} (from {url})")
         except Exception as exc:
             if rule_file.is_file():
@@ -124,7 +124,7 @@ def refresh_url_hooks(target_dir: str | None = None) -> None:
             # Validate JSON before caching
             json.loads(data)
             cached_file.write_bytes(data)
-            register_url_source(None, hook_name, url)
+            register_url_source(None, hook_name, url, content=data)
             print(f"  Refreshed: {hook_name} (from {url})")
         except Exception as exc:
             if cached_file.is_file():

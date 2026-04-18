@@ -10,6 +10,7 @@ Stdlib-only — no external dependencies.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -79,17 +80,43 @@ def save_sources(rules_dir: Path | None = None,
 # CRUD
 # ---------------------------------------------------------------------------
 
-def register_url_source(rules_dir: Path | None, rule_name: str, url: str) -> None:
-    """Add or update a URL source entry."""
+def register_url_source(
+    rules_dir: Path | None,
+    rule_name: str,
+    url: str,
+    content: bytes | None = None,
+) -> None:
+    """Add or update a URL source entry.
+
+    When ``content`` is supplied, its sha256 is persisted. If a previous
+    sha256 exists and differs from the new one, a warning is printed
+    (and the process fails with exit 2 when ``AI_TOOLKIT_STRICT_PIN=1``).
+    """
     import re
     if not rule_name or not re.fullmatch(r"[a-zA-Z0-9_-]+", rule_name):
         raise ValueError(f"Invalid rule name: {rule_name!r}")
     rules_dir = rules_dir or RULES_DIR
     sources = load_sources(rules_dir)
-    sources[rule_name] = {
+    entry: dict[str, Any] = {
         "url": url,
         "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+    if content is not None:
+        new_hash = hashlib.sha256(content).hexdigest()
+        prev = sources.get(rule_name) or {}
+        prev_hash = prev.get("sha256")
+        if prev_hash and prev_hash != new_hash:
+            msg = (
+                f"  CHECKSUM CHANGED: rule '{rule_name}' sha256 "
+                f"{prev_hash[:12]}... -> {new_hash[:12]}..."
+            )
+            print(msg)
+            if os.environ.get("AI_TOOLKIT_STRICT_PIN") == "1":
+                raise SystemExit(
+                    f"Refusing to update '{rule_name}' under AI_TOOLKIT_STRICT_PIN=1."
+                )
+        entry["sha256"] = new_hash
+    sources[rule_name] = entry
     save_sources(rules_dir, sources)
 
 

@@ -68,7 +68,7 @@ def main() -> None:
 
         dest = rules_dir / f"{rule_name}.md"
         dest.write_bytes(data)
-        register_url_source(rules_dir, rule_name, source)
+        register_url_source(rules_dir, rule_name, source, content=data)
 
         print(f"Registered: '{rule_name}' -> {dest}")
         print(f"Source URL: {source} (auto-refreshed on update)")

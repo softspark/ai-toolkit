@@ -14,13 +14,17 @@ TOOLKIT_DIR="$(npm root -g 2>/dev/null)/@softspark/ai-toolkit"
 VERSION_MSG=$(python3 "$TOOLKIT_DIR/scripts/version_check.py" 2>/dev/null)
 if [ -n "$VERSION_MSG" ]; then
     echo "$VERSION_MSG"
+    # Strip shell/AppleScript/PowerShell metacharacters before interpolating into
+    # notification commands. VERSION_MSG is version_check.py output which should
+    # be plain ASCII, but sanitize anyway as defense in depth.
+    VERSION_MSG_SAFE=$(printf '%s' "$VERSION_MSG" | LC_ALL=C tr -d '"'"'"'\\`$')
     # Desktop notification so user sees update before typing
     if command -v osascript >/dev/null 2>&1; then
-        osascript -e "display notification \"$VERSION_MSG\" with title \"ai-toolkit\"" 2>/dev/null &
+        osascript -e "display notification \"$VERSION_MSG_SAFE\" with title \"ai-toolkit\"" 2>/dev/null &
     elif command -v notify-send >/dev/null 2>&1; then
-        notify-send "ai-toolkit" "$VERSION_MSG" 2>/dev/null &
+        notify-send "ai-toolkit" "$VERSION_MSG_SAFE" 2>/dev/null &
     elif command -v powershell.exe >/dev/null 2>&1; then
-        powershell.exe -Command "[void](New-Object -ComObject WScript.Shell).Popup('$VERSION_MSG',5,'ai-toolkit',64)" 2>/dev/null &
+        powershell.exe -Command "[void](New-Object -ComObject WScript.Shell).Popup('$VERSION_MSG_SAFE',5,'ai-toolkit',64)" 2>/dev/null &
     fi
 fi
 

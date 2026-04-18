@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v6
 
@@ -21,7 +22,7 @@ jobs:
           scope: '@softspark'
 
       - name: Publish to npm
-        run: npm publish --access public --ignore-scripts
+        run: npm publish --access public --ignore-scripts --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

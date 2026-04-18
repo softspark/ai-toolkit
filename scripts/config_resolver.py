@@ -302,9 +302,12 @@ def _extract_tarball(tarball: Path, dest: Path) -> None:
     """Extract npm tarball (which has a package/ prefix) to dest.
 
     Validates that extracted paths stay within dest to prevent path traversal.
-    Rejects symlinks and absolute paths.
+    Rejects symlinks and absolute paths. Uses tarfile filter="data" on 3.12+
+    as defense in depth (Python 3.14 will require it).
     """
     dest_resolved = dest.resolve()
+    # filter="data" landed in 3.12 and becomes the default in 3.14
+    supports_filter = sys.version_info >= (3, 12)
     with tarfile.open(tarball, "r:gz") as tf:
         for member in tf.getmembers():
             # npm tarballs have a "package/" prefix
@@ -320,7 +323,10 @@ def _extract_tarball(tarball: Path, dest: Path) -> None:
             target = (dest / member.name).resolve()
             if not str(target).startswith(str(dest_resolved)):
                 continue
-            tf.extract(member, dest)
+            if supports_filter:
+                tf.extract(member, dest, filter="data")
+            else:
+                tf.extract(member, dest)
 
 
 def _extract_version_from_tarball(filename: str, package_name: str) -> str:

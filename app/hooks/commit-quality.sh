@@ -14,14 +14,17 @@ fi
 # Only check commands that contain "git commit"
 printf '%s' "$COMMAND" | grep -q 'git commit' || exit 0
 
-# Extract commit message from -m flag
-# Handles: git commit -m "msg", git commit -m 'msg', git commit -am "msg"
-MSG=$(printf '%s' "$COMMAND" | grep -oE '\-m\s+["'"'"']([^"'"'"']*)["'"'"']' | head -1 | sed "s/^-m[[:space:]]*[\"']//" | sed "s/[\"']$//")
-
-# Also handle heredoc-style: -m "$(cat <<'EOF' ... EOF )"
-if [ -z "$MSG" ]; then
-    MSG=$(printf '%s' "$COMMAND" | grep -oE '\-m\s+"[^"]*"' | head -1 | sed 's/^-m[[:space:]]*//' | tr -d '"')
-fi
+# Extract commit message from -m flag. Delegated to Python for correct
+# quote handling — the previous shell-regex approach broke on commit messages
+# containing both " and '.
+MSG=$(printf '%s' "$COMMAND" | python3 -c '
+import re, sys
+cmd = sys.stdin.read()
+# Match -m followed by a quoted string (either " or ").
+m = re.search(r"""-m\s+("((?:[^"\\]|\\.)*)"|'"'"'((?:[^'"'"'\\]|\\.)*)'"'"')""", cmd)
+if m:
+    print(m.group(2) if m.group(2) is not None else m.group(3))
+' 2>/dev/null)
 
 # No message found (might be --amend or interactive) — skip
 if [ -z "$MSG" ]; then

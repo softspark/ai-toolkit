@@ -7,6 +7,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.8.0 — Security Hardening & GHAS Integration (2026-04-18)
+
+### Added
+- **`scripts/audit_skills.py --sarif`** — emits SARIF 2.1.0 JSON compatible with GitHub Advanced Security Code Scanning. Severity maps HIGH→error / WARN→warning / INFO→note. Enables the GitHub Security tab to ingest audit findings directly.
+- **`scripts/audit_skills.py --permissions`** — per-skill tool-permission report (human + `--json` forms). Aggregates skills by tool usage (e.g. "50 skills use Bash"), flags broad Bash+Write+Edit access, prints full skill/invocable/tools table. Security review can now answer "show me every skill that can Bash" in one command.
+- **Checksum pinning for URL-sourced rules and hooks** — `rule_sources.py` and `hook_sources.py` now persist `sha256` of the fetched payload in `sources.json`. Subsequent refreshes log `CHECKSUM CHANGED` when the upstream payload changes. Setting `AI_TOOLKIT_STRICT_PIN=1` turns the mismatch into a hard failure (exit 2) so CI can reject silent upstream tampering.
+- **`SECRET_PLACEHOLDER_PREFIXES`** allowlist in `audit_skills.py` — WARN-level hardcoded-secret patterns now skip values starting with `REPLACE_`, `CHANGEME_`, `CHANGE_ME`, `YOUR_`, `EXAMPLE_`, `PLACEHOLDER_`, `${`, `{{`, `$ENV_`, `$(`, `<`, `xxx`, `XXX`. Fewer false positives on docs and `.env.example` fixtures.
+
+### Changed
+- **npm publish workflow (`.github/workflows/publish.yml`)** now runs with `--provenance` and `id-token: write`. Published tarballs carry a cryptographic provenance attestation visible on npmjs.com and verifiable via `npm audit signatures`.
+- **`scripts/config_resolver.py:_extract_tarball`** passes `filter="data"` to `tarfile.extract` on Python 3.12+. Defense in depth on top of existing path-traversal, symlink, and absolute-path rejection. Future-proofs against the 3.14 default-filter change.
+- **`app/hooks/session-start.sh`** sanitises `VERSION_MSG` with `LC_ALL=C tr -d '"'"'"'\\`$'` before interpolating into `osascript` / `powershell.exe` notification commands. Closes a latent command-injection footgun.
+- **`scripts/install_steps/ai_tools.py`** and **`hooks.py`** — generator and merge-hooks `subprocess.run` calls now have `timeout=120`. A stuck generator produces a clear error instead of hanging `ai-toolkit install` indefinitely.
+- **`app/hooks/commit-quality.sh`** — extracted commit message via a small Python regex instead of fragile shell `grep -oE` chain. Handles commit messages containing mixed `"` and `'` correctly.
+- **`app/hooks/quality-check.sh`** — normalised `|| true` handling across all languages (Python ruff was previously the only one propagating exit status). All language checks are now consistently advisory on the Stop hook.
+- **`bin/ai-toolkit.js:handleAddRule`** — simplified HTTPS/HTTP detection (single `startsWith('https://')` after the `http://` reject).
+- **`package.json` description** shortened from 400+ to 241 characters — stops mid-sentence truncation in npm search. Surfaces the new SARIF + provenance differentiators.
+- **`package.json` `engines`** — removed non-standard `bats` entry (npm ignores unknown engines and warned on install). Bats requirement is documented in `CLAUDE.md` Commands section.
+
+---
+
 ## v2.7.3 — Regenerate llms after Medplum Merge (2026-04-17)
 
 ### Fixed

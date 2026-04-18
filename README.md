@@ -10,9 +10,12 @@
 
 ---
 
-## What's New in v2.7.3
+## What's New in v2.8.0
 
-- **`llms.txt` + `llms-full.txt` regenerated** after PR #7 (Medplum/FHIR rules) — catalogs now list `medplum-docs-map.md` and the language-rules reference advertises the correct counts: `14 languages / 73 rule files` (was `13 / 68`).
+- **SARIF + permissions audit** — `audit_skills.py --sarif` emits SARIF 2.1.0 for GitHub Advanced Security Code Scanning; `--permissions` prints per-skill tool usage (e.g. "50 skills use Bash") and flags broad Bash+Write+Edit access.
+- **Signed npm provenance** — the publish workflow now runs with `--provenance`; published tarballs carry a cryptographic build-origin attestation verifiable via `npm audit signatures`.
+- **Checksum-pinned URL sources** — `sources.json` now persists `sha256` of every URL-sourced rule/hook and warns on upstream content change. `AI_TOOLKIT_STRICT_PIN=1` turns mismatches into a hard CI failure.
+- **Security hardening** — `tarfile.extract` uses `filter="data"` on Python 3.12+; `session-start.sh` sanitises `VERSION_MSG` before `osascript`/`powershell.exe`; install-time `subprocess.run` calls now time out at 120 s.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

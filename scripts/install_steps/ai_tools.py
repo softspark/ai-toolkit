@@ -194,7 +194,11 @@ def inject_with_rules(
     else:
         cmd = ["bash", str(scripts_dir / generator_script)]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        print(f"  ERROR: {generator_script} timed out after 120s")
+        return
     if result.returncode != 0:
         print(f"  ERROR: {generator_script} failed: {result.stderr.strip()}")
         return
@@ -240,7 +244,11 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
         cmd = ["python3", str(scripts_dir / py_name), *args]
     else:
         cmd = ["bash", str(scripts_dir / script_name), *args]
-    result = subprocess.run(cmd, capture_output=capture, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=capture, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        print(f"  ERROR: {script_name} timed out after 120s")
+        return ""
     return result.stdout if capture else ""
 
 

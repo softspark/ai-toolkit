@@ -64,7 +64,7 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
 
 def _run_merge_hooks(action: str, *args: str) -> None:
     cmd = ["python3", str(toolkit_dir / "scripts" / "merge-hooks.py"), action, *args]
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, timeout=120)
 
 
 def _install_output_styles(claude_dir: Path) -> None:
