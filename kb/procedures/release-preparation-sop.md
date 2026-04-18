@@ -2,11 +2,11 @@
 title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
-tags: [sop, release, version, publish, changelog, semver]
-version: "1.6.0"
+tags: [sop, release, version, publish, changelog, semver, provenance, sarif]
+version: "1.7.0"
 created: "2026-04-10"
-last_updated: "2026-04-17"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag."
+last_updated: "2026-04-18"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0."
 ---
 
 # SOP: Release Preparation
@@ -42,8 +42,13 @@ python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
-# 5. Validate + audit + test
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+# 5. Validate + audit + SARIF + test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && npm test
+
+# 5a. Supply-chain standard (v2.8.0+) — non-negotiable
+grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --provenance"; exit 1; }
+grep -q 'id-token: write'   .github/workflows/publish.yml || { echo "MISSING id-token: write"; exit 1; }
+python3 scripts/audit_skills.py --permissions   # review Bash/Write/Edit footprint
 
 # 6. Commit + tag + push
 git add -A && git commit -m "chore: release vX.Y.Z"
@@ -200,23 +205,69 @@ Run the full quality gate:
 ```bash
 python3 scripts/validate.py --strict
 python3 scripts/audit_skills.py --ci
+python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS ingest
+python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
 npm test
 ```
 
 **Expected results:**
 - `validate.py`: `Errors: 0 | Warnings: 0 | VALIDATION PASSED`
-- `audit_skills.py`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
+- `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
+- `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
+- `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
 - `npm test`: `1..N` with zero `not ok`
 
 **One-liner:**
 ```bash
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && npm test
 ```
 
 **If tests fail:** Fix the issue, do NOT skip. Common failures:
 - Stale counts → re-run `generate:all` or fix README/ARCHITECTURE
 - Missing frontmatter → add to new KB docs
 - Broken symlink → `ai-toolkit doctor --fix`
+
+### Phase 5a: Supply-Chain Hardening Verification (v2.8.0+)
+
+These checks enforce the security standard introduced in v2.8.0. Do NOT tag a release until all pass.
+
+**1. Publish workflow emits provenance:**
+
+```bash
+grep -E '\-\-provenance|id-token: write' .github/workflows/publish.yml
+```
+
+- [ ] Both markers present (`--provenance` flag + `id-token: write` permission)
+- [ ] Any PR that changes `publish.yml` REQUIRES an approved security review
+
+**2. URL-sourced rules and hooks are checksum-pinned:**
+
+```bash
+# On a machine that has consumed URL rules/hooks at least once:
+jq 'to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/rules/sources.json
+jq 'to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/hooks/external/sources.json
+```
+
+- [ ] Both queries return empty arrays (every URL entry has a `sha256`)
+- [ ] If not, run `ai-toolkit update` to backfill missing hashes before tagging
+
+**3. Audit SARIF output is well-formed:**
+
+```bash
+python3 scripts/audit_skills.py --sarif | python3 -c "import json, sys; d=json.load(sys.stdin); assert d['version']=='2.1.0' and d['runs'][0]['tool']['driver']['name']; print('SARIF OK')"
+```
+
+- [ ] Prints `SARIF OK`
+- [ ] If the script ever grows new rule classes, extend the SARIF `rules[]` coverage before releasing
+
+**4. Strict-pin mode passes on CI** (optional, recommended for stable branches):
+
+```bash
+AI_TOOLKIT_STRICT_PIN=1 ai-toolkit update --dry-run
+```
+
+- [ ] Exit 0, no `CHECKSUM CHANGED` line
+- [ ] Any unexpected upstream change blocks the release until explicitly approved
 
 ---
 
@@ -250,10 +301,12 @@ git push origin main --tags
 This triggers `.github/workflows/publish.yml` which:
 1. Runs `validate.py --strict`
 2. Runs `npm test`
-3. Publishes to npm as `@softspark/ai-toolkit@X.Y.Z`
+3. Publishes to npm as `@softspark/ai-toolkit@X.Y.Z` with `--provenance` (SLSA v1 build attestation)
+
+**Provenance is non-negotiable.** If `id-token: write` permission or the `--provenance` flag is missing from `publish.yml`, fix it BEFORE tagging — an unsigned release is a regression against the v2.8.0 standard.
 
 **After CI completes:** Run the [Release Verification SOP](release-verification-sop.md)
-to smoke-test the published package.
+to smoke-test the published package AND verify the provenance attestation landed on npm.
 
 ---
 
@@ -288,8 +341,12 @@ git push origin --delete vX.Y.Z
 | 7 | CHANGELOG.md | Add release entry | Entry exists for vX.Y.Z |
 | 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py`, `generate_llms_txt.py` | No unexpected diff |
 | 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
-| 10 | Security audit | `audit_skills.py --ci` | 0 HIGH |
-| 11 | Tests | `npm test` | All pass |
-| 12 | Commit | `git commit` | Clean working tree |
-| 13 | Tag | `git tag vX.Y.Z` | Tag exists |
-| 14 | Push | `git push origin main --tags` | CI triggered |
+| 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
+| 11 | Security audit (SARIF) | `audit_skills.py --sarif` | Valid SARIF 2.1.0 JSON |
+| 12 | Per-skill permissions | `audit_skills.py --permissions` | New broad-access skills justified in CHANGELOG |
+| 13 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
+| 14 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
+| 15 | Tests | `npm test` | All pass |
+| 16 | Commit | `git commit` | Clean working tree |
+| 17 | Tag | `git tag vX.Y.Z` | Tag exists |
+| 18 | Push | `git push origin main --tags` | CI triggered with `id-token: write` |

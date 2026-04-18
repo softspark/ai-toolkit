@@ -2,11 +2,11 @@
 title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
-tags: [sop, verification, release, smoke-test, install, update, qa]
-version: "1.1.0"
+tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
+version: "1.2.0"
 created: "2026-04-08"
-last_updated: "2026-04-13"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, and eject from user perspective."
+last_updated: "2026-04-18"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard."
 ---
 
 # SOP: Release Verification
@@ -31,7 +31,7 @@ Verifies all critical paths from the user's perspective.
 
 ## Quick Checklist (TL;DR)
 
-10 commands — if all pass, the release is ready:
+13 commands — if all pass, the release is ready:
 
 ```bash
 # Pre-commit (Phase 0)
@@ -47,6 +47,11 @@ ai-toolkit status                                           # 7. Status OK?
 ai-toolkit doctor                                           # 8. Health check passed?
 ai-toolkit install --dry-run                                # 9. Global install OK?
 python3 scripts/audit_skills.py --ci                        # 10. Security audit clean?
+
+# Supply-chain verification (Phase 8, v2.8.0+)
+python3 scripts/audit_skills.py --sarif | python3 -c "import json,sys; assert json.load(sys.stdin)['version']=='2.1.0'; print('SARIF OK')"   # 11. SARIF 2.1.0 well-formed?
+python3 scripts/audit_skills.py --permissions | head -30    # 12. Broad-access skills reviewed?
+npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"   # 13. Provenance attested on npm?
 ```
 
 ---
@@ -230,6 +235,72 @@ cd - && rm -rf /tmp/ai-toolkit-eject-test
 - [ ] Skills copied as real directories
 - [ ] Rules inlined into CLAUDE.md
 - [ ] constitution.md and ARCHITECTURE.md copied
+- [ ] `output-styles/` directory present (v2.7.1+)
+
+---
+
+## Phase 8: Supply-Chain Verification (2 min, v2.8.0+)
+
+These checks enforce the v2.8.0 security standard on a freshly-published release. Run AFTER the `publish.yml` workflow completes on the tag.
+
+### 8.1 Provenance attestation on npm
+
+```bash
+VERSION="X.Y.Z"                                           # the tag just published
+npm view "@softspark/ai-toolkit@${VERSION}" --json \
+  | python3 -c "import json, sys; d=json.load(sys.stdin); att=d['dist'].get('attestations', {}); assert att.get('provenance', {}).get('predicateType') == 'https://slsa.dev/provenance/v1', f'NO PROVENANCE for {d[\"version\"]}'; print(f'PROVENANCE OK: {att[\"url\"]}')"
+```
+
+**Verify:**
+- [ ] Exit 0 and prints `PROVENANCE OK: https://registry.npmjs.org/...`
+- [ ] `https://www.npmjs.com/package/@softspark/ai-toolkit/v/${VERSION}` shows the green "Provenance" badge
+
+**If provenance is missing:** the `publish.yml` ran without `id-token: write` or `--provenance`. Restore them and cut a patch release — a silently unsigned publish is a regression against the v2.8.0 standard.
+
+### 8.2 Audit SARIF output (for GHAS ingest)
+
+```bash
+python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif
+python3 -c "import json; d=json.load(open('/tmp/audit.sarif')); assert d['version']=='2.1.0' and d['runs'][0]['tool']['driver']['name']=='ai-toolkit-audit-skills'; print(f'SARIF OK: {len(d[\"runs\"][0][\"results\"])} results across {len(d[\"runs\"][0][\"tool\"][\"driver\"][\"rules\"])} rules')"
+```
+
+**Verify:**
+- [ ] Valid SARIF 2.1.0
+- [ ] In the publishing repo, the CI job uploads `audit.sarif` via `github/codeql-action/upload-sarif@v3` so findings appear in the Security tab
+
+### 8.3 Per-skill permissions report
+
+```bash
+python3 scripts/audit_skills.py --permissions | head -40
+```
+
+**Verify:**
+- [ ] Bash skill count has NOT jumped unexpectedly since the previous release
+- [ ] Any newly added entry under `Skills with Bash + Write + Edit` matches a CHANGELOG bullet that justifies the broad scope
+- [ ] JSON form (`--permissions --json`) is available for automated drift dashboards
+
+### 8.4 URL-sourced rules/hooks are checksum-pinned
+
+```bash
+jq '.rules // .hooks // {}' ~/.softspark/ai-toolkit/rules/sources.json 2>/dev/null \
+  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; print(f'RULE PIN OK: {len(d)} URL rules, all with sha256')"
+jq '.hooks // {}' ~/.softspark/ai-toolkit/hooks/external/sources.json 2>/dev/null \
+  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; print(f'HOOK PIN OK: {len(d)} URL hooks, all with sha256')"
+```
+
+**Verify:**
+- [ ] Both commands print `... PIN OK`
+- [ ] If any entry is unpinned, the `register_url_source()` call missed passing `content=` — fix the call-site and retag
+
+### 8.5 Strict-pin smoke test (optional but recommended)
+
+```bash
+AI_TOOLKIT_STRICT_PIN=1 ai-toolkit update --dry-run
+```
+
+**Verify:**
+- [ ] Exit 0, no `CHECKSUM CHANGED` line
+- [ ] If a checksum change was intentional (e.g. upstream rule update), document it in the CHANGELOG entry before tagging
 
 ---
 
@@ -279,7 +350,11 @@ ai-toolkit eject /tmp/test # retry
 | Health | `doctor`: 0 errors, 0 warnings, PASSED |
 | Install | `--dry-run` correct counts, `--local` all configs |
 | Quality | `validate.py --strict`: PASSED |
-| Security | `audit_skills.py --ci`: 0 HIGH |
+| Security (baseline) | `audit_skills.py --ci`: 0 HIGH |
+| Security (SARIF) | `audit_skills.py --sarif`: valid SARIF 2.1.0 with non-empty rules array |
+| Security (permissions) | `audit_skills.py --permissions`: broad-access skills unchanged or justified in CHANGELOG |
+| Supply chain | `dist.attestations.provenance.predicateType == https://slsa.dev/provenance/v1` on npm |
+| Supply chain | All `sources.json` URL entries carry a `sha256`; `AI_TOOLKIT_STRICT_PIN=1 ai-toolkit update --dry-run` passes |
 | Tests | `npm test`: N/N passed, 0 failures |
-| Eject | Standalone .claude/ with real files |
+| Eject | Standalone `.claude/` with real files AND `output-styles/` directory |
 | Guards | Destructive commands blocked |
