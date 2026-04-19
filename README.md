@@ -10,12 +10,11 @@
 
 ---
 
-## What's New in v2.8.0
+## What's New in v2.9.0
 
-- **SARIF + permissions audit** — `audit_skills.py --sarif` emits SARIF 2.1.0 for GitHub Advanced Security Code Scanning; `--permissions` prints per-skill tool usage (e.g. "50 skills use Bash") and flags broad Bash+Write+Edit access.
-- **Signed npm provenance** — the publish workflow now runs with `--provenance`; published tarballs carry a cryptographic build-origin attestation verifiable via `npm audit signatures`.
-- **Checksum-pinned URL sources** — `sources.json` now persists `sha256` of every URL-sourced rule/hook and warns on upstream content change. `AI_TOOLKIT_STRICT_PIN=1` turns mismatches into a hard CI failure.
-- **Security hardening** — `tarfile.extract` uses `filter="data"` on Python 3.12+; `session-start.sh` sanitises `VERSION_MSG` before `osascript`/`powershell.exe`; install-time `subprocess.run` calls now time out at 120 s.
+- **Skill routability fix** — 30 knowledge skills (`user-invocable: false`) had weak `"Loaded when user asks about X"` descriptions that silently lowered auto-loading hit rate. Rewritten with the Anthropic-docs-aligned shape `[capability]. Triggers: [keywords]. Load when [...]`.
+- **Description-quality lint** — `audit_skills.py` now enforces `description + when_to_use ≤ 1536 chars` (Anthropic limit), knowledge-skill descriptions ≥ 80 chars, and blocks the old anti-pattern from returning. CI fails on regression.
+- **Catalogs regenerated** — `AGENTS.md`, `llms.txt`, `llms-full.txt`, `GEMINI.md`, and `.github/copilot-instructions.md` now carry the improved routing signals for Cursor, Windsurf, Copilot, Gemini CLI, and Codex.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

@@ -7,7 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## v2.8.0 — Security Hardening & GHAS Integration (2026-04-18)
+## v2.9.0 — Skill Routability & Description Lint (2026-04-19)
+
+### Changed
+- **30 knowledge-skill descriptions rewritten** — every skill with `user-invocable: false` used the `"Loaded when user asks about X"` shape, which carries no action verb and no concrete trigger keywords. Per [Anthropic skill docs](https://code.claude.com/docs/en/skills.md), Claude Code auto-routes skills using only the `description:` field (+ optional `when_to_use:`), so weak descriptions silently lowered hit rate. Rewritten with the pattern `[capability]. Triggers: [keywords]. Load when [...]`. Affected skills: `api-patterns`, `app-builder`, `architecture-decision`, `ci-cd-patterns`, `clean-code`, `csharp-patterns`, `database-patterns`, `debugging-tactics`, `design-engineering`, `docker-devops`, `documentation-standards`, `ecommerce-patterns`, `flutter-patterns`, `git-mastery`, `hive-mind`, `java-patterns`, `kotlin-patterns`, `mcp-patterns`, `migration-patterns`, `observability-patterns`, `performance-profiling`, `plan-writing`, `rag-patterns`, `research-mastery`, `ruby-patterns`, `rust-patterns`, `security-patterns`, `swift-patterns`, `testing-patterns`, `typescript-patterns`.
+
+### Added
+- **`scripts/audit_skills.py` description-quality lint (`check_description`)** — new WARN rules that prevent the `"Loaded when user asks about/to ..."` anti-pattern from returning. Enforces three limits on auto-loadable skills: `description + when_to_use ≤ 1536 chars` (Anthropic truncation limit), knowledge-skill description ≥ 80 chars, and a regex block on the historical weak-opening patterns. Task skills (`disable-model-invocation: true`) are skipped — their description is a menu label, not a routing signal.
+- **Regenerated `AGENTS.md`, `llms.txt`, `llms-full.txt`, `GEMINI.md`, `.github/copilot-instructions.md`** — machine-readable catalogs now carry the new descriptions. External clients (Cursor, Windsurf, Copilot, Gemini CLI, Codex) get the same routing signal as Claude Code.
+
+
 
 ### Added
 - **`scripts/audit_skills.py --sarif`** — emits SARIF 2.1.0 JSON compatible with GitHub Advanced Security Code Scanning. Severity maps HIGH→error / WARN→warning / INFO→note. Enables the GitHub Security tab to ingest audit findings directly.
