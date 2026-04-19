@@ -1,6 +1,6 @@
 ---
 name: documentation-standards
-description: "Loaded when creating or updating KB documents, architecture notes, SOPs, or any file in kb/ directory"
+description: "KB document conventions: YAML frontmatter (7 required fields), 5-category taxonomy (reference/howto/procedures/troubleshooting/best-practices), directory-category matching, validate.sh CI rules. Triggers: kb/, KB document, architecture note, SOP, runbook, howto, frontmatter, knowledge base entry, documentation standard. Load when creating or editing any file under kb/."
 effort: medium
 user-invocable: false
 allowed-tools: Read

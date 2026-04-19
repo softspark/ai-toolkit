@@ -1,6 +1,6 @@
 ---
 name: migration-patterns
-description: "Loaded when user asks about database migrations or zero-downtime deploys"
+description: "Zero-downtime database migration patterns: expand-contract, double-write, backfill, blue-green schema changes, feature flags, rollback safety, online DDL. Triggers: migration, schema change, zero-downtime, expand-contract, double-write, backfill, ALTER TABLE, column rename, safe deploy, online DDL. Load when planning non-trivial DB schema changes."
 effort: medium
 user-invocable: false
 allowed-tools: Read

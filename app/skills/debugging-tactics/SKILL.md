@@ -1,6 +1,6 @@
 ---
 name: debugging-tactics
-description: "Loaded when user is debugging an issue or needs root cause analysis"
+description: "Root-cause debugging with 4-phase method: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, not working, intermittent, flaky, crash, regression, fails sometimes, why is X happening, broken after. Load when user reports a bug or asks to investigate failing code."
 effort: medium
 user-invocable: false
 allowed-tools: Grep, Read

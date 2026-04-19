@@ -1,6 +1,6 @@
 ---
 name: kotlin-patterns
-description: "Loaded when user asks about Kotlin development patterns"
+description: "Kotlin development patterns: coroutines, Flow, sealed classes, data classes, extension functions, null safety, Ktor, Jetpack Compose, KMP. Triggers: Kotlin, coroutine, Flow, suspend, Ktor, Android Kotlin, Jetpack Compose, sealed class, data class, KMP, kotlinx. Load when writing or reviewing Kotlin code."
 effort: medium
 user-invocable: false
 allowed-tools: Read

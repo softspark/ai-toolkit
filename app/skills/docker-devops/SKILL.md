@@ -1,6 +1,6 @@
 ---
 name: docker-devops
-description: "Loaded when user asks about Docker, containers, or DevOps patterns"
+description: "Docker, containers, Kubernetes, and DevOps patterns: Dockerfile best practices, multi-stage builds, compose, k8s manifests, Helm charts, service mesh, image hardening. Triggers: Docker, Dockerfile, container, image, Kubernetes, k8s, compose, Helm, registry, layer caching, service mesh, pod, deployment yaml. Load when writing or fixing container/orchestration configs."
 effort: medium
 user-invocable: false
 allowed-tools: Read

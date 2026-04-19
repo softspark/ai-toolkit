@@ -1,6 +1,6 @@
 ---
 name: mcp-patterns
-description: "Loaded when user asks about MCP servers or tool protocol design"
+description: "MCP (Model Context Protocol) server design: tool schemas, resource patterns, transport selection (stdio/SSE), client configuration, error handling, capability negotiation. Triggers: MCP, Model Context Protocol, MCP server, MCP tool, MCP resource, JSON-RPC, stdio transport, SSE transport, Claude Desktop config, Cursor MCP. Load when building or integrating MCP servers."
 effort: medium
 user-invocable: false
 allowed-tools: Read

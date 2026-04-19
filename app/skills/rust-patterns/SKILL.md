@@ -1,6 +1,6 @@
 ---
 name: rust-patterns
-description: "Loaded when user asks about Rust development patterns"
+description: "Rust development patterns: ownership, borrowing, lifetimes, async (Tokio), error handling (Result/anyhow/thiserror), traits, macros, zero-cost abstractions, unsafe boundaries. Triggers: Rust, borrow checker, lifetime, Tokio, async Rust, cargo, trait, impl, Result, unsafe, lifetime annotation, clippy. Load when writing or reviewing Rust code."
 effort: medium
 user-invocable: false
 allowed-tools: Read

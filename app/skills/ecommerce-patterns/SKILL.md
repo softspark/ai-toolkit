@@ -1,6 +1,6 @@
 ---
 name: ecommerce-patterns
-description: "Loaded when user asks about e-commerce or shopping cart features"
+description: "E-commerce domain patterns: cart, checkout flow, payment providers (Stripe/Adyen), order state machine, inventory, promotions, tax, B2B vs B2C. Triggers: cart, checkout, product, SKU, inventory, payment, Stripe, Shopify, Medusa, Magento, order status, promotion, tax calculation, coupon, refund. Load when working on any e-commerce feature."
 effort: medium
 user-invocable: false
 allowed-tools: Read

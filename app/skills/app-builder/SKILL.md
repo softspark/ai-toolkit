@@ -1,6 +1,6 @@
 ---
 name: app-builder
-description: "Loaded when user asks to scaffold or build a full-stack app"
+description: "Full-stack app scaffolding with stack-selection matrix: Next.js, React+Vite, Nuxt, Astro, FastAPI, Django, Laravel, React Native, Flutter, Unity. Triggers: scaffold, bootstrap, new project, starter template, build app, landing page, dashboard, API, mobile app, CLI, e-commerce, game. Load when user wants to start a new project from scratch."
 effort: medium
 user-invocable: false
 allowed-tools: Read

@@ -1,6 +1,6 @@
 ---
 name: git-mastery
-description: "Loaded when user asks about advanced Git workflows or history rewriting"
+description: "Advanced Git workflows: interactive rebase, bisect, reflog, cherry-pick, worktrees, history rewriting, submodules, large-file migration (LFS/filter-repo). Triggers: git rebase, bisect, cherry-pick, reflog, force push, history rewrite, detached HEAD, merge conflict, worktree, squash, fixup, submodule. Load when user needs non-trivial Git operations."
 effort: medium
 user-invocable: false
 allowed-tools: Read, Grep, Glob

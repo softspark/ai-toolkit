@@ -1,6 +1,6 @@
 ---
 name: research-mastery
-description: "Loaded when user asks to research, verify, or synthesize information"
+description: "Hierarchical information retrieval following strict order: KB first (smart_query/crag_search), then MCP/Context7, then web search, then LLM knowledge as last resort. Triggers: research, find information, verify fact, synthesize sources, fact-check, cross-reference, multi-source, cite sources, investigate topic. Load when any task requires external or cross-source knowledge."
 effort: medium
 user-invocable: false
 allowed-tools: Read

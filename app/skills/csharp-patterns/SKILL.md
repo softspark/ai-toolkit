@@ -1,6 +1,6 @@
 ---
 name: csharp-patterns
-description: "Loaded when user asks about C# or .NET development patterns"
+description: "C# and .NET development patterns: LINQ, async/await, dependency injection, records, nullable reference types, ASP.NET Core minimal APIs, EF Core, MediatR. Triggers: C#, .NET, dotnet, ASP.NET, EF Core, LINQ, IServiceCollection, record type, async C#, nullable reference types. Load when writing or reviewing C#/.NET code."
 effort: medium
 user-invocable: false
 allowed-tools: Read

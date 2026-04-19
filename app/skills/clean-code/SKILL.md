@@ -1,6 +1,6 @@
 ---
 name: clean-code
-description: "Loaded when user asks about clean code, naming, or code quality"
+description: "Code quality principles: meaningful names, single responsibility, DRY, small functions, clear intent, guard clauses, refactoring rules. Triggers: clean code, naming, refactor for clarity, code smell, SRP, DRY, long function, god class, magic number, dead code. Load when reviewing or writing any production code."
 effort: medium
 user-invocable: false
 allowed-tools: Read

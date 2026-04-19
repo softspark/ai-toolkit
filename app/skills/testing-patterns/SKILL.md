@@ -1,6 +1,6 @@
 ---
 name: testing-patterns
-description: "Loaded when user asks about testing strategy, fixtures, or mocking"
+description: "Testing strategy and craft: pyramid vs trophy, unit/integration/e2e split, fixtures, mocks vs fakes vs stubs, AAA pattern, flaky test diagnosis, coverage goals, property-based testing. Triggers: test, testing strategy, fixture, mock, stub, AAA, unit test, integration test, e2e, Playwright, Cypress, flaky, coverage, TDD, test pyramid. Load when writing, reviewing, or designing test suites."
 effort: medium
 user-invocable: false
 allowed-tools: Read

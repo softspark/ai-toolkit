@@ -1,6 +1,6 @@
 ---
 name: security-patterns
-description: "Loaded when user asks about security, OWASP, or auth patterns"
+description: "Application security: OWASP Top 10, authN/authZ, input validation, secrets management, TLS, CSRF/XSS/SQLi, session handling, JWT, rate limiting, CSP. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, encryption, TLS, authentication, authorization, CSP, CORS, password hashing. Load when touching auth code, handling user input, or doing security review."
 effort: medium
 user-invocable: false
 allowed-tools: Read

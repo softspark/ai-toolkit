@@ -1,6 +1,6 @@
 ---
 name: hive-mind
-description: "Loaded when orchestrating multi-agent swarms or consensus workflows"
+description: "Multi-agent swarm coordination: consensus voting with confidence scores, output aggregation, file ownership, targeted vs broadcast messaging, map-reduce workflows. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, team of agents, aggregate results, agent voting, distributed agents. Load when orchestrating 3+ agents working in parallel."
 effort: medium
 user-invocable: false
 allowed-tools: Read

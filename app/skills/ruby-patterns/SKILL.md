@@ -1,6 +1,6 @@
 ---
 name: ruby-patterns
-description: "Loaded when user asks about Ruby development patterns"
+description: "Ruby and Rails development patterns: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet/RBS, Hanami, Roda, Rack middleware. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, gem, Gemfile, bundler, rake, Hanami, Sorbet. Load when writing or reviewing Ruby code."
 effort: medium
 user-invocable: false
 allowed-tools: Read

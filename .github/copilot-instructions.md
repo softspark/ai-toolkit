@@ -155,16 +155,16 @@ Creates new specialized agents with frontmatter, tool selection, and delegation 
 Analyze code quality, complexity, and patterns
 
 ### api-patterns
-Loaded when user asks about REST API design or GraphQL patterns
+REST and GraphQL API design patterns: resource naming, versioning, pagination, error contracts, idempotency, HATEOAS, OpenAPI. Triggers: API design, REST, GraphQL, endpoint, route, OpenAPI, Swagger, pagination, rate limit, versioning, idempotency key. Load when designing or reviewing any HTTP API surface.
 
 ### app-builder
-Loaded when user asks to scaffold or build a full-stack app
+Full-stack app scaffolding with stack-selection matrix: Next.js, React+Vite, Nuxt, Astro, FastAPI, Django, Laravel, React Native, Flutter, Unity. Triggers: scaffold, bootstrap, new project, starter template, build app, landing page, dashboard, API, mobile app, CLI, e-commerce, game. Load when user wants to start a new project from scratch.
 
 ### architecture-audit
 Explore codebase organically for architectural friction, discover shallow modules, and propose module-deepening refactors as GitHub issue RFCs using parallel sub-agent interface designs. Use when user wants to improve architecture, find shallow modules, deepen modules, or reduce coupling.
 
 ### architecture-decision
-Loaded when user asks about architecture decisions or architecture note writing
+Architecture decision making via trade-off analysis in RFC/RFD/ADR format: context, constraints, 3+ options, comparison, recommendation. Triggers: architecture decision, ADR, RFC, RFD, trade-offs, options comparison, design choice, pick between, should we use, evaluate approach. Load when weighing 2+ architectural options or writing decision records.
 
 ### biz-scan
 Scan codebase for business opportunities and KPIs
@@ -185,10 +185,10 @@ Inject controlled faults for resilience testing
 Detect and run CI pipeline with status reporting
 
 ### ci-cd-patterns
-Loaded when user asks about CI/CD pipelines or deployment automation
+CI/CD pipeline and deployment automation: GitHub Actions, GitLab CI, Jenkins, build stages, caching, artifact promotion, blue-green, canary, rollback gates. Triggers: CI, CD, pipeline, GitHub Actions, workflow YAML, deploy automation, release, artifact, rollout, canary, blue-green. Load when designing or fixing a build/release pipeline.
 
 ### clean-code
-Loaded when user asks about clean code, naming, or code quality
+Code quality principles: meaningful names, single responsibility, DRY, small functions, clear intent, guard clauses, refactoring rules. Triggers: clean code, naming, refactor for clarity, code smell, SRP, DRY, long function, god class, magic number, dead code. Load when reviewing or writing any production code.
 
 ### command-creator
 Creates new Claude Code slash commands with frontmatter, workflow guidance, and validation
@@ -203,19 +203,19 @@ Loaded when user builds content moderation, safety filters, or policy enforcemen
 4-perspective decision evaluation for architecture choices. Use when user wants multi-angle analysis, needs to decide between alternatives, or mentions 'council', 'evaluate decision', 'pros cons'.
 
 ### csharp-patterns
-Loaded when user asks about C# or .NET development patterns
+C# and .NET development patterns: LINQ, async/await, dependency injection, records, nullable reference types, ASP.NET Core minimal APIs, EF Core, MediatR. Triggers: C#, .NET, dotnet, ASP.NET, EF Core, LINQ, IServiceCollection, record type, async C#, nullable reference types. Load when writing or reviewing C#/.NET code.
 
 ### cve-scan
 Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, bundler, dart)
 
 ### database-patterns
-Loaded when user asks about database schema or query optimization
+Database schema design and query optimization: normalization, indexing strategies, joins, N+1, transactions, isolation levels, partitioning, EXPLAIN plans. Triggers: schema, table design, index, slow query, N+1, PostgreSQL, MySQL, SQL Server, SQL, EXPLAIN, query plan, transaction, deadlock. Load when designing tables or tuning queries.
 
 ### debug
 Debug errors and trace root causes systematically
 
 ### debugging-tactics
-Loaded when user is debugging an issue or needs root cause analysis
+Root-cause debugging with 4-phase method: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, not working, intermittent, flaky, crash, regression, fails sometimes, why is X happening, broken after. Load when user reports a bug or asks to investigate failing code.
 
 ### deploy
 Deploy with pre-flight checks and health verification
@@ -224,19 +224,19 @@ Deploy with pre-flight checks and health verification
 Generate multiple radically different interface designs using parallel sub-agents, then compare on simplicity, depth, and correctness. Based on 'Design It Twice' from Ousterhout. Use when user wants to design an API, explore interface options, compare module shapes, or mentions 'design it twice'.
 
 ### design-engineering
-Loaded when user asks about UI animations or CSS design craft
+UI craftsmanship (Emil Kowalski school): animation frequency rules, easing curves, micro-interactions, state polish, invisible-details philosophy. Triggers: animation, transition, ease-out, ease-in-out, motion, micro-interaction, hover state, loading state, UI polish, design detail, spring curve, delightful UX. Load when building or reviewing interactive UI.
 
 ### docker-devops
-Loaded when user asks about Docker, containers, or DevOps patterns
+Docker, containers, Kubernetes, and DevOps patterns: Dockerfile best practices, multi-stage builds, compose, k8s manifests, Helm charts, service mesh, image hardening. Triggers: Docker, Dockerfile, container, image, Kubernetes, k8s, compose, Helm, registry, layer caching, service mesh, pod, deployment yaml. Load when writing or fixing container/orchestration configs.
 
 ### docs
 Generate and update README, API docs, and architecture notes
 
 ### documentation-standards
-Loaded when creating or updating KB documents, architecture notes, SOPs, or any file in kb/ directory
+KB document conventions: YAML frontmatter (7 required fields), 5-category taxonomy (reference/howto/procedures/troubleshooting/best-practices), directory-category matching, validate.sh CI rules. Triggers: kb/, KB document, architecture note, SOP, runbook, howto, frontmatter, knowledge base entry, documentation standard. Load when creating or editing any file under kb/.
 
 ### ecommerce-patterns
-Loaded when user asks about e-commerce or shopping cart features
+E-commerce domain patterns: cart, checkout flow, payment providers (Stripe/Adyen), order state machine, inventory, promotions, tax, B2B vs B2C. Triggers: cart, checkout, product, SKU, inventory, payment, Stripe, Shopify, Medusa, Magento, order status, promotion, tax calculation, coupon, refund. Load when working on any e-commerce feature.
 
 ### evaluate
 Evaluate skill quality and RAG retrieval accuracy
@@ -254,10 +254,10 @@ Explore codebase structure, stack, and architecture
 Auto-fix lint errors, type issues, and simple bugs
 
 ### flutter-patterns
-Loaded when user asks about Flutter or Dart development patterns
+Flutter and Dart development patterns: widget composition, state management (Riverpod/Bloc/Provider), navigation, async, platform channels, performance. Triggers: Flutter, Dart, widget, StatefulWidget, Riverpod, Bloc, Provider, pubspec, Navigator, platform channel, hot reload, StatelessWidget. Load when writing or reviewing Flutter code.
 
 ### git-mastery
-Loaded when user asks about advanced Git workflows or history rewriting
+Advanced Git workflows: interactive rebase, bisect, reflog, cherry-pick, worktrees, history rewriting, submodules, large-file migration (LFS/filter-repo). Triggers: git rebase, bisect, cherry-pick, reflog, force push, history rewrite, detached HEAD, merge conflict, worktree, squash, fixup, submodule. Load when user needs non-trivial Git operations.
 
 ### grill-me
 Stress-test a plan or design through relentless Socratic questioning, walking down each decision branch until reaching shared understanding. Use when user wants to stress-test a plan, get grilled, validate assumptions, or mentions 'grill me'.
@@ -269,7 +269,7 @@ Report service and infrastructure health status
 Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references
 
 ### hive-mind
-Loaded when orchestrating multi-agent swarms or consensus workflows
+Multi-agent swarm coordination: consensus voting with confidence scores, output aggregation, file ownership, targeted vs broadcast messaging, map-reduce workflows. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, team of agents, aggregate results, agent voting, distributed agents. Load when orchestrating 3+ agents working in parallel.
 
 ### hook-creator
 Creates new Claude Code hooks with guided workflow, strict conventions, and validation
@@ -284,13 +284,13 @@ Review and manage learned instincts from past sessions
 Agent self-debugging and recovery. Use when stuck in loops, making repeated errors, or quality degrades. Triggers: introspect, self-debug, stuck, loop, why failing.
 
 ### java-patterns
-Loaded when user asks about Java development patterns
+Java development patterns: Spring Boot, CompletableFuture, records, sealed types, streams, JPA/Hibernate, Maven/Gradle, virtual threads (Loom). Triggers: Java, Spring, Spring Boot, JPA, Hibernate, Maven, Gradle, CompletableFuture, record type, sealed class, virtual thread. Load when writing or reviewing Java code.
 
 ### json-mode-patterns
 Loaded when user needs structured JSON output from Claude. Covers tool-use-as-JSON-mode, schema design, parsing, partial recovery, and validation.
 
 ### kotlin-patterns
-Loaded when user asks about Kotlin development patterns
+Kotlin development patterns: coroutines, Flow, sealed classes, data classes, extension functions, null safety, Ktor, Jetpack Compose, KMP. Triggers: Kotlin, coroutine, Flow, suspend, Ktor, Android Kotlin, Jetpack Compose, sealed class, data class, KMP, kotlinx. Load when writing or reviewing Kotlin code.
 
 ### lint
 Lint code with auto-detected tools and fix suggestions
@@ -299,7 +299,7 @@ Lint code with auto-detected tools and fix suggestions
 Build production-grade MCP (Model Context Protocol) servers from scratch using the 4-phase methodology: research, implement, test, evaluate. Use when creating new MCP integrations for external APIs, databases, or internal services.
 
 ### mcp-patterns
-Loaded when user asks about MCP servers or tool protocol design
+MCP (Model Context Protocol) server design: tool schemas, resource patterns, transport selection (stdio/SSE), client configuration, error handling, capability negotiation. Triggers: MCP, Model Context Protocol, MCP server, MCP tool, MCP resource, JSON-RPC, stdio transport, SSE transport, Claude Desktop config, Cursor MCP. Load when building or integrating MCP servers.
 
 ### mem-search
 Search past coding sessions using natural language. Finds relevant observations, decisions, and context from previous work.
@@ -308,7 +308,7 @@ Search past coding sessions using natural language. Finds relevant observations,
 Run database migrations with backup verification
 
 ### migration-patterns
-Loaded when user asks about database migrations or zero-downtime deploys
+Zero-downtime database migration patterns: expand-contract, double-write, backfill, blue-green schema changes, feature flags, rollback safety, online DDL. Triggers: migration, schema change, zero-downtime, expand-contract, double-write, backfill, ALTER TABLE, column rename, safe deploy, online DDL. Load when planning non-trivial DB schema changes.
 
 ### model-routing-patterns
 Loaded when user builds multi-model pipelines (Haiku/Sonnet/Opus). Covers cost-optimized routing, escalation, sub-agent delegation, and fallback chains.
@@ -317,7 +317,7 @@ Loaded when user builds multi-model pipelines (Haiku/Sonnet/Opus). Covers cost-o
 Run autonomous maintenance and dependency updates
 
 ### observability-patterns
-Loaded when user asks about logging, metrics, or tracing patterns
+Observability: structured logging, metrics (RED/USE/four golden signals), distributed tracing (OpenTelemetry), correlation IDs, log aggregation, SLO/SLI. Triggers: logging, log level, metrics, Prometheus, Grafana, OpenTelemetry, trace, span, structured log, observability, monitoring, SLO, SLI, alerting. Load when adding or reviewing logs, metrics, or traces.
 
 ### onboard
 Generate project onboarding materials
@@ -329,7 +329,7 @@ Coordinate multiple specialized agents in parallel
 Emergency stabilization via system-governor agent
 
 ### performance-profiling
-Loaded when user asks about performance profiling or optimization
+Performance measurement and optimization: four golden signals (latency/traffic/errors/saturation), p50/p95/p99, baseline-change-measure loop, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, profile, bottleneck, optimization, load test, benchmark, CPU profiling, memory leak. Load when diagnosing or optimizing slow code or services.
 
 ### persona
 Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
@@ -338,7 +338,7 @@ Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, 
 Plan implementation with tasks and success criteria
 
 ### plan-writing
-Loaded when user asks to write an implementation plan or pre-mortem
+Implementation plan and pre-mortem drafting: phase breakdown, success criteria, risks, rollback plan, acceptance tests, estimated effort. Triggers: implementation plan, pre-mortem, phased plan, project plan, task breakdown, success criteria, rollback strategy, risk register. Load when user asks to write a plan or pre-mortem document.
 
 ### plugin-creator
 Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes
@@ -362,7 +362,7 @@ Loaded when user builds with Anthropic API and needs to cut cost or latency via 
 Interactive QA session where user reports bugs conversationally and agent files GitHub issues with domain language. Explores codebase in background for context. Use when user wants to report bugs, do QA, file issues conversationally, or mentions QA session.
 
 ### rag-patterns
-Loaded when user asks about RAG systems, embeddings, or vector search
+RAG architecture: embeddings, chunking strategies, hybrid search (BM25 + vector), reranking, CRAG/self-correcting, multi-hop reasoning, evaluation metrics. Triggers: RAG, embedding, vector search, pgvector, Qdrant, Pinecone, Weaviate, chunking, reranker, retrieval, hybrid search, semantic search, knowledge base, cosine similarity. Load when building or tuning RAG systems.
 
 ### refactor
 Refactor code for quality and maintainability
@@ -374,7 +374,7 @@ Create a detailed refactor plan with tiny commits via user interview, then file 
 Run a prompt or slash command on a recurring interval until task complete or limits reached. Use when user wants to set up a recurring task, poll for status, or run something repeatedly on an interval.
 
 ### research-mastery
-Loaded when user asks to research, verify, or synthesize information
+Hierarchical information retrieval following strict order: KB first (smart_query/crag_search), then MCP/Context7, then web search, then LLM knowledge as last resort. Triggers: research, find information, verify fact, synthesize sources, fact-check, cross-reference, multi-source, cite sources, investigate topic. Load when any task requires external or cross-source knowledge.
 
 ### review
 Review code for quality, security, and correctness
@@ -383,16 +383,16 @@ Review code for quality, security, and correctness
 Roll back a deployment safely with verification
 
 ### ruby-patterns
-Loaded when user asks about Ruby development patterns
+Ruby and Rails development patterns: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet/RBS, Hanami, Roda, Rack middleware. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, gem, Gemfile, bundler, rake, Hanami, Sorbet. Load when writing or reviewing Ruby code.
 
 ### rust-patterns
-Loaded when user asks about Rust development patterns
+Rust development patterns: ownership, borrowing, lifetimes, async (Tokio), error handling (Result/anyhow/thiserror), traits, macros, zero-cost abstractions, unsafe boundaries. Triggers: Rust, borrow checker, lifetime, Tokio, async Rust, cargo, trait, impl, Result, unsafe, lifetime annotation, clippy. Load when writing or reviewing Rust code.
 
 ### search
 Search the knowledge base with semantic and hybrid modes
 
 ### security-patterns
-Loaded when user asks about security, OWASP, or auth patterns
+Application security: OWASP Top 10, authN/authZ, input validation, secrets management, TLS, CSRF/XSS/SQLi, session handling, JWT, rate limiting, CSP. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, encryption, TLS, authentication, authorization, CSP, CORS, password hashing. Load when touching auth code, handling user input, or doing security review.
 
 ### seo-validate
 Validate code against SEO best practices: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Supports React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML.
@@ -410,7 +410,7 @@ Execute implementation plans using fresh subagents per task with two-stage revie
 Execute tasks via Map-Reduce, Consensus, or Relay swarms
 
 ### swift-patterns
-Loaded when user asks about Swift or iOS development patterns
+Swift and iOS development patterns: SwiftUI, Combine, async/await, property wrappers, actors, Swift Package Manager, Core Data, UIKit interop, @MainActor. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, property wrapper, Core Data, SPM, UIKit, @MainActor, @State, @Binding. Load when writing or reviewing Swift code.
 
 ### tdd
 Test-driven development with red-green-refactor loop and vertical slices. Use when user wants TDD, test-first development, red-green-refactor, or building features with tests driving the implementation.
@@ -422,13 +422,13 @@ Launch pre-configured Agent Teams for common workflows
 Run tests with coverage analysis and reporting
 
 ### testing-patterns
-Loaded when user asks about testing strategy, fixtures, or mocking
+Testing strategy and craft: pyramid vs trophy, unit/integration/e2e split, fixtures, mocks vs fakes vs stubs, AAA pattern, flaky test diagnosis, coverage goals, property-based testing. Triggers: test, testing strategy, fixture, mock, stub, AAA, unit test, integration test, e2e, Playwright, Cypress, flaky, coverage, TDD, test pyramid. Load when writing, reviewing, or designing test suites.
 
 ### triage-issue
 Triage a bug by deeply exploring the codebase for root cause, then create a GitHub issue with a TDD-based fix plan. Mostly hands-off — minimal user interaction. Use when user reports a bug, wants to investigate an issue, mentions triage, or wants a fix plan.
 
 ### typescript-patterns
-Loaded when user asks about TypeScript patterns or type safety
+TypeScript type safety patterns: strict mode, generics, conditional types, template literals, discriminated unions, branded types, Zod, satisfies operator, const assertions. Triggers: TypeScript, TS, generics, conditional type, utility type, strict, Zod, satisfies, discriminated union, type safety, type narrowing, template literal type. Load when writing or reviewing TypeScript code.
 
 ### ubiquitous-language
 Extract a DDD-style ubiquitous language glossary from the conversation, flagging ambiguities and proposing canonical terms. Saves to UBIQUITOUS_LANGUAGE.md. Use when user wants to define domain terms, build a glossary, harden terminology, or mentions DDD or domain model.

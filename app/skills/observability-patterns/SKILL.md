@@ -1,6 +1,6 @@
 ---
 name: observability-patterns
-description: "Loaded when user asks about logging, metrics, or tracing patterns"
+description: "Observability: structured logging, metrics (RED/USE/four golden signals), distributed tracing (OpenTelemetry), correlation IDs, log aggregation, SLO/SLI. Triggers: logging, log level, metrics, Prometheus, Grafana, OpenTelemetry, trace, span, structured log, observability, monitoring, SLO, SLI, alerting. Load when adding or reviewing logs, metrics, or traces."
 effort: medium
 user-invocable: false
 allowed-tools: Read

@@ -149,12 +149,80 @@ def scan_secrets(filepath: Path, findings: list[Finding]) -> None:
             findings.append(Finding(severity, rel, lineno, regex, desc))
 
 
+# Description quality — per Anthropic docs (code.claude.com/docs/en/skills.md):
+# description + when_to_use combined ≤ 1536 chars; first sentence carries
+# the trigger keywords that let the LLM route to this skill.
+DESCRIPTION_MAX_CHARS = 1536
+DESCRIPTION_MIN_CHARS = 80
+
+# Weak patterns — fail-fast on the historical "Loaded when user asks about X"
+# shape that carries no action verb and no concrete keywords.
+WEAK_DESCRIPTION_PATTERNS = [
+    (r'^Loaded when user asks about ', "starts with 'Loaded when user asks about' — no action verb, no trigger keywords"),
+    (r'^Loaded when user asks to ', "starts with 'Loaded when user asks to' — no action verb, no trigger keywords"),
+]
+
+
+def check_description(skill_md: Path, findings: list[Finding]) -> None:
+    """Check that SKILL.md description is specific enough for auto-loading.
+
+    Only enforces for knowledge skills (user-invocable: false). Task skills
+    invoked via `/name` do not rely on description for routing.
+    """
+    user_invocable = frontmatter_field(skill_md, "user-invocable")
+    disable_model = frontmatter_field(skill_md, "disable-model-invocation")
+
+    # Skip strictly-task skills — description is a menu label, not a trigger.
+    if disable_model == "true" and user_invocable != "false":
+        return
+
+    desc = frontmatter_field(skill_md, "description")
+    when = frontmatter_field(skill_md, "when_to_use")
+    combined_len = len(desc) + len(when)
+    rel = str(skill_md)
+
+    if not desc:
+        findings.append(Finding(
+            "WARN", rel, 0, "missing-description",
+            "Skill has no description — auto-loaded skills need one to be routable",
+        ))
+        return
+
+    if combined_len > DESCRIPTION_MAX_CHARS:
+        findings.append(Finding(
+            "WARN", rel, 0, "description-too-long",
+            f"description + when_to_use is {combined_len} chars (limit {DESCRIPTION_MAX_CHARS}). "
+            "Anthropic truncates past this — trigger keywords may be lost.",
+        ))
+
+    # Knowledge skills must have routable descriptions.
+    if user_invocable == "false":
+        if len(desc) < DESCRIPTION_MIN_CHARS:
+            findings.append(Finding(
+                "WARN", rel, 0, "description-too-short",
+                f"Knowledge skill description is {len(desc)} chars — needs "
+                f"≥{DESCRIPTION_MIN_CHARS} with concrete trigger keywords",
+            ))
+
+        for regex, reason in WEAK_DESCRIPTION_PATTERNS:
+            if re.match(regex, desc):
+                findings.append(Finding(
+                    "WARN", rel, 0, "description-weak-pattern",
+                    f"Weak description: {reason}. "
+                    "Use the shape '[capability]. Triggers: [keywords]. Load when [...].'",
+                ))
+                break
+
+
 def check_frontmatter(skill_dir: Path, findings: list[Finding]) -> None:
     """Check SKILL.md frontmatter for permission issues."""
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.is_file():
         return
     rel = str(skill_md)
+
+    # Description quality (routability)
+    check_description(skill_md, findings)
 
     allowed = frontmatter_field(skill_md, "allowed-tools")
     user_invocable = frontmatter_field(skill_md, "user-invocable")

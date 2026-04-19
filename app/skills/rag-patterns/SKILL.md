@@ -1,6 +1,6 @@
 ---
 name: rag-patterns
-description: "Loaded when user asks about RAG systems, embeddings, or vector search"
+description: "RAG architecture: embeddings, chunking strategies, hybrid search (BM25 + vector), reranking, CRAG/self-correcting, multi-hop reasoning, evaluation metrics. Triggers: RAG, embedding, vector search, pgvector, Qdrant, Pinecone, Weaviate, chunking, reranker, retrieval, hybrid search, semantic search, knowledge base, cosine similarity. Load when building or tuning RAG systems."
 effort: medium
 user-invocable: false
 allowed-tools: Read

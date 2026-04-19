@@ -1,6 +1,6 @@
 ---
 name: plan-writing
-description: "Loaded when user asks to write an implementation plan or pre-mortem"
+description: "Implementation plan and pre-mortem drafting: phase breakdown, success criteria, risks, rollback plan, acceptance tests, estimated effort. Triggers: implementation plan, pre-mortem, phased plan, project plan, task breakdown, success criteria, rollback strategy, risk register. Load when user asks to write a plan or pre-mortem document."
 effort: medium
 user-invocable: false
 allowed-tools: Read
