@@ -1,7 +1,7 @@
 ---
 language: common
 category: coding-style
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # Universal Coding Style
@@ -51,7 +51,17 @@ version: "1.0.0"
 - Match existing style, even if you would do it differently.
 - Do not "improve" adjacent code, comments, or formatting unprompted.
 - Orphan cleanup: remove imports/variables/functions that YOUR changes made unused.
-- Do not remove pre-existing dead code unless explicitly asked.
+
+## No Dead Code (Constitution Art. VI.1)
+- When a refactor leaves a file, class, function, import, l10n key, or variable unused, DELETE it in the same change. Verify via grep that zero references remain in the repo.
+- This applies to pre-existing code too, if your work makes its unusedness verifiable. "Legacy", "separate refactor", "out of scope", or "świadome pominięcie" are NOT valid excuses.
+- Before claiming the task done: grep for every symbol you removed or renamed; fix orphaned references.
+
+## Fix Every Found Bug (Constitution Art. VI.2)
+- A bug, missing test for changed behavior, or stale doc discovered while working on a task MUST be fixed in the same change — not deferred to "second step", "separate PR", or "świadome pominięcie".
+- When behavior changes, update integration AND unit tests AND the affected docs alongside. A unit test on a new helper is not sufficient when the behavior is exposed over an API — add the integration test too.
+- Legitimate deferral exists ONLY when: (a) the fix requires a user decision — in that case, surface it explicitly and ask, don't bury in a summary; or (b) the issue is genuinely unrelated to the current change surface.
+- Before marking done: re-read the diff and confirm no orphaned references, no missing test coverage for changed paths, no stale docs. If any are present, keep working.
 
 ## Goal-Driven Execution
 - Transform vague tasks into verifiable goals before starting.

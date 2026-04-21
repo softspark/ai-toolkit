@@ -10,11 +10,11 @@
 
 ---
 
-## What's New in v2.9.0
+## What's New in v2.10.0
 
-- **Skill routability fix** — 30 knowledge skills (`user-invocable: false`) had weak `"Loaded when user asks about X"` descriptions that silently lowered auto-loading hit rate. Rewritten with the Anthropic-docs-aligned shape `[capability]. Triggers: [keywords]. Load when [...]`.
-- **Description-quality lint** — `audit_skills.py` now enforces `description + when_to_use ≤ 1536 chars` (Anthropic limit), knowledge-skill descriptions ≥ 80 chars, and blocks the old anti-pattern from returning. CI fails on regression.
-- **Catalogs regenerated** — `AGENTS.md`, `llms.txt`, `llms-full.txt`, `GEMINI.md`, and `.github/copilot-instructions.md` now carry the improved routing signals for Cursor, Windsurf, Copilot, Gemini CLI, and Codex.
+- **Constitution Article VI — Repair Discipline** — four new immutable rules close the "świadome pominięcie / out of scope / separate PR" loophole: no dead code (VI.1), fix every found bug (VI.2), tests and docs follow behavior (VI.3), verify before claiming done (VI.4). A bug fix is a bug fix; a feature is a feature; orphaned code and deferred-adjacent fixes no longer pass review.
+- **`system-governor` gains Art. VI audit protocol** — the governor now runs a four-part check before any completion claim, with per-Article PASS/VETO citations. Scope is intentionally scoped to commit message + PR body + non-`.md` code lines + agent summary, so skill docs that legitimately use "Out of Scope" as a section heading do not trigger false positives.
+- **Rule, skill, and agent reinforcement** — `coding-style` rule (v1.1.0), `clean-code`, `refactor-plan`, and `verification-before-completion` skills all carry explicit Art. VI anchors and checklist rows. Totals unchanged: 44 agents, 99 skills, 666 tests.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

@@ -110,3 +110,4 @@ What is explicitly NOT part of this refactor.
 - No file paths or code snippets in the issue (durability)
 - File immediately via `gh issue create` — don't ask for review
 - Interview thoroughly before planning
+- **Dead code cleanup is mandatory per step, not deferred** (Constitution Art. VI.1): every refactor step must leave the repo with zero orphaned references. "We'll delete the old code in a later step" is only acceptable for transitional double-write / expand-contract phases where both paths are temporarily live — and the cleanup step must be explicitly listed in the plan, not implied.

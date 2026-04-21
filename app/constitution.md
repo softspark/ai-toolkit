@@ -1,6 +1,6 @@
 ---
 title: "The Immutable Constitution of the System"
-last_updated: "2026-01-30"
+last_updated: "2026-04-21"
 status: IMMUTABLE
 ---
 
@@ -43,3 +43,9 @@ status: IMMUTABLE
 ## Article V: Resource Governance
 1. **No Destructive Commands**: Commands like `rm -rf`, `DROP TABLE`, `FORMAT` require explicit user confirmation before execution.
 2. **Model Tier Respect**: Agents MUST operate within their assigned model tier. Model tier changes require user approval.
+
+## Article VI: Repair Discipline
+1. **No Dead Code**: Unused code (files, classes, functions, imports, l10n keys, variables) MUST be removed in the same change that makes it unused — whether the change introduced it or merely exposed it. "Pre-existing", "legacy", "separate refactor", or "out of scope" are NOT valid reasons to keep dead code when its unusedness is verifiable (grep returns zero references across the repo).
+2. **Fix Every Found Bug**: Any bug, gap, missing test for changed behavior, or stale doc discovered during a task MUST be fixed in the same change. Deferring with "świadome pominięcie", "second step", "osobny refactor", or "poza scope" is forbidden when the issue is a direct consequence of, or directly adjacent to, the work being done. Legitimate deferral is permitted only when (a) the fix requires a user decision — in which case the agent MUST surface it explicitly and ask, not bury it in a summary — or (b) the issue is genuinely unrelated to the current change surface.
+3. **Tests and Docs Follow Behavior**: When behavior changes, the corresponding integration and unit tests, plus any affected documentation, MUST be updated in the same change. A unit test on a new helper is not sufficient when the behavior is exposed over an API — add the integration test too.
+4. **Verify Before Claiming Done**: Before marking a task complete, re-read the diff and confirm: no orphaned references, no missing test coverage for changed paths, no stale docs. If any are present, the task is not done.

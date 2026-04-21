@@ -97,6 +97,8 @@ Keep modules focused. Order contents consistently: imports (stdlib, third-party,
 - [ ] Resources are properly cleaned up
 - [ ] No code duplication
 - [ ] Tests cover critical paths
+- [ ] **No dead code** — grep-verified zero references for every removed/renamed symbol; pre-existing dead code touched by this change is deleted too (Constitution Art. VI.1)
+- [ ] **Every found bug fixed** — bugs, missing tests for changed behavior, and stale docs discovered during the task are fixed in the same change, not deferred (Constitution Art. VI.2)
 
 ---
 
@@ -109,6 +111,9 @@ Keep modules focused. Order contents consistently: imports (stdlib, third-party,
 | "Short variable names are faster to type" | You type it once, readers parse it hundreds of times — optimize for reading |
 | "DRY means never repeat anything" | Wrong DRY creates coupling — duplicate until you see the real abstraction |
 | "More abstractions = cleaner code" | Premature abstraction is worse than duplication — wait for the third use |
+| "That dead file is pre-existing, not my problem" | If your change makes it verifiably unused, deleting it IS your problem (Constitution Art. VI.1) |
+| "I'll fix the missing test in a separate PR" | Forbidden when the test covers behavior you just changed — add it now (Constitution Art. VI.2) |
+| "Świadome pominięcie" / "out of scope" | Deferral of directly-adjacent fixes is forbidden; if a user decision is needed, ASK, don't bury it |
 
 ## Language-Specific References
 

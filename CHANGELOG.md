@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.10.0 — Constitution Article VI: Repair Discipline (2026-04-21)
+
+### Added
+- **Constitution Article VI — Repair Discipline** (`app/constitution.md`) — four new immutable rules: no dead code (VI.1), fix every found bug (VI.2), tests and docs follow behavior (VI.3), verify before claiming done (VI.4). Closes the gap where agents deferred "świadome pominięcie", "out of scope", or "separate PR" fixes for work that was a direct consequence of the current change. Articles I–V remain unchanged.
+- **`system-governor` Art. VI audit protocol** (`app/agents/system-governor.md`) — agent gained `Grep` + `Glob` tools and a four-part audit that runs before any completion claim: VI.1 dead-symbol grep, VI.2 deferred-work scan (scoped to commit message + PR body + non-`.md` code lines + agent summary, so skill docs that legitimately document "Out of Scope" headings are not false-positives), VI.3 behavior/test/doc coverage detection, VI.4 diff re-read. Outputs a structured verdict with per-Article PASS/VETO citations.
+- **`clean-code` skill Art. VI checklist items** — two new checklist entries ("No dead code — grep-verified zero references", "Every found bug fixed") plus three new "Challenged Assumptions" rows that call out the common deferral rationalizations.
+- **`refactor-plan` skill Art. VI anchor** — mandatory dead-code cleanup per step, not deferred. Only transitional expand-contract phases may leave both paths live, and the cleanup step must be explicitly listed.
+- **`verification-before-completion` skill Art. VI rows** — three new rows in the evidence-vs-non-evidence table covering VI.1/VI.2/VI.4, plus a "Constitutional Anchors" section that pins the skill to Art. VI.4.
+- **`coding-style` rule Art. VI sections** (`app/rules/common/coding-style.md`, v1.0.0 → v1.1.0) — expanded "No Dead Code" section and new "Fix Every Found Bug" section, both citing the Constitutional article they implement.
+
+### Changed
+- **`system-governor` description** widened to reflect Art. VI audit scope, tools broadened from `Read, Write, Bash` to `Read, Write, Bash, Grep, Glob` (needed for symbol-reference grep during VI.1).
+
+### Notes
+- No skill/agent/hook counts changed. Totals remain: 44 agents, 99 skills, 666 tests.
+- Art. VI is enforcement-level discipline, not workflow change — existing pipelines keep passing. Governor veto gates a completion claim, not a commit.
+
+---
+
 ## v2.9.0 — Skill Routability & Description Lint (2026-04-19)
 
 ### Changed

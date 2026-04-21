@@ -358,7 +358,7 @@ Search engine optimization specialist. Trigger words: SEO, search engine, meta t
 
 The Guardian of the Constitution. Validates all evolutionary changes and enforces immutable rules. Has VETO power.
 
-**Tools:** `Read, Write, Bash`
+**Tools:** `Read, Write, Bash, Grep, Glob`
 
 ---
 

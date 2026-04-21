@@ -54,6 +54,9 @@ Skip any step = lying, not verifying
 | Regression test works | Red-green cycle verified | Test passes once |
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
+| No dead code (Art. VI.1) | Grep for every removed/renamed symbol: 0 references | "I cleaned up what I touched" |
+| Behavior change covered (Art. VI.2) | Integration test for the API surface + unit test + docs updated | Unit test on the helper only |
+| Diff is clean (Art. VI.4) | Re-read full diff: no orphaned imports, no stale docs, no skipped fixes | "I only changed what I needed" |
 
 ## Red Flags — STOP
 
@@ -101,6 +104,10 @@ WRONG:    "Tests pass, phase complete"
 CORRECT:  Agent reports success → Check VCS diff → Verify changes → Report actual state
 WRONG:    Trust agent report at face value
 ```
+
+## Constitutional Anchors
+
+This skill enforces **Constitution Art. VI.4 (Verify Before Claiming Done)**. The diff re-read is not optional: before any completion claim, confirm no orphaned references, no missing test coverage for changed paths, no stale docs. A task is not done while any of those exist.
 
 ## The Bottom Line
 
