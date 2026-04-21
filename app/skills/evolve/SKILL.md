@@ -18,9 +18,9 @@ Triggers the Meta-Architect to improve agent and skill definitions based on obse
 
 ```bash
 /evolve [source]
-# /evolve learnings        — analyze kb/learnings/ for recurring failure patterns
-# /evolve last-failure     — analyze the most recent error log
-# /evolve agents           — audit all agent definitions for gaps
+# /evolve learnings        : analyze kb/learnings/ for recurring failure patterns
+# /evolve last-failure     : analyze the most recent error log
+# /evolve agents           : audit all agent definitions for gaps
 ```
 
 ## Protocol
@@ -62,6 +62,6 @@ Create a summary documenting what evolved:
 - **Source**: [learnings | last-failure | agents]
 - **Pattern found**: [description of failure/inefficiency]
 - **Changes applied**:
-  - `app/agents/[name].md` — [what changed and why]
+  - `app/agents/[name].md`: [what changed and why]
 - **Validation**: passed / failed
 ```

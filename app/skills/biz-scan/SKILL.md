@@ -19,14 +19,14 @@ Triggers the Business Intelligence agent to analyze the codebase for business op
 
 ```bash
 /biz-scan [scope]
-# /biz-scan schema     — focus on database models and entity relationships
-# /biz-scan api        — focus on API endpoints and data exposure
-# /biz-scan all        — full codebase scan
+# /biz-scan schema     : focus on database models and entity relationships
+# /biz-scan api        : focus on API endpoints and data exposure
+# /biz-scan all        : full codebase scan
 ```
 
 ## Protocol
 
-### 1. Model Scan — Analyze Data Layer
+### 1. Model Scan: Analyze Data Layer
 
 Scan for business-relevant data structures:
 
@@ -39,7 +39,7 @@ grep -rl "prisma\|sequelize\|typeorm\|sqlalchemy\|activerecord" .
 
 Catalog: entity names, relationships, fields that map to business concepts (revenue, subscription, usage, billing).
 
-### 2. Logic Scan — Analyze Business Logic
+### 2. Logic Scan: Analyze Business Logic
 
 Scan controllers, services, and use cases:
 
@@ -52,7 +52,7 @@ grep -rn "track\|analytics\|event\|metric\|log_event" --include="*.ts" --include
 
 Catalog: exposed endpoints, tracked events, feature flags, A/B tests.
 
-### 3. Synthesis — Match Data vs. Business Goals
+### 3. Synthesis: Match Data vs. Business Goals
 
 Cross-reference findings to identify:
 
@@ -63,7 +63,7 @@ Cross-reference findings to identify:
 | **Monetization gaps** | Subscription/billing entities without conversion tracking |
 | **Data exposure** | Rich internal data not surfaced via API |
 
-### 4. Report — Generate Opportunity Report
+### 4. Report: Generate Opportunity Report
 
 Output a structured markdown report:
 
@@ -76,10 +76,10 @@ Output a structured markdown report:
 | [name] | [events or "none"] | [what's missing] |
 
 ### Opportunities (ranked by estimated impact)
-1. **[Opportunity]** — [description, affected entities, suggested action]
+1. **[Opportunity]**: [description, affected entities, suggested action]
 
 ### Quick Wins
-- [ ] Add tracking to [feature] — estimated lift: [low/med/high]
+- [ ] Add tracking to [feature], estimated lift: [low/med/high]
 
 ### Data Exposure Gaps
 - [Entity] has [N fields] not exposed via any API endpoint

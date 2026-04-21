@@ -167,7 +167,7 @@ Explore codebase organically for architectural friction, discover shallow module
 Architecture decision making via trade-off analysis in RFC/RFD/ADR format: context, constraints, 3+ options, comparison, recommendation. Triggers: architecture decision, ADR, RFC, RFD, trade-offs, options comparison, design choice, pick between, should we use, evaluate approach. Load when weighing 2+ architectural options or writing decision records.
 
 ### biz-scan
-Scan codebase for business opportunities and KPIs
+Scans codebase for business opportunities by analyzing database schemas, API endpoints, tracking events, and feature flags to surface underutilized capabilities, missing KPIs, and monetization gaps. Use when the user asks about revenue opportunities, business metrics, KPI coverage, analytics gaps, or monetization analysis of a codebase.
 
 ### brand-voice
 Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice.
@@ -242,7 +242,7 @@ E-commerce domain patterns: cart, checkout flow, payment providers (Stripe/Adyen
 Evaluate skill quality and RAG retrieval accuracy
 
 ### evolve
-Evolve agent definitions via meta-architect
+Analyzes failure patterns and inefficiencies in agent/skill definitions, then drafts and applies targeted improvements to system prompts, tool permissions, and behavioral rules. Use when the user asks to improve agent behavior, refine skill definitions, update system prompts, or optimize agent configurations based on observed failures.
 
 ### explain
 Explain code, architecture, or concepts with diagrams
@@ -335,7 +335,7 @@ Performance measurement and optimization: four golden signals (latency/traffic/e
 Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
 
 ### plan
-Plan implementation with tasks and success criteria
+Breaks down feature requests and project goals into phased implementation plans with task lists, agent assignments, dependency graphs, and success criteria. Use when the user asks to plan a feature, create an implementation roadmap, break down a coding task, or outline project phases.
 
 ### plan-writing
 Implementation plan and pre-mortem drafting: phase breakdown, success criteria, risks, rollback plan, acceptance tests, estimated effort. Triggers: implementation plan, pre-mortem, phased plan, project plan, task breakdown, success criteria, rollback strategy, risk register. Load when user asks to write a plan or pre-mortem document.
@@ -353,7 +353,7 @@ Break a PRD into independently-grabbable GitHub issues using vertical slices wit
 Convert a PRD into a phased implementation plan using tracer-bullet vertical slices. Use when user wants to break down a PRD, create an implementation plan, plan phases from a PRD, or mentions tracer bullets.
 
 ### predict
-Predict regressions and impact before changes land
+Analyzes code diffs and file changes to identify potential regressions, maps dependency impact across the codebase, and generates a risk-scored impact report. Use when reviewing pull requests, assessing code change risk, checking for breaking changes, or analyzing the blast radius of a diff.
 
 ### prompt-caching-patterns
 Loaded when user builds with Anthropic API and needs to cut cost or latency via prompt caching. Covers TTL, cache breakpoints, stacking, invalidation, and measuring hit rate.
@@ -416,7 +416,7 @@ Swift and iOS development patterns: SwiftUI, Combine, async/await, property wrap
 Test-driven development with red-green-refactor loop and vertical slices. Use when user wants TDD, test-first development, red-green-refactor, or building features with tests driving the implementation.
 
 ### teams
-Launch pre-configured Agent Teams for common workflows
+Launches pre-configured multi-agent teams for code review, debugging, feature development, security audits, and database migrations. Use when the user asks to start a multi-agent workflow, coordinate agent teams, run a team review, or needs parallel agent collaboration on a complex task.
 
 ### test
 Run tests with coverage analysis and reporting

@@ -7,7 +7,7 @@ argument-hint: "<preset> [task-description]"
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Agent, TeamCreate, TeamDelete, SendMessage, TaskCreate, TaskList, TaskUpdate, TaskGet
 ---
 
-# /teams — Agent Teams Presets
+# /teams: Agent Teams Presets
 
 $ARGUMENTS
 
@@ -38,18 +38,18 @@ See [reference/presets.md](reference/presets.md) for detailed ownership, aggrega
 
 ## Workflow
 
-1. **Parse** `$ARGUMENTS` — extract `<preset>` and optional `[task-description]`
+1. **Parse** `$ARGUMENTS`: extract `<preset>` and optional `[task-description]`
 2. **Validate** preset is one of: review, debug, feature, fullstack, research, security, migration
-3. **Check environment** — verify `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set; warn if missing
+3. **Check environment**: verify `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set; warn if missing
 4. **Display** team composition and ownership rules from [reference/presets.md](reference/presets.md)
 5. **Confirm** with user before launching
-6. **Launch agents** — spawn each agent with its assigned scope using the Agent tool:
+6. **Launch agents**: spawn each agent with its assigned scope using the Agent tool:
    ```
    Agent({ description: "code-reviewer: PR review lead", prompt: "[task + ownership rules]" })
    Agent({ description: "security-auditor: security findings", prompt: "[task + domain scope]" })
    ```
-7. **Aggregate results** — apply the preset's aggregation strategy (consensus, relay, or map-reduce)
-8. **Produce output** — write the defined output document (e.g., `REVIEW.md`, `DEBUG_REPORT.md`)
+7. **Aggregate results**: apply the preset's aggregation strategy (consensus, relay, or map-reduce)
+8. **Produce output**: write the defined output document (e.g., `REVIEW.md`, `DEBUG_REPORT.md`)
 
 ### Error Handling
 
