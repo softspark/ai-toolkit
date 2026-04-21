@@ -10,12 +10,16 @@
 
 ---
 
-## What's New in v2.10.1
+## What's New in v2.11.0
 
-- **Art. VI enforcement drift repaired** — `IMMUTABLE_ARTICLES` in `config_merger.py` and `config_validator.py` extended to include Article 6, so downstream `extends:` configs can no longer override Repair Discipline. Enterprise config schema, CLI diff label, and doc surfaces updated to match.
-- **Generator emits Article VI** — `scripts/emission.py::generate_quality_standards()` now includes Article VI's four clauses; `AGENTS.md`, `GEMINI.md`, `llms-full.txt`, and editor rule files (`.clinerules`, `.roo`, `.windsurf`, `.augment`, `.agents`, `.github/copilot-instructions.md`) all regenerated.
-- **Constitution self-consistency** — Article I.3 "Max 3" aligned to Section 4's "maximum 5 iterations". `validate.py --strict` now fails on article-count drift between `app/constitution.md` and downstream catalogs; the lint parses `## Article <roman>:` headings and fails on stale count or roman-range literals elsewhere.
-- **SKILL.md improvements from #8** (merged from @rohan-tessl) — `biz-scan`, `evolve`, `plan`, `predict`, and `teams` got richer descriptions, executable protocol steps, and structured report templates; team preset details moved to `teams/reference/presets.md` for progressive disclosure. 5 skills total, totals unchanged: 44 agents, 99 skills, 666 tests.
+- **JSON wire format rules added to `common/coding-style.md`** — `camelCase` for field names (aligned with JSON:API, Google JSON Style, Symfony Serializer + `json_serializable` defaults), `UPPER_SNAKE_CASE` for enum values (Protocol Buffers, Google AIP-126 / api-linter, Zalando Rule #240, Java/Kotlin/Python consensus). Anti-pattern call-out against `camelCase` for enum values (no major public API uses it).
+- **`php/frameworks.md` — Symfony Serializer section** — documents the property-names-as-is default, the global-override side effect of `api_platform.name_converter` ([api-platform/core #6101](https://github.com/api-platform/core/issues/6101)), pragmatic `#[SerializedName]` usage, and Symfony 7.3.5+ `ObjectNormalizer` `isXxx` behavior change ([#62353](https://github.com/symfony/symfony/issues/62353)) that retires pre-7.3.5 boolean-getter aliases.
+- **`dart/frameworks.md` — JSON Serialization section** — `json_serializable` `FieldRename.none` default + Effective Dart `lowerCamelCase` = `camelCase` output with zero config; community recommendation to prefer class-level `fieldRename` over per-field `@JsonKey(name:)`; enum value wire strategy (`UPPER_SNAKE_CASE`) while keeping Dart enum case names `lowerCamelCase`.
+
+### Previous: v2.10.1 — Art. VI Enforcement Drift Repair
+
+- Art. VI enforcement drift repaired (`IMMUTABLE_ARTICLES` extended to include Article 6; generator emits Article VI text; article-count drift lint added).
+- Constitution self-consistency fixes (Article I.3 aligned with Section 4) and SKILL.md improvements from #8 (merged from @rohan-tessl). Totals unchanged: 44 agents, 99 skills, 666 tests.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

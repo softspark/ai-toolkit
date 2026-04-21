@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.11.0 — JSON Wire Format Rules (2026-04-21)
+
+### Added
+- **`app/rules/common/coding-style.md` v1.2.0 — JSON Wire Format Conventions section** — `camelCase` for field names (JSON:API, Google JSON Style, Symfony Serializer + `json_serializable` defaults), `UPPER_SNAKE_CASE` for enum/status/permission values (Protocol Buffers style guide, Google AIP-126 / api-linter, Zalando Rule #240, Java/Kotlin/C++/Python consensus). Explicit call-out that `camelCase` for enum VALUES is an anti-pattern with no major public API precedent.
+- **`app/rules/php/frameworks.md` v1.1.0 — Symfony Serializer section** — documents the `property-names-used-as-is` default, the global-override side effect of `api_platform.name_converter` ([api-platform/core #6101](https://github.com/api-platform/core/issues/6101)), pragmatic `#[SerializedName]` usage (only when justified), and the Symfony 7.3.5+ `ObjectNormalizer` `isXxx` behavior change ([symfony/symfony #62353](https://github.com/symfony/symfony/issues/62353)) that makes pre-7.3.5 `SerializedName` aliases redundant. API Platform section extended with `operation_name` metadata note.
+- **`app/rules/dart/frameworks.md` v1.1.0 — JSON Serialization section** — `json_serializable` `FieldRename.none` default + Effective Dart `lowerCamelCase` = `camelCase` JSON keys without configuration; community recommendation to prefer class-level `fieldRename` over per-field `@JsonKey(name:)`; enum value strategy (`UPPER_SNAKE_CASE` on wire, Dart case names stay `lowerCamelCase`).
+
+### Notes
+- Changes are additive — no existing rule text removed or reworded. Projects that ran `ai-toolkit install --local` before v2.11.0 will pick up the new sections on next re-run (install is idempotent — existing TOOLKIT markers get replaced, not duplicated).
+- Rules codify documented facts + widely-cited community consensus, not project-specific enforcement. Project-level SOPs (grep gates, migration workflows, whitelists) remain in each project's `kb/procedures/`.
+
+---
+
 ## v2.10.1 — Art. VI Enforcement Drift Repair (2026-04-21)
 
 ### Fixed

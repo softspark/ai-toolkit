@@ -1,7 +1,7 @@
 ---
 language: common
 category: coding-style
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # Universal Coding Style
@@ -68,6 +68,13 @@ version: "1.1.0"
 - For multi-step work, state a brief plan with verification per step:
   `1. [Step] → verify: [check]`
 - Strong success criteria enable independent looping. Weak criteria ("make it work") require clarification — ask first.
+
+## JSON Wire Format Conventions
+- Field names (keys): `camelCase`. Aligns with JSON:API spec, Google JSON Style Guide, and framework defaults (Symfony Serializer, Spring Jackson, `json_serializable` for Dart). No public major API uses `snake_case` keys in modern designs except ecosystem-bound cases (Rails/Django APIs defaulting to ecosystem convention).
+- Enum / status / permission / domain values: `UPPER_SNAKE_CASE`. Community consensus: [Protocol Buffers style guide](https://protobuf.dev/programming-guides/style/) (mandatory), [Google AIP-126 / api-linter](https://linter.aip.dev/126/upper-snake-values) (enforced), [Zalando Rule #240](https://opensource.zalando.com/restful-api-guidelines/), Java/Kotlin/C++/Python enum convention. `lowercase snake_case` (Stripe-style) is a legitimate outlier but not consensus.
+- Avoid `camelCase` for enum values — no major public API uses it, loses visual distinction between keys and values.
+- Pick one convention per project and enforce it with a CI grep gate. Mixing conventions inside a single API surface is the worst outcome.
+- External contracts (Stripe, GitHub, webhooks you receive) follow their own convention — map to your project convention at the adapter boundary, do not leak their keys past it.
 
 ## Anti-Patterns to Avoid
 - God classes/modules with 500+ lines and multiple responsibilities.

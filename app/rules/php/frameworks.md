@@ -1,7 +1,7 @@
 ---
 language: php
 category: frameworks
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # PHP Frameworks
@@ -36,12 +36,21 @@ version: "1.0.0"
 - Use migrations: `bin/console doctrine:migrations:diff` and `migrate`.
 - Use lifecycle callbacks (`@PrePersist`, `@PostUpdate`) for entity events.
 
+## Symfony Serializer
+- Default behavior uses property names as-is. Combined with PSR-12 `camelCase` property names, JSON output is `camelCase` with zero configuration.
+- Avoid adding `api_platform.name_converter: CamelCaseToSnakeCaseNameConverter` globally. Known side-effect ([api-platform/core #6101](https://github.com/api-platform/core/issues/6101)): overrides the project-wide `MetadataAwareNameConverter`, affecting Messenger serializers, custom normalizers, and CLI JSON output — not just the HTTP API.
+- Use `#[SerializedName]` only when justified: legacy field alias during rename, external contract mapping, ObjectNormalizer cross-version stabilization. Community practice ([Symfony docs](https://symfony.com/doc/current/serializer.html), Sylius, SymfonyCasts): prefer clean property/getter naming over aliases. When using, document the reason next to the attribute.
+- Symfony 7.3.5+ `ObjectNormalizer` produces `isActive` natively for a `isActive(): bool` getter ([symfony/symfony #62353](https://github.com/symfony/symfony/issues/62353)). Older `#[SerializedName('isActive')]` aliases added for pre-7.3.5 `ObjectNormalizer` (which produced `active`) are redundant after upgrade — remove them.
+- Avoid duplicate getters like `isActive()` + `getIsActive()` on the same property — `ObjectNormalizer` treats them as two fields and serializes ambiguously. Keep one (`isXxx()` for booleans, `getXxx()` otherwise).
+
 ## API Platform
 - Use API Platform for rapid REST/GraphQL API generation from entities.
 - Use `#[ApiResource]` attribute for automatic CRUD endpoint generation.
 - Use custom state providers and processors for business logic.
 - Use serialization groups for controlling response shape.
 - Use filters for query parameter support: pagination, search, ordering.
+- Property names on `ApiResource` DTOs drive JSON keys directly (see Symfony Serializer above). Write them in `camelCase` — that is both the Symfony default and the dominant JSON API convention.
+- Use `operation_name` in `extraProperties` for dispatch metadata (e.g., `extraProperties: ['operation_name' => 'club_activate']`). The key `operation_name` and its `snake_case` values are framework metadata, not JSON wire keys — keeping them `snake_case` is expected.
 
 ## Livewire (Laravel)
 - Use Livewire components for reactive UI without JavaScript.

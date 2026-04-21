@@ -1,7 +1,7 @@
 ---
 language: dart
 category: frameworks
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # Dart Frameworks
@@ -26,6 +26,14 @@ version: "1.0.0"
 - Use interceptors for auth token injection and refresh logic.
 - Set timeouts on every request: `connectTimeout`, `receiveTimeout`.
 - Use `CancelToken` for cancelling in-flight requests on navigation.
+
+## JSON Serialization
+- Use `json_serializable` (+ `build_runner`) for generated `fromJson`/`toJson`. Default `fieldRename: FieldRename.none` uses Dart property names as-is — combined with Effective Dart `lowerCamelCase`, this produces `camelCase` JSON keys with zero configuration.
+- Flutter docs recommend: *"best if both server and client follow the same naming strategy"* ([Flutter — JSON and serialization](https://docs.flutter.dev/data-and-backend/serialization/json)). When they do, no mapping is needed.
+- When server uses a different convention, prefer `@JsonSerializable(fieldRename: FieldRename.snake)` at the class level (or globally in `build.yaml`) over sprinkling `@JsonKey(name:)` on every field. Community recommendation from the `json_serializable` docs and pub.dev guides.
+- Use individual `@JsonKey(name: '...')` only for exceptional cases: external API with mixed conventions, reserved Dart keyword collision (`class`, `is`, `new`), or legacy field rename during deprecation window. Document the reason in a comment.
+- For enum / status / permission values on the wire: `UPPER_SNAKE_CASE` is the cross-language community consensus (see `common/coding-style.md` — JSON Wire Format Conventions). Dart enum case names themselves stay `lowerCamelCase` per Effective Dart; map them to uppercase strings in `fromJson`/`toJson` (`value.toUpperCase()` + `switch`).
+- Write unit tests asserting both directions (`fromJson` + `toJson`) with explicit expected keys. Catches contract drift at CI time.
 
 ## Local Storage
 - Use `shared_preferences` for simple key-value persistence.
