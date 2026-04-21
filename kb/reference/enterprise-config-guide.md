@@ -175,9 +175,9 @@ Requirements:
 
 ## Constitution Immutability
 
-- **Articles I-V** (toolkit core) are absolutely immutable
+- **Articles I-VI** (toolkit core) are absolutely immutable
 - **Base config articles** are immutable — projects cannot modify them
-- Projects can **only ADD** new articles (article 6+)
+- Projects can **only ADD** new articles (article 7+)
 
 ```json
 {

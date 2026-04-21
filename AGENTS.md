@@ -548,12 +548,12 @@ Skills are invocable commands or auto-loaded knowledge sources:
 
 ## Quality Standards
 
-Derived from the immutable safety constitution (5 articles):
+Derived from the immutable safety constitution (6 articles):
 
 **Article I — Safety First**
 - No data loss: never delete files without backup verification or using reversible operations
 - No blind execution: never run LLM-generated code without static analysis or review
-- No infinite loops: all autonomous loops must have a maximum iteration count (max 3)
+- No infinite loops: all autonomous loops must have a maximum iteration count (max 5)
 
 **Article II — Hierarchy of Truth**
 - The Knowledge Base (`kb/`) is the source of truth; if code contradicts KB, check KB freshness
@@ -571,6 +571,12 @@ Derived from the immutable safety constitution (5 articles):
 **Article V — Resource Governance**
 - Commands like `rm -rf`, `DROP TABLE`, `FORMAT` require explicit user confirmation
 - Operate within assigned model tiers; model tier changes require user approval
+
+**Article VI — Repair Discipline**
+- No dead code: unused code (files, classes, functions, imports, variables) must be removed in the same change that makes it unused; 'pre-existing' or 'out of scope' is not a valid reason
+- Fix every found bug: bugs, gaps, missing tests, or stale docs discovered during a task must be fixed in the same change when directly adjacent to the work; deferral requires explicit user decision
+- Tests and docs follow behavior: behavior changes must carry matching integration and unit tests plus affected documentation in the same change
+- Verify before claiming done: re-read the diff before marking a task complete; no orphaned references, no missing coverage, no stale docs
 
 ## Workflow Guidelines
 

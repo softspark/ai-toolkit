@@ -35,7 +35,7 @@ ai-toolkit/
     rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
     hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
-    constitution.md          # Immutable safety rules, 5 articles (marker-injected)
+    constitution.md          # Immutable safety rules, 6 articles (marker-injected)
     ARCHITECTURE.md          # System architecture reference (marker-injected)
     CLAUDE.md.template       # Template for project CLAUDE.md (used by init)
     settings.local.json.template
@@ -292,15 +292,16 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 Scripts at `~/.softspark/ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
 
-## Constitution (5 Articles)
+## Constitution (6 Articles)
 
 | Article | Key Rule |
 |---------|----------|
-| I Safety First | No data loss, no blind execution, max 3 loop iterations |
+| I Safety First | No data loss, no blind execution, max 5 loop iterations |
 | II Hierarchy of Truth | KB is source of truth, research protocol mandatory |
 | III Operational Integrity | Green tests = Done, logs are evidence |
 | IV Self-Preservation | Constitution is read-only, kill switch via system-governor |
 | V Resource Governance | No destructive commands without confirmation |
+| VI Repair Discipline | No dead code, fix every found bug, tests and docs follow behavior, verify before done |
 
 ## Persona Presets
 

@@ -10,11 +10,12 @@
 
 ---
 
-## What's New in v2.10.0
+## What's New in v2.10.1
 
-- **Constitution Article VI — Repair Discipline** — four new immutable rules close the "świadome pominięcie / out of scope / separate PR" loophole: no dead code (VI.1), fix every found bug (VI.2), tests and docs follow behavior (VI.3), verify before claiming done (VI.4). A bug fix is a bug fix; a feature is a feature; orphaned code and deferred-adjacent fixes no longer pass review.
-- **`system-governor` gains Art. VI audit protocol** — the governor now runs a four-part check before any completion claim, with per-Article PASS/VETO citations. Scope is intentionally scoped to commit message + PR body + non-`.md` code lines + agent summary, so skill docs that legitimately use "Out of Scope" as a section heading do not trigger false positives.
-- **Rule, skill, and agent reinforcement** — `coding-style` rule (v1.1.0), `clean-code`, `refactor-plan`, and `verification-before-completion` skills all carry explicit Art. VI anchors and checklist rows. Totals unchanged: 44 agents, 99 skills, 666 tests.
+- **Art. VI enforcement drift repaired** — `IMMUTABLE_ARTICLES` in `config_merger.py` and `config_validator.py` extended to include Article 6, so downstream `extends:` configs can no longer override Repair Discipline. Enterprise config schema, CLI diff label, and doc surfaces updated to match.
+- **Generator emits Article VI** — `scripts/emission.py::generate_quality_standards()` now includes Article VI's four clauses; `AGENTS.md`, `GEMINI.md`, `llms-full.txt`, and editor rule files (`.clinerules`, `.roo`, `.windsurf`, `.augment`, `.agents`, `.github/copilot-instructions.md`) all regenerated.
+- **Constitution self-consistency** — Article I.3 "Max 3" aligned to Section 4's "maximum 5 iterations". `validate.py --strict` now fails on article-count drift between `app/constitution.md` and downstream catalogs; the lint parses `## Article <roman>:` headings and fails on stale count or roman-range literals elsewhere.
+- **SKILL.md improvements from #8** (merged from @rohan-tessl) — `biz-scan`, `evolve`, `plan`, `predict`, and `teams` got richer descriptions, executable protocol steps, and structured report templates; team preset details moved to `teams/reference/presets.md` for progressive disclosure. 5 skills total, totals unchanged: 44 agents, 99 skills, 666 tests.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -121,7 +122,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
-| `constitution.md` | 5 articles | Machine-enforced safety rules |
+| `constitution.md` | 6 articles | Machine-enforced safety rules |
 | `rules/` | auto-injected | Language-specific and custom rules injected into your configs |
 | `kb/` | reference docs | Architecture, procedures, and best practices |
 
@@ -138,7 +139,7 @@ ai-toolkit/
 │   ├── hooks/           # Hook scripts (21 entries, 12 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
-│   ├── constitution.md  # 5 immutable safety articles
+│   ├── constitution.md  # 6 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts

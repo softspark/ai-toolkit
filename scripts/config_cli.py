@@ -217,7 +217,7 @@ def _diff_constitution(base: dict, project: dict) -> None:
     if base_articles or proj_articles:
         print()
         print("  Constitution:")
-        print("    = Articles I-V              (immutable)")
+        print("    = Articles I-VI             (immutable)")
         for num, art in sorted(base_articles.items()):
             print(f"    = Article {num}: {art['title']}  (inherited from base)")
         for num, art in sorted(proj_articles.items()):

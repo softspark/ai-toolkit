@@ -444,7 +444,7 @@ Create a Product Requirements Document through interactive interview, codebase e
 
 ## Quality Guidelines
 
-- **Safety First**: No data loss, no blind execution, maximum 3 autonomous loop iterations
+- **Safety First**: No data loss, no blind execution, maximum 5 autonomous loop iterations
 - **No Blind Execution**: Never run LLM-generated code without static analysis or review
 - **Tests are Sacred**: "Green Tests" is the only definition of Done; never force-merge on red tests
 - **No Destructive Commands**: Commands like `rm -rf`, `DROP TABLE`, `FORMAT` require explicit user confirmation

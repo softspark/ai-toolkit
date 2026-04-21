@@ -81,7 +81,7 @@
     "constitution": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Constitution amendments. Articles I-V are immutable. Base articles are immutable. Projects can only ADD new articles.",
+      "description": "Constitution amendments. Articles I-VI are immutable. Base articles are immutable. Projects can only ADD new articles (7+).",
       "properties": {
         "amendments": {
           "type": "array",

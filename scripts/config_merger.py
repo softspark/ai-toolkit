@@ -2,7 +2,7 @@
 """Config merger for ai-toolkit extends system.
 
 Implements layered deep merge with:
-- Constitution immutability (Articles I-V absolute, base articles immutable)
+- Constitution immutability (Articles I-VI absolute, base articles immutable)
 - Agent merge with requiredAgents enforcement
 - Override validation (override:true + justification required)
 - enforce block constraints (minHookProfile, requiredPlugins, forbidOverride, requiredAgents)
@@ -22,7 +22,7 @@ from typing import Any
 # Constants
 # ---------------------------------------------------------------------------
 
-IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5})
+IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5, 6})
 
 HOOK_PROFILE_ORDER = {"minimal": 0, "standard": 1, "strict": 2}
 
@@ -163,7 +163,7 @@ def _merge_constitution(
     """Merge constitution — additions only, no modifications.
 
     Rules:
-    1. Articles I-V (1-5) are ABSOLUTELY immutable — toolkit core.
+    1. Articles I-VI (1-6) are ABSOLUTELY immutable — toolkit core.
     2. Articles defined by base configs are immutable — projects cannot modify.
     3. Projects can ADD new articles with article numbers not in base.
     """
@@ -177,8 +177,8 @@ def _merge_constitution(
         if article_num in IMMUTABLE_ARTICLES:
             raise ConfigMergeError(
                 f"Cannot modify Constitution Article {article_num} — immutable.\n"
-                f"Articles I-V are defined by ai-toolkit and cannot be overridden.\n"
-                f"You can ADD new articles (article 6+)."
+                f"Articles I-VI are defined by ai-toolkit and cannot be overridden.\n"
+                f"You can ADD new articles (article 7+)."
             )
         if article_num in base_amendments:
             raise ConfigMergeError(

@@ -664,6 +664,66 @@ def _validate_version_sync(tk_dir: Path, vr: ValidationResult) -> None:
                     )
 
 
+ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
+
+
+def validate_constitution_drift(tk_dir: Path, vr: ValidationResult) -> None:
+    """Detect article-count drift between constitution.md and downstream docs."""
+    print()
+    print("## Constitution Drift")
+
+    constitution = tk_dir / "app" / "constitution.md"
+    if not constitution.is_file():
+        return
+
+    content = constitution.read_text(encoding="utf-8")
+    matches = re.findall(r"^## Article ([IVX]+):", content, re.MULTILINE)
+    if not matches:
+        vr.error("Constitution has no '## Article <roman>:' headings")
+        return
+
+    count = len(matches)
+    if count > len(ROMAN_NUMERALS):
+        vr.error(f"Constitution has {count} articles (more than {len(ROMAN_NUMERALS)} supported)")
+        return
+    max_roman = ROMAN_NUMERALS[count - 1]
+
+    docs = [
+        tk_dir / "README.md",
+        tk_dir / "app" / "ARCHITECTURE.md",
+        tk_dir / "kb" / "reference" / "architecture-overview.md",
+        tk_dir / "kb" / "reference" / "enterprise-config-guide.md",
+    ]
+
+    count_pat = re.compile(r"\b(\d+)\s+(?:immutable\s+safety\s+)?articles?\b", re.IGNORECASE)
+    range_pat = re.compile(r"\bArticles?\s+I-([IVX]+)\b")
+    drift = 0
+    for doc in docs:
+        if not doc.is_file():
+            continue
+        text = doc.read_text(encoding="utf-8")
+        for m in count_pat.finditer(text):
+            n = int(m.group(1))
+            if 1 <= n <= len(ROMAN_NUMERALS) and n != count:
+                vr.error(
+                    f"{doc.relative_to(tk_dir)} references '{n} articles' "
+                    f"but constitution has {count}"
+                )
+                drift += 1
+        for m in range_pat.finditer(text):
+            end = m.group(1).upper()
+            if end != max_roman and end in ROMAN_NUMERALS:
+                vr.error(
+                    f"{doc.relative_to(tk_dir)} references 'Articles I-{end}' "
+                    f"but constitution has I-{max_roman}"
+                )
+                drift += 1
+
+    if drift == 0:
+        print(f"  OK: constitution has {count} articles (I-{max_roman}), docs consistent")
+    print()
+
+
 def validate_content_quality(tk_dir: Path, vr: ValidationResult) -> None:
     """Check content quality: name matches directory, non-empty body."""
     print()
@@ -709,6 +769,7 @@ def _run_all_checks(tk_dir: Path, vr: ValidationResult) -> tuple[int, int, str]:
     validate_kb_documents(tk_dir, vr)
     validate_core_files(tk_dir, vr)
     actual_tests = validate_metadata_contracts(tk_dir, agent_count, skill_count, vr)
+    validate_constitution_drift(tk_dir, vr)
     validate_content_quality(tk_dir, vr)
     return agent_count, skill_count, actual_tests
 

@@ -21,7 +21,7 @@ from typing import Any
 VALID_PROFILES = {"minimal", "standard", "strict", "full", "offline-slm"}
 VALID_HOOK_PROFILES = {"minimal", "standard", "strict"}
 HOOK_PROFILE_ORDER = {"minimal": 0, "standard": 1, "strict": 2}
-IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5})
+IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5, 6})
 MIN_JUSTIFICATION_LEN = 20
 
 

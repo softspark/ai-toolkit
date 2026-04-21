@@ -7,6 +7,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.10.1 — Art. VI Enforcement Drift Repair (2026-04-21)
+
+### Fixed
+- **`IMMUTABLE_ARTICLES` extended to include Article 6** (`scripts/config_merger.py`, `scripts/config_validator.py`) — v2.10.0 declared Art. VI immutable in `app/constitution.md` but left the enforcement constant at `{1..5}`, so a downstream `extends:` config with `amendments: [{article: 6, ...}]` would silently override Repair Discipline. Constant now `{1..6}`; error message points at article 7+ as the first allowed project-added article.
+- **`scripts/emission.py::generate_quality_standards()` emits Article VI** — generator hard-coded I–V only, so `AGENTS.md`, `GEMINI.md`, editor rule files, and `llms-full.txt` did not carry Art. VI text after the v2.10.0 release. Added four-clause VI block (no dead code, fix every found bug, tests and docs follow behavior, verify before done). All downstream catalogs regenerated.
+- **"5 articles" / "Articles I-V" literals updated to 6 / I-VI** across `README.md`, `app/ARCHITECTURE.md`, `kb/reference/architecture-overview.md`, `kb/reference/enterprise-config-guide.md`, `scripts/config_cli.py` diff label, and `scripts/schemas/ai-toolkit-config.schema.json` description. Added Article VI row to the Constitution table in `architecture-overview.md`.
+- **Article I.3 "Max 3" aligned to Section 4 "Max 5"** in `app/constitution.md` to resolve a pre-existing internal contradiction. Same iteration cap now quoted in `scripts/emission.py` general/quality guidelines.
+- **SKILL.md improvements from PR #8 by @rohan-tessl** — `biz-scan`, `evolve`, `plan`, `predict`, and `teams` gained richer descriptions with explicit "Use when..." clauses and executable protocol steps; team preset details moved to `teams/reference/presets.md` (progressive disclosure). Repo style applied (no em dashes); `plan/SKILL.md` KB Integration section preserved.
+
+### Added
+- **`scripts/validate.py` article-count drift lint** (`validate_constitution_drift`) — parses `app/constitution.md` for `## Article <roman>:` headings, derives the expected count and max roman numeral, and fails strict validation when `README.md`, `app/ARCHITECTURE.md`, or `kb/reference/*` references a stale `N articles` or `Articles I-<roman>` literal. This is how v2.10.0 drift slipped past CI; it will not next time.
+
+### Notes
+- No skill/agent/hook counts changed. Totals remain: 44 agents, 99 skills, 666 tests.
+- Art. VI text itself (in `app/constitution.md`) unchanged from v2.10.0 — only surfaces and enforcement are reconciled with it.
+
+---
+
 ## v2.10.0 — Constitution Article VI: Repair Discipline (2026-04-21)
 
 ### Added

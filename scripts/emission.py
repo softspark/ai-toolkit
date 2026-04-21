@@ -147,7 +147,7 @@ def generate_general_guidelines() -> str:
     lines = [
         "## General Guidelines",
         "",
-        '- Apply "Safety First": no data loss, no blind execution, max 3 loop iterations',
+        '- Apply "Safety First": no data loss, no blind execution, max 5 loop iterations',
         "- Research before acting: check existing code and context before proposing changes",
         "- Use structured commits: feat/fix/docs/refactor/test/chore prefixes",
         "- Quality gates: lint must pass, types must check, tests must be green before done",
@@ -162,7 +162,7 @@ def generate_quality_standards() -> str:
     lines = [
         "## Quality Standards",
         "",
-        "Derived from the immutable safety constitution (5 articles):",
+        "Derived from the immutable safety constitution (6 articles):",
         "",
         "**Article I — Safety First**",
         "- No data loss: never delete files without backup verification"
@@ -170,7 +170,7 @@ def generate_quality_standards() -> str:
         "- No blind execution: never run LLM-generated code without"
         " static analysis or review",
         "- No infinite loops: all autonomous loops must have a maximum"
-        " iteration count (max 3)",
+        " iteration count (max 5)",
         "",
         "**Article II — Hierarchy of Truth**",
         "- The Knowledge Base (`kb/`) is the source of truth;"
@@ -196,6 +196,21 @@ def generate_quality_standards() -> str:
         " user confirmation",
         "- Operate within assigned model tiers; model tier changes"
         " require user approval",
+        "",
+        "**Article VI — Repair Discipline**",
+        "- No dead code: unused code (files, classes, functions, imports,"
+        " variables) must be removed in the same change that makes it"
+        " unused; 'pre-existing' or 'out of scope' is not a valid reason",
+        "- Fix every found bug: bugs, gaps, missing tests, or stale docs"
+        " discovered during a task must be fixed in the same change when"
+        " directly adjacent to the work; deferral requires explicit user"
+        " decision",
+        "- Tests and docs follow behavior: behavior changes must carry"
+        " matching integration and unit tests plus affected documentation"
+        " in the same change",
+        "- Verify before claiming done: re-read the diff before marking"
+        " a task complete; no orphaned references, no missing coverage,"
+        " no stale docs",
     ]
     return "\n".join(lines)
 
@@ -233,7 +248,7 @@ def generate_quality_guidelines() -> str:
         "## Quality Guidelines",
         "",
         '- **Safety First**: No data loss, no blind execution,'
-        " maximum 3 autonomous loop iterations",
+        " maximum 5 autonomous loop iterations",
         "- **No Blind Execution**: Never run LLM-generated code"
         " without static analysis or review",
         '- **Tests are Sacred**: "Green Tests" is the only definition of Done;'
