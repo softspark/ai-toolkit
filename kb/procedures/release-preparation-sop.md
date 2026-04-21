@@ -3,10 +3,10 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif]
-version: "1.7.0"
+version: "1.8.0"
 created: "2026-04-10"
-last_updated: "2026-04-18"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0."
+last_updated: "2026-04-21"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, and the single-run npm test discipline added in v1.8.0."
 ---
 
 # SOP: Release Preparation
@@ -207,7 +207,13 @@ python3 scripts/validate.py --strict
 python3 scripts/audit_skills.py --ci
 python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS ingest
 python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
-npm test
+
+# Run npm test ONCE, cache output, parse from file. The suite is 669+ bats
+# cases — rerunning it per check wastes minutes. Do not pipe npm test into
+# tail/grep multiple times in the same session.
+npm test > /tmp/npm-test.log 2>&1
+tail -3 /tmp/npm-test.log
+echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp/npm-test.log)"
 ```
 
 **Expected results:**
@@ -215,7 +221,7 @@ npm test
 - `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
 - `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
 - `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
-- `npm test`: `1..N` with zero `not ok`
+- `npm test`: `1..N` with zero `not ok` (read from the cached `/tmp/npm-test.log`, do not rerun)
 
 **One-liner:**
 ```bash

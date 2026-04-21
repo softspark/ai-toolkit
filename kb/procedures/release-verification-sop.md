@@ -3,10 +3,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-04-08"
-last_updated: "2026-04-18"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard."
+last_updated: "2026-04-21"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 adds the single-run npm test discipline (cache to file, parse ok/not-ok once)."
 ---
 
 # SOP: Release Verification
@@ -39,7 +39,7 @@ python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGEN
 python3 scripts/generate_codex_rules.py .                   # 2. Refresh standard Codex rules
 python3 scripts/generate_llms_txt.py > llms.txt             # 3. Regenerate llms.txt
 python3 scripts/validate.py --strict                        # 4. Validation passed?
-npm test                                                    # 5. All tests passed?
+npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 5. All tests passed? (single run, cached)
 
 # Post-install verification (Phases 1-7)
 ai-toolkit --version                                        # 6. Version OK?
@@ -204,14 +204,32 @@ python3 scripts/audit_skills.py --ci
 ## Phase 6: Tests (3-5 min)
 
 ```bash
-npm test
+# Run ONCE, capture to file, then parse. Full suite is 669+ bats cases —
+# re-running it per check (tail / grep ok / grep not ok piped separately)
+# wastes minutes every release. Always cache the output.
+npm test > /tmp/npm-test.log 2>&1
+exit=$?
+tail -3 /tmp/npm-test.log
+echo "ok:     $(grep -c '^ok '    /tmp/npm-test.log)"
+echo "not ok: $(grep -c '^not ok' /tmp/npm-test.log)"
+echo "exit:   $exit"
 ```
 
 **Verify:**
+- [ ] `exit == 0`
+- [ ] `ok == expected test count` (e.g., 669)
+- [ ] `not ok == 0`
 - [ ] Bats runs tests in parallel (4 jobs)
-- [ ] All `ok` — zero `not ok`
 - [ ] Groups: agents, autodetect, cli, generators, guards, hooks, inject,
       install, kb, mcp, readme, profiles, uninstall, validate
+
+**Anti-pattern — do NOT do this:**
+```bash
+# Runs the full suite THREE times. Adds 1-3 min and pressures CI capacity.
+npm test 2>&1 | tail -3
+npm test 2>&1 | grep -c '^ok '
+npm test 2>&1 | grep -c '^not ok'
+```
 
 **Key test areas:**
 - Guards: rm -rf, DROP TABLE, git push --force blocked
