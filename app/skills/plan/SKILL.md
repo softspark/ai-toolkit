@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Plan implementation with tasks and success criteria"
+description: "Breaks down feature requests and project goals into phased implementation plans with task lists, agent assignments, dependency graphs, and success criteria. Use when the user asks to plan a feature, create an implementation roadmap, break down a coding task, or outline project phases."
 user-invocable: true
 effort: high
 argument-hint: "[goal]"
@@ -11,71 +11,14 @@ allowed-tools: Read, Grep, Glob
 
 $ARGUMENTS
 
-Create a structured plan for a new project or feature.
+## Workflow
 
-## Usage
-
-```
-/plan [description]
-```
-
-## What This Command Does
-
-1. **Analyzes** the request
-2. **Identifies** project type and tech stack
-3. **Breaks down** into tasks
-4. **Creates** plan file with agent assignments
-
-## Plan File Output
-
-Creates a `{project-slug}.md` file in project root:
-
-```markdown
-# {Project Name} - Implementation Plan
-
-## Overview
-- **Type**: [Web App / Mobile App / API / etc.]
-- **Stack**: [Tech choices]
-- **Complexity**: [Low / Medium / High]
-
-## Requirements
-1. [Requirement 1]
-2. [Requirement 2]
-
-## Task Breakdown
-
-### Phase 1: Foundation
-- [ ] Task 1 (Agent: backend-specialist)
-- [ ] Task 2 (Agent: database-architect)
-
-### Phase 2: Core Features
-- [ ] Task 3 (Agent: frontend-specialist)
-- [ ] Task 4 (Agent: backend-specialist)
-
-### Phase 3: Polish
-- [ ] Task 5 (Agent: test-engineer)
-- [ ] Task 6 (Agent: devops-implementer)
-
-## Agent Assignment
-
-| Task | Agent | Dependencies |
-|------|-------|--------------|
-| Database | database-architect | None |
-| API | backend-specialist | Database |
-| UI | frontend-specialist | API |
-| Tests | test-engineer | All above |
-
-## File Structure
-```
-project/
-├── src/
-└── ...
-```
-
-## Success Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-```
+1. **Analyze scope**: read the goal, scan relevant source files to understand current state
+2. **Detect project type**: match keywords to determine stack and primary agents (see table below)
+3. **Break into phases**: group tasks by dependency order (foundation, core, polish)
+4. **Assign agents**: map each task to the best-fit agent with explicit dependencies
+5. **Write plan file**: create `{project-slug}.md` in project root using [templates/plan-template.md](templates/plan-template.md)
+6. **Validate**: confirm every requirement maps to at least one task, no circular dependencies exist, and success criteria are measurable
 
 ## Project Type Detection
 
@@ -83,44 +26,29 @@ project/
 |----------|------|----------------|
 | landing, website | Static Site | frontend-specialist |
 | dashboard, admin | Web App | frontend + backend |
-| api, rest | API Only | backend-specialist |
+| api, rest, graphql | API Only | backend-specialist |
 | mobile, ios, android | Mobile | mobile-developer |
-| game, unity | Game | game-developer |
+| cli, terminal | CLI Tool | backend-specialist |
 
-## PLAN MODE RULES
+## Planning Constraints
 
-During planning:
-- Create plan documents
-- Define tasks and structure
-- NO code writing
-- NO file creation (except plan)
-
-## Common Rationalizations
-
-| Excuse | Why It's Wrong |
-|--------|----------------|
-| "We already know what to build" | Assumed requirements lead to rework — validate assumptions explicitly |
-| "Planning is wasted time, just start coding" | Unplanned work has 3-5x more rework — 30 min planning saves days |
-| "The requirements will change anyway" | Plans adapt — without one, you can't assess impact of changes |
-| "It's a small feature, no plan needed" | Small features in complex systems have hidden dependencies — map them |
-| "We'll figure it out as we go" | Discovery without structure leads to scope creep and missed edge cases |
-
-## Next Steps
-
-After plan approval:
-1. Use `/orchestrate` to execute with agents
-2. Or manually invoke specific agents
+- Create plan documents only, NO code writing, NO file creation (except the plan)
+- Each task must name affected file(s) and a single owning agent
+- Phases must have explicit dependency edges (`Phase 1 -> Phase 2`)
+- Success criteria must be verifiable (command to run, expected output, or observable behavior)
 
 ## KB Integration
 
 Before planning:
+
 ```python
 smart_query("project template: {type}")
 hybrid_search_kb("architecture {pattern}")
 ```
 
 ## Related Skills
-- Plan approved? → `/orchestrate` or `/workflow` to execute with agents
-- Need requirements first? → `/write-a-prd` for structured product requirements
-- Want to stress-test the plan? → `/grill-me` for Socratic questioning
-- Ready to break into issues? → `/prd-to-plan` → `/triage-issue`
+
+- Plan approved? -> `/orchestrate` or `/workflow` to execute with agents
+- Need requirements first? -> `/write-a-prd` for structured product requirements
+- Want to stress-test the plan? -> `/grill-me` for Socratic questioning
+- Ready to break into issues? -> `/prd-to-plan` -> `/triage-issue`
