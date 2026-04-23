@@ -46,46 +46,38 @@ def _skill_body(skill_file: Path) -> str:
     return parts[2].lstrip("\n") if len(parts) >= 3 else text
 
 
-def _toml_escape_triple(value: str) -> str:
-    """Escape a string for embedding in a TOML multi-line basic string.
-
-    TOML triple-quoted basic strings treat backslashes as escape characters
-    and reject a raw ``\"\"\"`` sequence inside. We:
-
-    * double any existing backslash so ``\\n`` in literals is preserved;
-    * replace any occurrence of ``\"\"\"`` with ``\"\"\\\"`` (a zero-width
-      backslash escape between the last two quotes) so the delimiter can
-      never appear inside the body.
-
-    Control chars are left alone — Gemini's TOML parser handles ``\\n``
-    and ``\\t`` literals produced by real newlines correctly because the
-    triple-quoted form allows embedded newlines natively.
-    """
-    value = value.replace("\\", "\\\\")
-    value = value.replace('"""', '""\\"')
-    return value
-
-
 def _translate_placeholders(body: str) -> str:
     """Rewrite Claude-style ``$ARGUMENTS`` placeholders to Gemini ``{{args}}``."""
     return body.replace("$ARGUMENTS", "{{args}}")
 
 
 def _render_gemini_command(skill_file: Path) -> str:
-    """Render a single Gemini TOML command file from a user-invocable skill."""
+    """Render a single Gemini TOML command file from a user-invocable skill.
+
+    Bodies are emitted as TOML multi-line **literal** strings (``'''...'''``)
+    so embedded regex such as ``\\s``, ``\\d``, ``\\n`` are passed through
+    verbatim. Literal strings accept no escape sequences, which is exactly
+    what we want for prompt fidelity.
+    """
     description = frontmatter_field(skill_file, "description")
     body = _skill_body(skill_file).rstrip()
     body = _translate_placeholders(body)
 
+    if "'''" in body:
+        raise ValueError(
+            f"{skill_file}: body contains ''' which would terminate a TOML "
+            f"multi-line literal string. Rewrite the skill to avoid that "
+            f"sequence or switch this generator to basic strings for it."
+        )
+
     safe_desc = (description or "").replace('"', '\\"')
-    safe_body = _toml_escape_triple(body)
 
     lines: list[str] = []
     lines.append(f'description = "{safe_desc}"')
-    lines.append("prompt = \"\"\"")
-    if safe_body:
-        lines.append(safe_body)
-    lines.append("\"\"\"")
+    lines.append("prompt = '''")
+    if body:
+        lines.append(body)
+    lines.append("'''")
     lines.append("")
     return "\n".join(lines)
 

@@ -24,6 +24,10 @@
 - Copilot now uses the **directory layout** (`.github/copilot/`) instead of a single monolithic file. Existing single-file installs are preserved but new installs emit the directory form.
 - `2.13.0` is skipped. Upgrade path is `2.12.x` → `3.0.0`.
 
+### Non-breaking additions (opt-in)
+
+- `.windsurf/hooks.json`, `.cursor/hooks.json`, `.cursor/agents/`, `.augment/agents/`, `.augment/commands/`, `.gemini/commands/`, and `.codex/skills/` are **only emitted when you opt in** via `--profile full` (or `--codex-skills` for the Codex mirror). Existing projects that upgrade to 3.0.0 without changing their install flags will see no new files in those directories — the native surfaces stay dormant until you ask for them.
+
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ---

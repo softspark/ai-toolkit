@@ -739,25 +739,27 @@ def _install_codex_skills(cwd: Path) -> None:
 
 
 def _try_generator(module_name: str, *args, **kwargs) -> bool:
-    """Import and invoke ``<module>.generate(...)`` with graceful degradation.
+    """Import and invoke ``<module>.generate(...)``.
 
-    During a multi-bucket roll-out (v3.0.0 deep-coverage sweep) individual
-    generators may not yet exist on disk. When the import fails we log a
-    short warning and return ``False`` — the caller decides whether that is
-    fatal. Other exceptions from an existing generator are re-raised so
-    genuine bugs are not silently swallowed.
+    Post v3.0.0 all referenced generators ship with the toolkit. An ImportError
+    here therefore indicates a real packaging bug, not a roll-out gap. We print
+    a loud error and re-raise so CI and interactive installs fail fast instead
+    of silently skipping a native surface.
     """
     try:
         module = __import__(module_name)
     except ImportError as exc:
-        print(f"  Skipped: {module_name} not yet available ({exc.msg}). "
-              f"Re-run after all generators ship.")
-        return False
+        print(f"  INTERNAL ERROR: shipped generator '{module_name}' failed to "
+              f"import ({exc.msg}). Please file a bug at "
+              f"https://github.com/softspark/ai-toolkit/issues")
+        raise
 
     gen = getattr(module, "generate", None)
     if gen is None:
-        print(f"  Skipped: {module_name} has no generate() function yet.")
-        return False
+        raise RuntimeError(
+            f"INTERNAL ERROR: shipped generator '{module_name}' has no "
+            f"generate() function. This is a packaging bug."
+        )
 
     gen(*args, **kwargs)
     return True
