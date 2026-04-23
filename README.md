@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-99-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-669%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-679%20passing-success)](tests/)
 
 ---
 
@@ -144,7 +144,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (669 tests)
+├── tests/               # Bats test suite (679 tests)
 └── CHANGELOG.md
 ```
 

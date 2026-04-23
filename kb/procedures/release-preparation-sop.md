@@ -2,11 +2,11 @@
 title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
-tags: [sop, release, version, publish, changelog, semver, provenance, sarif]
-version: "1.8.0"
+tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem]
+version: "1.9.0"
 created: "2026-04-10"
-last_updated: "2026-04-21"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, and the single-run npm test discipline added in v1.8.0."
+last_updated: "2026-04-23"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, and the ecosystem-sync gate added in v1.9.0."
 ---
 
 # SOP: Release Preparation
@@ -17,20 +17,33 @@ Run this **before** tagging. After tagging and publishing, run the
 
 **Pipeline:**
 ```
-Release Preparation (this SOP) → git tag → CI publish → Release Verification SOP
+Ecosystem Sync SOP (drift check + generator updates)
+      ↓
+Release Preparation (this SOP)
+      ↓
+git tag → CI publish → Release Verification SOP
 ```
 
-**Time:** 5-10 minutes
+**Time:** 10-20 minutes (includes ecosystem sync review)
 
 ---
 
 ## Quick Checklist (TL;DR)
 
 ```bash
+# 0. Ecosystem sync (mandatory for minor/major releases; optional for patch)
+#    Full procedure: kb/procedures/ecosystem-sync-sop.md
+python3 scripts/ecosystem_doctor.py --format text > /tmp/eco-report.txt
+cat /tmp/eco-report.txt
+# If drift detected: stop here, follow ecosystem-sync-sop.md Phase 2-4 to
+# classify each drift (A-F), update generators as needed, refresh snapshot,
+# THEN resume this SOP.
+python3 scripts/ecosystem_doctor.py --update    # after all drift resolved
+
 # 1. Decide version bump
 #    patch (1.4.2 → 1.4.3): bugfix, typo, doc fix
-#    minor (1.4.2 → 1.5.0): new feature, new skill, new flag
-#    major (1.4.2 → 2.0.0): breaking change
+#    minor (1.4.2 → 1.5.0): new feature, new skill, new flag, any ecosystem-class-B/F change
+#    major (1.4.2 → 2.0.0): breaking change, any ecosystem-class-D removed path
 
 # 2. Sync version across all files
 python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
@@ -42,7 +55,7 @@ python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
-# 5. Validate + audit + SARIF + test
+# 5. Validate + audit + SARIF + test + ecosystem check
 python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && npm test
 
 # 5a. Supply-chain standard (v2.8.0+) — non-negotiable
@@ -50,11 +63,68 @@ grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --pro
 grep -q 'id-token: write'   .github/workflows/publish.yml || { echo "MISSING id-token: write"; exit 1; }
 python3 scripts/audit_skills.py --permissions   # review Bash/Write/Edit footprint
 
+# 5b. Ecosystem gate — snapshot must be current before tag
+python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem snapshot — re-run doctor"; exit 1; }
+
 # 6. Commit + tag + push
 git add -A && git commit -m "chore: release vX.Y.Z"
 git tag vX.Y.Z
 git push origin main --tags
 ```
+
+---
+
+## Phase 0: Ecosystem Sync (MANDATORY for minor/major)
+
+Before touching version numbers, confirm the toolkit is aligned with the current state of every editor / platform it integrates with. Skipping this phase ships a release whose generators may lag a month-old CLI refactor, a rename of `.cursorrules` to `.cursor/rules/`, or a new hook event we do not yet emit.
+
+**When this phase is mandatory:**
+- Minor release (X.Y.0) — always
+- Major release (X.0.0) — always
+- Patch release (X.Y.Z) — only if the patch touches a generator or install flow
+
+**When to skip:** pure doc-only patches, SOP edits, internal refactors that do not touch `scripts/generate_*` or `app/skills/*/SKILL.md`.
+
+### 0.1 Run the doctor
+
+```bash
+python3 scripts/ecosystem_doctor.py --format text | tee /tmp/eco-report.txt
+```
+
+Output classifies every registered tool as **Clean**, **Drift**, or **Errored**.
+
+### 0.2 Act on drift
+
+For each drifting tool, follow [ecosystem-sync-sop.md](ecosystem-sync-sop.md) Phase 2-4:
+
+| Drift class | Release impact |
+|-------------|----------------|
+| A (cosmetic reword) | No version impact — refresh snapshot, continue |
+| B (new feature — integrate) | **Minor** version bump at minimum; new generator or extended generator |
+| C (new feature — not adopted) | No impact — note in registry |
+| D (deprecation) | **Minor** or **major** depending on user impact; add migration warning |
+| E (feature promoted to default) | **Minor**; simplify generator, keep fallback comment |
+| F (feature newly globally available) | **Minor**; may require new generator or new config path |
+
+If any B/D/E/F changes land in this preparation pass, mention them explicitly in the CHANGELOG entry (Phase 3) under a `Ecosystem` subsection.
+
+### 0.3 Refresh snapshot
+
+Once every drift is resolved (either by code change or by re-classifying as acceptable):
+
+```bash
+python3 scripts/ecosystem_doctor.py --update
+```
+
+This writes the new baseline to `benchmarks/ecosystem-doctor-snapshot.json`. Commit it as part of the release commit.
+
+### 0.4 Gate
+
+```bash
+python3 scripts/ecosystem_doctor.py --offline --check
+```
+
+Must exit `0`. If it exits `1`, the snapshot is stale — rerun Phase 0.3 or review the remaining drift.
 
 ---
 
@@ -338,13 +408,16 @@ git push origin --delete vX.Y.Z
 
 | # | Step | Command / Action | Pass Criteria |
 |---|------|-----------------|---------------|
+| 0a | Ecosystem drift check | `ecosystem_doctor.py --format text` | All tools Clean, or drift classified and resolved |
+| 0b | Ecosystem snapshot refresh | `ecosystem_doctor.py --update` | `benchmarks/ecosystem-doctor-snapshot.json` updated |
+| 0c | Ecosystem gate | `ecosystem_doctor.py --offline --check` | Exit 0 |
 | 1 | Version bump type | Decide patch/minor/major | — |
 | 2 | `package.json` version | Edit `"version"` | Matches target |
 | 3 | `manifest.json` version | Edit `"version"` | Matches target |
 | 4 | `plugin.json` version | Edit `"version"` | Matches target |
 | 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
 | 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
-| 7 | CHANGELOG.md | Add release entry | Entry exists for vX.Y.Z |
+| 7 | CHANGELOG.md | Add release entry (incl. `Ecosystem` subsection if any B/D/E/F drift) | Entry exists for vX.Y.Z |
 | 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py`, `generate_llms_txt.py` | No unexpected diff |
 | 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
 | 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |

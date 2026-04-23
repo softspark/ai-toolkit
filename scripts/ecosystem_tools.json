@@ -1,0 +1,354 @@
+{
+  "schema_version": 1,
+  "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
+  "last_updated": "2026-04-23",
+  "tools": [
+    {
+      "id": "claude-code",
+      "display_name": "Claude Code",
+      "kind": "primary",
+      "urls": {
+        "docs": "https://platform.claude.com/docs/en/claude-code",
+        "release_notes": "https://github.com/anthropics/claude-code/releases",
+        "changelog": null
+      },
+      "config_paths": [
+        "~/.claude/settings.json",
+        ".claude/settings.local.json",
+        "CLAUDE.md",
+        ".claude/agents/*.md",
+        ".claude/skills/*/SKILL.md"
+      ],
+      "our_generators": [],
+      "capability_markers": [
+        "PreToolUse",
+        "PostToolUse",
+        "SessionStart",
+        "SubagentStop",
+        "UserPromptSubmit",
+        "slash command",
+        "MCP server",
+        "sub-agent",
+        "output style",
+        "SKILL.md"
+      ],
+      "version_probe": {
+        "kind": "command",
+        "command": "claude --version"
+      }
+    },
+    {
+      "id": "cursor",
+      "display_name": "Cursor",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://cursor.com/docs",
+        "release_notes": "https://cursor.com/changelog",
+        "changelog": "https://cursor.com/changelog"
+      },
+      "config_paths": [
+        ".cursorrules",
+        ".cursor/rules/*.mdc",
+        ".cursor/mcp.json",
+        "~/.cursor/mcp.json"
+      ],
+      "our_generators": [
+        "scripts/generate_cursor_rules.py",
+        "scripts/generate_cursor_mdc.py"
+      ],
+      "capability_markers": [
+        "cursorrules",
+        ".cursor/rules",
+        "mcp.json",
+        "Composer",
+        "Agent Mode",
+        "YOLO",
+        "auto-apply"
+      ],
+      "version_probe": null
+    },
+    {
+      "id": "windsurf",
+      "display_name": "Windsurf",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://docs.windsurf.com",
+        "release_notes": "https://windsurf.com/changelog",
+        "changelog": "https://windsurf.com/changelog"
+      },
+      "config_paths": [
+        ".windsurfrules",
+        ".windsurf/rules/*.md",
+        "~/.codeium/windsurf/mcp_config.json"
+      ],
+      "our_generators": [
+        "scripts/generate_windsurf.py",
+        "scripts/generate_windsurf_rules.py"
+      ],
+      "capability_markers": [
+        "Cascade",
+        "windsurfrules",
+        "Flow Actions",
+        "MCP",
+        "memories"
+      ],
+      "version_probe": null
+    },
+    {
+      "id": "github-copilot",
+      "display_name": "GitHub Copilot",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://docs.github.com/en/copilot",
+        "release_notes": "https://github.blog/changelog/label/copilot/",
+        "changelog": null
+      },
+      "config_paths": [
+        ".github/copilot-instructions.md",
+        ".github/mcp.json",
+        "~/.copilot/mcp-config.json"
+      ],
+      "our_generators": [
+        "scripts/generate_copilot.py"
+      ],
+      "capability_markers": [
+        "copilot-instructions.md",
+        "Copilot Chat",
+        "Copilot Workspace",
+        "MCP",
+        "agents",
+        "skillset"
+      ],
+      "version_probe": null
+    },
+    {
+      "id": "gemini-cli",
+      "display_name": "Gemini CLI",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://github.com/google-gemini/gemini-cli",
+        "release_notes": "https://github.com/google-gemini/gemini-cli/releases",
+        "changelog": null
+      },
+      "config_paths": [
+        "GEMINI.md",
+        ".gemini/settings.json",
+        "~/.gemini/settings.json"
+      ],
+      "our_generators": [
+        "scripts/generate_gemini.py"
+      ],
+      "capability_markers": [
+        "GEMINI.md",
+        "mcpServers",
+        "tools",
+        "settings.json"
+      ],
+      "version_probe": {
+        "kind": "command",
+        "command": "gemini --version"
+      }
+    },
+    {
+      "id": "cline",
+      "display_name": "Cline",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://docs.cline.bot",
+        "release_notes": "https://github.com/cline/cline/releases",
+        "changelog": null
+      },
+      "config_paths": [
+        ".clinerules/*.md",
+        "~/.cline/data/settings/cline_mcp_settings.json"
+      ],
+      "our_generators": [
+        "scripts/generate_cline.py",
+        "scripts/generate_cline_rules.py"
+      ],
+      "capability_markers": [
+        "clinerules",
+        "Plan Mode",
+        "Act Mode",
+        "MCP",
+        "custom modes"
+      ],
+      "version_probe": null
+    },
+    {
+      "id": "roo-code",
+      "display_name": "Roo Code",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://docs.roocode.com",
+        "release_notes": "https://github.com/RooCodeInc/Roo-Code/releases",
+        "changelog": null
+      },
+      "config_paths": [
+        ".roomodes",
+        ".roo/rules/*.md"
+      ],
+      "our_generators": [
+        "scripts/generate_roo_modes.py",
+        "scripts/generate_roo_rules.py"
+      ],
+      "capability_markers": [
+        "roomodes",
+        "custom modes",
+        "Code Actions",
+        "MCP",
+        "Orchestrator mode"
+      ],
+      "version_probe": null
+    },
+    {
+      "id": "aider",
+      "display_name": "Aider",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://aider.chat/docs",
+        "release_notes": "https://aider.chat/HISTORY.html",
+        "changelog": "https://aider.chat/HISTORY.html"
+      },
+      "config_paths": [
+        ".aider.conf.yml",
+        "CONVENTIONS.md",
+        "~/.aider.conf.yml"
+      ],
+      "our_generators": [
+        "scripts/generate_aider_conf.py",
+        "scripts/generate_conventions.py"
+      ],
+      "capability_markers": [
+        ".aider.conf.yml",
+        "CONVENTIONS.md",
+        "architect mode",
+        "read",
+        "lint-cmd",
+        "test-cmd"
+      ],
+      "version_probe": {
+        "kind": "command",
+        "command": "aider --version"
+      }
+    },
+    {
+      "id": "augment",
+      "display_name": "Augment",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://docs.augmentcode.com",
+        "release_notes": "https://www.augmentcode.com/changelog",
+        "changelog": null
+      },
+      "config_paths": [
+        ".augment/rules/*.md",
+        "~/.augment/settings.json"
+      ],
+      "our_generators": [
+        "scripts/generate_augment.py",
+        "scripts/generate_augment_rules.py"
+      ],
+      "capability_markers": [
+        ".augment",
+        "Agent mode",
+        "Next Edit",
+        "MCP",
+        "context engine"
+      ],
+      "version_probe": null
+    },
+    {
+      "id": "google-antigravity",
+      "display_name": "Google Antigravity",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://antigravity.google/docs",
+        "release_notes": "https://antigravity.google/changelog",
+        "changelog": null
+      },
+      "config_paths": [
+        ".agent/rules/*.md",
+        ".agent/workflows/*.md"
+      ],
+      "our_generators": [
+        "scripts/generate_antigravity.py"
+      ],
+      "capability_markers": [
+        "Antigravity",
+        "agent manager",
+        "artifacts",
+        "MCP",
+        "workflows"
+      ],
+      "version_probe": null
+    },
+    {
+      "id": "codex-cli",
+      "display_name": "Codex CLI",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://github.com/openai/codex",
+        "release_notes": "https://github.com/openai/codex/releases",
+        "changelog": null
+      },
+      "config_paths": [
+        "AGENTS.md",
+        ".agents/rules/*.md",
+        ".codex/hooks.json",
+        "~/.codex/config.toml"
+      ],
+      "our_generators": [
+        "scripts/generate_codex.py",
+        "scripts/generate_codex_rules.py",
+        "scripts/generate_codex_hooks.py"
+      ],
+      "capability_markers": [
+        "AGENTS.md",
+        "config.toml",
+        "mcp_servers",
+        "hooks",
+        "sandbox"
+      ],
+      "version_probe": {
+        "kind": "command",
+        "command": "codex --version"
+      }
+    },
+    {
+      "id": "opencode",
+      "display_name": "opencode",
+      "kind": "editor",
+      "urls": {
+        "docs": "https://opencode.ai/docs",
+        "release_notes": "https://github.com/sst/opencode/releases",
+        "changelog": null
+      },
+      "config_paths": [
+        "opencode.json",
+        ".opencode/agents/*.md",
+        ".opencode/commands/*.md",
+        ".opencode/plugins/*"
+      ],
+      "our_generators": [
+        "scripts/generate_opencode.py",
+        "scripts/generate_opencode_agents.py",
+        "scripts/generate_opencode_commands.py",
+        "scripts/generate_opencode_json.py",
+        "scripts/generate_opencode_plugin.py"
+      ],
+      "capability_markers": [
+        "opencode.json",
+        "agents",
+        "commands",
+        "plugins",
+        "MCP",
+        "rules"
+      ],
+      "version_probe": {
+        "kind": "command",
+        "command": "opencode --version"
+      }
+    }
+  ]
+}

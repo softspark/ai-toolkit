@@ -1,0 +1,331 @@
+{
+  "last_run": "2026-04-23T11:37:26Z",
+  "schema_version": 1,
+  "tools": {
+    "aider": {
+      "docs_hash": "3e8a0546effca7f1",
+      "headings": [
+        "Aider Documentation"
+      ],
+      "markers": {
+        ".aider.conf.yml": false,
+        "CONVENTIONS.md": false,
+        "architect mode": true,
+        "lint-cmd": false,
+        "read": true,
+        "test-cmd": false
+      }
+    },
+    "augment": {
+      "docs_hash": "91dbc84ba3b8652b",
+      "headings": [
+        "Agent",
+        "Code Completions",
+        "Introduction",
+        "Next Edit",
+        "\u200bAuggie CLI",
+        "\u200bGet started in minutes",
+        "\u200bJetBrains IDEs",
+        "\u200bLearn more",
+        "\u200bVisual Studio Code"
+      ],
+      "markers": {
+        ".augment": true,
+        "Agent mode": false,
+        "MCP": true,
+        "Next Edit": true,
+        "context engine": true
+      }
+    },
+    "claude-code": {
+      "docs_hash": "1a66be6d95ae5a4f",
+      "headings": [
+        "Claude Code overview",
+        "\u200bGet started",
+        "\u200bNext steps",
+        "\u200bUse Claude Code everywhere",
+        "\u200bWhat you can do"
+      ],
+      "markers": {
+        "MCP server": true,
+        "PostToolUse": true,
+        "PreToolUse": true,
+        "SKILL.md": true,
+        "SessionStart": false,
+        "SubagentStop": false,
+        "UserPromptSubmit": false,
+        "output style": true,
+        "slash command": true,
+        "sub-agent": true
+      },
+      "version": "2.1.118 (Claude Code)"
+    },
+    "cline": {
+      "docs_hash": "74835aa20cc3aeba",
+      "headings": [
+        "Cline CLI",
+        "Cline Documentation",
+        "Core Workflows",
+        "Customization",
+        "Features",
+        "Install Cline",
+        "MCP Servers",
+        "Models &amp; Providers",
+        "Quick Start",
+        "What is Cline?",
+        "Your First Project",
+        "\u200bExplore the Docs",
+        "\u200bWhat is Cline?"
+      ],
+      "markers": {
+        "Act Mode": true,
+        "MCP": true,
+        "Plan Mode": false,
+        "clinerules": false,
+        "custom modes": false
+      }
+    },
+    "codex-cli": {
+      "docs_hash": "9ce8e22174657f29",
+      "headings": [
+        "About",
+        "Contributing",
+        "Contributors",
+        "Docs",
+        "Folders and files",
+        "Footer",
+        "Footer navigation",
+        "Forks",
+        "History",
+        "Installing and running Codex CLI",
+        "Languages",
+        "Latest commit",
+        "License",
+        "Navigation Menu",
+        "Packages 0",
+        "Provide feedback",
+        "Quickstart",
+        "Releases 732",
+        "Repository files navigation",
+        "Resources",
+        "Saved searches",
+        "Search code, repositories, users, issues, pull requests...",
+        "Security policy",
+        "Stars",
+        "Uh oh!",
+        "Use saved searches to filter your results more quickly",
+        "Using Codex with your ChatGPT plan",
+        "Watchers",
+        "openai/codex"
+      ],
+      "markers": {
+        "AGENTS.md": true,
+        "config.toml": false,
+        "hooks": false,
+        "mcp_servers": false,
+        "sandbox": true
+      },
+      "version": "codex-cli 0.122.0"
+    },
+    "cursor": {
+      "docs_hash": "594d7b663fb8b3e1",
+      "headings": [],
+      "markers": {
+        ".cursor/rules": false,
+        "Agent Mode": false,
+        "Composer": true,
+        "YOLO": false,
+        "auto-apply": false,
+        "cursorrules": false,
+        "mcp.json": false
+      }
+    },
+    "gemini-cli": {
+      "docs_hash": "b4f2b86424207c46",
+      "headings": [
+        "About",
+        "Advanced Capabilities",
+        "Advanced Topics",
+        "Automation &amp; Integration",
+        "Basic Usage",
+        "Code Understanding &amp; Generation",
+        "Contributing",
+        "Contributors",
+        "Core Features",
+        "Folders and files",
+        "Footer",
+        "Footer navigation",
+        "Forks",
+        "Gemini CLI",
+        "Getting Started",
+        "GitHub Integration",
+        "History",
+        "Install Gemini CLI globally via npm (inside the environment)",
+        "Languages",
+        "Latest commit",
+        "License",
+        "Navigation Menu",
+        "Nightly",
+        "Option 1: Sign in with Google (OAuth login using your Google Account)",
+        "Option 2: Gemini API Key",
+        "Option 3: Vertex AI",
+        "Preview",
+        "Provide feedback",
+        "Quick Examples",
+        "Quick Install",
+        "Release Channels",
+        "Releases 465",
+        "Repository files navigation",
+        "Resources",
+        "Saved searches",
+        "Search code, repositories, users, issues, pull requests...",
+        "Security policy",
+        "Stable",
+        "Stars",
+        "Tools &amp; Extensions",
+        "Topics",
+        "Troubleshooting &amp; Support",
+        "Uh oh!",
+        "Uninstall",
+        "Use saved searches to filter your results more quickly",
+        "Using MCP Servers",
+        "Watchers",
+        "google-gemini/gemini-cli",
+        "\ud83d\udcc4 Legal",
+        "\ud83d\udccb Key Features",
+        "\ud83d\udcd6 Resources",
+        "\ud83d\udcda Documentation",
+        "\ud83d\udce6 Installation",
+        "\ud83d\udd10 Authentication Options",
+        "\ud83d\ude80 Getting Started",
+        "\ud83d\ude80 Why Gemini CLI?",
+        "\ud83e\udd1d Contributing"
+      ],
+      "markers": {
+        "GEMINI.md": true,
+        "mcpServers": false,
+        "settings.json": true,
+        "tools": true
+      }
+    },
+    "github-copilot": {
+      "docs_hash": "be084954d863d01a",
+      "headings": [
+        "About Copilot auto model selection",
+        "About Copilot integrations",
+        "About agent management",
+        "About agent skills",
+        "About agentic memory for GitHub Copilot",
+        "About billing for GitHub Copilot in organizations and enterprises",
+        "About billing for individual GitHub Copilot plans",
+        "About custom agents",
+        "Articles",
+        "Did you find what you needed?",
+        "GitHub Copilot",
+        "GitHub Copilot documentation",
+        "Help and support",
+        "Help us make these docs great!",
+        "Legal",
+        "Still need help?"
+      ],
+      "markers": {
+        "Copilot Chat": true,
+        "Copilot Workspace": false,
+        "MCP": true,
+        "agents": true,
+        "copilot-instructions.md": false,
+        "skillset": false
+      }
+    },
+    "google-antigravity": {
+      "docs_hash": "509c72e157ecb6f3",
+      "headings": [],
+      "markers": {
+        "Antigravity": false,
+        "MCP": false,
+        "agent manager": false,
+        "artifacts": false,
+        "workflows": false
+      }
+    },
+    "opencode": {
+      "docs_hash": "81d548872ef2d912",
+      "headings": [
+        "Add features",
+        "Ask questions",
+        "Configure",
+        "Customize",
+        "Initialize",
+        "Install",
+        "Intro",
+        "Make changes",
+        "On this page",
+        "Share",
+        "Undo changes",
+        "Usage"
+      ],
+      "markers": {
+        "MCP": true,
+        "agents": true,
+        "commands": true,
+        "opencode.json": false,
+        "plugins": true,
+        "rules": true
+      }
+    },
+    "roo-code": {
+      "docs_hash": "960b2e1caf562b43",
+      "headings": [
+        "A mindset for success\u200b",
+        "Additional Resources\u200b",
+        "Getting Started\u200b",
+        "Roo Code Docs",
+        "Tutorial &amp; Feature Videos\u200b",
+        "What can Roo Code do for you\u200b"
+      ],
+      "markers": {
+        "Code Actions": false,
+        "MCP": true,
+        "Orchestrator mode": false,
+        "custom modes": true,
+        "roomodes": false
+      }
+    },
+    "windsurf": {
+      "docs_hash": "99ecee90bc1efe60",
+      "headings": [
+        "Advanced",
+        "App Deploys",
+        "Cascade",
+        "Context Awareness",
+        "MCP",
+        "Memories",
+        "Recommended Plugins",
+        "Terminal",
+        "Usage",
+        "Welcome to Windsurf",
+        "Workflows",
+        "\u200b1. Select setup flow",
+        "\u200b2. Choose editor theme",
+        "\u200b3. Sign up / Log in",
+        "\u200b4. Let\u2019s Surf!",
+        "\u200bCustom App Icons (beta)",
+        "\u200bForgot to Import VS Code Configurations?",
+        "\u200bIncompatible Extensions",
+        "\u200bOnboarding",
+        "\u200bSet Up",
+        "\u200bThings to Try",
+        "\u200bUninstall Windsurf",
+        "\u200bUpdate Windsurf",
+        "\u200bWindsurf Next"
+      ],
+      "markers": {
+        "Cascade": true,
+        "Flow Actions": false,
+        "MCP": true,
+        "memories": true,
+        "windsurfrules": false
+      }
+    }
+  }
+}
