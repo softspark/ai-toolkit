@@ -13,11 +13,12 @@
 
 - [Best Practices](kb/best-practices/README.md)
 - [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
+- [Plan: Deep Coverage v3.0 — 100% Native Surface Utilization](kb/history/completed/deep-coverage-v3-20260423.md)
+- [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/history/completed/ecosystem-deep-sweep-20260423.md)
 - [Plan: Enterprise Config Inheritance — Multi-Repo Governance with `extends`](kb/history/completed/enterprise-config-inheritance-plan-20260412.md)
 - [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/history/completed/offline-slm-profile-plan-20260411.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
-- [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/planning/ecosystem-deep-sweep-2026-04-23.md)
 - [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Release Preparation](kb/procedures/release-preparation-sop.md)

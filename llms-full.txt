@@ -13,11 +13,12 @@
 
 - [Best Practices](kb/best-practices/README.md)
 - [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
+- [Plan: Deep Coverage v3.0 — 100% Native Surface Utilization](kb/history/completed/deep-coverage-v3-20260423.md)
+- [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/history/completed/ecosystem-deep-sweep-20260423.md)
 - [Plan: Enterprise Config Inheritance — Multi-Repo Governance with `extends`](kb/history/completed/enterprise-config-inheritance-plan-20260412.md)
 - [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/history/completed/offline-slm-profile-plan-20260411.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
-- [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/planning/ecosystem-deep-sweep-2026-04-23.md)
 - [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Release Preparation](kb/procedures/release-preparation-sop.md)
@@ -269,6 +270,449 @@ Shared AI development toolkit — 90 skills, 44 agents
 # GOOD — no count
 Shared AI development toolkit with multi-platform support
 ```
+
+---
+
+## kb/history/completed/deep-coverage-v3-20260423.md
+
+---
+title: "Plan: Deep Coverage v3.0 — 100% Native Surface Utilization Across 12 Tools"
+category: planning
+service: ai-toolkit
+doc_type: plan
+status: completed
+tags: [v3, deep-coverage, ecosystem, generators, hooks, skills, subagents, commands, profile-full]
+created: "2026-04-23"
+last_updated: "2026-04-23"
+completed: "2026-04-23"
+completion: "100%"
+description: "Ship v3.0.0 where every supported editor exposes the full ai-toolkit surface it is capable of hosting natively: hooks, subagents, custom commands, skill pointers. Introduce --profile full. Skip the 2.13.0 interim release and fold the completed deep sweep into 3.0.0."
+---
+
+# Plan: Deep Coverage v3.0 — 100% Native Surface Utilization
+
+**Status:** :yellow_circle: IN PROGRESS
+**Invocation:** continuation of `ecosystem-deep-sweep-2026-04-23` — same orchestration model
+**Estimated effort:** 10-15h orchestrated (~3h wall-clock across 4 parallel buckets + consolidation)
+**Deliverable:** v3.0.0 release where every editor's native surface is fully utilized; `--profile full` available
+
+---
+
+## 1. Objective
+
+After the 2026-04-23 deep sweep closed the doc-drift gap, **v3.0.0 closes the capability-utilization gap**: each editor now exposes the full ai-toolkit surface it can host natively.
+
+Definition of "100% coverage" chosen: **each editor works at 100% of its native capability** (compat-read counts). No cargo-cult duplication. No writing to `~/.cursor/`, `~/.augment/rules/` etc. globally.
+
+---
+
+## 2. Policy decisions (immutable constraints for all buckets)
+
+| # | Decision | Rule |
+|---|----------|------|
+| 1 | Skill propagation | `.claude/skills/` canonical. Cursor/Windsurf/opencode → compat-read (nothing). Augment/Gemini/Antigravity → **pointer skill** (1 file per editor). Codex → opt-in `--codex-skills` flag emits full mirror |
+| 2 | Global writes | Only `~/.claude/`. Cursor/Windsurf/opencode get global coverage via compat-read. Augment/Gemini/Roo require `--local` |
+| 3 | Surface activation | **`--profile full`** turns on every native surface. `standard` stays close to today's defaults but adds niepodważalne wypełnienia (Copilot wiring + Gemini hooks). `minimal` unchanged |
+| 4 | Default behavior | `--editors <name>` alone uses `standard`. Users who want the full stack pass `--profile full` |
+| 5 | Version | Skip 2.13. Ship everything (completed sweep + v3 work) as **3.0.0** with migration notes |
+
+---
+
+## 3. What's missing → what each bucket delivers
+
+### Bucket 1 — Hooks generators (backend-specialist)
+
+**Owned files**
+- New: `scripts/generate_gemini_hooks.py` (writes `.gemini/settings.json` hooks merge)
+- New: `scripts/generate_cursor_hooks.py` (writes `.cursor/hooks.json`)
+- New: `scripts/generate_windsurf_hooks.py` (writes `.windsurf/hooks.json`)
+- New: `scripts/generate_augment_hooks.py` (writes `~/.augment/settings.json` hooks merge)
+- New: `tests/test_hooks_per_editor.bats` (≥20 tests covering all 4 generators)
+
+**Must-haves**
+- All generators reuse `~/.softspark/ai-toolkit/hooks/*.sh` scripts (no duplicate shell code).
+- Preserve user-authored hook entries; mark our entries with `_source: ai-toolkit`.
+- Idempotent on regeneration.
+- Event mapping informed by each editor's docs (Claude Code events ↔ target editor events).
+
+### Bucket 2 — Native agents + custom commands (ai-engineer)
+
+**Owned files**
+- New: `scripts/generate_augment_agents.py` (`.augment/agents/*.md` with YAML frontmatter: name, description, model, color, tools, disabled_tools)
+- New: `scripts/generate_augment_commands.py` (`.augment/commands/*.md` from user-invocable skills)
+- New: `scripts/generate_cursor_agents.py` (`.cursor/agents/*.md` mirroring Claude Code agents)
+- New: `scripts/generate_gemini_commands.py` (`.gemini/commands/*.toml` custom slash commands)
+- New: `tests/test_native_surfaces.bats` (≥25 tests)
+
+**Must-haves**
+- Filter: only `user-invocable: true` skills become custom commands.
+- `ai-toolkit-*` prefix everywhere for install/uninstall sweep.
+- Do not touch files without our prefix.
+
+### Bucket 3 — Skill pointers + Codex mirror (ai-engineer)
+
+**Owned files**
+- New: `scripts/generate_gemini_skills.py` (`.gemini/skills/ai-toolkit-skill-catalogue/SKILL.md` — pointer)
+- New: `scripts/generate_augment_skills.py` (`.augment/skills/ai-toolkit-skill-catalogue/SKILL.md` — pointer)
+- New: `scripts/generate_codex_skills.py` (full mirror to `.codex/skills/<name>/SKILL.md` — gated by `--codex-skills` flag)
+- New: `tests/test_skills_native.bats` (≥15 tests)
+
+**Must-haves**
+- Pointer pattern same as Antigravity: 1 file per editor referencing `~/.claude/skills/<name>` and listing the catalogue.
+- Codex mirror respects `user-invocable: false` (knowledge skills stay, task skills stay — Codex reads them all).
+- `--codex-skills` must be opt-in; default OFF.
+
+### Bucket 4 — Install wiring + profile full + docs (devops-implementer)
+
+**Owned files**
+- `scripts/install_steps/ai_tools.py` — wire in all new generators from buckets 1-3
+- `scripts/install.py` — parse `--profile full`, propagate to `_create_local_ai_tool_configs`
+- `scripts/config_validator.py` — ensure `full` profile is accepted (already present, verify)
+- `README.md` — "What's New in v3.0.0" + migration notes
+- `CHANGELOG.md` — v3.0.0 entry
+- `kb/reference/global-install-model.md` — document profile semantics
+- `kb/reference/supported-tools-registry.md` — per-tool "generators by profile" column
+- `kb/procedures/maintenance-sop.md` — profile table update
+- `package.json` version bump → `3.0.0`
+- `package-lock.json` sync
+- `tests/test_install_profiles.bats` (≥15 tests covering minimal/standard/strict/full × 3 editors)
+
+**Must-haves**
+- `standard` profile: Copilot directory mode ON, Gemini hooks ON (non-breaking additions).
+- `full` profile: everything from `standard` + all native surfaces from buckets 1-3.
+- Migration note: users on `standard` today get Copilot instructions/prompts and Gemini hooks automatically after upgrading (acceptable breaking for major bump, documented).
+
+---
+
+## 4. Success criteria
+
+- [ ] 13 new Python generators (6+4+3, minus wiring)
+- [ ] ≥75 new bats tests across buckets
+- [ ] `npm test` green
+- [ ] `python3 scripts/validate.py --strict` 0/0
+- [ ] `python3 scripts/ecosystem_doctor.py --check` exit 0
+- [ ] `ai-toolkit install --local --editors all --profile full` produces every native surface per editor
+- [ ] `ai-toolkit install --local --editors all --profile standard` is still minimal-invasive (no subagents, no hooks for non-Claude editors) **except** Copilot + Gemini hooks (both documented migration notes)
+- [ ] README test badge bumped
+- [ ] CHANGELOG v3.0.0 entry
+- [ ] All docs updated (registry, install model, maintenance SOP)
+- [ ] Single atomic commit
+- [ ] Tag `v3.0.0` ready (push held for user confirmation)
+
+---
+
+## 5. Safety rails
+
+- **Do not commit during bucket work.** Orchestrator consolidates.
+- **Do not touch files outside your bucket's ownership list.**
+- **Preserve user files** via `ai-toolkit-*` prefix on generated artifacts.
+- **Do not write to global editor paths** (`~/.cursor/`, `~/.augment/rules/`, etc.) — policy decision 2.
+- **Do not change `standard` profile in ways that break existing users**, beyond the two documented additions (Copilot directory mode + Gemini hooks).
+- **Test per bucket locally before reporting.** Bucket reports must include a "tests green" line.
+
+---
+
+## 6. Consolidation steps (orchestrator)
+
+1. Merge all 4 bucket registry deltas into `scripts/ecosystem_tools.json`
+2. Run `python3 scripts/ecosystem_doctor.py --update`
+3. Run `npm run generate:all`
+4. Bump `package.json` → `3.0.0`; sync `package-lock.json`
+5. Update `README.md` badge + "What's New"
+6. Update `CHANGELOG.md` with v3.0.0 entry (include migration notes)
+7. Run `python3 scripts/validate.py --strict` (must pass 0/0)
+8. Run `npm test` (all green)
+9. Run `python3 scripts/ecosystem_doctor.py --check` (exit 0)
+10. Move this plan doc to `kb/history/completed/deep-coverage-v3-20260423.md`
+11. Single commit + tag `v3.0.0`
+12. Hold push pending user confirmation
+
+---
+
+## 7. Related
+
+- `kb/history/completed/ecosystem-deep-sweep-20260423.md` — predecessor plan (doc-drift closure)
+- `kb/reference/global-install-model.md` — install scope semantics
+- `kb/reference/supported-tools-registry.md` — tool registry
+- `scripts/config_validator.py` — `VALID_PROFILES` already includes `full`
+
+---
+
+## kb/history/completed/ecosystem-deep-sweep-20260423.md
+
+---
+title: "Plan: Ecosystem Deep Sweep — All 12 Supported Tools"
+category: planning
+service: ai-toolkit
+doc_type: plan
+status: completed
+tags: [ecosystem, editors, generators, deep-sweep, orchestrate, drift, integration]
+created: "2026-04-23"
+last_updated: "2026-04-23"
+completed: "2026-04-23"
+completion: "100%"
+description: "Orchestrate-ready plan for a deep per-tool documentation sweep across all 12 supported tools (Claude Code + 11 editors). Each agent owns 2-3 tools: fetches docs, diffs against our generators, proposes minimal patches. Consolidation step collects results into a single changeset."
+---
+
+# Plan: Ecosystem Deep Sweep — All 12 Supported Tools
+
+**Status:** :yellow_circle: PROPOSED
+**Invocation:** `/orchestrate deep ecosystem sweep per kb/planning/ecosystem-deep-sweep-2026-04-23.md`
+**Estimated effort:** 4-6 hours orchestrated (1-1.5 h per agent in parallel)
+**Deliverable:** Per-tool drift report + concrete generator/skill patches + updated registry
+
+---
+
+## 1. Objective
+
+For every supported tool in `scripts/ecosystem_tools.json`:
+
+1. Read the current official documentation end-to-end (not just landing page)
+2. Identify every feature that ai-toolkit could integrate with but does not currently
+3. Classify each gap using the ecosystem-sync SOP taxonomy (class A-F)
+4. Produce minimal, reviewable patches for class B/D/E/F gaps
+5. Update the registry (`ecosystem_tools.json`) with new capability markers and config paths
+6. Refresh the snapshot (`benchmarks/ecosystem-doctor-snapshot.json`)
+
+**Explicit non-goals:** complete feature parity, deep refactor of generators, adding new editors to the roster.
+
+---
+
+## 2. Parallelization Strategy
+
+12 tools → **4 agents × 3 tools each** by affinity and complexity:
+
+| Agent | Role | Tools | Rationale |
+|-------|------|-------|-----------|
+| `backend-specialist` | Deep CLI / config analysis | `claude-code`, `codex-cli`, `opencode` | CLI + config.toml + agents/commands/plugins — backend integration depth |
+| `frontend-specialist` | Editor UI integrations | `cursor`, `windsurf`, `google-antigravity` | Editor-embedded AI, rule files, MCP-via-UI |
+| `devops-implementer` | Pipeline + rules tools | `github-copilot`, `cline`, `roo-code` | Rules directories, MCP JSON variants, mode configs |
+| `ai-engineer` | LLM-native tools | `gemini-cli`, `aider`, `augment` | Pure LLM workflows, minimal IDE coupling |
+
+Each agent works **in parallel**, independent file scopes (different generators). Cross-file coordination only at the registry update (single JSON file).
+
+---
+
+## 3. Per-Tool Task Template
+
+Every agent applies the **same 7-step protocol** per tool in their bucket:
+
+### Step 1 — Baseline our current integration
+
+Read these files (read-only):
+- `scripts/generate_<tool>_*.py` — every generator targeting this tool
+- `scripts/ecosystem_tools.json` — the tool's registry entry
+- `kb/reference/supported-tools-registry.md` — human docs section
+- `benchmarks/ecosystem-doctor-snapshot.json` — last-seen headings/markers/version
+
+Produce a 3-line summary: "we currently generate X, Y, Z for this tool".
+
+### Step 2 — Fetch official docs
+
+Primary URL is in `ecosystem_tools.json::urls.docs`. Additionally fetch:
+- `urls.release_notes` — recent changes (last 6 months)
+- `urls.changelog` — if distinct from release notes
+- Any deep-link from the docs landing page that corresponds to an integration surface (rules, hooks, MCP, agents, commands, plugins, config schema)
+
+Use `WebFetch` (for general) or `gh api` (for GitHub-hosted docs like Codex CLI, opencode).
+
+### Step 3 — Extract the feature surface
+
+For the current version of the tool, enumerate:
+- Config file paths (the tool's OWN paths, not ours)
+- Rule / instruction / prompt formats
+- Hook / lifecycle event names (if any)
+- MCP config target path (if supported)
+- Agent / custom-mode / preset concepts (if any)
+- Slash command / CLI subcommand surface
+- Supported model providers (note, do not integrate)
+- Authentication / API-key mechanisms
+
+Produce a structured markdown table: `Feature | Since version | Stable? | Our integration?`
+
+### Step 4 — Diff against our output
+
+For each feature in the table, compare against:
+- What our `generate_<tool>_*.py` produces
+- What fields are in our registry's `capability_markers`
+
+Mark each row with one of:
+- `✅ supported` — we already emit / track it
+- `⚠️ partial` — we emit a subset; specific sub-feature missing
+- `❌ missing` — we do not support at all
+- `➖ out of scope` — tool has it, but not applicable to ai-toolkit's mission
+
+### Step 5 — Classify each gap
+
+For each `⚠️` / `❌` row, assign one of the SOP drift classes:
+
+| Class | Name | Action |
+|-------|------|--------|
+| A | Cosmetic | No code change; update snapshot only |
+| B | New feature — integrate | Patch generator(s), add tests |
+| C | New feature — not adopted | Note in registry, no code |
+| D | Deprecation | Migration warning in generator + CHANGELOG |
+| E | Feature promoted to default | Simplify generator; keep fallback comment |
+| F | Newly globally available | New generator / extended generator |
+
+### Step 6 — Produce patches (class B/D/E/F only)
+
+For every class B/D/E/F gap:
+1. Edit the relevant generator in `scripts/generate_<tool>_*.py`
+2. If a new capability marker emerges, add to `ecosystem_tools.json::capability_markers`
+3. If a new config path emerges, add to `ecosystem_tools.json::config_paths`
+4. If a hook event or skill frontmatter field emerges (for Claude Code), update:
+   - `app/skills/hook-creator/SKILL.md` (hooks table)
+   - `app/skills/skill-creator/SKILL.md` (frontmatter reference)
+   - `scripts/validate.py` (allowlist)
+5. Add a bats test under `tests/test_<tool>.bats` covering the new output
+6. Update the tool's section in `kb/reference/supported-tools-registry.md`
+
+**Constraints on patches:**
+- One generator change per logical feature (no "big bang" commits)
+- Preserve existing output format for backward compatibility
+- New output opt-in via flag if it would change existing user-visible state
+- Every new capability marker must pass the doctor's probe on the live docs page
+
+### Step 7 — Report
+
+Each agent emits a single markdown report with:
+- Feature matrix table (step 3+4+5 combined)
+- List of patches applied (files changed, bats tests added)
+- List of class B/D/E/F gaps NOT patched (with reason: "out of scope", "requires user decision", "blocker")
+- Registry diff (before/after for the tool's JSON entry)
+
+---
+
+## 4. Consolidation (after all agents finish)
+
+Run in order:
+
+1. Merge registry entries — single edit to `ecosystem_tools.json` combining all 12 per-tool updates
+2. Regenerate human registry doc: manually update `kb/reference/supported-tools-registry.md` from JSON
+3. `python3 scripts/ecosystem_doctor.py --update` — baseline new capability markers
+4. `python3 scripts/validate.py --strict` — must pass
+5. `npm test` — must pass (includes the newly added bats tests per tool)
+6. `python3 scripts/ecosystem_doctor.py --check` — exit 0
+7. Regenerate downstream artifacts:
+   ```bash
+   npm run generate:all
+   ```
+8. Collect all per-agent reports into `kb/learnings/ecosystem-sweep-2026-04-23.md`
+
+---
+
+## 5. Success Criteria
+
+- [ ] All 12 tools covered (no "skipped for time" items)
+- [ ] Every class B/D/E/F gap has either a patch OR a documented reason for deferral
+- [ ] Registry `capability_markers` list grew for at least 6 of 12 tools (signals real gap coverage)
+- [ ] `validate.py --strict`: 0 errors, 0 warnings
+- [ ] `npm test`: all green (including new per-tool bats tests)
+- [ ] `ecosystem_doctor.py --check`: exit 0 after snapshot refresh
+- [ ] Single consolidated commit per agent-bucket, plus one final consolidation commit
+
+---
+
+## 6. Known Traps (from prior ecosystem work)
+
+- **SPA docs** (Cursor, Antigravity, some Augment pages): `urllib` gets empty HTML skeleton. Agents should note this and do a **manual browser visit** or use a JS-aware fetcher. Do not treat "0 headings" as "nothing new".
+- **GitHub docs** rate-limit aggressively on repeated reads. Space out fetches or use `gh api`.
+- **Feature gates** vary by user plan. Copilot Business vs Individual vs Enterprise have different surface. Integrate with the OSS surface; document gated features as C (not adopted).
+- **Version skew** on config schemas. A setting that existed in v1.x may be deprecated in v2.x. When docs reference "available since v1.5" and we don't know what version users run, default to generating the newer form with a comment.
+- **Markdown vs MDX**: Cursor uses `.mdc`, Claude Code uses `.md`, Cline uses `.md` in `.clinerules/`, Roo uses `.md` in `.roo/rules/`. Don't assume one format fits all.
+
+---
+
+## 7. Orchestrate Invocation
+
+In a fresh Claude Code session (to avoid context rot from this session):
+
+```
+/orchestrate deep ecosystem sweep for ai-toolkit per kb/planning/ecosystem-deep-sweep-2026-04-23.md
+
+Spawn 4 agents in parallel:
+- backend-specialist: claude-code, codex-cli, opencode
+- frontend-specialist: cursor, windsurf, google-antigravity
+- devops-implementer: github-copilot, cline, roo-code
+- ai-engineer: gemini-cli, aider, augment
+
+Each agent follows the 7-step per-tool protocol in section 3.
+After all 4 report, run consolidation (section 4) and produce the sweep summary.
+```
+
+---
+
+## 8. Deliverables (per agent)
+
+Each agent's final output to orchestrator:
+1. **Feature matrix** — one table per assigned tool (step 3+4+5)
+2. **Patch log** — list of commits staged (not committed yet — orchestrator consolidates)
+3. **Registry delta** — proposed JSON diff for `ecosystem_tools.json`
+4. **Gaps not patched** — with rationale (out-of-scope, blocker, deferred)
+5. **Test additions** — bats test file names + test count
+
+Orchestrator's final output:
+1. Consolidated commit with message `feat(ecosystem): deep sweep 2026-04-23 — N class B/F integrations`
+2. Version bump decision (minor if any class B/F, patch if only class A updates)
+3. `kb/learnings/ecosystem-sweep-2026-04-23.md` — retrospective noting which tools needed most work (informs priority for next sweep)
+
+---
+
+## 9. Safety Rails
+
+- **Do not** silently upgrade default behavior — every user-visible change lands behind a flag OR goes through a minor version bump with CHANGELOG mention
+- **Do not** rewrite generators wholesale — incremental additions only
+- **Do not** commit during the sweep — orchestrator consolidates at the end
+- **Do not** modify files outside the tool's scope (e.g., backend-specialist touching frontend-specialist's files requires a handoff)
+- **Do** preserve existing symlinks and file-path expectations — the installer depends on them
+
+---
+
+## 10. Related
+
+- [Ecosystem Sync SOP](../procedures/ecosystem-sync-sop.md) — the process this plan instantiates
+- [Supported Tools Registry](../reference/supported-tools-registry.md) — source of truth for tool list
+- `scripts/ecosystem_doctor.py` — drift detector consumed by orchestrator consolidation
+- `scripts/ecosystem_tools.json` — registry file edited by every agent
+
+---
+
+## 11. Retrospective — 2026-04-23
+
+### Execution summary
+
+- 4 parallel agents, 3 tools each — full 12/12 coverage, one consolidation pass.
+- 161 new bats tests (679 → 840); validate.py 0 errors / 0 warnings; `ecosystem_doctor --check` exit 0.
+- 14 files modified, 12 new test files, 2 registry docs updated, 1 snapshot rebaselined.
+
+### What worked
+
+- **Bucket-level file ownership** eliminated merge conflicts entirely. Agents that flagged cross-bucket edits (`ecosystem_tools.json`, registry markdown) correctly left them for the orchestrator.
+- **The 7-step protocol** caught high-impact bugs we would have shipped otherwise — Windsurf rules missing `trigger:` frontmatter (silent invisibility to Cascade), Aider's default `attribute-co-authored-by: true` violating our own git policy, Roo modes lacking `whenToUse` (invisible to Orchestrator).
+- **SPA-wall compensation patterns** (Antigravity bundle strings, Cursor/Windsurf llms.txt mirrors, GitHub release notes as fallback) were reusable across buckets.
+
+### What surprised us
+
+- **Claude Code 2.1.x grew ~14 new hook events** and 3 new handler types since our last sync. Our validate.py allowlist was the bottleneck, not any generator.
+- **Cross-editor compat reads**: Cursor, Windsurf, and opencode now natively read `.claude/skills/` and `.claude/agents/` — we get skill/agent discovery in those editors "for free" without emitting duplicates. Saved ~300 generated files.
+- **Copilot tier-gating is heavy**: half of the upstream surface (custom agents, repo MCP, org instructions) is Business/Enterprise-only and was classified as C (documented non-integration).
+- **Test #755 regression** from the Codex `PermissionRequest` addition: the test counted `guard-destructive.sh` occurrences with `== 1`. Fixed by updating the expected count to 2 with a comment explaining why base hooks legitimately register it twice now.
+
+### Open items flagged for future passes
+
+1. **Native `.codex/skills/*/SKILL.md` emission** (class B) — would write ~99 skill directories. Needs opt-in flag + minor bump.
+2. **`.opencode/skills/` duplication** — deferred indefinitely; `.claude/skills/` fallback already works.
+3. **New generators needed**: `generate_gemini_hooks.py`, `generate_augment_agents.py`, `generate_augment_commands.py`, `generate_augment_hooks.py`.
+4. **Cross-editor hooks unification**: Cursor and Windsurf both shipped `.cursor/hooks.json` and `.windsurf/hooks.json` — worth a dedicated shared-schema pass rather than per-editor copies.
+5. **Roo `.roomodes` YAML variant** — upstream-preferred; deferred until a YAML multi-line helper is added.
+6. **Copilot install wiring**: new `.github/instructions/` and `.github/prompts/` directories are emitted when `generate_copilot.py` is called with a target dir, but `install_steps/ai_tools.py` doesn't invoke that path yet. Wire behind minor bump.
+
+### Process refinements for next sweep
+
+- **Add a "class B/F deferred" register**: buckets produced these ad-hoc; a structured list in the plan would make prioritization for the next sweep trivial.
+- **Cross-bucket test impact**: adding per-tool bats tests inflates the test count and trips the README badge validator. Next time, bump the badge at the start of consolidation, not at the end.
+- **Search docs via llms.txt first** when the vendor publishes one — bypasses SPA walls with zero fallback logic.
 
 ---
 
@@ -3130,245 +3574,6 @@ Examples:
 
 ---
 
-## kb/planning/ecosystem-deep-sweep-2026-04-23.md
-
----
-title: "Plan: Ecosystem Deep Sweep — All 12 Supported Tools"
-category: planning
-service: ai-toolkit
-doc_type: plan
-status: proposed
-tags: [ecosystem, editors, generators, deep-sweep, orchestrate, drift, integration]
-created: "2026-04-23"
-last_updated: "2026-04-23"
-completion: "0%"
-description: "Orchestrate-ready plan for a deep per-tool documentation sweep across all 12 supported tools (Claude Code + 11 editors). Each agent owns 2-3 tools: fetches docs, diffs against our generators, proposes minimal patches. Consolidation step collects results into a single changeset."
----
-
-# Plan: Ecosystem Deep Sweep — All 12 Supported Tools
-
-**Status:** :yellow_circle: PROPOSED
-**Invocation:** `/orchestrate deep ecosystem sweep per kb/planning/ecosystem-deep-sweep-2026-04-23.md`
-**Estimated effort:** 4-6 hours orchestrated (1-1.5 h per agent in parallel)
-**Deliverable:** Per-tool drift report + concrete generator/skill patches + updated registry
-
----
-
-## 1. Objective
-
-For every supported tool in `scripts/ecosystem_tools.json`:
-
-1. Read the current official documentation end-to-end (not just landing page)
-2. Identify every feature that ai-toolkit could integrate with but does not currently
-3. Classify each gap using the ecosystem-sync SOP taxonomy (class A-F)
-4. Produce minimal, reviewable patches for class B/D/E/F gaps
-5. Update the registry (`ecosystem_tools.json`) with new capability markers and config paths
-6. Refresh the snapshot (`benchmarks/ecosystem-doctor-snapshot.json`)
-
-**Explicit non-goals:** complete feature parity, deep refactor of generators, adding new editors to the roster.
-
----
-
-## 2. Parallelization Strategy
-
-12 tools → **4 agents × 3 tools each** by affinity and complexity:
-
-| Agent | Role | Tools | Rationale |
-|-------|------|-------|-----------|
-| `backend-specialist` | Deep CLI / config analysis | `claude-code`, `codex-cli`, `opencode` | CLI + config.toml + agents/commands/plugins — backend integration depth |
-| `frontend-specialist` | Editor UI integrations | `cursor`, `windsurf`, `google-antigravity` | Editor-embedded AI, rule files, MCP-via-UI |
-| `devops-implementer` | Pipeline + rules tools | `github-copilot`, `cline`, `roo-code` | Rules directories, MCP JSON variants, mode configs |
-| `ai-engineer` | LLM-native tools | `gemini-cli`, `aider`, `augment` | Pure LLM workflows, minimal IDE coupling |
-
-Each agent works **in parallel**, independent file scopes (different generators). Cross-file coordination only at the registry update (single JSON file).
-
----
-
-## 3. Per-Tool Task Template
-
-Every agent applies the **same 7-step protocol** per tool in their bucket:
-
-### Step 1 — Baseline our current integration
-
-Read these files (read-only):
-- `scripts/generate_<tool>_*.py` — every generator targeting this tool
-- `scripts/ecosystem_tools.json` — the tool's registry entry
-- `kb/reference/supported-tools-registry.md` — human docs section
-- `benchmarks/ecosystem-doctor-snapshot.json` — last-seen headings/markers/version
-
-Produce a 3-line summary: "we currently generate X, Y, Z for this tool".
-
-### Step 2 — Fetch official docs
-
-Primary URL is in `ecosystem_tools.json::urls.docs`. Additionally fetch:
-- `urls.release_notes` — recent changes (last 6 months)
-- `urls.changelog` — if distinct from release notes
-- Any deep-link from the docs landing page that corresponds to an integration surface (rules, hooks, MCP, agents, commands, plugins, config schema)
-
-Use `WebFetch` (for general) or `gh api` (for GitHub-hosted docs like Codex CLI, opencode).
-
-### Step 3 — Extract the feature surface
-
-For the current version of the tool, enumerate:
-- Config file paths (the tool's OWN paths, not ours)
-- Rule / instruction / prompt formats
-- Hook / lifecycle event names (if any)
-- MCP config target path (if supported)
-- Agent / custom-mode / preset concepts (if any)
-- Slash command / CLI subcommand surface
-- Supported model providers (note, do not integrate)
-- Authentication / API-key mechanisms
-
-Produce a structured markdown table: `Feature | Since version | Stable? | Our integration?`
-
-### Step 4 — Diff against our output
-
-For each feature in the table, compare against:
-- What our `generate_<tool>_*.py` produces
-- What fields are in our registry's `capability_markers`
-
-Mark each row with one of:
-- `✅ supported` — we already emit / track it
-- `⚠️ partial` — we emit a subset; specific sub-feature missing
-- `❌ missing` — we do not support at all
-- `➖ out of scope` — tool has it, but not applicable to ai-toolkit's mission
-
-### Step 5 — Classify each gap
-
-For each `⚠️` / `❌` row, assign one of the SOP drift classes:
-
-| Class | Name | Action |
-|-------|------|--------|
-| A | Cosmetic | No code change; update snapshot only |
-| B | New feature — integrate | Patch generator(s), add tests |
-| C | New feature — not adopted | Note in registry, no code |
-| D | Deprecation | Migration warning in generator + CHANGELOG |
-| E | Feature promoted to default | Simplify generator; keep fallback comment |
-| F | Newly globally available | New generator / extended generator |
-
-### Step 6 — Produce patches (class B/D/E/F only)
-
-For every class B/D/E/F gap:
-1. Edit the relevant generator in `scripts/generate_<tool>_*.py`
-2. If a new capability marker emerges, add to `ecosystem_tools.json::capability_markers`
-3. If a new config path emerges, add to `ecosystem_tools.json::config_paths`
-4. If a hook event or skill frontmatter field emerges (for Claude Code), update:
-   - `app/skills/hook-creator/SKILL.md` (hooks table)
-   - `app/skills/skill-creator/SKILL.md` (frontmatter reference)
-   - `scripts/validate.py` (allowlist)
-5. Add a bats test under `tests/test_<tool>.bats` covering the new output
-6. Update the tool's section in `kb/reference/supported-tools-registry.md`
-
-**Constraints on patches:**
-- One generator change per logical feature (no "big bang" commits)
-- Preserve existing output format for backward compatibility
-- New output opt-in via flag if it would change existing user-visible state
-- Every new capability marker must pass the doctor's probe on the live docs page
-
-### Step 7 — Report
-
-Each agent emits a single markdown report with:
-- Feature matrix table (step 3+4+5 combined)
-- List of patches applied (files changed, bats tests added)
-- List of class B/D/E/F gaps NOT patched (with reason: "out of scope", "requires user decision", "blocker")
-- Registry diff (before/after for the tool's JSON entry)
-
----
-
-## 4. Consolidation (after all agents finish)
-
-Run in order:
-
-1. Merge registry entries — single edit to `ecosystem_tools.json` combining all 12 per-tool updates
-2. Regenerate human registry doc: manually update `kb/reference/supported-tools-registry.md` from JSON
-3. `python3 scripts/ecosystem_doctor.py --update` — baseline new capability markers
-4. `python3 scripts/validate.py --strict` — must pass
-5. `npm test` — must pass (includes the newly added bats tests per tool)
-6. `python3 scripts/ecosystem_doctor.py --check` — exit 0
-7. Regenerate downstream artifacts:
-   ```bash
-   npm run generate:all
-   ```
-8. Collect all per-agent reports into `kb/learnings/ecosystem-sweep-2026-04-23.md`
-
----
-
-## 5. Success Criteria
-
-- [ ] All 12 tools covered (no "skipped for time" items)
-- [ ] Every class B/D/E/F gap has either a patch OR a documented reason for deferral
-- [ ] Registry `capability_markers` list grew for at least 6 of 12 tools (signals real gap coverage)
-- [ ] `validate.py --strict`: 0 errors, 0 warnings
-- [ ] `npm test`: all green (including new per-tool bats tests)
-- [ ] `ecosystem_doctor.py --check`: exit 0 after snapshot refresh
-- [ ] Single consolidated commit per agent-bucket, plus one final consolidation commit
-
----
-
-## 6. Known Traps (from prior ecosystem work)
-
-- **SPA docs** (Cursor, Antigravity, some Augment pages): `urllib` gets empty HTML skeleton. Agents should note this and do a **manual browser visit** or use a JS-aware fetcher. Do not treat "0 headings" as "nothing new".
-- **GitHub docs** rate-limit aggressively on repeated reads. Space out fetches or use `gh api`.
-- **Feature gates** vary by user plan. Copilot Business vs Individual vs Enterprise have different surface. Integrate with the OSS surface; document gated features as C (not adopted).
-- **Version skew** on config schemas. A setting that existed in v1.x may be deprecated in v2.x. When docs reference "available since v1.5" and we don't know what version users run, default to generating the newer form with a comment.
-- **Markdown vs MDX**: Cursor uses `.mdc`, Claude Code uses `.md`, Cline uses `.md` in `.clinerules/`, Roo uses `.md` in `.roo/rules/`. Don't assume one format fits all.
-
----
-
-## 7. Orchestrate Invocation
-
-In a fresh Claude Code session (to avoid context rot from this session):
-
-```
-/orchestrate deep ecosystem sweep for ai-toolkit per kb/planning/ecosystem-deep-sweep-2026-04-23.md
-
-Spawn 4 agents in parallel:
-- backend-specialist: claude-code, codex-cli, opencode
-- frontend-specialist: cursor, windsurf, google-antigravity
-- devops-implementer: github-copilot, cline, roo-code
-- ai-engineer: gemini-cli, aider, augment
-
-Each agent follows the 7-step per-tool protocol in section 3.
-After all 4 report, run consolidation (section 4) and produce the sweep summary.
-```
-
----
-
-## 8. Deliverables (per agent)
-
-Each agent's final output to orchestrator:
-1. **Feature matrix** — one table per assigned tool (step 3+4+5)
-2. **Patch log** — list of commits staged (not committed yet — orchestrator consolidates)
-3. **Registry delta** — proposed JSON diff for `ecosystem_tools.json`
-4. **Gaps not patched** — with rationale (out-of-scope, blocker, deferred)
-5. **Test additions** — bats test file names + test count
-
-Orchestrator's final output:
-1. Consolidated commit with message `feat(ecosystem): deep sweep 2026-04-23 — N class B/F integrations`
-2. Version bump decision (minor if any class B/F, patch if only class A updates)
-3. `kb/learnings/ecosystem-sweep-2026-04-23.md` — retrospective noting which tools needed most work (informs priority for next sweep)
-
----
-
-## 9. Safety Rails
-
-- **Do not** silently upgrade default behavior — every user-visible change lands behind a flag OR goes through a minor version bump with CHANGELOG mention
-- **Do not** rewrite generators wholesale — incremental additions only
-- **Do not** commit during the sweep — orchestrator consolidates at the end
-- **Do not** modify files outside the tool's scope (e.g., backend-specialist touching frontend-specialist's files requires a handoff)
-- **Do** preserve existing symlinks and file-path expectations — the installer depends on them
-
----
-
-## 10. Related
-
-- [Ecosystem Sync SOP](../procedures/ecosystem-sync-sop.md) — the process this plan instantiates
-- [Supported Tools Registry](../reference/supported-tools-registry.md) — source of truth for tool list
-- `scripts/ecosystem_doctor.py` — drift detector consumed by orchestrator consolidation
-- `scripts/ecosystem_tools.json` — registry file edited by every agent
-
----
-
 ## kb/procedures/ecosystem-sync-sop.md
 
 ---
@@ -3636,9 +3841,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "1.4.4"
+version: "3.0.0"
 created: "2026-03-23"
-last_updated: "2026-04-13"
+last_updated: "2026-04-23"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -3723,6 +3928,17 @@ What `install` and `update` do (merge-friendly — user content never overwritte
 | `CLAUDE.md` | Marker injection of `app/rules/*.md` via `inject_rule_cli.py` | User content outside markers untouched |
 
 Re-running updates only toolkit content. Old whole-directory symlinks are auto-upgraded to per-file on next run.
+
+### Install Profiles (v3.0.0)
+
+| Profile | Claude Code core | Editor rules | Gemini hooks | Copilot dir layout | Per-editor hooks / sub-agents / commands | Git hooks |
+|---------|:---------------:|:------------:|:------------:|:------------------:|:---------------------------------------:|:---------:|
+| `minimal` | yes | pointer only | no | no | no | no |
+| `standard` (default) | yes | yes | **yes** (new in v3) | **yes** (new in v3) | no | no |
+| `strict` | yes | yes | yes | yes | no | yes |
+| `full` | yes | yes | yes | yes | **yes, all editors** | optional |
+
+`--codex-skills` is orthogonal to `--profile` and materializes the full skill catalog under `.agents/skills/` for Codex. See `kb/reference/global-install-model.md` for the full semantic breakdown.
 
 ---
 
@@ -7490,9 +7706,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "1.4.4"
+version: "3.0.0"
 created: "2026-03-26"
-last_updated: "2026-04-13"
+last_updated: "2026-04-23"
 description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -7525,6 +7741,19 @@ installed with `ai-toolkit plugin install --editor codex`.
 | `ai-toolkit plugin install --editor claude|codex|all <name>` | runtime-native config | install plugin pack for selected runtime(s) |
 | `ai-toolkit plugin update --editor claude|codex|all <name>` | runtime-native config | re-apply plugin pack after toolkit updates |
 | `ai-toolkit plugin remove --editor claude|codex|all <name>` | runtime-native config | remove plugin pack from selected runtime(s) |
+
+## Install Profiles (v3.0.0)
+
+The `--profile` flag controls how much of each editor's native surface is activated.
+
+| Profile | What runs | Use when |
+|---------|-----------|----------|
+| `minimal` | Agents and skills only. No editor generators beyond pointer skills for editors that require them. | You want the smallest possible footprint, or you manage editor configs by hand. |
+| `standard` (default) | Claude Code + editor rule files. Includes **Gemini hooks** and the **Copilot directory layout** (v3.0.0 change from prior `standard`). | Day-to-day installs. Most users. |
+| `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks. | Solo dev or tight team with zero tolerance for drift. |
+| `full` | Every native surface across every editor: hooks, sub-agents, custom commands, skill pointers for Cursor / Windsurf / Gemini / Augment / Antigravity. | You want maximum coverage and understand that each editor will carry generated files under its own layout. |
+
+`--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full `.claude/skills/` catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
 
 ## Why global install is the default
 
