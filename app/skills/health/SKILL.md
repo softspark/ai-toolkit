@@ -1,6 +1,6 @@
 ---
 name: health
-description: "Report service and infrastructure health status"
+description: "Report service and infrastructure health status via liveness/readiness checks, resource usage, and quick diagnostics. Use when the user asks whether services are up or degraded — not for deep debugging of a known error."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[service]"
@@ -89,3 +89,24 @@ services:
     memory: XMB
     notes: "any issues"
 ```
+
+## Rules
+
+- **MUST** report measured values — never mark a service healthy without a successful probe
+- **NEVER** restart a degraded service without the user's explicit go-ahead
+- **CRITICAL**: separate liveness (process up) from readiness (accepting traffic) in the report
+- **MANDATORY**: if a health endpoint times out, classify as `degraded`, not `healthy`
+
+## Gotchas
+
+- `docker compose ps` shows `Up` even when a container is **crash-looping** via restart policy — look at the `STATUS` column for `(unhealthy)` or `Restarting` rather than trusting "Up" alone.
+- Many `/health` endpoints return 200 as long as the web server answers, even when the DB connection is down. If the service exposes a `/ready` or `/healthz?deep=true` endpoint, prefer it — shallow health is a lie.
+- `pg_isready` reports success the moment Postgres accepts TCP, which happens seconds before the DB is actually query-ready after a restart. Chain it with a trivial `SELECT 1`.
+- `docker stats --no-stream` needs cgroups v2 access; on older hosts or LXC containers it returns 0% CPU/memory silently instead of erroring. Verify at least one non-zero value before trusting the report.
+
+## When NOT to Use
+
+- To debug a specific failing service — use `/debug` after the health check narrows it down
+- For performance bottlenecks — use `/performance-profiling`
+- For a production incident with page/alert — use `/workflow incident-response`
+- For CI pipeline status — use `/ci`

@@ -1,6 +1,6 @@
 ---
 name: index
-description: "Index codebase into the knowledge base"
+description: "Reindex the knowledge base for semantic search via the configured vector store (e.g., Qdrant). Use only when the user explicitly asks to reindex — never trigger speculative rebuilds."
 effort: low
 disable-model-invocation: true
 argument-hint: "[path or scope]"
@@ -72,3 +72,24 @@ last_updated: "YYYY-MM-DD"
 | Missing documents | Verify frontmatter is valid |
 | Slow indexing | Check embedding service performance |
 | No vector store | Set up Qdrant or compatible vector DB |
+
+## Rules
+
+- **MUST** require explicit user permission before running `make index` or `make index-full` — never self-trigger
+- **NEVER** trigger a full rebuild to "clean up" unless the user asked for it
+- **CRITICAL**: validate KB frontmatter before indexing — abort on invalid documents rather than indexing a broken state
+- **MANDATORY**: respect change-detection hashes; do not force reindexing of unchanged documents
+
+## Gotchas
+
+- Content-hash change detection keys on the file's content AND path. A **moved** document (same content, new path) looks new to the indexer — both the old path vector and the new one will exist until a full rebuild. Plan a full rebuild after mass reorganizations.
+- Deleting a document on disk does not automatically remove its vectors from Qdrant; the indexer emits tombstones only if run with a directory scan. Without `--delete-missing`, orphan vectors stay for weeks.
+- Embedding providers rate-limit by requests-per-minute AND by tokens-per-minute. A reindex of 1000+ docs hits the token cap first and stalls silently — watch for 429s in the indexer log before concluding "slow indexing".
+- `make index-full` truncates the collection before re-embedding; if the embedding job crashes mid-way, the collection is left partially populated with no query-time indicator of the gap.
+
+## When NOT to Use
+
+- For searching the KB — use `/search` or call `smart_query()` via the rag-mcp tool
+- For fixing indexing bugs — use `/debug` on the indexer pipeline
+- To evaluate RAG quality after reindexing — use `/evaluate`
+- When no vector store is configured — document the gap, do not invent one

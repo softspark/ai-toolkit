@@ -82,3 +82,29 @@ For Flutter/Dart testing patterns, see [reference/flutter-testing.md](reference/
 | "We'll add tests later" | Untested code accumulates — later means never, and coverage gaps compound |
 | "Mocking everything is fine" | Over-mocking tests the mocks, not the code — mock at boundaries only |
 | "100% coverage means no bugs" | Coverage measures execution, not correctness — focus on behavior assertions |
+
+## Rules
+
+- **MUST** follow Arrange-Act-Assert (AAA) structure in every test — unstructured tests degrade into procedural smoke tests
+- **MUST** test behavior through the public interface, not internal implementation — tests coupled to internals break on every refactor
+- **NEVER** test implementation details (private method return values, internal state flags) — they are not the contract
+- **NEVER** hit real external services in unit tests — use fakes/stubs for boundaries; save real integration for integration tests
+- **CRITICAL**: integration tests must hit real dependencies (database, message queue, external API) when mock-vs-prod divergence is a real risk. Mocked integration tests create false confidence.
+- **MANDATORY**: flaky tests are bugs, not noise. Quarantine or delete them — a tolerated flaky test erodes the suite's credibility.
+
+## Gotchas
+
+- Coverage numbers are easy to game: include generated code, test files that import but do not assert, or wide `# pragma: no cover` usage. A 95% reported coverage with 60% real behavior assertion is common.
+- Snapshot tests (Jest `.toMatchSnapshot()`, pytest-regressions) accept any output as "correct" on first run. An incorrect initial snapshot becomes the accepted baseline — review snapshots as carefully as code.
+- Mocks configured with `any` matchers (e.g., `.mock.calls[0][0]` without a schema) pass even when the production call shape changes. Assert on specific arguments, not just "was called".
+- Test isolation fails when globals leak (module-level mutable state, module-scoped fixtures, env vars set in one test). Flakiness that appears only under `pytest -n auto` or `jest --parallel` is usually shared state.
+- Property-based tests (Hypothesis, fast-check) shrink failing examples to minimal reproducers, but shrinking time can dominate the run. For complex generators, cap shrink deadlines or seed the failing example for next-run reproducibility.
+- Test pyramid vs trophy: the "right" ratio depends on stack. Frontend apps with rendering concerns benefit from more integration tests (trophy); pure backend services align better with pyramid. Don't cargo-cult one model.
+
+## When NOT to Load
+
+- For **running** the test suite — use `/test`
+- For test-first development workflow — use `/tdd`
+- For debugging a specific test failure — use `/debug` on the failure output
+- For test framework choice in a new project — use `/app-builder`
+- For performance/load testing — this skill covers correctness tests, not load

@@ -200,3 +200,29 @@ Before finalizing plan:
 - [ ] Agents assigned
 - [ ] Risks documented
 - [ ] Success criteria defined
+
+## Rules
+
+- **MUST** include a Success Criteria section with measurable, verifiable conditions — subjective criteria are not criteria
+- **MUST** include a Rollback Plan for any work that touches production data or shared infrastructure
+- **MUST** write a Pre-Mortem when estimated effort exceeds 1 day — "what could go wrong" surfaces real risks cheaply
+- **NEVER** estimate in hours for work longer than a week. Use T-shirt sizes (S/M/L/XL) or tracer-bullet slices — precise long-horizon estimates are false confidence
+- **CRITICAL**: every risk has an owner AND a mitigation. A risk register with named risks but no mitigations is decorative.
+- **MANDATORY**: explicit scope boundaries — "not in this plan" is as important as "in this plan"
+
+## Gotchas
+
+- SMART criteria look complete but often omit the "relevant" dimension — a task can be Specific, Measurable, Achievable, Time-bound and still irrelevant to the outcome. Check relevance explicitly.
+- Pre-mortems feel pessimistic and get shortened under deadline pressure. Make the pre-mortem a first-class section with at least 5 named failure modes — a 2-bullet pre-mortem is theater.
+- Risk registers bloat when stakeholders add low-probability items to be safe. Cap the register at 10 risks ranked by (probability × impact); everything below line 10 is noise.
+- Plans authored by the person who will execute them are biased toward feasibility (they want to do it). Plans authored by someone who won't execute are biased toward ambition (they don't pay the cost). Mix both perspectives.
+- "Success criteria: deploy to production" is the weakest criterion — it measures effort, not outcome. Replace with user-facing or metric-based criteria ("20% reduction in p95 latency sustained for 7 days").
+
+## When NOT to Use
+
+- For **actually generating** a plan with phases and task breakdown — use `/plan`
+- For requirements capture before planning — use `/write-a-prd`
+- For turning a plan into filed issues — use `/prd-to-issues`
+- For stress-testing a plan's assumptions — use `/grill-me`
+- For executing plans with agents — use `/orchestrate` or `/workflow`
+- For a single-step fix that does not warrant a document — skip the plan entirely

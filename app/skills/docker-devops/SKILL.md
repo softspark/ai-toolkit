@@ -302,3 +302,29 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
 - [ ] Resource limits defined
 - [ ] Health checks configured
 - [ ] Logs to stdout/stderr
+
+## Rules
+
+- **MUST** use multi-stage builds for any production image — shipping build tools in the final layer is wasteful and insecure
+- **MUST** pin base images by digest (`@sha256:...`), not just by tag — tags are mutable and reproducibility collapses on every `latest` update
+- **NEVER** run a container as `root` in production — `USER appuser` with a non-zero UID is the default, not an optimization
+- **NEVER** `COPY . .` before the dependency manifest — layer cache becomes useless and every source change re-downloads packages
+- **CRITICAL**: logs go to stdout/stderr. Containers writing to log files require volumes, lose on crash, and break 12-factor assumptions.
+- **MANDATORY**: every Dockerfile has a `HEALTHCHECK`, every compose service has `restart: unless-stopped` (or `always` in production)
+
+## Gotchas
+
+- `alpine` uses `musl` libc, not `glibc`. Python wheels compiled for glibc fail to install on alpine — use `python:3.12-slim` (glibc-based, small) instead of `python:3.12-alpine` unless you know every dependency ships a musl wheel.
+- `docker compose build` caches layers per service. A change to a shared file (e.g., root `COPY . .` used by two services) invalidates both caches. Structure Dockerfiles to copy manifests first, source last.
+- `HEALTHCHECK` in a Dockerfile is only respected by Docker and Compose, **not by Kubernetes**. K8s uses its own `livenessProbe` / `readinessProbe`. Maintaining both costs duplicate logic.
+- `docker compose up -d` streams build output only to the terminal, not to a build log. CI that captures `docker compose up -d` silently misses build errors — use `docker compose build` as a separate step with log redirection.
+- Container time is host time unless you mount `/etc/localtime` — a container running on a UTC host is UTC regardless of its `TZ` env var for anything reading `/etc/localtime`. For Python `datetime.now(timezone.utc)` is safer than `datetime.now()` inside containers.
+- `volumes: ./data:/app/data` on macOS with VirtioFS mounts with inverted ownership (host UID vs container UID). Containers that chmod/chown the volume fail silently in dev, succeed in Linux CI.
+
+## When NOT to Load
+
+- For **CI/CD pipeline** design that uses Docker — use `/ci-cd-patterns`
+- For generating a project-specific Dockerfile — use `/app-builder`
+- For Kubernetes-specific manifests beyond Docker — this skill covers compose + basics; use `/devops-implementer` agent for k8s depth
+- For **observability** of containers (metrics, logs, traces) — use `/observability-patterns`
+- For **secret management** at runtime — use `/security-patterns`

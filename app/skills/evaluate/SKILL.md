@@ -1,6 +1,6 @@
 ---
 name: evaluate
-description: "Evaluate skill quality and RAG retrieval accuracy"
+description: "Evaluate RAG retrieval accuracy and LLM-as-a-judge quality metrics (faithfulness, relevancy, context precision) against a golden dataset. Use when the user asks to measure RAG quality or detect knowledge gaps — not for evaluating generic LLM outputs."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[--threshold N]"
@@ -130,3 +130,24 @@ Knowledge Gaps Detected:
 - [ ] Relevancy >70%
 - [ ] Context Precision >60%
 - [ ] No critical knowledge gaps
+
+## Rules
+
+- **MUST** use a golden dataset — never evaluate on synthetic queries only
+- **NEVER** report a score without listing the failed queries alongside it
+- **CRITICAL**: if the golden dataset is missing, stop and ask the user to provide one
+- **MANDATORY**: thresholds come from project config, not hardcoded defaults, when available
+
+## Gotchas
+
+- LLM-as-a-judge scores are **non-deterministic**; a single run fluctuates by ±10 points even with `temperature=0`. Always report the average and stddev over ≥3 runs, not a one-shot number.
+- The default threshold trio (0.7 / 0.7 / 0.6) was calibrated on English KBs. Multilingual corpora (Polish + English in the same index) score systematically 5-15 points lower — recalibrate per language, or split the golden dataset by language.
+- Golden datasets **drift**: when the KB is reindexed or documents are renamed, `expected_sources` may point at moved or deleted paths. A sudden drop in `context_precision` across unrelated queries usually means dataset rot, not RAG regression — validate the dataset paths first.
+- Judges often reward verbose answers as "more faithful" because there is more text to ground. Tune the judge prompt to penalize padding, or cap answer length in the generator before evaluation.
+
+## When NOT to Use
+
+- For auditing skill quality (the 5-criteria check) — that lives in `scripts/evaluate_skills.py`
+- For general-purpose LLM output scoring without a KB — use `/review` or a tailored prompt
+- For unit tests or code correctness — use `/test`
+- For continuous evaluation without a golden dataset — build the dataset first

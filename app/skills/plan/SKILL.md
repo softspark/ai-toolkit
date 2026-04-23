@@ -52,3 +52,29 @@ hybrid_search_kb("architecture {pattern}")
 - Need requirements first? -> `/write-a-prd` for structured product requirements
 - Want to stress-test the plan? -> `/grill-me` for Socratic questioning
 - Ready to break into issues? -> `/prd-to-plan` -> `/triage-issue`
+
+## Rules
+
+- **MUST** break work into phases where each phase is independently shippable (tracer-bullet discipline) — waterfall phases defer all risk to the end
+- **MUST** define measurable success criteria per phase before proposing tasks — "the user is happy" is not a criterion
+- **NEVER** write code in this skill — the output is a plan document, not a patch
+- **NEVER** invent an agent; every task lists a real agent from `app/agents/` or a real skill from `app/skills/` with a reason for the choice
+- **CRITICAL**: every phase has an explicit rollback or scope-cut option. A plan with no way to stop mid-project is a sunk-cost trap.
+- **MANDATORY**: dependencies between phases are explicit edges (`Phase 1 → Phase 2`). Circular dependencies are always a planning bug, not a valid state.
+
+## Gotchas
+
+- "SMART" tasks are often too small to be strategic and too vague to be tactical. Tasks at the plan level should be phase-aligned outcomes ("authentication ships behind a feature flag"), not implementation steps ("add JWT middleware").
+- Agent assignment drifts during execution — the agent named in the plan may be unavailable or wrong when the work starts. Document the **role** (`backend-specialist`) alongside the assigned agent, so a substitute is unambiguous.
+- Plans that start with a Research phase often consume 80% of the timeline without producing shippable output. If research is truly needed, cap it with a timebox and a concrete artifact (ADR, spike doc).
+- Dependency graphs with diamond patterns (A→B, A→C, B→D, C→D) silently serialize D. If parallel phases feel slow, check for an unintended diamond.
+- Success criteria based on code metrics (coverage, lint count) incentivize gaming them. Prefer user-facing criteria (p95 latency, first-time-success rate on the happy path).
+
+## When NOT to Use
+
+- For writing a **PRD** (product requirements) first — use `/write-a-prd`
+- For breaking a PRD into phases — use `/prd-to-plan`
+- For filing issues against a plan — use `/prd-to-issues`
+- For stress-testing an existing plan — use `/grill-me`
+- For executing a plan with agents — use `/orchestrate` or `/workflow`
+- For a refactor with incremental commits — use `/refactor-plan`

@@ -308,3 +308,28 @@ env:
 - Manual deployments to production
 - No rollback strategy
 - Skipping linting/type-checking in CI
+
+## Rules
+
+- **MUST** include lint, test, and build stages in every pipeline — deploy-only pipelines defer failure to production
+- **MUST** cache dependencies by lockfile hash, not by branch name — branch keys grow unbounded and leak cache across unrelated work
+- **NEVER** commit secrets to the pipeline config — use the platform's secret store and reference by name
+- **NEVER** echo secrets to job logs; GitHub Actions masks known secrets only if they came from `secrets.*`, not from arbitrary env vars
+- **CRITICAL**: every deployment path has a defined rollback — "we'll figure it out" is not a plan and will cost hours during an incident
+- **MANDATORY**: PR builds run the same checks as `main` builds; drift between the two hides failures until merge
+
+## Gotchas
+
+- GitHub Actions masks secret values sourced from `${{ secrets.X }}` only. Secrets routed through `env:` and then transformed (base64, JSON) lose the mask and appear in logs verbatim.
+- Workflows triggered by `pull_request` from forks run **without** repository secrets by default (security). Jobs that need secrets either gate on `github.event.pull_request.head.repo.full_name == github.repository` or use `pull_request_target` with explicit code-review — the latter is easy to get wrong and allow token theft.
+- `actions/cache` restore is best-effort — a cache miss is silent. Jobs that rely on the cache (e.g., skipping tests when nothing changed) must verify cache hits explicitly via the `cache-hit` output.
+- GitLab CI's `rules:` and `only:/except:` are mutually exclusive at the job level. Mixing parses only at pipeline run, not at `git push`.
+- Semantic-release assumes a linear history. Merge commits on `main` confuse the commit parser and produce no release — stick to squash merges if you rely on it.
+
+## When NOT to Load
+
+- For **generating** a pipeline file for the current project — use `/ci` (this skill is knowledge, not code)
+- For one-off deployment commands — use `/deploy`
+- For language-specific build toolchain nuances — pair with `/typescript-patterns`, `/python` rules, etc.
+- For observability or alerting around deploys — use `/observability-patterns`
+- For security scanning (SAST, SCA) steps in pipelines — use `/security-patterns` and `/cve-scan`

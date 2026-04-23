@@ -186,3 +186,27 @@ project/
 - ❌ Don't hardcode config
 - ❌ Don't ignore accessibility
 - ❌ Don't over-engineer early
+
+## Rules
+
+- **MUST** confirm the stack selection with the user before scaffolding — the matrix above is a default, not a verdict
+- **MUST** include `.gitignore`, `.env.example`, a README, a linter config, and a working test harness in every scaffold
+- **NEVER** overwrite an existing project directory without the user's explicit go-ahead
+- **NEVER** scaffold Create React App or other EOL starters — steer to Vite, Next.js, or Astro instead
+- **CRITICAL**: prefer the team's existing expertise over trend-chasing. If the team ships Laravel, scaffolding FastAPI "because it's faster" creates training debt that outweighs the runtime gain.
+
+## Gotchas
+
+- Next.js App Router (`app/`) and Pages Router (`pages/`) can coexist technically, but middleware, layouts, and loading-state conventions diverge. Pick one router per project and never mix inside a single feature — debugging the overlap wastes hours.
+- Expo Router (file-based, Expo SDK 49+) and React Navigation (imperative) use completely different navigation APIs. Tutorials mix freely; an agent copying code across the split produces uncompilable projects.
+- Prisma on SQLite silently ignores features that work on Postgres: no `CHECK` constraints, no deferrable foreign keys, no array columns, limited `enum` support. Dev-on-SQLite / prod-on-Postgres teams hit this at deploy time.
+- FastAPI `--reload` uses a file watcher that rebuilds Pydantic models on every edit — startup time doubles and benchmark numbers are unreliable. Disable reload for perf tests.
+- `npm create vite@latest` respects `--template` but `npx create-next-app@latest` prompts interactively even with flags. Fully unattended scaffolds need `--ts --tailwind --eslint --app --src-dir --import-alias` spelled out.
+
+## When NOT to Load
+
+- For modifying an **existing** project's stack — use `/migrate` or `/refactor-plan`
+- For adding a feature to a running app — use `/plan` and the relevant language-pattern skill (`/typescript-patterns`, etc.)
+- For onboarding to an unfamiliar codebase — use `/onboard` or `/explore`
+- For deciding between 2-3 specific stacks under stated constraints — use `/architecture-decision`
+- For plugin or agent scaffolding inside ai-toolkit itself — use `/plugin-creator`, `/agent-creator`

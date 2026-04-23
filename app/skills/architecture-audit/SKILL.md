@@ -139,3 +139,27 @@ Durable guidance NOT coupled to file paths:
 ## Testing Principle
 
 **Replace, don't layer.** Old unit tests on shallow modules are waste once boundary tests exist — delete them. Tests assert on observable outcomes through public interface, not internal state.
+
+## Rules
+
+- **MUST** explore the codebase organically (Explore sub-agent) before proposing deepening targets — do not anchor on what you already know
+- **MUST** present numbered candidates to the user and wait for selection before step 3 — auto-picking skips the product decision
+- **NEVER** design interfaces in step 2; interface work only happens in step 4 after the problem space is framed
+- **CRITICAL**: step 4 spawns **parallel** sub-agents with genuinely different constraints (minimize / maximize-flexibility / optimize-common / ports-adapters). Sequential variations of the same idea defeat the purpose.
+- **MANDATORY**: deliverable is a GitHub issue RFC created via `gh issue create`. Never open a PR from this skill.
+
+## Gotchas
+
+- "Depth" is measured against **actual call patterns**, not the method count. A module exporting 20 functions where callers only use 2 is effectively 2-deep — the other 18 are dead interface, not richness.
+- Shared TypeScript types and Python protocols count as coupling. A "just types" file imported by 30 modules creates a deep blast radius; deleting or renaming it is structurally significant even though no runtime code moves.
+- Parallel sub-agents collapse into echo chambers when their constraints are not sharply different. Spell out the **opposing** tensions ("minimize interface" vs "maximize flexibility") — soft variations produce near-identical designs.
+- `gh issue create` without `--body` or `--body-file` opens `$EDITOR`. In automated flows this hangs the skill indefinitely. Always pass the body explicitly.
+- Ports & Adapters introduces indirection that IDE "find references" and static analysis sometimes miss (dynamic dispatch via interface). Count on broken tooling during the transition period and compensate with runtime smoke tests.
+
+## When NOT to Use
+
+- For executing a known refactor plan — use `/refactor` (direct edits) or `/refactor-plan` (incremental)
+- For designing a single module's interface from scratch — use `/design-an-interface`
+- For deciding between 2-3 named architectural options — use `/architecture-decision`
+- For code-quality metrics (complexity, duplication, coverage) — use `/analyze`
+- For understanding a codebase without proposing changes — use `/explore`

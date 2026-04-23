@@ -1,6 +1,6 @@
 ---
 name: hook-creator
-description: "Creates new Claude Code hooks with guided workflow, strict conventions, and validation"
+description: "Create a new Claude Code lifecycle hook (PreToolUse, PostToolUse, Stop, SessionStart, etc.) with a bash script and hooks.json registration. Use when the user wants automated behavior tied to a specific event — not for one-off commands."
 effort: high
 disable-model-invocation: true
 argument-hint: "[hook event or description]"
@@ -89,11 +89,20 @@ exit 0
 
 ## Rules
 
-- One script per hook entry (no inline multi-line commands)
-- Script filename must use kebab-case matching the event purpose
-- Pre* hooks can block operations -- keep them fast and deterministic
-- Never write secrets or credentials to stdout (output goes to LLM context)
-- Test the script standalone before registering: `bash app/hooks/{name}.sh`
+- **MUST** use one script per hook entry — no inline multi-line commands inside `hooks.json`
+- **MUST** keep `Pre*` hooks fast and deterministic — they gate every matching tool call, slow hooks throttle the whole agent
+- **NEVER** write secrets, tokens, or credentials to stdout — hook output is injected into LLM context and can be extracted
+- **NEVER** exit non-zero from a `Post*` or `Stop` hook unless you intend to block further processing; exit 0 is the safe default
+- **CRITICAL**: respect the `TOOLKIT_HOOK_PROFILE` env var. Profile `minimal` must be a no-op for non-essential hooks.
+- **MANDATORY**: test the script standalone (`bash app/hooks/{name}.sh`) before adding it to `hooks.json`
+
+## Gotchas
+
+- `PreToolUse` hooks that exit non-zero **block** the tool call. A slow or flaky hook (network call, lock contention) becomes a DoS against Claude's own workflow. Keep Pre hooks to pure-bash checks of local state.
+- Hook output (stdout) is injected verbatim into the model's context. A hook that runs `git log --all` prints hundreds of lines the model then has to wade through — be surgical, print only what matters.
+- The path in `hooks.json` is resolved relative to the user's machine, not the ai-toolkit repo. Use `$HOME/.softspark/ai-toolkit/hooks/<name>.sh` as the canonical location (installer symlinks there).
+- `SessionStart` with matcher `startup|compact` fires on both fresh starts AND after context compaction. Hooks that assume "new session" will mis-fire after compaction — check for explicit context markers if the distinction matters.
+- Bash hooks on Windows (without WSL) will not run. If the hook must work cross-platform, wrap it in a Node or Python script and call from the bash stub — or flag the hook as `posix-only` in the description.
 
 ## Validation Checklist
 
@@ -105,3 +114,11 @@ After creating the hook:
 - [ ] `scripts/validate.py` passes
 - [ ] Script runs without errors: `bash app/hooks/{name}.sh`
 - [ ] Hook count in README.md and docs updated if needed
+
+## When NOT to Use
+
+- For a **skill** (slash command) — use `/skill-creator`
+- For an **agent** definition — use `/agent-creator`
+- For a git pre-commit hook (not a Claude Code hook) — use `/git-mastery` or `scripts/install_git_hooks.py`
+- For one-off automation that is not tied to a Claude Code event — use a plain shell script outside the toolkit
+- To modify an existing toolkit hook — edit the file directly; this skill is create-only

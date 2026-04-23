@@ -105,9 +105,26 @@ What is explicitly NOT part of this refactor.
 
 ## Rules
 
-- Present >=3 alternatives before committing to an approach
-- Tiny commits — each step keeps codebase working
-- No file paths or code snippets in the issue (durability)
-- File immediately via `gh issue create` — don't ask for review
-- Interview thoroughly before planning
-- **Dead code cleanup is mandatory per step, not deferred** (Constitution Art. VI.1): every refactor step must leave the repo with zero orphaned references. "We'll delete the old code in a later step" is only acceptable for transitional double-write / expand-contract phases where both paths are temporarily live — and the cleanup step must be explicitly listed in the plan, not implied.
+- **MUST** present >=3 alternative approaches with trade-offs before committing to one
+- **MUST** break the refactor into commits small enough to roll back individually — a commit that cannot be reverted is not tiny
+- **MUST** verify test coverage of the affected area before planning; insufficient coverage is a blocker, not a warning
+- **NEVER** embed file paths, code snippets, or function names in the issue body — the plan outlives the code
+- **NEVER** ask for review after creating the issue — file it immediately, share the URL, iterate in comments
+- **CRITICAL**: dead-code cleanup is **per step**, not deferred (Constitution Art. VI.1). "We'll delete the old code later" is only acceptable during explicit expand-contract phases, and the cleanup step must be in the plan.
+- **MANDATORY**: the Out of Scope section names what is NOT part of this refactor — scope clarity prevents reviewer confusion
+
+## Gotchas
+
+- "Tiny" is relative to the reviewer's context. A 20-line commit that touches the hot path is not tiny in practice — tiny means **tractable**, not short.
+- Tests for refactors are often omitted with "the existing tests cover it". Verify by running the suite with coverage in the affected area, not by asking.
+- Rebasing a long chain of tiny commits is painful when the target branch moves. Recommend landing the chain weekly and rebasing on `main` before each review round.
+- GitHub issue RFCs tend to get stale if the refactor drags. Add a "Status" line that updates with each landed commit so readers see progress without scrolling through comments.
+- Expand-contract refactors with double-writes silently leak cost — both paths are live, both pay resources. Set a hard deadline in the plan for when the old path is removed.
+
+## When NOT to Use
+
+- For **executing** a refactor directly — use `/refactor`
+- For architecture-level audit without a specific refactor in mind — use `/architecture-audit`
+- For creating a PRD (product requirements) — use `/write-a-prd`
+- For a plan without the GitHub RFC step — use `/plan` or `/plan-writing`
+- For interface design of a single module — use `/design-an-interface`

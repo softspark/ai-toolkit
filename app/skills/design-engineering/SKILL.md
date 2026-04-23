@@ -256,3 +256,28 @@ Deliberate actions stay slow (2s linear for hold-to-delete), system responses sn
 - Same duration for enter and exit — exits should be faster
 - Hover effects without `@media (hover: hover)` — breaks touch devices
 - Framer Motion shorthands under load — drops frames on main thread
+
+## Rules
+
+- **MUST** specify exact properties in `transition` (`transition: transform 200ms ease-out`) — never `transition: all`
+- **MUST** use `ease-out` (or a custom curve) on UI appearances; `ease-in` delays feedback at the moment the user's attention peaks
+- **NEVER** animate `height`, `width`, `margin`, or `top/left` — animate `transform` and `opacity` only. Layout-triggering properties drop frames under load.
+- **NEVER** add motion for decorative reasons alone — every animation must serve meaning (status change, spatial relationship, progress)
+- **CRITICAL**: exit is faster than enter. A 2s linear enter (hold-to-delete) needs a 200ms ease-out exit. Symmetrical durations feel sluggish.
+- **MANDATORY**: any animation longer than 300ms for UI feedback needs an explicit justification — the user perceives >300ms as "laggy", not "smooth"
+
+## Gotchas
+
+- `transform: translateX(-50%)` on an element that will animate `opacity` triggers a paint on every frame because the browser cannot composite the layer. Add `will-change: transform, opacity` to hint the compositor — but only during the animation, not permanently (it consumes GPU memory).
+- Framer Motion's `x={100}` prop is a shortcut for `transform: translateX(100px)`, but under load it falls back to the main thread. Use the longhand `style={{ transform: "translateX(100px)" }}` for guaranteed compositor path.
+- `@media (prefers-reduced-motion: reduce)` is widely supported but often forgotten. Users with vestibular disorders or pointer-device sensitivity will notice; include a reduced-motion override for every non-trivial animation.
+- Chrome's Performance tab samples animations, but the sampling rate is 1kHz — sub-millisecond jank is invisible. For micro-animations, prefer `performance.mark` and `measure` with explicit timestamps.
+- CSS keyframe animations re-trigger on every class toggle. On rapidly-updating state (drag, hover), transitions are cheaper and smoother; keyframes are for one-shot entries/exits.
+
+## When NOT to Load
+
+- For **accessibility** beyond motion (contrast, focus, ARIA) — use `/a11y-validate`
+- For component-library architecture (Radix, Headless UI, ShadCN) — use `/frontend-specialist` agent
+- For **information architecture** and user flows — use `/ux-designer` agent
+- For generic CSS patterns without motion — this skill is motion-specific
+- For **brand voice** / content tone — use `/brand-voice`

@@ -139,3 +139,28 @@ Build a golden set of ~500 examples per category with ground truth. Track:
 - `prompt-caching-patterns` — cache the policy doc
 - `model-routing-patterns` — when to escalate from Haiku to Sonnet
 - Anthropic docs: https://docs.claude.com/en/docs/about-claude/use-case-guides/content-moderation
+
+## Rules
+
+- **MUST** pre-filter the obvious cases (regex, deny-lists, length caps) before sending to an LLM — LLM moderation on a 500MB comment is unusable
+- **MUST** return a structured JSON classification (category, confidence, reason), not a prose verdict — prose breaks audit trails
+- **NEVER** ship a moderation pipeline without a human-in-the-loop escalation path for ambiguous cases
+- **NEVER** hide the policy in the user message; the policy belongs in the cached system prompt so it is versioned and auditable
+- **CRITICAL**: log every decision (input, category, confidence, model, policy version, timestamp) — moderation without an audit trail cannot be improved or appealed
+- **MANDATORY**: calibrate confidence thresholds per category; harassment FP is cheap, clean-content FP is expensive
+
+## Gotchas
+
+- False positives on clean content are **much more expensive** than false negatives on borderline content, in user-trust terms. Optimize for recall on hard-fail categories (CSAM, doxing) but precision on soft-fail categories (spam, rudeness).
+- Haiku is sufficient for most moderation classification; using Opus inflates cost 10× with no measurable accuracy gain on this task. Reach for Opus only for edge cases that Haiku consistently misclassifies.
+- Prompt caching on the policy doc only hits when the cache window is still warm (5 minutes). Bursty traffic with long quiet periods loses the cache every window — amortize by keeping a heartbeat call.
+- Structured JSON output via tool-use is more reliable than free-form JSON in the response — parse errors happen ~1-3% of the time with free-form, near zero with tool-use schemas.
+- The golden test set drifts. Policy changes, new attack patterns, and new product surfaces all invalidate old examples. Refresh quarterly or after any policy update.
+
+## When NOT to Load
+
+- For **structured JSON output** design in general — use `/json-mode-patterns`
+- For **security** input validation (SQLi, XSS) — use `/security-patterns`
+- For caching the policy doc mechanics — use `/prompt-caching-patterns`
+- For picking the model tier (Haiku vs Sonnet vs Opus) — use `/model-routing-patterns`
+- For moderation of voice/audio content — this skill covers text; audio adds a transcription failure mode not covered here

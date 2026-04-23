@@ -53,3 +53,27 @@ We will use PostgreSQL 16.
 - **Maintainability** (Simple vs Easy, Ecosystem)
 - **Security** (AuthN/Z, Encryption)
 - **Cost** (Infrastructure, License, Cognitive load)
+
+## Rules
+
+- **MUST** present at least 3 viable options, including "status quo / do nothing" when relevant
+- **MUST** state constraints (budget, time, team skillset, legacy) **before** enumerating options — options without constraints are arbitrary
+- **NEVER** recommend an option without explicitly naming its failure mode and what would trigger revisiting the decision
+- **CRITICAL**: the output is a document (ADR / RFC / RFD), not code changes. Code work belongs in `/plan` or `/refactor-plan`.
+- **MANDATORY**: `Consequences` section names both Positive and Negative effects. A decision with only upside is not honestly analysed.
+
+## Gotchas
+
+- "Status quo" is a genuine option and often the right one for constrained teams. Omitting it biases the analysis toward change for change's sake.
+- ADRs are **append-only**. A reversed decision gets a new ADR with `Status: Supersedes ADR-N`, not an in-place edit of the original — the history of thinking matters more than the current state.
+- Qualitative scales (High / Medium / Low) without anchors are hand-waving. When scoring, pin each level to a measurable threshold (e.g., "High scalability = 10k req/s at p95 < 100ms on 2 nodes").
+- "We might use X" and "We will try X" are not decisions — they are deferrals. A valid ADR states the chosen option unconditionally; if you cannot, the decision is not ready.
+- Political constraints (team expertise, vendor relationships, executive preferences) are first-class constraints. Hiding them behind technical language produces ADRs that get silently ignored — name them explicitly in the Constraints section.
+
+## When NOT to Load
+
+- To find **what** architectural problems exist — use `/architecture-audit` (discovery) before this skill (decision)
+- To plan implementation of an already-decided option — use `/plan` or `/refactor-plan`
+- To design a single module's interface — use `/design-an-interface`
+- When fewer than 2 options exist — there is no decision to make; document the constraint instead
+- For runtime configuration choices (flag values, timeouts) — those are operational, not architectural

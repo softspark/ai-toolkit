@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v2.12.0 — Skill Quality Pass (Rules + Gotchas + When NOT to Use) (2026-04-23)
+
+### Added
+- **Meta-architect audit criteria across 62 skills** — every previously low-scoring skill (2-3/5 on the 5-criterion meta-architect audit) gained three new sections:
+  - `## Rules` — prescriptive MUST / NEVER / CRITICAL / MANDATORY markers for non-negotiable process constraints
+  - `## Gotchas` — Anthropic-recommended section for environment-specific traps and domain surprises (only where genuine traps exist; not padded)
+  - `## When NOT to Use` — explicit boundary with 2-5 adjacent skills to prevent over-triggering
+- **`meta-architect.md` mutation strategy taxonomy extended** — added `add_gotcha` as a fifth strategy alongside `add_example`, `add_constraint`, `add_edge_case`, `restructure`. Clarifies that Rules (prescriptive) and Gotchas (environment-specific) are distinct semantic buckets.
+- **`skill-creator/SKILL.md` and `command-creator/SKILL.md` templates updated** — new skills now default to the three-section pattern (Rules + optional Gotchas + When NOT to Use). Quality checklist extended to match.
+- **`scripts/evaluate_skills.py` — `_meta_architect_audit()` function** — non-failing advisory scoring per skill against the 5 binary criteria (description ≥50 chars, example, constraint, edge_case, length). Surfaces bottom-10 watchlist in every evaluation run.
+- **rag-mcp KB integration**: new document `kb/troubleshooting/rag-failure-patterns.md` (12-pattern taxonomy P01-P12) adapted from `awesome-llm-apps/rag_tutorials/rag_failure_diagnostics_clinic/`. New planning doc `kb/planning/toon-output-format-spike.md` proposes a timeboxed benchmark of TOON vs JSON output format for search tool responses.
+
+### Changed
+- **14 task skills (wave-1)** upgraded from 2/5 to 5/5 audit score: `analyze`, `chaos`, `ci`, `debug`, `evaluate`, `health`, `index`, `mem-search`, `night-watch`, `onboard`, `panic`, `performance-profiling`, `pr`, `test`. Short frontmatter descriptions extended with trigger hints; hard-rule markers added; explicit sibling-skill boundaries documented.
+- **48 task and knowledge skills (wave-2)** upgraded from 3/5 to 5/5: `agent-creator`, `api-patterns`, `app-builder`, `architecture-audit`, `architecture-decision`, `biz-scan`, `brand-voice`, `briefing`, `build`, `ci-cd-patterns`, `content-moderation-patterns`, `database-patterns`, `design-engineering`, `docker-devops`, `ecommerce-patterns`, `evolve`, `explain`, `explore`, `fix`, `git-mastery`, `grill-me`, `hipaa-validate`, `hook-creator`, `instinct-review`, `introspect`, `lint`, `mcp-builder`, `migrate`, `migration-patterns`, `observability-patterns`, `persona`, `plan`, `plan-writing`, `plugin-creator`, `prd-to-issues`, `prd-to-plan`, `predict`, `qa-session`, `rag-patterns`, `refactor`, `refactor-plan`, `rollback`, `security-patterns`, `skill-audit`, `swift-patterns`, `testing-patterns`, `triage-issue`, `ubiquitous-language`.
+- **`swift-patterns/SKILL.md` restructured** — 108-line `Common Frameworks` section moved to `reference/frameworks.md` (progressive disclosure per Anthropic spec), room reclaimed for Rules/Gotchas/When NOT to Load. SKILL.md now 420 lines (under 500 limit).
+
+### Notes
+- Score distribution: `{2: 14, 3: 48, 4: 32, 5: 5}` → `{4: 33, 5: 66}`. Zero skills remain below 4/5.
+- Approach validated against official Anthropic guidance (`agentskills.io/skill-creation/best-practices.md`): Gotchas section is Anthropic-recommended; prescriptive negative instructions (MUST/NEVER) and default-plus-escape-hatch (When NOT to Use) map to documented patterns.
+- Changes are **additive** — no existing skill content removed; sections appended or, in the case of `swift-patterns`, relocated to a reference subdirectory. Test count unchanged (669). No new skills or agents added, so counts unchanged (44 agents, 99 skills).
+
+---
+
 ## v2.11.0 — JSON Wire Format Rules (2026-04-21)
 
 ### Added

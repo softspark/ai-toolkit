@@ -84,3 +84,27 @@ Output a structured markdown report:
 ### Data Exposure Gaps
 - [Entity] has [N fields] not exposed via any API endpoint
 ```
+
+## Rules
+
+- **MUST** tie every opportunity to a concrete business metric or KPI name — "improve onboarding" is not an opportunity, "increase trial-to-paid conversion" is
+- **MUST** rank the opportunity list by estimated impact (rough order of magnitude is enough) — alphabetical order hides the signal
+- **NEVER** propose a new tracking event without first checking for an existing one — duplicate events corrupt analytics pipelines
+- **CRITICAL**: output is advisory. Do not modify tracking code in the scan. The product owner decides what ships.
+- **MANDATORY**: when the codebase has no analytics layer at all, say so explicitly and stop — the gap is "no instrumentation", not "no opportunities".
+
+## Gotchas
+
+- ORM models and TypeScript/Zod types often drift. An entity may exist in the DB schema but be invisible to the API layer (and vice-versa) — grep both sides before declaring "no tracking coverage".
+- Feature flags without analytics wiring are invisible to most scans. A flag can gate a feature with zero rollout data; treat a flag-without-exposure as its own gap category.
+- "No tracking event on entity X" often means X is tracked via a parent event (e.g., `order_items` piggybacking on `order_completed`). Walk the event taxonomy one level up before calling a gap.
+- Revenue attribution in multi-tenant apps often splits client-side (page views, clicks) from server-side (conversions). Scanning only one side produces systematically wrong conclusions about monetization coverage.
+- Migration files may show deleted columns that live code no longer references — always check the current schema (`alembic current`, `prisma migrate status`) before treating a migration-declared field as live.
+
+## When NOT to Use
+
+- For **implementing** a tracking change — use `/fix` or the relevant language skill
+- For dashboard design or SQL queries — delegate to the `data-analyst` agent
+- For generic code-quality metrics — use `/analyze`
+- For security or CVE scans — use `/cve-scan` or `/security-patterns`
+- When the project has no product-analytics layer configured — document the gap, do not speculate on events

@@ -85,19 +85,26 @@ Perform the requested task using this workflow:
 - **MUST** {non-negotiable rule}
 - **NEVER** {forbidden action}
 
+## Gotchas
+
+- {environment-specific trap — only if the command has one; omit the section otherwise}
+
 ## When NOT to Use
 
 - For {adjacent use case} -- use `/{other-command}` instead
 - If {precondition} is not met
 ```
 
+Follow [Anthropic's Gotchas guidance](https://agentskills.io/skill-creation/best-practices.md#gotchas-sections): *"concrete corrections to mistakes the agent will make without being told otherwise"* — not general advice. Omit the section when no domain traps exist.
+
 ## Validation Checklist
 
 - [ ] Command file uses markdown and valid YAML frontmatter
 - [ ] Description ≥50 chars, third-person, with trigger hint
 - [ ] At least one concrete code-fenced example
-- [ ] Hard rules using MUST / NEVER / CRITICAL
-- [ ] "When NOT to Use" section naming 2-3 adjacent commands
+- [ ] `## Rules` with MUST / NEVER / CRITICAL (prescriptive)
+- [ ] `## Gotchas` when the command has real environment-specific traps (optional)
+- [ ] `## When NOT to Use` section naming 2-3 adjacent commands
 - [ ] Body is instruction-oriented, not user-facing prose
 - [ ] `$ARGUMENTS` is present when arguments are expected
 - [ ] Validation steps are explicit

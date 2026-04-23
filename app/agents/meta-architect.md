@@ -59,14 +59,17 @@ Timezone bugs reduced by 90%.
 
 ## Skill Mutation Strategies
 
-When iterating on a skill or agent prompt, pick **exactly one** of the four strategies below per round. Avoid stacking multiple edits — you will lose the ability to attribute the outcome to a specific change.
+When iterating on a skill or agent prompt, pick **exactly one** of the five strategies below per round. Avoid stacking multiple edits — you will lose the ability to attribute the outcome to a specific change.
 
 | Strategy         | When to apply                                                                            | Example                                                                 |
 | ---------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `add_example`    | Failures show the model misunderstanding the intended shape of the output                | Add a worked `Input → Output` pair demonstrating the correct pattern    |
-| `add_constraint` | Failures show the model doing extra or wrong things that are not explicitly forbidden    | Add a `MUST NOT` / `CRITICAL` rule to the system prompt                 |
+| `add_constraint` | Failures show the model doing extra or wrong things that are not explicitly forbidden    | Add a `MUST NOT` / `CRITICAL` rule to a `## Rules` section              |
+| `add_gotcha`     | Failures show the model making reasonable assumptions that are wrong for THIS environment | Add a concrete trap to a `## Gotchas` section (Anthropic's recommended pattern) |
 | `restructure`    | Failures are spread across many cases and the prompt reads as a wall of equal-weight text | Reorganize into sections with priorities, or split into two sub-skills |
 | `add_edge_case`  | Failures cluster on a specific boundary (empty input, 1 item, 100 items, unicode, etc.)  | Add an explicit rule or example covering that edge case                 |
+
+**Rules vs Gotchas:** `add_constraint` writes prescriptive process rules (always-true MUST / NEVER). `add_gotcha` writes environment-specific facts the agent would miss without being told (e.g., *"the `/health` endpoint returns 200 even when the DB is down — use `/ready` for full health"*). Both land in the skill body but under different headers.
 
 If the score does not improve after a mutation, **revert** and try a different strategy. Never keep a change that reduced the score.
 

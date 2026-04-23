@@ -306,3 +306,28 @@ client.create_payload_index(
 | "NoSQL is faster" | NoSQL trades consistency for speed — if you need joins, use a relational DB |
 | "We don't need migrations, we'll update the schema directly" | Direct schema changes are irreversible and untestable — migrations are the safety net |
 | "One big table is simpler" | Denormalization without measurement creates update anomalies — normalize first, denormalize with data |
+
+## Rules
+
+- **MUST** profile queries with `EXPLAIN (ANALYZE, BUFFERS)` before adding an index — indexes chosen by intuition miss the real hot path half the time
+- **MUST** design the schema around the dominant access pattern, not the logical entity graph — storage follows queries, not the other way round
+- **NEVER** write to production with raw SQL when a migration file fits — ad-hoc changes break rollback and audit
+- **NEVER** add a `SELECT *` in a loop — N+1 is the most common performance regression in code review
+- **CRITICAL**: every foreign key has an index on the referencing column. Postgres does not create one automatically, and `ON DELETE CASCADE` without the index causes full-table scans on delete.
+- **MANDATORY**: numeric IDs use `bigint` (or `bigserial`) in new tables unless there is a stated reason to cap at 2^31. Integer overflow on a growing table is a late, painful surprise.
+
+## Gotchas
+
+- `EXPLAIN` without `ANALYZE` shows the planner's estimate, not the actual execution. A query plan that "looks good" with `EXPLAIN` can still be slow in practice — always use `ANALYZE` for real diagnosis.
+- ORM-generated queries often look efficient in one row but emit N+1 at scale. `prisma`, `sequelize`, `activerecord` all have "eager loading" switches that must be explicit — the default is lazy and bites under load.
+- Postgres transactions hold **row locks** until commit or rollback. A long-running transaction that reads rows another writer needs blocks progress silently. Investigate `pg_stat_activity` for `state=idle in transaction` when writes stall.
+- Index-only scans require both the query columns AND the filter to be in the index (or in the visibility map for heap tuples). Adding a single column to `WHERE` can demote an index-only scan to an index scan with a 10× slowdown.
+- MySQL implicit collation on JOIN across tables with different `utf8mb4` collations forces a row-by-row collation conversion — a 100× slowdown that shows as a full scan in the plan. Align collations during schema design.
+
+## When NOT to Load
+
+- For **schema evolution** (zero-downtime, expand-contract, backfill) — use `/migration-patterns`
+- For running migrations as a task — use `/migrate`
+- For query-plan profiling and the four golden signals — use `/performance-profiling`
+- For vector/embedding-specific schema — this skill covers the mechanics; use `/rag-patterns` for retrieval design
+- For observability of DB metrics (slow query log, connection pool saturation) — use `/observability-patterns`

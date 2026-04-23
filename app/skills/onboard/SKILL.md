@@ -1,6 +1,6 @@
 ---
 name: onboard
-description: "Generate project onboarding materials"
+description: "Guide setup of ai-toolkit in a new project: install symlinks, create CLAUDE.md, capture undocumented intent via interview. Use when the user starts a fresh project or migrates an existing one to ai-toolkit."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[project-path]"
@@ -91,3 +91,24 @@ Edit `.claude/settings.local.json` for project-specific settings:
 /onboard verify       # Just verify existing installation
 /onboard update       # Update toolkit symlinks
 ```
+
+## Rules
+
+- **MUST** run the intent-capture interview before creating any files — skip only if the user provides answers up front
+- **NEVER** overwrite an existing `CLAUDE.md` without confirming
+- **CRITICAL**: prefer project-local installation (`--local`) unless the user asks for global
+- **MANDATORY**: verify installation at the end with the toolkit's validate script
+
+## Gotchas
+
+- On Windows without WSL, symlink creation requires either Developer Mode or admin privileges. The installer **silently skips** agents and skills that cannot be linked — verify with `ai-toolkit doctor` after install on Windows hosts.
+- If `.claude/` already exists as a real directory (not a symlink), `ai-toolkit install` will not replace it. Old files linger. Check `ls -la .claude/` for mixed symlink + real-file state before onboarding.
+- `settings.local.json` is per-user and gitignored, but `settings.json` is shared. Users who edit the wrong file lose their overrides on `git pull`.
+- When the target project is a **git submodule**, the toolkit's notion of "project root" (outermost `.git`) differs from the developer's — symlinks may land in the parent repo instead of the submodule. Confirm `git rev-parse --show-toplevel` before installing.
+
+## When NOT to Use
+
+- To update an already-onboarded project — use `/onboard update`
+- To scaffold a new app from scratch — use `/app-builder`
+- For plugin development inside ai-toolkit — use `/plugin-creator`
+- When the project already has its own CLAUDE.md conventions — discuss migration before overwriting

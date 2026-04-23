@@ -259,3 +259,29 @@ docker service rollback api
 - Not testing rollback path
 - Deploying code before migration completes
 - Dropping columns before removing code references
+
+## Rules
+
+- **MUST** use **expand-contract** for any column rename, type change, or NOT NULL addition in production — single-step migrations block deploys
+- **MUST** test the **rollback** migration on staging with production-like data — an untested rollback is a wish, not a plan
+- **NEVER** drop a column while code still references it — the deploy window overlaps and some requests will fail
+- **NEVER** backfill in one big transaction on a large table — batch with explicit progress tracking and resumability
+- **CRITICAL**: schema changes deploy **before** the code that uses them. Code deploys before the schema means 500 errors until both complete.
+- **MANDATORY**: any migration that affects >1M rows or takes >30 seconds on staging runs behind a feature flag — not a schema lock
+
+## Gotchas
+
+- `ALTER TABLE ... ADD COLUMN NOT NULL DEFAULT <value>` in Postgres rewrites the whole table before version 11 (fast since 11 for non-volatile defaults). On older versions this locks the table for minutes. Add as NULL + default, backfill, then apply NOT NULL.
+- `CREATE INDEX CONCURRENTLY` cannot run inside a transaction, which means many migration tools (Alembic default, Rails) need an override to use it. Check the tool's docs for non-transactional migrations.
+- Double-write strategies need explicit reconciliation. "Write to both old and new, then cut over" leaves stale data in the old store unless you schedule a reconciliation pass before the cutover.
+- Feature flags for migration safety must be **per-row** or **per-tenant**, not global. A global flag gates the whole deploy; a per-row flag lets a small cohort validate before full rollout.
+- Rolling back an expand-contract migration mid-transition is ambiguous — the reverse direction depends on which phase was partially applied. Document the allowed rollback points in the migration itself.
+- ORM query caches may retain the old schema shape. After an additive migration, services often need a cache flush or restart to see the new column — plan this into the deploy sequence.
+
+## When NOT to Load
+
+- For executing a migration with the detected tool — use `/migrate`
+- For **schema design** from scratch — use `/database-patterns`
+- For pipeline migrations outside the database (config, file formats) — generic patterns here do not apply; use `/refactor-plan`
+- For zero-downtime **application** deploys (blue-green, canary) — use `/ci-cd-patterns`
+- When the database is small and can tolerate downtime — simpler single-step migrations are fine; expand-contract is overhead for tables with <100k rows and no concurrent writers

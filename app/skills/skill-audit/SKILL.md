@@ -130,8 +130,25 @@ The `/skill-audit` slash command wraps this scanner with Claude's analysis for r
 
 ## Rules
 
-- Never modify files without `--fix` flag
-- HIGH severity findings should block deployment
-- This skill is READ-ONLY by default
-- Scan both `app/skills/` and `app/agents/` directories
-- Exit with non-zero status if any HIGH findings exist (for CI integration)
+- **MUST** remain read-only by default — file modifications require the explicit `--fix` flag
+- **MUST** exit with non-zero status on any HIGH finding so CI pipelines can gate merges
+- **NEVER** auto-fix HIGH-severity findings — only the human owner decides on dangerous code
+- **NEVER** silence findings by adding exceptions in the audit config; either fix the code or document why the pattern is safe in the skill body
+- **CRITICAL**: scan both `app/skills/` and `app/agents/` — agents without tool restrictions are the same risk class as skills with broad `allowed-tools`
+- **MANDATORY**: every finding names a specific fix (replace `eval()` with `ast.literal_eval()`, add missing `allowed-tools`). A finding without a fix is triage noise.
+
+## Gotchas
+
+- Regex-based secret detection catches canonical patterns (`sk-...`, `ghp_...`) but misses custom API key formats used by internal services. Augment the regex list with project-specific patterns before trusting "0 HIGH findings".
+- `--fix` on `allowed-tools` infers minimal tool sets from imports, but skills that shell out via Bash may need tools not visible in the static scan. Review auto-added restrictions before merging.
+- Knowledge skills (`user-invocable: false`) with Bash access are HIGH because they auto-load and can act without user triggering. Legitimate exceptions (e.g., `research-mastery` calling `smart_query()`) should be explicitly whitelisted in the audit config with a comment.
+- The scanner flags `eval(` even inside docstrings and commented-out code. Context-aware scanning is hard; the alternative is reviewing each HIGH flag manually — the scan errs on the side of false positives.
+- CI integration with `--ci` exits 1 on any HIGH, which **blocks the commit**. A sudden pattern match (e.g., a legitimate new use of `subprocess.run`) can block unrelated PRs. Keep a fast path for pre-approving new patterns.
+
+## When NOT to Use
+
+- For general code-quality metrics (complexity, coverage, duplication) — use `/analyze`
+- For dependency CVE scans — use `/cve-scan`
+- For HIPAA-specific audits — use `/hipaa-validate`
+- For live pentesting of a deployed app — delegate to the `security-auditor` agent
+- When the project has its own security scanner (semgrep, snyk) — prefer it; `/skill-audit` is toolkit-specific

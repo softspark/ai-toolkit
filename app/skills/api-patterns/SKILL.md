@@ -302,6 +302,16 @@ Accept: application/vnd.myapi.v1+json
 | "Error messages are just for debugging" | Error responses are your API's UX — clients depend on consistent, parseable errors |
 | "PATCH and PUT are the same thing" | PUT replaces the resource, PATCH modifies it — wrong semantics cause data loss |
 
+## Hard Rules
+
+- **MUST** version the API from day one (URL path or Accept header) — unversioned APIs break clients on every change
+- **MUST** validate every input at the API boundary, not inside business logic
+- **MUST** use PUT for full replacement and PATCH for partial update — confusing the two causes silent data loss
+- **NEVER** return unbounded list responses — pagination (offset or cursor) is mandatory
+- **NEVER** expose stack traces or internal error details in 5xx responses — clients get a `code`, `message`, and optional `details[]`
+- **CRITICAL**: idempotency on POST/PUT/PATCH is non-negotiable when retries are possible — accept an `Idempotency-Key` header or design the endpoint to be naturally idempotent
+- **CRITICAL**: rate limits exist from the first deploy, not "later" — unprotected endpoints get abused within hours
+
 ## Best Practices
 
 - [ ] Use HTTPS only
@@ -314,3 +324,20 @@ Accept: application/vnd.myapi.v1+json
 - [ ] Document with OpenAPI/Swagger
 - [ ] Log requests for debugging
 - [ ] Set reasonable timeouts
+
+## Gotchas
+
+- CDN and load-balancer caches key on the full URL by default. If you version via both URL path and `Accept` header (e.g., `/api/v1/...` + `Accept: application/vnd.myapi.v2+json`), the edge returns the wrong payload for non-path versioning. Pick one versioning axis and stick to it.
+- OpenAPI `additionalProperties: false` is **not** enforced by most JSON Schema validators unless you explicitly enable strict mode (`ajv({strict: true})`, Pydantic `Config.extra = "forbid"`). An API marked "strict" in the spec silently accepts unknown fields.
+- `Idempotency-Key` only works if the server persists the mapping from key to response — purely in-memory implementations forget it on restart. Back it with Redis or the primary DB.
+- HTTP methods are **case-sensitive** per RFC 7230 (all uppercase); some clients and proxies normalize, some don't. A `post` method reaches the server as-is through some edge proxies and hits a 405 instead of the POST route.
+- `429 Too Many Requests` without a `Retry-After` header leaves clients guessing — most libraries back off exponentially from zero and hammer the server. Always include `Retry-After` on 429 and 503.
+
+## When NOT to Load
+
+- For **MCP protocol** (JSON-RPC over stdio/SSE) specifics — use `/mcp-patterns`; this skill covers generic JSON-RPC only
+- For **gRPC, GraphQL subscriptions, or message queues** — outside scope; this skill is REST-first with a JSON-RPC aside
+- For **language-specific idioms** (Fastify middleware chains, ASP.NET minimal APIs, etc.) — pair this skill with `/typescript-patterns`, `/csharp-patterns`, etc.
+- For **OpenAPI schema authoring** as the primary task — use `/docs` with OpenAPI output; this skill is design-only
+- For **authentication deep-dives** beyond the starter API-key and JWT snippets — use `/security-patterns`
+

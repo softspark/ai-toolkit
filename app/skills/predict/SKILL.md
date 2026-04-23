@@ -76,3 +76,28 @@ Output a markdown report:
 - [ ] Review [high-dependent file] with extra scrutiny
 - [ ] Run integration tests covering [affected area]
 ```
+
+## Rules
+
+- **MUST** base risk scores on measurable signals (dependent count, coverage, diff size) — not vibes or adjective scales
+- **MUST** name at least one specific action per high-risk file — "review carefully" is not an action
+- **NEVER** predict regressions beyond what the signals justify. A single file with 20 dependents is a signal; a generic "this might break things" is noise.
+- **NEVER** skip the test-coverage factor — a high-dependent file with 100% coverage is lower risk than a low-dependent file with none
+- **CRITICAL**: the report ranks files by weighted risk score, not alphabetically. Readers will stop after the first 5 entries.
+- **MANDATORY**: state the confidence level explicitly. Predictions from a 5-line diff are HIGH confidence; predictions from 500-line refactors are LOW.
+
+## Gotchas
+
+- `grep -rl "import.*from.*[target]"` is easily fooled by comments and string literals. Use the language's real AST tools (`ts-morph`, `ast-grep`, `pyflakes`) for accurate dependency graphs on anything beyond trivial diffs.
+- Dynamic imports (`importlib.import_module`, `require(variable)`, JavaScript `await import()`) are invisible to grep. Flag explicitly when the target uses them.
+- Test coverage reported by CI may exclude generated code, migrations, and `__init__.py`. "Has dedicated test = score 1" assumes a real assertion exists — check the test file rather than just the path match.
+- A 5-line diff in a "core" file is often more dangerous than a 500-line diff in a leaf file. The `change_surface` weight alone is misleading; combine with `shared/core` weight for meaningful signals.
+- Predictions about regressions are calibrated against the current test suite, not unknown production behaviors. A "low-risk" verdict means "tests likely pass", not "users will not notice".
+
+## When NOT to Use
+
+- For **executing** a change after prediction — use `/fix`, `/refactor`, or the relevant skill
+- For PR review of logic quality — use `/review`
+- For CI pipeline risk analysis — use `/ci-cd-patterns`
+- For code quality metrics (complexity, duplication) — use `/analyze`
+- For a brand-new codebase with no change history — this skill needs dependents to measure; use `/explore` first

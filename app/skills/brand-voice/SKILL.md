@@ -90,3 +90,39 @@ Auto-loaded when writing documentation, content, or user-facing text. Enforces c
 - [ ] Active voice used by default?
 - [ ] No weasel words remaining?
 - [ ] Technical claims backed by evidence or examples?
+
+## Example
+
+Bad (filler, marketing, generic):
+
+```
+In today's ever-evolving landscape of AI, our cutting-edge toolkit empowers
+developers to seamlessly leverage state-of-the-art skills. Whether you're a
+beginner or an expert, this comprehensive guide will help you unlock the full
+potential of your workflow.
+```
+
+Good (direct, specific, active):
+
+```
+ai-toolkit installs 99 skills and 44 agents via `npm install -g @softspark/ai-toolkit`.
+After install, run `ai-toolkit doctor` to verify symlinks and hooks. Typical
+install takes under 30 seconds on a local disk.
+```
+
+## Rules
+
+- **MUST** remove every phrase from the anti-trope list before publishing — the list is a hard filter, not a suggestion
+- **MUST** lead with the action or outcome in the opening sentence, never with context or framing
+- **NEVER** open with "In today's...", "Let's dive into...", "Whether you're...", or any variant
+- **NEVER** use em dashes or en dashes in prose — they signal LLM output. Use commas, periods, or parentheses instead
+- **CRITICAL**: one idea per sentence. If you write "and" linking two distinct ideas, split the sentence
+- **MANDATORY**: technical claims include a concrete number, name, or example — never assert quality without evidence
+
+## When NOT to Load
+
+- For code or technical specs with no user-facing prose — the voice rules do not apply
+- For structured logs, CSV, or machine-readable output — formatting matters, voice does not
+- For creative writing, poetry, or marketing copy where playfulness is a feature
+- For **non-English** content — the anti-trope list is English-specific and would flag valid Polish/Spanish/etc. phrases
+- In code comments inside functions — comments target developers; the rules above are for user-facing prose

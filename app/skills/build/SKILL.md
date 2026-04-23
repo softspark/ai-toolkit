@@ -1,6 +1,6 @@
 ---
 name: build
-description: "Build the project with auto-detected toolchain"
+description: "Build the project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Use when the user asks to compile, bundle, or produce artifacts — not to run tests or deploy."
 effort: low
 disable-model-invocation: true
 argument-hint: "[target]"
@@ -95,3 +95,26 @@ After build configuration changes, update documentation:
 - [ ] Build successful
 - [ ] **README build instructions updated** (if changed)
 - [ ] **CI/CD config documented**
+
+## Rules
+
+- **MUST** detect the build system automatically (`detect-build.py`) before invoking any command
+- **NEVER** run a `clean` build when incremental works — clean only on explicit user request
+- **CRITICAL**: surface the first build error literally, including the stack trace and file:line. Paraphrasing loses the diagnostic.
+- **MANDATORY**: on success, report the artifact paths (compiled binaries, bundled output, built images) — callers downstream need them
+
+## Gotchas
+
+- `npm run build` does not refresh `node_modules`. If `package-lock.json` is out of sync, the build runs against stale dependencies and "succeeds" with wrong versions. In CI always precede with `npm ci`.
+- `cargo build --release` takes 5-10× longer than debug. Never use `--release` in a dev loop; reserve it for CI artifacts and benchmarks.
+- `docker compose build` keys layer cache per service. A change to a shared context file (e.g., root `COPY . .`) invalidates every service's cache. Structure Dockerfiles to copy dependency manifests first, source last.
+- `flutter build apk` without `--split-per-abi` produces a fat APK ~3× larger than needed. Production builds should always split unless explicitly bundling.
+- `go build ./...` succeeds with a warning when a package has no Go files (e.g., pure-doc subdir). Downstream tools that expect every listed package to compile a binary fail silently — check `go build -v` for the list of built packages.
+
+## When NOT to Use
+
+- For running tests — use `/test`
+- For deployment or artifact push — use `/deploy`
+- For scaffolding a new build system — use `/app-builder` or `/ci`
+- For CI pipeline generation — use `/ci`
+- When the project has no build step (interpreted code, pure docs) — this skill has nothing to do

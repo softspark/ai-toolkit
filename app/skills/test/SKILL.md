@@ -1,6 +1,6 @@
 ---
 name: test
-description: "Run tests with coverage analysis and reporting"
+description: "Run the project's test suite with coverage reporting, auto-detecting the framework (pytest, vitest, jest, flutter test, go test, cargo test, phpunit). Use when the user asks to run existing tests — not to author new ones test-first."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[file or pattern]"
@@ -105,3 +105,25 @@ tests/               # or test/, spec/, __tests__/
 ├── integration/     # Tests with external dependencies
 └── e2e/             # End-to-end tests
 ```
+
+## Rules
+
+- **MUST** detect the framework automatically via `detect-runner.py` — do not assume
+- **NEVER** modify tests to make them pass
+- **CRITICAL**: coverage reporting must use the project's configured tool (`--cov=src`, `--coverage`, etc.) — do not invent flags
+- **MANDATORY**: when a test fails, report the failure exactly; do not paraphrase
+
+## Gotchas
+
+- `pytest --cov=src` inflates coverage when `tests/` lives under `src/` — test files count toward covered lines. Either move `tests/` out, or use `--cov=src --cov-branch --cov-report=term-missing` with an explicit `[tool.coverage.run] omit = ["tests/*"]` in `pyproject.toml`.
+- `go test ./...` runs packages in parallel by default; a test depending on shared global state may pass alone and fail in the suite. If flakiness appears only under `./...`, suspect shared state, not a bug in the test.
+- `flutter test` without an emulator falls back to the headless "null platform" — widget tests that require a render surface are **silently skipped**. CI without a display must add `flutter test --platform vm` or a virtual framebuffer.
+- `vitest run` and `jest` interpret glob patterns differently: `*.test.ts` in vitest matches filenames, in jest matches paths. Passing the same CLI arg to both produces different test sets — use the framework-native config file when possible.
+- `pytest --lf` (last-failed) silently runs **all** tests if there is no cache from a prior run. First-time runs in CI therefore ignore `--lf` and re-run everything, which can hide "only failed tests" bugs in local runs.
+
+## When NOT to Use
+
+- To write new tests test-first — use `/tdd`
+- To author test design patterns — use `/testing-patterns` (knowledge skill)
+- To debug a failing test — use `/debug` after `/test` surfaces the failure
+- For performance/load testing — use dedicated tooling, not `/test`

@@ -130,6 +130,33 @@ Claude Desktop: same JSON, placed in `~/Library/Application Support/Claude/claud
 | `exit 1` on transient errors | Retry with exponential backoff, surface final error |
 | Stdout pollution (MCP stdio) | All logs go to **stderr**, stdout is JSON-RPC only |
 
+## Rules
+
+- **MUST** pick 5-15 workflow-oriented tools, not a 1:1 API mirror. The model routes by task, not by endpoint.
+- **MUST** use strict input schemas (Zod for TS, Pydantic for Python). `additionalProperties: true` lets the model invent fields and drift.
+- **MUST** set correct tool annotations: `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` — the host uses these for safety UIs and auto-approval policies
+- **NEVER** expose an MCP server on a public network without auth. MCP clients default to trusting the transport — attackers reach tools directly.
+- **NEVER** log API keys, tokens, or env vars in error messages. A verbose error thrown at the model becomes a stored credential in the conversation.
+- **CRITICAL**: with `stdio` transport, **all** logs go to stderr. Any stdout write that is not a JSON-RPC message breaks the client.
+- **MANDATORY**: every server ships with a README documenting env vars, required scopes, rate limits, and a minimal invocation example.
+
+## Gotchas
+
+- `stdio` transport sends the server's stdout directly to the client as protocol frames. A stray `print()` or `console.log()` crashes the client with a parse error and no clear diagnostic. Route all logs through a logger that writes to stderr.
+- MCP tool descriptions are the only thing the LLM sees when routing. `description: "calls POST /api/v2/tickets"` tells the model nothing about intent. Describe **when to use**, not what it does at the HTTP level.
+- Annotations (`readOnlyHint`, etc.) are optional in the spec but some hosts (Claude Desktop, Cursor) gate auto-approval on them. Missing `destructiveHint: true` on a delete tool may cause the client to run it silently.
+- `streamable-http` with SSE requires the server to handle client reconnects with a `Last-Event-ID` header. Many quick-start templates skip this and drop events on flaky networks.
+- Pagination cursors must be opaque from the client's perspective but stable across retries. A timestamp cursor that advances on every poll fails if the client retries the same cursor after a transient error.
+- Claude Desktop caches server capabilities on first connection. After changing tool schemas, users must explicitly reload the server (quit + reopen or remove/re-add the server) — simply restarting the server process is not enough.
+
+## When NOT to Use
+
+- For **in-toolkit skills** (slash commands, knowledge docs) — use `/skill-creator`
+- For **agents** inside ai-toolkit — use `/agent-creator`
+- For plugin packs bundling multiple agents/skills — use `/plugin-creator`
+- For protocol-level MCP theory and transport trade-offs — use `/mcp-patterns` (knowledge skill)
+- For conformance/integration testing of an MCP server — delegate to the `mcp-testing-engineer` agent
+
 ## Related
 
 - `mcp-patterns` — protocol reference (auto-loaded knowledge skill)

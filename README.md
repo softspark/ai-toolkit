@@ -10,16 +10,13 @@
 
 ---
 
-## What's New in v2.11.0
+## What's New in v2.12.0
 
-- **JSON wire format rules added to `common/coding-style.md`** — `camelCase` for field names (aligned with JSON:API, Google JSON Style, Symfony Serializer + `json_serializable` defaults), `UPPER_SNAKE_CASE` for enum values (Protocol Buffers, Google AIP-126 / api-linter, Zalando Rule #240, Java/Kotlin/Python consensus). Anti-pattern call-out against `camelCase` for enum values (no major public API uses it).
-- **`php/frameworks.md` — Symfony Serializer section** — documents the property-names-as-is default, the global-override side effect of `api_platform.name_converter` ([api-platform/core #6101](https://github.com/api-platform/core/issues/6101)), pragmatic `#[SerializedName]` usage, and Symfony 7.3.5+ `ObjectNormalizer` `isXxx` behavior change ([#62353](https://github.com/symfony/symfony/issues/62353)) that retires pre-7.3.5 boolean-getter aliases.
-- **`dart/frameworks.md` — JSON Serialization section** — `json_serializable` `FieldRename.none` default + Effective Dart `lowerCamelCase` = `camelCase` output with zero config; community recommendation to prefer class-level `fieldRename` over per-field `@JsonKey(name:)`; enum value wire strategy (`UPPER_SNAKE_CASE`) while keeping Dart enum case names `lowerCamelCase`.
-
-### Previous: v2.10.1 — Art. VI Enforcement Drift Repair
-
-- Art. VI enforcement drift repaired (`IMMUTABLE_ARTICLES` extended to include Article 6; generator emits Article VI text; article-count drift lint added).
-- Constitution self-consistency fixes (Article I.3 aligned with Section 4) and SKILL.md improvements from #8 (merged from @rohan-tessl). Totals unchanged: 44 agents, 99 skills, 666 tests.
+- **Skill quality pass across 62 skills (14 wave-1 at 2/5 + 48 wave-2 at 3/5)** — every previously low-scoring skill now ships with a `## Rules` section (MUST / NEVER / CRITICAL markers), an optional `## Gotchas` section (Anthropic-recommended environment-specific traps), and a `## When NOT to Use` section naming 2-5 adjacent skills. Score distribution shifted from `{2: 14, 3: 48, 4: 32, 5: 5}` to `{4: 33, 5: 66}` — zero skills below 4/5.
+- **Meta-architect mutation strategy extended** — `add_gotcha` added as a fifth strategy alongside `add_example`, `add_constraint`, `add_edge_case`, `restructure`. Rules and Gotchas are distinct semantic buckets; `skill-creator` and `command-creator` templates now default to the three-section pattern.
+- **`scripts/evaluate_skills.py` — `_meta_architect_audit()` advisory** — non-failing per-skill scoring against 5 binary criteria (description ≥50 chars, example, constraint, edge_case, length). Bottom-10 watchlist surfaced on every `npm run evaluate`.
+- **`swift-patterns` restructured** — 108-line `Common Frameworks` section extracted to `reference/frameworks.md` (progressive disclosure per Anthropic spec). SKILL.md now fits under 500 lines with room for the new sections.
+- **rag-mcp KB** gained `kb/troubleshooting/rag-failure-patterns.md` (12-pattern failure taxonomy P01-P12) and `kb/planning/toon-output-format-spike.md` (timeboxed TOON vs JSON benchmark plan).
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

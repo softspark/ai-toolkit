@@ -114,7 +114,25 @@ Do NOT include file paths, line numbers, or implementation details. Describe mod
 
 ## Rules
 
-- Minimal user interaction — investigate autonomously
-- No file paths or line numbers in the issue (durability)
-- TDD plan uses vertical slices, not horizontal
-- File immediately — don't ask for review
+- **MUST** explore the codebase for root cause before filing — symptoms masquerade as causes often
+- **MUST** propose a TDD fix plan with ordered RED→GREEN cycles, each a vertical slice
+- **NEVER** ask follow-up clarifying questions; one initial question maximum, then investigate autonomously
+- **NEVER** include file paths, function names, or line numbers in the issue body — they go stale before the issue is picked up
+- **CRITICAL**: the issue must be reproducible. If reproduction steps cannot be determined from the investigation, say so explicitly in the Problem section — do not fabricate them.
+- **MANDATORY**: file the issue immediately via `gh issue create` and share the URL — do not ask the user to review a draft first
+
+## Gotchas
+
+- `gh issue create` without `--body` opens `$EDITOR`. In automated flows the skill hangs — always pass the body file or inline text.
+- "Root cause" often turns out to be two concurrent issues. If the investigation keeps branching, file the most-probable primary cause and note the secondary as a follow-up in the same issue.
+- TDD plans with more than ~5 RED→GREEN cycles usually conceal a deeper design issue. Short plans (2-3 cycles) reflect confident root-cause identification; long plans reflect fishing.
+- The `debugger` agent explored autonomously but returns a narrative. Parse it for: confirmed hypothesis, code paths, and recent changes. Discard speculation.
+- Bugs in framework-adjacent code (middleware, ORM hooks) require test setup that mirrors the framework's call context. A TDD plan that writes the test "like a unit test" may not actually reproduce the framework bug.
+
+## When NOT to Use
+
+- For a conversational bug report from a non-engineer — use `/qa-session` first, which returns refined reports this skill can then process
+- For a specific reproducible error with known root cause — use `/fix` directly
+- For architectural-scale problems — use `/architecture-audit`
+- For creating issues from a PRD — use `/prd-to-issues`
+- For debugging without filing an issue — use `/debug`

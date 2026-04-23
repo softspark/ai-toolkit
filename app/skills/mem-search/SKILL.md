@@ -68,3 +68,43 @@ This skill queries the SQLite FTS5 full-text search index at `~/.softspark/ai-to
 - FTS5 supports prefix matching: `migrat*` matches "migration", "migrate"
 - Boolean operators: `database AND NOT test`
 - Column filters: `tool_name:Edit` to search only Edit tool observations
+
+## Example
+
+```bash
+/mem-search "postgres migration rollback"
+```
+
+Typical output:
+
+```
+## Memory Search: "postgres migration rollback"
+Found 3 results across 2 sessions.
+
+| # | Session | Project          | Tool | Time       | Preview                              |
+|---|---------|------------------|------|------------|--------------------------------------|
+| 1 | abc123  | magento2-os      | Edit | 2026-03-12 | Rolled back 0042_add_tax_col...      |
+| 2 | def456  | magento2-b2b     | Bash | 2026-02-28 | pg_dump before schema migration...   |
+| 3 | abc123  | magento2-os      | Read | 2026-03-12 | Reviewed migration safety checklist  |
+```
+
+## Rules
+
+- **MUST** escape single quotes in queries by doubling (`it''s`) — SQL injection into the FTS5 call will break the query
+- **NEVER** return the raw database path — treat `~/.softspark/ai-toolkit/memory.db` as internal
+- **CRITICAL**: if the database does not exist, initialize it silently and return zero results — do not fail the skill
+- **MANDATORY**: present Stage 1 (summary table) first; only expand to Stage 2 on follow-up
+
+## Gotchas
+
+- FTS5 `MATCH` is picky: hyphens, slashes, and dots are parsed as operator separators and will reject queries like `mem-search api/v1` with a cryptic `malformed MATCH expression`. Wrap multi-token phrases with double-quotes: `"api/v1"` or `"mem-search"`.
+- Results are ordered by `rank` (FTS5 relevance), **not** by `created_at`. A stale but high-ranked match outranks a fresh but weak one — include the `created_at` column and consider `ORDER BY rank, created_at DESC` for time-sensitive queries.
+- The database path is static at `~/.softspark/ai-toolkit/memory.db`. If the user runs from a container, `~` resolves to the container's home, not the host's — the observation list will look empty. Check the env var `SOFTSPARK_HOME` before assuming the DB is missing.
+- `observations_fts` is a separate virtual table; when observations are deleted directly (not via the SDK) the FTS index can drift. If counts between `observations` and `observations_fts` differ, rebuild with `INSERT INTO observations_fts(observations_fts) VALUES('rebuild');`.
+
+## When NOT to Use
+
+- To search the KB or documentation — use `/search` or `smart_query()`
+- To find a specific commit — use `git log --grep` or `/git-mastery`
+- To list agent tasks — use `TaskList` or `/plan`
+- When memory-pack hooks are not installed — direct the user to install them first

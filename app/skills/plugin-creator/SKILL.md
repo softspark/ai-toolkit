@@ -60,12 +60,21 @@ app/plugins/<plugin-name>/
 
 ## Authoring Rules
 
-- Keep packs **domain-scoped**, not generic junk drawers
-- Prefer referencing existing toolkit assets before duplicating them
-- Pack manifests must be valid JSON with `name`, `description`, `version`, `domain`, `type`, `status`, and `includes`
-- Optional hooks must be executable and documented in the pack README
-- If the pack introduces policy or hook behavior, document install/opt-in semantics clearly, including supported runtimes (`claude`, `codex`, or `all`) and that the pack is not part of the default install
-- Experimental packs should remain opt-in and must not silently alter default global install behavior
+- **MUST** keep packs domain-scoped — "security-pack", "mobile-pack", not "misc-pack"
+- **MUST** reference existing toolkit assets before duplicating — packs extend, they do not fork
+- **MUST** ship a valid `plugin.json` with `name`, `description`, `version`, `domain`, `type`, `status`, and `includes`
+- **NEVER** have a pack silently alter default global install behavior — experimental packs are **opt-in only**
+- **NEVER** copy an agent or skill file into a pack when referencing the toolkit-level version suffices; duplication creates drift
+- **CRITICAL**: optional hooks bundled in a pack must be executable (`chmod +x`) and documented in the pack README with their install semantics
+- **MANDATORY**: the pack README names supported runtimes (`claude`, `codex`, or `all`) and explains that the pack is not part of the default install
+
+## Gotchas
+
+- Plugin packs are discovered by scanning `app/plugins/*/plugin.json`. A pack with a missing or malformed `plugin.json` is silently ignored — no error surfaces. Check with `ls app/plugins/*/plugin.json` and `jq . app/plugins/*/plugin.json`.
+- The `status: experimental` flag gates visibility in some install paths — marking a pack "stable" before it is audited can make it install by default for every user. Keep `experimental` until the pack has eaten its own dogfood.
+- Packs that include hooks inherit the toolkit's hook merge rules (`_source: "ai-toolkit"`). Hooks without the `_source` tag survive `ai-toolkit update` and can leak into other packs' merge pools.
+- Versions in `plugin.json` are separate from the toolkit version. A pack at v1.2 running inside toolkit v2.11 may still satisfy `requires.ai-toolkit: >=1.0.0` but mean nothing about actual compatibility — test against the current toolkit before tagging.
+- Codex-runtime packs need matching `.agents/rules/` and `.codex/hooks.json` variants; a plugin that only ships Claude assets looks broken under Codex CLI. Declare runtime support explicitly.
 
 ## Validation Checklist
 
@@ -75,3 +84,11 @@ app/plugins/<plugin-name>/
 - [ ] Optional hooks are executable and use `#!/bin/bash`
 - [ ] `scripts/validate.py` passes
 - [ ] Public docs mention the pack only after the manifest and README exist
+
+## When NOT to Use
+
+- For an individual **skill** (slash command or knowledge doc) — use `/skill-creator`
+- For an individual **agent** — use `/agent-creator`
+- For a single **hook** (not a pack) — use `/hook-creator`
+- For an MCP server — use `/mcp-builder`
+- For modifying an existing plugin pack — edit its files directly; this skill is create-only

@@ -65,3 +65,28 @@ Create a summary documenting what evolved:
   - `app/agents/[name].md`: [what changed and why]
 - **Validation**: passed / failed
 ```
+
+## Rules
+
+- **MUST** delegate file edits to the `meta-architect` agent — this command is the trigger, the agent owns the changes
+- **MUST** have a concrete failure signal (recurring error, named incident, repeated correction) before evolving — do not mutate based on vibes
+- **NEVER** evolve an agent based on a **single** failure instance — evolution is pattern-matching, not reaction
+- **NEVER** touch `.claude/agents/*` files directly from this skill; `meta-architect` is the only agent with that authority
+- **CRITICAL**: every evolution names the trigger, the change, and the expected measurable shift (e.g., "reduces false routing of `/debug` to `/fix`")
+- **MANDATORY**: run `scripts/validate.py --strict` after every applied change; roll back if the score drops
+
+## Gotchas
+
+- Small changes to an agent's description can silently re-route a dozen adjacent queries. After an evolution, run the skill router against a saved set of representative queries to confirm no drift.
+- `kb/learnings/` entries without a `status: final` frontmatter field are often drafts — aggregating them treats speculative observations as validated patterns. Filter by status before mining.
+- "Last-failure" often points at the **symptom**, not the root cause. A route-to-wrong-agent failure may actually be a description-field ambiguity; fix the description, not the router.
+- Changes to agent frontmatter fields (`tools`, `model`) propagate to the installed global config only after `ai-toolkit update`. A locally-evolved agent still runs old behavior until the user reinstalls.
+- Evolution in isolation invites regression. Keep a changelog (`kb/learnings/` entries or `CHANGELOG.md`) so future sessions can see what was tried and reverted.
+
+## When NOT to Use
+
+- For a specific, known agent edit — call `meta-architect` directly
+- For fixing a failing test — use `/fix` or `/debug`
+- For auditing **current** skill/agent quality — use `scripts/evaluate_skills.py` and `scripts/audit_skills.py --ci`
+- For creating a **new** agent — use `/agent-creator`
+- When no recurring pattern exists (single data point) — wait and observe; do not over-fit to noise

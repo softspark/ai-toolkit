@@ -1,6 +1,6 @@
 ---
 name: debug
-description: "Debug errors and trace root causes systematically"
+description: "Debug errors and trace root causes systematically using logs, health checks, and hypothesis-driven investigation. Use when a bug or error message is in hand — not for architectural questions or when there is no reproducible symptom."
 user-invocable: true
 effort: medium
 argument-hint: "[symptom]"
@@ -162,6 +162,28 @@ Report consensus when done.
 - [ ] Reproduced issue
 - [ ] Formed hypothesis
 - [ ] Tested fix
+
+## Rules
+
+- **MUST** form a testable hypothesis before changing code
+- **NEVER** apply fixes without first reproducing the symptom
+- **CRITICAL**: trace from symptom to root cause — do not stop at the first plausible explanation
+- **MANDATORY**: if the bug is intermittent, log enough state to reproduce it deterministically before fixing
+
+## Gotchas
+
+- `docker compose logs` with no `--since` shows logs from **the current container lifecycle plus anything buffered**. After a restart you may read stale logs that look like the current error. Always filter: `docker compose logs --since 5m`.
+- `tail -f` stops emitting after a log rotation unless you pass `-F` (GNU) or `--follow=name` — the file descriptor points at the renamed inode. On rotated logs, always use `-F`.
+- `curl -f <url>` exits non-zero on 4xx/5xx but discards the response body — you lose the exact error. Debug with `curl -s -o /tmp/body -w 'HTTP %{http_code}\n'` and then inspect `/tmp/body`.
+- Stack traces from uvicorn/gunicorn/WSGI show framework frames first; the first few frames are almost always irrelevant. Scroll past framework internals and find the first frame inside your own package.
+- A 500 with "Internal Server Error" and no body usually means the error happened before the logger was initialized — check service start-up logs, not request logs.
+
+## When NOT to Use
+
+- For triaging an unreported bug without a known symptom — use `/triage-issue` instead
+- For writing a fix once the cause is already known — use `/fix`
+- For performance-specific investigation — use `/performance-profiling` or `/analyze --type=complexity`
+- For a live production incident — use `/workflow incident-response` (coordinated response)
 
 ## Related Skills
 - Bug fixed? → `/review` to verify the fix quality

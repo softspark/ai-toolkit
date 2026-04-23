@@ -1,6 +1,6 @@
 ---
 name: migrate
-description: "Run database migrations with backup verification"
+description: "Run or create database migrations with the detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle) and verify backups exist first. Use when the user asks to apply, roll back, or generate a migration — not for general schema design."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[direction]"
@@ -88,3 +88,29 @@ Returns JSON with: `tool`, `config_file`, `migrations_dir`, `total_migrations`, 
 
 ## Reference Skill
 Use `migration-patterns` skill for zero-downtime strategies and best practices.
+
+## Rules
+
+- **MUST** verify a recent backup exists (or confirmed in-progress) before any forward migration on production
+- **MUST** show the generated SQL (dry-run / `--pretend` / `--sql`) before applying — the user approves the diff, not just the command
+- **NEVER** run destructive migrations (DROP TABLE/COLUMN, NOT NULL on existing column, type change) without a tested rollback path
+- **NEVER** mix schema changes and data backfill in the same migration — they fail differently and roll back differently
+- **CRITICAL**: large-table operations use the concurrent/online variant (`ALTER TABLE ... ALGORITHM=INPLACE`, `CREATE INDEX CONCURRENTLY`) — table locks in production cause outages, not slowdowns
+- **MANDATORY**: migrations test on a non-production environment first with representative data volume
+
+## Gotchas
+
+- `alembic upgrade head` silently skips migrations with `branches` if the branch head is not explicit. Multi-head migrations need `alembic upgrade <revision>@head` or a merge migration first.
+- Prisma's `prisma migrate dev` auto-generates migrations AND applies them AND reseeds the dev database. Running it on a production-connected config destroys data. Always use `prisma migrate deploy` in non-dev.
+- Laravel's `migrate` command without `--force` refuses to run in `APP_ENV=production`. Scripts that blindly run `migrate` hang on interactive prompts in prod — always use `artisan migrate --force` in automation.
+- Django's `migrate --fake` marks a migration as applied **without running it**. Intended for manual data fixes, but accidentally using it skips real schema changes and silently diverges production from code.
+- `CREATE INDEX CONCURRENTLY` (Postgres) cannot run inside a transaction. Alembic wraps each migration in a transaction by default — concurrent index creation needs `op.execute()` with `autocommit_block()` or a manual `COMMIT`.
+- Rolling back a forward migration that added a NOT NULL column deletes the column; data in that column is gone. "Rollback" is not "undo" if the column held user data during the forward window.
+
+## When NOT to Use
+
+- For **zero-downtime schema evolution** strategy (expand-contract, double-write) — use `/migration-patterns`
+- For designing the schema from scratch — use `/database-patterns`
+- For application-layer rollback (deploying previous code) — use `/rollback`
+- For CI-triggered migrations — use `/ci` or `/deploy`
+- When no migration tool is detected — propose one from `/app-builder` instead of ad-hoc SQL

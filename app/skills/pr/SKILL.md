@@ -1,6 +1,6 @@
 ---
 name: pr
-description: "Create pull requests with pre-flight validation"
+description: "Create a GitHub pull request after running pre-flight checks (lint, typecheck, tests) and generating a structured summary from commit history. Use when the branch is ready to merge — not for drafting work-in-progress."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[title or branch]"
@@ -127,3 +127,26 @@ gh pr edit --add-reviewer username
 # Merge PR
 gh pr merge --squash
 ```
+
+## Rules
+
+- **MUST** run lint + typecheck + tests locally before opening the PR
+- **NEVER** force-push `main` or `master`
+- **NEVER** add `Co-Authored-By: Claude` or other AI attribution to commits
+- **CRITICAL**: PR body must include a Test plan checklist — no exceptions
+- **MANDATORY**: commit messages follow conventional commits (`feat:`, `fix:`, `docs:` etc.)
+
+## Gotchas
+
+- `gh pr merge --squash` **drops** all original commit trailers, including `Co-Authored-By:` lines. If the PR had legitimate co-authors, note them in the squashed commit body or use `--rebase` instead.
+- `gh` defaults to `github.com`; for GitHub Enterprise the host must be set per-repo with `gh auth login --hostname <host>` and `gh repo set-default`. Silent failures on enterprise usually mean the wrong host.
+- Running `gh pr create` without `--body` opens an editor (`$EDITOR` or `vi`) — in non-interactive contexts this hangs indefinitely. Always pass `--body` or `--body-file`.
+- The pre-flight `ruff check .` walks respecting `.gitignore` by default but `mypy src/` does not — if `src/` contains generated code excluded from git, mypy will still scan it and report spurious errors.
+- `git diff main...HEAD` (triple dot) shows commits on HEAD since the merge-base; `git diff main..HEAD` (double dot) shows all differences including main's newer commits. Use triple-dot for PR-scope diffs.
+
+## When NOT to Use
+
+- For creating a commit (without a PR) — use `/commit`
+- For reviewing a PR someone else opened — use `/review`
+- For drafting release notes across many PRs — use `/docs` or a release script
+- When the branch has uncommitted changes — commit first, then open the PR

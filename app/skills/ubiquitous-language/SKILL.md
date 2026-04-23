@@ -64,11 +64,26 @@ Extract and formalize domain terminology into a consistent glossary.
 
 ## Rules
 
-- **Be opinionated** — pick the best term, list others as aliases to avoid
-- **Flag conflicts explicitly** — call out ambiguous usage with clear recommendations
-- **Domain terms only** — skip generic programming concepts (array, function, endpoint)
-- **Tight definitions** — one sentence max, define what it IS not what it does
-- **Show relationships** — bold term names, express cardinality
-- **Group naturally** — multiple tables when clusters emerge, one table if cohesive
-- **Example dialogue** — 3-5 exchanges showing terms used precisely
-- **Keep existing** — when re-running, read existing file and update incrementally
+- **MUST** be opinionated — pick the best term and list alternatives as aliases to avoid
+- **MUST** flag every ambiguity (one word → two concepts) and every synonym (two words → one concept) with an explicit recommendation
+- **MUST** write tight definitions (one sentence) that define what the term **is**, not what it does
+- **NEVER** include generic programming concepts (array, function, endpoint, class) — this glossary is for the **domain**, not the toolchain
+- **NEVER** silently overwrite an existing `UBIQUITOUS_LANGUAGE.md` — read the current file first, then update incrementally preserving prior decisions
+- **CRITICAL**: show relationships with cardinality ("an Order belongs to exactly one Customer"). Vocabulary without relationships is a word list, not a language.
+- **MANDATORY**: include 3-5 example dialogue exchanges showing correct usage. Abstract glossaries without dialogue rarely get adopted.
+
+## Gotchas
+
+- Domain terms often **overlap** with framework jargon (e.g., "Service" in DDD vs "Service" in Angular). If the framework already claims a term, prefer a domain-specific alternative to avoid collision.
+- Stakeholders resist terminology change even when their current terms are ambiguous. "Account" replacing "User" triggers more discussion than expected — plan for negotiation in the example dialogue section.
+- Glossaries rot when features ship without updating them. A `UBIQUITOUS_LANGUAGE.md` last updated 6 months ago is a snapshot, not a source of truth. Flag staleness in the header and re-run this skill periodically.
+- Relationships between terms are easy to hand-wave with "related to". Pin down the cardinality (`0..1`, `1..*`, `1..1`) — vague relationships produce schema ambiguity later.
+- The opinionated canonical choice may contradict marketing or legal language. Note conflicts explicitly rather than hiding them; the domain model and the marketing site can legitimately diverge.
+
+## When NOT to Use
+
+- For writing a **PRD** (full requirements) — use `/write-a-prd`
+- For generating user-facing documentation — use `/docs`
+- For implementation planning — use `/plan` or `/prd-to-plan`
+- For enforcing language in commit messages or code reviews — use `/brand-voice` (distinct concern: writing style, not domain terms)
+- When the project is a single-developer throwaway — glossary overhead is not justified

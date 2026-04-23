@@ -1,6 +1,6 @@
 ---
 name: fix
-description: "Auto-fix lint errors, type issues, and simple bugs"
+description: "Apply a targeted fix to a known bug or lint error and verify it with the same command that surfaced the problem. Use when the root cause is already identified — not for unknown symptoms or open-ended debugging."
 effort: low
 disable-model-invocation: true
 argument-hint: "[test or lint target]"
@@ -76,3 +76,28 @@ Agent: Fixing app.py (Import missing module)
 Agent: Running tests... PASS
 Agent: Fixed NameError in app.py
 ```
+
+## Rules
+
+- **MUST** know the exact symptom (error message, failing test, lint code) before editing — guessing is not fixing
+- **MUST** verify the fix by rerunning **the same command** that exposed the problem, not a different validator
+- **NEVER** modify tests to make them pass — fixing the test is not fixing the bug
+- **NEVER** touch files outside the declared scope — scope creep hides regressions
+- **CRITICAL**: hard-stop after 3 iterations. If the fix loop has not converged, the problem is deeper than `/fix` handles — escalate to `/debug`.
+- **MANDATORY**: if new, unrelated errors appear during a fix attempt, stop and ask the user — do not chase them
+
+## Gotchas
+
+- `ruff check --fix` reorders imports and rewrites them. On files with circular imports or conditional-imports-under-TYPE_CHECKING, the "fix" can break things silently. Run `--check` first, inspect the diff, then apply.
+- `eslint --fix --cache` skips already-cached files even if their content changed (cache invalidation by mtime). On first-run misses, clear the cache with `--no-cache` to force a complete pass.
+- `mypy --install-types` auto-installs stub packages, adding dependencies to the environment the user did not request. Reserve it for explicit opt-in; in CI, pass `--non-interactive` to prevent surprise installs.
+- `npm test -- path/to/test` in a workspace repo runs the **root** workspace's test runner, not the leaf package's. Use `npm test --workspace=<name>` or the per-package `cd packages/foo && npm test` form.
+- Fix loops occasionally produce **cycle diffs** — iteration 1 fixes A which triggers B, iteration 2 fixes B which re-breaks A. After every iteration compare the diff to the previous; identical or inverse diffs mean a cycle — stop.
+
+## When NOT to Use
+
+- When the root cause is unknown — use `/debug` first, then `/fix` with a clear target
+- For systemic refactoring across modules — use `/refactor` or `/refactor-plan`
+- For writing new features test-first — use `/tdd`
+- For CI failures spanning many files — use `/workflow debugging` (coordinated)
+- When the failing validation is itself broken — repair the validator separately, do not patch code to satisfy it

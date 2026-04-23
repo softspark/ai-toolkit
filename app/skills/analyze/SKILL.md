@@ -1,6 +1,6 @@
 ---
 name: analyze
-description: "Analyze code quality, complexity, and patterns"
+description: "Analyze code quality, complexity, and patterns across a codebase. Use when the user asks for a quality report, hotspot scan, or systemic architecture signal — not for fixing bugs or reviewing a single PR."
 user-invocable: true
 effort: medium
 argument-hint: "[path or pattern]"
@@ -99,6 +99,26 @@ Reports file counts by type, largest files, TODO/FIXME counts, and total code li
 | JavaScript | eslint, tsc |
 | Go | golangci-lint |
 | Rust | clippy |
+
+## Rules
+
+- **MUST** report measured values — never assert "this is fine" without numbers
+- **NEVER** modify source files (read-only skill)
+- **CRITICAL**: if the requested analysis type is unsupported for the detected language, say so explicitly and stop — do not fake metrics
+
+## Gotchas
+
+- Linters that exit `0` still may have **skipped** files (gitignore rules, no-match patterns, parse errors). Always read the "N files checked" line before reporting "clean".
+- Coverage percentages silently exclude generated code, migrations, and `__init__.py` by default. Report coverage with the exclude list, not the headline number alone.
+- `ruff` and `pylint` disagree on several rules (line length, import order) — pick one as the source of truth for the project and note the choice in the report.
+- `mypy --strict` on a codebase that was not authored under strict mode will return hundreds of spurious findings. Start with `--ignore-missing-imports` and a file allowlist before claiming the codebase is untyped.
+
+## When NOT to Use
+
+- For a single-PR code review — use `/review` instead
+- For fixing a specific bug — use `/debug` or `/fix`
+- For architectural friction and module design — use `/architecture-audit`
+- For a vulnerability scan of dependencies — use `/cve-scan`
 
 ## Related Skills
 - Found quality issues? → `/refactor` to fix them systematically

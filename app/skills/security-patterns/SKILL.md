@@ -100,3 +100,30 @@ For authorization patterns (RBAC, ABAC), see [reference/authorization.md](refere
 For input validation patterns (SQL injection, XSS, Pydantic), see [reference/input-validation.md](reference/input-validation.md).
 
 For OAuth2 flows, CSRF protection, and audit logging, see [reference/oauth-csrf-audit.md](reference/oauth-csrf-audit.md).
+
+## Rules
+
+- **MUST** validate all input at the trust boundary, not inside business logic — deep validation allows bad data to spread before rejection
+- **MUST** use parameterized queries (prepared statements) for every SQL interaction — string concatenation is SQL injection
+- **NEVER** store secrets (API keys, tokens, passwords) in code, config files, or git history — use the platform's secret manager
+- **NEVER** log passwords, tokens, PII, or PHI — even at debug level. Logs reach aggregation systems, backups, and disk snapshots.
+- **NEVER** roll your own crypto. Use vetted libraries (bcrypt/argon2 for passwords, libsodium for crypto) and accept their defaults.
+- **CRITICAL**: authentication (who you are) and authorization (what you can do) are distinct concerns. Confusing them produces privilege escalation bugs; AuthN passes → AuthZ still runs.
+- **MANDATORY**: every endpoint is authenticated and authorized by default. Public endpoints are explicit opt-outs, not unmarked defaults.
+
+## Gotchas
+
+- JWT tokens signed with `none` algorithm are valid-looking tokens with no signature. Libraries that trust the `alg` header field accept them — always validate `alg` against an allowlist, never use the token's own declaration.
+- `bcrypt` has a 72-byte password length cap; longer passwords are silently truncated, making "UniqueLongPassword..." collide with "UniqueLong...". Pre-hash with SHA-256 before bcrypt for >72 char passwords.
+- `SameSite=Lax` cookies are **sent** on top-level navigations (including POST from a malicious site) in some browsers. CSRF protection requires either `SameSite=Strict` or explicit CSRF tokens; relying on `Lax` alone is insufficient for state-changing endpoints.
+- `Content-Security-Policy` with `unsafe-inline` allows any inline script to run — negating most of CSP's value. Remove `unsafe-inline` and refactor to external scripts, even if it means extra files.
+- Environment variables leak via `printenv` in debug endpoints, `/proc/<pid>/environ` on Linux, and process listings. Prefer mounting secrets as files (Docker secrets, Kubernetes secrets) for defense in depth.
+- Rate limiting by IP address is bypassed by CDN proxies and legitimate shared NAT. Apply rate limits at the **authenticated user** level when possible; IP-level is a coarse last resort.
+
+## When NOT to Load
+
+- For dependency vulnerability scanning — use `/cve-scan`
+- For HIPAA-specific healthcare compliance — use `/hipaa-validate`
+- For threat modeling of a new architecture — delegate to the `security-architect` agent
+- For penetration testing and CVE exploitation — delegate to `security-auditor` agent
+- For content moderation (LLM safety filters) — use `/content-moderation-patterns`

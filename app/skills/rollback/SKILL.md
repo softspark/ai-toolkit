@@ -1,6 +1,6 @@
 ---
 name: rollback
-description: "Roll back a deployment safely with verification"
+description: "Roll back a git commit, database migration, or deployment to a previous known-good state with safety checks and health verification. Use when the user wants to revert recent changes safely — not to undo local edits or halt the whole system."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[target: git/db/deploy]"
@@ -85,3 +85,29 @@ Before any rollback:
 ```
 
 > **CRITICAL: Always confirm with the user before executing destructive rollback operations.**
+
+## Rules
+
+- **MUST** confirm the current state AND the target state before rolling back — surface the diff in plain English
+- **MUST** verify a recent backup exists (for DB rollbacks) or explicitly warn the user that none was found
+- **NEVER** roll back without an explicit "yes" from the user — rollbacks are irreversible in the user-experience sense even when technically reversible
+- **NEVER** `git reset --hard` on a branch others have pulled from — it rewrites shared history
+- **CRITICAL**: after any rollback, run a health check (`/health` or the project's equivalent) to confirm the target state is stable — a "successful" rollback to a broken baseline is worse than the original state
+- **MANDATORY**: log the rollback with timestamp, scope, and reason — post-mortems need this trail
+
+## Gotchas
+
+- `git revert` creates a **new commit** that undoes the target commit. The reverted commit is still in history — if the target commit was sensitive (secret, PII), revert alone does not remove it. Use history rewriting tools for that.
+- Database migration rollbacks sometimes **lose data**. A forward migration that added a NOT NULL column with a default, then populated it with user data, cannot restore the column contents on rollback — the data is gone.
+- Kubernetes `kubectl rollout undo` rolls back to the previous ReplicaSet, not to a specific version. If you need "rollback to v1.2.3 specifically", track deployments by image tag and use `kubectl set image`, not `rollout undo`.
+- Heroku and similar PaaS platforms `rollback` restores the slug but not environment config that changed after the rollback target was built — new env vars or add-ons may break the rolled-back version.
+- `git reset --soft` preserves staged changes, `--mixed` (default) preserves working tree, `--hard` discards both. Wrong flag = lost work; always state the flag explicitly in the confirmation prompt.
+- Restoring a DB backup on top of an active database can cause data loss between the backup time and the restore time. Take a fresh snapshot before the restore, even when rolling back — the current (broken) state might contain post-backup user writes.
+
+## When NOT to Use
+
+- For emergency halt of all agent activity — use `/panic`
+- For undoing local uncommitted edits — use `git checkout` directly, not this skill
+- For an incident with user-facing impact — use `/workflow incident-response` for coordinated response
+- For planned schema changes — use `/migrate` with a forward rollback migration, not this skill after-the-fact
+- For a feature flag off-switch — toggle the flag; rollback is a heavier tool than needed

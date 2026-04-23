@@ -110,3 +110,28 @@ This generates `codebase-map.html` with collapsible directories, file sizes, and
 smart_query("codebase analysis: {technology}")
 hybrid_search_kb("project structure {framework}")
 ```
+
+## Rules
+
+- **MUST** use `Glob` and `Grep` before `Read` — scan for shape before opening files
+- **MUST** deliver a map of the codebase (entry points, layers, module boundaries), not a file listing — a tree without interpretation is noise
+- **NEVER** read every file sequentially; target reads via grep patterns and filename globs
+- **NEVER** modify any file — this is a read-only skill
+- **CRITICAL**: when the repo contains generated code (`node_modules`, `vendor/`, `dist/`, `build/`), exclude it from scans or the signal drowns in generated noise
+- **MANDATORY**: summarize the stack once at the top (language, framework, package manager, test runner) before diving into structure
+
+## Gotchas
+
+- `find .` and `ls -R` ignore `.gitignore` by default and include `node_modules`, `vendor/`, `.venv/`, `target/`. Use `git ls-files` or `fd` / `rg` for a git-aware listing, or explicitly prune.
+- `package.json` says `"type": "module"` → ESM; absence → CommonJS. Mixing them without noticing produces "Cannot use import statement outside a module" errors later; call out the setting in the report.
+- Frameworks with file-based routing (Next.js, Nuxt, SvelteKit) treat the `app/` or `pages/` tree as the router. A directory listing alone does not reveal routes — the framework convention does. Name the framework first, then the routes.
+- `pyproject.toml` can declare multiple project layouts (src/, flat, namespace packages). "Where is the main code" is not obvious without reading `[tool.setuptools.packages]` or `[tool.poetry.packages]`.
+- Large monorepos use workspaces (`pnpm-workspace.yaml`, `nx.json`, `turbo.json`) with apps and packages. Treating the root as the project conceals the actual component boundaries — surface the workspace topology first.
+
+## When NOT to Use
+
+- To explain a specific module's design — use `/explain`
+- To find a specific identifier or symbol — use `Grep` directly or `/search`
+- To audit architecture for deepening candidates — use `/architecture-audit`
+- To scaffold a new project — use `/app-builder`
+- When the user already knows the codebase — skip the overview and jump to the concrete task

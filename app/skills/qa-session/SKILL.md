@@ -101,10 +101,26 @@ After filing, share URLs and ask: "Next issue, or are we done?"
 
 ## Rules
 
-- **No file paths or line numbers** in issues — they go stale
-- **Use project domain language** (check UBIQUITOUS_LANGUAGE.md)
-- **Describe behaviors, not code** — "sync service fails to apply patch" not "applyPatch() throws"
-- **Reproduction steps mandatory** — ask if you can't determine them
-- **Keep concise** — developer should read issue in 30 seconds
-- **Maximize parallelism** — independent issues have no blockers
-- **Create in dependency order** — blockers first for real issue numbers
+- **MUST** use the project's domain language from `UBIQUITOUS_LANGUAGE.md` — framework jargon in issues excludes non-engineering stakeholders
+- **MUST** describe behaviors, not code — "sync service fails to apply patch" not "applyPatch() throws"
+- **MUST** include reproduction steps — if they are not clear, ask the user rather than guess
+- **NEVER** include file paths, line numbers, or function names in issue bodies — they go stale before triage
+- **NEVER** over-interview. Cap clarifying questions at 2-3 per bug; more than that is signal the bug needs a QA session with a product owner, not more questions.
+- **CRITICAL**: the developer who picks up the issue should understand it in 30 seconds. Wall-of-text reports get reopened for clarification.
+- **MANDATORY**: when breaking one report into multiple issues, file them in dependency order so blockers have real issue numbers to reference
+
+## Gotchas
+
+- Domain language in `UBIQUITOUS_LANGUAGE.md` may be out of date. If it was last updated months ago and new features have shipped, the glossary is an input hint, not a source of truth — confirm terms with the user when unsure.
+- "Intermittent" reports are often environmental (one user's browser, one region's data) rather than truly random. Always ask for "how often" and "when did it start" before labeling as race condition.
+- `gh issue create` opens `$EDITOR` without `--body`. In automation this hangs — always pass the body file or inline body.
+- Users often describe the **workaround** as if it were the bug ("I have to refresh the page"). Drill to the underlying behavior — "what fails before the refresh?" — otherwise the fix targets the symptom.
+- Independent sub-issues from one bug report can duplicate work if each gets a different developer. Mention the parent QA session in every sub-issue so reviewers notice the pattern.
+
+## When NOT to Use
+
+- For triaging a **single** known bug with a proposed fix — use `/triage-issue`
+- For creating issues from a PRD — use `/prd-to-issues`
+- For debugging a reproducible error — use `/debug`
+- For code review of a PR that addresses a bug — use `/review`
+- For architecture-level problems — use `/architecture-audit`, not bug reports

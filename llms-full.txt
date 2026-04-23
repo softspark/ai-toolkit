@@ -60,17 +60,17 @@
 
 - **a11y-validate**: Validate code against accessibility standards: WCAG 2.1 Level AA, EN 301 549, and the European Accessibility Act (EAA / Directive EU 2019/882). Covers semantics, text alternatives, keyboard/focus, color/contrast, forms, media, ARIA, motion, mobile, and EAA documentation requirements. Framework-aware (React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/React Native/Flutter/static HTML).
 - **agent-creator**: Creates new specialized agents with frontmatter, tool selection, and delegation guidance
-- **analyze**: Analyze code quality, complexity, and patterns
+- **analyze**: Analyze code quality, complexity, and patterns across a codebase. Use when the user asks for a quality report, hotspot scan, or systemic architecture signal — not for fixing bugs or reviewing a single PR.
 - **api-patterns**: REST and GraphQL API design patterns: resource naming, versioning, pagination, error contracts, idempotency, HATEOAS, OpenAPI. Triggers: API design, REST, GraphQL, endpoint, route, OpenAPI, Swagger, pagination, rate limit, versioning, idempotency key. Load when designing or reviewing any HTTP API surface.
 - **app-builder**: Full-stack app scaffolding with stack-selection matrix: Next.js, React+Vite, Nuxt, Astro, FastAPI, Django, Laravel, React Native, Flutter, Unity. Triggers: scaffold, bootstrap, new project, starter template, build app, landing page, dashboard, API, mobile app, CLI, e-commerce, game. Load when user wants to start a new project from scratch.
 - **architecture-audit**: Explore codebase organically for architectural friction, discover shallow modules, and propose module-deepening refactors as GitHub issue RFCs using parallel sub-agent interface designs. Use when user wants to improve architecture, find shallow modules, deepen modules, or reduce coupling.
 - **architecture-decision**: Architecture decision making via trade-off analysis in RFC/RFD/ADR format: context, constraints, 3+ options, comparison, recommendation. Triggers: architecture decision, ADR, RFC, RFD, trade-offs, options comparison, design choice, pick between, should we use, evaluate approach. Load when weighing 2+ architectural options or writing decision records.
 - **biz-scan**: Scans codebase for business opportunities by analyzing database schemas, API endpoints, tracking events, and feature flags to surface underutilized capabilities, missing KPIs, and monetization gaps. Use when the user asks about revenue opportunities, business metrics, KPI coverage, analytics gaps, or monetization analysis of a codebase.
 - **brand-voice**: Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice.
-- **briefing**: Generate executive daily briefing across all agents
-- **build**: Build the project with auto-detected toolchain
-- **chaos**: Inject controlled faults for resilience testing
-- **ci**: Detect and run CI pipeline with status reporting
+- **briefing**: Generate an executive daily briefing that aggregates reports from all agents into a short, decision-focused summary. Use when the user asks for a status update across the whole system — not for one-agent activity reports.
+- **build**: Build the project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Use when the user asks to compile, bundle, or produce artifacts — not to run tests or deploy.
+- **chaos**: Inject controlled faults for resilience testing on non-production targets. Use when the user explicitly asks for a chaos experiment, latency injection, or dependency kill — never implicit.
+- **ci**: Detect, generate, or troubleshoot CI/CD pipeline configuration for the current project type (GitHub Actions, GitLab CI). Use when the user asks to set up, update, or debug a build pipeline — not for running tests locally.
 - **ci-cd-patterns**: CI/CD pipeline and deployment automation: GitHub Actions, GitLab CI, Jenkins, build stages, caching, artifact promotion, blue-green, canary, rollback gates. Triggers: CI, CD, pipeline, GitHub Actions, workflow YAML, deploy automation, release, artifact, rollout, canary, blue-green. Load when designing or fixing a build/release pipeline.
 - **clean-code**: Code quality principles: meaningful names, single responsibility, DRY, small functions, clear intent, guard clauses, refactoring rules. Triggers: clean code, naming, refactor for clarity, code smell, SRP, DRY, long function, god class, magic number, dead code. Load when reviewing or writing any production code.
 - **command-creator**: Creates new Claude Code slash commands with frontmatter, workflow guidance, and validation
@@ -80,7 +80,7 @@
 - **csharp-patterns**: C# and .NET development patterns: LINQ, async/await, dependency injection, records, nullable reference types, ASP.NET Core minimal APIs, EF Core, MediatR. Triggers: C#, .NET, dotnet, ASP.NET, EF Core, LINQ, IServiceCollection, record type, async C#, nullable reference types. Load when writing or reviewing C#/.NET code.
 - **cve-scan**: Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, bundler, dart)
 - **database-patterns**: Database schema design and query optimization: normalization, indexing strategies, joins, N+1, transactions, isolation levels, partitioning, EXPLAIN plans. Triggers: schema, table design, index, slow query, N+1, PostgreSQL, MySQL, SQL Server, SQL, EXPLAIN, query plan, transaction, deadlock. Load when designing tables or tuning queries.
-- **debug**: Debug errors and trace root causes systematically
+- **debug**: Debug errors and trace root causes systematically using logs, health checks, and hypothesis-driven investigation. Use when a bug or error message is in hand — not for architectural questions or when there is no reproducible symptom.
 - **debugging-tactics**: Root-cause debugging with 4-phase method: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, not working, intermittent, flaky, crash, regression, fails sometimes, why is X happening, broken after. Load when user reports a bug or asks to investigate failing code.
 - **deploy**: Deploy with pre-flight checks and health verification
 - **design-an-interface**: Generate multiple radically different interface designs using parallel sub-agents, then compare on simplicity, depth, and correctness. Based on 'Design It Twice' from Ousterhout. Use when user wants to design an API, explore interface options, compare module shapes, or mentions 'design it twice'.
@@ -89,42 +89,42 @@
 - **docs**: Generate and update README, API docs, and architecture notes
 - **documentation-standards**: KB document conventions: YAML frontmatter (7 required fields), 5-category taxonomy (reference/howto/procedures/troubleshooting/best-practices), directory-category matching, validate.sh CI rules. Triggers: kb/, KB document, architecture note, SOP, runbook, howto, frontmatter, knowledge base entry, documentation standard. Load when creating or editing any file under kb/.
 - **ecommerce-patterns**: E-commerce domain patterns: cart, checkout flow, payment providers (Stripe/Adyen), order state machine, inventory, promotions, tax, B2B vs B2C. Triggers: cart, checkout, product, SKU, inventory, payment, Stripe, Shopify, Medusa, Magento, order status, promotion, tax calculation, coupon, refund. Load when working on any e-commerce feature.
-- **evaluate**: Evaluate skill quality and RAG retrieval accuracy
+- **evaluate**: Evaluate RAG retrieval accuracy and LLM-as-a-judge quality metrics (faithfulness, relevancy, context precision) against a golden dataset. Use when the user asks to measure RAG quality or detect knowledge gaps — not for evaluating generic LLM outputs.
 - **evolve**: Analyzes failure patterns and inefficiencies in agent/skill definitions, then drafts and applies targeted improvements to system prompts, tool permissions, and behavioral rules. Use when the user asks to improve agent behavior, refine skill definitions, update system prompts, or optimize agent configurations based on observed failures.
-- **explain**: Explain code, architecture, or concepts with diagrams
+- **explain**: Explain code, architecture, or concepts with Mermaid diagrams and sequence flows. Use when the user asks 'what does X do' or 'how does Y work' — not to critique code quality or implement changes.
 - **explore**: Explore codebase structure, stack, and architecture
-- **fix**: Auto-fix lint errors, type issues, and simple bugs
+- **fix**: Apply a targeted fix to a known bug or lint error and verify it with the same command that surfaced the problem. Use when the root cause is already identified — not for unknown symptoms or open-ended debugging.
 - **flutter-patterns**: Flutter and Dart development patterns: widget composition, state management (Riverpod/Bloc/Provider), navigation, async, platform channels, performance. Triggers: Flutter, Dart, widget, StatefulWidget, Riverpod, Bloc, Provider, pubspec, Navigator, platform channel, hot reload, StatelessWidget. Load when writing or reviewing Flutter code.
 - **git-mastery**: Advanced Git workflows: interactive rebase, bisect, reflog, cherry-pick, worktrees, history rewriting, submodules, large-file migration (LFS/filter-repo). Triggers: git rebase, bisect, cherry-pick, reflog, force push, history rewrite, detached HEAD, merge conflict, worktree, squash, fixup, submodule. Load when user needs non-trivial Git operations.
 - **grill-me**: Stress-test a plan or design through relentless Socratic questioning, walking down each decision branch until reaching shared understanding. Use when user wants to stress-test a plan, get grilled, validate assumptions, or mentions 'grill me'.
-- **health**: Report service and infrastructure health status
+- **health**: Report service and infrastructure health status via liveness/readiness checks, resource usage, and quick diagnostics. Use when the user asks whether services are up or degraded — not for deep debugging of a known error.
 - **hipaa-validate**: Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references
 - **hive-mind**: Multi-agent swarm coordination: consensus voting with confidence scores, output aggregation, file ownership, targeted vs broadcast messaging, map-reduce workflows. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, team of agents, aggregate results, agent voting, distributed agents. Load when orchestrating 3+ agents working in parallel.
-- **hook-creator**: Creates new Claude Code hooks with guided workflow, strict conventions, and validation
-- **index**: Index codebase into the knowledge base
-- **instinct-review**: Review and manage learned instincts from past sessions
+- **hook-creator**: Create a new Claude Code lifecycle hook (PreToolUse, PostToolUse, Stop, SessionStart, etc.) with a bash script and hooks.json registration. Use when the user wants automated behavior tied to a specific event — not for one-off commands.
+- **index**: Reindex the knowledge base for semantic search via the configured vector store (e.g., Qdrant). Use only when the user explicitly asks to reindex — never trigger speculative rebuilds.
+- **instinct-review**: Review, promote, or remove learned instincts extracted from past sessions (`.claude/instincts/*.md`). Use when the user wants to curate the instinct list — not to extract new instincts or edit memory.
 - **introspect**: Agent self-debugging and recovery. Use when stuck in loops, making repeated errors, or quality degrades. Triggers: introspect, self-debug, stuck, loop, why failing.
 - **java-patterns**: Java development patterns: Spring Boot, CompletableFuture, records, sealed types, streams, JPA/Hibernate, Maven/Gradle, virtual threads (Loom). Triggers: Java, Spring, Spring Boot, JPA, Hibernate, Maven, Gradle, CompletableFuture, record type, sealed class, virtual thread. Load when writing or reviewing Java code.
 - **json-mode-patterns**: Loaded when user needs structured JSON output from Claude. Covers tool-use-as-JSON-mode, schema design, parsing, partial recovery, and validation.
 - **kotlin-patterns**: Kotlin development patterns: coroutines, Flow, sealed classes, data classes, extension functions, null safety, Ktor, Jetpack Compose, KMP. Triggers: Kotlin, coroutine, Flow, suspend, Ktor, Android Kotlin, Jetpack Compose, sealed class, data class, KMP, kotlinx. Load when writing or reviewing Kotlin code.
-- **lint**: Lint code with auto-detected tools and fix suggestions
+- **lint**: Run the project's linter and type-checker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy, dart analyze). Use when the user asks for static-analysis feedback — not to run tests or refactor.
 - **mcp-builder**: Build production-grade MCP (Model Context Protocol) servers from scratch using the 4-phase methodology: research, implement, test, evaluate. Use when creating new MCP integrations for external APIs, databases, or internal services.
 - **mcp-patterns**: MCP (Model Context Protocol) server design: tool schemas, resource patterns, transport selection (stdio/SSE), client configuration, error handling, capability negotiation. Triggers: MCP, Model Context Protocol, MCP server, MCP tool, MCP resource, JSON-RPC, stdio transport, SSE transport, Claude Desktop config, Cursor MCP. Load when building or integrating MCP servers.
 - **mem-search**: Search past coding sessions using natural language. Finds relevant observations, decisions, and context from previous work.
-- **migrate**: Run database migrations with backup verification
+- **migrate**: Run or create database migrations with the detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle) and verify backups exist first. Use when the user asks to apply, roll back, or generate a migration — not for general schema design.
 - **migration-patterns**: Zero-downtime database migration patterns: expand-contract, double-write, backfill, blue-green schema changes, feature flags, rollback safety, online DDL. Triggers: migration, schema change, zero-downtime, expand-contract, double-write, backfill, ALTER TABLE, column rename, safe deploy, online DDL. Load when planning non-trivial DB schema changes.
 - **model-routing-patterns**: Loaded when user builds multi-model pipelines (Haiku/Sonnet/Opus). Covers cost-optimized routing, escalation, sub-agent delegation, and fallback chains.
-- **night-watch**: Run autonomous maintenance and dependency updates
+- **night-watch**: Run autonomous maintenance tasks (dependency updates, dead code removal, small refactors) in an isolated branch. Use only when the user triggers it explicitly — typically off-hours; never auto-invoked.
 - **observability-patterns**: Observability: structured logging, metrics (RED/USE/four golden signals), distributed tracing (OpenTelemetry), correlation IDs, log aggregation, SLO/SLI. Triggers: logging, log level, metrics, Prometheus, Grafana, OpenTelemetry, trace, span, structured log, observability, monitoring, SLO, SLI, alerting. Load when adding or reviewing logs, metrics, or traces.
-- **onboard**: Generate project onboarding materials
+- **onboard**: Guide setup of ai-toolkit in a new project: install symlinks, create CLAUDE.md, capture undocumented intent via interview. Use when the user starts a fresh project or migrates an existing one to ai-toolkit.
 - **orchestrate**: Coordinate multiple specialized agents in parallel
-- **panic**: Emergency stabilization via system-governor agent
+- **panic**: Emergency kill switch that halts all agent activity via a lockfile gate. Use when agents are looping, misbehaving, or the user wants to stop everything NOW — not for normal workflow interruptions.
 - **performance-profiling**: Performance measurement and optimization: four golden signals (latency/traffic/errors/saturation), p50/p95/p99, baseline-change-measure loop, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, profile, bottleneck, optimization, load test, benchmark, CPU profiling, memory leak. Load when diagnosing or optimizing slow code or services.
 - **persona**: Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
 - **plan**: Breaks down feature requests and project goals into phased implementation plans with task lists, agent assignments, dependency graphs, and success criteria. Use when the user asks to plan a feature, create an implementation roadmap, break down a coding task, or outline project phases.
 - **plan-writing**: Implementation plan and pre-mortem drafting: phase breakdown, success criteria, risks, rollback plan, acceptance tests, estimated effort. Triggers: implementation plan, pre-mortem, phased plan, project plan, task breakdown, success criteria, rollback strategy, risk register. Load when user asks to write a plan or pre-mortem document.
 - **plugin-creator**: Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes
-- **pr**: Create pull requests with pre-flight validation
+- **pr**: Create a GitHub pull request after running pre-flight checks (lint, typecheck, tests) and generating a structured summary from commit history. Use when the branch is ready to merge — not for drafting work-in-progress.
 - **prd-to-issues**: Break a PRD into independently-grabbable GitHub issues using vertical slices with HITL/AFK tagging and dependency ordering. Use when user wants to convert a PRD to issues, create tickets, or break down a PRD into work items.
 - **prd-to-plan**: Convert a PRD into a phased implementation plan using tracer-bullet vertical slices. Use when user wants to break down a PRD, create an implementation plan, plan phases from a PRD, or mentions tracer bullets.
 - **predict**: Analyzes code diffs and file changes to identify potential regressions, maps dependency impact across the codebase, and generates a risk-scored impact report. Use when reviewing pull requests, assessing code change risk, checking for breaking changes, or analyzing the blast radius of a diff.
@@ -136,7 +136,7 @@
 - **repeat**: Run a prompt or slash command on a recurring interval until task complete or limits reached. Use when user wants to set up a recurring task, poll for status, or run something repeatedly on an interval.
 - **research-mastery**: Hierarchical information retrieval following strict order: KB first (smart_query/crag_search), then MCP/Context7, then web search, then LLM knowledge as last resort. Triggers: research, find information, verify fact, synthesize sources, fact-check, cross-reference, multi-source, cite sources, investigate topic. Load when any task requires external or cross-source knowledge.
 - **review**: Review code for quality, security, and correctness
-- **rollback**: Roll back a deployment safely with verification
+- **rollback**: Roll back a git commit, database migration, or deployment to a previous known-good state with safety checks and health verification. Use when the user wants to revert recent changes safely — not to undo local edits or halt the whole system.
 - **ruby-patterns**: Ruby and Rails development patterns: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet/RBS, Hanami, Roda, Rack middleware. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, gem, Gemfile, bundler, rake, Hanami, Sorbet. Load when writing or reviewing Ruby code.
 - **rust-patterns**: Rust development patterns: ownership, borrowing, lifetimes, async (Tokio), error handling (Result/anyhow/thiserror), traits, macros, zero-cost abstractions, unsafe boundaries. Triggers: Rust, borrow checker, lifetime, Tokio, async Rust, cargo, trait, impl, Result, unsafe, lifetime annotation, clippy. Load when writing or reviewing Rust code.
 - **search**: Search the knowledge base with semantic and hybrid modes
@@ -149,7 +149,7 @@
 - **swift-patterns**: Swift and iOS development patterns: SwiftUI, Combine, async/await, property wrappers, actors, Swift Package Manager, Core Data, UIKit interop, @MainActor. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, property wrapper, Core Data, SPM, UIKit, @MainActor, @State, @Binding. Load when writing or reviewing Swift code.
 - **tdd**: Test-driven development with red-green-refactor loop and vertical slices. Use when user wants TDD, test-first development, red-green-refactor, or building features with tests driving the implementation.
 - **teams**: Launches pre-configured multi-agent teams for code review, debugging, feature development, security audits, and database migrations. Use when the user asks to start a multi-agent workflow, coordinate agent teams, run a team review, or needs parallel agent collaboration on a complex task.
-- **test**: Run tests with coverage analysis and reporting
+- **test**: Run the project's test suite with coverage reporting, auto-detecting the framework (pytest, vitest, jest, flutter test, go test, cargo test, phpunit). Use when the user asks to run existing tests — not to author new ones test-first.
 - **testing-patterns**: Testing strategy and craft: pyramid vs trophy, unit/integration/e2e split, fixtures, mocks vs fakes vs stubs, AAA pattern, flaky test diagnosis, coverage goals, property-based testing. Triggers: test, testing strategy, fixture, mock, stub, AAA, unit test, integration test, e2e, Playwright, Cypress, flaky, coverage, TDD, test pyramid. Load when writing, reviewing, or designing test suites.
 - **triage-issue**: Triage a bug by deeply exploring the codebase for root cause, then create a GitHub issue with a TDD-based fix plan. Mostly hands-off — minimal user interaction. Use when user reports a bug, wants to investigate an issue, mentions triage, or wants a fix plan.
 - **typescript-patterns**: TypeScript type safety patterns: strict mode, generics, conditional types, template literals, discriminated unions, branded types, Zod, satisfies operator, const assertions. Triggers: TypeScript, TS, generics, conditional type, utility type, strict, Zod, satisfies, discriminated union, type safety, type narrowing, template literal type. Load when writing or reviewing TypeScript code.
@@ -3524,10 +3524,10 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif]
-version: "1.7.0"
+version: "1.8.0"
 created: "2026-04-10"
-last_updated: "2026-04-18"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0."
+last_updated: "2026-04-21"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, and the single-run npm test discipline added in v1.8.0."
 ---
 
 # SOP: Release Preparation
@@ -3728,7 +3728,13 @@ python3 scripts/validate.py --strict
 python3 scripts/audit_skills.py --ci
 python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS ingest
 python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
-npm test
+
+# Run npm test ONCE, cache output, parse from file. The suite is 669+ bats
+# cases — rerunning it per check wastes minutes. Do not pipe npm test into
+# tail/grep multiple times in the same session.
+npm test > /tmp/npm-test.log 2>&1
+tail -3 /tmp/npm-test.log
+echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp/npm-test.log)"
 ```
 
 **Expected results:**
@@ -3736,7 +3742,7 @@ npm test
 - `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
 - `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
 - `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
-- `npm test`: `1..N` with zero `not ok`
+- `npm test`: `1..N` with zero `not ok` (read from the cached `/tmp/npm-test.log`, do not rerun)
 
 **One-liner:**
 ```bash
@@ -3881,10 +3887,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-04-08"
-last_updated: "2026-04-18"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard."
+last_updated: "2026-04-21"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 adds the single-run npm test discipline (cache to file, parse ok/not-ok once)."
 ---
 
 # SOP: Release Verification
@@ -3917,7 +3923,7 @@ python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGEN
 python3 scripts/generate_codex_rules.py .                   # 2. Refresh standard Codex rules
 python3 scripts/generate_llms_txt.py > llms.txt             # 3. Regenerate llms.txt
 python3 scripts/validate.py --strict                        # 4. Validation passed?
-npm test                                                    # 5. All tests passed?
+npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 5. All tests passed? (single run, cached)
 
 # Post-install verification (Phases 1-7)
 ai-toolkit --version                                        # 6. Version OK?
@@ -4082,14 +4088,32 @@ python3 scripts/audit_skills.py --ci
 ## Phase 6: Tests (3-5 min)
 
 ```bash
-npm test
+# Run ONCE, capture to file, then parse. Full suite is 669+ bats cases —
+# re-running it per check (tail / grep ok / grep not ok piped separately)
+# wastes minutes every release. Always cache the output.
+npm test > /tmp/npm-test.log 2>&1
+exit=$?
+tail -3 /tmp/npm-test.log
+echo "ok:     $(grep -c '^ok '    /tmp/npm-test.log)"
+echo "not ok: $(grep -c '^not ok' /tmp/npm-test.log)"
+echo "exit:   $exit"
 ```
 
 **Verify:**
+- [ ] `exit == 0`
+- [ ] `ok == expected test count` (e.g., 669)
+- [ ] `not ok == 0`
 - [ ] Bats runs tests in parallel (4 jobs)
-- [ ] All `ok` — zero `not ok`
 - [ ] Groups: agents, autodetect, cli, generators, guards, hooks, inject,
       install, kb, mcp, readme, profiles, uninstall, validate
+
+**Anti-pattern — do NOT do this:**
+```bash
+# Runs the full suite THREE times. Adds 1-3 min and pressures CI capacity.
+npm test 2>&1 | tail -3
+npm test 2>&1 | grep -c '^ok '
+npm test 2>&1 | grep -c '^not ok'
+```
 
 **Key test areas:**
 - Guards: rm -rf, DROP TABLE, git push --force blocked

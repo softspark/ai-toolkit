@@ -99,7 +99,24 @@ Output exactly this format:
 
 ---
 
-## Self-Correction Rules
+## Rules
+
+- **MUST** name a specific failure pattern (Loop / Drift / Assumption Error / Tool Misuse / Context Overflow / Wrong Abstraction / Missing Information) — vague self-diagnosis is useless
+- **MUST** ground the diagnosis in concrete evidence (action traces, error messages, tool outputs) — not in feelings or hunches
+- **NEVER** retry the exact same action. If it failed once, it will fail again. Change something.
+- **NEVER** continue a loop "hoping it will work this time". Hope is not a strategy.
+- **CRITICAL**: after 3 failed attempts, escalate to the user with a concrete report of what was tried, what failed, and what you need — do not keep flailing
+- **MANDATORY**: the recovery action is ONE concrete next step, not a multi-phase plan. If you need a plan, use `/plan`.
+
+## Gotchas
+
+- "Introspection" invoked mid-task can itself become a procrastination loop — spending effort diagnosing instead of acting. If the report takes longer to write than the next concrete action, skip the report and just change approach.
+- Context overflow is often invisible from inside the session — the model cannot reliably detect its own forgetting. External signals (user frustration, repeated explanations of the same fact) are the real diagnostic.
+- "Wrong abstraction" is frequently misdiagnosed as "Missing information". If adding data does not unlock the next step but simplifying the code does, the abstraction is the problem.
+- Ask-the-user is the escape hatch but it has a cost: user context-switching, latency, fatigue. Use it when you truly cannot proceed, not as a habit to avoid commitment.
+- The "fresh start" thought experiment works best when written down. Articulating "if starting over, my first action would be X" out loud often reveals the current approach's sunk-cost fallacy.
+
+## Self-Correction Checklist
 
 These rules are non-negotiable during recovery:
 
@@ -110,6 +127,14 @@ These rules are non-negotiable during recovery:
 5. **A 2-line fix is better than a 50-line refactor.** Solve the immediate problem first.
 6. **Check if the goal is still correct** before optimizing the approach. Sometimes the task itself needs clarification.
 7. **If stuck for more than 3 attempts, escalate.** Tell the user what you tried, what failed, and what you need.
+
+## When NOT to Use
+
+- For debugging user code (not agent self-debugging) — use `/debug`
+- For analyzing past sessions to find patterns — use `/mem-search` or `/instinct-review`
+- For writing a recovery **plan** that spans multiple steps — use `/plan`
+- When the user has already described the failure — respond directly, skip the structured introspection
+- As a procrastination mechanism — if the next action is obvious, take it instead of writing a report
 
 ---
 

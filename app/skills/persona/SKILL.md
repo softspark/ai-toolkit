@@ -51,7 +51,24 @@ Unlike `--persona` at install time (which injects into CLAUDE.md permanently), `
 
 ## Rules
 
-- This skill is READ-ONLY — it never writes files
-- Persona stays active for the current session only
-- Only one persona active at a time — switching replaces the previous one
-- Valid personas are defined by `.md` files in `app/personas/`
+- **MUST** remain read-only — this skill never writes files, only loads persona content into the session
+- **MUST** state the active persona explicitly at switch time so the user knows which lens is in effect
+- **NEVER** keep the previous persona active after a switch — replace, do not stack
+- **NEVER** mix personas in a single response — each persona has internally consistent priorities that clash if blended
+- **CRITICAL**: personas apply for the **current session only**. `/persona --clear` resets; a new session starts from default.
+- **MANDATORY**: valid personas are defined by `.md` files in `app/personas/` — do not invent or describe a persona that has no file
+
+## Gotchas
+
+- The persona file lives in `app/personas/<name>.md` relative to the toolkit root. When the toolkit is globally installed, that root is at `~/.claude/skills/persona/../../../app/personas/` — fallback paths matter.
+- Switching personas mid-task can produce a jarring tone shift in the user's output. Announce the switch, briefly restate the current task in the new persona, then continue.
+- `/persona --clear` only resets the **in-session** persona. If the user ran `ai-toolkit install --persona <name>` at install time, that persona is injected into CLAUDE.md and survives session clears. Clearing requires editing CLAUDE.md directly.
+- Personas are **style overlays**, not skill enablers. Activating `devops-eng` does not give access to `/deploy` if it was not already installed; it only biases which skills the agent reaches for first.
+- A persona that contradicts project-level CLAUDE.md rules (e.g. `junior-dev` asking for explanations in a project that says "no pleasantries") creates a tone conflict. Project rules win; adjust the persona or the project rules, not both silently.
+
+## When NOT to Use
+
+- For **permanent** persona injection at install time — use `ai-toolkit install --persona <name>` (project or global)
+- For multi-agent parallel work with different specialists — use `/orchestrate` or `/teams`
+- For a specific language or framework context (not a general engineering stance) — use the language-pattern skills (`/typescript-patterns`, etc.)
+- To edit or create a persona file — edit `app/personas/<name>.md` directly; this skill only switches between existing ones

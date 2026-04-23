@@ -100,9 +100,25 @@ Reference by number from the parent PRD:
 
 ## Rules
 
-- Every issue must be a VERTICAL slice — never horizontal
-- Create in dependency order for real issue number references
-- Do NOT close or modify the parent PRD issue
-- Do NOT ask user to review before creating — file and share URLs
-- Maximize parallelism — independent issues should have no blockers
-- No file paths or line numbers in issue bodies
+- **MUST** slice vertically — every issue cuts through schema, API, UI, tests end-to-end. Horizontal slices (all-schema, then all-API) defer integration risk.
+- **MUST** create issues in dependency order so blockers have real issue numbers to reference
+- **NEVER** close or modify the parent PRD issue — it is the reference anchor for every child issue
+- **NEVER** include file paths, line numbers, or function names in issue bodies — they go stale before the issue is picked up
+- **CRITICAL**: maximize parallelism. Independent issues have zero `Blocked by` entries; if every issue has blockers, the slicing is wrong.
+- **MANDATORY**: every issue lists the user stories it addresses by number from the parent PRD — traceability matters more than brevity
+
+## Gotchas
+
+- `gh issue create` opens `$EDITOR` without `--body` or `--body-file`. In automation, this hangs silently. Always pass the body explicitly.
+- Dependency chains longer than 3 hops (A blocks B blocks C blocks D) almost always mean the slicing is too thin. Collapse the chain into fewer, wider slices.
+- GitHub issue numbers increment globally in the repo. Creating 5 issues with forward references (#124 blocks #125) requires the blocker to land before the blocked — order matters, and a mid-batch failure leaves dangling references.
+- AFK issues (no human interaction) appear attractive but the label is aspirational. Real AFK requires green CI, clear acceptance criteria, and no design ambiguity — misclassifying HITL as AFK creates reopens.
+- User stories referenced by "number from the PRD" drift if the PRD gets edited. Quote the story text inline if it is short, or pin to a PRD anchor (`#issue-42 > User Story 7`) to resist drift.
+
+## When NOT to Use
+
+- For breaking a PRD into a **plan** (phases, no issues yet) — use `/prd-to-plan`
+- For writing the PRD itself — use `/write-a-prd`
+- For filing a single bug — use `/qa-session` or `/triage-issue`
+- For a plan that exists but has no PRD — use `/plan` then revisit this skill
+- For triaging existing issues (not creating new ones) — this skill is create-only

@@ -346,14 +346,31 @@ This distinction helps compliance officers prioritize immediate remediation (def
 
 ## Rules
 
-- **Read-only**: Never modify any files. Report findings only.
-- **HIPAA rule citation**: Every finding must reference a specific HIPAA section (§ number).
-- **Skip non-source files**: Binary files, lock files (`*.lock`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`), vendored directories (`node_modules/`, `vendor/`, `.git/`, `dist/`, `build/`, `out/`, `.next/`).
-- **Respect `.hipaaignore`**: Honor exclusion patterns in the project's `.hipaaignore` file.
-- **No false confidence**: Clearly label heuristic findings as `POTENTIAL` and mark confidence as `heuristic`.
-- **Context before identifiers**: Always run the healthcare keyword context gate before applying PHI identifier regex patterns (Category 4) to avoid false positives.
-- **Warn on missing secrets management**: Flag PHI-adjacent config files without `.env` or secret manager references.
-- **No auto-fix in v1**: Auto-fixing HIPAA issues requires project-specific knowledge of logging/audit infrastructure. Planned for v2.
+- **MUST** remain read-only — never modify any file. This skill reports findings only.
+- **MUST** cite a specific HIPAA rule section (§ number) for every finding — uncited findings are not actionable
+- **MUST** run the healthcare keyword context gate before applying PHI identifier regex (Category 4) — without it, false-positive rate is ~90%
+- **NEVER** label a heuristic finding as "definitive" — clearly mark `POTENTIAL` and `confidence: heuristic`
+- **NEVER** scan binary files, lock files (`*.lock`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`), or vendored dirs (`node_modules/`, `vendor/`, `.git/`, `dist/`, `build/`, `out/`, `.next/`) — noise and zero signal
+- **CRITICAL**: respect `.hipaaignore` exclusion patterns — teams use it to mark known-safe data fixtures
+- **MANDATORY**: flag PHI-adjacent config files without `.env` or secret-manager references as a WARN category, even when no PHI pattern matches
+- **NEVER** auto-fix in this version. Auto-fixing requires project-specific knowledge of logging and audit infrastructure that regex alone cannot provide.
+
+## Gotchas
+
+- Test fixtures and seed data often contain **synthetic** PHI that looks real (SSN-shaped IDs, formatted phone numbers, sample email addresses). Flag them but lower severity — production code handling the same patterns is the actual risk.
+- HIPAA §164.312(b) requires audit logging but does not specify a format. "Logs exist" is not evidence of compliance — the logs must capture WHO (authenticated user), WHAT (action), WHEN (timestamp), WHERE (resource), and they must be immutable (append-only or write-once storage).
+- Encryption-at-rest varies silently by storage layer. RDS auto-encrypts new volumes since 2017, but older DB snapshots may not be; S3 bucket policies can override instance-level encryption. Treat "encryption enabled" as a claim to verify with the cloud provider, not a state to trust.
+- PHI identifiers 1-18 differ from HIPAA's "limited data set" rules — date of service and city are permitted in a limited dataset but not in full PHI. Do not auto-flag any date as PHI without context; check for surrounding patient-name or diagnosis proximity.
+- PHI detection via regex misses data encoded in BLOBs, base64-embedded JSON, or encrypted-at-application-layer columns. A clean regex scan does not prove absence of PHI — document this explicitly in the report.
+- Healthcare keyword context gate has dialect drift: "patient" in a veterinary codebase is a dog, not a person under HIPAA. Review context before escalating findings from multi-tenant or vertical-adjacent codebases.
+
+## When NOT to Use
+
+- For generic security patterns (XSS, SQLi, CSRF) — use `/security-patterns`
+- For dependency vulnerabilities — use `/cve-scan`
+- For non-healthcare compliance regimes (PCI-DSS, SOC2, GDPR) — this skill is HIPAA-specific
+- For **legal interpretation** of compliance — this skill flags technical controls; only a QSA or attorney interprets compliance status
+- For PII/GDPR outside the HIPAA scope — overlapping but distinct; HIPAA covers PHI specifically
 
 ## Reference Documents
 

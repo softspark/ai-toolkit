@@ -280,113 +280,7 @@ func testLoginFlow() {
 
 ## Common Frameworks
 
-### SwiftUI + @Observable (iOS 17+)
-
-```swift
-@Observable
-final class UserViewModel {
-    var users: [User] = []
-    var isLoading = false
-    private let service: UserService
-
-    init(service: UserService) { self.service = service }
-
-    func load() async {
-        isLoading = true
-        defer { isLoading = false }
-        users = (try? await service.fetchAll()) ?? []
-    }
-}
-
-struct UserListView: View {
-    @State private var vm: UserViewModel
-
-    init(service: UserService) {
-        _vm = State(initialValue: UserViewModel(service: service))
-    }
-
-    var body: some View {
-        NavigationStack {
-            List(vm.users) { user in
-                NavigationLink(value: user) { Text(user.name) }
-            }
-            .navigationTitle("Users")
-            .navigationDestination(for: User.self) { UserDetailView(user: $0) }
-            .task { await vm.load() }
-        }
-    }
-}
-```
-
-### Combine
-
-```swift
-class SearchVM: ObservableObject {
-    @Published var query = ""
-    @Published var results: [Item] = []
-    private var cancellables = Set<AnyCancellable>()
-
-    init(service: SearchService) {
-        $query
-            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
-            .removeDuplicates()
-            .filter { !$0.isEmpty }
-            .flatMap { service.search(query: $0) }
-            .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { _ in },
-                  receiveValue: { [weak self] in self?.results = $0 })
-            .store(in: &cancellables)
-    }
-}
-```
-
-### Structured Concurrency
-
-```swift
-func fetchAllProfiles(ids: [String]) async throws -> [Profile] {
-    try await withThrowingTaskGroup(of: Profile.self) { group in
-        for id in ids { group.addTask { try await fetchProfile(id: id) } }
-        return try await group.reduce(into: []) { $0.append($1) }
-    }
-}
-
-// AsyncStream for bridging callbacks
-let locations = AsyncStream<Location> { continuation in
-    manager.onUpdate = { continuation.yield($0) }
-    continuation.onTermination = { _ in manager.stop() }
-}
-```
-
-### SwiftData
-
-```swift
-@Model
-final class Item {
-    var title: String
-    var timestamp: Date
-    @Relationship(deleteRule: .cascade) var tags: [Tag]
-    init(title: String) { self.title = title; self.timestamp = .now; self.tags = [] }
-}
-
-struct ItemListView: View {
-    @Query(sort: \Item.timestamp, order: .reverse) private var items: [Item]
-    @Environment(\.modelContext) private var context
-
-    var body: some View {
-        List(items) { Text($0.title) }
-    }
-}
-```
-
-### Vapor (Server-Side)
-
-```swift
-app.get("users", ":id") { req async throws -> User in
-    guard let id = req.parameters.get("id", as: UUID.self) else { throw Abort(.badRequest) }
-    guard let user = try await User.find(id, on: req.db) else { throw Abort(.notFound) }
-    return user
-}
-```
+For SwiftUI + `@Observable`, Combine, Structured Concurrency, SwiftData, and Vapor framework patterns with complete code examples, see [reference/frameworks.md](reference/frameworks.md).
 
 ---
 
@@ -498,3 +392,29 @@ Schemes: separate Debug/Release/Testing. Enable ASan + TSan in test schemes.
 | Blocking main thread | UI freezes | `async/await`, `Task { }` |
 | `UserDefaults` for secrets | Insecure | Keychain (`SecItemAdd`) |
 | `@ObservedObject` for owned state | Object recreated | `@StateObject` or `@State` + `@Observable` |
+
+## Rules
+
+- **MUST** use Swift concurrency primitives (`async/await`, actors, `Task`) for new code — GCD is legacy and mixes poorly with the new model
+- **MUST** annotate view models with `@MainActor` when they touch UI state — off-main mutations cause runtime warnings and flaky UI
+- **NEVER** force-unwrap (`!`) without a documented invariant in a comment; runtime crashes from unwrap are the top iOS crash category
+- **NEVER** store secrets in `UserDefaults` or plist — use Keychain APIs (`SecItemAdd`, `SecItemCopyMatching`)
+- **CRITICAL**: SwiftUI state flows downward; mutations flow through `@State`, `@Binding`, or `@Observable`. Never mutate a parent's state from a child via a captured reference — it breaks dependency tracking.
+- **MANDATORY**: every closure that captures `self` inside a reference type uses `[weak self]` or `[unowned self]` — retain cycles are the top memory-leak cause
+
+## Gotchas
+
+- `@StateObject` and `@ObservedObject` look similar but behave oppositely on parent re-render: `@StateObject` persists, `@ObservedObject` may re-initialize. Using `@ObservedObject` for view-owned state recreates the object on every render — state loss without error.
+- `Task { @MainActor in ... }` inside a non-`@MainActor` context does **not** synchronously return to main; it schedules. Code between the `await` and `Task` boundary runs on whatever actor you came from, which can race with UI updates.
+- `AsyncStream` continuations without `onTermination` leak: if the consumer cancels, the producer keeps yielding forever. Always install a termination handler.
+- SwiftData `@Query` with `@Environment(\.modelContext)` invalidates on every write; heavy reads in a watched view cause perf drops. Use `@FetchRequest`-style fetch descriptors with explicit refresh, not ambient `@Query`, for large datasets.
+- Combine's `.receive(on: DispatchQueue.main)` schedules asynchronously — if the next operator expects sync execution, order matters. Prefer moving `.receive(on:)` to just before the sink, not mid-pipeline.
+- Swift Concurrency does not compose cleanly with Objective-C completion handlers; `withCheckedContinuation` bridges but a continuation that is never resumed hangs the Task forever. Always pair resumes with all control-flow paths, including errors.
+
+## When NOT to Load
+
+- For **Flutter or React Native** cross-platform code — use `/flutter-patterns` or JS patterns; this skill is Swift-only
+- For generic iOS architecture decisions (MVC vs MVVM vs VIPER) — use `/architecture-decision`
+- For Kotlin-based cross-platform mobile (KMP) — use `/kotlin-patterns`
+- For mobile CI/CD specifics (TestFlight, Fastlane) — use `/ci-cd-patterns`
+- For Objective-C interop deep dives — outside scope; this skill focuses on modern Swift

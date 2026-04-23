@@ -208,3 +208,29 @@ Product → Indexer → Search Index (Elasticsearch/OpenSearch)
 - [ ] Enable flat tables
 - [ ] Configure CDN
 - [ ] Index optimization
+
+## Rules
+
+- **MUST** model order lifecycle as an explicit state machine (pending → authorized → captured → fulfilled → refunded) — ad-hoc booleans produce inconsistent states on retry
+- **MUST** separate payment capture from inventory decrement — reserve stock on order placement, commit stock on payment success. Coupling them causes stuck-stock bugs during payment retries.
+- **NEVER** store CVV, full PAN, or track data — ever. PCI scope expands to any system that sees them, even "temporarily in memory".
+- **NEVER** use floating-point for money calculations. Use `decimal.Decimal`, `BigDecimal`, or integer minor units (cents). Float rounding produces $0.01 discrepancies that accumulate into angry customer emails.
+- **CRITICAL**: every cart mutation is idempotent via an `Idempotency-Key` or natural key — users double-click checkout buttons, networks retry, and duplicate orders are expensive to reconcile.
+- **MANDATORY**: tax and shipping calculations live in isolated services or modules. Inlining them into cart logic prevents caching and creates compliance drift.
+
+## Gotchas
+
+- Promotion codes with stackable rules explode combinatorially — "20% off + free shipping + first-time buyer" can produce negative totals if the ordering of applications is not defined. Always normalize to a pipeline with a fixed evaluation order.
+- Tax jurisdictions change **after** the order is placed (shipping address edits). A cart that recalculates on every update but not on address change silently under-collects tax.
+- Inventory reservations must expire — otherwise abandoned carts hold stock forever. 15-30 minutes is typical; longer reservations need explicit business approval.
+- Currency rounding rules differ by locale. Japanese Yen has 0 decimal places, Kuwaiti Dinar has 3. Defaulting to 2 decimals produces off-by-one-unit bugs in non-USD markets.
+- Refunds are **not** negative orders. Payment processors treat them as separate resources with their own state machine and timing (Stripe refunds can take 5-10 business days to settle). Model accordingly.
+- Magento's flat-table option speeds reads but silently stops auto-syncing if a reindex fails — stale product data in production. Monitor reindex job success, not just page latency.
+
+## When NOT to Load
+
+- For **payment provider** protocol specifics (Stripe, Adyen, PayPal) — use the provider's SDK docs; this skill is pattern-level
+- For generic API design — use `/api-patterns`
+- For database schema of orders/inventory — use `/database-patterns`
+- For promotions and segmentation at scale — use `/data-analyst` agent
+- For PCI compliance audit — this skill flags the traps but is not a substitute for a QSA audit

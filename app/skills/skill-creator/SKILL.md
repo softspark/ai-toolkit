@@ -70,6 +70,13 @@ Every SKILL.md must contain all five, or it will lower the toolkit quality score
 These map directly to the mutation strategies in `meta-architect.md`:
 `add_example`, `add_constraint`, `add_edge_case`, `restructure`.
 
+### Rules vs Gotchas — different semantic buckets
+
+Split the "hard rules" criterion into two sections when both apply:
+
+- **`## Rules`** — prescriptive process constraints (always-true MUST / NEVER): *"MUST form a testable hypothesis before changing code"*, *"NEVER force-push main"*. Required in every skill.
+- **`## Gotchas`** — environment-specific traps the agent would miss without being told, taken from [Anthropic's best practices](https://agentskills.io/skill-creation/best-practices.md#gotchas-sections). Example from their docs: *"The `users` table uses soft deletes. Queries must include `WHERE deleted_at IS NULL` or results will include deactivated accounts."* Add this section only when real domain traps exist — do not pad with a `(none)` placeholder.
+
 ## Directory Structure
 
 ```
@@ -124,6 +131,11 @@ $ARGUMENTS
 - **NEVER** {forbidden action}
 - **CRITICAL**: {safety constraint}
 
+## Gotchas
+
+- {environment-specific trap the agent would miss — concrete, not general}
+- {non-obvious behavior of a tool, API, or data layout}
+
 ## When NOT to Use
 
 - For {adjacent use case} -- use `/{other-skill}` instead
@@ -131,14 +143,17 @@ $ARGUMENTS
 - If {precondition} is not met
 ```
 
+Leave out `## Gotchas` entirely when the skill has no domain-specific traps — it is not mandatory, and a stub with nothing concrete is worse than no section.
+
 ## Quality Checklist
 
 Before finalizing, verify:
 
 - [ ] Description ≥50 chars, third-person, with trigger hint
 - [ ] At least one concrete code-fenced example
-- [ ] Hard rules using MUST / NEVER / CRITICAL / MANDATORY / DO NOT
-- [ ] "When NOT to Use" section naming 2-3 adjacent skills
+- [ ] `## Rules` section with prescriptive MUST / NEVER / CRITICAL / MANDATORY
+- [ ] `## Gotchas` section when the domain has real environment-specific traps (otherwise omit)
+- [ ] `## When NOT to Use` section naming 2-3 adjacent skills
 - [ ] SKILL.md under 500 lines
 - [ ] No time-sensitive information (versions, dates)
 - [ ] Consistent terminology throughout

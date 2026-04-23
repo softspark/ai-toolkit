@@ -138,3 +138,29 @@ Teammate 1 completes first, then Teammate 2 acts on the plan.
 - Want to validate architecture? → `/analyze` for code quality metrics
 - Need tests before refactoring? → `/tdd` to build safety net first
 - Architecture decision needed? → `/council` for multi-perspective evaluation
+
+## Rules
+
+- **MUST** run the full test suite before starting — a green baseline is the only way to tell the refactor did not break anything
+- **MUST** preserve behavior end-to-end; if behavior must change, stop and ask — "while we're here" changes are how refactors introduce bugs
+- **NEVER** mix refactoring with feature changes in the same commit — they fail review and rollback differently
+- **NEVER** refactor untested code without adding tests first — the refactor has nothing to assert against
+- **CRITICAL**: commits stay small and individually reversible. A 2000-line refactor commit cannot be code-reviewed and cannot be bisected.
+- **MANDATORY**: dead-code cleanup is part of the refactor per Constitution Art. VI.1 — orphaned references left behind from a refactor are a quality regression, not "later work"
+
+## Gotchas
+
+- "Behavior-preserving" refactors still change **observable** things: timing, memory allocation, error message text, log line format. Downstream consumers may rely on these — scan for log parsers or monitoring rules before changing prose in exceptions.
+- IDE rename refactors miss dynamic references (string-keyed dicts, reflection, `getattr`, dynamic imports). After a rename, grep for the old name in strings and comments — the IDE will not.
+- Git history diffing is confused by combined move + content changes. Split moves into their own commit (`git mv` + tiny commit) so later reviewers can use `git log --follow`.
+- Preserving backward compatibility is a spectrum. "Keep the old function as a thin wrapper" sounds safe but often defers the cleanup forever — prefer deprecate-with-warning followed by a scheduled removal.
+- Refactor-to-DRY abstractions made from 2 use cases often need to be torn down when the 3rd use case arrives (Rule of Three). Resist abstracting until the third repetition makes the shape obvious.
+- Test suites that rely on mocks frequently pass during refactors that silently break real behavior (the mock reflects the old shape). Run integration tests, not just unit, before marking done.
+
+## When NOT to Use
+
+- For **planning** a refactor (no execution) — use `/refactor-plan`
+- For architectural audit of shallow modules — use `/architecture-audit`
+- For fixing a specific bug — use `/fix` or `/debug`
+- For adding a feature — use `/plan` then the relevant language skill
+- When tests do not exist or are red — write tests first (`/tdd`) before refactoring
