@@ -28,15 +28,19 @@ Create a new skill following the Agent Skills standard.
 |-------|------|----------|-------------|
 | `name` | string | yes | Lowercase, hyphens only, max 64 chars |
 | `description` | string | yes | Third person, max 1024 chars, include key terms |
-| `effort` | low/medium/high/max | no | Controls model thinking budget |
+| `effort` | low/medium/high/xhigh/max | no | Controls model thinking budget (xhigh added for Opus 4.7) |
 | `disable-model-invocation` | bool | no | `true` = only user can trigger (task skills) |
 | `user-invocable` | bool | no | `false` = knowledge skill, Claude auto-loads |
-| `allowed-tools` | csv | no | Restrict tool access for safety |
-| `model` | string | no | Override default model |
+| `allowed-tools` | csv or YAML list | no | Restrict tool access for safety; YAML-style lists accepted |
+| `disallowedTools` | csv or YAML list | no | Block specific tools (plugin-shipped agents) |
+| `model` | string | no | Override default model (accepts full IDs like `claude-opus-4-7`) |
 | `context` | string | no | `fork` to run in isolated subagent |
 | `agent` | string | no | Agent type to use when `context: fork` |
+| `skills` | csv | no | Auto-load skills for the invoked subagent |
 | `argument-hint` | string | no | Shown in autocomplete, e.g. `"[target]"` |
-| `hooks` | object | no | Lifecycle hooks (PreToolUse, PostToolUse, Stop) |
+| `hooks` | object | no | Lifecycle hooks (`PreToolUse`, `PostToolUse`, `Stop`) scoped to the skill invocation |
+| `maxTurns` | int | no | Cap turns when skill spawns a subagent |
+| `memory` | user/project/local | no | Persistent memory scope (agents only) |
 
 ## Classification Guide
 

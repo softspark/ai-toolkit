@@ -314,7 +314,9 @@ def _resolve_editors(editors_arg: str, cwd: Path) -> list[str]:
 def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
                           language_modules: list[str] | None = None,
                           editors: str = "",
-                          merged_config: dict | None = None) -> None:
+                          merged_config: dict | None = None,
+                          profile: str = "standard",
+                          codex_skills: bool = False) -> None:
     """Install project-local configs.
 
     Claude Code configs (CLAUDE.md, settings, constitution) are always installed.
@@ -322,6 +324,17 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
     - ``--editors all``: install all editors
     - ``--editors cursor,aider``: install only these
     - (empty): auto-detect from existing project files, install only those
+
+    ``profile`` controls which native surfaces are emitted for each editor:
+    - ``minimal``  / ``standard`` / ``strict``: rules (+ Copilot directory mode
+      and Gemini hooks from ``standard`` onwards — both non-breaking).
+    - ``full``: adds every native surface an editor can host (subagents,
+      custom commands, hooks, skill-catalogue pointers).
+
+    ``codex_skills`` (opt-in, off by default) additionally writes a full skill
+    mirror under ``.codex/skills/``. Required even for ``--profile full`` —
+    the mirror is intentionally gated behind an extra flag to keep the default
+    footprint small.
 
     If ``merged_config`` is provided (from .softspark-toolkit.json extends resolution),
     additional rules and constitution amendments from the base config are injected.
@@ -340,10 +353,13 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
         print(f"   Editors: {', '.join(resolved_editors)}")
     else:
         print("   Editors: none (use --editors <list> or --editors all to enable)")
+    if profile:
+        print(f"   Profile: {profile}")
     print()
 
     if dry_run:
-        _install_local_dry_run(reset, resolved_editors)
+        _install_local_dry_run(reset, resolved_editors, profile=profile,
+                               codex_skills=codex_skills)
         if language_modules:
             print(f"  Would inject language rules: {', '.join(language_modules)}")
         if merged_config:
@@ -382,7 +398,9 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
 
     # Install editor configs only for resolved editors
     _create_local_ai_tool_configs(cwd, rules_dir, resolved_editors,
-                                  language_modules=language_modules)
+                                  language_modules=language_modules,
+                                  profile=profile,
+                                  codex_skills=codex_skills)
 
 
 def _apply_extends_config(cwd: Path, merged: dict) -> None:
@@ -533,7 +551,9 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
         tmp_path.unlink(missing_ok=True)
 
 
-def _install_local_dry_run(reset: bool, editors: list[str] | None = None) -> None:
+def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
+                            profile: str = "standard",
+                            codex_skills: bool = False) -> None:
     eds = set(editors or [])
     if reset:
         print("  Would remove: CLAUDE.md, .claude/settings.local.json")
@@ -543,6 +563,10 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None) -> Non
         print("  Would create: CLAUDE.md (if missing)")
         print("  Would create: .claude/settings.local.json (if missing)")
         print("  Would inject: .claude/constitution.md")
+
+    add_copilot_dir = profile in {"standard", "strict", "full"}
+    add_gemini_hooks = profile in {"standard", "strict", "full"}
+    add_native_surfaces = profile == "full"
 
     # Editor-specific dry-run messages
     _EDITOR_DRY_RUN = {
@@ -554,11 +578,30 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None) -> Non
         "aider":        "  Would generate: .aider.conf.yml + CONVENTIONS.md",
         "augment":      "  Would generate: .augment/rules/ai-toolkit-*.md",
         "antigravity":  "  Would generate: .agent/rules/ + .agent/workflows/",
+        "gemini":       "  Would generate: GEMINI.md",
         "opencode":     "  Would generate: AGENTS.md + .opencode/{agents,commands,plugins}/ + opencode.json",
     }
     for ed, msg in _EDITOR_DRY_RUN.items():
         if ed in eds:
             print(msg)
+
+    # Profile-driven extras (matrix in kb/reference/global-install-model.md)
+    if "copilot" in eds and add_copilot_dir:
+        print("  Would generate: .github/instructions/ + .github/prompts/ (profile >= standard)")
+    if "gemini" in eds and add_gemini_hooks:
+        print("  Would generate: .gemini/settings.json hooks (profile >= standard)")
+    if add_native_surfaces:
+        if "cursor" in eds:
+            print("  Would generate: .cursor/hooks.json + .cursor/agents/ (profile=full)")
+        if "windsurf" in eds:
+            print("  Would generate: .windsurf/hooks.json (profile=full)")
+        if "augment" in eds:
+            print("  Would generate: .augment/agents/ + .augment/commands/ + "
+                  "$HOME/.augment/settings.json + .augment/skills/ (profile=full)")
+        if "gemini" in eds:
+            print("  Would generate: .gemini/commands/ + .gemini/skills/ (profile=full)")
+    if "codex" in eds and codex_skills:
+        print("  Would generate: .codex/skills/ full mirror (--codex-skills)")
 
     if not eds:
         print("  No editors selected (use --editors <list> or --editors all)")
@@ -695,10 +738,44 @@ def _install_codex_skills(cwd: Path) -> None:
     )
 
 
+def _try_generator(module_name: str, *args, **kwargs) -> bool:
+    """Import and invoke ``<module>.generate(...)`` with graceful degradation.
+
+    During a multi-bucket roll-out (v3.0.0 deep-coverage sweep) individual
+    generators may not yet exist on disk. When the import fails we log a
+    short warning and return ``False`` — the caller decides whether that is
+    fatal. Other exceptions from an existing generator are re-raised so
+    genuine bugs are not silently swallowed.
+    """
+    try:
+        module = __import__(module_name)
+    except ImportError as exc:
+        print(f"  Skipped: {module_name} not yet available ({exc.msg}). "
+              f"Re-run after all generators ship.")
+        return False
+
+    gen = getattr(module, "generate", None)
+    if gen is None:
+        print(f"  Skipped: {module_name} has no generate() function yet.")
+        return False
+
+    gen(*args, **kwargs)
+    return True
+
+
 def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
                                    editors: list[str],
-                                   language_modules: list[str] | None = None) -> None:
+                                   language_modules: list[str] | None = None,
+                                   profile: str = "standard",
+                                   codex_skills: bool = False) -> None:
     eds = set(editors)
+    # `full` implies the `standard` additions (Copilot dir + Gemini hooks)
+    # plus every native-surface generator we ship. Normalize unknown
+    # profiles to `standard` so callers never produce a silent no-op.
+    _profile = profile if profile in {"minimal", "standard", "strict", "full"} else "standard"
+    add_copilot_dir = _profile in {"standard", "strict", "full"}
+    add_gemini_hooks = _profile in {"standard", "strict", "full"}
+    add_native_surfaces = _profile == "full"
 
     if "copilot" in eds:
         inject_with_rules(
@@ -706,6 +783,12 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             cwd / ".github" / "copilot-instructions.md",
             rules_dir,
         )
+        # `standard` and above: emit path-specific instructions + prompt files
+        # (directory mode). `minimal` stays backwards-compatible with v2.
+        if add_copilot_dir:
+            from generate_copilot import generate as gen_copilot_dir
+            gen_copilot_dir(cwd, language_modules=language_modules,
+                            rules_dir=rules_dir)
 
     if "cursor" in eds:
         inject_with_rules(
@@ -716,6 +799,9 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         from generate_cursor_mdc import generate as gen_cursor_mdc
         gen_cursor_mdc(cwd, language_modules=language_modules,
                        rules_dir=rules_dir)
+        if add_native_surfaces:
+            _try_generator("generate_cursor_hooks", cwd)
+            _try_generator("generate_cursor_agents", cwd)
 
     if "windsurf" in eds:
         inject_with_rules(
@@ -726,6 +812,8 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         from generate_windsurf_rules import generate as gen_windsurf_rules
         gen_windsurf_rules(cwd, language_modules=language_modules,
                            rules_dir=rules_dir)
+        if add_native_surfaces:
+            _try_generator("generate_windsurf_hooks", cwd)
 
     if "cline" in eds:
         # Migrate: remove legacy .clinerules single file (replaced by directory)
@@ -759,6 +847,13 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         from generate_augment_rules import generate as gen_augment_rules
         gen_augment_rules(cwd, language_modules=language_modules,
                           rules_dir=rules_dir)
+        if add_native_surfaces:
+            _try_generator("generate_augment_agents", cwd)
+            _try_generator("generate_augment_commands", cwd)
+            # Augment hooks live under $HOME/.augment/settings.json. The
+            # generator takes HOME (not cwd) per bucket-1 contract.
+            _try_generator("generate_augment_hooks", Path.home())
+            _try_generator("generate_augment_skills", cwd)
 
     if "antigravity" in eds:
         from generate_antigravity import generate as gen_antigravity
@@ -786,6 +881,24 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         print("  Created: .codex/hooks.json")
         # .agents/skills/ — filtered symlinks (Codex-compatible skills only)
         _install_codex_skills(cwd)
+        # .codex/skills/ — full mirror, gated behind explicit --codex-skills flag
+        # (does NOT activate automatically on --profile full — must opt in).
+        if codex_skills:
+            _try_generator("generate_codex_skills", cwd,
+                           enable_codex_skills=True)
+
+    if "gemini" in eds:
+        # GEMINI.md — marker injection from the shared generator output
+        inject_with_rules(
+            "generate-gemini.sh",
+            cwd / "GEMINI.md",
+            rules_dir,
+        )
+        if add_gemini_hooks:
+            _try_generator("generate_gemini_hooks", cwd)
+        if add_native_surfaces:
+            _try_generator("generate_gemini_commands", cwd)
+            _try_generator("generate_gemini_skills", cwd)
 
     if "opencode" in eds:
         # AGENTS.md — shared with Codex via marker injection (opencode reads same file)

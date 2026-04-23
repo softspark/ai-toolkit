@@ -17,6 +17,8 @@
 - [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/history/completed/offline-slm-profile-plan-20260411.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
+- [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/planning/ecosystem-deep-sweep-2026-04-23.md)
+- [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Release Preparation](kb/procedures/release-preparation-sop.md)
 - [SOP: Release Verification](kb/procedures/release-verification-sop.md)
@@ -52,6 +54,7 @@
 - [Skills Catalog](kb/reference/skills-catalog.md)
 - [Skills Unification Model](kb/reference/skills-unification.md)
 - [Usage Statistics](kb/reference/stats.md)
+- [Supported Tools Registry](kb/reference/supported-tools-registry.md)
 - [Config Sync](kb/reference/sync.md)
 - [Unique Features & Differentiators](kb/reference/unique-features.md)
 - [Troubleshooting](kb/troubleshooting/README.md)
@@ -3127,6 +3130,505 @@ Examples:
 
 ---
 
+## kb/planning/ecosystem-deep-sweep-2026-04-23.md
+
+---
+title: "Plan: Ecosystem Deep Sweep — All 12 Supported Tools"
+category: planning
+service: ai-toolkit
+doc_type: plan
+status: proposed
+tags: [ecosystem, editors, generators, deep-sweep, orchestrate, drift, integration]
+created: "2026-04-23"
+last_updated: "2026-04-23"
+completion: "0%"
+description: "Orchestrate-ready plan for a deep per-tool documentation sweep across all 12 supported tools (Claude Code + 11 editors). Each agent owns 2-3 tools: fetches docs, diffs against our generators, proposes minimal patches. Consolidation step collects results into a single changeset."
+---
+
+# Plan: Ecosystem Deep Sweep — All 12 Supported Tools
+
+**Status:** :yellow_circle: PROPOSED
+**Invocation:** `/orchestrate deep ecosystem sweep per kb/planning/ecosystem-deep-sweep-2026-04-23.md`
+**Estimated effort:** 4-6 hours orchestrated (1-1.5 h per agent in parallel)
+**Deliverable:** Per-tool drift report + concrete generator/skill patches + updated registry
+
+---
+
+## 1. Objective
+
+For every supported tool in `scripts/ecosystem_tools.json`:
+
+1. Read the current official documentation end-to-end (not just landing page)
+2. Identify every feature that ai-toolkit could integrate with but does not currently
+3. Classify each gap using the ecosystem-sync SOP taxonomy (class A-F)
+4. Produce minimal, reviewable patches for class B/D/E/F gaps
+5. Update the registry (`ecosystem_tools.json`) with new capability markers and config paths
+6. Refresh the snapshot (`benchmarks/ecosystem-doctor-snapshot.json`)
+
+**Explicit non-goals:** complete feature parity, deep refactor of generators, adding new editors to the roster.
+
+---
+
+## 2. Parallelization Strategy
+
+12 tools → **4 agents × 3 tools each** by affinity and complexity:
+
+| Agent | Role | Tools | Rationale |
+|-------|------|-------|-----------|
+| `backend-specialist` | Deep CLI / config analysis | `claude-code`, `codex-cli`, `opencode` | CLI + config.toml + agents/commands/plugins — backend integration depth |
+| `frontend-specialist` | Editor UI integrations | `cursor`, `windsurf`, `google-antigravity` | Editor-embedded AI, rule files, MCP-via-UI |
+| `devops-implementer` | Pipeline + rules tools | `github-copilot`, `cline`, `roo-code` | Rules directories, MCP JSON variants, mode configs |
+| `ai-engineer` | LLM-native tools | `gemini-cli`, `aider`, `augment` | Pure LLM workflows, minimal IDE coupling |
+
+Each agent works **in parallel**, independent file scopes (different generators). Cross-file coordination only at the registry update (single JSON file).
+
+---
+
+## 3. Per-Tool Task Template
+
+Every agent applies the **same 7-step protocol** per tool in their bucket:
+
+### Step 1 — Baseline our current integration
+
+Read these files (read-only):
+- `scripts/generate_<tool>_*.py` — every generator targeting this tool
+- `scripts/ecosystem_tools.json` — the tool's registry entry
+- `kb/reference/supported-tools-registry.md` — human docs section
+- `benchmarks/ecosystem-doctor-snapshot.json` — last-seen headings/markers/version
+
+Produce a 3-line summary: "we currently generate X, Y, Z for this tool".
+
+### Step 2 — Fetch official docs
+
+Primary URL is in `ecosystem_tools.json::urls.docs`. Additionally fetch:
+- `urls.release_notes` — recent changes (last 6 months)
+- `urls.changelog` — if distinct from release notes
+- Any deep-link from the docs landing page that corresponds to an integration surface (rules, hooks, MCP, agents, commands, plugins, config schema)
+
+Use `WebFetch` (for general) or `gh api` (for GitHub-hosted docs like Codex CLI, opencode).
+
+### Step 3 — Extract the feature surface
+
+For the current version of the tool, enumerate:
+- Config file paths (the tool's OWN paths, not ours)
+- Rule / instruction / prompt formats
+- Hook / lifecycle event names (if any)
+- MCP config target path (if supported)
+- Agent / custom-mode / preset concepts (if any)
+- Slash command / CLI subcommand surface
+- Supported model providers (note, do not integrate)
+- Authentication / API-key mechanisms
+
+Produce a structured markdown table: `Feature | Since version | Stable? | Our integration?`
+
+### Step 4 — Diff against our output
+
+For each feature in the table, compare against:
+- What our `generate_<tool>_*.py` produces
+- What fields are in our registry's `capability_markers`
+
+Mark each row with one of:
+- `✅ supported` — we already emit / track it
+- `⚠️ partial` — we emit a subset; specific sub-feature missing
+- `❌ missing` — we do not support at all
+- `➖ out of scope` — tool has it, but not applicable to ai-toolkit's mission
+
+### Step 5 — Classify each gap
+
+For each `⚠️` / `❌` row, assign one of the SOP drift classes:
+
+| Class | Name | Action |
+|-------|------|--------|
+| A | Cosmetic | No code change; update snapshot only |
+| B | New feature — integrate | Patch generator(s), add tests |
+| C | New feature — not adopted | Note in registry, no code |
+| D | Deprecation | Migration warning in generator + CHANGELOG |
+| E | Feature promoted to default | Simplify generator; keep fallback comment |
+| F | Newly globally available | New generator / extended generator |
+
+### Step 6 — Produce patches (class B/D/E/F only)
+
+For every class B/D/E/F gap:
+1. Edit the relevant generator in `scripts/generate_<tool>_*.py`
+2. If a new capability marker emerges, add to `ecosystem_tools.json::capability_markers`
+3. If a new config path emerges, add to `ecosystem_tools.json::config_paths`
+4. If a hook event or skill frontmatter field emerges (for Claude Code), update:
+   - `app/skills/hook-creator/SKILL.md` (hooks table)
+   - `app/skills/skill-creator/SKILL.md` (frontmatter reference)
+   - `scripts/validate.py` (allowlist)
+5. Add a bats test under `tests/test_<tool>.bats` covering the new output
+6. Update the tool's section in `kb/reference/supported-tools-registry.md`
+
+**Constraints on patches:**
+- One generator change per logical feature (no "big bang" commits)
+- Preserve existing output format for backward compatibility
+- New output opt-in via flag if it would change existing user-visible state
+- Every new capability marker must pass the doctor's probe on the live docs page
+
+### Step 7 — Report
+
+Each agent emits a single markdown report with:
+- Feature matrix table (step 3+4+5 combined)
+- List of patches applied (files changed, bats tests added)
+- List of class B/D/E/F gaps NOT patched (with reason: "out of scope", "requires user decision", "blocker")
+- Registry diff (before/after for the tool's JSON entry)
+
+---
+
+## 4. Consolidation (after all agents finish)
+
+Run in order:
+
+1. Merge registry entries — single edit to `ecosystem_tools.json` combining all 12 per-tool updates
+2. Regenerate human registry doc: manually update `kb/reference/supported-tools-registry.md` from JSON
+3. `python3 scripts/ecosystem_doctor.py --update` — baseline new capability markers
+4. `python3 scripts/validate.py --strict` — must pass
+5. `npm test` — must pass (includes the newly added bats tests per tool)
+6. `python3 scripts/ecosystem_doctor.py --check` — exit 0
+7. Regenerate downstream artifacts:
+   ```bash
+   npm run generate:all
+   ```
+8. Collect all per-agent reports into `kb/learnings/ecosystem-sweep-2026-04-23.md`
+
+---
+
+## 5. Success Criteria
+
+- [ ] All 12 tools covered (no "skipped for time" items)
+- [ ] Every class B/D/E/F gap has either a patch OR a documented reason for deferral
+- [ ] Registry `capability_markers` list grew for at least 6 of 12 tools (signals real gap coverage)
+- [ ] `validate.py --strict`: 0 errors, 0 warnings
+- [ ] `npm test`: all green (including new per-tool bats tests)
+- [ ] `ecosystem_doctor.py --check`: exit 0 after snapshot refresh
+- [ ] Single consolidated commit per agent-bucket, plus one final consolidation commit
+
+---
+
+## 6. Known Traps (from prior ecosystem work)
+
+- **SPA docs** (Cursor, Antigravity, some Augment pages): `urllib` gets empty HTML skeleton. Agents should note this and do a **manual browser visit** or use a JS-aware fetcher. Do not treat "0 headings" as "nothing new".
+- **GitHub docs** rate-limit aggressively on repeated reads. Space out fetches or use `gh api`.
+- **Feature gates** vary by user plan. Copilot Business vs Individual vs Enterprise have different surface. Integrate with the OSS surface; document gated features as C (not adopted).
+- **Version skew** on config schemas. A setting that existed in v1.x may be deprecated in v2.x. When docs reference "available since v1.5" and we don't know what version users run, default to generating the newer form with a comment.
+- **Markdown vs MDX**: Cursor uses `.mdc`, Claude Code uses `.md`, Cline uses `.md` in `.clinerules/`, Roo uses `.md` in `.roo/rules/`. Don't assume one format fits all.
+
+---
+
+## 7. Orchestrate Invocation
+
+In a fresh Claude Code session (to avoid context rot from this session):
+
+```
+/orchestrate deep ecosystem sweep for ai-toolkit per kb/planning/ecosystem-deep-sweep-2026-04-23.md
+
+Spawn 4 agents in parallel:
+- backend-specialist: claude-code, codex-cli, opencode
+- frontend-specialist: cursor, windsurf, google-antigravity
+- devops-implementer: github-copilot, cline, roo-code
+- ai-engineer: gemini-cli, aider, augment
+
+Each agent follows the 7-step per-tool protocol in section 3.
+After all 4 report, run consolidation (section 4) and produce the sweep summary.
+```
+
+---
+
+## 8. Deliverables (per agent)
+
+Each agent's final output to orchestrator:
+1. **Feature matrix** — one table per assigned tool (step 3+4+5)
+2. **Patch log** — list of commits staged (not committed yet — orchestrator consolidates)
+3. **Registry delta** — proposed JSON diff for `ecosystem_tools.json`
+4. **Gaps not patched** — with rationale (out-of-scope, blocker, deferred)
+5. **Test additions** — bats test file names + test count
+
+Orchestrator's final output:
+1. Consolidated commit with message `feat(ecosystem): deep sweep 2026-04-23 — N class B/F integrations`
+2. Version bump decision (minor if any class B/F, patch if only class A updates)
+3. `kb/learnings/ecosystem-sweep-2026-04-23.md` — retrospective noting which tools needed most work (informs priority for next sweep)
+
+---
+
+## 9. Safety Rails
+
+- **Do not** silently upgrade default behavior — every user-visible change lands behind a flag OR goes through a minor version bump with CHANGELOG mention
+- **Do not** rewrite generators wholesale — incremental additions only
+- **Do not** commit during the sweep — orchestrator consolidates at the end
+- **Do not** modify files outside the tool's scope (e.g., backend-specialist touching frontend-specialist's files requires a handoff)
+- **Do** preserve existing symlinks and file-path expectations — the installer depends on them
+
+---
+
+## 10. Related
+
+- [Ecosystem Sync SOP](../procedures/ecosystem-sync-sop.md) — the process this plan instantiates
+- [Supported Tools Registry](../reference/supported-tools-registry.md) — source of truth for tool list
+- `scripts/ecosystem_doctor.py` — drift detector consumed by orchestrator consolidation
+- `scripts/ecosystem_tools.json` — registry file edited by every agent
+
+---
+
+## kb/procedures/ecosystem-sync-sop.md
+
+---
+title: "SOP: Ecosystem Sync"
+category: procedures
+service: ai-toolkit
+tags: [sop, ecosystem, editors, generators, drift-detection, sync]
+version: "1.0.0"
+created: "2026-04-23"
+last_updated: "2026-04-23"
+description: "Quarterly (or event-triggered) sync procedure that detects documentation and capability drift in supported tools (Claude Code + 11 editors), analyses our generators and skills for missing features, and walks through the migration + generator-update workflow."
+---
+
+# SOP: Ecosystem Sync
+
+Keeps ai-toolkit aligned with the tools it integrates with. When an editor adds a new hook lifecycle, makes a feature globally available, changes a config path, or deprecates a flag, this SOP surfaces it before it surprises users.
+
+**When to run:**
+- **Every quarter** as a baseline health check (calendar reminder)
+- **Before every minor release** of ai-toolkit (Phase 0 of release prep)
+- **Whenever an editor ships a major version** (subscribe to their changelogs)
+- **On demand** if a user reports "feature X exists but toolkit doesn't support it"
+
+**Time:** 30 minutes for drift review + variable for any generator updates
+
+---
+
+## Quick Reference
+
+```bash
+# Full check (all 12 tools, online)
+python3 scripts/ecosystem_doctor.py --format text
+
+# Single tool
+python3 scripts/ecosystem_doctor.py --tool cursor --format text
+
+# First-ever run — baseline the snapshot
+python3 scripts/ecosystem_doctor.py --update > /dev/null
+
+# CI / gating mode
+python3 scripts/ecosystem_doctor.py --check
+
+# Offline (no network) — validates our side only
+python3 scripts/ecosystem_doctor.py --offline --format text
+```
+
+---
+
+## Inputs
+
+| File | Purpose |
+|------|---------|
+| `scripts/ecosystem_tools.json` | Authoritative registry: 12 tools with doc URLs, config paths, our generators, capability markers |
+| `benchmarks/ecosystem-doctor-snapshot.json` | Last-seen state (headings, content hash, markers, version) — updated via `--update` |
+| `scripts/ecosystem_doctor.py` | Drift detector |
+| `kb/reference/supported-tools-registry.md` | Human-readable view of the registry |
+
+---
+
+## Phase 1: Run the Doctor
+
+```bash
+python3 scripts/ecosystem_doctor.py --format text > /tmp/eco-report.txt
+cat /tmp/eco-report.txt
+```
+
+The report classifies every tool into:
+
+- **Clean** — doc page, headings, and markers match the last snapshot; no action
+- **Drift** — something changed upstream. Each drift entry has a `kind`:
+  - `headings_added` — the doc grew new sections (new features? reorg?)
+  - `headings_removed` — a section disappeared (deprecation? renaming?)
+  - `marker_flips` — an expected capability marker appeared (`+`) or vanished (`-`)
+  - `content_changed_no_heading_delta` — prose edits, reorder, minor rewrites, OR HTML churn (timestamps, ads, CSRF nonces). Reported but **not** treated as drift by `--check` — too noisy on dynamic pages.
+  - `version_changed` — the CLI version bumped (for tools that expose `--version`)
+- **Errored** — couldn't fetch docs (timeout, 404, auth wall). Doctor does not overwrite
+  the snapshot for errored tools; the last-known-good state persists.
+
+---
+
+## Phase 2: Classify Each Drift
+
+For every drifting tool, read its docs URL and classify the change into exactly one bucket:
+
+| Drift class | What it means | Action owner |
+|-------------|---------------|--------------|
+| **A. Cosmetic reword** | Prose edited, same feature set | Update snapshot (`--update`), no code change |
+| **B. New feature — we should integrate** | New hook event, new config key, new CLI flag, new rule surface | Update the relevant generator in `scripts/generate_<tool>_*.py`; extend `app/skills/*` or `app/agents/*` if the feature maps onto our skills; document in `kb/reference/supported-tools-registry.md` |
+| **C. New feature — not our concern** | Enterprise SSO, billing, proprietary UI-only features | Note in registry `capability_markers` as "not adopted"; update snapshot |
+| **D. Deprecation** | Flag or path removed / renamed | Open migration issue; coordinate with `ai-toolkit install` and generator output; add deprecation warning to CLAUDE.md rules if user-facing |
+| **E. Feature promoted to default** | Was behind a flag, now global | Remove the flag from generator output; simplify our installer |
+| **F. Global availability** | Was editor-only, now also available via CLI / hooks / settings.json | Map new config surface; may require a new generator or extending an existing one |
+
+Write one line per drift in `/tmp/eco-report.txt` with its class. Example:
+
+```
+cursor: headings_added [AGENTS.md support] -> class B (integrate: extend generate_cursor_mdc.py)
+aider:  version_changed 0.70 -> 0.72          -> class A (cosmetic, --update)
+windsurf: marker_flips +Cascade               -> class B (already supported, verify snapshot)
+```
+
+---
+
+## Phase 3: Execute Changes
+
+### For class B (new feature — integrate)
+
+1. Read the tool's docs section that introduced the feature. Note the exact config key / hook name / file path.
+2. Open the relevant generator (`scripts/generate_<tool>_*.py`) and add output for the new surface.
+3. If the feature is a **hook event**, also update:
+   - `app/hooks.json` (if Claude-Code-native)
+   - `app/skills/hook-creator/SKILL.md` — add the event to the Supported Hook Events table
+   - `scripts/inject_hook_cli.py` — if the hook target path differs
+4. If the feature is a **skill/agent schema extension**:
+   - Update `app/skills/skill-creator/SKILL.md` and `app/skills/command-creator/SKILL.md` templates
+   - Update `scripts/validate.py` field allowlists
+   - Update `kb/reference/agent-skills-spec.md` (if the change is an upstream spec change)
+5. Add a bats test under `tests/test_<tool>.bats` covering the new output.
+6. Regenerate artifacts: `npm run generate:all`.
+
+### For class D (deprecation)
+
+1. Open a migration issue in GitHub with "class: deprecation" and a link to the upstream changelog.
+2. In the generator, mark the deprecated output path as emitting a comment: `# DEPRECATED: <link>, removed in <version>`.
+3. If deprecation affects `ai-toolkit install --local --editors <tool>`, add a doctor check that warns when a user's repo still contains the deprecated file.
+
+### For class E / F (feature promotion)
+
+1. Simplify the generator to emit the new-default form; keep a fallback comment for users on older tool versions.
+2. Update `kb/reference/supported-tools-registry.md` config-paths column.
+
+### For class A / C (no code change)
+
+1. Run `python3 scripts/ecosystem_doctor.py --update --tool <id>` to refresh that tool's snapshot.
+
+---
+
+## Phase 4: Update the Registry
+
+If new capability markers, config paths, or doc URLs emerged during Phase 3, edit `scripts/ecosystem_tools.json`:
+
+```bash
+${EDITOR:-nvim} scripts/ecosystem_tools.json
+```
+
+Fields to consider updating:
+- `urls.docs` — if the vendor moved their docs
+- `urls.release_notes` — if the changelog location changed
+- `config_paths` — if new files now ship in our install output
+- `our_generators` — if a new generator was added
+- `capability_markers` — if a new feature was adopted
+- `version_probe.command` — if the CLI binary was renamed
+
+After editing, increment `last_updated` in the registry and save the snapshot:
+
+```bash
+python3 scripts/ecosystem_doctor.py --update
+```
+
+---
+
+## Phase 5: Validate
+
+```bash
+python3 scripts/validate.py --strict
+python3 scripts/audit_skills.py --ci
+python3 scripts/ecosystem_doctor.py --check              # exits 0 after --update
+npm test
+```
+
+All four must pass before committing generator / registry changes.
+
+---
+
+## Phase 6: Commit
+
+Use a structured commit per change class:
+
+```bash
+git add scripts/ecosystem_tools.json benchmarks/ecosystem-doctor-snapshot.json
+git add scripts/generate_<tool>_*.py                  # if class B/D/E/F
+git add app/skills/<skill>/SKILL.md                   # if templates touched
+git add kb/reference/supported-tools-registry.md
+git commit -m "chore(ecosystem): sync <tool> — <brief summary>"
+```
+
+Recommended commit messages by class:
+
+| Class | Template |
+|-------|----------|
+| A | `chore(ecosystem): refresh <tool> snapshot (cosmetic docs update)` |
+| B | `feat(<tool>): add support for <feature>` |
+| C | `chore(ecosystem): note <tool> <feature> as not-adopted` |
+| D | `feat(<tool>): deprecation warning for <old-path>` |
+| E | `refactor(<tool>): remove flag for <feature> (now default)` |
+| F | `feat(<tool>): add <new-surface> generator` |
+
+---
+
+## Gotchas
+
+- **First run has no baseline.** On a machine where `benchmarks/ecosystem-doctor-snapshot.json` does not exist, every tool shows as clean (no prior state to diff against). Run `--update` once to seed, then run again to see real drift.
+- **Documentation sites use client-side rendering.** Aider, opencode, and Antigravity serve most content via JavaScript. `urllib` fetches the bare HTML skeleton — the doctor only sees a few headings. Combine the automated check with a manual visit to the docs on these tools.
+- **Release notes pages change structure more often than docs.** Cursor and Windsurf refactor their changelog layouts periodically; a heading delta from a changelog page is often a presentation change, not a feature change. Classify as A when in doubt.
+- **Version probes require the CLI to be installed locally.** `gemini --version`, `aider --version`, etc. are skipped silently when the binary isn't on `$PATH`. The snapshot therefore omits version drift for tools you haven't installed — that is intentional, not a bug.
+- **GitHub release pages have anti-scraping.** `github.com/<org>/<repo>/releases` works via `urllib` but rate-limits aggressively. If the doctor errors on repeated runs, wait 10 minutes or manually review the release page.
+- **Marker list is intentionally small.** Capability markers are a "did we adopt this?" checklist, not a feature coverage map. Adding every sub-feature bloats the JSON and produces noisy flips — keep markers at the top-level-capability tier.
+- **`--check` only gates on structural drift.** Heading/marker/version changes and fetch errors exit `1`. Pure content-hash differences (`content_changed_no_heading_delta`) exit `0` — otherwise dynamic pages with timestamps or rotating ads would page you every run. If you want the strictest possible gate, grep for `Content changed` in the text report instead.
+
+---
+
+## Scheduling
+
+Recommended cadence:
+
+| Trigger | Action |
+|---------|--------|
+| Every Monday morning | `python3 scripts/ecosystem_doctor.py --format text` — scan during coffee |
+| Before a minor release | Full sync + clean snapshot before tagging |
+| After any drift report | Act within 1 week or record explicit "ignore, low priority" in the commit message |
+| New tool added to the registry | Baseline with `--update --tool <id>` |
+| Tool removed from support | Delete its entry from the registry AND from the snapshot JSON |
+
+An optional GitHub Action can run `--check` weekly and open an issue on drift. Template:
+
+```yaml
+# .github/workflows/ecosystem-doctor.yml  (proposed, not yet committed)
+on:
+  schedule:
+    - cron: '0 9 * * 1'        # Mondays 09:00 UTC
+  workflow_dispatch: {}
+jobs:
+  doctor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/ecosystem_doctor.py --format text | tee /tmp/doctor.txt
+      - run: python3 scripts/ecosystem_doctor.py --check
+```
+
+---
+
+## When NOT to Use
+
+- For **runtime** user support (user hit a bug with an editor) — use `/debug` or `/triage-issue`
+- For **picking** an editor to add — that is a product decision, not a sync; use `/architecture-decision`
+- For **one-off** testing of a specific tool's install flow — use the release-verification SOP
+- For **scaling up** the supported-tools list — add the new tool to the registry, then run the SOP to baseline it
+
+---
+
+## Related Documentation
+
+- [Supported Tools Registry](../reference/supported-tools-registry.md) — human-readable per-tool breakdown
+- [MCP Editor Compatibility](../reference/mcp-editor-compatibility.md) — MCP-specific adapter table
+- [Maintenance SOP](maintenance-sop.md) — general toolkit upkeep
+- [Release Preparation SOP](release-preparation-sop.md) — run the doctor before tagging
+
+---
+
 ## kb/procedures/maintenance-sop.md
 
 ---
@@ -3523,11 +4025,11 @@ What `uninstall` does:
 title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
-tags: [sop, release, version, publish, changelog, semver, provenance, sarif]
-version: "1.8.0"
+tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem]
+version: "1.9.0"
 created: "2026-04-10"
-last_updated: "2026-04-21"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, and the single-run npm test discipline added in v1.8.0."
+last_updated: "2026-04-23"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, and the ecosystem-sync gate added in v1.9.0."
 ---
 
 # SOP: Release Preparation
@@ -3538,20 +4040,33 @@ Run this **before** tagging. After tagging and publishing, run the
 
 **Pipeline:**
 ```
-Release Preparation (this SOP) → git tag → CI publish → Release Verification SOP
+Ecosystem Sync SOP (drift check + generator updates)
+      ↓
+Release Preparation (this SOP)
+      ↓
+git tag → CI publish → Release Verification SOP
 ```
 
-**Time:** 5-10 minutes
+**Time:** 10-20 minutes (includes ecosystem sync review)
 
 ---
 
 ## Quick Checklist (TL;DR)
 
 ```bash
+# 0. Ecosystem sync (mandatory for minor/major releases; optional for patch)
+#    Full procedure: kb/procedures/ecosystem-sync-sop.md
+python3 scripts/ecosystem_doctor.py --format text > /tmp/eco-report.txt
+cat /tmp/eco-report.txt
+# If drift detected: stop here, follow ecosystem-sync-sop.md Phase 2-4 to
+# classify each drift (A-F), update generators as needed, refresh snapshot,
+# THEN resume this SOP.
+python3 scripts/ecosystem_doctor.py --update    # after all drift resolved
+
 # 1. Decide version bump
 #    patch (1.4.2 → 1.4.3): bugfix, typo, doc fix
-#    minor (1.4.2 → 1.5.0): new feature, new skill, new flag
-#    major (1.4.2 → 2.0.0): breaking change
+#    minor (1.4.2 → 1.5.0): new feature, new skill, new flag, any ecosystem-class-B/F change
+#    major (1.4.2 → 2.0.0): breaking change, any ecosystem-class-D removed path
 
 # 2. Sync version across all files
 python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
@@ -3563,7 +4078,7 @@ python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
-# 5. Validate + audit + SARIF + test
+# 5. Validate + audit + SARIF + test + ecosystem check
 python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && npm test
 
 # 5a. Supply-chain standard (v2.8.0+) — non-negotiable
@@ -3571,11 +4086,68 @@ grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --pro
 grep -q 'id-token: write'   .github/workflows/publish.yml || { echo "MISSING id-token: write"; exit 1; }
 python3 scripts/audit_skills.py --permissions   # review Bash/Write/Edit footprint
 
+# 5b. Ecosystem gate — snapshot must be current before tag
+python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem snapshot — re-run doctor"; exit 1; }
+
 # 6. Commit + tag + push
 git add -A && git commit -m "chore: release vX.Y.Z"
 git tag vX.Y.Z
 git push origin main --tags
 ```
+
+---
+
+## Phase 0: Ecosystem Sync (MANDATORY for minor/major)
+
+Before touching version numbers, confirm the toolkit is aligned with the current state of every editor / platform it integrates with. Skipping this phase ships a release whose generators may lag a month-old CLI refactor, a rename of `.cursorrules` to `.cursor/rules/`, or a new hook event we do not yet emit.
+
+**When this phase is mandatory:**
+- Minor release (X.Y.0) — always
+- Major release (X.0.0) — always
+- Patch release (X.Y.Z) — only if the patch touches a generator or install flow
+
+**When to skip:** pure doc-only patches, SOP edits, internal refactors that do not touch `scripts/generate_*` or `app/skills/*/SKILL.md`.
+
+### 0.1 Run the doctor
+
+```bash
+python3 scripts/ecosystem_doctor.py --format text | tee /tmp/eco-report.txt
+```
+
+Output classifies every registered tool as **Clean**, **Drift**, or **Errored**.
+
+### 0.2 Act on drift
+
+For each drifting tool, follow [ecosystem-sync-sop.md](ecosystem-sync-sop.md) Phase 2-4:
+
+| Drift class | Release impact |
+|-------------|----------------|
+| A (cosmetic reword) | No version impact — refresh snapshot, continue |
+| B (new feature — integrate) | **Minor** version bump at minimum; new generator or extended generator |
+| C (new feature — not adopted) | No impact — note in registry |
+| D (deprecation) | **Minor** or **major** depending on user impact; add migration warning |
+| E (feature promoted to default) | **Minor**; simplify generator, keep fallback comment |
+| F (feature newly globally available) | **Minor**; may require new generator or new config path |
+
+If any B/D/E/F changes land in this preparation pass, mention them explicitly in the CHANGELOG entry (Phase 3) under a `Ecosystem` subsection.
+
+### 0.3 Refresh snapshot
+
+Once every drift is resolved (either by code change or by re-classifying as acceptable):
+
+```bash
+python3 scripts/ecosystem_doctor.py --update
+```
+
+This writes the new baseline to `benchmarks/ecosystem-doctor-snapshot.json`. Commit it as part of the release commit.
+
+### 0.4 Gate
+
+```bash
+python3 scripts/ecosystem_doctor.py --offline --check
+```
+
+Must exit `0`. If it exits `1`, the snapshot is stale — rerun Phase 0.3 or review the remaining drift.
 
 ---
 
@@ -3859,13 +4431,16 @@ git push origin --delete vX.Y.Z
 
 | # | Step | Command / Action | Pass Criteria |
 |---|------|-----------------|---------------|
+| 0a | Ecosystem drift check | `ecosystem_doctor.py --format text` | All tools Clean, or drift classified and resolved |
+| 0b | Ecosystem snapshot refresh | `ecosystem_doctor.py --update` | `benchmarks/ecosystem-doctor-snapshot.json` updated |
+| 0c | Ecosystem gate | `ecosystem_doctor.py --offline --check` | Exit 0 |
 | 1 | Version bump type | Decide patch/minor/major | — |
 | 2 | `package.json` version | Edit `"version"` | Matches target |
 | 3 | `manifest.json` version | Edit `"version"` | Matches target |
 | 4 | `plugin.json` version | Edit `"version"` | Matches target |
 | 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
 | 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
-| 7 | CHANGELOG.md | Add release entry | Entry exists for vX.Y.Z |
+| 7 | CHANGELOG.md | Add release entry (incl. `Ecosystem` subsection if any B/D/E/F drift) | Entry exists for vX.Y.Z |
 | 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py`, `generate_llms_txt.py` | No unexpected diff |
 | 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
 | 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
@@ -9873,6 +10448,240 @@ Unique skills: 3
 File: ~/.softspark/ai-toolkit/stats.json
 Reset: ai-toolkit stats --reset
 ```
+
+---
+
+## kb/reference/supported-tools-registry.md
+
+---
+title: "Supported Tools Registry"
+category: reference
+service: ai-toolkit
+tags: [editors, platforms, generators, integration, ecosystem]
+version: "1.1.0"
+created: "2026-04-23"
+last_updated: "2026-04-23"
+description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
+---
+
+# Supported Tools Registry
+
+The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view — when the JSON changes, update this table too.
+
+## Tool Count: 12
+
+1 primary runtime (Claude Code) + 11 editor integrations.
+
+---
+
+## Primary Runtime
+
+### Claude Code
+
+| Field | Value |
+|-------|-------|
+| ID | `claude-code` |
+| Docs | https://platform.claude.com/docs/en/claude-code |
+| Release notes | https://github.com/anthropics/claude-code/releases |
+| Config paths | `~/.claude/settings.json`, `.claude/settings.local.json`, `CLAUDE.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+) |
+| Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
+| Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`. Tool: `PreToolUse`, `PostToolUse`. Turn: `Stop`, `StopFailure`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
+| Tracked handler types | `command`, `prompt`, `agent`, `mcp_tool` |
+| Other capabilities | slash commands, MCP server/client, sub-agent, output style, `SKILL.md` (≥500 lines warn) |
+| Version probe | `claude --version` |
+
+---
+
+## Editor Integrations
+
+### Cursor
+
+| Field | Value |
+|-------|-------|
+| ID | `cursor` |
+| Docs | https://cursor.com/docs |
+| Changelog | https://cursor.com/changelog |
+| Stable docs mirror | https://cursor.com/llms.txt (all doc pages have .md twins) |
+| Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json`, `~/.cursor/hooks.json` |
+| Compat read paths | `.claude/skills/`, `.claude/agents/`, `.codex/skills/`, `.codex/agents/` (Cursor cross-reads these so ai-toolkit's Claude install works automatically) |
+| Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py` |
+| Tracked capabilities | `cursorrules`, `.cursor/rules`, `AGENTS.md`, `mcp.json`, Composer, Agent Mode, hooks.json, subagents, skills, plugins |
+
+### Windsurf
+
+| Field | Value |
+|-------|-------|
+| ID | `windsurf` |
+| Docs | https://docs.windsurf.com |
+| Changelog | https://windsurf.com/changelog |
+| Stable docs mirror | https://docs.windsurf.com/llms.txt + per-page .md twins |
+| Config paths | `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `AGENTS.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/mcp_config.json` |
+| Compat read paths | `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/` |
+| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py` |
+| Tracked capabilities | Cascade, `windsurfrules`, `AGENTS.md`, activation triggers (`always_on`/`glob`/`model_decision`), workflows, MCP, memories, hooks |
+| Activation modes emitted | always_on (agents/security/quality), glob (testing + language rules), model_decision (code-style/workflow) |
+
+### GitHub Copilot
+
+| Field | Value |
+|-------|-------|
+| ID | `github-copilot` |
+| Docs | https://docs.github.com/en/copilot |
+| Release notes | https://github.blog/changelog/label/copilot/ |
+| Config paths | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/prompts/*.prompt.md`, `AGENTS.md` |
+| Our generators | `scripts/generate_copilot.py` |
+| Tracked capabilities | `copilot-instructions.md`, Copilot Chat, Copilot Workspace, Copilot cloud agent, `applyTo`, custom agents, prompt files, `instructions.md`, MCP |
+| Tier notes | Custom agents (`.github/agents/*.agent.md`) and repo-level MCP config are Pro/Pro+/Business/Enterprise only and intentionally not integrated (class C per ecosystem-sync SOP). |
+
+### Gemini CLI
+
+| Field | Value |
+|-------|-------|
+| ID | `gemini-cli` |
+| Docs | https://github.com/google-gemini/gemini-cli/tree/main/docs |
+| Release notes | https://github.com/google-gemini/gemini-cli/releases |
+| Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md`, `.gemini/extensions/gemini-extension.json` |
+| Our generators | `scripts/generate_gemini.py` |
+| Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `SessionStart`, `SessionEnd`, `Stop`, `SKILL.md`, `activate_skill`, custom commands, `gemini-extension.json` |
+| Version probe | `gemini --version` |
+| Latest upstream | v0.39.0 (2026-04-23) |
+
+### Cline
+
+| Field | Value |
+|-------|-------|
+| ID | `cline` |
+| Docs | https://docs.cline.bot |
+| Release notes | https://github.com/cline/cline/releases |
+| Config paths | `.clinerules/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/`, `.cline/skills/`, `~/.cline/data/settings/cline_mcp_settings.json`, `~/Documents/Cline/Rules/` |
+| Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py` |
+| Tracked capabilities | `clinerules`, Plan Mode, Act Mode, MCP, custom modes, workflows, hooks, skills, subagents, conditional rules |
+| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Skills (`.cline/skills/`) and hooks (`.clinerules/hooks/`) remain experimental upstream and are not yet generated. |
+
+### Roo Code
+
+| Field | Value |
+|-------|-------|
+| ID | `roo-code` |
+| Docs | https://docs.roocode.com |
+| Release notes | https://github.com/RooCodeInc/Roo-Code/releases |
+| Config paths | `.roomodes`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json`, `~/.roo/rules/`, `~/.roo/settings/custom_modes.yaml`, `~/.roo/settings/mcp_settings.json` |
+| Our generators | `scripts/generate_roo_modes.py`, `scripts/generate_roo_rules.py` |
+| Tracked capabilities | `roomodes`, custom modes, Code Actions, MCP, Orchestrator mode, `whenToUse`, `description`, `roleDefinition`, `groups` |
+| Notes | `.roomodes` now includes `description` and `whenToUse` for every mode (since 2026-04). YAML `.roomodes` is upstream-preferred but not yet emitted — JSON is still accepted by Roo. |
+
+### Aider
+
+| Field | Value |
+|-------|-------|
+| ID | `aider` |
+| Docs | https://aider.chat/docs |
+| Changelog | https://aider.chat/HISTORY.html |
+| Config paths | `.aider.conf.yml`, `CONVENTIONS.md`, `~/.aider.conf.yml` |
+| Our generators | `scripts/generate_aider_conf.py`, `scripts/generate_conventions.py` |
+| Tracked capabilities | `.aider.conf.yml`, `CONVENTIONS.md`, `architect`, `auto-accept-architect`, `read`, `lint-cmd`, `test-cmd`, `commit-prompt`, `attribute-co-authored-by`, `chat-language`, `commit-language`, `watch-files`, `auto-commits` |
+| Version probe | `aider --version` |
+| Latest upstream | v0.86.1 (Aug 2025) |
+
+### Augment
+
+| Field | Value |
+|-------|-------|
+| ID | `augment` |
+| Docs | https://docs.augmentcode.com |
+| Changelog | https://www.augmentcode.com/changelog |
+| Config paths | `.augment/rules/*.md`, `.augment/guidelines.md` (legacy), `.augment/agents/*.md`, `.augment/commands/*.md`, `.augment/skills/*/SKILL.md`, `~/.augment/rules/*.md`, `~/.augment/settings.json`, `/etc/augment/settings.json` |
+| Our generators | `scripts/generate_augment.py`, `scripts/generate_augment_rules.py` |
+| Tracked capabilities | `.augment`, Agent mode, Next Edit, MCP, context engine, Auggie CLI, `always_apply`, `agent_requested`, subagents, custom commands, `SKILL.md`, `PreToolUse`, `PostToolUse`, `SessionStart`, `SessionEnd`, `Stop`, ACP Mode |
+| SPA caveat | Mintlify Next.js SPA; use `https://docs.augmentcode.com/<path>.md` siblings (discoverable via `/llms.txt`) for machine reads |
+
+### Google Antigravity
+
+| Field | Value |
+|-------|-------|
+| ID | `google-antigravity` |
+| Docs | https://antigravity.google/docs (JavaScript SPA — use bundle strings / sitemap to verify) |
+| Changelog | https://antigravity.google/changelog (SPA; changelog entries embedded in main-*.js) |
+| Config paths | `.agent/rules/*.md`, `.agent/workflows/*.md`, `.agent/skills/*/SKILL.md`, `AGENTS.md`, `GEMINI.md` |
+| Our generators | `scripts/generate_antigravity.py` (rules + workflows + skill pointer) |
+| Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, `AGENTS.md`, `GEMINI.md`, agent permissions |
+| Doc access note | Docs are JS-SPA — verify via `main-*.js` bundle strings or community skill repos. `WebFetch` returns an empty shell. |
+
+### Codex CLI
+
+| Field | Value |
+|-------|-------|
+| ID | `codex-cli` |
+| Docs | https://github.com/openai/codex (redirects from developers.openai.com/codex) |
+| Release notes | https://github.com/openai/codex/releases |
+| Config paths | `AGENTS.md`, `.agents/rules/*.md`, `.codex/hooks.json`, `.codex/skills/*/SKILL.md`, `~/.codex/config.toml` |
+| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_rules.py`, `scripts/generate_codex_hooks.py` |
+| Tracked hook events | `PreToolUse`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`, `PermissionRequest` (6 events supported upstream in `config.toml`) |
+| Tracked handler types | `command` (emitted by default); `prompt` and `agent` available upstream but authored by hand |
+| Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.codex/skills/*/SKILL.md` (native discovery, not auto-emitted by ai-toolkit yet) |
+| Version probe | `codex --version` |
+
+### opencode
+
+| Field | Value |
+|-------|-------|
+| ID | `opencode` |
+| Docs | https://opencode.ai/docs |
+| Release notes | https://github.com/sst/opencode/releases |
+| Config paths | `opencode.json`, `.opencode/agents/*.md`, `.opencode/commands/*.md`, `.opencode/plugins/*`, `.opencode/skills/*/SKILL.md` (v1.14+), `AGENTS.md`, `.claude/skills/*/SKILL.md` (fallback discovery) |
+| Our generators | `scripts/generate_opencode.py`, `scripts/generate_opencode_agents.py`, `scripts/generate_opencode_commands.py`, `scripts/generate_opencode_json.py`, `scripts/generate_opencode_plugin.py` |
+| Tracked plugin events | `session.created`, `session.compacted`, `session.deleted`, `message.updated`, `tool.execute.before`, `tool.execute.after`, `permission.asked`, `command.executed` |
+| Other capabilities | `opencode.json` config, primary + subagent modes, `@`-mention subagents, `/`-invocation commands, MCP (local + remote), plugin hooks in JS/TS, native `SKILL.md` discovery with Claude-compatible fallback, `permission.skill.*` matrix |
+| Version probe | `opencode --version` |
+
+---
+
+## How the Registry is Consumed
+
+```
+┌─────────────────────────┐
+│  ecosystem_tools.json   │  ← authoritative config (this doc mirrors it)
+└──────────┬──────────────┘
+           │ read
+           ▼
+┌─────────────────────────┐     ┌─────────────────────────────────┐
+│  ecosystem_doctor.py    │◄───►│  ecosystem-doctor-snapshot.json │  (last-seen state)
+└──────────┬──────────────┘     └─────────────────────────────────┘
+           │ emits
+           ▼
+    Drift report  (JSON or text)  →  human review  →  generator updates  →  commit
+```
+
+---
+
+## Adding a New Tool
+
+1. Append an entry to `scripts/ecosystem_tools.json` with all required fields (schema: `schema_version: 1`).
+2. Add a generator under `scripts/generate_<tool>_*.py` (or link to an existing one).
+3. Update this registry doc with a new section matching the format above.
+4. Baseline the snapshot: `python3 scripts/ecosystem_doctor.py --update --tool <id>`.
+5. Run the doctor again to confirm clean state: `python3 scripts/ecosystem_doctor.py --tool <id> --format text`.
+6. Update tool count at the top of this document.
+
+---
+
+## Removing a Tool
+
+1. Delete the tool's entry from `scripts/ecosystem_tools.json`.
+2. Delete its section from this document.
+3. Delete its snapshot entry from `benchmarks/ecosystem-doctor-snapshot.json` (or let the next `--update` prune it — currently not pruned automatically).
+4. Decide whether to keep the generator (`scripts/generate_<tool>_*.py`) for backwards compatibility or delete it.
+5. Remove references from `README.md`, `manifest.json` `description` field, and `kb/procedures/maintenance-sop.md` `Supported editors` line.
+
+---
+
+## Related
+
+- [Ecosystem Sync SOP](../procedures/ecosystem-sync-sop.md) — how to use the doctor
+- [MCP Editor Compatibility](./mcp-editor-compatibility.md) — MCP-specific subset
+- `scripts/ecosystem_tools.json` — source of truth
+- `scripts/ecosystem_doctor.py` — drift detector
+- `benchmarks/ecosystem-doctor-snapshot.json` — last-seen state
 
 ---
 

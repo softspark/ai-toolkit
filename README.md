@@ -6,17 +6,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-99-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-679%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-945%20passing-success)](tests/)
 
 ---
 
-## What's New in v2.12.0
+## What's New in v3.0.0
 
-- **Skill quality pass across 62 skills (14 wave-1 at 2/5 + 48 wave-2 at 3/5)** — every previously low-scoring skill now ships with a `## Rules` section (MUST / NEVER / CRITICAL markers), an optional `## Gotchas` section (Anthropic-recommended environment-specific traps), and a `## When NOT to Use` section naming 2-5 adjacent skills. Score distribution shifted from `{2: 14, 3: 48, 4: 32, 5: 5}` to `{4: 33, 5: 66}` — zero skills below 4/5.
-- **Meta-architect mutation strategy extended** — `add_gotcha` added as a fifth strategy alongside `add_example`, `add_constraint`, `add_edge_case`, `restructure`. Rules and Gotchas are distinct semantic buckets; `skill-creator` and `command-creator` templates now default to the three-section pattern.
-- **`scripts/evaluate_skills.py` — `_meta_architect_audit()` advisory** — non-failing per-skill scoring against 5 binary criteria (description ≥50 chars, example, constraint, edge_case, length). Bottom-10 watchlist surfaced on every `npm run evaluate`.
-- **`swift-patterns` restructured** — 108-line `Common Frameworks` section extracted to `reference/frameworks.md` (progressive disclosure per Anthropic spec). SKILL.md now fits under 500 lines with room for the new sections.
-- **rag-mcp KB** gained `kb/troubleshooting/rag-failure-patterns.md` (12-pattern failure taxonomy P01-P12) and `kb/planning/toon-output-format-spike.md` (timeboxed TOON vs JSON benchmark plan).
+- **Deep coverage: every editor at 100% of its native surface.** New generators emit hooks, sub-agents, custom commands, and skill pointers per editor: `generate_cursor_agents.py`, `generate_cursor_hooks.py`, `generate_windsurf_hooks.py`, `generate_gemini_commands.py`, `generate_gemini_hooks.py`, `generate_gemini_skills.py`, `generate_augment_agents.py`, `generate_augment_commands.py`, `generate_augment_hooks.py`, `generate_augment_skills.py`, `generate_codex_skills.py`.
+- **`--profile full`** turns on every native surface across all supported editors in one flag. `minimal` / `standard` / `strict` retain prior semantics but `standard` now also wires Gemini hooks and the Copilot directory layout (see Breaking Changes).
+- **Opt-in Codex skill mirroring** via `--codex-skills`. Codex gets the full skill catalog materialized under `.agents/skills/`; other editors stay on pointer-skill or compat-read.
+- **58 new bats tests** covering native surface generators (`tests/test_native_surfaces.bats`, `tests/test_skills_native.bats`) plus per-editor suites for aider, antigravity, augment, claude-code, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf.
+- **Skill quality pass** (folded in from the 2.12 work that is now skipped): 62 skills upgraded to 4-5 / 5 on the meta-architect audit; `add_gotcha` added as a fifth mutation strategy.
+
+### Breaking changes
+
+- `--profile standard` now installs **Gemini hooks** automatically. To opt out, use `--profile minimal` or pass `--skip gemini-hooks`.
+- Copilot now uses the **directory layout** (`.github/copilot/`) instead of a single monolithic file. Existing single-file installs are preserved but new installs emit the directory form.
+- `2.13.0` is skipped. Upgrade path is `2.12.x` → `3.0.0`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -144,7 +150,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (679 tests)
+├── tests/               # Bats test suite (945 tests)
 └── CHANGELOG.md
 ```
 

@@ -3,9 +3,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "1.4.4"
+version: "3.0.0"
 created: "2026-03-23"
-last_updated: "2026-04-13"
+last_updated: "2026-04-23"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -90,6 +90,17 @@ What `install` and `update` do (merge-friendly — user content never overwritte
 | `CLAUDE.md` | Marker injection of `app/rules/*.md` via `inject_rule_cli.py` | User content outside markers untouched |
 
 Re-running updates only toolkit content. Old whole-directory symlinks are auto-upgraded to per-file on next run.
+
+### Install Profiles (v3.0.0)
+
+| Profile | Claude Code core | Editor rules | Gemini hooks | Copilot dir layout | Per-editor hooks / sub-agents / commands | Git hooks |
+|---------|:---------------:|:------------:|:------------:|:------------------:|:---------------------------------------:|:---------:|
+| `minimal` | yes | pointer only | no | no | no | no |
+| `standard` (default) | yes | yes | **yes** (new in v3) | **yes** (new in v3) | no | no |
+| `strict` | yes | yes | yes | yes | no | yes |
+| `full` | yes | yes | yes | yes | **yes, all editors** | optional |
+
+`--codex-skills` is orthogonal to `--profile` and materializes the full skill catalog under `.agents/skills/` for Codex. See `kb/reference/global-install-model.md` for the full semantic breakdown.
 
 ---
 

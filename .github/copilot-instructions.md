@@ -152,7 +152,7 @@ Validate code against accessibility standards: WCAG 2.1 Level AA, EN 301 549, an
 Creates new specialized agents with frontmatter, tool selection, and delegation guidance
 
 ### analyze
-Analyze code quality, complexity, and patterns
+Analyze code quality, complexity, and patterns across a codebase. Use when the user asks for a quality report, hotspot scan, or systemic architecture signal — not for fixing bugs or reviewing a single PR.
 
 ### api-patterns
 REST and GraphQL API design patterns: resource naming, versioning, pagination, error contracts, idempotency, HATEOAS, OpenAPI. Triggers: API design, REST, GraphQL, endpoint, route, OpenAPI, Swagger, pagination, rate limit, versioning, idempotency key. Load when designing or reviewing any HTTP API surface.
@@ -173,16 +173,16 @@ Scans codebase for business opportunities by analyzing database schemas, API end
 Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice.
 
 ### briefing
-Generate executive daily briefing across all agents
+Generate an executive daily briefing that aggregates reports from all agents into a short, decision-focused summary. Use when the user asks for a status update across the whole system — not for one-agent activity reports.
 
 ### build
-Build the project with auto-detected toolchain
+Build the project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Use when the user asks to compile, bundle, or produce artifacts — not to run tests or deploy.
 
 ### chaos
-Inject controlled faults for resilience testing
+Inject controlled faults for resilience testing on non-production targets. Use when the user explicitly asks for a chaos experiment, latency injection, or dependency kill — never implicit.
 
 ### ci
-Detect and run CI pipeline with status reporting
+Detect, generate, or troubleshoot CI/CD pipeline configuration for the current project type (GitHub Actions, GitLab CI). Use when the user asks to set up, update, or debug a build pipeline — not for running tests locally.
 
 ### ci-cd-patterns
 CI/CD pipeline and deployment automation: GitHub Actions, GitLab CI, Jenkins, build stages, caching, artifact promotion, blue-green, canary, rollback gates. Triggers: CI, CD, pipeline, GitHub Actions, workflow YAML, deploy automation, release, artifact, rollout, canary, blue-green. Load when designing or fixing a build/release pipeline.
@@ -212,7 +212,7 @@ Scan project dependencies for known CVEs using native audit tools (npm, pip, com
 Database schema design and query optimization: normalization, indexing strategies, joins, N+1, transactions, isolation levels, partitioning, EXPLAIN plans. Triggers: schema, table design, index, slow query, N+1, PostgreSQL, MySQL, SQL Server, SQL, EXPLAIN, query plan, transaction, deadlock. Load when designing tables or tuning queries.
 
 ### debug
-Debug errors and trace root causes systematically
+Debug errors and trace root causes systematically using logs, health checks, and hypothesis-driven investigation. Use when a bug or error message is in hand — not for architectural questions or when there is no reproducible symptom.
 
 ### debugging-tactics
 Root-cause debugging with 4-phase method: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, not working, intermittent, flaky, crash, regression, fails sometimes, why is X happening, broken after. Load when user reports a bug or asks to investigate failing code.
@@ -239,19 +239,19 @@ KB document conventions: YAML frontmatter (7 required fields), 5-category taxono
 E-commerce domain patterns: cart, checkout flow, payment providers (Stripe/Adyen), order state machine, inventory, promotions, tax, B2B vs B2C. Triggers: cart, checkout, product, SKU, inventory, payment, Stripe, Shopify, Medusa, Magento, order status, promotion, tax calculation, coupon, refund. Load when working on any e-commerce feature.
 
 ### evaluate
-Evaluate skill quality and RAG retrieval accuracy
+Evaluate RAG retrieval accuracy and LLM-as-a-judge quality metrics (faithfulness, relevancy, context precision) against a golden dataset. Use when the user asks to measure RAG quality or detect knowledge gaps — not for evaluating generic LLM outputs.
 
 ### evolve
 Analyzes failure patterns and inefficiencies in agent/skill definitions, then drafts and applies targeted improvements to system prompts, tool permissions, and behavioral rules. Use when the user asks to improve agent behavior, refine skill definitions, update system prompts, or optimize agent configurations based on observed failures.
 
 ### explain
-Explain code, architecture, or concepts with diagrams
+Explain code, architecture, or concepts with Mermaid diagrams and sequence flows. Use when the user asks 'what does X do' or 'how does Y work' — not to critique code quality or implement changes.
 
 ### explore
 Explore codebase structure, stack, and architecture
 
 ### fix
-Auto-fix lint errors, type issues, and simple bugs
+Apply a targeted fix to a known bug or lint error and verify it with the same command that surfaced the problem. Use when the root cause is already identified — not for unknown symptoms or open-ended debugging.
 
 ### flutter-patterns
 Flutter and Dart development patterns: widget composition, state management (Riverpod/Bloc/Provider), navigation, async, platform channels, performance. Triggers: Flutter, Dart, widget, StatefulWidget, Riverpod, Bloc, Provider, pubspec, Navigator, platform channel, hot reload, StatelessWidget. Load when writing or reviewing Flutter code.
@@ -263,7 +263,7 @@ Advanced Git workflows: interactive rebase, bisect, reflog, cherry-pick, worktre
 Stress-test a plan or design through relentless Socratic questioning, walking down each decision branch until reaching shared understanding. Use when user wants to stress-test a plan, get grilled, validate assumptions, or mentions 'grill me'.
 
 ### health
-Report service and infrastructure health status
+Report service and infrastructure health status via liveness/readiness checks, resource usage, and quick diagnostics. Use when the user asks whether services are up or degraded — not for deep debugging of a known error.
 
 ### hipaa-validate
 Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references
@@ -272,13 +272,13 @@ Validate code against HIPAA policy: PHI exposure, missing audit logging, unencry
 Multi-agent swarm coordination: consensus voting with confidence scores, output aggregation, file ownership, targeted vs broadcast messaging, map-reduce workflows. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, team of agents, aggregate results, agent voting, distributed agents. Load when orchestrating 3+ agents working in parallel.
 
 ### hook-creator
-Creates new Claude Code hooks with guided workflow, strict conventions, and validation
+Create a new Claude Code lifecycle hook (PreToolUse, PostToolUse, Stop, SessionStart, etc.) with a bash script and hooks.json registration. Use when the user wants automated behavior tied to a specific event — not for one-off commands.
 
 ### index
-Index codebase into the knowledge base
+Reindex the knowledge base for semantic search via the configured vector store (e.g., Qdrant). Use only when the user explicitly asks to reindex — never trigger speculative rebuilds.
 
 ### instinct-review
-Review and manage learned instincts from past sessions
+Review, promote, or remove learned instincts extracted from past sessions (`.claude/instincts/*.md`). Use when the user wants to curate the instinct list — not to extract new instincts or edit memory.
 
 ### introspect
 Agent self-debugging and recovery. Use when stuck in loops, making repeated errors, or quality degrades. Triggers: introspect, self-debug, stuck, loop, why failing.
@@ -293,7 +293,7 @@ Loaded when user needs structured JSON output from Claude. Covers tool-use-as-JS
 Kotlin development patterns: coroutines, Flow, sealed classes, data classes, extension functions, null safety, Ktor, Jetpack Compose, KMP. Triggers: Kotlin, coroutine, Flow, suspend, Ktor, Android Kotlin, Jetpack Compose, sealed class, data class, KMP, kotlinx. Load when writing or reviewing Kotlin code.
 
 ### lint
-Lint code with auto-detected tools and fix suggestions
+Run the project's linter and type-checker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy, dart analyze). Use when the user asks for static-analysis feedback — not to run tests or refactor.
 
 ### mcp-builder
 Build production-grade MCP (Model Context Protocol) servers from scratch using the 4-phase methodology: research, implement, test, evaluate. Use when creating new MCP integrations for external APIs, databases, or internal services.
@@ -305,7 +305,7 @@ MCP (Model Context Protocol) server design: tool schemas, resource patterns, tra
 Search past coding sessions using natural language. Finds relevant observations, decisions, and context from previous work.
 
 ### migrate
-Run database migrations with backup verification
+Run or create database migrations with the detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle) and verify backups exist first. Use when the user asks to apply, roll back, or generate a migration — not for general schema design.
 
 ### migration-patterns
 Zero-downtime database migration patterns: expand-contract, double-write, backfill, blue-green schema changes, feature flags, rollback safety, online DDL. Triggers: migration, schema change, zero-downtime, expand-contract, double-write, backfill, ALTER TABLE, column rename, safe deploy, online DDL. Load when planning non-trivial DB schema changes.
@@ -314,19 +314,19 @@ Zero-downtime database migration patterns: expand-contract, double-write, backfi
 Loaded when user builds multi-model pipelines (Haiku/Sonnet/Opus). Covers cost-optimized routing, escalation, sub-agent delegation, and fallback chains.
 
 ### night-watch
-Run autonomous maintenance and dependency updates
+Run autonomous maintenance tasks (dependency updates, dead code removal, small refactors) in an isolated branch. Use only when the user triggers it explicitly — typically off-hours; never auto-invoked.
 
 ### observability-patterns
 Observability: structured logging, metrics (RED/USE/four golden signals), distributed tracing (OpenTelemetry), correlation IDs, log aggregation, SLO/SLI. Triggers: logging, log level, metrics, Prometheus, Grafana, OpenTelemetry, trace, span, structured log, observability, monitoring, SLO, SLI, alerting. Load when adding or reviewing logs, metrics, or traces.
 
 ### onboard
-Generate project onboarding materials
+Guide setup of ai-toolkit in a new project: install symlinks, create CLAUDE.md, capture undocumented intent via interview. Use when the user starts a fresh project or migrates an existing one to ai-toolkit.
 
 ### orchestrate
 Coordinate multiple specialized agents in parallel
 
 ### panic
-Emergency stabilization via system-governor agent
+Emergency kill switch that halts all agent activity via a lockfile gate. Use when agents are looping, misbehaving, or the user wants to stop everything NOW — not for normal workflow interruptions.
 
 ### performance-profiling
 Performance measurement and optimization: four golden signals (latency/traffic/errors/saturation), p50/p95/p99, baseline-change-measure loop, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, profile, bottleneck, optimization, load test, benchmark, CPU profiling, memory leak. Load when diagnosing or optimizing slow code or services.
@@ -344,7 +344,7 @@ Implementation plan and pre-mortem drafting: phase breakdown, success criteria, 
 Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes
 
 ### pr
-Create pull requests with pre-flight validation
+Create a GitHub pull request after running pre-flight checks (lint, typecheck, tests) and generating a structured summary from commit history. Use when the branch is ready to merge — not for drafting work-in-progress.
 
 ### prd-to-issues
 Break a PRD into independently-grabbable GitHub issues using vertical slices with HITL/AFK tagging and dependency ordering. Use when user wants to convert a PRD to issues, create tickets, or break down a PRD into work items.
@@ -380,7 +380,7 @@ Hierarchical information retrieval following strict order: KB first (smart_query
 Review code for quality, security, and correctness
 
 ### rollback
-Roll back a deployment safely with verification
+Roll back a git commit, database migration, or deployment to a previous known-good state with safety checks and health verification. Use when the user wants to revert recent changes safely — not to undo local edits or halt the whole system.
 
 ### ruby-patterns
 Ruby and Rails development patterns: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet/RBS, Hanami, Roda, Rack middleware. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, gem, Gemfile, bundler, rake, Hanami, Sorbet. Load when writing or reviewing Ruby code.
@@ -419,7 +419,7 @@ Test-driven development with red-green-refactor loop and vertical slices. Use wh
 Launches pre-configured multi-agent teams for code review, debugging, feature development, security audits, and database migrations. Use when the user asks to start a multi-agent workflow, coordinate agent teams, run a team review, or needs parallel agent collaboration on a complex task.
 
 ### test
-Run tests with coverage analysis and reporting
+Run the project's test suite with coverage reporting, auto-detecting the framework (pytest, vitest, jest, flutter test, go test, cargo test, phpunit). Use when the user asks to run existing tests — not to author new ones test-first.
 
 ### testing-patterns
 Testing strategy and craft: pyramid vs trophy, unit/integration/e2e split, fixtures, mocks vs fakes vs stubs, AAA pattern, flaky test diagnosis, coverage goals, property-based testing. Triggers: test, testing strategy, fixture, mock, stub, AAA, unit test, integration test, e2e, Playwright, Cypress, flaky, coverage, TDD, test pyramid. Load when writing, reviewing, or designing test suites.

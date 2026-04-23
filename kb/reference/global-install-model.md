@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "1.4.4"
+version: "3.0.0"
 created: "2026-03-26"
-last_updated: "2026-04-13"
+last_updated: "2026-04-23"
 description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -38,6 +38,19 @@ installed with `ai-toolkit plugin install --editor codex`.
 | `ai-toolkit plugin install --editor claude|codex|all <name>` | runtime-native config | install plugin pack for selected runtime(s) |
 | `ai-toolkit plugin update --editor claude|codex|all <name>` | runtime-native config | re-apply plugin pack after toolkit updates |
 | `ai-toolkit plugin remove --editor claude|codex|all <name>` | runtime-native config | remove plugin pack from selected runtime(s) |
+
+## Install Profiles (v3.0.0)
+
+The `--profile` flag controls how much of each editor's native surface is activated.
+
+| Profile | What runs | Use when |
+|---------|-----------|----------|
+| `minimal` | Agents and skills only. No editor generators beyond pointer skills for editors that require them. | You want the smallest possible footprint, or you manage editor configs by hand. |
+| `standard` (default) | Claude Code + editor rule files. Includes **Gemini hooks** and the **Copilot directory layout** (v3.0.0 change from prior `standard`). | Day-to-day installs. Most users. |
+| `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks. | Solo dev or tight team with zero tolerance for drift. |
+| `full` | Every native surface across every editor: hooks, sub-agents, custom commands, skill pointers for Cursor / Windsurf / Gemini / Augment / Antigravity. | You want maximum coverage and understand that each editor will carry generated files under its own layout. |
+
+`--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full `.claude/skills/` catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
 
 ## Why global install is the default
 

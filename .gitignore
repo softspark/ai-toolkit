@@ -51,3 +51,6 @@ dist/
 /.opencode/
 /opencode.json
 /app/agents/.claude/
+/.github/prompts/
+/.github/instructions/
+/.gemini/

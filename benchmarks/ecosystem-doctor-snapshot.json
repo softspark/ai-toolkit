@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-23T11:37:26Z",
+  "last_run": "2026-04-23T13:13:00Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -10,10 +10,17 @@
       "markers": {
         ".aider.conf.yml": false,
         "CONVENTIONS.md": false,
-        "architect mode": true,
+        "architect": true,
+        "attribute-co-authored-by": false,
+        "auto-accept-architect": true,
+        "auto-commits": false,
+        "chat-language": false,
+        "commit-language": false,
+        "commit-prompt": false,
         "lint-cmd": false,
         "read": true,
-        "test-cmd": false
+        "test-cmd": false,
+        "watch-files": false
       }
     },
     "augment": {
@@ -31,14 +38,26 @@
       ],
       "markers": {
         ".augment": true,
+        "ACP Mode": true,
         "Agent mode": false,
+        "Auggie CLI": true,
         "MCP": true,
         "Next Edit": true,
-        "context engine": true
+        "PostToolUse": false,
+        "PreToolUse": false,
+        "SKILL.md": false,
+        "SessionEnd": false,
+        "SessionStart": false,
+        "Stop": false,
+        "agent_requested": false,
+        "always_apply": false,
+        "context engine": true,
+        "custom commands": true,
+        "subagents": true
       }
     },
     "claude-code": {
-      "docs_hash": "1a66be6d95ae5a4f",
+      "docs_hash": "a117026a47c684b9",
       "headings": [
         "Claude Code overview",
         "\u200bGet started",
@@ -47,13 +66,38 @@
         "\u200bWhat you can do"
       ],
       "markers": {
+        "ConfigChange": false,
+        "CwdChanged": false,
+        "Elicitation": false,
+        "ElicitationResult": false,
+        "FileChanged": false,
+        "InstructionsLoaded": false,
         "MCP server": true,
+        "Notification": true,
+        "PermissionDenied": false,
+        "PermissionRequest": false,
+        "PostCompact": false,
         "PostToolUse": true,
+        "PreCompact": false,
         "PreToolUse": true,
         "SKILL.md": true,
+        "SessionEnd": false,
         "SessionStart": false,
+        "Setup": true,
+        "Stop": false,
+        "StopFailure": false,
+        "SubagentStart": false,
         "SubagentStop": false,
+        "TaskCompleted": false,
+        "TaskCreated": false,
+        "TeammateIdle": false,
         "UserPromptSubmit": false,
+        "WorktreeCreate": false,
+        "WorktreeRemove": false,
+        "hook handler: agent": false,
+        "hook handler: command": false,
+        "hook handler: mcp_tool": false,
+        "hook handler: prompt": false,
         "output style": true,
         "slash command": true,
         "sub-agent": true
@@ -61,7 +105,7 @@
       "version": "2.1.118 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "74835aa20cc3aeba",
+      "docs_hash": "5ed2cada4d9b3fa6",
       "headings": [
         "Cline CLI",
         "Cline Documentation",
@@ -82,11 +126,16 @@
         "MCP": true,
         "Plan Mode": false,
         "clinerules": false,
-        "custom modes": false
+        "conditional rules": false,
+        "custom modes": false,
+        "hooks": true,
+        "skills": true,
+        "subagents": true,
+        "workflows": true
       }
     },
     "codex-cli": {
-      "docs_hash": "9ce8e22174657f29",
+      "docs_hash": "d66e6b65d5c69da4",
       "headings": [
         "About",
         "Contributing",
@@ -119,8 +168,18 @@
         "openai/codex"
       ],
       "markers": {
+        ".codex/skills": true,
         "AGENTS.md": true,
         "config.toml": false,
+        "hook event: PermissionRequest": false,
+        "hook event: PostToolUse": false,
+        "hook event: PreToolUse": false,
+        "hook event: SessionStart": false,
+        "hook event: Stop": false,
+        "hook event: UserPromptSubmit": false,
+        "hook handler: agent": false,
+        "hook handler: command": false,
+        "hook handler: prompt": false,
         "hooks": false,
         "mcp_servers": false,
         "sandbox": true
@@ -132,84 +191,58 @@
       "headings": [],
       "markers": {
         ".cursor/rules": false,
+        "AGENTS.md": false,
         "Agent Mode": false,
         "Composer": true,
-        "YOLO": false,
-        "auto-apply": false,
         "cursorrules": false,
-        "mcp.json": false
+        "hooks.json": false,
+        "mcp.json": false,
+        "plugins": true,
+        "skills": true,
+        "subagents": true
       }
     },
     "gemini-cli": {
-      "docs_hash": "b4f2b86424207c46",
+      "docs_hash": "51d03cce48332772",
       "headings": [
-        "About",
-        "Advanced Capabilities",
-        "Advanced Topics",
-        "Automation &amp; Integration",
-        "Basic Usage",
-        "Code Understanding &amp; Generation",
-        "Contributing",
-        "Contributors",
-        "Core Features",
+        "Breadcrumbs",
+        "Directory actions",
+        "FilesExpand file tree",
         "Folders and files",
         "Footer",
         "Footer navigation",
-        "Forks",
-        "Gemini CLI",
-        "Getting Started",
-        "GitHub Integration",
         "History",
-        "Install Gemini CLI globally via npm (inside the environment)",
-        "Languages",
         "Latest commit",
-        "License",
+        "More options",
         "Navigation Menu",
-        "Nightly",
-        "Option 1: Sign in with Google (OAuth login using your Google Account)",
-        "Option 2: Gemini API Key",
-        "Option 3: Vertex AI",
-        "Preview",
         "Provide feedback",
-        "Quick Examples",
-        "Quick Install",
-        "Release Channels",
-        "Releases 465",
-        "Repository files navigation",
-        "Resources",
         "Saved searches",
         "Search code, repositories, users, issues, pull requests...",
-        "Security policy",
-        "Stable",
-        "Stars",
-        "Tools &amp; Extensions",
-        "Topics",
-        "Troubleshooting &amp; Support",
-        "Uh oh!",
-        "Uninstall",
         "Use saved searches to filter your results more quickly",
-        "Using MCP Servers",
-        "Watchers",
-        "google-gemini/gemini-cli",
-        "\ud83d\udcc4 Legal",
-        "\ud83d\udccb Key Features",
-        "\ud83d\udcd6 Resources",
-        "\ud83d\udcda Documentation",
-        "\ud83d\udce6 Installation",
-        "\ud83d\udd10 Authentication Options",
-        "\ud83d\ude80 Getting Started",
-        "\ud83d\ude80 Why Gemini CLI?",
-        "\ud83e\udd1d Contributing"
+        "docs",
+        "parent directory"
       ],
       "markers": {
+        "AfterAgent": false,
+        "AfterTool": false,
+        "BeforeAgent": false,
+        "BeforeModel": false,
+        "BeforeTool": false,
         "GEMINI.md": true,
+        "SKILL.md": false,
+        "SessionEnd": false,
+        "SessionStart": false,
+        "Stop": true,
+        "activate_skill": false,
+        "custom commands": false,
+        "gemini-extension.json": false,
         "mcpServers": false,
-        "settings.json": true,
+        "settings.json": false,
         "tools": true
       }
     },
     "github-copilot": {
-      "docs_hash": "be084954d863d01a",
+      "docs_hash": "377b588e529c7deb",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot integrations",
@@ -231,20 +264,28 @@
       "markers": {
         "Copilot Chat": true,
         "Copilot Workspace": false,
+        "Copilot cloud agent": true,
         "MCP": true,
-        "agents": true,
+        "applyTo": false,
         "copilot-instructions.md": false,
-        "skillset": false
+        "custom agents": true,
+        "instructions.md": false,
+        "prompt files": true
       }
     },
     "google-antigravity": {
       "docs_hash": "509c72e157ecb6f3",
       "headings": [],
       "markers": {
+        "AGENTS.md": false,
         "Antigravity": false,
+        "GEMINI.md": false,
         "MCP": false,
         "agent manager": false,
+        "agent permissions": false,
         "artifacts": false,
+        "rules": false,
+        "skills": false,
         "workflows": false
       }
     },
@@ -265,12 +306,26 @@
         "Usage"
       ],
       "markers": {
+        "AGENTS.md": true,
         "MCP": true,
         "agents": true,
         "commands": true,
         "opencode.json": false,
+        "permission.skill": false,
+        "plugin event: command.executed": false,
+        "plugin event: message.updated": false,
+        "plugin event: permission.asked": false,
+        "plugin event: session.compacted": false,
+        "plugin event: session.created": false,
+        "plugin event: session.deleted": false,
+        "plugin event: tool.execute.after": false,
+        "plugin event: tool.execute.before": false,
         "plugins": true,
-        "rules": true
+        "primary mode": false,
+        "rules": true,
+        "skills (native .opencode/skills)": false,
+        "skills (via .claude/skills fallback)": false,
+        "subagent mode": false
       }
     },
     "roo-code": {
@@ -288,7 +343,11 @@
         "MCP": true,
         "Orchestrator mode": false,
         "custom modes": true,
-        "roomodes": false
+        "description": true,
+        "groups": false,
+        "roleDefinition": false,
+        "roomodes": false,
+        "whenToUse": false
       }
     },
     "windsurf": {
@@ -320,11 +379,16 @@
         "\u200bWindsurf Next"
       ],
       "markers": {
+        "AGENTS.md": true,
         "Cascade": true,
-        "Flow Actions": false,
         "MCP": true,
+        "always_on": false,
+        "glob": true,
+        "hooks": true,
         "memories": true,
-        "windsurfrules": false
+        "model_decision": false,
+        "windsurfrules": false,
+        "workflows": true
       }
     }
   }

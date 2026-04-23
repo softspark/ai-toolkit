@@ -65,7 +65,9 @@ for entries in hooks["hooks"].values():
             if hook.get("command", "").endswith("guard-destructive.sh\""):
                 matches += 1
 
-assert matches == 1, matches
+# Base Codex hooks register guard-destructive.sh twice: PreToolUse + PermissionRequest.
+# Plugin install must not increase that count.
+assert matches == 2, matches
 PY
     [ "$status" -eq 0 ]
 }

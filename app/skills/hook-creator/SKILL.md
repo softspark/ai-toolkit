@@ -15,18 +15,89 @@ Create a new Claude Code hook following ai-toolkit conventions.
 
 ## Supported Hook Events
 
+### Core lifecycle
+
 | Event | Fires When | Matcher | Typical Use |
 |-------|-----------|---------|-------------|
-| `SessionStart` | Session begins or resumes after compact | `startup\|compact` | Context injection, rules reminder |
+| `SessionStart` | Session begins, resumes, or clears | `startup\|resume\|clear` | Context injection, rules reminder |
+| `SessionEnd` | Session is closing | any | Flush logs, save transcripts |
+| `UserPromptSubmit` | User submits a prompt | any | Prompt governance, usage tracking |
 | `Notification` | Claude sends a notification | any | OS alerts, Slack pings |
-| `PreToolUse` | Before a tool executes | tool name (e.g. `Bash`) | Safety guards, validation |
-| `PostToolUse` | After a tool executes | tool name | Feedback loops, logging |
+
+### Tool lifecycle
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
+| `PreToolUse` | Before a tool executes | tool name (e.g. `Bash`) or `if:` rule | Safety guards, validation, `"defer"` for headless |
+| `PostToolUse` | After a tool executes | tool name | Feedback loops, logging, format-on-save |
+
+### Turn lifecycle
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
 | `Stop` | Claude finishes responding | any | Quality checks, session save |
-| `PreCompact` | Before context compaction | any | Context preservation |
+| `StopFailure` | Turn ends due to an API error (rate limit, auth) | any | Alerting, fallback behavior |
+
+### Subagent lifecycle
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
+| `SubagentStart` | Subagent launches | any | Observability |
 | `SubagentStop` | Subagent completes | any | Result validation |
-| `UserPromptSubmit` | User submits a prompt | any | Prompt governance |
-| `TaskCompleted` | Agent Teams task done | any | Lint, type check |
+
+### Compaction
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
+| `PreCompact` | Before context compaction; can block with exit 2 or `{"decision":"block"}` | any | Context preservation |
+| `PostCompact` | After compaction completes | any | Re-inject state that was summarized away |
+
+### Permissions & elicitation
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
+| `PermissionRequest` | Tool awaiting permission; can return `updatedInput` | any | Headless approval flows |
+| `PermissionDenied` | Auto-mode classifier denied a tool call; return `{retry: true}` to allow retry | any | Coach the model, log denials |
+| `Elicitation` | MCP `elicitation/create` request arrives | any | Intercept / override MCP UI prompts |
+| `ElicitationResult` | Elicitation response ready to be sent back | any | Validate / transform elicitation replies |
+
+### Agent Teams
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
+| `TaskCreated` | New task registered via `TaskCreate` | any | Audit, assignment routing |
+| `TaskCompleted` | Agent Teams task finished | any | Lint, type check, notify |
 | `TeammateIdle` | Agent Teams member idle | any | Completeness reminder |
+
+### Worktrees & environment
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
+| `WorktreeCreate` | Worktree is being created; `type: "http"` can return `hookSpecificOutput.worktreePath` | any | Provision worktree dirs |
+| `WorktreeRemove` | Worktree is being removed | any | Cleanup |
+| `CwdChanged` | Working directory changes during a session | any | Reactive env management (e.g., direnv) |
+| `FileChanged` | Tracked file is modified on disk | any | Re-lint, reload config |
+| `ConfigChange` | Settings / config file changed | any | Re-validate, warn on drift |
+
+### Setup / bootstrap
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
+| `Setup` | First-run / initialization | any | Project bootstrap |
+| `InstructionsLoaded` | CLAUDE.md / AGENTS.md loaded into context | any | Verify presence of mandatory rules |
+
+## Hook Handler Types
+
+Claude Code supports four handler `type` values in `hooks.json`:
+
+| Type | Purpose | Required fields |
+|------|---------|-----------------|
+| `command` | Run a shell script / binary | `command` (path + args) |
+| `prompt` | Inject a prompt to the fast inline model and use its verdict | Handler-managed |
+| `agent` | Spawn a full subagent to evaluate the event (must target `Stop` / `SubagentStop`) | `agent` (agent name) |
+| `mcp_tool` | Invoke an MCP tool directly (no subprocess) | `server`, `tool`, `arguments` |
+
+`command` remains the default and ai-toolkit's hook entries all use it. The other types are documented here so you can author them by hand when needed.
 
 ## Workflow
 
@@ -66,8 +137,13 @@ Create a new Claude Code hook following ai-toolkit conventions.
 Required fields:
 - `_source`: always `"ai-toolkit"` (used by merge/strip logic)
 - `matcher`: tool name or regex for Pre/PostToolUse, empty string for global events
-- `hooks[].type`: always `"command"`
-- `hooks[].command`: path to script using `$HOME/.softspark/ai-toolkit/hooks/` prefix
+- `hooks[].type`: `"command"`, `"prompt"`, `"agent"`, or `"mcp_tool"` (ai-toolkit uses `"command"`)
+- `hooks[].command`: path to script using `$HOME/.softspark/ai-toolkit/hooks/` prefix (for `type: command`)
+
+Optional fields (read from Claude Code docs, not emitted by ai-toolkit by default):
+- `hooks[].timeout`: seconds to wait before killing the hook (global default applies if omitted)
+- `hooks[].if`: permission-rule filter (e.g. `"Bash(git push*)"`) to reduce process spawning
+- `hooks[].statusMessage`: short message surfaced in the UI while the hook runs
 
 ## Script Template
 

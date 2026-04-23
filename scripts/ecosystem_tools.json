@@ -17,20 +17,46 @@
         ".claude/settings.local.json",
         "CLAUDE.md",
         ".claude/agents/*.md",
-        ".claude/skills/*/SKILL.md"
+        ".claude/skills/*/SKILL.md",
+        "~/.claude/themes/*.json"
       ],
       "our_generators": [],
       "capability_markers": [
         "PreToolUse",
         "PostToolUse",
         "SessionStart",
+        "SessionEnd",
+        "SubagentStart",
         "SubagentStop",
         "UserPromptSubmit",
+        "Notification",
+        "Stop",
+        "StopFailure",
+        "PreCompact",
+        "PostCompact",
+        "PermissionRequest",
+        "PermissionDenied",
+        "Elicitation",
+        "ElicitationResult",
+        "TaskCreated",
+        "TaskCompleted",
+        "TeammateIdle",
+        "WorktreeCreate",
+        "WorktreeRemove",
+        "CwdChanged",
+        "FileChanged",
+        "ConfigChange",
+        "Setup",
+        "InstructionsLoaded",
         "slash command",
         "MCP server",
         "sub-agent",
         "output style",
-        "SKILL.md"
+        "SKILL.md",
+        "hook handler: command",
+        "hook handler: prompt",
+        "hook handler: agent",
+        "hook handler: mcp_tool"
       ],
       "version_probe": {
         "kind": "command",
@@ -49,8 +75,14 @@
       "config_paths": [
         ".cursorrules",
         ".cursor/rules/*.mdc",
+        ".cursor/rules/*.md",
+        "AGENTS.md",
         ".cursor/mcp.json",
-        "~/.cursor/mcp.json"
+        "~/.cursor/mcp.json",
+        ".cursor/skills/*/SKILL.md",
+        ".cursor/agents/*.md",
+        ".cursor/hooks.json",
+        "~/.cursor/hooks.json"
       ],
       "our_generators": [
         "scripts/generate_cursor_rules.py",
@@ -59,11 +91,14 @@
       "capability_markers": [
         "cursorrules",
         ".cursor/rules",
+        "AGENTS.md",
         "mcp.json",
         "Composer",
         "Agent Mode",
-        "YOLO",
-        "auto-apply"
+        "hooks.json",
+        "subagents",
+        "skills",
+        "plugins"
       ],
       "version_probe": null
     },
@@ -79,7 +114,11 @@
       "config_paths": [
         ".windsurfrules",
         ".windsurf/rules/*.md",
-        "~/.codeium/windsurf/mcp_config.json"
+        ".windsurf/workflows/*.md",
+        "AGENTS.md",
+        "~/.codeium/windsurf/memories/global_rules.md",
+        "~/.codeium/windsurf/mcp_config.json",
+        "~/.codeium/windsurf/global_workflows/*.md"
       ],
       "our_generators": [
         "scripts/generate_windsurf.py",
@@ -88,9 +127,14 @@
       "capability_markers": [
         "Cascade",
         "windsurfrules",
-        "Flow Actions",
+        "AGENTS.md",
+        "always_on",
+        "glob",
+        "model_decision",
+        "workflows",
         "MCP",
-        "memories"
+        "memories",
+        "hooks"
       ],
       "version_probe": null
     },
@@ -105,8 +149,9 @@
       },
       "config_paths": [
         ".github/copilot-instructions.md",
-        ".github/mcp.json",
-        "~/.copilot/mcp-config.json"
+        ".github/instructions/*.instructions.md",
+        ".github/prompts/*.prompt.md",
+        "AGENTS.md"
       ],
       "our_generators": [
         "scripts/generate_copilot.py"
@@ -115,9 +160,12 @@
         "copilot-instructions.md",
         "Copilot Chat",
         "Copilot Workspace",
-        "MCP",
-        "agents",
-        "skillset"
+        "Copilot cloud agent",
+        "applyTo",
+        "custom agents",
+        "prompt files",
+        "instructions.md",
+        "MCP"
       ],
       "version_probe": null
     },
@@ -126,14 +174,19 @@
       "display_name": "Gemini CLI",
       "kind": "editor",
       "urls": {
-        "docs": "https://github.com/google-gemini/gemini-cli",
+        "docs": "https://github.com/google-gemini/gemini-cli/tree/main/docs",
         "release_notes": "https://github.com/google-gemini/gemini-cli/releases",
         "changelog": null
       },
       "config_paths": [
         "GEMINI.md",
         ".gemini/settings.json",
-        "~/.gemini/settings.json"
+        "~/.gemini/settings.json",
+        ".gemini/commands/*.toml",
+        ".gemini/skills/*/SKILL.md",
+        ".agents/skills/*/SKILL.md",
+        "~/.gemini/skills/*/SKILL.md",
+        ".gemini/extensions/gemini-extension.json"
       ],
       "our_generators": [
         "scripts/generate_gemini.py"
@@ -142,7 +195,19 @@
         "GEMINI.md",
         "mcpServers",
         "tools",
-        "settings.json"
+        "settings.json",
+        "BeforeTool",
+        "AfterTool",
+        "BeforeAgent",
+        "AfterAgent",
+        "BeforeModel",
+        "SessionStart",
+        "SessionEnd",
+        "Stop",
+        "SKILL.md",
+        "activate_skill",
+        "custom commands",
+        "gemini-extension.json"
       ],
       "version_probe": {
         "kind": "command",
@@ -160,7 +225,11 @@
       },
       "config_paths": [
         ".clinerules/*.md",
-        "~/.cline/data/settings/cline_mcp_settings.json"
+        ".clinerules/workflows/*.md",
+        ".clinerules/hooks/",
+        ".cline/skills/",
+        "~/.cline/data/settings/cline_mcp_settings.json",
+        "~/Documents/Cline/Rules/"
       ],
       "our_generators": [
         "scripts/generate_cline.py",
@@ -171,7 +240,12 @@
         "Plan Mode",
         "Act Mode",
         "MCP",
-        "custom modes"
+        "custom modes",
+        "workflows",
+        "hooks",
+        "skills",
+        "subagents",
+        "conditional rules"
       ],
       "version_probe": null
     },
@@ -186,7 +260,12 @@
       },
       "config_paths": [
         ".roomodes",
-        ".roo/rules/*.md"
+        ".roo/rules/*.md",
+        ".roo/rules-{slug}/*.md",
+        ".roo/mcp.json",
+        "~/.roo/rules/",
+        "~/.roo/settings/custom_modes.yaml",
+        "~/.roo/settings/mcp_settings.json"
       ],
       "our_generators": [
         "scripts/generate_roo_modes.py",
@@ -197,7 +276,11 @@
         "custom modes",
         "Code Actions",
         "MCP",
-        "Orchestrator mode"
+        "Orchestrator mode",
+        "whenToUse",
+        "description",
+        "roleDefinition",
+        "groups"
       ],
       "version_probe": null
     },
@@ -222,10 +305,17 @@
       "capability_markers": [
         ".aider.conf.yml",
         "CONVENTIONS.md",
-        "architect mode",
+        "architect",
+        "auto-accept-architect",
         "read",
         "lint-cmd",
-        "test-cmd"
+        "test-cmd",
+        "commit-prompt",
+        "attribute-co-authored-by",
+        "chat-language",
+        "commit-language",
+        "watch-files",
+        "auto-commits"
       ],
       "version_probe": {
         "kind": "command",
@@ -243,7 +333,15 @@
       },
       "config_paths": [
         ".augment/rules/*.md",
-        "~/.augment/settings.json"
+        ".augment/guidelines.md",
+        ".augment/agents/*.md",
+        ".augment/commands/*.md",
+        ".augment/skills/*/SKILL.md",
+        "~/.augment/rules/*.md",
+        "~/.augment/agents/*.md",
+        "~/.augment/commands/*.md",
+        "~/.augment/settings.json",
+        "/etc/augment/settings.json"
       ],
       "our_generators": [
         "scripts/generate_augment.py",
@@ -254,7 +352,19 @@
         "Agent mode",
         "Next Edit",
         "MCP",
-        "context engine"
+        "context engine",
+        "Auggie CLI",
+        "always_apply",
+        "agent_requested",
+        "subagents",
+        "custom commands",
+        "SKILL.md",
+        "PreToolUse",
+        "PostToolUse",
+        "SessionStart",
+        "SessionEnd",
+        "Stop",
+        "ACP Mode"
       ],
       "version_probe": null
     },
@@ -269,7 +379,10 @@
       },
       "config_paths": [
         ".agent/rules/*.md",
-        ".agent/workflows/*.md"
+        ".agent/workflows/*.md",
+        ".agent/skills/*/SKILL.md",
+        "AGENTS.md",
+        "GEMINI.md"
       ],
       "our_generators": [
         "scripts/generate_antigravity.py"
@@ -279,7 +392,12 @@
         "agent manager",
         "artifacts",
         "MCP",
-        "workflows"
+        "workflows",
+        "rules",
+        "skills",
+        "AGENTS.md",
+        "GEMINI.md",
+        "agent permissions"
       ],
       "version_probe": null
     },
@@ -296,6 +414,7 @@
         "AGENTS.md",
         ".agents/rules/*.md",
         ".codex/hooks.json",
+        ".codex/skills/*/SKILL.md",
         "~/.codex/config.toml"
       ],
       "our_generators": [
@@ -308,7 +427,17 @@
         "config.toml",
         "mcp_servers",
         "hooks",
-        "sandbox"
+        "sandbox",
+        "hook event: PreToolUse",
+        "hook event: PostToolUse",
+        "hook event: SessionStart",
+        "hook event: UserPromptSubmit",
+        "hook event: Stop",
+        "hook event: PermissionRequest",
+        "hook handler: command",
+        "hook handler: prompt",
+        "hook handler: agent",
+        ".codex/skills"
       ],
       "version_probe": {
         "kind": "command",
@@ -328,7 +457,10 @@
         "opencode.json",
         ".opencode/agents/*.md",
         ".opencode/commands/*.md",
-        ".opencode/plugins/*"
+        ".opencode/plugins/*",
+        ".opencode/skills/*/SKILL.md",
+        "AGENTS.md",
+        ".claude/skills/*/SKILL.md"
       ],
       "our_generators": [
         "scripts/generate_opencode.py",
@@ -343,7 +475,21 @@
         "commands",
         "plugins",
         "MCP",
-        "rules"
+        "rules",
+        "AGENTS.md",
+        "skills (native .opencode/skills)",
+        "skills (via .claude/skills fallback)",
+        "permission.skill",
+        "subagent mode",
+        "primary mode",
+        "plugin event: session.created",
+        "plugin event: session.compacted",
+        "plugin event: session.deleted",
+        "plugin event: tool.execute.before",
+        "plugin event: tool.execute.after",
+        "plugin event: permission.asked",
+        "plugin event: command.executed",
+        "plugin event: message.updated"
       ],
       "version_probe": {
         "kind": "command",

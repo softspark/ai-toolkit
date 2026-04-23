@@ -1,14 +1,26 @@
 #!/usr/bin/env python3
-"""Generate .cursor/rules/*.mdc files for Cursor IDE.
+"""Generate ``.cursor/rules/*.mdc`` files for Cursor IDE.
 
-Cursor reads rules from .cursor/rules/*.mdc (since Cursor 0.45).
-Each .mdc file has YAML frontmatter controlling when the rule applies:
-  - alwaysApply: true  — always in context
-  - globs: ["**/*.ts"] — auto-attached for matching files
-  - description: "..." — AI decides whether to include (Agent Requested)
+Cursor reads rules from ``.cursor/rules/`` (since Cursor 0.45). Both ``.mdc``
+and plain ``.md`` extensions are accepted; we emit ``.mdc`` because only it
+carries the full YAML frontmatter used to control activation:
 
-The legacy .cursorrules format is still generated separately by
-generate_cursor_rules.py for backwards compatibility.
+  - ``alwaysApply: true``   — always in context
+  - ``globs: ["**/*.ts"]``  — auto-attached for matching files
+  - ``description: "..."``  — Agent Requested (AI decides whether to include)
+  - manual (no description, no globs, ``alwaysApply: false``) — ``@rule-name``
+
+Rule types map to Cursor's UI labels as follows:
+
+  Always Apply            → ``alwaysApply: true``
+  Apply to Specific Files → ``globs: [...]``
+  Apply Intelligently     → ``description: ...``
+  Apply Manually          → none of the above
+
+The legacy ``.cursorrules`` single-file format is still generated separately
+by ``generate_cursor_rules.py`` for backwards compatibility. Cursor also
+supports ``AGENTS.md`` (root + nested subdirectories) as an alternative to
+``.cursor/rules/``; ``generate_agents_md.py`` covers that surface.
 
 Usage:
   python3 scripts/generate_cursor_mdc.py [target-dir]

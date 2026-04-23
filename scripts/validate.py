@@ -39,9 +39,26 @@ VALID_TOOLS = frozenset({
 })
 
 VALID_HOOK_EVENTS = frozenset({
-    "SessionStart", "Notification", "PreToolUse", "PostToolUse", "Stop",
-    "PreCompact", "SubagentStop", "UserPromptSubmit", "TaskCompleted",
-    "TeammateIdle", "SubagentStart", "SessionEnd", "PermissionRequest", "Setup",
+    # Core lifecycle
+    "SessionStart", "SessionEnd", "UserPromptSubmit", "Notification",
+    # Tool lifecycle
+    "PreToolUse", "PostToolUse",
+    # Turn lifecycle
+    "Stop", "StopFailure",
+    # Subagent lifecycle
+    "SubagentStart", "SubagentStop",
+    # Compaction
+    "PreCompact", "PostCompact",
+    # Permissions & elicitation
+    "PermissionRequest", "PermissionDenied",
+    "Elicitation", "ElicitationResult",
+    # Agent Teams
+    "TaskCreated", "TaskCompleted", "TeammateIdle",
+    # Worktrees & environment
+    "WorktreeCreate", "WorktreeRemove",
+    "CwdChanged", "FileChanged", "ConfigChange",
+    # Setup / bootstrap
+    "Setup", "InstructionsLoaded",
 })
 
 VALID_KB_CATEGORIES = frozenset({

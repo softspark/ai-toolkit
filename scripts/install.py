@@ -216,6 +216,7 @@ def parse_args(argv: list[str]) -> dict:
         "config": "",
         "refresh_base": False,
         "skip_register": False,
+        "codex_skills": False,
     }
     i = 0
     while i < len(argv):
@@ -274,6 +275,8 @@ def parse_args(argv: list[str]) -> dict:
             cfg["refresh_base"] = True
         elif arg == "--skip-register":
             cfg["skip_register"] = True
+        elif arg == "--codex-skills":
+            cfg["codex_skills"] = True
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -361,8 +364,12 @@ def resolve_profile(profile: str, only: str) -> str:
         pass
     elif profile == "strict":
         pass
+    elif profile == "full":
+        # `full` is a `standard`-shaped install for Claude Code components;
+        # the extra native surfaces are wired into editor-local generators.
+        pass
     else:
-        print(f"Unknown profile: {profile} (valid: minimal, standard, strict)")
+        print(f"Unknown profile: {profile} (valid: minimal, standard, strict, full)")
         sys.exit(1)
     return only
 
@@ -714,7 +721,9 @@ def main() -> None:
         local_editors_arg: str = cfg["editors"]
         install_local_project(rules_dir, dry_run, reset, lang_modules or None,
                               editors=local_editors_arg,
-                              merged_config=merged_config)
+                              merged_config=merged_config,
+                              profile=profile or "standard",
+                              codex_skills=cfg.get("codex_skills", False))
         installed_eds: list[str] = []  # local install doesn't track global editors
         install_strict_git_hooks(profile, local, dry_run)
     else:

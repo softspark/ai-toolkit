@@ -60,17 +60,17 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 
 - **a11y-validate**: Validate code against accessibility standards: WCAG 2.1 Level AA, EN 301 549, and the European Accessibility Act (EAA / Directive EU 2019/882). Covers semantics, text alternatives, keyboard/focus, color/contrast, forms, media, ARIA, motion, mobile, and EAA documentation requirements. Framework-aware (React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/React Native/Flutter/static HTML).
 - **agent-creator**: Creates new specialized agents with frontmatter, tool selection, and delegation guidance
-- **analyze**: Analyze code quality, complexity, and patterns
+- **analyze**: Analyze code quality, complexity, and patterns across a codebase. Use when the user asks for a quality report, hotspot scan, or systemic architecture signal — not for fixing bugs or reviewing a single PR.
 - **api-patterns**: REST and GraphQL API design patterns: resource naming, versioning, pagination, error contracts, idempotency, HATEOAS, OpenAPI. Triggers: API design, REST, GraphQL, endpoint, route, OpenAPI, Swagger, pagination, rate limit, versioning, idempotency key. Load when designing or reviewing any HTTP API surface.
 - **app-builder**: Full-stack app scaffolding with stack-selection matrix: Next.js, React+Vite, Nuxt, Astro, FastAPI, Django, Laravel, React Native, Flutter, Unity. Triggers: scaffold, bootstrap, new project, starter template, build app, landing page, dashboard, API, mobile app, CLI, e-commerce, game. Load when user wants to start a new project from scratch.
 - **architecture-audit**: Explore codebase organically for architectural friction, discover shallow modules, and propose module-deepening refactors as GitHub issue RFCs using parallel sub-agent interface designs. Use when user wants to improve architecture, find shallow modules, deepen modules, or reduce coupling.
 - **architecture-decision**: Architecture decision making via trade-off analysis in RFC/RFD/ADR format: context, constraints, 3+ options, comparison, recommendation. Triggers: architecture decision, ADR, RFC, RFD, trade-offs, options comparison, design choice, pick between, should we use, evaluate approach. Load when weighing 2+ architectural options or writing decision records.
 - **biz-scan**: Scans codebase for business opportunities by analyzing database schemas, API endpoints, tracking events, and feature flags to surface underutilized capabilities, missing KPIs, and monetization gaps. Use when the user asks about revenue opportunities, business metrics, KPI coverage, analytics gaps, or monetization analysis of a codebase.
 - **brand-voice**: Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice.
-- **briefing**: Generate executive daily briefing across all agents
-- **build**: Build the project with auto-detected toolchain
-- **chaos**: Inject controlled faults for resilience testing
-- **ci**: Detect and run CI pipeline with status reporting
+- **briefing**: Generate an executive daily briefing that aggregates reports from all agents into a short, decision-focused summary. Use when the user asks for a status update across the whole system — not for one-agent activity reports.
+- **build**: Build the project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Use when the user asks to compile, bundle, or produce artifacts — not to run tests or deploy.
+- **chaos**: Inject controlled faults for resilience testing on non-production targets. Use when the user explicitly asks for a chaos experiment, latency injection, or dependency kill — never implicit.
+- **ci**: Detect, generate, or troubleshoot CI/CD pipeline configuration for the current project type (GitHub Actions, GitLab CI). Use when the user asks to set up, update, or debug a build pipeline — not for running tests locally.
 - **ci-cd-patterns**: CI/CD pipeline and deployment automation: GitHub Actions, GitLab CI, Jenkins, build stages, caching, artifact promotion, blue-green, canary, rollback gates. Triggers: CI, CD, pipeline, GitHub Actions, workflow YAML, deploy automation, release, artifact, rollout, canary, blue-green. Load when designing or fixing a build/release pipeline.
 - **clean-code**: Code quality principles: meaningful names, single responsibility, DRY, small functions, clear intent, guard clauses, refactoring rules. Triggers: clean code, naming, refactor for clarity, code smell, SRP, DRY, long function, god class, magic number, dead code. Load when reviewing or writing any production code.
 - **command-creator**: Creates new Claude Code slash commands with frontmatter, workflow guidance, and validation
@@ -80,7 +80,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **csharp-patterns**: C# and .NET development patterns: LINQ, async/await, dependency injection, records, nullable reference types, ASP.NET Core minimal APIs, EF Core, MediatR. Triggers: C#, .NET, dotnet, ASP.NET, EF Core, LINQ, IServiceCollection, record type, async C#, nullable reference types. Load when writing or reviewing C#/.NET code.
 - **cve-scan**: Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, bundler, dart)
 - **database-patterns**: Database schema design and query optimization: normalization, indexing strategies, joins, N+1, transactions, isolation levels, partitioning, EXPLAIN plans. Triggers: schema, table design, index, slow query, N+1, PostgreSQL, MySQL, SQL Server, SQL, EXPLAIN, query plan, transaction, deadlock. Load when designing tables or tuning queries.
-- **debug**: Debug errors and trace root causes systematically
+- **debug**: Debug errors and trace root causes systematically using logs, health checks, and hypothesis-driven investigation. Use when a bug or error message is in hand — not for architectural questions or when there is no reproducible symptom.
 - **debugging-tactics**: Root-cause debugging with 4-phase method: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, not working, intermittent, flaky, crash, regression, fails sometimes, why is X happening, broken after. Load when user reports a bug or asks to investigate failing code.
 - **deploy**: Deploy with pre-flight checks and health verification
 - **design-an-interface**: Generate multiple radically different interface designs using parallel sub-agents, then compare on simplicity, depth, and correctness. Based on 'Design It Twice' from Ousterhout. Use when user wants to design an API, explore interface options, compare module shapes, or mentions 'design it twice'.
@@ -89,42 +89,42 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **docs**: Generate and update README, API docs, and architecture notes
 - **documentation-standards**: KB document conventions: YAML frontmatter (7 required fields), 5-category taxonomy (reference/howto/procedures/troubleshooting/best-practices), directory-category matching, validate.sh CI rules. Triggers: kb/, KB document, architecture note, SOP, runbook, howto, frontmatter, knowledge base entry, documentation standard. Load when creating or editing any file under kb/.
 - **ecommerce-patterns**: E-commerce domain patterns: cart, checkout flow, payment providers (Stripe/Adyen), order state machine, inventory, promotions, tax, B2B vs B2C. Triggers: cart, checkout, product, SKU, inventory, payment, Stripe, Shopify, Medusa, Magento, order status, promotion, tax calculation, coupon, refund. Load when working on any e-commerce feature.
-- **evaluate**: Evaluate skill quality and RAG retrieval accuracy
+- **evaluate**: Evaluate RAG retrieval accuracy and LLM-as-a-judge quality metrics (faithfulness, relevancy, context precision) against a golden dataset. Use when the user asks to measure RAG quality or detect knowledge gaps — not for evaluating generic LLM outputs.
 - **evolve**: Analyzes failure patterns and inefficiencies in agent/skill definitions, then drafts and applies targeted improvements to system prompts, tool permissions, and behavioral rules. Use when the user asks to improve agent behavior, refine skill definitions, update system prompts, or optimize agent configurations based on observed failures.
-- **explain**: Explain code, architecture, or concepts with diagrams
+- **explain**: Explain code, architecture, or concepts with Mermaid diagrams and sequence flows. Use when the user asks 'what does X do' or 'how does Y work' — not to critique code quality or implement changes.
 - **explore**: Explore codebase structure, stack, and architecture
-- **fix**: Auto-fix lint errors, type issues, and simple bugs
+- **fix**: Apply a targeted fix to a known bug or lint error and verify it with the same command that surfaced the problem. Use when the root cause is already identified — not for unknown symptoms or open-ended debugging.
 - **flutter-patterns**: Flutter and Dart development patterns: widget composition, state management (Riverpod/Bloc/Provider), navigation, async, platform channels, performance. Triggers: Flutter, Dart, widget, StatefulWidget, Riverpod, Bloc, Provider, pubspec, Navigator, platform channel, hot reload, StatelessWidget. Load when writing or reviewing Flutter code.
 - **git-mastery**: Advanced Git workflows: interactive rebase, bisect, reflog, cherry-pick, worktrees, history rewriting, submodules, large-file migration (LFS/filter-repo). Triggers: git rebase, bisect, cherry-pick, reflog, force push, history rewrite, detached HEAD, merge conflict, worktree, squash, fixup, submodule. Load when user needs non-trivial Git operations.
 - **grill-me**: Stress-test a plan or design through relentless Socratic questioning, walking down each decision branch until reaching shared understanding. Use when user wants to stress-test a plan, get grilled, validate assumptions, or mentions 'grill me'.
-- **health**: Report service and infrastructure health status
+- **health**: Report service and infrastructure health status via liveness/readiness checks, resource usage, and quick diagnostics. Use when the user asks whether services are up or degraded — not for deep debugging of a known error.
 - **hipaa-validate**: Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references
 - **hive-mind**: Multi-agent swarm coordination: consensus voting with confidence scores, output aggregation, file ownership, targeted vs broadcast messaging, map-reduce workflows. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, team of agents, aggregate results, agent voting, distributed agents. Load when orchestrating 3+ agents working in parallel.
-- **hook-creator**: Creates new Claude Code hooks with guided workflow, strict conventions, and validation
-- **index**: Index codebase into the knowledge base
-- **instinct-review**: Review and manage learned instincts from past sessions
+- **hook-creator**: Create a new Claude Code lifecycle hook (PreToolUse, PostToolUse, Stop, SessionStart, etc.) with a bash script and hooks.json registration. Use when the user wants automated behavior tied to a specific event — not for one-off commands.
+- **index**: Reindex the knowledge base for semantic search via the configured vector store (e.g., Qdrant). Use only when the user explicitly asks to reindex — never trigger speculative rebuilds.
+- **instinct-review**: Review, promote, or remove learned instincts extracted from past sessions (`.claude/instincts/*.md`). Use when the user wants to curate the instinct list — not to extract new instincts or edit memory.
 - **introspect**: Agent self-debugging and recovery. Use when stuck in loops, making repeated errors, or quality degrades. Triggers: introspect, self-debug, stuck, loop, why failing.
 - **java-patterns**: Java development patterns: Spring Boot, CompletableFuture, records, sealed types, streams, JPA/Hibernate, Maven/Gradle, virtual threads (Loom). Triggers: Java, Spring, Spring Boot, JPA, Hibernate, Maven, Gradle, CompletableFuture, record type, sealed class, virtual thread. Load when writing or reviewing Java code.
 - **json-mode-patterns**: Loaded when user needs structured JSON output from Claude. Covers tool-use-as-JSON-mode, schema design, parsing, partial recovery, and validation.
 - **kotlin-patterns**: Kotlin development patterns: coroutines, Flow, sealed classes, data classes, extension functions, null safety, Ktor, Jetpack Compose, KMP. Triggers: Kotlin, coroutine, Flow, suspend, Ktor, Android Kotlin, Jetpack Compose, sealed class, data class, KMP, kotlinx. Load when writing or reviewing Kotlin code.
-- **lint**: Lint code with auto-detected tools and fix suggestions
+- **lint**: Run the project's linter and type-checker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy, dart analyze). Use when the user asks for static-analysis feedback — not to run tests or refactor.
 - **mcp-builder**: Build production-grade MCP (Model Context Protocol) servers from scratch using the 4-phase methodology: research, implement, test, evaluate. Use when creating new MCP integrations for external APIs, databases, or internal services.
 - **mcp-patterns**: MCP (Model Context Protocol) server design: tool schemas, resource patterns, transport selection (stdio/SSE), client configuration, error handling, capability negotiation. Triggers: MCP, Model Context Protocol, MCP server, MCP tool, MCP resource, JSON-RPC, stdio transport, SSE transport, Claude Desktop config, Cursor MCP. Load when building or integrating MCP servers.
 - **mem-search**: Search past coding sessions using natural language. Finds relevant observations, decisions, and context from previous work.
-- **migrate**: Run database migrations with backup verification
+- **migrate**: Run or create database migrations with the detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle) and verify backups exist first. Use when the user asks to apply, roll back, or generate a migration — not for general schema design.
 - **migration-patterns**: Zero-downtime database migration patterns: expand-contract, double-write, backfill, blue-green schema changes, feature flags, rollback safety, online DDL. Triggers: migration, schema change, zero-downtime, expand-contract, double-write, backfill, ALTER TABLE, column rename, safe deploy, online DDL. Load when planning non-trivial DB schema changes.
 - **model-routing-patterns**: Loaded when user builds multi-model pipelines (Haiku/Sonnet/Opus). Covers cost-optimized routing, escalation, sub-agent delegation, and fallback chains.
-- **night-watch**: Run autonomous maintenance and dependency updates
+- **night-watch**: Run autonomous maintenance tasks (dependency updates, dead code removal, small refactors) in an isolated branch. Use only when the user triggers it explicitly — typically off-hours; never auto-invoked.
 - **observability-patterns**: Observability: structured logging, metrics (RED/USE/four golden signals), distributed tracing (OpenTelemetry), correlation IDs, log aggregation, SLO/SLI. Triggers: logging, log level, metrics, Prometheus, Grafana, OpenTelemetry, trace, span, structured log, observability, monitoring, SLO, SLI, alerting. Load when adding or reviewing logs, metrics, or traces.
-- **onboard**: Generate project onboarding materials
+- **onboard**: Guide setup of ai-toolkit in a new project: install symlinks, create CLAUDE.md, capture undocumented intent via interview. Use when the user starts a fresh project or migrates an existing one to ai-toolkit.
 - **orchestrate**: Coordinate multiple specialized agents in parallel
-- **panic**: Emergency stabilization via system-governor agent
+- **panic**: Emergency kill switch that halts all agent activity via a lockfile gate. Use when agents are looping, misbehaving, or the user wants to stop everything NOW — not for normal workflow interruptions.
 - **performance-profiling**: Performance measurement and optimization: four golden signals (latency/traffic/errors/saturation), p50/p95/p99, baseline-change-measure loop, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, profile, bottleneck, optimization, load test, benchmark, CPU profiling, memory leak. Load when diagnosing or optimizing slow code or services.
 - **persona**: Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
 - **plan**: Breaks down feature requests and project goals into phased implementation plans with task lists, agent assignments, dependency graphs, and success criteria. Use when the user asks to plan a feature, create an implementation roadmap, break down a coding task, or outline project phases.
 - **plan-writing**: Implementation plan and pre-mortem drafting: phase breakdown, success criteria, risks, rollback plan, acceptance tests, estimated effort. Triggers: implementation plan, pre-mortem, phased plan, project plan, task breakdown, success criteria, rollback strategy, risk register. Load when user asks to write a plan or pre-mortem document.
 - **plugin-creator**: Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes
-- **pr**: Create pull requests with pre-flight validation
+- **pr**: Create a GitHub pull request after running pre-flight checks (lint, typecheck, tests) and generating a structured summary from commit history. Use when the branch is ready to merge — not for drafting work-in-progress.
 - **prd-to-issues**: Break a PRD into independently-grabbable GitHub issues using vertical slices with HITL/AFK tagging and dependency ordering. Use when user wants to convert a PRD to issues, create tickets, or break down a PRD into work items.
 - **prd-to-plan**: Convert a PRD into a phased implementation plan using tracer-bullet vertical slices. Use when user wants to break down a PRD, create an implementation plan, plan phases from a PRD, or mentions tracer bullets.
 - **predict**: Analyzes code diffs and file changes to identify potential regressions, maps dependency impact across the codebase, and generates a risk-scored impact report. Use when reviewing pull requests, assessing code change risk, checking for breaking changes, or analyzing the blast radius of a diff.
@@ -136,7 +136,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **repeat**: Run a prompt or slash command on a recurring interval until task complete or limits reached. Use when user wants to set up a recurring task, poll for status, or run something repeatedly on an interval.
 - **research-mastery**: Hierarchical information retrieval following strict order: KB first (smart_query/crag_search), then MCP/Context7, then web search, then LLM knowledge as last resort. Triggers: research, find information, verify fact, synthesize sources, fact-check, cross-reference, multi-source, cite sources, investigate topic. Load when any task requires external or cross-source knowledge.
 - **review**: Review code for quality, security, and correctness
-- **rollback**: Roll back a deployment safely with verification
+- **rollback**: Roll back a git commit, database migration, or deployment to a previous known-good state with safety checks and health verification. Use when the user wants to revert recent changes safely — not to undo local edits or halt the whole system.
 - **ruby-patterns**: Ruby and Rails development patterns: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet/RBS, Hanami, Roda, Rack middleware. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, gem, Gemfile, bundler, rake, Hanami, Sorbet. Load when writing or reviewing Ruby code.
 - **rust-patterns**: Rust development patterns: ownership, borrowing, lifetimes, async (Tokio), error handling (Result/anyhow/thiserror), traits, macros, zero-cost abstractions, unsafe boundaries. Triggers: Rust, borrow checker, lifetime, Tokio, async Rust, cargo, trait, impl, Result, unsafe, lifetime annotation, clippy. Load when writing or reviewing Rust code.
 - **search**: Search the knowledge base with semantic and hybrid modes
@@ -149,7 +149,7 @@ Skills are invocable slash commands or auto-loaded knowledge sources:
 - **swift-patterns**: Swift and iOS development patterns: SwiftUI, Combine, async/await, property wrappers, actors, Swift Package Manager, Core Data, UIKit interop, @MainActor. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, property wrapper, Core Data, SPM, UIKit, @MainActor, @State, @Binding. Load when writing or reviewing Swift code.
 - **tdd**: Test-driven development with red-green-refactor loop and vertical slices. Use when user wants TDD, test-first development, red-green-refactor, or building features with tests driving the implementation.
 - **teams**: Launches pre-configured multi-agent teams for code review, debugging, feature development, security audits, and database migrations. Use when the user asks to start a multi-agent workflow, coordinate agent teams, run a team review, or needs parallel agent collaboration on a complex task.
-- **test**: Run tests with coverage analysis and reporting
+- **test**: Run the project's test suite with coverage reporting, auto-detecting the framework (pytest, vitest, jest, flutter test, go test, cargo test, phpunit). Use when the user asks to run existing tests — not to author new ones test-first.
 - **testing-patterns**: Testing strategy and craft: pyramid vs trophy, unit/integration/e2e split, fixtures, mocks vs fakes vs stubs, AAA pattern, flaky test diagnosis, coverage goals, property-based testing. Triggers: test, testing strategy, fixture, mock, stub, AAA, unit test, integration test, e2e, Playwright, Cypress, flaky, coverage, TDD, test pyramid. Load when writing, reviewing, or designing test suites.
 - **triage-issue**: Triage a bug by deeply exploring the codebase for root cause, then create a GitHub issue with a TDD-based fix plan. Mostly hands-off — minimal user interaction. Use when user reports a bug, wants to investigate an issue, mentions triage, or wants a fix plan.
 - **typescript-patterns**: TypeScript type safety patterns: strict mode, generics, conditional types, template literals, discriminated unions, branded types, Zod, satisfies operator, const assertions. Triggers: TypeScript, TS, generics, conditional type, utility type, strict, Zod, satisfies, discriminated union, type safety, type narrowing, template literal type. Load when writing or reviewing TypeScript code.
@@ -203,132 +203,3 @@ Derived from the immutable safety constitution (6 articles):
 - **No Secrets in Code**: Never commit credentials, API keys, or sensitive configuration values
 
 <!-- TOOLKIT:ai-toolkit END -->
-
-<!-- TOOLKIT:jira-mcp START -->
-<!-- Auto-injected by ai-toolkit. Re-run to update. -->
-
-# Jira MCP Server
-
-Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `add_task_comment`, `delete_task`, `delete_comment`, `reassign_task`, `get_task_statuses`, `get_task_details`, `get_project_language`, `log_task_time`, `get_task_time_tracking`, `list_comment_templates`, `add_templated_comment`, `create_task`, `search_tasks`
-
-## Key Rules
-
-- **Always `sync_tasks` first** before reading, because the cache may be stale.
-- **Language first:** before writing ANY comment, description, or task content, call `get_project_language(project_key)` or check the `language` field in `get_task_details` response. Write ALL content in the project's configured language. Never assume Polish or English. Always check first.
-- **Time format:** `"2h 30m"`, using hours and minutes only, never days.
-- **Status changes:** call `get_task_statuses` first to check valid transitions.
-- **Multi-instance:** project key determines which Jira instance is used (mapped in config.json).
-- **Comments are ADF:** `add_task_comment` converts markdown to ADF (Atlassian Document Format) automatically.
-- **Delete guard:** `delete_task` is allowed only for the task creator, and `delete_comment` is allowed only for the comment author. Both require explicit `user_approved=true`.
-- **Templates:** use `list_comment_templates` to discover available templates, then `add_templated_comment` with `template_id` + `variables`.
-
-## Writing Style
-
-- **Write like a real team member:** use plain, direct language that sounds like an engineer writing to another human, not like polished AI copy or marketing text.
-- **No em dash and no double-hyphen separator in prose:** do not use those punctuation patterns in generated comments, descriptions, docs, or summaries. Use commas, periods, or parentheses instead.
-- **Avoid stock AI phrases:** do not use phrases like "worth noting", "it is important to understand", "in today's dynamic environment", "overall", "in conclusion", or similar generic filler.
-- **Prefer concrete wording:** use specific facts, actions, examples, and decisions instead of abstract claims or padded qualifiers.
-- **Avoid repetitive rhythm:** do not make every sentence or bullet sound structurally identical. Vary sentence length and openings when writing longer text.
-- **Keep summaries short:** do not add forced wrap-up paragraphs unless the user explicitly asks for a summary.
-- **Use a workmanlike tone:** prefer a slightly rough, practical style over text that sounds overly smooth, symmetrical, or "LLM-clean".
-
-## Workflow
-
-1. `sync_tasks(jql="assignee=currentUser() AND status!=Done")` to fetch fresh data
-2. `read_cached_tasks()` to work offline
-3. `get_task_details(task_key="PROJ-123")` for a deep dive into description and comments as markdown
-4. `update_task_status(...)` / `add_task_comment(...)` / `log_task_time(...)` to mutate data
-
-## Comment Templates (built-in)
-
-| ID | Use for |
-|----|---------|
-| `status-update` | Progress report with completed/next/blockers |
-| `blocker-notification` | Escalate blocking issue |
-| `handoff-transition` | Task handoff between people |
-| `review-request` | Request code review |
-| `sprint-update` | Sprint progress report |
-| `bug-report` | Structured bug report |
-| `deployment-note` | Deployment documentation |
-| `time-log-summary` | Time logging with description |
-
-## CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `jira-mcp config init` | Initialize global config (~/.softspark/jira-mcp/) |
-| `jira-mcp config add-project <key> <url>` | Add Jira project mapping |
-| `jira-mcp config remove-project <key>` | Remove a project |
-| `jira-mcp config list-projects` | Show configured projects with language |
-| `jira-mcp config set-default <key>` | Set default project |
-| `jira-mcp config set-credentials` | Set API credentials |
-| `jira-mcp config set-language <lang>` | Set global default language |
-| `jira-mcp config set-project-language <key> <lang>` | Set language for a specific project |
-| `jira-mcp create <path>` | Create tasks from template (dry-run default) |
-| `jira-mcp create-monthly` | Create monthly admin tasks |
-| `jira-mcp cache sync-users` | Cache user list for reassignment |
-| `jira-mcp cache sync-workflows` | Cache status transitions |
-| `jira-mcp cache list-users` | Show cached users |
-| `jira-mcp cache list-workflows` | Show cached workflows |
-
-## Architecture
-
-Four layers. Each depends only on layers below.
-
-1. **Types & Config** (`config/`, `errors/`, `*/types.ts`), pure data with zero runtime deps
-2. **Infrastructure** (`connector/`, `cache/`, `adf/`, `templates/`), I/O and external APIs
-3. **Business Logic** (`operations/`, `bulk/`), orchestrating infrastructure
-4. **Entry Points** (`tools/`, `cli/`, `server.ts`), thin dispatchers
-
-## Coding Conventions
-
-- **Strict TypeScript**: `strict: true`, NO `any`, `readonly` interfaces, `import type`, `.js` imports
-- **Zod schemas** for all external data: `type Foo = z.infer<typeof FooSchema>`
-- **Error classes**: extend `JiraMcpError` with `code` property
-- **ADF round-trip**: `markdownToAdf()` for writes and `adfToMarkdown()` for reads. NEVER throw.
-- **InstancePool**: singleton, lazy connectors, dedup by URL
-- **Dual-write**: after Jira mutation, update local cache, return API result
-- **Dry-run default**: `--execute` required for destructive operations
-- **DI pattern**: handlers accept `deps?` parameter for testing
-- **Config path**: ALWAYS `~/.softspark/jira-mcp/` via `GLOBAL_CONFIG_DIR`, with no manual config and no env vars in MCP client setup
-- **SoftSpark standard**: all open-source tools use `~/.softspark/<tool-name>/`. See SOP in rag-mcp `kb/procedures/softspark-config-standard.md`
-
-## Testing
-
-- **Vitest**: 70% coverage threshold, `vi.fn()` for mocks
-- **No real Jira API calls** in tests, use `tests/fixtures/mocks.ts`
-- **Filesystem tests**: `os.tmpdir()` + `mkdtemp()`, NEVER write to `~/.softspark/`
-- Quick pre-commit: `npm run typecheck && npm run lint && npm test && npm run build`
-
-## KB & SOPs
-
-- `kb/reference/` for architecture, API, configuration, ADF, caching, and templates
-- `kb/howto/` for setup, multi-instance usage, and CLI usage
-- `kb/procedures/` for `sop-pre-commit`, `sop-release`, and `sop-post-release-testing`
-
-<!-- TOOLKIT:jira-mcp END -->
-
-<!-- TOOLKIT:rag-mcp-rules START -->
-<!-- Auto-injected by ai-toolkit. Re-run to update. -->
-
-## INSTANT ACTION RULE (GOLDEN RULE)
-
-**ANY technical question? -> INSTANTLY call `smart_query()` OR `hybrid_search_kb()` BEFORE outputting text!**
-
-1. **Search First:** `smart_query()` or `hybrid_search_kb()` (NEVER skip, even if you "know").
-2. **Cite Sources:** always include `[PATH: kb/...]`.
-3. **Strict Order:** Semantic Search -> Files -> External Docs -> General Knowledge.
-
-Default tool: `smart_query()`. Use `hybrid_search_kb()` for speed, `crag_search()` for vague queries, `multi_hop_search()` for complex reasoning.
-
-## kb_id vs file_path
-
-- `get_document(path=...)` takes `kb_id` from search results (e.g., `local/softspark/project/reference/api.md`)
-- `Read`/`Edit` take filesystem `file_path` (e.g., `./reference/api.md`)
-- **DO NOT CONFUSE** these fields.
-
-## SOPs
-
-ALWAYS check `kb/procedures/` first: `smart_query("SOP for <task>")`.
-
-<!-- TOOLKIT:rag-mcp-rules END -->

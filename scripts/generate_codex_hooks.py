@@ -4,8 +4,13 @@
 Maps compatible ai-toolkit hooks to Codex lifecycle events.
 Hook scripts are shared with Claude Code (stored in ~/.softspark/ai-toolkit/hooks/).
 
-Codex supports 5 events: SessionStart, PreToolUse, PostToolUse,
-UserPromptSubmit, Stop. PreToolUse/PostToolUse only support Bash matcher.
+Codex supports 6 events (PascalCase in config.toml / hooks.json):
+``PreToolUse``, ``PostToolUse``, ``PermissionRequest``, ``SessionStart``,
+``UserPromptSubmit``, ``Stop``. PreToolUse/PostToolUse only support
+the ``Bash`` matcher.
+
+Handler types in Codex: ``command`` (what we emit), ``prompt``, and ``agent``.
+Reference: codex-rs/config/src/hook_config.rs.
 
 Usage:
   python3 scripts/generate_codex_hooks.py [target-dir]
@@ -32,6 +37,12 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     "PreToolUse": [
         ("Bash", "guard-destructive.sh"),
         ("Bash", "commit-quality.sh"),
+    ],
+    "PermissionRequest": [
+        # Fires when Codex asks the user to approve a tool call. Our guard
+        # reviews the tool input and can veto destructive patterns before the
+        # approval prompt reaches the human.
+        ("", "guard-destructive.sh"),
     ],
     "UserPromptSubmit": [
         ("", "user-prompt-submit.sh"),

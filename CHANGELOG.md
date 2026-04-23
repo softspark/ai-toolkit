@@ -7,6 +7,44 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.0.0 — Deep Coverage: Full Native Surface Utilization (2026-04-23)
+
+Skips `2.13.0`. Upgrade path is `2.12.x` -> `3.0.0`.
+
+### BREAKING
+
+- **`--profile standard` now installs Gemini hooks** by default. Users who relied on `standard` leaving Gemini hooks alone must switch to `--profile minimal` or pass `--skip gemini-hooks`.
+- **Copilot moved to directory mode** (`.github/copilot/`) for new installs. Existing single-file `.github/copilot-instructions.md` installs are preserved; re-running `install` will emit the directory form alongside.
+
+### Added
+
+- **`--profile full`** flag that activates every native surface across every supported editor in a single invocation.
+- **`--codex-skills`** opt-in flag that materializes the full skill catalog under Codex's `.agents/skills/` directory (other editors continue using pointer-skill or compat-read).
+- **11 new generators** covering hooks, sub-agents, commands, and skill pointers per editor:
+  - `scripts/generate_cursor_agents.py`, `scripts/generate_cursor_hooks.py`
+  - `scripts/generate_windsurf_hooks.py`
+  - `scripts/generate_gemini_commands.py`, `scripts/generate_gemini_hooks.py`, `scripts/generate_gemini_skills.py`
+  - `scripts/generate_augment_agents.py`, `scripts/generate_augment_commands.py`, `scripts/generate_augment_hooks.py`, `scripts/generate_augment_skills.py`
+  - `scripts/generate_codex_skills.py`
+- **105 new bats tests**: `tests/test_native_surfaces.bats` (33), `tests/test_skills_native.bats` (25), `tests/test_hooks_per_editor.bats` (30), `tests/test_install_profiles.bats` (17), plus per-editor suites for aider, antigravity, augment, claude-code, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf. Total test count: 840 -> 945.
+- **Folded-in skill quality pass** (originally targeted at 2.13): 62 skills upgraded to 4-5 / 5 on the meta-architect audit with `## Rules`, `## Gotchas`, and `## When NOT to Use` sections. `add_gotcha` added as a fifth mutation strategy.
+
+### Changed
+
+- `scripts/install_steps/ai_tools.py` now routes profile and `--codex-skills` through a `_try_generator` wrapper that degrades gracefully when a generator is missing. All new generators are wired behind explicit profile checks; no generator runs at `minimal`.
+- `scripts/install.py` accepts `--profile full` and `--codex-skills`.
+- `config_validator.VALID_PROFILES` extended with `full`.
+- Per-tool generator matrix documented in `kb/reference/supported-tools-registry.md` (profile column).
+- Profile semantics documented in `kb/reference/global-install-model.md` and `kb/procedures/maintenance-sop.md`.
+
+### Migration notes
+
+- If you pin `--profile standard` in CI and need to keep Gemini hooks out, switch to `--profile minimal` or pass `--skip gemini-hooks`.
+- Copilot users on single-file mode: no action required. To adopt the directory layout, delete `.github/copilot-instructions.md` before re-running `install`.
+- Users running `install` against a project that already has hand-edited Cursor / Windsurf / Gemini hooks are safe. All new generators preserve prefix/suffix markers and only rewrite the managed block.
+
+---
+
 ## v2.12.0 — Skill Quality Pass (Rules + Gotchas + When NOT to Use) (2026-04-23)
 
 ### Added
