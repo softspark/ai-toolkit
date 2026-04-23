@@ -49,12 +49,15 @@ model: sonnet
 - Prefer numbered phases for multi-step workflows
 - List required checks explicitly (`lint`, `tests`, `docs`, etc.)
 - Avoid hidden assumptions about project structure unless the command is project-specific
+- **Description ≥50 chars** with a trigger hint (`Use when…`) — short descriptions cause adjacent commands to fight for the same query
+- Include **hard rules** (MUST / NEVER / CRITICAL) so the agent cannot improvise around safety boundaries
+- Include **"When NOT to use"** naming 2-3 adjacent commands, to prevent over-triggering
 
 ## Minimal Template
 
 ```markdown
 ---
-description: "{one-line description}"
+description: "{Third-person description, min 50 chars, with trigger hint like 'Use when...'}"
 argument-hint: "[arguments]"
 allowed-tools: Read, Grep, Bash
 ---
@@ -70,12 +73,31 @@ Perform the requested task using this workflow:
 3. Execute the task using the smallest safe set of changes.
 4. Validate the result.
 5. Summarize outcome and follow-up actions.
+
+## Example
+
+\`\`\`
+/{command} example-argument
+\`\`\`
+
+## Rules
+
+- **MUST** {non-negotiable rule}
+- **NEVER** {forbidden action}
+
+## When NOT to Use
+
+- For {adjacent use case} -- use `/{other-command}` instead
+- If {precondition} is not met
 ```
 
 ## Validation Checklist
 
 - [ ] Command file uses markdown and valid YAML frontmatter
-- [ ] Help text is concise and searchable
+- [ ] Description ≥50 chars, third-person, with trigger hint
+- [ ] At least one concrete code-fenced example
+- [ ] Hard rules using MUST / NEVER / CRITICAL
+- [ ] "When NOT to Use" section naming 2-3 adjacent commands
 - [ ] Body is instruction-oriented, not user-facing prose
 - [ ] `$ARGUMENTS` is present when arguments are expected
 - [ ] Validation steps are explicit

@@ -48,7 +48,7 @@ Create a new skill following the Agent Skills standard.
 
 ## Writing Guidelines
 
-- **Description**: third person ("Generates...", "Provides..."), include searchable key terms
+- **Description**: third person ("Generates...", "Provides..."), **min 50 chars**, include searchable key terms **and a trigger hint** (e.g., "Use when..."). Short descriptions cause over-triggering — adjacent skills fight for the same query.
 - **Name**: lowercase, hyphens, max 64 chars -- match the directory name
 - **Length**: SKILL.md under 500 lines; use `reference/` for overflow
 - **Be concise**: Claude is smart -- give structure, not lectures
@@ -56,6 +56,19 @@ Create a new skill following the Agent Skills standard.
 - **File references**: max 1 level deep (e.g., `reference/details.md`)
 - **Use `$ARGUMENTS`**: place it early so user input is visible
 - **Tables over prose**: for options, patterns, mappings
+
+## Mandatory Sections (meta-architect audit criteria)
+
+Every SKILL.md must contain all five, or it will lower the toolkit quality score:
+
+1. **Description ≥50 chars** with trigger hint in frontmatter
+2. **At least one concrete example** — fenced code block or `## Example` section
+3. **Hard rules** using uppercase markers: `MUST`, `NEVER`, `CRITICAL`, `MANDATORY`, or `DO NOT`
+4. **"When NOT to Use" section** — list 2-3 adjacent skills and the boundary between them
+5. **Under 500 lines** — split into `reference/` if needed
+
+These map directly to the mutation strategies in `meta-architect.md`:
+`add_example`, `add_constraint`, `add_edge_case`, `restructure`.
 
 ## Directory Structure
 
@@ -74,7 +87,7 @@ Only create subdirectories when the skill needs them. Most skills are a single S
 ```markdown
 ---
 name: {name}
-description: "{Third-person description with key terms}"
+description: "{Third-person description, min 50 chars, with trigger hint like 'Use when...'}"
 argument-hint: "[hint]"
 allowed-tools: Read, Grep, Glob
 ---
@@ -97,25 +110,38 @@ $ARGUMENTS
 2. **Step two**
 3. **Step three**
 
-## Output Format
+## Example
 
-{Expected output structure}
+\`\`\`
+/{name} example-argument
+\`\`\`
+
+{Expected observable behavior.}
 
 ## Rules
 
-- {Constraint 1}
-- {Constraint 2}
+- **MUST** {non-negotiable rule 1}
+- **NEVER** {forbidden action}
+- **CRITICAL**: {safety constraint}
+
+## When NOT to Use
+
+- For {adjacent use case} -- use `/{other-skill}` instead
+- For {another case} -- use `/{another-skill}`
+- If {precondition} is not met
 ```
 
 ## Quality Checklist
 
 Before finalizing, verify:
 
-- [ ] Description is specific with searchable key terms
-- [ ] SKILL.md is under 500 lines
+- [ ] Description ≥50 chars, third-person, with trigger hint
+- [ ] At least one concrete code-fenced example
+- [ ] Hard rules using MUST / NEVER / CRITICAL / MANDATORY / DO NOT
+- [ ] "When NOT to Use" section naming 2-3 adjacent skills
+- [ ] SKILL.md under 500 lines
 - [ ] No time-sensitive information (versions, dates)
 - [ ] Consistent terminology throughout
-- [ ] Examples are concrete, not abstract
 - [ ] File references max 1 level deep
 - [ ] Workflows have numbered steps
 - [ ] Frontmatter fields match classification type

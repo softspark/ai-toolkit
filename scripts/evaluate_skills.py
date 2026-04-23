@@ -212,6 +212,80 @@ def _collect_quality_metrics() -> tuple[int, int, int, int, int, int]:
     return ref_count, tmpl_count, inject_count, over500, depends_count, orphan_deps
 
 
+def _meta_architect_audit() -> tuple[dict[int, int], list[tuple[str, int, list[str]]]]:
+    """Score each skill against the 5 meta-architect binary criteria.
+
+    Criteria (all binary yes=pass):
+        description : frontmatter description is >= 50 chars and not generic
+        example     : SKILL.md contains at least one fenced code block or an
+                      '## Example' heading
+        constraint  : SKILL.md uses at least one of MUST / NEVER / CRITICAL /
+                      MANDATORY / REQUIRED / DO NOT as an uppercase marker
+        edge_case   : SKILL.md mentions edge cases, failure modes, fallbacks,
+                      or when NOT to use the skill
+        length      : SKILL.md is under 500 lines
+
+    Returns:
+        (score_distribution, weak_skills) where
+          score_distribution maps score -> count of skills,
+          weak_skills is a list of (name, score, failed_criteria) for score <= 3.
+    """
+    score_dist: dict[int, int] = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+    weak: list[tuple[str, int, list[str]]] = []
+
+    desc_generic = {"tbd", "todo", "fixme", "placeholder"}
+    constraint_re = re.compile(r"\b(MUST|NEVER|CRITICAL|MANDATORY|REQUIRED|DO NOT)\b")
+    edge_re = re.compile(
+        r"(?i)\b(edge case|edge-case|corner case|failure mode|when not to|"
+        r"do not use for|fallback|error handling|limitations?)\b"
+    )
+    example_heading_re = re.compile(
+        r"(?im)^##+\s*(example|examples|usage|worked example)"
+    )
+
+    for sf in sorted(skills_dir.glob("*/SKILL.md")):
+        text = sf.read_text(encoding="utf-8")
+        fm = frontmatter_block(sf)
+        desc = _fm_value(fm, "description")
+        line_count = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
+
+        passed: list[str] = []
+        failed: list[str] = []
+
+        if len(desc) >= 50 and not any(g in desc.lower() for g in desc_generic):
+            passed.append("description")
+        else:
+            failed.append("description")
+
+        if re.search(r"^```", text, re.M) or example_heading_re.search(text):
+            passed.append("example")
+        else:
+            failed.append("example")
+
+        if constraint_re.search(text):
+            passed.append("constraint")
+        else:
+            failed.append("constraint")
+
+        if edge_re.search(text):
+            passed.append("edge_case")
+        else:
+            failed.append("edge_case")
+
+        if line_count < 500:
+            passed.append("length")
+        else:
+            failed.append("length")
+
+        score = len(passed)
+        score_dist[score] = score_dist.get(score, 0) + 1
+        if score <= 3:
+            weak.append((sf.parent.name, score, failed))
+
+    weak.sort(key=lambda r: (r[1], r[0]))
+    return score_dist, weak
+
+
 def main() -> None:
     """Run evaluation across all skills and print report."""
     print("AI Toolkit Skill Evaluation")
@@ -247,6 +321,16 @@ def main() -> None:
     print(f"  Over 500 lines:         {over500}")
     print(f"  Skills with depends-on: {depends_count}")
     print(f"  Orphan dependencies:    {orphan_deps}")
+    print()
+
+    score_dist, weak = _meta_architect_audit()
+    print("Meta-Architect Audit (advisory, non-failing):")
+    print(f"  Score distribution (of 5): {dict(sorted(score_dist.items()))}")
+    print(f"  Skills scoring <= 3:       {len(weak)}")
+    if weak:
+        print("  Bottom 10 (score, name, failed criteria):")
+        for name, score, failed in weak[:10]:
+            print(f"    {score}/5  {name:<28} {','.join(failed)}")
     print()
 
     if fail_count > 0:
