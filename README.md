@@ -8,6 +8,10 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-960%20passing-success)](tests/)
 
+<p align="center">
+  <img src="assets/ai-toolkit-readme-hero.png" alt="ai-toolkit 3 README hero showing one toolkit for 12 AI editors" width="900">
+</p>
+
 ---
 
 ## What's New in v3.0.2
