@@ -57,6 +57,9 @@ See [CHANGELOG.md](CHANGELOG.md) for full history.
 - [Getting Started](#getting-started)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
+- [Changelog](#changelog)
 
 ---
 
@@ -180,7 +183,7 @@ ai-toolkit/
 
 ## Key Features
 
-**Machine-enforced constitution** — 5-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
+**Machine-enforced constitution** — 6-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
 **21 lifecycle hooks** — Executable scripts across 12 events (SessionStart → SessionEnd). Guards, governance, quality gates, session persistence, MCP health checks. See [Hooks Catalog](kb/reference/hooks-catalog.md).
 
@@ -202,7 +205,7 @@ ai-toolkit/
 
 **Config inheritance** — Enterprise `extends` system with constitution immutability and enforcement constraints. See [Enterprise Config Guide](kb/reference/enterprise-config-guide.md).
 
-**68 language rules** — 13 languages, 5 categories each. Auto-detected or explicit `--lang`. See [Language Rules](kb/reference/language-rules.md).
+**70 language rules** — 13 languages + common, 5 categories each. Auto-detected or explicit `--lang`. See [Language Rules](kb/reference/language-rules.md).
 
 **26 MCP templates** — Ready-to-use configs for GitHub, PostgreSQL, Slack, Jira, Sentry, and more. See [MCP Templates](kb/reference/mcp-templates.md).
 
