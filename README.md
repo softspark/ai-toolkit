@@ -10,15 +10,22 @@
 
 ---
 
-## What's New in v3.0.0
+## What's New in v3.0.1
+
+**3.0.1 is a doc-only patch** that tightens the release SOPs. No code or generator changes. The v3.0.0 feature set below is still what you get when you upgrade from 2.x.
+
+- Release Verification SOP gains **Phase 9: Deep-Coverage Checks** — six automated assertions for the v3.0.0 native surfaces (`--profile full` emission, `--codex-skills` orthogonality, breaking-change surfaces on `standard`, install idempotence, live JSON parse, registry/generator drift) plus refreshed thresholds and a HOME-scoped-write safety warning.
+- Release Preparation SOP now runs the registry-vs-generators drift check in Phase 5 so a misaligned `supported-tools-registry.md` can't escape into a release.
+
+### Carried from v3.0.0 (feature release)
 
 - **Deep coverage: every editor at 100% of its native surface.** New generators emit hooks, sub-agents, custom commands, and skill pointers per editor: `generate_cursor_agents.py`, `generate_cursor_hooks.py`, `generate_windsurf_hooks.py`, `generate_gemini_commands.py`, `generate_gemini_hooks.py`, `generate_gemini_skills.py`, `generate_augment_agents.py`, `generate_augment_commands.py`, `generate_augment_hooks.py`, `generate_augment_skills.py`, `generate_codex_skills.py`.
 - **`--profile full`** turns on every native surface across all supported editors in one flag. `minimal` / `standard` / `strict` retain prior semantics but `standard` now also wires Gemini hooks and the Copilot directory layout (see Breaking Changes).
 - **Opt-in Codex skill mirroring** via `--codex-skills`. Codex gets the full skill catalog materialized under `.agents/skills/`; other editors stay on pointer-skill or compat-read.
-- **58 new bats tests** covering native surface generators (`tests/test_native_surfaces.bats`, `tests/test_skills_native.bats`) plus per-editor suites for aider, antigravity, augment, claude-code, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf.
+- **58 new bats tests** covering native surface generators plus per-editor suites for aider, antigravity, augment, claude-code, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf.
 - **Skill quality pass** (folded in from the 2.12 work that is now skipped): 62 skills upgraded to 4-5 / 5 on the meta-architect audit; `add_gotcha` added as a fifth mutation strategy.
 
-### Breaking changes
+### Breaking changes (from 3.0.0)
 
 - `--profile standard` now installs **Gemini hooks** automatically. To opt out, use `--profile minimal` or pass `--skip gemini-hooks`.
 - Copilot now uses the **directory layout** (`.github/copilot/`) instead of a single monolithic file. Existing single-file installs are preserved but new installs emit the directory form.

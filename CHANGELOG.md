@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.0.1 — Release SOP Deep-Coverage Checks (2026-04-24)
+
+Doc-only patch. No code, generators, or runtime behavior changed.
+
+### Changed
+
+- **`kb/procedures/release-verification-sop.md` 1.3.0 -> 1.4.0** — added Phase 9 (six new checks for v3.0.0 native surfaces: `--profile full` emission, `--codex-skills` orthogonality, breaking-change surfaces at `standard`, install idempotence, live JSON parse, registry/generator drift). Refreshed stale thresholds (`Tests >= 350` -> `Tests >= 900`, `e.g., 669` -> `e.g., 945`). Editor list updated from 8 to 11 (+codex, +gemini, +opencode). Added HOME-scoped write safety warning.
+- **`kb/procedures/release-preparation-sop.md` 1.9.0 -> 1.10.0** — added the registry-vs-generators drift check to Phase 5 so a bad registry can never escape into a release.
+- **`kb/reference/supported-tools-registry.md` 1.1.0 -> 1.2.0** — enumerated the 11 new v3.0.0 generators (cursor_hooks/agents, windsurf_hooks, gemini_hooks/commands/skills, augment_hooks/agents/commands/skills, codex_skills) with profile and opt-in annotations.
+
+---
+
 ## v3.0.0 — Deep Coverage: Full Native Surface Utilization (2026-04-23)
 
 Skips `2.13.0`. Upgrade path is `2.12.x` -> `3.0.0`.
