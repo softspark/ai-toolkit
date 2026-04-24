@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-04-23"
-last_updated: "2026-04-23"
+last_updated: "2026-04-24"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -49,7 +49,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Stable docs mirror | https://cursor.com/llms.txt (all doc pages have .md twins) |
 | Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json`, `~/.cursor/hooks.json` |
 | Compat read paths | `.claude/skills/`, `.claude/agents/`, `.codex/skills/`, `.codex/agents/` (Cursor cross-reads these so ai-toolkit's Claude install works automatically) |
-| Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py` |
+| Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py`, `scripts/generate_cursor_hooks.py` (profile=full), `scripts/generate_cursor_agents.py` (profile=full) |
 | Tracked capabilities | `cursorrules`, `.cursor/rules`, `AGENTS.md`, `mcp.json`, Composer, Agent Mode, hooks.json, subagents, skills, plugins |
 
 ### Windsurf
@@ -62,7 +62,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Stable docs mirror | https://docs.windsurf.com/llms.txt + per-page .md twins |
 | Config paths | `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `AGENTS.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/mcp_config.json` |
 | Compat read paths | `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/` |
-| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py` |
+| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py`, `scripts/generate_windsurf_hooks.py` (profile=full) |
 | Tracked capabilities | Cascade, `windsurfrules`, `AGENTS.md`, activation triggers (`always_on`/`glob`/`model_decision`), workflows, MCP, memories, hooks |
 | Activation modes emitted | always_on (agents/security/quality), glob (testing + language rules), model_decision (code-style/workflow) |
 
@@ -86,7 +86,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://github.com/google-gemini/gemini-cli/tree/main/docs |
 | Release notes | https://github.com/google-gemini/gemini-cli/releases |
 | Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md`, `.gemini/extensions/gemini-extension.json` |
-| Our generators | `scripts/generate_gemini.py` |
+| Our generators | `scripts/generate_gemini.py`, `scripts/generate_gemini_hooks.py` (profile>=standard), `scripts/generate_gemini_commands.py` (profile=full), `scripts/generate_gemini_skills.py` (profile=full) |
 | Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `SessionStart`, `SessionEnd`, `Stop`, `SKILL.md`, `activate_skill`, custom commands, `gemini-extension.json` |
 | Version probe | `gemini --version` |
 | Latest upstream | v0.39.0 (2026-04-23) |
@@ -136,7 +136,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://docs.augmentcode.com |
 | Changelog | https://www.augmentcode.com/changelog |
 | Config paths | `.augment/rules/*.md`, `.augment/guidelines.md` (legacy), `.augment/agents/*.md`, `.augment/commands/*.md`, `.augment/skills/*/SKILL.md`, `~/.augment/rules/*.md`, `~/.augment/settings.json`, `/etc/augment/settings.json` |
-| Our generators | `scripts/generate_augment.py`, `scripts/generate_augment_rules.py` |
+| Our generators | `scripts/generate_augment.py`, `scripts/generate_augment_rules.py`, `scripts/generate_augment_agents.py` (profile=full), `scripts/generate_augment_commands.py` (profile=full), `scripts/generate_augment_hooks.py` (profile=full, HOME-scoped), `scripts/generate_augment_skills.py` (profile=full) |
 | Tracked capabilities | `.augment`, Agent mode, Next Edit, MCP, context engine, Auggie CLI, `always_apply`, `agent_requested`, subagents, custom commands, `SKILL.md`, `PreToolUse`, `PostToolUse`, `SessionStart`, `SessionEnd`, `Stop`, ACP Mode |
 | SPA caveat | Mintlify Next.js SPA; use `https://docs.augmentcode.com/<path>.md` siblings (discoverable via `/llms.txt`) for machine reads |
 
@@ -160,7 +160,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://github.com/openai/codex (redirects from developers.openai.com/codex) |
 | Release notes | https://github.com/openai/codex/releases |
 | Config paths | `AGENTS.md`, `.agents/rules/*.md`, `.codex/hooks.json`, `.codex/skills/*/SKILL.md`, `~/.codex/config.toml` |
-| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_rules.py`, `scripts/generate_codex_hooks.py` |
+| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_rules.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
 | Tracked hook events | `PreToolUse`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`, `PermissionRequest` (6 events supported upstream in `config.toml`) |
 | Tracked handler types | `command` (emitted by default); `prompt` and `agent` available upstream but authored by hand |
 | Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.codex/skills/*/SKILL.md` (native discovery, not auto-emitted by ai-toolkit yet) |

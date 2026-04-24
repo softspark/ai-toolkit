@@ -3,10 +3,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-04-08"
-last_updated: "2026-04-21"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 adds the single-run npm test discipline (cache to file, parse ok/not-ok once)."
+last_updated: "2026-04-24"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds."
 ---
 
 # SOP: Release Verification
@@ -52,6 +52,10 @@ python3 scripts/audit_skills.py --ci                        # 10. Security audit
 python3 scripts/audit_skills.py --sarif | python3 -c "import json,sys; assert json.load(sys.stdin)['version']=='2.1.0'; print('SARIF OK')"   # 11. SARIF 2.1.0 well-formed?
 python3 scripts/audit_skills.py --permissions | head -30    # 12. Broad-access skills reviewed?
 npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"   # 13. Provenance attested on npm?
+
+# Deep-coverage verification (Phase 9, v3.0.0+)
+META="generate_agents_md.py|generate_llms_txt.py"
+diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 14. Registry <-> generators drift?
 ```
 
 ---
@@ -117,8 +121,8 @@ ai-toolkit status
 ```
 
 **Verify `--dry-run`:**
-- [ ] Agents >= 40
-- [ ] Skills >= 80
+- [ ] Agents >= 44
+- [ ] Skills >= 99
 - [ ] Hooks merged into settings.json
 - [ ] "Other AI Tools" section lists cursor, windsurf, gemini, augment (antigravity via --local)
 
@@ -168,7 +172,7 @@ cd - && rm -rf /tmp/ai-toolkit-verify
 - [ ] Would create: CLAUDE.md
 - [ ] Would create: .claude/settings.local.json
 - [ ] Would inject: .claude/constitution.md
-- [ ] Editors: all 8 listed (copilot, cursor, windsurf, cline, roo, aider, augment, antigravity)
+- [ ] Editors: all 11 listed (copilot, cursor, windsurf, cline, roo, aider, augment, antigravity, codex, gemini, opencode)
 - [ ] Would generate configs for each editor (legacy + directory-based)
 - [ ] Would install: .git/hooks/pre-commit
 - [ ] Would inject language rules (auto-detected)
@@ -189,7 +193,7 @@ python3 scripts/audit_skills.py --ci
 ```
 
 **Verify validate.py:**
-- [ ] Agents >= 40, Skills >= 80, Tests >= 350
+- [ ] Agents >= 44, Skills >= 99, Tests >= 900
 - [ ] Hook events: 12, Hook scripts: >= 20
 - [ ] Plugin packs >= 10, KB documents >= 20
 - [ ] `Errors: 0 | Warnings: 0` → `VALIDATION PASSED`
@@ -217,7 +221,7 @@ echo "exit:   $exit"
 
 **Verify:**
 - [ ] `exit == 0`
-- [ ] `ok == expected test count` (e.g., 669)
+- [ ] `ok == expected test count` (e.g., 945 on v3.0.0)
 - [ ] `not ok == 0`
 - [ ] Bats runs tests in parallel (4 jobs)
 - [ ] Groups: agents, autodetect, cli, generators, guards, hooks, inject,
@@ -322,6 +326,101 @@ AI_TOOLKIT_STRICT_PIN=1 ai-toolkit update --dry-run
 
 ---
 
+## Phase 9: Deep-Coverage Checks (v3.0.0+)
+
+These verify the native-surface generators shipped in v3.0.0 actually emit the right files for the right profiles, and that the tool registry stays in sync with shipped generators.
+
+> **Safety warning — HOME-scoped writes:** Running `--profile full` with `augment` in the editor list writes to `$HOME/.augment/settings.json` (Augment stores hooks under HOME, not per-project). Use `--dry-run` for verification unless you intend to carry ai-toolkit hook entries on this machine. The generator is marker-safe (only rewrites its own `_source: ai-toolkit` entries) but is still a side-effect.
+
+### 9.1 `--profile full` emits every native surface
+
+```bash
+D=/tmp/aitk-profile-full-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
+ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
+  --profile full --codex-skills --dry-run 2>&1 \
+  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.windsurf/hooks\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.codex/skills"
+```
+
+**Verify** — at least the following lines appear:
+- [ ] `.cursor/hooks.json` and `.cursor/agents/`
+- [ ] `.windsurf/hooks.json`
+- [ ] `.gemini/settings.json` hooks AND `.gemini/commands/`
+- [ ] `.augment/agents/` + `.augment/commands/` + `$HOME/.augment/settings.json`
+- [ ] `.codex/skills/` (opt-in via `--codex-skills`)
+
+### 9.2 `--codex-skills` is orthogonal to `--profile`
+
+```bash
+D=/tmp/aitk-codex-skills-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
+ai-toolkit install --local --editors codex --profile standard --codex-skills --dry-run 2>&1 \
+  | grep -q "Would generate: .codex/skills" && echo "OK: --codex-skills works without --profile full"
+ai-toolkit install --local --editors codex --profile full --dry-run 2>&1 \
+  | grep -q "Would generate: .codex/skills" && echo "FAIL: --profile full should NOT auto-emit .codex/skills" \
+  || echo "OK: --profile full alone does not auto-emit .codex/skills (correct — opt-in only)"
+```
+
+**Verify:**
+- [ ] `--codex-skills` emits `.codex/skills/` at any profile
+- [ ] `--profile full` alone does NOT emit `.codex/skills/` (must be opt-in)
+
+### 9.3 Breaking-change surfaces land on `--profile standard`
+
+v3.0.0 moved two surfaces from opt-in to default:
+- Copilot directory layout (`.github/instructions/`, `.github/prompts/`)
+- Gemini hooks (`.gemini/settings.json`)
+
+```bash
+D=/tmp/aitk-breaking-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
+ai-toolkit install --local --editors copilot,gemini --profile standard --dry-run 2>&1 \
+  | tee /tmp/aitk-breaking.log
+grep -q "\\.github/instructions/" /tmp/aitk-breaking.log && echo "OK: Copilot dir layout at standard"
+grep -q "\\.gemini/settings\\.json hooks" /tmp/aitk-breaking.log && echo "OK: Gemini hooks at standard"
+```
+
+**Verify both lines print `OK:`**. If either is missing, a regression has unwound the v3.0.0 breaking change.
+
+### 9.4 Install is idempotent
+
+```bash
+D=/tmp/aitk-idem-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
+ai-toolkit install --local --editors cursor,gemini --profile full >/dev/null 2>&1
+SHA1=$(find .cursor .gemini -type f -exec shasum {} + | shasum | awk '{print $1}')
+ai-toolkit install --local --editors cursor,gemini --profile full >/dev/null 2>&1
+SHA2=$(find .cursor .gemini -type f -exec shasum {} + | shasum | awk '{print $1}')
+[ "$SHA1" = "$SHA2" ] && echo "OK: idempotent" || echo "FAIL: install is not idempotent"
+```
+
+**Verify:** prints `OK: idempotent`. A second run must produce byte-identical files in every managed path.
+
+### 9.5 Live-install JSON outputs parse
+
+The bats suite validates JSON shape at generation time. This re-checks that what actually landed on disk after a live install parses without errors.
+
+```bash
+D=/tmp/aitk-json-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
+ai-toolkit install --local --editors cursor,windsurf,gemini,augment --profile full >/dev/null 2>&1
+for f in .cursor/hooks.json .windsurf/hooks.json .gemini/settings.json $HOME/.augment/settings.json; do
+  [ -f "$f" ] && python3 -c "import json; json.load(open('$f'))" && echo "OK: $f"
+done
+```
+
+**Verify:** each emitted file prints `OK: <path>`. Any `json.decoder.JSONDecodeError` means the merge logic corrupted the output.
+
+### 9.6 Registry / generator drift check
+
+`kb/reference/supported-tools-registry.md` should enumerate every per-editor `scripts/generate_*.py` we ship. Meta-generators (`generate_agents_md.py`, `generate_llms_txt.py`) are excluded — they produce docs/artifacts, not editor configs.
+
+```bash
+META="generate_agents_md.py|generate_llms_txt.py"
+REG=$(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u)
+FS=$(ls scripts/generate_*.py | grep -vE "$META" | sort -u)
+diff <(echo "$REG") <(echo "$FS") && echo "OK: registry matches filesystem" || echo "DRIFT: update supported-tools-registry.md"
+```
+
+**Verify:** prints `OK: registry matches filesystem`. If not, add the missing rows to the registry before tagging the next release.
+
+---
+
 ## Troubleshooting
 
 ### `ai-toolkit: command not found`
@@ -376,3 +475,8 @@ ai-toolkit eject /tmp/test # retry
 | Tests | `npm test`: N/N passed, 0 failures |
 | Eject | Standalone `.claude/` with real files AND `output-styles/` directory |
 | Guards | Destructive commands blocked |
+| Deep coverage | `--profile full` emits all 9 v3.0.0 native surfaces; `--codex-skills` works orthogonally |
+| Breaking changes | Copilot directory layout + Gemini hooks emit at `--profile standard` (v3.0.0 contract) |
+| Idempotence | Second `install` run produces byte-identical output in every managed path |
+| Live JSON | Every generated `.json` file on disk parses as valid JSON |
+| Registry | `supported-tools-registry.md` enumerates every `scripts/generate_*.py` we ship |
