@@ -58,4 +58,5 @@
 - [Supported Tools Registry](kb/reference/supported-tools-registry.md)
 - [Config Sync](kb/reference/sync.md)
 - [Unique Features & Differentiators](kb/reference/unique-features.md)
+- [Windows Support](kb/reference/windows-support.md)
 - [Troubleshooting](kb/troubleshooting/README.md)

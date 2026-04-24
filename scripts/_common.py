@@ -165,6 +165,27 @@ def detect_os() -> dict[str, str]:
             "install_cmd": install_cmd,
         }
 
+    if system == "windows":
+        managers = (
+            ("winget", "winget install"),
+            ("choco", "choco install -y"),
+            ("scoop", "scoop install"),
+        )
+        for manager, install_cmd in managers:
+            if shutil.which(manager):
+                return {
+                    "os": "Windows",
+                    "distro": platform.version(),
+                    "pkg_manager": manager,
+                    "install_cmd": install_cmd,
+                }
+        return {
+            "os": "Windows",
+            "distro": platform.version(),
+            "pkg_manager": "none",
+            "install_cmd": "",
+        }
+
     return {
         "os": system,
         "distro": "",

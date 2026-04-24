@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.4.2"
+version: "1.5.0"
 created: "2026-03-27"
-last_updated: "2026-04-09"
+last_updated: "2026-04-24"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -14,6 +14,12 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 ## Overview
 
 ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+
+## Supported Surface
+
+`scripts/validate.py` validates both event names and handler shapes before release. The accepted lifecycle surface includes `PostToolUseFailure`, `PostToolBatch`, and `UserPromptExpansion` in addition to the installed ai-toolkit events below.
+
+Supported handler types are `command`, `http`, `prompt`, `agent`, and `mcp_tool`. ai-toolkit ships command hooks by default; non-command handlers are validated so external consumers can safely inject richer hook definitions through `inject-hook`.
 
 ## Installation
 

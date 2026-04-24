@@ -6,14 +6,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-99-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-945%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-960%20passing-success)](tests/)
 
 ---
 
 ## What's New in v3.0.1
 
-**3.0.1 is a doc-only patch** that tightens the release SOPs. No code or generator changes. The v3.0.0 feature set below is still what you get when you upgrade from 2.x.
+**3.0.1 is a maintenance patch** that tightens release SOPs, closes known validation gaps, expands the validated hook surface, adds Windows dependency hints, and exposes local product telemetry.
 
+- `validate.py` now checks hook handler types, required handler fields, prompt/agent event compatibility, and structured language-rule frontmatter/category coverage.
+- Hook docs and validation now cover `PostToolUseFailure`, `PostToolBatch`, `UserPromptExpansion`, plus `command`, `http`, `prompt`, `agent`, and `mcp_tool` handler types.
+- `ai-toolkit stats --summary` reports local product telemetry: total invocations, unique skills used, catalog coverage, unused skills, recent activity, and top skills.
+- Windows dependency detection now emits package hints for `winget`, Chocolatey, and Scoop; WSL remains the recommended runtime for Bash hooks.
 - Release Verification SOP gains **Phase 9: Deep-Coverage Checks** — six automated assertions for the v3.0.0 native surfaces (`--profile full` emission, `--codex-skills` orthogonality, breaking-change surfaces on `standard`, install idempotence, live JSON parse, registry/generator drift) plus refreshed thresholds and a HOME-scoped-write safety warning.
 - Release Preparation SOP now runs the registry-vs-generators drift check in Phase 5 so a misaligned `supported-tools-registry.md` can't escape into a release.
 
@@ -65,6 +69,8 @@ npx @softspark/ai-toolkit install
 ```
 
 **That's it.** Claude Code picks up 99 skills, 44 agents, quality hooks, and the safety constitution automatically.
+
+**Windows:** WSL is the recommended runtime. Native Windows works when Git Bash is available for hook scripts; dependency hints cover `winget`, Chocolatey, and Scoop. See [Windows Support](kb/reference/windows-support.md).
 
 ### Update
 
@@ -161,7 +167,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (945 tests)
+├── tests/               # Bats test suite (960 tests)
 └── CHANGELOG.md
 ```
 
@@ -186,6 +192,8 @@ ai-toolkit/
 **Two-stage review** — `/subagent-development` runs Implementer → Spec Review → Quality Review per task.
 
 **Persistent memory** — `memory-pack` plugin: SQLite + FTS5 search across past sessions.
+
+**Local product telemetry** — `ai-toolkit stats --summary` reports total invocations, skill coverage, unused catalog skills, recent activity, and top skills from local usage data.
 
 **Persona presets** — 4 roles (backend-lead, frontend-lead, devops-eng, junior-dev) adjust style and priorities.
 

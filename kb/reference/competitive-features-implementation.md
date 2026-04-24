@@ -13,7 +13,7 @@ tags:
 doc_type: plan
 status: completed
 created: "2026-04-07"
-last_updated: "2026-04-09"
+last_updated: "2026-04-24"
 completion: "100%"
 description: "Implementation plan for features identified from competitive analysis of everything-claude-code and claude-mem. Focus on learning system, language rules, advanced hooks, MCP templates, and rag-mcp integration. COMPLETED: 8/9 features shipped (1 skipped). See kb/reference/ for permanent documentation."
 ---
@@ -142,8 +142,8 @@ app/rules/
 - [x] 13 languages × 5 rule files created (70 files: 13 dirs × 5 + 5 common)
 - [x] `ai-toolkit install --local` auto-detects language and injects rules (two-phase: marker files + extension scan)
 - [x] Manual override: `ai-toolkit install --local --lang typescript` (with aliases: go→golang, c++→cpp, cs→csharp)
-- [ ] validate.py checks rules format (not yet implemented)
-- [ ] Tests: >=13 (no test_rules file yet)
+- [x] validate.py checks rules format
+- [x] Tests: dedicated `tests/test_rules.bats`
 
 ---
 
@@ -497,7 +497,7 @@ context: fork
 - [x] `/council` invocable
 - [x] 4 perspectives generated
 - [x] Structured output with recommendation
-- [ ] Tests: dedicated council tests not yet written
+- [x] Tests: dedicated council skill contract
 
 ---
 
@@ -516,7 +516,7 @@ context: fork
 **Success Criteria:**
 - [x] Skill auto-loads when writing docs/content
 - [x] Anti-trope list prevents generic LLM rhetoric
-- [ ] Tests: dedicated brand-voice tests not yet written
+- [x] Tests: dedicated brand-voice skill contract
 
 ---
 
@@ -538,7 +538,7 @@ context: fork
 - [x] `/introspect` invocable when agent is stuck
 - [x] Classifies failure pattern
 - [x] Suggests recovery action
-- [ ] Tests: dedicated introspect tests not yet written
+- [x] Tests: dedicated introspect skill contract
 
 ---
 
@@ -660,9 +660,9 @@ npx @softspark/ai-toolkit inject-hook  ./rag-mcp-hooks.json    # NEW
 
 All major features shipped. Outstanding items:
 
-1. [ ] `validate.py` does not check rules format (1.1)
-2. [ ] No dedicated `test_rules` test file (1.1)
-3. [ ] No dedicated tests for council, brand-voice, introspect skills (3.1-3.3)
+1. [x] `validate.py` checks rules format (1.1)
+2. [x] Dedicated `test_rules` test file exists (1.1)
+3. [x] Dedicated tests exist for council, brand-voice, introspect skills (3.1-3.3)
 4. [x] `observe-session.sh` lives in rag-mcp (consumer), not ai-toolkit — by design
 
 ---

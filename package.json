@@ -62,7 +62,11 @@
     "generate:codex-rules": "python3 scripts/generate_codex_rules.py .",
     "generate:opencode-agents": "python3 scripts/generate_opencode_agents.py .",
     "generate:opencode-commands": "python3 scripts/generate_opencode_commands.py .",
-    "generate:all": "npm run generate:agents && npm run generate:codex-rules && npm run generate:opencode-agents && npm run generate:opencode-commands && npm run generate:cursor && npm run generate:windsurf && npm run generate:copilot && npm run generate:gemini && npm run generate:cline && npm run generate:roo && npm run generate:aider && npm run generate:llms"
+    "generate:cursor-mdc": "python3 scripts/generate_cursor_mdc.py .",
+    "generate:windsurf-rules": "python3 scripts/generate_windsurf_rules.py .",
+    "generate:roo-rules": "python3 scripts/generate_roo_rules.py .",
+    "generate:augment-rules": "python3 scripts/generate_augment_rules.py .",
+    "generate:all": "npm run generate:agents && npm run generate:codex-rules && npm run generate:opencode-agents && npm run generate:opencode-commands && npm run generate:cursor && npm run generate:cursor-mdc && npm run generate:windsurf && npm run generate:windsurf-rules && npm run generate:copilot && npm run generate:gemini && npm run generate:cline && npm run generate:roo && npm run generate:roo-rules && npm run generate:aider && npm run generate:augment-rules && npm run generate:llms"
   },
   "files": [
     "bin/",

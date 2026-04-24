@@ -30,6 +30,8 @@ Create a new Claude Code hook following ai-toolkit conventions.
 |-------|-----------|---------|-------------|
 | `PreToolUse` | Before a tool executes | tool name (e.g. `Bash`) or `if:` rule | Safety guards, validation, `"defer"` for headless |
 | `PostToolUse` | After a tool executes | tool name | Feedback loops, logging, format-on-save |
+| `PostToolUseFailure` | After a tool fails | tool name | Failure telemetry, recovery hints |
+| `PostToolBatch` | After a batch of tool calls completes | any | Batch summaries, aggregate validation |
 
 ### Turn lifecycle
 
@@ -37,6 +39,7 @@ Create a new Claude Code hook following ai-toolkit conventions.
 |-------|-----------|---------|-------------|
 | `Stop` | Claude finishes responding | any | Quality checks, session save |
 | `StopFailure` | Turn ends due to an API error (rate limit, auth) | any | Alerting, fallback behavior |
+| `UserPromptExpansion` | Claude expands or rewrites a submitted prompt | any | Prompt policy and context shaping |
 
 ### Subagent lifecycle
 
@@ -88,12 +91,13 @@ Create a new Claude Code hook following ai-toolkit conventions.
 
 ## Hook Handler Types
 
-Claude Code supports four handler `type` values in `hooks.json`:
+Claude Code supports five handler `type` values in `hooks.json`:
 
 | Type | Purpose | Required fields |
 |------|---------|-----------------|
 | `command` | Run a shell script / binary | `command` (path + args) |
-| `prompt` | Inject a prompt to the fast inline model and use its verdict | Handler-managed |
+| `http` | Call a local or remote HTTP endpoint | `url` |
+| `prompt` | Inject a prompt to the fast inline model and use its verdict | `prompt` |
 | `agent` | Spawn a full subagent to evaluate the event (must target `Stop` / `SubagentStop`) | `agent` (agent name) |
 | `mcp_tool` | Invoke an MCP tool directly (no subprocess) | `server`, `tool`, `arguments` |
 
@@ -137,7 +141,7 @@ Claude Code supports four handler `type` values in `hooks.json`:
 Required fields:
 - `_source`: always `"ai-toolkit"` (used by merge/strip logic)
 - `matcher`: tool name or regex for Pre/PostToolUse, empty string for global events
-- `hooks[].type`: `"command"`, `"prompt"`, `"agent"`, or `"mcp_tool"` (ai-toolkit uses `"command"`)
+- `hooks[].type`: `"command"`, `"http"`, `"prompt"`, `"agent"`, or `"mcp_tool"` (ai-toolkit uses `"command"`)
 - `hooks[].command`: path to script using `$HOME/.softspark/ai-toolkit/hooks/` prefix (for `type: command`)
 
 Optional fields (read from Claude Code docs, not emitted by ai-toolkit by default):

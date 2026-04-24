@@ -16,12 +16,13 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
     # When Anthropic ships a new hook event, add it here AND to validate.py.
     expected=(
         SessionStart SessionEnd UserPromptSubmit Notification
-        PreToolUse PostToolUse
+        PreToolUse PostToolUse PostToolUseFailure PostToolBatch
         Stop StopFailure
         SubagentStart SubagentStop
         PreCompact PostCompact
         PermissionRequest PermissionDenied
         Elicitation ElicitationResult
+        UserPromptExpansion
         TaskCreated TaskCompleted TeammateIdle
         WorktreeCreate WorktreeRemove
         CwdChanged FileChanged ConfigChange
@@ -61,7 +62,7 @@ print('ok')
 
 @test "hook-creator SKILL.md documents every hook handler type Claude Code supports" {
     skill="$TOOLKIT_DIR/app/skills/hook-creator/SKILL.md"
-    for ty in command prompt agent mcp_tool; do
+    for ty in command http prompt agent mcp_tool; do
         grep -q "\`${ty}\`" "$skill" || { echo "Missing handler type \`${ty}\` in hook-creator/SKILL.md" >&2; return 1; }
     done
 }

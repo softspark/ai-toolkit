@@ -45,6 +45,34 @@ EOF
 }
 EOF
 
+    mkdir -p "$dir/app/rules/common" "$dir/app/rules/python"
+    for rule in coding-style testing security performance git-workflow; do
+        cat > "$dir/app/rules/common/$rule.md" <<RULE
+---
+language: common
+category: $rule
+version: "1.0.0"
+---
+
+# Common $rule
+
+Content.
+RULE
+    done
+    for rule in coding-style testing security patterns frameworks; do
+        cat > "$dir/app/rules/python/$rule.md" <<RULE
+---
+language: python
+category: $rule
+version: "1.0.0"
+---
+
+# Python $rule
+
+Content.
+RULE
+    done
+
     # All planned assets required by validate.py
     mkdir -p "$dir/app/.claude-plugin"
     echo '{"name":"test","version":"1.0.0","description":"test"}' > "$dir/app/.claude-plugin/plugin.json"
@@ -184,6 +212,58 @@ with open('$TEST_DIR/app/hooks.json', 'w') as f:
     run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
     [ "$status" -ne 0 ]
     echo "$output" | grep -q "Unknown hook event.*BogusEvent"
+}
+
+@test "validate.py catches unsupported hook handler type" {
+    python3 -c "
+import json
+with open('$TEST_DIR/app/hooks.json') as f:
+    data = json.load(f)
+data['hooks']['Stop'] = [{'_source': 'ai-toolkit', 'matcher': '', 'hooks': [{'type': 'bogus', 'command': 'echo test'}]}]
+with open('$TEST_DIR/app/hooks.json', 'w') as f:
+    json.dump(data, f, indent=4)
+"
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "Unsupported hook handler type.*bogus"
+}
+
+@test "validate.py catches prompt hook on SessionStart" {
+    python3 -c "
+import json
+with open('$TEST_DIR/app/hooks.json') as f:
+    data = json.load(f)
+data['hooks']['SessionStart'] = [{'_source': 'ai-toolkit', 'matcher': 'startup', 'hooks': [{'type': 'prompt', 'prompt': 'Check startup'}]}]
+with open('$TEST_DIR/app/hooks.json', 'w') as f:
+    json.dump(data, f, indent=4)
+"
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "Hook type 'prompt' is not supported for event SessionStart"
+}
+
+# ── Rule validation ─────────────────────────────────────────────────────────
+
+@test "validate.py catches rule language/category mismatch" {
+    cat > "$TEST_DIR/app/rules/python/testing.md" <<'EOF'
+---
+language: javascript
+category: testing
+version: "1.0.0"
+---
+
+# Broken rule
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "app/rules/python/testing.md language 'javascript' does not match directory 'python'"
+}
+
+@test "validate.py catches missing required rule category" {
+    rm -f "$TEST_DIR/app/rules/python/security.md"
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "app/rules/python missing required rule category: security"
 }
 
 # ── Planned assets ───────────────────────────────────────────────────────────

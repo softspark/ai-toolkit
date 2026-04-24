@@ -7,12 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## v3.0.1 — Release SOP Deep-Coverage Checks (2026-04-24)
+## v3.0.1 — Validation, Windows, and Telemetry Maintenance (2026-04-24)
 
-Doc-only patch. No code, generators, or runtime behavior changed.
+Maintenance patch that tightens release SOPs, closes known validation gaps, expands hook-surface contracts, adds Windows dependency hints, and exposes local product telemetry.
+
+### Added
+
+- **Hook surface validation** — `scripts/validate.py` now accepts the current Claude Code hook event surface, including `PostToolUseFailure`, `PostToolBatch`, and `UserPromptExpansion`.
+- **Hook handler contracts** — validation now checks supported handler types (`command`, `http`, `prompt`, `agent`, `mcp_tool`), required handler fields, and prompt/agent event compatibility.
+- **Language rule validation** — `scripts/validate.py` now checks `app/rules/<language>/*.md` frontmatter, category names, filename/category alignment, directory/language alignment, and required category coverage.
+- **Windows dependency hints** — `_common.detect_os()` recognizes Windows package managers (`winget`, Chocolatey, Scoop), and `check_deps.py` emits package install commands for Python, Git, Node, SQLite, and supported optional tooling.
+- **Product telemetry summary** — `ai-toolkit stats --summary` reports local usage telemetry; `--summary --json` emits machine-readable totals, coverage, unused catalog count, recent activity, and top skills.
+- **Dedicated gap tests** — added contracts for structured rules, Windows dependency support, council/brand-voice/introspect skill coverage, and `npm run generate:all` directory-rule generator coverage. Total test count: 945 -> 960.
+- **Windows Support KB** — new `kb/reference/windows-support.md` documents WSL, Git Bash, package managers, and hook runtime constraints.
 
 ### Changed
 
+- **`package.json` `generate:all`** — now invokes all directory-based rule generators (`generate_cursor_mdc.py`, `generate_windsurf_rules.py`, `generate_roo_rules.py`, `generate_augment_rules.py`) so registered custom rules in `~/.softspark/ai-toolkit/rules/` propagate to every editor that supports per-rule module files. Restores parity with `ai-toolkit generate-all` (CLI).
+- **`app/skills/hook-creator/SKILL.md`** — documents the expanded hook event and handler type surface.
+- **`README.md` and `kb/reference/cli-reference.md`** — document `stats --summary` and Windows support.
+- **`kb/reference/hooks-catalog.md`** — documents the validated hook surface and non-command handler support.
 - **`kb/procedures/release-verification-sop.md` 1.3.0 -> 1.4.0** — added Phase 9 (six new checks for v3.0.0 native surfaces: `--profile full` emission, `--codex-skills` orthogonality, breaking-change surfaces at `standard`, install idempotence, live JSON parse, registry/generator drift). Refreshed stale thresholds (`Tests >= 350` -> `Tests >= 900`, `e.g., 669` -> `e.g., 945`). Editor list updated from 8 to 11 (+codex, +gemini, +opencode). Added HOME-scoped write safety warning.
 - **`kb/procedures/release-preparation-sop.md` 1.9.0 -> 1.10.0** — added the registry-vs-generators drift check to Phase 5 so a bad registry can never escape into a release.
 - **`kb/reference/supported-tools-registry.md` 1.1.0 -> 1.2.0** — enumerated the 11 new v3.0.0 generators (cursor_hooks/agents, windsurf_hooks, gemini_hooks/commands/skills, augment_hooks/agents/commands/skills, codex_skills) with profile and opt-in annotations.

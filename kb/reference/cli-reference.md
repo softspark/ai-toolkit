@@ -2,9 +2,9 @@
 title: "CLI Reference"
 category: reference
 service: ai-toolkit
-tags: [cli, commands, reference, install, update, plugin, mcp]
+tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-04-15"
+last_updated: "2026-04-24"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -111,13 +111,24 @@ Usage: ai-toolkit <command> [options]
 
 | Command | Description |
 |---------|-------------|
-| `stats` | Show skill usage statistics (`--reset` to clear, `--json` for raw output) |
+| `stats` | Show skill usage statistics (`--summary` for product telemetry, `--reset` to clear, `--json` for raw output) |
 | `benchmark --my-config` | Compare your config vs defaults vs ecosystem |
 | `benchmark-ecosystem` | Generate ecosystem benchmark snapshot |
 | `create skill <name>` | Scaffold new skill from template (`--template=linter\|reviewer\|generator\|workflow\|knowledge`) |
 | `sync` | Config portability via GitHub Gist (`--export`, `--push`, `--pull`, `--import`) |
 | `compile-slm` | Compile toolkit into minimal SLM system prompt (`--budget`, `--model-size`, `--dry-run`) |
 | `evaluate` | Run skill evaluation suite |
+
+### `stats`
+
+```bash
+ai-toolkit stats                 # table of local skill usage
+ai-toolkit stats --summary       # product telemetry summary
+ai-toolkit stats --summary --json  # machine-readable telemetry
+ai-toolkit stats --reset         # clear local stats
+```
+
+`--summary` reports total invocations, unique skills used, catalog coverage, unused catalog skills, active skills in the last 7 days, and top skills. Data stays local in `~/.softspark/ai-toolkit/stats.json`.
 
 ## Install / Update Options
 

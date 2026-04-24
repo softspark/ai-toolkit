@@ -601,3 +601,46 @@ print('OK: cached rule preserved after failed refresh')
     echo "$output" | grep -q 'commit'
     echo "$output" | grep -q '5'
 }
+
+@test "cli: stats --summary reports product telemetry" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
+    printf '{"commit": {"count": 5, "last_used": "2026-04-23 10:00:00"}, "review": {"count": 2, "last_used": "2026-04-22 10:00:00"}}' > "$TEST_TMP/.softspark/ai-toolkit/stats.json"
+    run $CLI stats --summary
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'Product Telemetry'
+    echo "$output" | grep -q 'Total invocations: 7'
+    echo "$output" | grep -q 'Unique skills used: 2'
+    echo "$output" | grep -q 'Unused catalog skills:'
+}
+
+@test "cli: stats --summary --json emits machine-readable telemetry" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
+    printf '{"commit": {"count": 5, "last_used": "2026-04-23 10:00:00"}}' > "$TEST_TMP/.softspark/ai-toolkit/stats.json"
+    run $CLI stats --summary --json
+    [ "$status" -eq 0 ]
+    echo "$output" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['totalInvocations'] == 5 and d['uniqueSkillsUsed'] == 1"
+}
+
+@test "npm generate:all runs every directory-based rule generator (custom-rule propagation)" {
+    run python3 -c "
+import json, sys
+with open('$TOOLKIT_DIR/package.json') as f:
+    scripts = json.load(f)['scripts']
+gen_all = scripts['generate:all']
+required = [
+    'generate:cursor-mdc',
+    'generate:windsurf-rules',
+    'generate:roo-rules',
+    'generate:augment-rules',
+    'generate:cline',
+    'generate:codex-rules',
+    'generate:opencode-agents',
+    'generate:opencode-commands',
+]
+missing = [name for name in required if name not in gen_all]
+assert not missing, f'generate:all missing generators: {missing}'
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}

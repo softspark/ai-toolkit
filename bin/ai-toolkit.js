@@ -74,7 +74,7 @@ const COMMANDS = {
   benchmark: 'Benchmark toolkit (--my-config to compare your setup vs defaults vs ecosystem)',
   'benchmark-ecosystem': 'Generate ecosystem benchmark snapshot (GitHub metadata + offline fallback)',
   evaluate: 'Run skill evaluation suite',
-  stats: 'Show skill usage statistics (--reset to clear, --json for raw output)',
+  stats: 'Show skill usage statistics (--summary for product telemetry, --reset to clear)',
   create: 'Scaffold new skill from template (e.g. create skill my-lint --template=linter)',
   mcp: 'Manage MCP templates and install native editor MCP configs',
   config: 'Manage config inheritance (validate, diff, init, create-base, check)',
@@ -280,6 +280,10 @@ function showHelp() {
   console.log('                                Remove from .mcp.json or native editor configs');
   console.log('\nOptions for doctor:');
   console.log('  --fix           Auto-repair detected issues');
+  console.log('\nOptions for stats:');
+  console.log('  --summary       Show aggregated product telemetry (usage coverage, top skills, unused catalog)');
+  console.log('  --json          Emit raw stats, or machine-readable telemetry when combined with --summary');
+  console.log('  --reset         Clear local usage stats');
   console.log('\nOptions for eject:');
   console.log('  [target-dir]    Target directory (default: current directory)');
   console.log('');

@@ -61,7 +61,7 @@ Answer these three questions:
 
 ## Step 4: Select Recovery Action
 
-Apply the **smallest possible fix** — do not restart from scratch unless absolutely necessary:
+Choose the **smallest recovery action** and apply the smallest possible fix — do not restart from scratch unless absolutely necessary:
 
 | Pattern | Recovery Action |
 |---------|----------------|

@@ -42,9 +42,9 @@ VALID_HOOK_EVENTS = frozenset({
     # Core lifecycle
     "SessionStart", "SessionEnd", "UserPromptSubmit", "Notification",
     # Tool lifecycle
-    "PreToolUse", "PostToolUse",
+    "PreToolUse", "PostToolUse", "PostToolUseFailure", "PostToolBatch",
     # Turn lifecycle
-    "Stop", "StopFailure",
+    "Stop", "StopFailure", "UserPromptExpansion",
     # Subagent lifecycle
     "SubagentStart", "SubagentStop",
     # Compaction
@@ -61,9 +61,65 @@ VALID_HOOK_EVENTS = frozenset({
     "Setup", "InstructionsLoaded",
 })
 
+VALID_HOOK_TYPES = frozenset({
+    "command",
+    "http",
+    "prompt",
+    "agent",
+    "mcp_tool",
+})
+
+HOOK_TYPE_EVENTS = {
+    "agent": frozenset({"Stop", "SubagentStop"}),
+    "prompt": frozenset({
+        "PreToolUse",
+        "PostToolUse",
+        "PostToolUseFailure",
+        "PostToolBatch",
+        "UserPromptSubmit",
+        "UserPromptExpansion",
+        "Stop",
+        "SubagentStop",
+    }),
+}
+
+HOOK_REQUIRED_FIELDS = {
+    "command": ("command",),
+    "http": ("url",),
+    "prompt": ("prompt",),
+    "agent": ("agent",),
+    "mcp_tool": ("server", "tool", "arguments"),
+}
+
 VALID_KB_CATEGORIES = frozenset({
     "reference", "howto", "procedures", "troubleshooting", "best-practices",
     "planning",
+})
+
+VALID_RULE_CATEGORIES = frozenset({
+    "coding-style",
+    "testing",
+    "security",
+    "performance",
+    "git-workflow",
+    "patterns",
+    "frameworks",
+})
+
+COMMON_RULE_CATEGORIES = frozenset({
+    "coding-style",
+    "testing",
+    "security",
+    "performance",
+    "git-workflow",
+})
+
+LANGUAGE_RULE_CATEGORIES = frozenset({
+    "coding-style",
+    "testing",
+    "security",
+    "patterns",
+    "frameworks",
 })
 
 PLANNED_ASSETS = [
@@ -354,8 +410,49 @@ def validate_legacy_commands(tk_dir: Path, vr: ValidationResult) -> None:
             print()
 
 
+def _validate_hook_handler(event: str, hook: dict, vr: ValidationResult) -> None:
+    """Validate one hooks.json handler object."""
+    hook_type = hook.get("type")
+    if not hook_type:
+        vr.error(f"{event}: hook entry missing type")
+        return
+
+    if hook_type not in VALID_HOOK_TYPES:
+        vr.error(f"Unsupported hook handler type '{hook_type}' for event {event}")
+        return
+
+    allowed_events = HOOK_TYPE_EVENTS.get(hook_type)
+    if allowed_events is not None and event not in allowed_events:
+        vr.error(f"Hook type '{hook_type}' is not supported for event {event}")
+
+    for field in HOOK_REQUIRED_FIELDS.get(hook_type, ()):
+        if field not in hook:
+            vr.error(f"{event}: hook type '{hook_type}' missing required field '{field}'")
+
+
+def _validate_hook_entries(event: str, entries: object, vr: ValidationResult) -> None:
+    """Validate hooks.json matcher entries for one event."""
+    if not isinstance(entries, list):
+        vr.error(f"{event}: expected list of hook matcher entries")
+        return
+
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            vr.error(f"{event}[{index}]: expected hook matcher entry object")
+            continue
+        hooks = entry.get("hooks")
+        if not isinstance(hooks, list) or not hooks:
+            vr.error(f"{event}[{index}]: missing non-empty hooks list")
+            continue
+        for hook_index, hook in enumerate(hooks):
+            if not isinstance(hook, dict):
+                vr.error(f"{event}[{index}].hooks[{hook_index}]: expected hook object")
+                continue
+            _validate_hook_handler(event, hook, vr)
+
+
 def validate_hook_events(tk_dir: Path, vr: ValidationResult) -> None:
-    """Validate hook event names in hooks.json."""
+    """Validate hook event names and handler shapes in hooks.json."""
     print("## Hook Events")
     hooks_file = tk_dir / "app" / "hooks.json"
 
@@ -373,9 +470,10 @@ def validate_hook_events(tk_dir: Path, vr: ValidationResult) -> None:
         return
 
     hooks = data.get("hooks", {})
-    for event in hooks:
+    for event, entries in hooks.items():
         if event in VALID_HOOK_EVENTS:
             print(f"  OK: {event}")
+            _validate_hook_entries(event, entries, vr)
         else:
             vr.error(f"Unknown hook event: {event}")
 
@@ -383,6 +481,63 @@ def validate_hook_events(tk_dir: Path, vr: ValidationResult) -> None:
     hooks_dir = tk_dir / "app" / "hooks"
     script_count = sum(1 for f in hooks_dir.glob("*.sh") if f.is_file()) if hooks_dir.is_dir() else 0
     print(f"  Found: {script_count} hook scripts")
+    print()
+
+
+def validate_language_rules(tk_dir: Path, vr: ValidationResult) -> None:
+    """Validate structured language-rule directories under app/rules."""
+    print("## Language Rules")
+    rules_dir = tk_dir / "app" / "rules"
+    rule_count = 0
+    rule_errors = 0
+
+    if not rules_dir.is_dir():
+        vr.error("app/rules directory not found")
+        print()
+        return
+
+    for rule_dir in sorted(p for p in rules_dir.iterdir() if p.is_dir()):
+        language = rule_dir.name
+        expected = COMMON_RULE_CATEGORIES if language == "common" else LANGUAGE_RULE_CATEGORIES
+        seen: set[str] = set()
+
+        for rule_file in sorted(rule_dir.glob("*.md")):
+            rel = str(rule_file.relative_to(tk_dir))
+            rule_count += 1
+            if not _has_frontmatter(rule_file):
+                vr.error(f"{rel} - Missing YAML frontmatter")
+                rule_errors += 1
+                continue
+
+            fm_lines = _parse_frontmatter_lines(rule_file)
+            for field in ("language", "category", "version"):
+                if not _fm_has(fm_lines, field):
+                    vr.error(f"{rel} - Missing required field: {field}")
+                    rule_errors += 1
+
+            rule_language = _fm_field(fm_lines, "language").strip()
+            if rule_language and rule_language != language:
+                vr.error(f"{rel} language '{rule_language}' does not match directory '{language}'")
+                rule_errors += 1
+
+            category = _fm_field(fm_lines, "category").strip()
+            if category:
+                seen.add(category)
+                if category not in VALID_RULE_CATEGORIES:
+                    vr.error(f"{rel} has invalid rule category '{category}'")
+                    rule_errors += 1
+                if rule_file.stem != category:
+                    vr.error(f"{rel} filename does not match category '{category}'")
+                    rule_errors += 1
+
+        for category in sorted(expected - seen):
+            vr.error(f"app/rules/{language} missing required rule category: {category}")
+            rule_errors += 1
+
+    if rule_errors == 0:
+        print(f"  OK: {rule_count} rule files validated")
+    else:
+        print(f"  Found: {rule_count} rule files ({rule_errors} with errors)")
     print()
 
 
@@ -781,6 +936,7 @@ def _run_all_checks(tk_dir: Path, vr: ValidationResult) -> tuple[int, int, str]:
     skill_count = validate_skills(tk_dir, vr)
     validate_legacy_commands(tk_dir, vr)
     validate_hook_events(tk_dir, vr)
+    validate_language_rules(tk_dir, vr)
     validate_planned_assets(tk_dir, vr)
     validate_plugin_packs(tk_dir, vr)
     validate_kb_documents(tk_dir, vr)
