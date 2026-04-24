@@ -7,9 +7,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## v3.0.1 — Validation, Windows, and Telemetry Maintenance (2026-04-24)
+## v3.0.2 — Validation, Windows, Telemetry, and generate:all parity (2026-04-24)
 
-Maintenance patch that tightens release SOPs, closes known validation gaps, expands hook-surface contracts, adds Windows dependency hints, and exposes local product telemetry.
+Patch release that closes known validation gaps, expands the hook-surface contracts, adds Windows dependency hints, exposes local product telemetry, and restores `npm run generate:all` parity with the CLI so registered custom rules reach every editor.
 
 ### Added
 
@@ -27,6 +27,15 @@ Maintenance patch that tightens release SOPs, closes known validation gaps, expa
 - **`app/skills/hook-creator/SKILL.md`** — documents the expanded hook event and handler type surface.
 - **`README.md` and `kb/reference/cli-reference.md`** — document `stats --summary` and Windows support.
 - **`kb/reference/hooks-catalog.md`** — documents the validated hook surface and non-command handler support.
+
+---
+
+## v3.0.1 — Release SOP Deep-Coverage Checks (2026-04-24)
+
+Doc-only patch. No code, generators, or runtime behavior changed.
+
+### Changed
+
 - **`kb/procedures/release-verification-sop.md` 1.3.0 -> 1.4.0** — added Phase 9 (six new checks for v3.0.0 native surfaces: `--profile full` emission, `--codex-skills` orthogonality, breaking-change surfaces at `standard`, install idempotence, live JSON parse, registry/generator drift). Refreshed stale thresholds (`Tests >= 350` -> `Tests >= 900`, `e.g., 669` -> `e.g., 945`). Editor list updated from 8 to 11 (+codex, +gemini, +opencode). Added HOME-scoped write safety warning.
 - **`kb/procedures/release-preparation-sop.md` 1.9.0 -> 1.10.0** — added the registry-vs-generators drift check to Phase 5 so a bad registry can never escape into a release.
 - **`kb/reference/supported-tools-registry.md` 1.1.0 -> 1.2.0** — enumerated the 11 new v3.0.0 generators (cursor_hooks/agents, windsurf_hooks, gemini_hooks/commands/skills, augment_hooks/agents/commands/skills, codex_skills) with profile and opt-in annotations.
