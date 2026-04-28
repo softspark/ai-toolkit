@@ -202,11 +202,20 @@ Loaded when user builds content moderation, safety filters, or policy enforcemen
 ### council
 4-perspective decision evaluation for architecture choices. Use when user wants multi-angle analysis, needs to decide between alternatives, or mentions 'council', 'evaluate decision', 'pros cons'.
 
+### cpp-rules
+C++ coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .cpp, .cc, .cxx, .hpp, .h, CMakeLists.txt, Makefile, GoogleTest, clang-tidy. Load when writing, reviewing, or editing C++ code.
+
 ### csharp-patterns
 C# and .NET development patterns: LINQ, async/await, dependency injection, records, nullable reference types, ASP.NET Core minimal APIs, EF Core, MediatR. Triggers: C#, .NET, dotnet, ASP.NET, EF Core, LINQ, IServiceCollection, record type, async C#, nullable reference types. Load when writing or reviewing C#/.NET code.
 
+### csharp-rules
+C#/.NET coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .cs, .csproj, .sln, ASP.NET, ASP.NET Core, EF Core, LINQ, NUnit, xUnit, dotnet. Load when writing, reviewing, or editing C#/.NET code.
+
 ### cve-scan
 Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, bundler, dart)
+
+### dart-rules
+Dart/Flutter coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .dart, pubspec.yaml, Flutter, Riverpod, Bloc, widget, StatelessWidget, StatefulWidget. Load when writing, reviewing, or editing Dart/Flutter code.
 
 ### database-patterns
 Database schema design and query optimization: normalization, indexing strategies, joins, N+1, transactions, isolation levels, partitioning, EXPLAIN plans. Triggers: schema, table design, index, slow query, N+1, PostgreSQL, MySQL, SQL Server, SQL, EXPLAIN, query plan, transaction, deadlock. Load when designing tables or tuning queries.
@@ -259,6 +268,9 @@ Flutter and Dart development patterns: widget composition, state management (Riv
 ### git-mastery
 Advanced Git workflows: interactive rebase, bisect, reflog, cherry-pick, worktrees, history rewriting, submodules, large-file migration (LFS/filter-repo). Triggers: git rebase, bisect, cherry-pick, reflog, force push, history rewrite, detached HEAD, merge conflict, worktree, squash, fixup, submodule. Load when user needs non-trivial Git operations.
 
+### golang-rules
+Go coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .go, go.mod, go.sum, Gin, Echo, Gorilla, testing, gofmt. Load when writing, reviewing, or editing Go code.
+
 ### grill-me
 Stress-test a plan or design through relentless Socratic questioning, walking down each decision branch until reaching shared understanding. Use when user wants to stress-test a plan, get grilled, validate assumptions, or mentions 'grill me'.
 
@@ -286,11 +298,17 @@ Agent self-debugging and recovery. Use when stuck in loops, making repeated erro
 ### java-patterns
 Java development patterns: Spring Boot, CompletableFuture, records, sealed types, streams, JPA/Hibernate, Maven/Gradle, virtual threads (Loom). Triggers: Java, Spring, Spring Boot, JPA, Hibernate, Maven, Gradle, CompletableFuture, record type, sealed class, virtual thread. Load when writing or reviewing Java code.
 
+### java-rules
+Java coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .java, pom.xml, build.gradle, Spring, Spring Boot, JPA, Hibernate, JUnit, Maven, Gradle. Load when writing, reviewing, or editing Java code.
+
 ### json-mode-patterns
 Loaded when user needs structured JSON output from Claude. Covers tool-use-as-JSON-mode, schema design, parsing, partial recovery, and validation.
 
 ### kotlin-patterns
 Kotlin development patterns: coroutines, Flow, sealed classes, data classes, extension functions, null safety, Ktor, Jetpack Compose, KMP. Triggers: Kotlin, coroutine, Flow, suspend, Ktor, Android Kotlin, Jetpack Compose, sealed class, data class, KMP, kotlinx. Load when writing or reviewing Kotlin code.
+
+### kotlin-rules
+Kotlin coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .kt, .kts, build.gradle.kts, Ktor, Jetpack Compose, coroutines, kotlinx. Load when writing, reviewing, or editing Kotlin code.
 
 ### lint
 Run the project's linter and type-checker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy, dart analyze). Use when the user asks for static-analysis feedback — not to run tests or refactor.
@@ -300,6 +318,9 @@ Build production-grade MCP (Model Context Protocol) servers from scratch using t
 
 ### mcp-patterns
 MCP (Model Context Protocol) server design: tool schemas, resource patterns, transport selection (stdio/SSE), client configuration, error handling, capability negotiation. Triggers: MCP, Model Context Protocol, MCP server, MCP tool, MCP resource, JSON-RPC, stdio transport, SSE transport, Claude Desktop config, Cursor MCP. Load when building or integrating MCP servers.
+
+### medplum-rules
+Medplum (FHIR healthcare) coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: medplum.config.mts, medplum.config.ts, FHIR, Medplum, Bot, Subscription, Questionnaire. Load when writing, reviewing, or editing Medplum (FHIR healthcare) code.
 
 ### mem-search
 Search past coding sessions using natural language. Finds relevant observations, decisions, and context from previous work.
@@ -334,6 +355,9 @@ Performance measurement and optimization: four golden signals (latency/traffic/e
 ### persona
 Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
 
+### php-rules
+PHP coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .php, composer.json, Laravel, Symfony, PHPUnit, PSR-12, Composer. Load when writing, reviewing, or editing PHP code.
+
 ### plan
 Breaks down feature requests and project goals into phased implementation plans with task lists, agent assignments, dependency graphs, and success criteria. Use when the user asks to plan a feature, create an implementation roadmap, break down a coding task, or outline project phases.
 
@@ -357,6 +381,9 @@ Analyzes code diffs and file changes to identify potential regressions, maps dep
 
 ### prompt-caching-patterns
 Loaded when user builds with Anthropic API and needs to cut cost or latency via prompt caching. Covers TTL, cache breakpoints, stacking, invalidation, and measuring hit rate.
+
+### python-rules
+Python coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .py, .pyi, pyproject.toml, requirements.txt, Pipfile, FastAPI, Django, Flask, pytest, SQLAlchemy, ruff, mypy. Load when writing, reviewing, or editing Python code.
 
 ### qa-session
 Interactive QA session where user reports bugs conversationally and agent files GitHub issues with domain language. Explores codebase in background for context. Use when user wants to report bugs, do QA, file issues conversationally, or mentions QA session.
@@ -385,8 +412,14 @@ Roll back a git commit, database migration, or deployment to a previous known-go
 ### ruby-patterns
 Ruby and Rails development patterns: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet/RBS, Hanami, Roda, Rack middleware. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, gem, Gemfile, bundler, rake, Hanami, Sorbet. Load when writing or reviewing Ruby code.
 
+### ruby-rules
+Ruby coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .rb, Gemfile, .gemspec, Rails, ActiveRecord, Sidekiq, RSpec, Sorbet, rubocop. Load when writing, reviewing, or editing Ruby code.
+
 ### rust-patterns
 Rust development patterns: ownership, borrowing, lifetimes, async (Tokio), error handling (Result/anyhow/thiserror), traits, macros, zero-cost abstractions, unsafe boundaries. Triggers: Rust, borrow checker, lifetime, Tokio, async Rust, cargo, trait, impl, Result, unsafe, lifetime annotation, clippy. Load when writing or reviewing Rust code.
+
+### rust-rules
+Rust coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .rs, Cargo.toml, Cargo.lock, Tokio, Axum, Serde, clippy, cargo test. Load when writing, reviewing, or editing Rust code.
 
 ### search
 Search the knowledge base with semantic and hybrid modes
@@ -412,6 +445,9 @@ Execute tasks via Map-Reduce, Consensus, or Relay swarms
 ### swift-patterns
 Swift and iOS development patterns: SwiftUI, Combine, async/await, property wrappers, actors, Swift Package Manager, Core Data, UIKit interop, @MainActor. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, property wrapper, Core Data, SPM, UIKit, @MainActor, @State, @Binding. Load when writing or reviewing Swift code.
 
+### swift-rules
+Swift coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .swift, Package.swift, .xcodeproj, SwiftUI, Combine, async/await, XCTest. Load when writing, reviewing, or editing Swift code.
+
 ### tdd
 Test-driven development with red-green-refactor loop and vertical slices. Use when user wants TDD, test-first development, red-green-refactor, or building features with tests driving the implementation.
 
@@ -429,6 +465,9 @@ Triage a bug by deeply exploring the codebase for root cause, then create a GitH
 
 ### typescript-patterns
 TypeScript type safety patterns: strict mode, generics, conditional types, template literals, discriminated unions, branded types, Zod, satisfies operator, const assertions. Triggers: TypeScript, TS, generics, conditional type, utility type, strict, Zod, satisfies, discriminated union, type safety, type narrowing, template literal type. Load when writing or reviewing TypeScript code.
+
+### typescript-rules
+TypeScript/JavaScript coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .ts, .tsx, .js, .jsx, package.json, tsconfig.json, React, Next.js, Vue, Vite, Vitest, Jest, ESLint. Load when writing, reviewing, or editing TypeScript/JavaScript code.
 
 ### ubiquitous-language
 Extract a DDD-style ubiquitous language glossary from the conversation, flagging ambiguities and proposing canonical terms. Saves to UBIQUITOUS_LANGUAGE.md. Use when user wants to define domain terms, build a glossary, harden terminology, or mentions DDD or domain model.

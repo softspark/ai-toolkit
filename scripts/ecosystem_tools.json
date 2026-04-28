@@ -413,14 +413,15 @@
       "config_paths": [
         "AGENTS.md",
         ".agents/rules/*.md",
+        ".agents/skills/*/SKILL.md",
         ".codex/hooks.json",
-        ".codex/skills/*/SKILL.md",
         "~/.codex/config.toml"
       ],
       "our_generators": [
         "scripts/generate_codex.py",
         "scripts/generate_codex_rules.py",
-        "scripts/generate_codex_hooks.py"
+        "scripts/generate_codex_hooks.py",
+        "scripts/generate_codex_skills.py"
       ],
       "capability_markers": [
         "AGENTS.md",
@@ -437,7 +438,7 @@
         "hook handler: command",
         "hook handler: prompt",
         "hook handler: agent",
-        ".codex/skills"
+        ".agents/skills"
       ],
       "version_probe": {
         "kind": "command",

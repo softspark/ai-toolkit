@@ -338,7 +338,7 @@ These verify the native-surface generators shipped in v3.0.0 actually emit the r
 D=/tmp/aitk-profile-full-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
   --profile full --codex-skills --dry-run 2>&1 \
-  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.windsurf/hooks\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.codex/skills"
+  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.windsurf/hooks\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.agents/skills"
 ```
 
 **Verify** — at least the following lines appear:
@@ -346,22 +346,21 @@ ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
 - [ ] `.windsurf/hooks.json`
 - [ ] `.gemini/settings.json` hooks AND `.gemini/commands/`
 - [ ] `.augment/agents/` + `.augment/commands/` + `$HOME/.augment/settings.json`
-- [ ] `.codex/skills/` (opt-in via `--codex-skills`)
+- [ ] `.agents/skills/` (Codex native discovery path; refreshed by `--codex-skills`)
 
 ### 9.2 `--codex-skills` is orthogonal to `--profile`
 
 ```bash
 D=/tmp/aitk-codex-skills-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors codex --profile standard --codex-skills --dry-run 2>&1 \
-  | grep -q "Would generate: .codex/skills" && echo "OK: --codex-skills works without --profile full"
+  | grep -q "Would refresh: .agents/skills" && echo "OK: --codex-skills refreshes .agents/skills without --profile full"
 ai-toolkit install --local --editors codex --profile full --dry-run 2>&1 \
-  | grep -q "Would generate: .codex/skills" && echo "FAIL: --profile full should NOT auto-emit .codex/skills" \
-  || echo "OK: --profile full alone does not auto-emit .codex/skills (correct — opt-in only)"
+  | grep -q "Would generate: .agents/skills" && echo "OK: Codex skills use .agents/skills at profile full"
 ```
 
 **Verify:**
-- [ ] `--codex-skills` emits `.codex/skills/` at any profile
-- [ ] `--profile full` alone does NOT emit `.codex/skills/` (must be opt-in)
+- [ ] `--codex-skills` refreshes `.agents/skills/` at any profile
+- [ ] `--profile full` never emits `.codex/skills/`; Codex skills use `.agents/skills/`
 
 ### 9.3 Breaking-change surfaces land on `--profile standard`
 

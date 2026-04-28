@@ -259,7 +259,7 @@ Orchestrator's final output:
 
 ### Open items flagged for future passes
 
-1. **Native `.codex/skills/*/SKILL.md` emission** (class B) — would write ~99 skill directories. Needs opt-in flag + minor bump.
+1. **Native `.agents/skills/*/SKILL.md` emission** (class B) — writes the Codex skill catalog to the upstream discovery path.
 2. **`.opencode/skills/` duplication** — deferred indefinitely; `.claude/skills/` fallback already works.
 3. **New generators needed**: `generate_gemini_hooks.py`, `generate_augment_agents.py`, `generate_augment_commands.py`, `generate_augment_hooks.py`.
 4. **Cross-editor hooks unification**: Cursor and Windsurf both shipped `.cursor/hooks.json` and `.windsurf/hooks.json` — worth a dedicated shared-schema pass rather than per-editor copies.

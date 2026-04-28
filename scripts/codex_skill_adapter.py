@@ -155,13 +155,29 @@ def sync_codex_skill(skill_dir: Path, skills_dst: Path) -> str:
 
 def cleanup_codex_skills(skills_dst: Path, skills_src: Path) -> None:
     """Remove broken symlinks and stale generated Codex skill wrappers."""
+    skills_src_resolved = skills_src.resolve()
     for item in skills_dst.iterdir():
         src = skills_src / item.name
-        if item.is_symlink() and not item.exists():
-            item.unlink()
-            continue
+        if item.is_symlink():
+            if not item.exists():
+                item.unlink()
+                continue
+            target = item.resolve()
+            if src.is_dir() and target == src.resolve():
+                continue
+            if _is_relative_to(target, skills_src_resolved):
+                item.unlink()
+                continue
         if item.is_dir() and (item / ADAPTED_MARKER).is_file() and not src.is_dir():
             shutil.rmtree(item)
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+        return True
+    except ValueError:
+        return False
 
 
 def _parse_frontmatter(frontmatter_text: str) -> list[tuple[str, str]]:

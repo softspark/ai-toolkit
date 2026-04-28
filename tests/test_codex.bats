@@ -137,7 +137,7 @@ print('ok')
 
 # ── ecosystem registry integrity ────────────────────────────────────────────
 
-@test "codex: registry declares all three codex generators" {
+@test "codex: registry declares all codex generators" {
     run python3 -c "
 import json
 d = json.load(open('$TOOLKIT_DIR/scripts/ecosystem_tools.json'))
@@ -148,6 +148,7 @@ expected = {
     'scripts/generate_codex.py',
     'scripts/generate_codex_rules.py',
     'scripts/generate_codex_hooks.py',
+    'scripts/generate_codex_skills.py',
 }
 missing = expected - gens
 assert not missing, f'registry missing generators: {missing}'

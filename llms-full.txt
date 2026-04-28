@@ -82,8 +82,11 @@
 - **commit**: Create Conventional Commits with pre-commit validation
 - **content-moderation-patterns**: Loaded when user builds content moderation, safety filters, or policy enforcement with Claude. Covers pre-filter vs LLM-classify, category design, confidence thresholds, and human-in-the-loop.
 - **council**: 4-perspective decision evaluation for architecture choices. Use when user wants multi-angle analysis, needs to decide between alternatives, or mentions 'council', 'evaluate decision', 'pros cons'.
+- **cpp-rules**: C++ coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .cpp, .cc, .cxx, .hpp, .h, CMakeLists.txt, Makefile, GoogleTest, clang-tidy. Load when writing, reviewing, or editing C++ code.
 - **csharp-patterns**: C# and .NET development patterns: LINQ, async/await, dependency injection, records, nullable reference types, ASP.NET Core minimal APIs, EF Core, MediatR. Triggers: C#, .NET, dotnet, ASP.NET, EF Core, LINQ, IServiceCollection, record type, async C#, nullable reference types. Load when writing or reviewing C#/.NET code.
+- **csharp-rules**: C#/.NET coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .cs, .csproj, .sln, ASP.NET, ASP.NET Core, EF Core, LINQ, NUnit, xUnit, dotnet. Load when writing, reviewing, or editing C#/.NET code.
 - **cve-scan**: Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, bundler, dart)
+- **dart-rules**: Dart/Flutter coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .dart, pubspec.yaml, Flutter, Riverpod, Bloc, widget, StatelessWidget, StatefulWidget. Load when writing, reviewing, or editing Dart/Flutter code.
 - **database-patterns**: Database schema design and query optimization: normalization, indexing strategies, joins, N+1, transactions, isolation levels, partitioning, EXPLAIN plans. Triggers: schema, table design, index, slow query, N+1, PostgreSQL, MySQL, SQL Server, SQL, EXPLAIN, query plan, transaction, deadlock. Load when designing tables or tuning queries.
 - **debug**: Debug errors and trace root causes systematically using logs, health checks, and hypothesis-driven investigation. Use when a bug or error message is in hand — not for architectural questions or when there is no reproducible symptom.
 - **debugging-tactics**: Root-cause debugging with 4-phase method: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, not working, intermittent, flaky, crash, regression, fails sometimes, why is X happening, broken after. Load when user reports a bug or asks to investigate failing code.
@@ -101,6 +104,7 @@
 - **fix**: Apply a targeted fix to a known bug or lint error and verify it with the same command that surfaced the problem. Use when the root cause is already identified — not for unknown symptoms or open-ended debugging.
 - **flutter-patterns**: Flutter and Dart development patterns: widget composition, state management (Riverpod/Bloc/Provider), navigation, async, platform channels, performance. Triggers: Flutter, Dart, widget, StatefulWidget, Riverpod, Bloc, Provider, pubspec, Navigator, platform channel, hot reload, StatelessWidget. Load when writing or reviewing Flutter code.
 - **git-mastery**: Advanced Git workflows: interactive rebase, bisect, reflog, cherry-pick, worktrees, history rewriting, submodules, large-file migration (LFS/filter-repo). Triggers: git rebase, bisect, cherry-pick, reflog, force push, history rewrite, detached HEAD, merge conflict, worktree, squash, fixup, submodule. Load when user needs non-trivial Git operations.
+- **golang-rules**: Go coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .go, go.mod, go.sum, Gin, Echo, Gorilla, testing, gofmt. Load when writing, reviewing, or editing Go code.
 - **grill-me**: Stress-test a plan or design through relentless Socratic questioning, walking down each decision branch until reaching shared understanding. Use when user wants to stress-test a plan, get grilled, validate assumptions, or mentions 'grill me'.
 - **health**: Report service and infrastructure health status via liveness/readiness checks, resource usage, and quick diagnostics. Use when the user asks whether services are up or degraded — not for deep debugging of a known error.
 - **hipaa-validate**: Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references
@@ -110,11 +114,14 @@
 - **instinct-review**: Review, promote, or remove learned instincts extracted from past sessions (`.claude/instincts/*.md`). Use when the user wants to curate the instinct list — not to extract new instincts or edit memory.
 - **introspect**: Agent self-debugging and recovery. Use when stuck in loops, making repeated errors, or quality degrades. Triggers: introspect, self-debug, stuck, loop, why failing.
 - **java-patterns**: Java development patterns: Spring Boot, CompletableFuture, records, sealed types, streams, JPA/Hibernate, Maven/Gradle, virtual threads (Loom). Triggers: Java, Spring, Spring Boot, JPA, Hibernate, Maven, Gradle, CompletableFuture, record type, sealed class, virtual thread. Load when writing or reviewing Java code.
+- **java-rules**: Java coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .java, pom.xml, build.gradle, Spring, Spring Boot, JPA, Hibernate, JUnit, Maven, Gradle. Load when writing, reviewing, or editing Java code.
 - **json-mode-patterns**: Loaded when user needs structured JSON output from Claude. Covers tool-use-as-JSON-mode, schema design, parsing, partial recovery, and validation.
 - **kotlin-patterns**: Kotlin development patterns: coroutines, Flow, sealed classes, data classes, extension functions, null safety, Ktor, Jetpack Compose, KMP. Triggers: Kotlin, coroutine, Flow, suspend, Ktor, Android Kotlin, Jetpack Compose, sealed class, data class, KMP, kotlinx. Load when writing or reviewing Kotlin code.
+- **kotlin-rules**: Kotlin coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .kt, .kts, build.gradle.kts, Ktor, Jetpack Compose, coroutines, kotlinx. Load when writing, reviewing, or editing Kotlin code.
 - **lint**: Run the project's linter and type-checker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy, dart analyze). Use when the user asks for static-analysis feedback — not to run tests or refactor.
 - **mcp-builder**: Build production-grade MCP (Model Context Protocol) servers from scratch using the 4-phase methodology: research, implement, test, evaluate. Use when creating new MCP integrations for external APIs, databases, or internal services.
 - **mcp-patterns**: MCP (Model Context Protocol) server design: tool schemas, resource patterns, transport selection (stdio/SSE), client configuration, error handling, capability negotiation. Triggers: MCP, Model Context Protocol, MCP server, MCP tool, MCP resource, JSON-RPC, stdio transport, SSE transport, Claude Desktop config, Cursor MCP. Load when building or integrating MCP servers.
+- **medplum-rules**: Medplum (FHIR healthcare) coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: medplum.config.mts, medplum.config.ts, FHIR, Medplum, Bot, Subscription, Questionnaire. Load when writing, reviewing, or editing Medplum (FHIR healthcare) code.
 - **mem-search**: Search past coding sessions using natural language. Finds relevant observations, decisions, and context from previous work.
 - **migrate**: Run or create database migrations with the detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle) and verify backups exist first. Use when the user asks to apply, roll back, or generate a migration — not for general schema design.
 - **migration-patterns**: Zero-downtime database migration patterns: expand-contract, double-write, backfill, blue-green schema changes, feature flags, rollback safety, online DDL. Triggers: migration, schema change, zero-downtime, expand-contract, double-write, backfill, ALTER TABLE, column rename, safe deploy, online DDL. Load when planning non-trivial DB schema changes.
@@ -126,6 +133,7 @@
 - **panic**: Emergency kill switch that halts all agent activity via a lockfile gate. Use when agents are looping, misbehaving, or the user wants to stop everything NOW — not for normal workflow interruptions.
 - **performance-profiling**: Performance measurement and optimization: four golden signals (latency/traffic/errors/saturation), p50/p95/p99, baseline-change-measure loop, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, profile, bottleneck, optimization, load test, benchmark, CPU profiling, memory leak. Load when diagnosing or optimizing slow code or services.
 - **persona**: Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev
+- **php-rules**: PHP coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .php, composer.json, Laravel, Symfony, PHPUnit, PSR-12, Composer. Load when writing, reviewing, or editing PHP code.
 - **plan**: Breaks down feature requests and project goals into phased implementation plans with task lists, agent assignments, dependency graphs, and success criteria. Use when the user asks to plan a feature, create an implementation roadmap, break down a coding task, or outline project phases.
 - **plan-writing**: Implementation plan and pre-mortem drafting: phase breakdown, success criteria, risks, rollback plan, acceptance tests, estimated effort. Triggers: implementation plan, pre-mortem, phased plan, project plan, task breakdown, success criteria, rollback strategy, risk register. Load when user asks to write a plan or pre-mortem document.
 - **plugin-creator**: Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes
@@ -134,6 +142,7 @@
 - **prd-to-plan**: Convert a PRD into a phased implementation plan using tracer-bullet vertical slices. Use when user wants to break down a PRD, create an implementation plan, plan phases from a PRD, or mentions tracer bullets.
 - **predict**: Analyzes code diffs and file changes to identify potential regressions, maps dependency impact across the codebase, and generates a risk-scored impact report. Use when reviewing pull requests, assessing code change risk, checking for breaking changes, or analyzing the blast radius of a diff.
 - **prompt-caching-patterns**: Loaded when user builds with Anthropic API and needs to cut cost or latency via prompt caching. Covers TTL, cache breakpoints, stacking, invalidation, and measuring hit rate.
+- **python-rules**: Python coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .py, .pyi, pyproject.toml, requirements.txt, Pipfile, FastAPI, Django, Flask, pytest, SQLAlchemy, ruff, mypy. Load when writing, reviewing, or editing Python code.
 - **qa-session**: Interactive QA session where user reports bugs conversationally and agent files GitHub issues with domain language. Explores codebase in background for context. Use when user wants to report bugs, do QA, file issues conversationally, or mentions QA session.
 - **rag-patterns**: RAG architecture: embeddings, chunking strategies, hybrid search (BM25 + vector), reranking, CRAG/self-correcting, multi-hop reasoning, evaluation metrics. Triggers: RAG, embedding, vector search, pgvector, Qdrant, Pinecone, Weaviate, chunking, reranker, retrieval, hybrid search, semantic search, knowledge base, cosine similarity. Load when building or tuning RAG systems.
 - **refactor**: Refactor code for quality and maintainability
@@ -143,7 +152,9 @@
 - **review**: Review code for quality, security, and correctness
 - **rollback**: Roll back a git commit, database migration, or deployment to a previous known-good state with safety checks and health verification. Use when the user wants to revert recent changes safely — not to undo local edits or halt the whole system.
 - **ruby-patterns**: Ruby and Rails development patterns: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet/RBS, Hanami, Roda, Rack middleware. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, gem, Gemfile, bundler, rake, Hanami, Sorbet. Load when writing or reviewing Ruby code.
+- **ruby-rules**: Ruby coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .rb, Gemfile, .gemspec, Rails, ActiveRecord, Sidekiq, RSpec, Sorbet, rubocop. Load when writing, reviewing, or editing Ruby code.
 - **rust-patterns**: Rust development patterns: ownership, borrowing, lifetimes, async (Tokio), error handling (Result/anyhow/thiserror), traits, macros, zero-cost abstractions, unsafe boundaries. Triggers: Rust, borrow checker, lifetime, Tokio, async Rust, cargo, trait, impl, Result, unsafe, lifetime annotation, clippy. Load when writing or reviewing Rust code.
+- **rust-rules**: Rust coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .rs, Cargo.toml, Cargo.lock, Tokio, Axum, Serde, clippy, cargo test. Load when writing, reviewing, or editing Rust code.
 - **search**: Search the knowledge base with semantic and hybrid modes
 - **security-patterns**: Application security: OWASP Top 10, authN/authZ, input validation, secrets management, TLS, CSRF/XSS/SQLi, session handling, JWT, rate limiting, CSP. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, encryption, TLS, authentication, authorization, CSP, CORS, password hashing. Load when touching auth code, handling user input, or doing security review.
 - **seo-validate**: Validate code against SEO best practices: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Supports React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML.
@@ -152,12 +163,14 @@
 - **subagent-development**: Execute implementation plans using fresh subagents per task with two-stage review: spec compliance first, then code quality. Use when executing plans with independent tasks.
 - **swarm**: Execute tasks via Map-Reduce, Consensus, or Relay swarms
 - **swift-patterns**: Swift and iOS development patterns: SwiftUI, Combine, async/await, property wrappers, actors, Swift Package Manager, Core Data, UIKit interop, @MainActor. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, property wrapper, Core Data, SPM, UIKit, @MainActor, @State, @Binding. Load when writing or reviewing Swift code.
+- **swift-rules**: Swift coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .swift, Package.swift, .xcodeproj, SwiftUI, Combine, async/await, XCTest. Load when writing, reviewing, or editing Swift code.
 - **tdd**: Test-driven development with red-green-refactor loop and vertical slices. Use when user wants TDD, test-first development, red-green-refactor, or building features with tests driving the implementation.
 - **teams**: Launches pre-configured multi-agent teams for code review, debugging, feature development, security audits, and database migrations. Use when the user asks to start a multi-agent workflow, coordinate agent teams, run a team review, or needs parallel agent collaboration on a complex task.
 - **test**: Run the project's test suite with coverage reporting, auto-detecting the framework (pytest, vitest, jest, flutter test, go test, cargo test, phpunit). Use when the user asks to run existing tests — not to author new ones test-first.
 - **testing-patterns**: Testing strategy and craft: pyramid vs trophy, unit/integration/e2e split, fixtures, mocks vs fakes vs stubs, AAA pattern, flaky test diagnosis, coverage goals, property-based testing. Triggers: test, testing strategy, fixture, mock, stub, AAA, unit test, integration test, e2e, Playwright, Cypress, flaky, coverage, TDD, test pyramid. Load when writing, reviewing, or designing test suites.
 - **triage-issue**: Triage a bug by deeply exploring the codebase for root cause, then create a GitHub issue with a TDD-based fix plan. Mostly hands-off — minimal user interaction. Use when user reports a bug, wants to investigate an issue, mentions triage, or wants a fix plan.
 - **typescript-patterns**: TypeScript type safety patterns: strict mode, generics, conditional types, template literals, discriminated unions, branded types, Zod, satisfies operator, const assertions. Triggers: TypeScript, TS, generics, conditional type, utility type, strict, Zod, satisfies, discriminated union, type safety, type narrowing, template literal type. Load when writing or reviewing TypeScript code.
+- **typescript-rules**: TypeScript/JavaScript coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .ts, .tsx, .js, .jsx, package.json, tsconfig.json, React, Next.js, Vue, Vite, Vitest, Jest, ESLint. Load when writing, reviewing, or editing TypeScript/JavaScript code.
 - **ubiquitous-language**: Extract a DDD-style ubiquitous language glossary from the conversation, flagging ambiguities and proposing canonical terms. Saves to UBIQUITOUS_LANGUAGE.md. Use when user wants to define domain terms, build a glossary, harden terminology, or mentions DDD or domain model.
 - **verification-before-completion**: Loaded when agent is about to claim work is complete, fixed, or passing — requires running verification commands and confirming output before making any success claims. Evidence before assertions, always.
 - **workflow**: Start and manage autonomous agent workflows
@@ -311,7 +324,7 @@ Definition of "100% coverage" chosen: **each editor works at 100% of its native 
 
 | # | Decision | Rule |
 |---|----------|------|
-| 1 | Skill propagation | `.claude/skills/` canonical. Cursor/Windsurf/opencode → compat-read (nothing). Augment/Gemini/Antigravity → **pointer skill** (1 file per editor). Codex → opt-in `--codex-skills` flag emits full mirror |
+| 1 | Skill propagation | `.claude/skills/` canonical. Cursor/Windsurf/opencode → compat-read (nothing). Augment/Gemini/Antigravity → **pointer skill** (1 file per editor). Codex → native `.agents/skills/` mirror |
 | 2 | Global writes | Only `~/.claude/`. Cursor/Windsurf/opencode get global coverage via compat-read. Augment/Gemini/Roo require `--local` |
 | 3 | Surface activation | **`--profile full`** turns on every native surface. `standard` stays close to today's defaults but adds niepodważalne wypełnienia (Copilot wiring + Gemini hooks). `minimal` unchanged |
 | 4 | Default behavior | `--editors <name>` alone uses `standard`. Users who want the full stack pass `--profile full` |
@@ -355,13 +368,13 @@ Definition of "100% coverage" chosen: **each editor works at 100% of its native 
 **Owned files**
 - New: `scripts/generate_gemini_skills.py` (`.gemini/skills/ai-toolkit-skill-catalogue/SKILL.md` — pointer)
 - New: `scripts/generate_augment_skills.py` (`.augment/skills/ai-toolkit-skill-catalogue/SKILL.md` — pointer)
-- New: `scripts/generate_codex_skills.py` (full mirror to `.codex/skills/<name>/SKILL.md` — gated by `--codex-skills` flag)
+- New: `scripts/generate_codex_skills.py` (Codex-native mirror to `.agents/skills/<name>/SKILL.md`)
 - New: `tests/test_skills_native.bats` (≥15 tests)
 
 **Must-haves**
 - Pointer pattern same as Antigravity: 1 file per editor referencing `~/.claude/skills/<name>` and listing the catalogue.
 - Codex mirror respects `user-invocable: false` (knowledge skills stay, task skills stay — Codex reads them all).
-- `--codex-skills` must be opt-in; default OFF.
+- Codex skills use the upstream `.agents/skills` discovery path.
 
 ### Bucket 4 — Install wiring + profile full + docs (devops-implementer)
 
@@ -702,7 +715,7 @@ Orchestrator's final output:
 
 ### Open items flagged for future passes
 
-1. **Native `.codex/skills/*/SKILL.md` emission** (class B) — would write ~99 skill directories. Needs opt-in flag + minor bump.
+1. **Native `.agents/skills/*/SKILL.md` emission** (class B) — writes the Codex skill catalog to the upstream discovery path.
 2. **`.opencode/skills/` duplication** — deferred indefinitely; `.claude/skills/` fallback already works.
 3. **New generators needed**: `generate_gemini_hooks.py`, `generate_augment_agents.py`, `generate_augment_commands.py`, `generate_augment_hooks.py`.
 4. **Cross-editor hooks unification**: Cursor and Windsurf both shipped `.cursor/hooks.json` and `.windsurf/hooks.json` — worth a dedicated shared-schema pass rather than per-editor copies.
@@ -5023,7 +5036,7 @@ These verify the native-surface generators shipped in v3.0.0 actually emit the r
 D=/tmp/aitk-profile-full-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
   --profile full --codex-skills --dry-run 2>&1 \
-  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.windsurf/hooks\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.codex/skills"
+  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.windsurf/hooks\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.agents/skills"
 ```
 
 **Verify** — at least the following lines appear:
@@ -5031,22 +5044,21 @@ ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
 - [ ] `.windsurf/hooks.json`
 - [ ] `.gemini/settings.json` hooks AND `.gemini/commands/`
 - [ ] `.augment/agents/` + `.augment/commands/` + `$HOME/.augment/settings.json`
-- [ ] `.codex/skills/` (opt-in via `--codex-skills`)
+- [ ] `.agents/skills/` (Codex native discovery path; refreshed by `--codex-skills`)
 
 ### 9.2 `--codex-skills` is orthogonal to `--profile`
 
 ```bash
 D=/tmp/aitk-codex-skills-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors codex --profile standard --codex-skills --dry-run 2>&1 \
-  | grep -q "Would generate: .codex/skills" && echo "OK: --codex-skills works without --profile full"
+  | grep -q "Would refresh: .agents/skills" && echo "OK: --codex-skills refreshes .agents/skills without --profile full"
 ai-toolkit install --local --editors codex --profile full --dry-run 2>&1 \
-  | grep -q "Would generate: .codex/skills" && echo "FAIL: --profile full should NOT auto-emit .codex/skills" \
-  || echo "OK: --profile full alone does not auto-emit .codex/skills (correct — opt-in only)"
+  | grep -q "Would generate: .agents/skills" && echo "OK: Codex skills use .agents/skills at profile full"
 ```
 
 **Verify:**
-- [ ] `--codex-skills` emits `.codex/skills/` at any profile
-- [ ] `--profile full` alone does NOT emit `.codex/skills/` (must be opt-in)
+- [ ] `--codex-skills` refreshes `.agents/skills/` at any profile
+- [ ] `--profile full` never emits `.codex/skills/`; Codex skills use `.agents/skills/`
 
 ### 9.3 Breaking-change surfaces land on `--profile standard`
 
@@ -5711,7 +5723,7 @@ Three tiers determine how to approach a task:
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 32 |
 | Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
-| Knowledge | `user-invocable: false` | Claude auto-loads | 36 |
+| Knowledge | `user-invocable: false` | Claude auto-loads | 49 |
 
 ## Multi-Agent Execution
 
@@ -8723,19 +8735,22 @@ title: "Language Rules System"
 category: reference
 service: ai-toolkit
 tags: [rules, languages, coding-style, testing, patterns, security]
-version: "1.0.0"
+version: "2.0.0"
 created: "2026-04-07"
-last_updated: "2026-04-07"
-description: "Reference for the language-specific rules system: 14 languages, 5 categories per language, auto-detection."
+last_updated: "2026-04-28"
+description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus a common set inlined into CLAUDE.md."
 ---
 
 # Language Rules System
 
 ## Overview
 
-ai-toolkit ships language-specific rule files covering 14 languages/platforms plus a common set (see README.md for current count). Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
+ai-toolkit ships rule content for 13 languages/platforms plus a language-agnostic common set. Source files live under `app/rules/` and are split into two delivery channels by `ai-toolkit install --local`:
 
-Rules are distinct from skills: rules are injected as static text into `CLAUDE.md` and are always visible to Claude, whereas skills are loaded contextually by agents.
+- **Common rules** (`app/rules/common/*.md`): full content is inlined into the project's `.claude/CLAUDE.md` under a single `<!-- TOOLKIT:language-rules START -->` marker. They cover coding-style, git-workflow, performance, security, and testing — concerns that apply regardless of language, so they stay always visible.
+- **Per-language rules** (`app/rules/<lang>/*.md`): emitted at build time as `<lang>-rules` knowledge skills under `app/skills/`. Each skill is `user-invocable: false`, so Claude loads it via the Agent Skills progressive-disclosure mechanism only when its description triggers match (file extensions, framework names, or matching keywords in the prompt).
+
+The skills are generated from the rule files via `python3 scripts/generate_language_rules_skills.py`, which is idempotent and rerun-safe. Other editors (Cursor, Windsurf, Cline, Roo, Augment, Codex, Copilot, Antigravity, Gemini, opencode) still receive the full per-language rule content via their own generators in `scripts/dir_rules_shared.py::build_language_rules()` — Claude is the only target where the per-language content is now skill-delivered rather than inlined.
 
 ## File Structure
 
@@ -8772,7 +8787,7 @@ app/rules/
 └── medplum/
 ```
 
-**Total: 14 directories × 5 files each + 3 standalone = 73 rule files** (see README.md for canonical count)
+**Total: 13 per-language directories × 5 files + 1 common directory × 5 files + 3 standalone files** (see README.md for canonical count). Per-language directories ship as `<lang>-rules` knowledge skills; the common directory is inlined into CLAUDE.md.
 
 ## Supported Languages
 
@@ -8857,15 +8872,45 @@ ai-toolkit install --local --modules core,agents
 
 The `--lang` flag accepts comma-separated language names and converts them to `rules-<lang>` modules. Common aliases are supported: `go` → `golang`, `c++` → `cpp`, `c#`/`cs` → `csharp`. Using `--lang` implies `--local` and disables auto-detection.
 
-Language rules are injected into the project `CLAUDE.md` between named markers:
+Common rules are injected into the project `CLAUDE.md` between a single named marker (the per-language markers from v1.x are no longer used):
 
 ```
-<!-- TOOLKIT:rules-typescript START -->
-... TypeScript rules content ...
-<!-- TOOLKIT:rules-typescript END -->
+<!-- TOOLKIT:language-rules START -->
+# Language Rules
+
+Common (language-agnostic) rules apply to every change in this project.
+Language-specific rules live in `<lang>-rules` knowledge skills (e.g.
+`python-rules`, `typescript-rules`) and load automatically when their
+triggers match.
+
+Detected languages: `python-rules`, `typescript-rules`.
+
+---
+
+... full content of app/rules/common/*.md inlined here ...
+<!-- TOOLKIT:language-rules END -->
 ```
 
-Re-running `install --local` is idempotent — existing blocks are replaced, not duplicated.
+Re-running `install --local` is idempotent — the existing block is replaced, not duplicated. Per-language rules are not injected into `CLAUDE.md` for Claude — they are loaded contextually via their respective `<lang>-rules` knowledge skills.
+
+### Generating language-rules skills
+
+The `<lang>-rules` skills under `app/skills/` are produced by:
+
+```bash
+python3 scripts/generate_language_rules_skills.py            # write all
+python3 scripts/generate_language_rules_skills.py --check    # dry-run, exit 1 on diff
+python3 scripts/generate_language_rules_skills.py --langs python,rust  # subset
+```
+
+The generator reads `app/rules/<lang>/*.md`, strips YAML frontmatter, concatenates the categories, and writes `app/skills/<lang>-rules/SKILL.md` with frontmatter:
+
+- `name: <lang>-rules`
+- `description: ...` — language label, rule categories, and concrete trigger keywords (file extensions, framework names) so the skill activates reliably when Claude is working on that language.
+- `user-invocable: false` — knowledge skill, no slash command.
+- `allowed-tools: Read` — the skill body is reference content, not an action.
+
+Rerunning the generator is idempotent. Editing rule files under `app/rules/<lang>/` and rerunning the generator is the canonical way to update a language skill.
 
 ## Manifest Module Names
 
@@ -8890,13 +8935,16 @@ Language rules are tracked as modules in `manifest.json`:
 
 ## Rules vs Skills
 
-| | Rules | Skills |
-|---|-------|--------|
-| Location | `app/rules/` | `app/skills/` |
-| Delivery | Injected into `CLAUDE.md` text | Loaded from `~/.claude/skills/` |
-| Visibility | Always visible in context | Loaded contextually by agents |
-| Scope | Per-language static guidance | Domain-specific agent behavior |
-| Install | `--local` only | Global install |
+| | Common rules | Per-language rules | Other skills |
+|---|---|---|---|
+| Source | `app/rules/common/` | `app/rules/<lang>/` | `app/skills/<name>/SKILL.md` |
+| Delivery to Claude | Inlined into project `CLAUDE.md` (`--local`) | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
+| Visibility | Always in context | Loaded when triggers match (file extensions, framework names) | Loaded when triggers match |
+| Scope | Language-agnostic standards (security, git, testing, perf, style) | Per-language coding-style, frameworks, patterns, security, testing | Domain skills (testing, debugging, RAG, etc.) |
+| Install | `ai-toolkit install --local` | Global install (skills directory is symlinked) | Global install |
+| Other editors | Inlined into editor-specific rule files | Inlined into editor-specific rule files (still full content, not skills) | N/A |
+
+Per-language content delivered as a knowledge skill is the same Markdown that other editors receive inlined. The split exists only for Claude, where the Agent Skills progressive-disclosure mechanism keeps the system prompt small.
 
 ## Related Documentation
 
@@ -10863,7 +10911,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Changelog | https://cursor.com/changelog |
 | Stable docs mirror | https://cursor.com/llms.txt (all doc pages have .md twins) |
 | Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json`, `~/.cursor/hooks.json` |
-| Compat read paths | `.claude/skills/`, `.claude/agents/`, `.codex/skills/`, `.codex/agents/` (Cursor cross-reads these so ai-toolkit's Claude install works automatically) |
+| Compat read paths | `.claude/skills/`, `.claude/agents/`, `.agents/skills/` (Cursor cross-reads these so ai-toolkit's Claude/Codex installs work automatically) |
 | Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py`, `scripts/generate_cursor_hooks.py` (profile=full), `scripts/generate_cursor_agents.py` (profile=full) |
 | Tracked capabilities | `cursorrules`, `.cursor/rules`, `AGENTS.md`, `mcp.json`, Composer, Agent Mode, hooks.json, subagents, skills, plugins |
 
@@ -10974,11 +11022,11 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `codex-cli` |
 | Docs | https://github.com/openai/codex (redirects from developers.openai.com/codex) |
 | Release notes | https://github.com/openai/codex/releases |
-| Config paths | `AGENTS.md`, `.agents/rules/*.md`, `.codex/hooks.json`, `.codex/skills/*/SKILL.md`, `~/.codex/config.toml` |
+| Config paths | `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `~/.codex/config.toml` |
 | Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_rules.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
 | Tracked hook events | `PreToolUse`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`, `PermissionRequest` (6 events supported upstream in `config.toml`) |
 | Tracked handler types | `command` (emitted by default); `prompt` and `agent` available upstream but authored by hand |
-| Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.codex/skills/*/SKILL.md` (native discovery, not auto-emitted by ai-toolkit yet) |
+| Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.agents/skills/*/SKILL.md` (native Codex skill discovery path) |
 | Version probe | `codex --version` |
 
 ### opencode

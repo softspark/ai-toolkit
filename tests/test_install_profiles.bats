@@ -143,14 +143,17 @@ run_install() {
     grep -q '"_source": "ai-toolkit"' "$TEST_PROJECT/.windsurf/hooks.json"
 }
 
-# ── --codex-skills is independent of --profile ─────────────────────────────
+# ── Codex skills use upstream .agents/skills discovery path ────────────────
 
-@test "profiles: --codex-skills without --profile full still emits .codex/skills/" {
+@test "profiles: --codex-skills without --profile full refreshes .agents/skills/" {
     run_install --editors codex --profile standard --codex-skills >/dev/null 2>&1
-    [ -d "$TEST_PROJECT/.codex/skills" ]
+    [ -d "$TEST_PROJECT/.agents/skills" ]
+    [ -f "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md" ]
+    grep -q 'Codex Translation Layer' "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
 }
 
-@test "profiles: --profile full alone does NOT auto-emit .codex/skills/ (opt-in only)" {
+@test "profiles: --profile full alone uses .agents/skills and does not emit .codex/skills/" {
     run_install --editors codex --profile full >/dev/null 2>&1
+    [ -d "$TEST_PROJECT/.agents/skills" ]
     [ ! -d "$TEST_PROJECT/.codex/skills" ]
 }

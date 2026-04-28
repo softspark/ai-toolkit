@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
-"""Mirror the full ai-toolkit skill catalogue into ``.codex/skills/``.
+"""Mirror the ai-toolkit skill catalogue into Codex ``.agents/skills/``.
 
-OpenAI Codex CLI supports the Agent Skills standard at
-``.codex/skills/<skill-name>/SKILL.md`` with optional supporting files
-(scripts, references, assets) in the skill directory. Unlike the Augment
-and Gemini pointer pattern, Codex benefits from having the full skill
-content on disk, so this generator performs a **full mirror** of every
-skill in ``app/skills/`` into ``<target-dir>/.codex/skills/<name>/``.
+OpenAI Codex CLI discovers Agent Skills from ``.agents/skills/`` in the
+repository tree, plus user/admin/system skill locations. Unlike the Augment
+and Gemini pointer pattern, Codex benefits from having the full skill catalog
+on disk, so this generator syncs every skill in ``app/skills/`` into
+``<target-dir>/.agents/skills/<name>/``.
 
 The mirror is **opt-in**: ``enable_codex_skills=False`` is the default.
 Bucket 4 wires a ``--codex-skills`` CLI flag that toggles this on.
 
 Implementation:
-  * Prefer symlinks from ``.codex/skills/<name>`` to the canonical
-    ``app/skills/<name>`` directory (atomic and cheap).
-  * Fall back to a recursive copy when symlinks are unavailable (Windows
-    without developer mode, hostile filesystems, etc.).
+  * Native Codex-compatible skills are symlinked to canonical ``app/skills``.
+  * Skills that use Claude-only delegation tools are rendered as Codex
+    wrappers through ``codex_skill_adapter.sync_codex_skill``.
   * Skip ``_lib`` and any dotfile directories under ``app/skills/``.
-  * Remove stale entries under ``.codex/skills/`` that no longer
-    correspond to a source skill (cleanup on rerun).
-  * Never touch user-authored entries in ``.codex/skills/`` that do not
-    match a source skill name and are not our managed targets.
+  * Remove stale generated wrappers and broken managed symlinks.
+  * Preserve user-authored entries in ``.agents/skills/`` that are not managed
+    by ai-toolkit.
 
 Idempotent on rerun.
 
@@ -32,12 +29,11 @@ keeping the opt-in default enforced even when invoked directly.
 """
 from __future__ import annotations
 
-import os
-import shutil
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from codex_skill_adapter import cleanup_codex_skills, sync_codex_skill
 from emission import skills_dir
 
 
@@ -69,69 +65,11 @@ def _iter_source_skills() -> list[Path]:
 # Mirror operations
 # ---------------------------------------------------------------------------
 
-def _remove_existing(target: Path) -> None:
-    """Remove an existing file, symlink, or directory at ``target``.
-
-    Uses ``lstat`` so symlinks are unlinked without following them.
-    """
-    if not target.exists() and not target.is_symlink():
-        return
-    if target.is_symlink() or target.is_file():
-        target.unlink()
-        return
-    shutil.rmtree(target)
-
-
-def _symlink_or_copy(source: Path, target: Path) -> str:
-    """Create ``target`` as a symlink to ``source``; fall back to a copy.
-
-    Returns ``"symlink"`` or ``"copy"`` indicating which strategy was used.
-    """
-    _remove_existing(target)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        os.symlink(source, target, target_is_directory=True)
-        return "symlink"
-    except (OSError, NotImplementedError):
-        shutil.copytree(source, target, symlinks=False)
-        return "copy"
-
-
-def _cleanup_stale(codex_skills_dir: Path, live_names: set[str]) -> list[str]:
-    """Remove managed entries under ``.codex/skills/`` that no longer map
-    to a source skill. Returns the names removed.
-
-    A managed entry is one whose directory name matches a historical
-    source skill name pattern: it contains a ``SKILL.md`` either directly
-    (copy) or via a symlink back into ``app/skills/``. User-authored
-    entries that do not look managed are left alone.
-    """
+def _count_entries(codex_skills_dir: Path) -> int:
+    """Count top-level skill entries after sync."""
     if not codex_skills_dir.is_dir():
-        return []
-    removed: list[str] = []
-    for entry in sorted(codex_skills_dir.iterdir()):
-        if not entry.is_dir() and not entry.is_symlink():
-            continue
-        if entry.name in live_names:
-            continue
-        if entry.is_symlink():
-            # Only remove symlinks that point inside our app/skills/ tree.
-            try:
-                resolved = entry.resolve()
-            except OSError:
-                continue
-            try:
-                resolved.relative_to(skills_dir.resolve())
-            except ValueError:
-                continue
-            entry.unlink()
-            removed.append(entry.name)
-            continue
-        # Copy mode: treat as managed only if a SKILL.md is present.
-        if (entry / "SKILL.md").is_file():
-            shutil.rmtree(entry)
-            removed.append(entry.name)
-    return removed
+        return 0
+    return sum(1 for entry in codex_skills_dir.iterdir() if entry.is_dir() or entry.is_symlink())
 
 
 # ---------------------------------------------------------------------------
@@ -139,10 +77,10 @@ def _cleanup_stale(codex_skills_dir: Path, live_names: set[str]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def generate(target_dir: Path, enable_codex_skills: bool = False) -> None:
-    """Mirror ``app/skills/`` into ``<target_dir>/.codex/skills/``.
+    """Mirror ``app/skills/`` into ``<target_dir>/.agents/skills/``.
 
     Args:
-      target_dir: Project root where ``.codex/skills/`` is written.
+      target_dir: Project root where ``.agents/skills/`` is written.
       enable_codex_skills: Opt-in flag. Defaults to ``False`` (no-op).
 
     Contract for Bucket 4 wiring::
@@ -156,31 +94,30 @@ def generate(target_dir: Path, enable_codex_skills: bool = False) -> None:
     if not enable_codex_skills:
         return
 
-    codex_skills_dir = target_dir / ".codex" / "skills"
+    codex_skills_dir = target_dir / ".agents" / "skills"
     codex_skills_dir.mkdir(parents=True, exist_ok=True)
 
     sources = _iter_source_skills()
-    live_names: set[str] = {s.name for s in sources}
 
-    symlink_count = 0
-    copy_count = 0
+    linked = 0
+    adapted = 0
+    skipped = 0
     for skill in sources:
-        target = codex_skills_dir / skill.name
-        mode = _symlink_or_copy(skill, target)
-        if mode == "symlink":
-            symlink_count += 1
+        mode = sync_codex_skill(skill, codex_skills_dir)
+        if mode == "linked":
+            linked += 1
+        elif mode == "adapted":
+            adapted += 1
         else:
-            copy_count += 1
+            skipped += 1
 
-    removed = _cleanup_stale(codex_skills_dir, live_names)
+    cleanup_codex_skills(codex_skills_dir, skills_dir)
 
-    total = symlink_count + copy_count
     print(
-        f"  Codex skill mirror: {total} skills "
-        f"({symlink_count} symlink, {copy_count} copy)"
+        f"  Codex skill mirror: {_count_entries(codex_skills_dir)} skills "
+        f"to .agents/skills/ ({linked} linked, {adapted} adapted, "
+        f"{skipped} skipped)"
     )
-    if removed:
-        print(f"  Codex skill mirror: removed {len(removed)} stale entries")
 
 
 def main() -> None:

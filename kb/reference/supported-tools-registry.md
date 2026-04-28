@@ -48,7 +48,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Changelog | https://cursor.com/changelog |
 | Stable docs mirror | https://cursor.com/llms.txt (all doc pages have .md twins) |
 | Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json`, `~/.cursor/hooks.json` |
-| Compat read paths | `.claude/skills/`, `.claude/agents/`, `.codex/skills/`, `.codex/agents/` (Cursor cross-reads these so ai-toolkit's Claude install works automatically) |
+| Compat read paths | `.claude/skills/`, `.claude/agents/`, `.agents/skills/` (Cursor cross-reads these so ai-toolkit's Claude/Codex installs work automatically) |
 | Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py`, `scripts/generate_cursor_hooks.py` (profile=full), `scripts/generate_cursor_agents.py` (profile=full) |
 | Tracked capabilities | `cursorrules`, `.cursor/rules`, `AGENTS.md`, `mcp.json`, Composer, Agent Mode, hooks.json, subagents, skills, plugins |
 
@@ -159,11 +159,11 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `codex-cli` |
 | Docs | https://github.com/openai/codex (redirects from developers.openai.com/codex) |
 | Release notes | https://github.com/openai/codex/releases |
-| Config paths | `AGENTS.md`, `.agents/rules/*.md`, `.codex/hooks.json`, `.codex/skills/*/SKILL.md`, `~/.codex/config.toml` |
+| Config paths | `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `~/.codex/config.toml` |
 | Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_rules.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
 | Tracked hook events | `PreToolUse`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`, `Stop`, `PermissionRequest` (6 events supported upstream in `config.toml`) |
 | Tracked handler types | `command` (emitted by default); `prompt` and `agent` available upstream but authored by hand |
-| Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.codex/skills/*/SKILL.md` (native discovery, not auto-emitted by ai-toolkit yet) |
+| Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.agents/skills/*/SKILL.md` (native Codex skill discovery path) |
 | Version probe | `codex --version` |
 
 ### opencode

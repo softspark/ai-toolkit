@@ -33,7 +33,7 @@ Definition of "100% coverage" chosen: **each editor works at 100% of its native 
 
 | # | Decision | Rule |
 |---|----------|------|
-| 1 | Skill propagation | `.claude/skills/` canonical. Cursor/Windsurf/opencode → compat-read (nothing). Augment/Gemini/Antigravity → **pointer skill** (1 file per editor). Codex → opt-in `--codex-skills` flag emits full mirror |
+| 1 | Skill propagation | `.claude/skills/` canonical. Cursor/Windsurf/opencode → compat-read (nothing). Augment/Gemini/Antigravity → **pointer skill** (1 file per editor). Codex → native `.agents/skills/` mirror |
 | 2 | Global writes | Only `~/.claude/`. Cursor/Windsurf/opencode get global coverage via compat-read. Augment/Gemini/Roo require `--local` |
 | 3 | Surface activation | **`--profile full`** turns on every native surface. `standard` stays close to today's defaults but adds niepodważalne wypełnienia (Copilot wiring + Gemini hooks). `minimal` unchanged |
 | 4 | Default behavior | `--editors <name>` alone uses `standard`. Users who want the full stack pass `--profile full` |
@@ -77,13 +77,13 @@ Definition of "100% coverage" chosen: **each editor works at 100% of its native 
 **Owned files**
 - New: `scripts/generate_gemini_skills.py` (`.gemini/skills/ai-toolkit-skill-catalogue/SKILL.md` — pointer)
 - New: `scripts/generate_augment_skills.py` (`.augment/skills/ai-toolkit-skill-catalogue/SKILL.md` — pointer)
-- New: `scripts/generate_codex_skills.py` (full mirror to `.codex/skills/<name>/SKILL.md` — gated by `--codex-skills` flag)
+- New: `scripts/generate_codex_skills.py` (Codex-native mirror to `.agents/skills/<name>/SKILL.md`)
 - New: `tests/test_skills_native.bats` (≥15 tests)
 
 **Must-haves**
 - Pointer pattern same as Antigravity: 1 file per editor referencing `~/.claude/skills/<name>` and listing the catalogue.
 - Codex mirror respects `user-invocable: false` (knowledge skills stay, task skills stay — Codex reads them all).
-- `--codex-skills` must be opt-in; default OFF.
+- Codex skills use the upstream `.agents/skills` discovery path.
 
 ### Bucket 4 — Install wiring + profile full + docs (devops-implementer)
 

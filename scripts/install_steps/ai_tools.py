@@ -331,10 +331,10 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
     - ``full``: adds every native surface an editor can host (subagents,
       custom commands, hooks, skill-catalogue pointers).
 
-    ``codex_skills`` (opt-in, off by default) additionally writes a full skill
-    mirror under ``.codex/skills/``. Required even for ``--profile full`` —
-    the mirror is intentionally gated behind an extra flag to keep the default
-    footprint small.
+    ``codex_skills`` (opt-in, off by default) explicitly refreshes the full
+    Codex skill catalog under ``.agents/skills/``. ``--editors codex`` already
+    installs this catalog for normal local installs; the flag is kept as a
+    direct generator contract for scripts and dry-run verification.
 
     If ``merged_config`` is provided (from .softspark-toolkit.json extends resolution),
     additional rules and constitution amendments from the base config are injected.
@@ -617,8 +617,10 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
                   "$HOME/.augment/settings.json + .augment/skills/ (profile=full)")
         if "gemini" in eds:
             print("  Would generate: .gemini/commands/ + .gemini/skills/ (profile=full)")
-    if "codex" in eds and codex_skills:
-        print("  Would generate: .codex/skills/ full mirror (--codex-skills)")
+    if "codex" in eds:
+        print("  Would generate: .agents/skills/ Codex skills")
+        if codex_skills:
+            print("  Would refresh: .agents/skills/ via --codex-skills")
 
     if not eds:
         print("  No editors selected (use --editors <list> or --editors all)")
@@ -898,10 +900,10 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         from generate_codex_hooks import generate as gen_codex_hooks
         gen_codex_hooks(cwd)
         print("  Created: .codex/hooks.json")
-        # .agents/skills/ — filtered symlinks (Codex-compatible skills only)
+        # .agents/skills/ — Codex discovery path for repo-local skills
         _install_codex_skills(cwd)
-        # .codex/skills/ — full mirror, gated behind explicit --codex-skills flag
-        # (does NOT activate automatically on --profile full — must opt in).
+        # --codex-skills explicitly re-runs the same Codex skill sync path.
+        # Codex upstream discovers skills from .agents/skills/, not .codex/skills/.
         if codex_skills:
             _try_generator("generate_codex_skills", cwd,
                            enable_codex_skills=True)

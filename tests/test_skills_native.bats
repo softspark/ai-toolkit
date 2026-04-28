@@ -4,7 +4,7 @@
 # Covers:
 #   - scripts/generate_gemini_skills.py  (pointer pattern)
 #   - scripts/generate_augment_skills.py (pointer pattern)
-#   - scripts/generate_codex_skills.py   (full mirror, opt-in)
+#   - scripts/generate_codex_skills.py   (.agents/skills mirror, opt-in)
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 POINTER_SKILL="ai-toolkit-skill-catalogue"
@@ -132,7 +132,7 @@ PY
 # ── Codex mirror (opt-in) ─────────────────────────────────────────────────
 
 @test "codex-skills: default is no-op — nothing written without --enable" {
-    [ ! -d "$B3_CODEX_OFF/.codex" ] || [ -z "$(find "$B3_CODEX_OFF/.codex" -mindepth 1 -print -quit)" ]
+    [ ! -d "$B3_CODEX_OFF/.agents" ] || [ -z "$(find "$B3_CODEX_OFF/.agents" -mindepth 1 -print -quit)" ]
 }
 
 @test "codex-skills: generate() default signature defaults to disabled" {
@@ -144,27 +144,26 @@ sys.path.insert(0, "$TOOLKIT_DIR/scripts")
 from generate_codex_skills import generate
 generate(Path("$tmp"))  # no kwargs — must stay disabled
 PY
-    [ ! -d "$tmp/.codex/skills" ] || [ -z "$(ls "$tmp/.codex/skills" 2>/dev/null)" ]
+    [ ! -d "$tmp/.agents/skills" ] || [ -z "$(ls "$tmp/.agents/skills" 2>/dev/null)" ]
     rm -rf "$tmp"
 }
 
-@test "codex-skills: --enable mirrors the full catalogue" {
-    [ -d "$B3_CODEX_ON/.codex/skills" ]
-    count=$(ls "$B3_CODEX_ON/.codex/skills" | wc -l | xargs)
+@test "codex-skills: --enable mirrors the catalogue into .agents/skills" {
+    [ -d "$B3_CODEX_ON/.agents/skills" ]
+    count=$(ls "$B3_CODEX_ON/.agents/skills" | wc -l | xargs)
     [ "$count" -ge 50 ]
 }
 
 @test "codex-skills: each mirrored entry exposes SKILL.md" {
     missing=0
-    for d in "$B3_CODEX_ON/.codex/skills"/*; do
+    for d in "$B3_CODEX_ON/.agents/skills"/*; do
         [ -f "$d/SKILL.md" ] || missing=$((missing+1))
     done
     [ "$missing" -eq 0 ]
 }
 
-@test "codex-skills: prefers symlinks to canonical app/skills/" {
-    # At least one known skill should be a symlink back into app/skills/.
-    f="$B3_CODEX_ON/.codex/skills/clean-code"
+@test "codex-skills: prefers symlinks for native Codex skills" {
+    f="$B3_CODEX_ON/.agents/skills/clean-code"
     [ -L "$f" ] || [ -d "$f" ]  # symlink OR fallback copy
     if [ -L "$f" ]; then
         target=$(readlink "$f")
@@ -175,16 +174,22 @@ PY
     fi
 }
 
+@test "codex-skills: adapts Claude-only orchestration skills" {
+    [ -f "$B3_CODEX_ON/.agents/skills/orchestrate/SKILL.md" ]
+    grep -q 'Codex Translation Layer' "$B3_CODEX_ON/.agents/skills/orchestrate/SKILL.md"
+    ! grep -q 'allowed-tools:.*Agent' "$B3_CODEX_ON/.agents/skills/orchestrate/SKILL.md"
+}
+
 @test "codex-skills: skips _lib internal directory" {
-    [ ! -e "$B3_CODEX_ON/.codex/skills/_lib" ]
+    [ ! -e "$B3_CODEX_ON/.agents/skills/_lib" ]
 }
 
 @test "codex-skills: regeneration is idempotent (symlink count stable)" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null
-    c1=$(ls "$tmp/.codex/skills" | wc -l | xargs)
+    c1=$(ls "$tmp/.agents/skills" | wc -l | xargs)
     python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null
-    c2=$(ls "$tmp/.codex/skills" | wc -l | xargs)
+    c2=$(ls "$tmp/.agents/skills" | wc -l | xargs)
     [ "$c1" = "$c2" ]
     rm -rf "$tmp"
 }
@@ -193,19 +198,19 @@ PY
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null
     # Inject a fake stale symlink pointing inside our app/skills/ tree.
-    ln -s "$TOOLKIT_DIR/app/skills/clean-code" "$tmp/.codex/skills/zz-stale-entry"
+    ln -s "$TOOLKIT_DIR/app/skills/clean-code" "$tmp/.agents/skills/zz-stale-entry"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null
-    [ ! -e "$tmp/.codex/skills/zz-stale-entry" ]
+    [ ! -e "$tmp/.agents/skills/zz-stale-entry" ]
     rm -rf "$tmp"
 }
 
 @test "codex-skills: leaves user-authored entries alone" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null
-    mkdir -p "$tmp/.codex/skills/user-authored"
-    echo "hello" > "$tmp/.codex/skills/user-authored/notes.txt"
+    mkdir -p "$tmp/.agents/skills/user-authored"
+    echo "hello" > "$tmp/.agents/skills/user-authored/notes.txt"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null
-    [ -f "$tmp/.codex/skills/user-authored/notes.txt" ]
+    [ -f "$tmp/.agents/skills/user-authored/notes.txt" ]
     rm -rf "$tmp"
 }
 
@@ -218,8 +223,8 @@ sys.path.insert(0, "$TOOLKIT_DIR/scripts")
 from generate_codex_skills import generate
 generate(Path("$tmp"), enable_codex_skills=True)
 PY
-    [ -d "$tmp/.codex/skills" ]
-    count=$(ls "$tmp/.codex/skills" | wc -l | xargs)
+    [ -d "$tmp/.agents/skills" ]
+    count=$(ls "$tmp/.agents/skills" | wc -l | xargs)
     [ "$count" -ge 50 ]
     rm -rf "$tmp"
 }

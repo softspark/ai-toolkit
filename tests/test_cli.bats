@@ -644,3 +644,16 @@ print('ok')
     [ "$status" -eq 0 ]
     [ "$output" = "ok" ]
 }
+
+@test "npm generate:all refreshes generated language-rules skills before docs" {
+    run python3 -c "
+import json
+with open('$TOOLKIT_DIR/package.json') as f:
+    gen_all = json.load(f)['scripts']['generate:all']
+assert 'generate:language-rules' in gen_all, gen_all
+assert gen_all.index('generate:language-rules') < gen_all.index('generate:agents'), gen_all
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
