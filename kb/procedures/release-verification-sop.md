@@ -124,7 +124,7 @@ ai-toolkit status
 - [ ] Agents >= 44
 - [ ] Skills >= 99
 - [ ] Hooks merged into settings.json
-- [ ] "Other AI Tools" section lists cursor, windsurf, gemini, augment (antigravity via --local)
+- [ ] "Other AI Tools" section lists documented global targets only: aider, augment, cline, codex, gemini, opencode, roo, windsurf (Cursor, Copilot, Antigravity via --local for rules)
 
 **Verify `status`:**
 - [ ] Version matches expected

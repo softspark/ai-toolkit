@@ -3,9 +3,9 @@ title: "AI Toolkit - MCP Editor Compatibility"
 category: reference
 service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-04-12"
-last_updated: "2026-04-12"
+last_updated: "2026-04-28"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -23,6 +23,7 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` | Adds Copilot-required `type` and `tools` fields |
 | Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Merges `mcpServers` into settings JSON |
+| Roo Code | project | `.roo/mcp.json` | Mirrors `mcpServers` into the documented project-level MCP file |
 | Windsurf | global | `~/.codeium/windsurf/mcp_config.json` | Global-only JSON config |
 | Cline | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only JSON config |
 | Augment | global | `~/.augment/settings.json` | Global-only JSON settings file |
@@ -34,7 +35,6 @@ These editors are still supported by ai-toolkit for rules and instructions, but 
 
 | Editor | Reason |
 |--------|--------|
-| Roo Code | MCP support exists, but no verified official file path was adopted in ai-toolkit |
 | Aider | No verified native MCP config surface was adopted in ai-toolkit |
 | Google Antigravity | MCP can be configured via UI/import flows, but no stable file target was adopted in ai-toolkit |
 
@@ -53,6 +53,7 @@ When `.mcp.json` exists in a project, `ai-toolkit install --local` mirrors its s
 - `.claude/settings.local.json`
 - `.cursor/mcp.json` when `--editors cursor` is selected
 - `.github/mcp.json` when `--editors copilot` is selected
+- `.roo/mcp.json` when `--editors roo` is selected
 
 Global-only clients are configured explicitly via `ai-toolkit mcp install --editor ...`.
 

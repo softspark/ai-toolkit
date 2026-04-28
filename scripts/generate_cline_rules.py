@@ -79,13 +79,20 @@ def generate(target_dir: Path, *,
              rules_dir: Path | None = None,
              cleanup: bool = True,
              emit_workflows: bool = True,
-             managed_scopes: tuple[str, ...] = (STANDARD_SCOPE,)) -> None:
-    """Write ``.clinerules/*.md`` (and workflow) files to target_dir."""
+             managed_scopes: tuple[str, ...] = (STANDARD_SCOPE,),
+             output_root: Path | None = None) -> None:
+    """Write Cline rule files.
+
+    By default writes project-local ``target_dir/.clinerules/*.md``. When
+    ``output_root`` is provided, writes directly into that directory; this is
+    used for Cline's documented global rules directory.
+    """
     # Migrate: if .clinerules exists as a single file, remove it so the
     # directory can be created (Cline 3.7+ uses directory format).
-    clinerules = target_dir / ".clinerules"
-    if clinerules.is_file():
-        clinerules.unlink()
+    if output_root is None:
+        clinerules = target_dir / ".clinerules"
+        if clinerules.is_file():
+            clinerules.unlink()
 
     rules: dict[str, callable] = dict(STANDARD_RULES)
     # Replace the testing rule with a conditional variant so it only
@@ -107,15 +114,17 @@ def generate(target_dir: Path, *,
 
     rules.update(build_registered_rules(rules_dir))
 
+    root = output_root.parent if output_root is not None else target_dir
+    subdir = output_root.name if output_root is not None else ".clinerules"
     write_rules(
-        target_dir,
+        root,
         rules,
-        ".clinerules",
+        subdir,
         cleanup=cleanup,
         managed_scopes=managed_scopes,
     )
 
-    if emit_workflows:
+    if emit_workflows and output_root is None:
         _write_workflows(target_dir, cleanup=cleanup)
 
 

@@ -267,17 +267,19 @@ assert d['env']['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] == '1', 'toolkit env var
 }
 JSON
 
-    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors cursor,copilot) >/dev/null 2>&1
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors cursor,copilot,roo) >/dev/null 2>&1
 
     [ -f "$TEST_PROJECT/.claude/settings.local.json" ]
     [ -f "$TEST_PROJECT/.cursor/mcp.json" ]
     [ -f "$TEST_PROJECT/.github/mcp.json" ]
+    [ -f "$TEST_PROJECT/.roo/mcp.json" ]
 
     python3 -c "
 import json
 assert 'github' in json.load(open('$TEST_PROJECT/.claude/settings.local.json'))['mcpServers']
 assert 'github' in json.load(open('$TEST_PROJECT/.cursor/mcp.json'))['mcpServers']
 assert 'github' in json.load(open('$TEST_PROJECT/.github/mcp.json'))['mcpServers']
+assert 'github' in json.load(open('$TEST_PROJECT/.roo/mcp.json'))['mcpServers']
 "
 }
 

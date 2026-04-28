@@ -88,8 +88,20 @@ def remove_mcp_template(name: str) -> None:
 # Default global install: Claude only — no other editors unless --editors is used
 DEFAULT_GLOBAL_EDITORS: list[str] = []
 
-# All editors that support global install (opt-in via --editors)
-GLOBAL_CAPABLE_EDITORS = ["augment", "codex", "cursor", "gemini", "opencode", "windsurf"]
+# All editors that support global install (opt-in via --editors).
+#
+# Cursor intentionally stays out of this list: its documented global rules
+# surface is the Settings UI, not a stable file path we can merge safely.
+GLOBAL_CAPABLE_EDITORS = [
+    "aider",
+    "augment",
+    "cline",
+    "codex",
+    "gemini",
+    "opencode",
+    "roo",
+    "windsurf",
+]
 
 
 def get_global_editors() -> list[str]:

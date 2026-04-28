@@ -12,9 +12,14 @@ Claude Code (~/.claude/):
   - Rules injected into ~/.claude/CLAUDE.md
 
 Other tools (global config locations):
-  - Cursor:   ~/.cursor/rules
   - Windsurf: ~/.codeium/windsurf/memories/global_rules.md
   - Gemini:   ~/.gemini/GEMINI.md
+  - Cline:    ~/Documents/Cline/Rules/
+  - Roo Code: ~/.roo/rules/
+  - Aider:    ~/.aider.conf.yml (created only if absent)
+  - Augment:  ~/.augment/rules/ai-toolkit.md
+  - Codex:    ~/AGENTS.md, ~/.agents/, ~/.codex/hooks.json
+  - opencode: ~/.config/opencode/
 
 Registered rules (~/.softspark/ai-toolkit/rules/*.md) are also injected into
 all of the above. Add rules with: ai-toolkit add-rule <rule.md>

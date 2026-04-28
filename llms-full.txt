@@ -4822,7 +4822,7 @@ ai-toolkit status
 - [ ] Agents >= 44
 - [ ] Skills >= 99
 - [ ] Hooks merged into settings.json
-- [ ] "Other AI Tools" section lists cursor, windsurf, gemini, augment (antigravity via --local)
+- [ ] "Other AI Tools" section lists documented global targets only: aider, augment, cline, codex, gemini, opencode, roo, windsurf (Cursor, Copilot, Antigravity via --local for rules)
 
 **Verify `status`:**
 - [ ] Version matches expected
@@ -7843,9 +7843,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.0.0"
+version: "3.0.1"
 created: "2026-03-26"
-last_updated: "2026-04-23"
+last_updated: "2026-04-28"
 description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -7857,9 +7857,12 @@ description: "Reference description of the global install target, project-local 
 
 That means one machine-level install provides agents, skills, hooks, and rules to every project without committing toolkit boilerplate into each repository.
 
-Codex remains project-local for the core toolkit install, but experimental
-plugin packs can now layer a global Codex target in `HOME` when explicitly
-installed with `ai-toolkit plugin install --editor codex`.
+Other editor targets are opt-in and only use documented file surfaces. Cursor
+rules stay project-local because Cursor's global user rules are managed through
+the settings UI, not a stable merge-safe file. Codex remains project-local for
+the core toolkit install, but experimental plugin packs can layer a global
+Codex target in `HOME` when explicitly installed with
+`ai-toolkit plugin install --editor codex`.
 
 ## Command Responsibilities
 
@@ -7890,7 +7893,25 @@ The `--profile` flag controls how much of each editor's native surface is activa
 | `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks. | Solo dev or tight team with zero tolerance for drift. |
 | `full` | Every native surface across every editor: hooks, sub-agents, custom commands, skill pointers for Cursor / Windsurf / Gemini / Augment / Antigravity. | You want maximum coverage and understand that each editor will carry generated files under its own layout. |
 
-`--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full `.claude/skills/` catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
+`--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full skill catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
+
+## Global Editor Targets
+
+`ai-toolkit install --editors <name>` can write global files only for editors
+with documented, file-based config surfaces:
+
+- `windsurf`: `~/.codeium/windsurf/memories/global_rules.md`
+- `gemini`: `~/.gemini/GEMINI.md`
+- `augment`: `~/.augment/rules/ai-toolkit.md`
+- `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md`
+- `roo`: `~/.roo/rules/ai-toolkit-*.md`
+- `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
+- `codex`: `~/AGENTS.md`, `~/.agents/rules/*`, `~/.agents/skills/*`, `~/.codex/hooks.json`
+- `opencode`: `~/.config/opencode/*`
+
+Cursor, GitHub Copilot, and Google Antigravity rule installs stay project-local.
+Their global MCP support, where available, is handled by `ai-toolkit mcp
+install`, not by the rule installer.
 
 ## Why global install is the default
 
@@ -7906,6 +7927,7 @@ These files still stay local to a repository as part of the core install model:
 - `.claude/settings.local.json`
 - `.mcp.json`
 - `.cursor/mcp.json`
+- `.roo/mcp.json`
 - `.github/mcp.json`
 - `.claude/constitution.md`
 - project `AGENTS.md`
@@ -7959,6 +7981,7 @@ If `.mcp.json` exists in the current project, `ai-toolkit install --local` mirro
 - `.claude/settings.local.json`
 - `.cursor/mcp.json` when `--editors cursor` is selected
 - `.github/mcp.json` when `--editors copilot` is selected
+- `.roo/mcp.json` when `--editors roo` is selected
 
 Global-only editor MCP configs are not written during `install --local`. Use `ai-toolkit mcp install --editor <name...>` for those targets.
 
@@ -9131,9 +9154,9 @@ title: "AI Toolkit - MCP Editor Compatibility"
 category: reference
 service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-04-12"
-last_updated: "2026-04-12"
+last_updated: "2026-04-28"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -9151,6 +9174,7 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` | Adds Copilot-required `type` and `tools` fields |
 | Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Merges `mcpServers` into settings JSON |
+| Roo Code | project | `.roo/mcp.json` | Mirrors `mcpServers` into the documented project-level MCP file |
 | Windsurf | global | `~/.codeium/windsurf/mcp_config.json` | Global-only JSON config |
 | Cline | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only JSON config |
 | Augment | global | `~/.augment/settings.json` | Global-only JSON settings file |
@@ -9162,7 +9186,6 @@ These editors are still supported by ai-toolkit for rules and instructions, but 
 
 | Editor | Reason |
 |--------|--------|
-| Roo Code | MCP support exists, but no verified official file path was adopted in ai-toolkit |
 | Aider | No verified native MCP config surface was adopted in ai-toolkit |
 | Google Antigravity | MCP can be configured via UI/import flows, but no stable file target was adopted in ai-toolkit |
 
@@ -9181,6 +9204,7 @@ When `.mcp.json` exists in a project, `ai-toolkit install --local` mirrors its s
 - `.claude/settings.local.json`
 - `.cursor/mcp.json` when `--editors cursor` is selected
 - `.github/mcp.json` when `--editors copilot` is selected
+- `.roo/mcp.json` when `--editors roo` is selected
 
 Global-only clients are configured explicitly via `ai-toolkit mcp install --editor ...`.
 
@@ -9228,7 +9252,7 @@ ai-toolkit mcp remove <name>      # Remove from .mcp.json or native editor confi
 The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist it is created. If the server name already exists in `.mcp.json`, the entry is overwritten with the template version.
 
 The `install` command renders the same canonical template into an editor-native config format:
-- JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Windsurf, Cline, Augment
+- JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Roo Code, Windsurf, Cline, Augment
 - JSON clients with additional transport metadata: GitHub Copilot
 - TOML clients: Codex CLI (`[mcp_servers.<name>]`)
 
@@ -9242,12 +9266,13 @@ When `install` runs with `--scope project`, ai-toolkit also updates the project'
 | `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
 | `copilot` | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` | Adds `type` and `tools: ["*"]` automatically |
 | `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
+| `roo` | project | `.roo/mcp.json` | Mirrors canonical `mcpServers` into Roo's project MCP file |
 | `windsurf` | global | `~/.codeium/windsurf/mcp_config.json` | Global-only official config |
 | `cline` | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only official config |
 | `augment` | global | `~/.augment/settings.json` | Global-only settings file |
 | `codex` | global | `~/.codex/config.toml` | Rendered as TOML `mcp_servers` tables |
 
-Project-local `ai-toolkit install --local` also mirrors `.mcp.json` into Claude project settings plus selected project editors that have official repository/workspace MCP files (`cursor`, `copilot`).
+Project-local `ai-toolkit install --local` also mirrors `.mcp.json` into Claude project settings plus selected project editors that have official repository/workspace MCP files (`cursor`, `copilot`, `roo`).
 
 ## Template List
 
@@ -10866,9 +10891,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.2.0"
+version: "1.2.1"
 created: "2026-04-23"
-last_updated: "2026-04-24"
+last_updated: "2026-04-28"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -10910,7 +10935,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://cursor.com/docs |
 | Changelog | https://cursor.com/changelog |
 | Stable docs mirror | https://cursor.com/llms.txt (all doc pages have .md twins) |
-| Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json`, `~/.cursor/hooks.json` |
+| Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json` |
 | Compat read paths | `.claude/skills/`, `.claude/agents/`, `.agents/skills/` (Cursor cross-reads these so ai-toolkit's Claude/Codex installs work automatically) |
 | Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py`, `scripts/generate_cursor_hooks.py` (profile=full), `scripts/generate_cursor_agents.py` (profile=full) |
 | Tracked capabilities | `cursorrules`, `.cursor/rules`, `AGENTS.md`, `mcp.json`, Composer, Agent Mode, hooks.json, subagents, skills, plugins |
@@ -10965,6 +10990,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py` |
 | Tracked capabilities | `clinerules`, Plan Mode, Act Mode, MCP, custom modes, workflows, hooks, skills, subagents, conditional rules |
 | Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Skills (`.cline/skills/`) and hooks (`.clinerules/hooks/`) remain experimental upstream and are not yet generated. |
+| Global install | `ai-toolkit install --editors cline` writes only documented global rules under `~/Documents/Cline/Rules/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
 
 ### Roo Code
 
@@ -10973,10 +10999,10 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `roo-code` |
 | Docs | https://docs.roocode.com |
 | Release notes | https://github.com/RooCodeInc/Roo-Code/releases |
-| Config paths | `.roomodes`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json`, `~/.roo/rules/`, `~/.roo/settings/custom_modes.yaml`, `~/.roo/settings/mcp_settings.json` |
+| Config paths | `.roomodes`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json`, `~/.roo/rules/`, `~/.roo/custom_modes.yaml`, `mcp_settings.json` (global via Roo settings UI) |
 | Our generators | `scripts/generate_roo_modes.py`, `scripts/generate_roo_rules.py` |
 | Tracked capabilities | `roomodes`, custom modes, Code Actions, MCP, Orchestrator mode, `whenToUse`, `description`, `roleDefinition`, `groups` |
-| Notes | `.roomodes` now includes `description` and `whenToUse` for every mode (since 2026-04). YAML `.roomodes` is upstream-preferred but not yet emitted — JSON is still accepted by Roo. |
+| Notes | `.roomodes` now includes `description` and `whenToUse` for every mode (since 2026-04). YAML `.roomodes` is upstream-preferred but not yet emitted — JSON is still accepted by Roo. Global install writes only `~/.roo/rules/` because the exact global MCP settings path is UI-managed. |
 
 ### Aider
 
@@ -10988,6 +11014,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Config paths | `.aider.conf.yml`, `CONVENTIONS.md`, `~/.aider.conf.yml` |
 | Our generators | `scripts/generate_aider_conf.py`, `scripts/generate_conventions.py` |
 | Tracked capabilities | `.aider.conf.yml`, `CONVENTIONS.md`, `architect`, `auto-accept-architect`, `read`, `lint-cmd`, `test-cmd`, `commit-prompt`, `attribute-co-authored-by`, `chat-language`, `commit-language`, `watch-files`, `auto-commits` |
+| Global install | `ai-toolkit install --editors aider` creates `~/.aider.conf.yml` only when absent and always refreshes `~/.aider-ai-toolkit-CONVENTIONS.md`; existing YAML is preserved. |
 | Version probe | `aider --version` |
 | Latest upstream | v0.86.1 (Aug 2025) |
 

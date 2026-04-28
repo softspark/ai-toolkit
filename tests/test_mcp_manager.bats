@@ -133,6 +133,18 @@ assert server['tools'] == ['*']
     [ "$status" -eq 0 ]
 }
 
+@test "mcp install project roo github: writes .roo/mcp.json" {
+    run $MCP_MANAGER install --editor roo --scope project --target "$TEST_TMP" github
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.roo/mcp.json" ]
+    run python3 -c "
+import json
+cfg = json.load(open('$TEST_TMP/.roo/mcp.json'))
+assert 'github' in cfg['mcpServers']
+"
+    [ "$status" -eq 0 ]
+}
+
 @test "mcp install global codex github: writes ~/.codex/config.toml" {
     run $MCP_MANAGER install --editor codex github
     [ "$status" -eq 0 ]

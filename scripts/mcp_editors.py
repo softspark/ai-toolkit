@@ -41,6 +41,13 @@ EDITOR_SPECS: dict[str, dict[str, str | None]] = {
         "format": "json",
         "doc_scope": "project + global",
     },
+    "roo": {
+        "label": "Roo Code",
+        "project_path": ".roo/mcp.json",
+        "global_path": None,
+        "format": "json",
+        "doc_scope": "project",
+    },
     "windsurf": {
         "label": "Windsurf",
         "project_path": None,

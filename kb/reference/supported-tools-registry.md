@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.2.0"
+version: "1.2.1"
 created: "2026-04-23"
-last_updated: "2026-04-24"
+last_updated: "2026-04-28"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -47,7 +47,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://cursor.com/docs |
 | Changelog | https://cursor.com/changelog |
 | Stable docs mirror | https://cursor.com/llms.txt (all doc pages have .md twins) |
-| Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json`, `~/.cursor/hooks.json` |
+| Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json` |
 | Compat read paths | `.claude/skills/`, `.claude/agents/`, `.agents/skills/` (Cursor cross-reads these so ai-toolkit's Claude/Codex installs work automatically) |
 | Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py`, `scripts/generate_cursor_hooks.py` (profile=full), `scripts/generate_cursor_agents.py` (profile=full) |
 | Tracked capabilities | `cursorrules`, `.cursor/rules`, `AGENTS.md`, `mcp.json`, Composer, Agent Mode, hooks.json, subagents, skills, plugins |
@@ -102,6 +102,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py` |
 | Tracked capabilities | `clinerules`, Plan Mode, Act Mode, MCP, custom modes, workflows, hooks, skills, subagents, conditional rules |
 | Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Skills (`.cline/skills/`) and hooks (`.clinerules/hooks/`) remain experimental upstream and are not yet generated. |
+| Global install | `ai-toolkit install --editors cline` writes only documented global rules under `~/Documents/Cline/Rules/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
 
 ### Roo Code
 
@@ -110,10 +111,10 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `roo-code` |
 | Docs | https://docs.roocode.com |
 | Release notes | https://github.com/RooCodeInc/Roo-Code/releases |
-| Config paths | `.roomodes`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json`, `~/.roo/rules/`, `~/.roo/settings/custom_modes.yaml`, `~/.roo/settings/mcp_settings.json` |
+| Config paths | `.roomodes`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json`, `~/.roo/rules/`, `~/.roo/custom_modes.yaml`, `mcp_settings.json` (global via Roo settings UI) |
 | Our generators | `scripts/generate_roo_modes.py`, `scripts/generate_roo_rules.py` |
 | Tracked capabilities | `roomodes`, custom modes, Code Actions, MCP, Orchestrator mode, `whenToUse`, `description`, `roleDefinition`, `groups` |
-| Notes | `.roomodes` now includes `description` and `whenToUse` for every mode (since 2026-04). YAML `.roomodes` is upstream-preferred but not yet emitted — JSON is still accepted by Roo. |
+| Notes | `.roomodes` now includes `description` and `whenToUse` for every mode (since 2026-04). YAML `.roomodes` is upstream-preferred but not yet emitted — JSON is still accepted by Roo. Global install writes only `~/.roo/rules/` because the exact global MCP settings path is UI-managed. |
 
 ### Aider
 
@@ -125,6 +126,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Config paths | `.aider.conf.yml`, `CONVENTIONS.md`, `~/.aider.conf.yml` |
 | Our generators | `scripts/generate_aider_conf.py`, `scripts/generate_conventions.py` |
 | Tracked capabilities | `.aider.conf.yml`, `CONVENTIONS.md`, `architect`, `auto-accept-architect`, `read`, `lint-cmd`, `test-cmd`, `commit-prompt`, `attribute-co-authored-by`, `chat-language`, `commit-language`, `watch-files`, `auto-commits` |
+| Global install | `ai-toolkit install --editors aider` creates `~/.aider.conf.yml` only when absent and always refreshes `~/.aider-ai-toolkit-CONVENTIONS.md`; existing YAML is preserved. |
 | Version probe | `aider --version` |
 | Latest upstream | v0.86.1 (Aug 2025) |
 

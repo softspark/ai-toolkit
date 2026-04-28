@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-24T08:04:02Z",
+  "last_run": "2026-04-28T09:09:42Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "5754553b0e436fd7",
+      "docs_hash": "7e632fc04e405f60",
       "headings": [
         "Agent",
         "Code Completions",
@@ -57,7 +57,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "0c111b1b1f28960d",
+      "docs_hash": "6ce49780749d2193",
       "headings": [
         "Claude Code overview",
         "\u200bGet started",
@@ -102,10 +102,10 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.119 (Claude Code)"
+      "version": "2.1.121 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "17c24d27216f70cf",
+      "docs_hash": "0c69984492abf906",
       "headings": [
         "Cline CLI",
         "Cline Documentation",
@@ -135,7 +135,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "7a7f5cdf9411c5e2",
+      "docs_hash": "81efdc04a4f051ed",
       "headings": [
         "About",
         "Contributing",
@@ -154,7 +154,7 @@
         "Packages 0",
         "Provide feedback",
         "Quickstart",
-        "Releases 735",
+        "Releases 744",
         "Repository files navigation",
         "Resources",
         "Saved searches",
@@ -168,7 +168,7 @@
         "openai/codex"
       ],
       "markers": {
-        ".codex/skills": true,
+        ".agents/skills": false,
         "AGENTS.md": true,
         "config.toml": false,
         "hook event: PermissionRequest": false,
@@ -184,10 +184,10 @@
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.124.0"
+      "version": "codex-cli 0.125.0"
     },
     "cursor": {
-      "docs_hash": "a94b8e8f685b0831",
+      "docs_hash": "56983669e33487e2",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -203,7 +203,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "9415ea08e344013d",
+      "docs_hash": "c173d1815874df38",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -242,7 +242,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "8bcd2db0db925807",
+      "docs_hash": "c2100e9dca8dce0d",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot integrations",
@@ -290,7 +290,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "760fbf466036892f",
+      "docs_hash": "5c0f3f9c9b031f49",
       "headings": [
         "Add features",
         "Ask questions",
@@ -351,7 +351,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "81d0aafbf97b18c8",
+      "docs_hash": "9cadd867b0cec6da",
       "headings": [
         "Advanced",
         "App Deploys",

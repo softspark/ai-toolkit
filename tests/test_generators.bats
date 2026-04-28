@@ -932,6 +932,53 @@ PYEOF
     grep -q '"opencode"' "$TOOLKIT_DIR/scripts/install_steps/install_state.py"
 }
 
+@test "install_steps: global-capable editors match documented file-safe targets" {
+    python3 - "$TOOLKIT_DIR" <<'PYEOF'
+import sys
+sys.path.insert(0, f"{sys.argv[1]}/scripts")
+from install_steps.install_state import GLOBAL_CAPABLE_EDITORS
+
+expected = {"aider", "augment", "cline", "codex", "gemini", "opencode", "roo", "windsurf"}
+actual = set(GLOBAL_CAPABLE_EDITORS)
+assert actual == expected, actual
+assert "cursor" not in actual
+PYEOF
+}
+
+@test "generate_cline_rules.py supports documented global rules root" {
+    tmp="$(mktemp -d)"
+    home="$tmp/home"
+    python3 - "$TOOLKIT_DIR" "$tmp" "$home" <<'PYEOF'
+import sys
+from pathlib import Path
+sys.path.insert(0, f"{sys.argv[1]}/scripts")
+from generate_cline_rules import generate
+generate(
+    Path(sys.argv[2]),
+    output_root=Path(sys.argv[3]) / "Documents" / "Cline" / "Rules",
+    emit_workflows=False,
+)
+PYEOF
+    [ -f "$home/Documents/Cline/Rules/ai-toolkit-security.md" ]
+    [ ! -d "$tmp/.clinerules" ]
+    rm -rf "$tmp"
+}
+
+@test "generate_roo_rules.py supports documented global rules root" {
+    tmp="$(mktemp -d)"
+    home="$tmp/home"
+    python3 - "$TOOLKIT_DIR" "$tmp" "$home" <<'PYEOF'
+import sys
+from pathlib import Path
+sys.path.insert(0, f"{sys.argv[1]}/scripts")
+from generate_roo_rules import generate
+generate(Path(sys.argv[2]), output_root=Path(sys.argv[3]) / ".roo" / "rules")
+PYEOF
+    [ -f "$home/.roo/rules/ai-toolkit-security.md" ]
+    [ ! -d "$tmp/.roo" ]
+    rm -rf "$tmp"
+}
+
 @test "install_steps: opencode auto-detected via opencode.json marker" {
     python3 -c "
 import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')

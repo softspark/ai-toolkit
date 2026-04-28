@@ -33,7 +33,7 @@ ai-toolkit mcp remove <name>      # Remove from .mcp.json or native editor confi
 The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist it is created. If the server name already exists in `.mcp.json`, the entry is overwritten with the template version.
 
 The `install` command renders the same canonical template into an editor-native config format:
-- JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Windsurf, Cline, Augment
+- JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Roo Code, Windsurf, Cline, Augment
 - JSON clients with additional transport metadata: GitHub Copilot
 - TOML clients: Codex CLI (`[mcp_servers.<name>]`)
 
@@ -47,12 +47,13 @@ When `install` runs with `--scope project`, ai-toolkit also updates the project'
 | `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
 | `copilot` | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` | Adds `type` and `tools: ["*"]` automatically |
 | `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
+| `roo` | project | `.roo/mcp.json` | Mirrors canonical `mcpServers` into Roo's project MCP file |
 | `windsurf` | global | `~/.codeium/windsurf/mcp_config.json` | Global-only official config |
 | `cline` | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only official config |
 | `augment` | global | `~/.augment/settings.json` | Global-only settings file |
 | `codex` | global | `~/.codex/config.toml` | Rendered as TOML `mcp_servers` tables |
 
-Project-local `ai-toolkit install --local` also mirrors `.mcp.json` into Claude project settings plus selected project editors that have official repository/workspace MCP files (`cursor`, `copilot`).
+Project-local `ai-toolkit install --local` also mirrors `.mcp.json` into Claude project settings plus selected project editors that have official repository/workspace MCP files (`cursor`, `copilot`, `roo`).
 
 ## Template List
 

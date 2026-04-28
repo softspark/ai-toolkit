@@ -81,8 +81,7 @@
         "~/.cursor/mcp.json",
         ".cursor/skills/*/SKILL.md",
         ".cursor/agents/*.md",
-        ".cursor/hooks.json",
-        "~/.cursor/hooks.json"
+        ".cursor/hooks.json"
       ],
       "our_generators": [
         "scripts/generate_cursor_rules.py",
@@ -264,8 +263,8 @@
         ".roo/rules-{slug}/*.md",
         ".roo/mcp.json",
         "~/.roo/rules/",
-        "~/.roo/settings/custom_modes.yaml",
-        "~/.roo/settings/mcp_settings.json"
+        "~/.roo/custom_modes.yaml",
+        "mcp_settings.json"
       ],
       "our_generators": [
         "scripts/generate_roo_modes.py",

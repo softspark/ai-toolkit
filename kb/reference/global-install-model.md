@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.0.0"
+version: "3.0.1"
 created: "2026-03-26"
-last_updated: "2026-04-23"
+last_updated: "2026-04-28"
 description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -17,9 +17,12 @@ description: "Reference description of the global install target, project-local 
 
 That means one machine-level install provides agents, skills, hooks, and rules to every project without committing toolkit boilerplate into each repository.
 
-Codex remains project-local for the core toolkit install, but experimental
-plugin packs can now layer a global Codex target in `HOME` when explicitly
-installed with `ai-toolkit plugin install --editor codex`.
+Other editor targets are opt-in and only use documented file surfaces. Cursor
+rules stay project-local because Cursor's global user rules are managed through
+the settings UI, not a stable merge-safe file. Codex remains project-local for
+the core toolkit install, but experimental plugin packs can layer a global
+Codex target in `HOME` when explicitly installed with
+`ai-toolkit plugin install --editor codex`.
 
 ## Command Responsibilities
 
@@ -50,7 +53,25 @@ The `--profile` flag controls how much of each editor's native surface is activa
 | `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks. | Solo dev or tight team with zero tolerance for drift. |
 | `full` | Every native surface across every editor: hooks, sub-agents, custom commands, skill pointers for Cursor / Windsurf / Gemini / Augment / Antigravity. | You want maximum coverage and understand that each editor will carry generated files under its own layout. |
 
-`--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full `.claude/skills/` catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
+`--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full skill catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
+
+## Global Editor Targets
+
+`ai-toolkit install --editors <name>` can write global files only for editors
+with documented, file-based config surfaces:
+
+- `windsurf`: `~/.codeium/windsurf/memories/global_rules.md`
+- `gemini`: `~/.gemini/GEMINI.md`
+- `augment`: `~/.augment/rules/ai-toolkit.md`
+- `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md`
+- `roo`: `~/.roo/rules/ai-toolkit-*.md`
+- `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
+- `codex`: `~/AGENTS.md`, `~/.agents/rules/*`, `~/.agents/skills/*`, `~/.codex/hooks.json`
+- `opencode`: `~/.config/opencode/*`
+
+Cursor, GitHub Copilot, and Google Antigravity rule installs stay project-local.
+Their global MCP support, where available, is handled by `ai-toolkit mcp
+install`, not by the rule installer.
 
 ## Why global install is the default
 
@@ -66,6 +87,7 @@ These files still stay local to a repository as part of the core install model:
 - `.claude/settings.local.json`
 - `.mcp.json`
 - `.cursor/mcp.json`
+- `.roo/mcp.json`
 - `.github/mcp.json`
 - `.claude/constitution.md`
 - project `AGENTS.md`
@@ -119,6 +141,7 @@ If `.mcp.json` exists in the current project, `ai-toolkit install --local` mirro
 - `.claude/settings.local.json`
 - `.cursor/mcp.json` when `--editors cursor` is selected
 - `.github/mcp.json` when `--editors copilot` is selected
+- `.roo/mcp.json` when `--editors roo` is selected
 
 Global-only editor MCP configs are not written during `install --local`. Use `ai-toolkit mcp install --editor <name...>` for those targets.
 
