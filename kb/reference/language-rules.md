@@ -3,19 +3,22 @@ title: "Language Rules System"
 category: reference
 service: ai-toolkit
 tags: [rules, languages, coding-style, testing, patterns, security]
-version: "1.0.0"
+version: "2.0.0"
 created: "2026-04-07"
-last_updated: "2026-04-07"
-description: "Reference for the language-specific rules system: 14 languages, 5 categories per language, auto-detection."
+last_updated: "2026-04-28"
+description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus a common set inlined into CLAUDE.md."
 ---
 
 # Language Rules System
 
 ## Overview
 
-ai-toolkit ships language-specific rule files covering 14 languages/platforms plus a common set (see README.md for current count). Rules are plain Markdown files injected into `CLAUDE.md` via `ai-toolkit install --local`. They provide coding-style, testing, patterns, frameworks, and security guidance specific to each language.
+ai-toolkit ships rule content for 13 languages/platforms plus a language-agnostic common set. Source files live under `app/rules/` and are split into two delivery channels by `ai-toolkit install --local`:
 
-Rules are distinct from skills: rules are injected as static text into `CLAUDE.md` and are always visible to Claude, whereas skills are loaded contextually by agents.
+- **Common rules** (`app/rules/common/*.md`): full content is inlined into the project's `.claude/CLAUDE.md` under a single `<!-- TOOLKIT:language-rules START -->` marker. They cover coding-style, git-workflow, performance, security, and testing — concerns that apply regardless of language, so they stay always visible.
+- **Per-language rules** (`app/rules/<lang>/*.md`): emitted at build time as `<lang>-rules` knowledge skills under `app/skills/`. Each skill is `user-invocable: false`, so Claude loads it via the Agent Skills progressive-disclosure mechanism only when its description triggers match (file extensions, framework names, or matching keywords in the prompt).
+
+The skills are generated from the rule files via `python3 scripts/generate_language_rules_skills.py`, which is idempotent and rerun-safe. Other editors (Cursor, Windsurf, Cline, Roo, Augment, Codex, Copilot, Antigravity, Gemini, opencode) still receive the full per-language rule content via their own generators in `scripts/dir_rules_shared.py::build_language_rules()` — Claude is the only target where the per-language content is now skill-delivered rather than inlined.
 
 ## File Structure
 
@@ -52,7 +55,7 @@ app/rules/
 └── medplum/
 ```
 
-**Total: 14 directories × 5 files each + 3 standalone = 73 rule files** (see README.md for canonical count)
+**Total: 13 per-language directories × 5 files + 1 common directory × 5 files + 3 standalone files** (see README.md for canonical count). Per-language directories ship as `<lang>-rules` knowledge skills; the common directory is inlined into CLAUDE.md.
 
 ## Supported Languages
 
@@ -137,15 +140,45 @@ ai-toolkit install --local --modules core,agents
 
 The `--lang` flag accepts comma-separated language names and converts them to `rules-<lang>` modules. Common aliases are supported: `go` → `golang`, `c++` → `cpp`, `c#`/`cs` → `csharp`. Using `--lang` implies `--local` and disables auto-detection.
 
-Language rules are injected into the project `CLAUDE.md` between named markers:
+Common rules are injected into the project `CLAUDE.md` between a single named marker (the per-language markers from v1.x are no longer used):
 
 ```
-<!-- TOOLKIT:rules-typescript START -->
-... TypeScript rules content ...
-<!-- TOOLKIT:rules-typescript END -->
+<!-- TOOLKIT:language-rules START -->
+# Language Rules
+
+Common (language-agnostic) rules apply to every change in this project.
+Language-specific rules live in `<lang>-rules` knowledge skills (e.g.
+`python-rules`, `typescript-rules`) and load automatically when their
+triggers match.
+
+Detected languages: `python-rules`, `typescript-rules`.
+
+---
+
+... full content of app/rules/common/*.md inlined here ...
+<!-- TOOLKIT:language-rules END -->
 ```
 
-Re-running `install --local` is idempotent — existing blocks are replaced, not duplicated.
+Re-running `install --local` is idempotent — the existing block is replaced, not duplicated. Per-language rules are not injected into `CLAUDE.md` for Claude — they are loaded contextually via their respective `<lang>-rules` knowledge skills.
+
+### Generating language-rules skills
+
+The `<lang>-rules` skills under `app/skills/` are produced by:
+
+```bash
+python3 scripts/generate_language_rules_skills.py            # write all
+python3 scripts/generate_language_rules_skills.py --check    # dry-run, exit 1 on diff
+python3 scripts/generate_language_rules_skills.py --langs python,rust  # subset
+```
+
+The generator reads `app/rules/<lang>/*.md`, strips YAML frontmatter, concatenates the categories, and writes `app/skills/<lang>-rules/SKILL.md` with frontmatter:
+
+- `name: <lang>-rules`
+- `description: ...` — language label, rule categories, and concrete trigger keywords (file extensions, framework names) so the skill activates reliably when Claude is working on that language.
+- `user-invocable: false` — knowledge skill, no slash command.
+- `allowed-tools: Read` — the skill body is reference content, not an action.
+
+Rerunning the generator is idempotent. Editing rule files under `app/rules/<lang>/` and rerunning the generator is the canonical way to update a language skill.
 
 ## Manifest Module Names
 
@@ -170,13 +203,16 @@ Language rules are tracked as modules in `manifest.json`:
 
 ## Rules vs Skills
 
-| | Rules | Skills |
-|---|-------|--------|
-| Location | `app/rules/` | `app/skills/` |
-| Delivery | Injected into `CLAUDE.md` text | Loaded from `~/.claude/skills/` |
-| Visibility | Always visible in context | Loaded contextually by agents |
-| Scope | Per-language static guidance | Domain-specific agent behavior |
-| Install | `--local` only | Global install |
+| | Common rules | Per-language rules | Other skills |
+|---|---|---|---|
+| Source | `app/rules/common/` | `app/rules/<lang>/` | `app/skills/<name>/SKILL.md` |
+| Delivery to Claude | Inlined into project `CLAUDE.md` (`--local`) | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
+| Visibility | Always in context | Loaded when triggers match (file extensions, framework names) | Loaded when triggers match |
+| Scope | Language-agnostic standards (security, git, testing, perf, style) | Per-language coding-style, frameworks, patterns, security, testing | Domain skills (testing, debugging, RAG, etc.) |
+| Install | `ai-toolkit install --local` | Global install (skills directory is symlinked) | Global install |
+| Other editors | Inlined into editor-specific rule files | Inlined into editor-specific rule files (still full content, not skills) | N/A |
+
+Per-language content delivered as a knowledge skill is the same Markdown that other editors receive inlined. The split exists only for Claude, where the Agent Skills progressive-disclosure mechanism keeps the system prompt small.
 
 ## Related Documentation
 

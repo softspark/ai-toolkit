@@ -491,53 +491,67 @@ def _apply_extends_config(cwd: Path, merged: dict) -> None:
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
-    """Inject language-specific rule summary into project's .claude/CLAUDE.md.
+    """Inject ``app/rules/common/*.md`` content into project's ``.claude/CLAUDE.md``.
 
-    Instead of injecting full rule content (hundreds of lines), injects a
-    compact summary with the key rules per category. Full rules are available
-    as knowledge skills that Claude auto-loads contextually.
+    Per-language rules (``app/rules/<lang>/``) are NOT injected here -- they
+    ship as ``<lang>-rules`` knowledge skills under ``app/skills/`` and load
+    contextually via the Agent Skills progressive-disclosure mechanism. This
+    keeps ``CLAUDE.md`` small while ensuring language-specific guidance still
+    reaches Claude when relevant.
+
+    Common rules are language-agnostic (security, git workflow, testing,
+    coding-style, performance) and stay inlined so they remain in scope for
+    every prompt.
     """
     if not language_modules:
         return
 
     rules_src = app_dir / "rules"
-    if not rules_src.is_dir():
+    common_dir = rules_src / "common"
+    if not common_dir.is_dir():
         return
 
-    # Detect language names
+    # Detect requested per-language modules so we can name the linked skills
+    # in the marker block. The modules themselves are not inlined.
     langs: list[str] = []
     for mod in language_modules:
         if mod.startswith("rules-"):
-            langs.append(mod[6:])
+            name = mod[6:]
+            if name != "common":
+                langs.append(name)
 
-    if not langs:
-        return
+    # Inline full content of every common rule file, stripping YAML
+    # frontmatter so the resulting block reads as plain Markdown.
+    inlined: list[str] = []
+    for f in sorted(common_dir.glob("*.md")):
+        body = f.read_text(encoding="utf-8")
+        if body.startswith("---"):
+            end = body.find("\n---", 3)
+            if end != -1:
+                body = body[end + 4:].lstrip("\n")
+        inlined.append(body.rstrip())
 
-    # Build a lightweight reference pointer — NOT the full rules content.
-    # Full rules are available as knowledge skills (auto-loaded by Claude)
-    # and as files Claude can Read on demand.
-    toolkit_pkg = app_dir.parent
     lines: list[str] = ["# Language Rules", ""]
-    lines.append(f"This project uses: **{', '.join(langs)}**")
+    lines.append(
+        "Common (language-agnostic) rules apply to every change in this "
+        "project. Language-specific rules live in `<lang>-rules` knowledge "
+        "skills (e.g. `python-rules`, `typescript-rules`) and load "
+        "automatically when their triggers match -- you do not need to "
+        "Read them manually."
+    )
+    if langs:
+        skill_names = ", ".join(f"`{l}-rules`" for l in langs)
+        lines.append("")
+        lines.append(f"Detected languages: {skill_names}.")
     lines.append("")
-    lines.append("When writing or reviewing code, use the Glob and Read tools to read the rules:")
-    # Resolve actual installed path for the rules
-    rules_resolved = str(rules_src.resolve())
-    all_dirs: list[str] = ["common"]
-    for l in langs:
-        if l not in all_dirs:
-            all_dirs.append(l)
-    for lang in all_dirs:
-        lang_path = rules_src / lang
-        if lang_path.is_dir():
-            categories = ", ".join(f.stem for f in sorted(lang_path.glob("*.md")))
-            lines.append(f"- `{lang_path.resolve()}/` ({categories})")
+    lines.append("---")
     lines.append("")
-    lines.append("Read the relevant rule files before making code changes. Do NOT guess — read first.")
+    lines.extend(inlined)
 
-    # Write summary to temp file, then inject as section
+    # Write to temp file, then inject as a single named section so reruns are
+    # idempotent (existing block is replaced, not duplicated).
     import tempfile
-    combined = "\n".join(lines)
+    combined = "\n\n".join(lines).rstrip() + "\n"
     with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False,
                                      encoding="utf-8") as tmp:
         tmp.write(combined)
@@ -545,8 +559,11 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
 
     try:
         inject_section(tmp_path, cwd / ".claude" / "CLAUDE.md", "language-rules")
-        lang_names = [l for l in langs if l != "common"]
-        print(f"  Injected: language rules summary (common + {', '.join(lang_names)})")
+        if langs:
+            print(f"  Injected: common rules + {len(langs)} language skill(s) "
+                  f"({', '.join(langs)})")
+        else:
+            print("  Injected: common rules")
     finally:
         tmp_path.unlink(missing_ok=True)
 

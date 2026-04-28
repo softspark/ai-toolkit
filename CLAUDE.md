@@ -24,6 +24,7 @@ Stale counts = broken user trust. This is non-negotiable.
 # Harvest: python3 scripts/harvest_ecosystem.py --offline
 # Generate: python3 scripts/generate_agents_md.py > AGENTS.md
 # Generate: python3 scripts/generate_llms_txt.py > llms.txt
+# Generate: python3 scripts/generate_language_rules_skills.py  (build app/skills/<lang>-rules/ from app/rules/<lang>/)
 # Install:  ai-toolkit install            (global → ~/.claude/settings.json hooks + ~/.softspark/ai-toolkit/hooks/ scripts)
 # Install:  ai-toolkit install --profile minimal|standard|strict
 # Init:     ai-toolkit install --local    (project-local Claude Code configs only)
