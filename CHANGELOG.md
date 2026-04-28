@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.1.0 — Global Editor Install Alignment (2026-04-28)
+
+Minor release aligning global and project-local editor configuration with the current documented surfaces for all supported editors.
+
+### Added
+
+- **Global Cline rules** — `ai-toolkit install --editors cline` now writes documented global rules under `~/Documents/Cline/Rules/ai-toolkit-*.md`.
+- **Global Roo Code rules** — `ai-toolkit install --editors roo` now writes documented global rules under `~/.roo/rules/ai-toolkit-*.md`.
+- **Safe global Aider bootstrap** — `ai-toolkit install --editors aider` now creates `~/.aider.conf.yml` only when absent and refreshes `~/.aider-ai-toolkit-CONVENTIONS.md`; existing user YAML is preserved.
+- **Project Roo MCP sync** — `ai-toolkit mcp install --editor roo --scope project ...` and `install --local --editors roo` now mirror canonical `.mcp.json` servers into `.roo/mcp.json`.
+
+### Changed
+
+- **Global editor target policy** — global install now uses only documented, file-based targets: `aider`, `augment`, `cline`, `codex`, `gemini`, `opencode`, `roo`, and `windsurf`.
+- **Cursor rules scope** — Cursor rule generation is now explicitly project-local. Cursor still supports project/global MCP via `.cursor/mcp.json` and `~/.cursor/mcp.json`, but global rule writes are not emitted because Cursor's global user rules are settings-managed rather than a stable merge-safe file.
+- **Release and registry docs** — updated the supported-tools registry, MCP compatibility tables, global install model, release SOP, README platform matrix, and ecosystem doctor snapshot for the April 28, 2026 upstream baseline.
+- **Release SOP meta-generator gate** — registry/generator drift checks now exclude `generate_language_rules_skills.py` alongside docs/index meta-generators, keeping the editor registry focused on editor config generators.
+
+### Fixed
+
+- **SOP compliance gap** — Cline, Roo Code, and Aider global surfaces are now used where documented, while Cursor/Copilot/Antigravity rules remain local-only where no safe global rule file exists.
+- **Release metadata drift** — test count is now synced to 973 across README and validation metadata.
+
 ## v3.0.2 — Validation, Windows, Telemetry, and generate:all parity (2026-04-24)
 
 Patch release that closes known validation gaps, expands the hook-surface contracts, adds Windows dependency hints, exposes local product telemetry, and restores `npm run generate:all` parity with the CLI so registered custom rules reach every editor.

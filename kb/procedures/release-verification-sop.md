@@ -3,9 +3,9 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.4.0"
+version: "1.4.1"
 created: "2026-04-08"
-last_updated: "2026-04-24"
+last_updated: "2026-04-28"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds."
 ---
 
@@ -54,7 +54,7 @@ python3 scripts/audit_skills.py --permissions | head -30    # 12. Broad-access s
 npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"   # 13. Provenance attested on npm?
 
 # Deep-coverage verification (Phase 9, v3.0.0+)
-META="generate_agents_md.py|generate_llms_txt.py"
+META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
 diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 14. Registry <-> generators drift?
 ```
 
@@ -410,7 +410,7 @@ done
 `kb/reference/supported-tools-registry.md` should enumerate every per-editor `scripts/generate_*.py` we ship. Meta-generators (`generate_agents_md.py`, `generate_llms_txt.py`) are excluded — they produce docs/artifacts, not editor configs.
 
 ```bash
-META="generate_agents_md.py|generate_llms_txt.py"
+META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
 REG=$(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u)
 FS=$(ls scripts/generate_*.py | grep -vE "$META" | sort -u)
 diff <(echo "$REG") <(echo "$FS") && echo "OK: registry matches filesystem" || echo "DRIFT: update supported-tools-registry.md"

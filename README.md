@@ -14,15 +14,15 @@
 
 ---
 
-## What's New in v3.0.2
+## What's New in v3.1.0
 
-**3.0.2 is a patch release** that closes known validation gaps, expands the validated hook surface, adds Windows dependency hints, exposes local product telemetry, and restores `npm run generate:all` parity with the CLI.
+**3.1.0 aligns global and project-local editor installs** with the current documented config surfaces for all 12 supported tools.
 
-- `validate.py` now checks hook handler types, required handler fields, prompt/agent event compatibility, and structured language-rule frontmatter/category coverage.
-- Hook docs and validation now cover `PostToolUseFailure`, `PostToolBatch`, `UserPromptExpansion`, plus `command`, `http`, `prompt`, `agent`, and `mcp_tool` handler types.
-- `ai-toolkit stats --summary` reports local product telemetry: total invocations, unique skills used, catalog coverage, unused skills, recent activity, and top skills.
-- Windows dependency detection now emits package hints for `winget`, Chocolatey, and Scoop; WSL remains the recommended runtime for Bash hooks.
-- `npm run generate:all` now invokes every directory-based rule generator, so registered custom rules in `~/.softspark/ai-toolkit/rules/` propagate to every editor that supports per-rule module files.
+- `ai-toolkit install --editors cline` now writes documented global rules under `~/Documents/Cline/Rules/`.
+- `ai-toolkit install --editors roo` now writes documented global rules under `~/.roo/rules/`.
+- `ai-toolkit install --editors aider` safely creates `~/.aider.conf.yml` only when absent and refreshes `~/.aider-ai-toolkit-CONVENTIONS.md`.
+- Roo Code now has project MCP sync via `.roo/mcp.json` from the canonical `.mcp.json`.
+- Cursor rules are explicitly project-local; Cursor MCP remains supported at project/global scope through `.cursor/mcp.json`.
 
 ### Carried from v3.0.0 (feature release)
 
