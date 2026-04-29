@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.1.1 — Windows install fix (2026-04-29)
+
+Patch release. `ai-toolkit install --local` crashed on Windows before doing any work because `scripts/install_steps/project_registry.py` imported `fcntl` (POSIX-only) at module load, raising `ModuleNotFoundError: No module named 'fcntl'`.
+
+### Fixed
+
+- **Windows install crash** — `project_registry` now imports `fcntl` and `msvcrt` defensively (try/except → `None`) and `_registry_lock()` selects between `fcntl.flock` (POSIX) and `msvcrt.locking` (Windows) at runtime. POSIX semantics unchanged; Windows acquires the lock with `LK_NBLCK` + 30 s deadline + 10 ms retry backoff.
+
+### Added
+
+- **Windows compat regression test** — `tests/test_windows_support.bats` now blocks `import fcntl` via a custom `meta_path` finder, stubs `msvcrt`, and forces the Windows branch of `_registry_lock` so future regressions are caught on the POSIX CI runners without needing a Windows machine.
+
 ## v3.1.0 — Global Editor Install Alignment (2026-04-28)
 
 Minor release aligning global and project-local editor configuration with the current documented surfaces for all supported editors.

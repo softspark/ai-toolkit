@@ -25,6 +25,47 @@ PY
     [ "$output" = "ok" ]
 }
 
+@test "project_registry imports without fcntl (Windows compat)" {
+    TMP_HOME="$(mktemp -d)"
+    run env HOME="$TMP_HOME" python3 - <<PY
+import sys
+
+# Make ``import fcntl`` raise ImportError to simulate Windows.
+class _BlockFcntl:
+    def find_module(self, name, path=None):
+        return self if name == "fcntl" else None
+    def load_module(self, name):
+        raise ImportError("simulated: fcntl unavailable on Windows")
+sys.meta_path.insert(0, _BlockFcntl())
+sys.modules.pop("fcntl", None)
+
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+
+from install_steps import project_registry  # must not raise
+
+# On POSIX the lock body normally uses fcntl. Force the Windows branch and
+# stub msvcrt so we exercise the cross-platform code path end-to-end.
+import os, types
+project_registry.fcntl = None
+msvcrt_stub = types.ModuleType("msvcrt")
+msvcrt_stub.LK_NBLCK = 1
+msvcrt_stub.LK_UNLCK = 4
+msvcrt_stub.locking = lambda fd, mode, nbytes: None
+project_registry.msvcrt = msvcrt_stub
+_orig_name = os.name
+os.name = "nt"
+try:
+    with project_registry._registry_lock():
+        pass
+finally:
+    os.name = _orig_name
+print("ok")
+PY
+    rm -rf "$TMP_HOME"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
 @test "check_deps exposes Windows install hints" {
     run python3 - <<PY
 import platform

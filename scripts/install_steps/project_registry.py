@@ -9,7 +9,6 @@ Stdlib-only — no external dependencies.
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import json
 import os
 import sys
@@ -19,6 +18,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Generator
 
+try:
+    import fcntl  # POSIX-only
+except ImportError:
+    fcntl = None  # type: ignore[assignment]
+
+try:
+    import msvcrt  # Windows-only
+except ImportError:
+    msvcrt = None  # type: ignore[assignment]
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from paths import PROJECTS_FILE
 
@@ -26,24 +35,48 @@ from paths import PROJECTS_FILE
 _LOAD_RETRIES = 3
 _LOAD_RETRY_DELAY = 0.05  # 50ms
 
+# Registry lock acquisition timeout (seconds)
+_LOCK_TIMEOUT = 30.0
+_LOCK_RETRY_DELAY = 0.01
+
 
 @contextlib.contextmanager
 def _registry_lock() -> Generator[None, None, None]:
     """Exclusive file lock for read-modify-write on projects.json.
 
     Prevents concurrent processes from interleaving loads and saves,
-    which can silently drop entries.
+    which can silently drop entries. Cross-platform: POSIX uses
+    fcntl.flock, Windows uses msvcrt.locking.
     """
     path = _registry_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     lock_path = path.with_suffix(".lock")
     fd = os.open(str(lock_path), os.O_CREAT | os.O_RDWR)
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
+        if os.name == "nt":
+            deadline = time.monotonic() + _LOCK_TIMEOUT
+            while True:
+                try:
+                    msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError:
+                    if time.monotonic() > deadline:
+                        raise
+                    time.sleep(_LOCK_RETRY_DELAY)
+        else:
+            fcntl.flock(fd, fcntl.LOCK_EX)
         yield
     finally:
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
+        try:
+            if os.name == "nt":
+                with contextlib.suppress(OSError):
+                    os.lseek(fd, 0, 0)
+                with contextlib.suppress(OSError):
+                    msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
 
 
 def _registry_path() -> Path:

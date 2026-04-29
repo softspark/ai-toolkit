@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-112-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-973%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-974%20passing-success)](tests/)
 
 <p align="center">
   <img src="assets/ai-toolkit-readme-hero.png" alt="ai-toolkit 3 README hero showing one toolkit for 12 AI editors" width="900">
@@ -14,33 +14,12 @@
 
 ---
 
-## What's New in v3.1.0
+## What's New in v3.1.1
 
-**3.1.0 aligns global and project-local editor installs** with the current documented config surfaces for all 12 supported tools.
+Patch release fixing the Windows install crash introduced when project registration started using a POSIX-only file lock.
 
-- `ai-toolkit install --editors cline` now writes documented global rules under `~/Documents/Cline/Rules/`.
-- `ai-toolkit install --editors roo` now writes documented global rules under `~/.roo/rules/`.
-- `ai-toolkit install --editors aider` safely creates `~/.aider.conf.yml` only when absent and refreshes `~/.aider-ai-toolkit-CONVENTIONS.md`.
-- Roo Code now has project MCP sync via `.roo/mcp.json` from the canonical `.mcp.json`.
-- Cursor rules are explicitly project-local; Cursor MCP remains supported at project/global scope through `.cursor/mcp.json`.
-
-### Carried from v3.0.0 (feature release)
-
-- **Deep coverage: every editor at 100% of its native surface.** New generators emit hooks, sub-agents, custom commands, and skill pointers per editor: `generate_cursor_agents.py`, `generate_cursor_hooks.py`, `generate_windsurf_hooks.py`, `generate_gemini_commands.py`, `generate_gemini_hooks.py`, `generate_gemini_skills.py`, `generate_augment_agents.py`, `generate_augment_commands.py`, `generate_augment_hooks.py`, `generate_augment_skills.py`, `generate_codex_skills.py`.
-- **`--profile full`** turns on every native surface across all supported editors in one flag. `minimal` / `standard` / `strict` retain prior semantics but `standard` now also wires Gemini hooks and the Copilot directory layout (see Breaking Changes).
-- **Codex skill mirroring** uses Codex's native `.agents/skills/` discovery path. `--editors codex` installs translated skills there; `--codex-skills` explicitly refreshes the same catalog.
-- **58 new bats tests** covering native surface generators plus per-editor suites for aider, antigravity, augment, claude-code, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf.
-- **Skill quality pass** (folded in from the 2.12 work that is now skipped): 62 skills upgraded to 4-5 / 5 on the meta-architect audit; `add_gotcha` added as a fifth mutation strategy.
-
-### Breaking changes (from 3.0.0)
-
-- `--profile standard` now installs **Gemini hooks** automatically. To opt out, use `--profile minimal` or pass `--skip gemini-hooks`.
-- Copilot now uses the **directory layout** (`.github/copilot/`) instead of a single monolithic file. Existing single-file installs are preserved but new installs emit the directory form.
-- `2.13.0` is skipped. Upgrade path is `2.12.x` → `3.0.0`.
-
-### Non-breaking additions (opt-in)
-
-- `.windsurf/hooks.json`, `.cursor/hooks.json`, `.cursor/agents/`, `.augment/agents/`, `.augment/commands/`, and `.gemini/commands/` are **only emitted when you opt in** via `--profile full`. Codex skills are emitted under `.agents/skills/` whenever the Codex editor target is selected, matching Codex's native discovery path.
+- **Windows install no longer crashes** — `ai-toolkit install --local` on Windows hit `ModuleNotFoundError: No module named 'fcntl'` before doing any work. The project registry now selects `fcntl` (POSIX) or `msvcrt.locking` (Windows) at runtime; POSIX semantics are unchanged.
+- **Regression test on POSIX CI** — `tests/test_windows_support.bats` simulates the missing-`fcntl` scenario and exercises the Windows lock branch via a stubbed `msvcrt`, so this regression is caught without a Windows runner.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -173,7 +152,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (973 tests)
+├── tests/               # Bats test suite (974 tests)
 └── CHANGELOG.md
 ```
 
