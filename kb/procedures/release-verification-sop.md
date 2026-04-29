@@ -3,10 +3,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.4.1"
+version: "1.4.2"
 created: "2026-04-08"
-last_updated: "2026-04-28"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds."
+last_updated: "2026-04-29"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing."
 ---
 
 # SOP: Release Verification
@@ -382,10 +382,13 @@ grep -q "\\.gemini/settings\\.json hooks" /tmp/aitk-breaking.log && echo "OK: Ge
 
 ```bash
 D=/tmp/aitk-idem-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
+# Sort file paths before hashing — find traversal order follows inode order,
+# which can shift between runs even when content is byte-identical, producing
+# false FAIL signals.
 ai-toolkit install --local --editors cursor,gemini --profile full >/dev/null 2>&1
-SHA1=$(find .cursor .gemini -type f -exec shasum {} + | shasum | awk '{print $1}')
+SHA1=$(find .cursor .gemini -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum | shasum | awk '{print $1}')
 ai-toolkit install --local --editors cursor,gemini --profile full >/dev/null 2>&1
-SHA2=$(find .cursor .gemini -type f -exec shasum {} + | shasum | awk '{print $1}')
+SHA2=$(find .cursor .gemini -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum | shasum | awk '{print $1}')
 [ "$SHA1" = "$SHA2" ] && echo "OK: idempotent" || echo "FAIL: install is not idempotent"
 ```
 
