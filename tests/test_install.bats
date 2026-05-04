@@ -77,6 +77,11 @@ teardown() {
     for script in pre-compact.sh post-tool-use.sh user-prompt-submit.sh subagent-start.sh subagent-stop.sh session-end.sh; do
         [ -x "$HOME/.softspark/ai-toolkit/hooks/$script" ] || { echo "MISSING/non-executable: $script"; return 1; }
     done
+
+    # Hook runtime Python scripts deployed alongside (so hooks work without npm-global)
+    for runtime in session_token_stats.py version_check.py; do
+        [ -f "$HOME/.softspark/ai-toolkit/scripts/$runtime" ] || { echo "MISSING runtime script: $runtime"; return 1; }
+    done
 }
 
 # ── Merge behavior: user content preservation ────────────────────────────────

@@ -28,18 +28,27 @@ set -u
 [ "${AI_TOOLKIT_STATUSLINE_DISABLE:-0}" = "1" ] && exit 0
 
 # ── Toolkit dir auto-detect ─────────────────────────────────────────────────
-# Match the pattern used by other ai-toolkit hooks: npm global root first
-# (where scripts/ lives), then walk up from this script as a dev fallback.
+# Resolution order (first one that has session_token_stats.py wins):
+#   1. AI_TOOLKIT_DIR env var (explicit override)
+#   2. ~/.softspark/ai-toolkit/ — installer copies hook runtime scripts here
+#   3. npm global root @softspark/ai-toolkit — works post-publish
+#   4. Walk up from this script — dev fallback when running from source repo
 TOOLKIT_DIR="${AI_TOOLKIT_DIR:-}"
+
+_have_runtime() { [ -f "$1/scripts/session_token_stats.py" ]; }
+
+if [ -z "$TOOLKIT_DIR" ] && _have_runtime "$HOME/.softspark/ai-toolkit"; then
+    TOOLKIT_DIR="$HOME/.softspark/ai-toolkit"
+fi
 if [ -z "$TOOLKIT_DIR" ]; then
     NPM_ROOT="$(npm root -g 2>/dev/null)"
-    if [ -n "$NPM_ROOT" ] && [ -d "$NPM_ROOT/@softspark/ai-toolkit" ]; then
+    if [ -n "$NPM_ROOT" ] && _have_runtime "$NPM_ROOT/@softspark/ai-toolkit"; then
         TOOLKIT_DIR="$NPM_ROOT/@softspark/ai-toolkit"
     fi
 fi
-if [ -z "$TOOLKIT_DIR" ] || [ ! -f "$TOOLKIT_DIR/scripts/session_token_stats.py" ]; then
+if [ -z "$TOOLKIT_DIR" ] || ! _have_runtime "$TOOLKIT_DIR"; then
     CAND="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)"
-    if [ -n "$CAND" ] && [ -f "$CAND/scripts/session_token_stats.py" ]; then
+    if [ -n "$CAND" ] && _have_runtime "$CAND"; then
         TOOLKIT_DIR="$CAND"
     fi
 fi

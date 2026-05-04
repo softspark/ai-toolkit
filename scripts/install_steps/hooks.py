@@ -29,6 +29,7 @@ def install_hooks(claude_dir: Path, hooks_scripts_dir: Path,
         return
 
     _copy_hook_scripts(claude_dir, hooks_scripts_dir)
+    _copy_hook_runtime_scripts(hooks_scripts_dir.parent / "scripts")
     _run_merge_hooks(
         "inject",
         str(hooks_json),
@@ -60,6 +61,38 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
     if legacy_hooks.is_symlink():
         legacy_hooks.unlink()
         print("  Removed: .claude/hooks (legacy symlink)")
+
+
+# Python helpers that hooks invoke at runtime. Kept narrow on purpose — only
+# scripts that a deployed hook actually executes belong here.
+HOOK_RUNTIME_SCRIPTS: tuple[str, ...] = (
+    "session_token_stats.py",
+    "version_check.py",
+)
+
+
+def _copy_hook_runtime_scripts(scripts_dst: Path) -> None:
+    """Copy the small set of Python helpers that deployed hooks invoke.
+
+    Without this, hooks that call e.g. session_token_stats.py only work when
+    the npm-global @softspark/ai-toolkit package is up to date. Shipping these
+    alongside the hooks means ~/.softspark/ai-toolkit/ is self-sufficient.
+    """
+    scripts_src = toolkit_dir / "scripts"
+    if not scripts_src.is_dir():
+        return
+    scripts_dst.mkdir(parents=True, exist_ok=True)
+    copied = 0
+    for name in HOOK_RUNTIME_SCRIPTS:
+        src = scripts_src / name
+        if not src.is_file():
+            continue
+        dst = scripts_dst / name
+        shutil.copy2(src, dst)
+        dst.chmod(dst.stat().st_mode | 0o111)
+        copied += 1
+    if copied:
+        print(f"  Copied: {copied} hook runtime scripts to ~/.softspark/ai-toolkit/scripts/")
 
 
 def _run_merge_hooks(action: str, *args: str) -> None:
