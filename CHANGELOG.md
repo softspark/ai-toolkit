@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.2.1 — Statusline shellcheck cleanup (2026-05-04)
+
+Patch release. Lint-only fix in the default status line hook — no behavior change.
+
+### Fixed
+
+- **`app/hooks/ai-toolkit-statusline.sh` shellcheck warnings** — removed the unused `C_GRAY` color variable (SC2034) and replaced the deprecated `[ p -o q ]` form with `{ [ p ] || [ q ]; }` (SC2166). CI shellcheck gate at `--severity=warning` now passes clean across `app/hooks/*.sh`.
+
+---
+
 ## v3.2.0 — Output discipline & token-aware status line (2026-05-04)
 
 Minor release. Two coordinated additions: per-response output discipline and a real-token status line installed by default.

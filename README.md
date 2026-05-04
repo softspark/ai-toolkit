@@ -14,14 +14,11 @@
 
 ---
 
-## What's New in v3.2.0
+## What's New in v3.2.1
 
-Minor release adding response-length governance and a token-aware status line installed by default.
+Patch release. Shellcheck cleanup of the default status line hook — no behavior change.
 
-- **Output modes for `brand-voice`** — `concise` (≤60% tokens) and `strict` (≤40%) modes governing conversational responses, with rule files in `app/skills/brand-voice/modes/` and a `measure.py` evaluator that runs against fixtures with load-bearing-fact assertions.
-- **Default comprehensive status line** — `ai-toolkit install` now wires `~/.claude/settings.json` to a single line showing cwd, git, a 10-cell context-window progress bar (green <70% / orange 70–89% / red ≥90%), `↑input ↓output` token arrows, effort level, and model. All data read directly from Claude Code's statusLine stdin — no JSONL parsing, ~50 ms cold start. User-customized statusLine entries are preserved untouched. Cost segment opt-in via `AI_TOOLKIT_STATUSLINE_SHOW_COST=1`.
-- **Real token telemetry** — `scripts/session_token_stats.py` parses Claude Code session JSONL for `/briefing --tokens` reporting and baseline capture. Stdlib-only.
-- **Opt-outs via env vars** — `AI_TOOLKIT_STATUSLINE_DISABLE`, `_NO_TOKENS`, `_NO_GIT`, `_NO_EFFORT`, `_NO_COLOR`, `_SHOW_COST` (opt-in), `_DUMP` (debug).
+- **Statusline lint cleanup** — `app/hooks/ai-toolkit-statusline.sh` now passes `shellcheck --severity=warning`: removed the unused `C_GRAY` color variable (SC2034) and replaced the deprecated `[ p -o q ]` form with `{ [ p ] || [ q ]; }` (SC2166).
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

@@ -39,7 +39,7 @@ set -u
 # renders the statusline. So always emit colors unless explicitly disabled.
 if [ "${AI_TOOLKIT_STATUSLINE_NO_COLOR:-0}" = "1" ]; then
     C_RESET="" C_GREEN="" C_BOLD_GREEN="" C_CYAN="" C_BLUE="" C_RED=""
-    C_YELLOW="" C_MAGENTA="" C_DIM="" C_GRAY="" C_BOLD_YELLOW="" C_ORANGE=""
+    C_YELLOW="" C_MAGENTA="" C_DIM="" C_BOLD_YELLOW="" C_ORANGE=""
 else
     C_RESET=$'\033[0m'
     C_GREEN=$'\033[0;32m'
@@ -51,7 +51,6 @@ else
     C_BOLD_YELLOW=$'\033[1;33m'
     C_MAGENTA=$'\033[0;35m'
     C_DIM=$'\033[2m'
-    C_GRAY=$'\033[0;37m'
     C_ORANGE=$'\033[38;5;208m'
 fi
 
@@ -160,8 +159,8 @@ fi
 # ↑ green = upload (input tokens sent to model)
 # ↓ red   = download (output tokens received from model)
 SEG_TOKENS=""
-if [ "${AI_TOOLKIT_STATUSLINE_NO_TOKENS:-0}" != "1" ] && \
-   [ -n "$IN_TOK" ] && [ "$IN_TOK" != "0" -o "$OUT_TOK" != "0" ]; then
+if [ "${AI_TOOLKIT_STATUSLINE_NO_TOKENS:-0}" != "1" ] && [ -n "$IN_TOK" ] && \
+   { [ "$IN_TOK" != "0" ] || [ "$OUT_TOK" != "0" ]; }; then
     SEG_TOKENS="  ${C_BOLD_GREEN}\xe2\x86\x91${IN_TOK}${C_RESET} ${C_RED}\xe2\x86\x93${OUT_TOK}${C_RESET}"
     if [ "${AI_TOOLKIT_STATUSLINE_SHOW_COST:-0}" = "1" ] && [ -n "$COST" ]; then
         SEG_TOKENS+=" ${C_BOLD_GREEN}\$${COST}${C_RESET}"
