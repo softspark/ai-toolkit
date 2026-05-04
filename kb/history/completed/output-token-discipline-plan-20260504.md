@@ -101,37 +101,9 @@ Trzy mechanizmy:
 
 **Reason:** Claude Code hooks do not expose the MCP `tools/list` response or the system-prompt tool catalog. Hook events (`PreToolUse`, `PermissionRequest`, `Elicitation`) operate on individual tool calls only. Modifying tool descriptions before they reach the model requires a local MCP proxy server — multi-day scope, single-bug-breaks-all-MCP failure mode, out of scope for v3.2.0.
 
-**Resolution:** Full proxy-server approach parked for **v4.0** with its own dedicated PRD and architecture spike. The mid-spike "F2-lite observability tool" alternative was also dropped per user decision (2026-05-04) — v3.2.0 ships F1+F3 only; v4.0 picks up the proxy-server work in full scope.
+**Resolution:** Full proxy-server approach moved to its own active planning doc: [`kb/planning/mcp-context-trim-v4-prd.md`](../../planning/mcp-context-trim-v4-prd.md). The mid-spike "F2-lite observability tool" alternative was also dropped per user decision (2026-05-04) — v3.2.0 ships F1+F3 only; v4.0 picks up the proxy-server work in full scope.
 
-The original Feature 2 design that follows is preserved as historical context for the v4.0 PRD.
-
-### Original design (historical)
-
-**Cel** — Pre-tool-use hook który skraca opisy MCP-tooli zanim trafią do modelu. Zachowuje URL-e, identifiers, parametry funkcji.
-
-**Pliki**
-
-| Ścieżka | Akcja | Cel |
-|---------|-------|-----|
-| `scripts/mcp_description_trimmer.py` | new | Stdin: JSON z mcp tool list; stdout: skompresowany JSON. Stdlib-only. |
-| `app/skills/mcp-trim/SKILL.md` | new | Knowledge skill: kiedy używać, ostrzeżenia, jak wyłączyć dla konkretnego serwera |
-| `app/hooks/mcp-trim.sh` | new | Opt-in hook (typu PreToolUse jeśli wykonalne — patrz spike) |
-| `tests/mcp_trimmer.bats` | new | Fixtures z jira/filesystem/dart-mcp listings, asercje na zachowanie inputSchema |
-
-**Heurystyki kompresji** (do reuse w v4.0 proxy)
-
-- Usuń przykłady z `description` >40 znaków
-- Skróć `Use this server to...` do najkrótszej formy zachowującej cel
-- Usuń duplikat nazwy tool'a w opisie
-- **Zachowaj bezwzględnie:** `inputSchema.properties[*].description` (typy), `required`, `enum` values, identyfikatory URL/path
-- Cel: redukcja >40% długości opisu, 0% utraty parametrów
-- **Nigdy nie usuwaj** słów: `not`, `never`, `only`, `except`, `unless` — niosą sygnał discriminacji "kiedy NIE używać"
-
-**Ryzyka znane przed spike**
-
-1. Skompresowanie usuwa sygnał discriminacji (mitigacja: blacklist powyżej)
-2. Brak Claude Code API do modyfikacji tool list — **potwierdzone przez spike**, wymaga proxy
-3. Niespodziewana regresja w innych projektach — opt-in jest must-have
+The compression heuristics, file plan, and risk register from the original Feature 2 design were migrated into the v4.0 PRD. They are no longer duplicated in this archived doc.
 
 ---
 

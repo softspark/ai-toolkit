@@ -98,13 +98,15 @@ Users now have visibility into the MCP-description waste this spike identified, 
 
 ## What goes into v4.0
 
-Tracked separately. The v4.0 PRD will need to:
+Tracked as an active PRD: [`kb/planning/mcp-context-trim-v4-prd.md`](../../planning/mcp-context-trim-v4-prd.md). It carries forward:
 
-1. Reuse the compression heuristics from the original F2 design (preserved in `output-token-discipline-plan-20260504.md` under "Original design (historical)")
-2. Build a local MCP proxy server architecture: JSON-RPC 2.0 over stdio + SSE per server, process supervisor, per-server config in `~/.claude/.mcp.json`
-3. Define rollback / opt-out story (a buggy proxy must not break MCP-dependent skills)
-4. Specify failure mode: proxy down → fall through to direct MCP server, with telemetry warning
+1. Compression heuristics from the original F2 design (migrated out of the archived plan into the live PRD)
+2. Local MCP proxy server architecture: JSON-RPC 2.0 over stdio + SSE per server, process supervisor, per-server config in `~/.softspark/ai-toolkit/mcp-proxy/`
+3. Rollback / opt-out story — a buggy proxy must not break MCP-dependent skills
+4. Failure mode — proxy down → fall through to direct MCP server, with telemetry warning
 5. Migration of existing user `.mcp.json` configs
+
+Estimate in the PRD: ~8 working days.
 
 ## Status
 
