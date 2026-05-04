@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-112-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-974%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-981%20passing-success)](tests/)
 
 <p align="center">
   <img src="assets/ai-toolkit-readme-hero.png" alt="ai-toolkit 3 README hero showing one toolkit for 12 AI editors" width="900">
@@ -152,7 +152,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (974 tests)
+├── tests/               # Bats test suite (981 tests)
 └── CHANGELOG.md
 ```
 

@@ -51,6 +51,7 @@ const SCRIPT_COMMANDS = {
   'evaluate':             { script: 'evaluate_skills.py',    toolkitCwd: true },
   'stats':                { script: 'stats.py' },
   'compile-slm':          { script: 'compile_slm.py' },
+  'pack-codebase':        { script: 'pack_codebase.py' },
 };
 
 // ---------------------------------------------------------------------------
@@ -106,6 +107,7 @@ const COMMANDS = {
   'opencode-json': 'Merge .mcp.json servers into opencode.json',
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
   'compile-slm': 'Compile toolkit into a minimal SLM system prompt (--budget, --model-size, --dry-run)',
+  'pack-codebase': 'Pack the current codebase into a single AI-friendly markdown file (--budget, --include, --exclude, --dry-run)',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
   'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, opencode, llms)',
   help: 'Show this help message',

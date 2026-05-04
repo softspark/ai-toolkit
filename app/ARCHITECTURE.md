@@ -12,6 +12,53 @@ Universal multi-agent system for software development. Works across all reposito
 
 ---
 
+## Layered Model (the five-layer mental model)
+
+The toolkit is organised as five stacked layers. Higher layers depend on lower layers, never the other way around. Treat this as the canonical mental model when adding features — pick the lowest layer that fits.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 5 — Plugins (distribution)                           │
+│  Bundles for npm / marketplace / ai-toolkit eject           │
+│  Files: app/plugins/, plugin.json, package.json             │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 4 — Subagents (delegation)                           │
+│  Specialised personas spawned via Agent / Teams             │
+│  Files: app/agents/, .claude/agents/                        │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 3 — Hooks (the guardrail layer)                      │
+│  Lifecycle events: SessionStart, PreToolUse, Stop, …        │
+│  Files: app/hooks/*.sh, settings.json hooks block           │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 2 — Skills (the knowledge layer)                     │
+│  Slash-commands, knowledge skills, hybrid skills            │
+│  Files: app/skills/<name>/SKILL.md                          │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 1 — CLAUDE.md (the memory layer)                     │
+│  Persistent rules + auto-memory loaded into every session   │
+│  Files: CLAUDE.md (global / project / .claude)              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Where does my new feature go?
+
+| If the feature is… | Add it at | Examples |
+|---|---|---|
+| A persistent rule the model must always know | Layer 1 (CLAUDE.md) | "always sync_tasks first", commit conventions |
+| A reusable workflow / domain knowledge | Layer 2 (Skills) | `/debug`, `/review`, `python-rules` |
+| Behavior the harness must enforce automatically | Layer 3 (Hooks) | block destructive `rm -rf`, run lint on Stop |
+| A specialised role for delegation | Layer 4 (Subagents) | `security-auditor`, `database-architect` |
+| A shippable bundle for other repos | Layer 5 (Plugins) | `app/plugins/python-stack/` |
+
+### Cross-cutting rules
+
+- A skill MAY trigger an agent (`agent: <name>` frontmatter) — that's Layer 2 calling Layer 4.
+- A hook MUST NOT call a skill — hooks are deterministic shell, skills are LLM-driven.
+- A plugin MAY bundle skills + agents + hooks, but never the inverse.
+- CLAUDE.md is read by every layer; it is the only layer everyone reads.
+
+---
+
 ## Agents
 
 ### Orchestration & Planning (4)
