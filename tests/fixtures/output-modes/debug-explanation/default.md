@@ -1,0 +1,5 @@
+Great question! Let me walk you through what's happening here. The reason your React component is re-rendering on every parent update is that React's default behavior is to re-render any child component whenever the parent component re-renders, regardless of whether the props passed to that child have actually changed. This is part of React's reconciliation process, and it's intentional, because React can't know without doing some extra work whether your component depends on something other than its props.
+
+To prevent this re-rendering when props haven't changed, you have a few options. The most common one is to wrap your child component in `React.memo()`, which performs a shallow comparison of props and skips re-rendering when they're equal. Another option is to use `useMemo` to memoize the props you pass down, particularly if you're passing objects or arrays, since those are compared by reference and a new reference on every render will defeat memoization. Similarly, `useCallback` can be used for function props for the same reason.
+
+I hope this helps clarify what's going on! Let me know if you'd like me to dig into any specific part of this in more detail.

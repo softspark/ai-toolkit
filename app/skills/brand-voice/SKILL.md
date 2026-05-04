@@ -1,14 +1,16 @@
 ---
 name: brand-voice
-description: "Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice."
+description: "Loaded when writing documentation, content, README, or user-facing text, AND when an output-mode is set for conversational responses. Prevents generic LLM rhetoric, enforces direct technical voice, and supplies optional concise/strict response modes."
 effort: medium
-user-invocable: false
+user-invocable: true
 allowed-tools: Read
 ---
 
 # Brand Voice
 
 Auto-loaded when writing documentation, content, or user-facing text. Enforces consistent, direct voice and eliminates LLM rhetoric.
+
+Also loaded when a project sets `output-mode: concise` or `output-mode: strict` in `CLAUDE.md`, to govern conversational response length and structure (see [Output Modes](#output-modes)).
 
 ## Anti-Trope List (Banned Phrases)
 
@@ -118,6 +120,40 @@ install takes under 30 seconds on a local disk.
 - **NEVER** use em dashes or en dashes in prose — they signal LLM output. Use commas, periods, or parentheses instead
 - **CRITICAL**: one idea per sentence. If you write "and" linking two distinct ideas, split the sentence
 - **MANDATORY**: technical claims include a concrete number, name, or example — never assert quality without evidence
+
+## Output Modes
+
+Three modes govern conversational response length. Default applies always; `concise` and `strict` activate per-project or per-session.
+
+| Mode | Token target vs default | Used when |
+|------|-------------------------|-----------|
+| `default` | 100% (no extra constraints) | No `output-mode` configured |
+| `concise` | ≤60% | Daily work, short Q&A, code edits, short reviews |
+| `strict` | ≤40% | Long sessions, expensive models, batch operations, code-only tasks |
+
+Mode rules live in this skill's `modes/` directory. Read the file matching the active mode:
+
+- `modes/concise.md` — bullet-first, no preamble, max 3-sentence prose blocks
+- `modes/strict.md` — telegraphic, no prose blocks, only lists/tables/code
+
+### Activation
+
+1. **Project-level (preferred):** add `output-mode: concise` to project `CLAUDE.md` frontmatter or `.claude/settings.json` under `aiToolkit.outputMode`
+2. **Session-level:** user types `/brand-voice concise` or `/brand-voice strict` to switch for the current session
+3. **Reset:** `/brand-voice default` or remove the project setting
+
+### What modes do NOT change
+
+- Code blocks (always full, never truncated)
+- File paths, line numbers, error messages (always exact)
+- Lists of items the user must see (file lists, test failures, security findings)
+- Plan documents and ADRs (always full structure)
+
+Modes change *prose*, not *data*. If you cut a fact to fit a length budget, you have failed the mode, not honored it.
+
+### Measurement
+
+Run `python3 app/skills/brand-voice/scripts/measure.py --fixtures tests/fixtures/output-modes/` to compare baseline vs mode tokens on the fixture set. Report shows per-fixture deltas and an aggregate ratio.
 
 ## When NOT to Load
 

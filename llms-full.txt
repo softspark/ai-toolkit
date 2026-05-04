@@ -19,6 +19,8 @@
 - [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/history/completed/offline-slm-profile-plan-20260411.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
+- [Spike: F2 MCP Context Trim — Hook Feasibility & Path Decision](kb/planning/f2-mcp-trim-spike-conclusion.md)
+- [Plan: Output & Token Discipline](kb/planning/output-token-discipline-plan.md)
 - [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Release Preparation](kb/procedures/release-preparation-sop.md)
@@ -71,7 +73,7 @@
 - **architecture-audit**: Explore codebase organically for architectural friction, discover shallow modules, and propose module-deepening refactors as GitHub issue RFCs using parallel sub-agent interface designs. Use when user wants to improve architecture, find shallow modules, deepen modules, or reduce coupling.
 - **architecture-decision**: Architecture decision making via trade-off analysis in RFC/RFD/ADR format: context, constraints, 3+ options, comparison, recommendation. Triggers: architecture decision, ADR, RFC, RFD, trade-offs, options comparison, design choice, pick between, should we use, evaluate approach. Load when weighing 2+ architectural options or writing decision records.
 - **biz-scan**: Scans codebase for business opportunities by analyzing database schemas, API endpoints, tracking events, and feature flags to surface underutilized capabilities, missing KPIs, and monetization gaps. Use when the user asks about revenue opportunities, business metrics, KPI coverage, analytics gaps, or monetization analysis of a codebase.
-- **brand-voice**: Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice.
+- **brand-voice**: Loaded when writing documentation, content, README, or user-facing text, AND when an output-mode is set for conversational responses. Prevents generic LLM rhetoric, enforces direct technical voice, and supplies optional concise/strict response modes.
 - **briefing**: Generate an executive daily briefing that aggregates reports from all agents into a short, decision-focused summary. Use when the user asks for a status update across the whole system — not for one-agent activity reports.
 - **build**: Build the project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Use when the user asks to compile, bundle, or produce artifacts — not to run tests or deploy.
 - **chaos**: Inject controlled faults for resilience testing on non-production targets. Use when the user explicitly asks for a chaos experiment, latency injection, or dependency kill — never implicit.
@@ -217,7 +219,7 @@
 - **search-specialist**: Information retrieval and search optimization specialist. Trigger words: search, query, semantic search, information retrieval, relevance, ranking, search optimization
 - **security-architect**: Proactive security design expert. Use for Threat Modeling, architecture security reviews, and designing secure systems (AuthN/AuthZ, Crypto).
 - **security-auditor**: Security expert. Use for OWASP Top 10, CVE analysis, security audits, penetration testing, vulnerability assessment, hardening. Triggers: security, owasp, cve, vulnerability, audit, hardening, penetration, pentest, injection test, api security.
-- **seo-specialist**: Search engine optimization specialist. Trigger words: SEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org
+- **seo-specialist**: Search engine + generative engine optimization specialist. Trigger words: SEO, GEO, AEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org, llms.txt, ChatGPT visibility, Claude citation, Perplexity ranking, AI Overviews
 - **system-governor**: The Guardian of the Constitution. Validates all evolutionary changes and enforces immutable rules. Has VETO power.
 - **tech-lead**: Technical authority for code quality, architecture patterns, and stack decisions. Use for code reviews, technological disputes, and standards enforcement.
 - **technical-researcher**: Deep technical investigation and multi-source research synthesis specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix, synthesize, aggregate, report, executive summary, gap analysis, findings, multi-source, cross-reference
@@ -3588,6 +3590,393 @@ Examples:
 
 ---
 
+## kb/planning/f2-mcp-trim-spike-conclusion.md
+
+---
+title: "Spike: F2 MCP Context Trim — Hook Feasibility & Path Decision"
+category: planning
+service: ai-toolkit
+tags:
+  - mcp
+  - hooks
+  - claude-code
+  - spike
+  - feasibility
+doc_type: spike
+status: completed
+created: "2026-05-04"
+last_updated: "2026-05-04"
+description: "Spike conclusion for Feature 2 of the output-token-discipline plan. Determines whether Claude Code hooks can modify MCP tool descriptions before they reach the LLM. Result: hooks operate per-call, not on tool list metadata. Full feature requires an MCP proxy server (multi-day scope). Recommends a smaller observability-first replacement."
+---
+
+# Spike: F2 MCP Context Trim — Hook Feasibility & Path Decision
+
+## Question
+
+Can Claude Code's hook system modify MCP **tool descriptions** that get included in the model's system prompt, or do hooks only intercept individual tool **calls**?
+
+## Method
+
+Reviewed local sources only (RAG MCP offline at spike time):
+
+1. `app/skills/hook-creator/SKILL.md` — exhaustive list of supported hook events and their data shapes
+2. `app/hooks/guard-destructive.sh`, `app/hooks/guard-path.sh` — actual examples reading `tool_input` from stdin
+3. `app/skills/mcp-builder/SKILL.md` — MCP server-side conventions
+4. `~/.claude/.mcp.json` — user's installed MCP servers (Context7, sequential-thinking, filesystem, rag-mcp, memory, jira-mcp)
+
+## Findings
+
+### Hook events that touch tool data
+
+| Event | Modifies tool list? | Modifies tool input? | Notes |
+|-------|--------------------|--------------------|-------|
+| `PreToolUse` | no | no (only block via exit 2) | Reads `tool_input.*`, decides allow/deny |
+| `PostToolUse` | no | no | Sees result for logging / feedback |
+| `PermissionRequest` | no | yes (`updatedInput`) | Can rewrite a single call's args |
+| `Elicitation` | no | n/a | Intercepts MCP UI prompts, not tool list |
+| `SessionStart` | no | n/a | Context injection only |
+| `InstructionsLoaded` | no | n/a | Verifies CLAUDE.md presence |
+
+**No event exposes the MCP `tools/list` response or the system-prompt tool catalog**. The tool catalog is materialized once per MCP server connection from the server's own `tools/list` reply.
+
+### Why this matters
+
+The compression target was the bulk of MCP tool descriptions sitting in every model turn's system prompt. Examples from the user's installed servers:
+
+- `dart-mcp-server` — ~30 tools with multi-paragraph descriptions
+- `filesystem` — verbose paths and example sections
+- `pencil` — "IMPORTANT" stanzas repeated across tools
+- `jira-mcp` — long `Use this tool to...` boilerplate
+
+At ~100 tools across 7 servers in this user's config, easily 8–15k tokens of pure description text. Real waste, but Claude Code does not let a hook touch it.
+
+### What would actually work
+
+To compress MCP tool descriptions before they reach the LLM, exactly two architectures are viable:
+
+1. **Local MCP proxy server** between Claude Code and each target server. The proxy re-implements `tools/list` to rewrite descriptions on the fly while passing through `tools/call`. Requires JSON-RPC 2.0 over stdio + SSE per server, per-server config in `~/.claude/.mcp.json`, and a process supervisor for the proxies. Multi-day scope. Failure mode: a buggy proxy breaks all MCP-dependent skills.
+2. **Source-side fork**: ship pre-trimmed copies of common MCP servers (`@softspark/jira-mcp-trim`, etc.) — high maintenance burden, doesn't help users with custom servers.
+
+Neither is a "minimal change" by the standards of this plan.
+
+## Decision
+
+**Drop the in-flight MCP description rewrite from the v3.2 scope.** The original F2 plan assumed hooks could rewrite tool metadata — that assumption is wrong.
+
+Replace with a **smaller observability-first feature** (call it F2-lite) that:
+
+- Connects to each MCP server in `~/.claude/.mcp.json`, calls `tools/list`, measures total description tokens
+- Reports per-server cost and identifies the 10 most expensive tool descriptions
+- Suggests trim targets (e.g., "removing `Use this tool to` boilerplate from 17 tools in jira-mcp would save ~340 tokens")
+- Stays inert: does NOT modify any MCP traffic
+
+This shifts the value from automated compression to human-in-the-loop awareness — users see the cost, then choose to fix it upstream (open a PR to the MCP server, switch to a leaner alternative, or disable a server they don't need).
+
+Full MCP proxy compression goes into a future v3.4 or v4.0 milestone with its own dedicated plan.
+
+## Alternatives considered (and why rejected)
+
+| Option | Pros | Cons | Verdict |
+|--------|------|------|---------|
+| Build full MCP proxy now | Achieves original compression goal | Multi-day work, single-bug-breaks-all-MCP failure mode, defers F1/F3 commits | Out of scope |
+| Pre-install rewrite of `.mcp.json` | One-shot, no runtime cost | MCP spec says descriptions come from server, not config — wouldn't actually take effect | Doesn't work |
+| Skip F2 entirely | Closes the plan at F1+F3 (75%) | Leaves measurable token waste invisible to users | Acceptable but worse than F2-lite |
+| **F2-lite observability tool** | Low risk, gives users data, easy to ship | Not the original "automatic compression" target | **Selected** |
+
+## Action items
+
+1. Update `kb/planning/output-token-discipline-plan.md` — mark original F2 as **descoped**, add F2-lite as new section
+2. Implement F2-lite as `scripts/mcp_inventory.py` + `/briefing --mcp` extension
+3. Document the proxy-server path as a separate v4 candidate in `kb/planning/`
+
+## Open questions for user
+
+1. Accept the F2 → F2-lite swap, or push back and demand the full proxy?
+2. If F2-lite: ship in 3.2.0 (delays release) or 3.3.0 (3.2.0 ships now with F1+F3 only)?
+
+## Status
+
+| Date | Status | Author |
+|------|--------|--------|
+| 2026-05-04 | Spike completed, F2-lite proposed | claude |
+
+---
+
+## kb/planning/output-token-discipline-plan.md
+
+---
+title: "Plan: Output & Token Discipline — Concise Modes, MCP Trim, Token Receipts"
+category: planning
+service: ai-toolkit
+tags:
+  - brand-voice
+  - output-style
+  - mcp
+  - statusline
+  - token-tracking
+  - hooks
+  - briefing
+doc_type: plan
+status: completed
+created: "2026-05-04"
+last_updated: "2026-05-04"
+completion: "100% of v3.2.0 scope (F2 deferred to v4.0 per spike conclusion)"
+description: "Three coordinated extensions to ai-toolkit that reduce token usage and surface real cost data: (1) brand-voice output modes for concise/strict Claude responses, (2) MCP description trimmer to compact tool listings before they reach the model, (3) token receipts in statusline reading session JSONL directly. Native extensions, no third-party skill names imported."
+---
+
+# Plan: Output & Token Discipline
+
+**Status:** Proposed
+**Author:** lukasz.krzemien
+**Source of inspiration:** external Claude Code plugin observed 2026-05-04 (mechanism only, not naming or branding)
+
+## Cel
+
+Zmniejszyć realne zużycie tokenów w sesjach Claude Code i dać użytkownikowi widoczność tego zużycia w czasie rzeczywistym. Trzy mechanizmy działające razem, każdy jako natywne rozszerzenie istniejących komponentów ai-toolkit (`brand-voice`, `briefing`, `track-usage.sh`). Bez importowania obcych nazw — adaptacja idei jako własnych.
+
+## Kontekst
+
+Obecnie ai-toolkit ma:
+
+- `brand-voice` skill — pilnuje stylu pisanego (docs, README, content)
+- `track-usage.sh` hook — liczy `/skill` invocations do `~/.softspark/ai-toolkit/stats.json`
+- `compile_slm.py` — kompresuje cały toolkit dla małych modeli (inny scope)
+- 113 skilli, pełen system hooków, doctor, eject
+
+Brakuje:
+
+- Trybu zwięzłego dla *odpowiedzi* Claude'a (brand-voice działa tylko dla pisanej zawartości)
+- Kompresji opisów MCP-tooli, które zżerają setki tokenów na każdym wywołaniu
+- Realnego pomiaru tokenów per sesja (mamy tylko licznik invocations, nie tokenów)
+
+## Zakres
+
+Trzy features, zaplanowane w kolejności narastającego ryzyka.
+
+---
+
+## Feature 1 — `brand-voice` output modes
+
+### Cel
+Rozszerzyć `brand-voice` o tryby zwięzłości stosowane do odpowiedzi konwersacyjnych Claude'a, nie tylko do generowanych dokumentów.
+
+### Decyzje nazewnicze
+- **Wybrane:** zostaje `brand-voice` z wewnętrznymi trybami (`default`, `concise`, `strict`)
+- **Odrzucone:**
+  - `concise` jako osobny skill — duplikuje brand-voice, niepotrzebny rozłam
+  - `terse` — niejednoznaczne, kojarzy się z "rude"
+  - `output-discipline` — zbyt biurokratyczne
+
+### Pliki
+
+| Ścieżka | Akcja | Cel |
+|---------|-------|-----|
+| `app/skills/brand-voice/SKILL.md` | edit | Dodaj sekcję `## Output Modes` z opisem trzech trybów i sposobu aktywacji |
+| `app/skills/brand-voice/modes/concise.md` | new | Reguły: max 3 zdania per odpowiedź na pytanie zamknięte, brak preamble, brak "I'll now..." |
+| `app/skills/brand-voice/modes/strict.md` | new | Reguły: tylko fakty, zero filler adjectives, max 1 zdanie per fakt, listy zamiast prozy |
+| `app/skills/brand-voice/scripts/measure.py` | new | Eval przed/po na fixtures, raport oszczędności tokenów |
+| `tests/fixtures/output-modes/` | new | 10 par baseline/expected dla różnych typów zadań (debug, review, plan, eksploracja) |
+| `tests/skills_brand_voice.bats` | edit | Dodaj asercje dla modes (regex na zakazane filler, max-line-length) |
+
+### Aktywacja
+
+Trzy mechanizmy:
+
+1. Frontmatter w projekcie: `output-mode: concise` w `CLAUDE.md` lub `.claude/settings.json`
+2. Slash: `/brand-voice concise` przełącza dla bieżącej sesji (przez `track-usage.sh` zapisuje do session state)
+3. Auto-trigger: skill ładuje się także przy długich sesjach generowania (>30 min, heurystyka)
+
+### Success criteria
+
+- Na zestawie 10 fixtures `concise` redukuje output >40% bez utraty kluczowych faktów
+- Test asercji: zachowane są wszystkie nazwy plików i symboli z baseline (regex match)
+- `validate.py --strict` przechodzi
+- `audit_skills.py --ci` zero HIGH
+
+### Estymata
+4–6h
+
+---
+
+## Feature 2 — MCP context trim — DEFERRED TO v4.0
+
+**Status:** Deferred. See `kb/planning/f2-mcp-trim-spike-conclusion.md` for the spike result.
+
+**Reason:** Claude Code's hook system does not expose `tools/list` metadata to hooks; only individual tool calls and inputs. Modifying MCP tool descriptions before they reach the model requires either a local MCP proxy server (multi-day scope, high blast radius) or source-side forks of MCP servers (high maintenance). Both are out of scope for v3.2.0.
+
+The full proxy approach is parked for v4.0 with its own dedicated PRD and architecture spike.
+
+
+
+### Cel
+Pre-tool-use hook który skraca opisy MCP-tooli zanim trafią do modelu. Zachowuje URL-e, identifiers, parametry funkcji.
+
+### Decyzje nazewnicze
+- **Wybrane:** nowy skill `mcp-trim` (knowledge-only, dokumentuje użycie) + skrypt `scripts/mcp_description_trimmer.py` + opt-in hook `app/hooks/mcp-trim.sh`
+- **Odrzucone:**
+  - Rozszerzenie `mcp-builder` — buduje serwery, nie modyfikuje runtime, niepasujący scope
+  - Rozszerzenie `mcp-patterns` — to skill wiedzy, nie wykonawczy
+  - Standalone MCP proxy serwer — za duże blast-radius na pierwszą iterację
+
+### Pliki
+
+| Ścieżka | Akcja | Cel |
+|---------|-------|-----|
+| `scripts/mcp_description_trimmer.py` | new | Stdin: JSON z mcp tool list; stdout: skompresowany JSON. Stdlib-only. |
+| `app/skills/mcp-trim/SKILL.md` | new | Knowledge skill: kiedy używać, ostrzeżenia, jak wyłączyć dla konkretnego serwera |
+| `app/hooks/mcp-trim.sh` | new | Opt-in hook (typu PreToolUse jeśli wykonalne — patrz spike) |
+| `tests/mcp_trimmer.bats` | new | Fixtures z jira/filesystem/dart-mcp listings, asercje na zachowanie inputSchema |
+
+### Heurystyki kompresji
+
+- Usuń przykłady z `description` >40 znaków
+- Skróć `Use this server to...` do najkrótszej formy zachowującej cel
+- Usuń duplikat nazwy tool'a w opisie
+- **Zachowaj bezwzględnie:** `inputSchema.properties[*].description` (typy), `required`, `enum` values, identyfikatory URL/path
+- Cel: redukcja >40% długości opisu, 0% utraty parametrów
+
+### Spike przed implementacją (1h)
+
+- Sprawdzić czy Claude Code's `PreToolUse` hook może modyfikować deklarację tool'a, czy tylko payload wywołania
+- Jeśli tylko payload → wymagany MCP proxy server, dokończenie odsuwane do v2
+- Wynik spike'u: ADR/decision note w `kb/decisions/`
+
+### Profil instalacji
+
+- NIE w `default` ani `standard`
+- Tylko `--with-mcp-trim` flag lub `--profile strict`
+- Ostrzeżenie w README: "może odebrać Claude'owi sygnał kiedy NIE używać tool'a"
+
+### Ryzyka (devil's advocate)
+
+1. **Skompresowanie usuwa sygnał discriminacji** — opis "Use this server only for X, never for Y" po skróceniu może stracić "never for Y". Mitigacja: heurystyka NIE usuwa `not`, `never`, `only`, `except`, `unless`.
+2. **Brak Claude Code API do modyfikacji tool list** — wymaga MCP proxy. Spike rozstrzygnie.
+3. **Niespodziewana regresja w innych projektach** — opt-in z dokładnym dokumentem migracji.
+
+### Success criteria
+
+- Opisy MCP w fixtures zredukowane >40%
+- Deep-equal `inputSchema` z baseline po stripie pól description (zero zmiany w schematach)
+- `tests/mcp_trimmer.bats` pass
+
+### Estymata
+1h spike + 6–10h implementacji (jeśli spike pozytywny) lub 0h (jeśli spike pokaże wymóg proxy server, scope odsuwany)
+
+---
+
+## Feature 3 — Token receipts w statusline
+
+### Cel
+Pokazać realne (nie estymowane) zużycie tokenów per-sesja w statusline Claude Code. Dane czytane z session JSONL, nie z heurystyk.
+
+### Decyzje nazewnicze
+- **Wybrane:** rozszerzenie istniejącego skilla `briefing` + nowy hook `statusline-tokens.sh` + nowy skrypt `session_token_stats.py`
+- **Odrzucone:**
+  - Nowy skill `stats` / `receipts` — duplikuje funkcjonalnie `briefing`
+  - Modyfikacja istniejącego `track-usage.sh` jako jedynego punktu — za duża odpowiedzialność jednego pliku
+
+### Pliki
+
+| Ścieżka | Akcja | Cel |
+|---------|-------|-----|
+| `scripts/session_token_stats.py` | new | Parser JSONL stdlib-only. Funkcje: `read_session()`, `aggregate_by_skill()`, `compare_baseline_vs_concise()` |
+| `app/hooks/statusline-tokens.sh` | new | Type `statusLine` w settings.json. Sumuje `usage.input_tokens` + `usage.output_tokens` z bieżącej sesji JSONL |
+| `app/hooks/track-usage.sh` | edit | Po wykryciu `/skill` zapisuj też `prompt_tokens` jeśli `transcript_path` dostępne |
+| `app/skills/briefing/SKILL.md` | edit | Nowa sekcja "Token receipts", komendy `/briefing --tokens --since 7d`, `/briefing --tokens --share` |
+| `scripts/install.py` lub hook injector | edit | Rejestracja `statusLine` w settings.json template (opt-in) |
+| `tests/session_token_stats.bats` | new | Fixture JSONL z 3 messages, asercje na sumę i breakdown |
+| `tests/statusline_tokens.bats` | new | Mock JSONL, weryfikacja outputu hooka (max 80 znaków, brak NaN, fallback gdy brak sesji) |
+
+### Format statusline (proponowany)
+
+```
+[ai-toolkit] /concise · session: 24.7k · trend: ↓18%
+```
+
+Krótki tryb default, `--verbose` dodaje breakdown per skill.
+
+### Ścieżka odczytu sesji
+
+Claude Code zapisuje JSONL do `~/.claude/projects/<sanitized-cwd>/<session-id>.jsonl`. Każda linia to message z polem `usage` (input_tokens, output_tokens, cache_*). Skrypt:
+
+1. Identyfikuje aktualną sesję z env var `CLAUDE_SESSION_ID` (jeśli istnieje) lub najświeższy plik
+2. Parsuje linie ignorując te bez `usage`
+3. Sumuje + agreguje per skill (jeśli `track-usage.sh` zapisał skill mapping w sidecar pliku)
+
+### Success criteria
+
+- Statusline pokazuje liczbę tokenów odczytaną z JSONL z dokładnością ±2% vs Anthropic API report (jeśli dostępny)
+- Brak crash gdy sesja jeszcze pusta
+- Brak crash gdy JSONL malformed
+- `validate.py --strict` przechodzi
+
+### Estymata
+6–8h
+
+---
+
+## Co nie wchodzi w plan
+
+| Pomysł | Powód odrzucenia |
+|--------|------------------|
+| Memory/file compressor (`/compress <file>`) | `compile_slm.py` już kompresuje toolkit, brak konkretnego use-case dla per-file |
+| Compact `/commit`, `/review` modes | Powstaną automatycznie po Feature 1 (te skille będą używać reguł `concise` mode) |
+| "Caveman speak" / classical Chinese mode | Nie pasuje do tonu workmanlike, sprzeczne z brand-voice |
+| Single curl-installer | Już mamy `ai-toolkit install` z profilami |
+
+---
+
+## Kolejność realizacji i zależności
+
+```
+Feature 1 (brand-voice modes)
+    ↓ dostarcza reguły zwięzłości
+Feature 3 (token receipts)
+    ↓ dostarcza pomiar before/after dla F1
+Feature 2 (mcp-trim)  ← spike research najpierw, niezależne od F1/F3
+```
+
+**F1 i F3 mogą iść parallel po dokończeniu F1 mode files.**
+**F2 ma osobną decyzję go/no-go po spike'u.**
+
+## Estymata zbiorcza
+
+| Feature | Min | Max |
+|---------|-----|-----|
+| F1 | 4h | 6h |
+| F3 | 6h | 8h |
+| F2 spike | 1h | 1h |
+| F2 implementacja | 0h | 10h |
+| **Total** | **11h** | **25h** |
+
+## Doc & test sweep (obowiązkowy po każdym feature)
+
+1. `python3 scripts/validate.py --strict`
+2. `python3 scripts/audit_skills.py --ci`
+3. Regen `AGENTS.md`: `python3 scripts/generate_agents_md.py > AGENTS.md`
+4. Regen `llms.txt`: `python3 scripts/generate_llms_txt.py > llms.txt`
+5. Bump version w `package.json` + `plugin.json`
+6. Update `skills-catalog.md` z nowymi/zmienionymi skillami
+7. Update `README.md`, `CLAUDE.md`, `ARCHITECTURE.md`, `architecture-overview.md` jeśli zmiana behavior
+8. Commit conventional: `feat(brand-voice): add output modes`, `feat(briefing): add token receipts`, `feat(mcp-trim): add description trimmer`
+
+## Open questions
+
+1. Czy `PreToolUse` hook może modyfikować deklarację tool'a w MCP listingu? (rozstrzyga F2 spike)
+2. Czy Claude Code wystawia hookom `CLAUDE_SESSION_ID` env var? Jeśli nie — heurystyka "newest JSONL" w kursorze.
+3. Czy włączyć `concise` mode jako default po F1, czy zostawić opt-in? Decyzja po pomiarach z F3 (dane > opinia).
+
+## Status & rewizje
+
+| Data | Zmiana | Autor |
+|------|--------|-------|
+| 2026-05-04 | Initial draft | lukasz.krzemien |
+| 2026-05-04 | F1 implementation done — brand-voice modes (concise/strict), measure.py, 3 fixtures, 14 bats tests passing. Aggregate ratio: concise 21%, strict 14% on shipped fixtures (well under 60%/40% targets). | claude |
+| 2026-05-04 | F3 implementation done — `scripts/session_token_stats.py` (stdlib JSONL parser), `app/hooks/statusline-tokens.sh`, briefing skill extended with `--tokens` and statusline wire-up docs. 22 new bats tests passing. Smoke-tested on real Claude Code session: 96.6k tokens correctly parsed. Installer integration deferred to follow-up — manual settings.json edit documented in briefing skill. | claude |
+| 2026-05-04 | F3.5 follow-up done — replaced focused tokens-only hook with comprehensive `app/hooks/ai-toolkit-statusline.sh` combining cwd, git, ctx%, tokens, trend, model-aware cost, model name. Extended `merge-hooks.py` to inject `statusLine` into settings.json by default while preserving user-customized entries (no `_source: ai-toolkit` tag). Added `app/hooks.json` `statusLine` entry. Bumped version 3.1.1 → 3.2.0. Added 22 new bats tests (statusline + merge-hooks). CHANGELOG, README "What's New", briefing skill all updated. | claude |
+
+---
+
 ## kb/procedures/ecosystem-sync-sop.md
 
 ---
@@ -4701,10 +5090,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.4.1"
+version: "1.4.2"
 created: "2026-04-08"
-last_updated: "2026-04-28"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds."
+last_updated: "2026-04-29"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing."
 ---
 
 # SOP: Release Verification
@@ -5080,10 +5469,13 @@ grep -q "\\.gemini/settings\\.json hooks" /tmp/aitk-breaking.log && echo "OK: Ge
 
 ```bash
 D=/tmp/aitk-idem-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
+# Sort file paths before hashing — find traversal order follows inode order,
+# which can shift between runs even when content is byte-identical, producing
+# false FAIL signals.
 ai-toolkit install --local --editors cursor,gemini --profile full >/dev/null 2>&1
-SHA1=$(find .cursor .gemini -type f -exec shasum {} + | shasum | awk '{print $1}')
+SHA1=$(find .cursor .gemini -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum | shasum | awk '{print $1}')
 ai-toolkit install --local --editors cursor,gemini --profile full >/dev/null 2>&1
-SHA2=$(find .cursor .gemini -type f -exec shasum {} + | shasum | awk '{print $1}')
+SHA2=$(find .cursor .gemini -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum | shasum | awk '{print $1}')
 [ "$SHA1" = "$SHA2" ] && echo "OK: idempotent" || echo "FAIL: install is not idempotent"
 ```
 
@@ -5722,8 +6114,8 @@ Three tiers determine how to approach a task:
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 32 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
-| Knowledge | `user-invocable: false` | Claude auto-loads | 49 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 32 |
+| Knowledge | `user-invocable: false` | Claude auto-loads | 48 |
 
 ## Multi-Agent Execution
 
@@ -10479,7 +10871,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **seo-validate** | `/seo-validate` | medium | Scan codebase for SEO issues: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Framework-aware (Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML). |
 | **mcp-builder** | `/mcp-builder` | high | Build production-grade MCP servers using the 4-phase methodology (research, implement, test, evaluate). TypeScript/Python, stdio/streamable-http. |
 
-## Hybrid Skills (31)
+## Hybrid Skills (32)
 
 Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
 
@@ -10516,6 +10908,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **persona** | `/persona` | low | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
 | **council** | `/council` | high | 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) with synthesis and confidence-rated recommendation. Tier 1, orchestrator, `context: fork`. |
 | **introspect** | `/introspect` | medium | Agent self-debugging: classify failure pattern, suggest smallest recovery action, emit structured introspection report |
+| **brand-voice** | `/brand-voice` | medium | Anti-trope list, voice principles, LLM rhetoric prevention; output modes (`concise` ≤60% tokens, `strict` ≤40%) governing conversational responses. |
 
 ### `/workflow` types
 
@@ -10537,7 +10930,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | `application-deploy` | 3 | Deploy → smoke test → release notes |
 | `proactive-troubleshooting` | 4 | Investigate → check perf → preventive fix → docs |
 
-## Knowledge Skills - Development (16)
+## Knowledge Skills - Development (15)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
@@ -10556,7 +10949,6 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **ruby-patterns** | `skills/ruby-patterns/` | Blocks, Rails conventions, RSpec, ActiveRecord |
 | **design-engineering** | `skills/design-engineering/` | UI polish, animation craft, easing, transforms, accessibility |
 | **documentation-standards** | `skills/documentation-standards/` | KB document conventions, frontmatter validation, category taxonomy |
-| **brand-voice** | `skills/brand-voice/` | Anti-trope list, voice principles, LLM rhetoric prevention |
 
 ## Knowledge Skills - Infrastructure (6)
 

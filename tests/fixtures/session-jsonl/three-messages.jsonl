@@ -1,0 +1,5 @@
+{"type":"user","timestamp":"2025-01-15T10:00:00Z","message":{"role":"user","content":"hello"}}
+{"type":"assistant","timestamp":"2025-01-15T10:00:01Z","message":{"role":"assistant","content":"hi","usage":{"input_tokens":100,"output_tokens":20,"cache_creation_input_tokens":500,"cache_read_input_tokens":1000}}}
+{"type":"user","timestamp":"2025-01-15T10:01:00Z","message":{"role":"user","content":"another"}}
+{"type":"assistant","timestamp":"2025-01-15T10:01:02Z","message":{"role":"assistant","content":"reply","usage":{"input_tokens":200,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":2000}}}
+{"type":"assistant","timestamp":"2025-01-15T10:02:00Z","message":{"role":"assistant","content":"third","usage":{"input_tokens":300,"output_tokens":80,"cache_creation_input_tokens":0,"cache_read_input_tokens":3000}}}

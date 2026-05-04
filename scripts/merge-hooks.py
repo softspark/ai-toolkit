@@ -111,6 +111,7 @@ def cmd_inject(toolkit_path: str, target_path: str) -> None:
         sys.exit(2)
 
     toolkit_hooks = toolkit_data.get("hooks", {})
+    toolkit_statusline = toolkit_data.get("statusLine")
 
     # Load existing target settings (preserving all non-hooks keys)
     target_settings: dict = {}
@@ -128,6 +129,17 @@ def cmd_inject(toolkit_path: str, target_path: str) -> None:
     result = merge(toolkit_hooks, target_hooks)
 
     target_settings["hooks"] = result
+
+    # statusLine: only set if absent OR previously installed by ai-toolkit.
+    # User-customized statusLine (no _source tag) is preserved.
+    if toolkit_statusline is not None:
+        existing_sl = target_settings.get("statusLine")
+        if existing_sl is None or (
+            isinstance(existing_sl, dict) and existing_sl.get("_source") == SOURCE_TAG
+        ):
+            target_settings["statusLine"] = toolkit_statusline
+        # else: user has a custom statusLine, leave it alone
+
     save_json(target_path, target_settings)
 
 
@@ -159,6 +171,11 @@ def cmd_strip(target_path: str) -> None:
         target_settings["hooks"] = result
     else:
         target_settings.pop("hooks", None)
+
+    # Strip toolkit-installed statusLine (user-customized one is preserved).
+    sl = target_settings.get("statusLine")
+    if isinstance(sl, dict) and sl.get("_source") == SOURCE_TAG:
+        target_settings.pop("statusLine", None)
 
     save_json(target_path, target_settings)
 

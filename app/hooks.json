@@ -234,5 +234,10 @@
                 ]
             }
         ]
+    },
+    "statusLine": {
+        "_source": "ai-toolkit",
+        "type": "command",
+        "command": "bash \"$HOME/.softspark/ai-toolkit/hooks/ai-toolkit-statusline.sh\""
     }
 }

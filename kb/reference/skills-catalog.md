@@ -62,7 +62,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **seo-validate** | `/seo-validate` | medium | Scan codebase for SEO issues: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Framework-aware (Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML). |
 | **mcp-builder** | `/mcp-builder` | high | Build production-grade MCP servers using the 4-phase methodology (research, implement, test, evaluate). TypeScript/Python, stdio/streamable-http. |
 
-## Hybrid Skills (31)
+## Hybrid Skills (32)
 
 Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
 
@@ -99,6 +99,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **persona** | `/persona` | low | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
 | **council** | `/council` | high | 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) with synthesis and confidence-rated recommendation. Tier 1, orchestrator, `context: fork`. |
 | **introspect** | `/introspect` | medium | Agent self-debugging: classify failure pattern, suggest smallest recovery action, emit structured introspection report |
+| **brand-voice** | `/brand-voice` | medium | Anti-trope list, voice principles, LLM rhetoric prevention; output modes (`concise` ≤60% tokens, `strict` ≤40%) governing conversational responses. |
 
 ### `/workflow` types
 
@@ -120,7 +121,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | `application-deploy` | 3 | Deploy → smoke test → release notes |
 | `proactive-troubleshooting` | 4 | Investigate → check perf → preventive fix → docs |
 
-## Knowledge Skills - Development (16)
+## Knowledge Skills - Development (15)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
@@ -139,7 +140,6 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **ruby-patterns** | `skills/ruby-patterns/` | Blocks, Rails conventions, RSpec, ActiveRecord |
 | **design-engineering** | `skills/design-engineering/` | UI polish, animation craft, easing, transforms, accessibility |
 | **documentation-standards** | `skills/documentation-standards/` | KB document conventions, frontmatter validation, category taxonomy |
-| **brand-voice** | `skills/brand-voice/` | Anti-trope list, voice principles, LLM rhetoric prevention |
 
 ## Knowledge Skills - Infrastructure (6)
 

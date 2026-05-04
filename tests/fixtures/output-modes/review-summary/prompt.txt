@@ -1,0 +1,1 @@
+give me a quick review of src/auth/login.ts line 42 — is that user lookup safe?

@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-112-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-981%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1032%20passing-success)](tests/)
 
 <p align="center">
   <img src="assets/ai-toolkit-readme-hero.png" alt="ai-toolkit 3 README hero showing one toolkit for 12 AI editors" width="900">
@@ -14,12 +14,14 @@
 
 ---
 
-## What's New in v3.1.1
+## What's New in v3.2.0
 
-Patch release fixing the Windows install crash introduced when project registration started using a POSIX-only file lock.
+Minor release adding response-length governance and a token-aware status line installed by default.
 
-- **Windows install no longer crashes** — `ai-toolkit install --local` on Windows hit `ModuleNotFoundError: No module named 'fcntl'` before doing any work. The project registry now selects `fcntl` (POSIX) or `msvcrt.locking` (Windows) at runtime; POSIX semantics are unchanged.
-- **Regression test on POSIX CI** — `tests/test_windows_support.bats` simulates the missing-`fcntl` scenario and exercises the Windows lock branch via a stubbed `msvcrt`, so this regression is caught without a Windows runner.
+- **Output modes for `brand-voice`** — `concise` (≤60% tokens) and `strict` (≤40%) modes governing conversational responses, with rule files in `app/skills/brand-voice/modes/` and a `measure.py` evaluator that runs against fixtures with load-bearing-fact assertions.
+- **Default comprehensive status line** — `ai-toolkit install` now wires `~/.claude/settings.json` to a single status line showing cwd, git branch, context-window %, real session tokens (parsed from JSONL), trend vs baseline, model-aware cost estimate, and model name. User-customized statusLine entries are preserved.
+- **Real token telemetry** — `scripts/session_token_stats.py` parses Claude Code session JSONL for actual input/output/cache token counts, exposed via `/briefing --tokens` and the status line. Stdlib-only, <100ms in the status-line hot path.
+- **Opt-outs via env vars** — `AI_TOOLKIT_STATUSLINE_DISABLE`, `_NO_TOKENS`, `_NO_GIT`, `_NO_COLOR`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -126,8 +128,8 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Component | Count | Description |
 |-----------|-------|-------------|
 | `skills/` (task) | 32 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/mcp-builder`, ... |
-| `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
-| `skills/` (knowledge) | 49 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
+| `skills/` (hybrid) | 32 | Slash commands with agent knowledge base |
+| `skills/` (knowledge) | 48 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
@@ -152,7 +154,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (981 tests)
+├── tests/               # Bats test suite (1032 tests)
 └── CHANGELOG.md
 ```
 

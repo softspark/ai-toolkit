@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-28T09:44:52Z",
+  "last_run": "2026-05-04T08:36:05Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,10 +24,11 @@
       }
     },
     "augment": {
-      "docs_hash": "7e632fc04e405f60",
+      "docs_hash": "f6b4c7fd64936879",
       "headings": [
         "Agent",
         "Code Completions",
+        "Documentation Index",
         "Introduction",
         "Next Edit",
         "\u200bAuggie CLI",
@@ -57,9 +58,10 @@
       }
     },
     "claude-code": {
-      "docs_hash": "e51d7d44c72cd522",
+      "docs_hash": "7d2930e5f97e4126",
       "headings": [
         "Claude Code overview",
+        "Documentation Index",
         "\u200bGet started",
         "\u200bNext steps",
         "\u200bUse Claude Code everywhere",
@@ -102,15 +104,16 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.121 (Claude Code)"
+      "version": "2.1.126 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "0c69984492abf906",
+      "docs_hash": "eec0384d180243aa",
       "headings": [
         "Cline CLI",
         "Cline Documentation",
         "Core Workflows",
         "Customization",
+        "Documentation Index",
         "Features",
         "Install Cline",
         "MCP Servers",
@@ -135,7 +138,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "9e188e7e454523b6",
+      "docs_hash": "5a4b2d4eeee1d675",
       "headings": [
         "About",
         "Contributing",
@@ -154,7 +157,7 @@
         "Packages 0",
         "Provide feedback",
         "Quickstart",
-        "Releases 744",
+        "Releases 757",
         "Repository files navigation",
         "Resources",
         "Saved searches",
@@ -187,12 +190,12 @@
       "version": "codex-cli 0.125.0"
     },
     "cursor": {
-      "docs_hash": "56983669e33487e2",
+      "docs_hash": "4c3678f1353e012f",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
         "AGENTS.md": false,
-        "Agent Mode": false,
+        "Agent Mode": true,
         "Composer": true,
         "cursorrules": false,
         "hooks.json": false,
@@ -203,7 +206,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "fa8989b65df2bb73",
+      "docs_hash": "20c254199b42f18c",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -242,7 +245,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "c2100e9dca8dce0d",
+      "docs_hash": "6467b14babd06b26",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot integrations",
@@ -290,7 +293,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "5c0f3f9c9b031f49",
+      "docs_hash": "c8c233106f166444",
       "headings": [
         "Add features",
         "Ask questions",
@@ -351,12 +354,13 @@
       }
     },
     "windsurf": {
-      "docs_hash": "9cadd867b0cec6da",
+      "docs_hash": "167ee1fc000f03d9",
       "headings": [
         "Advanced",
         "App Deploys",
         "Cascade",
         "Context Awareness",
+        "Documentation Index",
         "MCP",
         "Memories",
         "Recommended Plugins",

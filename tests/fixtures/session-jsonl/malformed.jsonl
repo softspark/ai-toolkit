@@ -1,0 +1,5 @@
+{"type":"user","message":{"content":"good line"}}
+this is not valid json at all
+{"type":"assistant","message":{"usage":{"input_tokens":50,"output_tokens":10}}}
+{broken
+{"type":"assistant","message":{"usage":{"input_tokens":75,"output_tokens":15}}}

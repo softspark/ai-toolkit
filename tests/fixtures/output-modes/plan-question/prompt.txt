@@ -1,0 +1,1 @@
+should we add a Redis cache layer for our user session lookups?

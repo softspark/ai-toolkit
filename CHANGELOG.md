@@ -7,6 +7,32 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.2.0 — Output discipline & token-aware status line (2026-05-04)
+
+Minor release. Two coordinated additions: per-response output discipline and a real-token status line installed by default.
+
+### Added
+
+- **`brand-voice` output modes** — `concise` (≤60% tokens) and `strict` (≤40% tokens) extend the existing brand-voice skill with response-length governance. Activate via `output-mode: concise` in project `CLAUDE.md` or `/brand-voice concise`. Mode rules in `app/skills/brand-voice/modes/`.
+- **`measure.py` token evaluator** — fixture-driven before/after comparison at `app/skills/brand-voice/scripts/measure.py`. Asserts budget compliance and load-bearing fact preservation via optional `must_contain.txt` per fixture. JSON and human report formats.
+- **`session_token_stats.py`** — stdlib-only Claude Code session JSONL parser at `scripts/session_token_stats.py`. Reports real input/output/cache token counts per session, supports `--since`, `--baseline`, `--statusline`, and `--json` modes.
+- **Comprehensive default status line** — new `app/hooks/ai-toolkit-statusline.sh` renders a single line with cwd, git branch + dirty marker, context-window %, real session tokens (k-formatted), trend arrow vs baseline, model-aware cost estimate, and model name. Installed automatically into `~/.claude/settings.json` by `ai-toolkit install` (and `update`). User-customized statusLine entries (without the ai-toolkit `_source` tag) are preserved untouched.
+- **`merge-hooks.py` statusLine support** — `inject` writes the toolkit statusLine only when the target has none or has a stale toolkit-installed one. `strip` removes only toolkit-installed entries.
+- **`briefing` skill `--tokens` mode** — `/briefing --tokens [--since 7d]` for explicit reporting and baseline capture. Includes wire-up docs for the status-line hook and `AI_TOOLKIT_STATUSLINE_*` opt-out env vars.
+
+### Opt-out
+
+- `AI_TOOLKIT_STATUSLINE_DISABLE=1` silences output entirely
+- `AI_TOOLKIT_STATUSLINE_NO_TOKENS=1` hides token / cost segments
+- `AI_TOOLKIT_STATUSLINE_NO_GIT=1` hides git segment
+- `AI_TOOLKIT_STATUSLINE_NO_COLOR=1` disables ANSI colors
+
+### Tests
+
+- 36 new bats tests across `tests/test_brand_voice.bats`, `tests/test_session_token_stats.bats`, `tests/test_statusline_hook.bats`, `tests/test_merge_hooks_statusline.bats`.
+
+---
+
 ## v3.1.1 — Windows install fix (2026-04-29)
 
 Patch release. `ai-toolkit install --local` crashed on Windows before doing any work because `scripts/install_steps/project_registry.py` imported `fcntl` (POSIX-only) at module load, raising `ModuleNotFoundError: No module named 'fcntl'`.

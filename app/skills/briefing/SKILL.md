@@ -18,6 +18,8 @@ Triggers the Chief of Staff to generate an executive summary.
 /briefing [period]
 # Example: /briefing today
 # Example: /briefing week
+/briefing --tokens [--since 7d|24h|30m]
+# Reports real session token usage from Claude Code JSONL.
 ```
 
 ## Protocol
@@ -57,6 +59,47 @@ Triggers the Chief of Staff to generate an executive summary.
 - `maintenance/` branch logs from `/night-watch` use a different format (Shift Report markdown) than agent run logs. Do not concatenate blindly — parse each source separately and normalize.
 - "Recent runs" without an explicit time bound defaults to **everything** on some log backends. Always pass `--since` or a date filter, or you will read a week into yesterday's memory.
 - Successful runs outnumber interesting runs by an order of magnitude. Aggressively filter green/noop entries — they are the signal's noise floor.
+
+## Token Receipts
+
+The `--tokens` flag reports real token usage parsed from Claude Code session JSONL — not estimates. Useful for:
+
+- Verifying `output-mode: concise` actually reduces tokens vs default sessions
+- Spotting expensive runs before they show up on the bill
+- Capturing a baseline before changing prompts or skills
+
+Underlying script: `scripts/session_token_stats.py`.
+
+```bash
+# Aggregate current session
+python3 scripts/session_token_stats.py --json
+
+# Statusline-friendly one-line output
+python3 scripts/session_token_stats.py --statusline
+
+# Trend vs baseline
+python3 scripts/session_token_stats.py --statusline --baseline ~/.softspark/ai-toolkit/baseline.json
+```
+
+### Status line (installed by default in v3.2.0+)
+
+`ai-toolkit install` wires `~/.claude/settings.json` to `app/hooks/ai-toolkit-statusline.sh`, which renders one line combining cwd, git, context %, real session tokens, trend, cost, and model. Custom statusLine entries you set yourself are preserved untouched.
+
+Opt-outs (no reinstall required):
+
+- `AI_TOOLKIT_STATUSLINE_DISABLE=1` — silence the line entirely
+- `AI_TOOLKIT_STATUSLINE_NO_TOKENS=1` — hide token + cost segments
+- `AI_TOOLKIT_STATUSLINE_NO_GIT=1` — hide git segment
+- `AI_TOOLKIT_STATUSLINE_NO_COLOR=1` — disable ANSI colors
+
+### Save a baseline
+
+```bash
+python3 scripts/session_token_stats.py --json | jq '.totals' > ~/.softspark/ai-toolkit/baseline.json
+export AI_TOOLKIT_STATUSLINE_BASELINE=~/.softspark/ai-toolkit/baseline.json
+```
+
+The statusline then renders trend arrows (↑ / ↓) against that baseline.
 
 ## When NOT to Use
 

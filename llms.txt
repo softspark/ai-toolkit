@@ -19,6 +19,8 @@
 - [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/history/completed/offline-slm-profile-plan-20260411.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
+- [Spike: F2 MCP Context Trim — Hook Feasibility & Path Decision](kb/planning/f2-mcp-trim-spike-conclusion.md)
+- [Plan: Output & Token Discipline](kb/planning/output-token-discipline-plan.md)
 - [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Release Preparation](kb/procedures/release-preparation-sop.md)

@@ -348,7 +348,7 @@ Security expert. Use for OWASP Top 10, CVE analysis, security audits, penetratio
 
 ### `seo-specialist`
 
-Search engine optimization specialist. Trigger words: SEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org
+Search engine + generative engine optimization specialist. Trigger words: SEO, GEO, AEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org, llms.txt, ChatGPT visibility, Claude citation, Perplexity ranking, AI Overviews
 
 **Tools:** `Read, Write, Edit, Bash, Grep, Glob`
 
@@ -436,7 +436,7 @@ Specialized agent personas — apply their expertise for relevant tasks:
 - **search-specialist**: Information retrieval and search optimization specialist. Trigger words: search, query, semantic search, information retrieval, relevance, ranking, search optimization
 - **security-architect**: Proactive security design expert. Use for Threat Modeling, architecture security reviews, and designing secure systems (AuthN/AuthZ, Crypto).
 - **security-auditor**: Security expert. Use for OWASP Top 10, CVE analysis, security audits, penetration testing, vulnerability assessment, hardening. Triggers: security, owasp, cve, vulnerability, audit, hardening, penetration, pentest, injection test, api security.
-- **seo-specialist**: Search engine optimization specialist. Trigger words: SEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org
+- **seo-specialist**: Search engine + generative engine optimization specialist. Trigger words: SEO, GEO, AEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org, llms.txt, ChatGPT visibility, Claude citation, Perplexity ranking, AI Overviews
 - **system-governor**: The Guardian of the Constitution. Validates all evolutionary changes and enforces immutable rules. Has VETO power.
 - **tech-lead**: Technical authority for code quality, architecture patterns, and stack decisions. Use for code reviews, technological disputes, and standards enforcement.
 - **technical-researcher**: Deep technical investigation and multi-source research synthesis specialist. Trigger words: technical research, feasibility study, root cause analysis, API investigation, compatibility research, comparison matrix, synthesize, aggregate, report, executive summary, gap analysis, findings, multi-source, cross-reference
@@ -454,7 +454,7 @@ Skills are invocable commands or auto-loaded knowledge sources:
 - **architecture-audit**: Explore codebase organically for architectural friction, discover shallow modules, and propose module-deepening refactors as GitHub issue RFCs using parallel sub-agent interface designs. Use when user wants to improve architecture, find shallow modules, deepen modules, or reduce coupling. Codex-adapted: uses native subagents and plan tracking.
 - **architecture-decision**: Architecture decision making via trade-off analysis in RFC/RFD/ADR format: context, constraints, 3+ options, comparison, recommendation. Triggers: architecture decision, ADR, RFC, RFD, trade-offs, options comparison, design choice, pick between, should we use, evaluate approach. Load when weighing 2+ architectural options or writing decision records.
 - **biz-scan**: Scans codebase for business opportunities by analyzing database schemas, API endpoints, tracking events, and feature flags to surface underutilized capabilities, missing KPIs, and monetization gaps. Use when the user asks about revenue opportunities, business metrics, KPI coverage, analytics gaps, or monetization analysis of a codebase.
-- **brand-voice**: Loaded when writing documentation, content, README, or user-facing text. Prevents generic LLM rhetoric and enforces direct, technical voice.
+- **brand-voice**: Loaded when writing documentation, content, README, or user-facing text, AND when an output-mode is set for conversational responses. Prevents generic LLM rhetoric, enforces direct technical voice, and supplies optional concise/strict response modes.
 - **briefing**: Generate an executive daily briefing that aggregates reports from all agents into a short, decision-focused summary. Use when the user asks for a status update across the whole system — not for one-agent activity reports.
 - **build**: Build the project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Use when the user asks to compile, bundle, or produce artifacts — not to run tests or deploy.
 - **chaos**: Inject controlled faults for resilience testing on non-production targets. Use when the user explicitly asks for a chaos experiment, latency injection, or dependency kill — never implicit.

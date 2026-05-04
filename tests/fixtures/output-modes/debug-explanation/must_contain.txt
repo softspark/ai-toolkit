@@ -1,0 +1,5 @@
+# Load-bearing facts that MUST appear in concise.md and strict.md.
+# Lines starting with # are comments. Empty lines ignored.
+React.memo
+useMemo
+useCallback

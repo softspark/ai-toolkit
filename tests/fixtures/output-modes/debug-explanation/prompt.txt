@@ -1,0 +1,1 @@
+why is my React component re-rendering on every parent update?
