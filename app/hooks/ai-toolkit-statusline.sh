@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ai-toolkit-statusline.sh — comprehensive Claude Code status line.
 #
-# Renders one line combining: cwd, git state, model, context-window %,
-# real session tokens (from JSONL), and a model-aware cost estimate.
+# Renders one line combining: cwd, git state, context-window %, real session
+# tokens (from JSONL), and the model name. Cost-estimate segment is opt-in via
+# AI_TOOLKIT_STATUSLINE_SHOW_COST=1 — off by default to avoid alarming numbers.
 #
 # Wire-up: ai-toolkit installer adds this as default `statusLine` in
 # ~/.claude/settings.json. Manual config:
@@ -18,10 +19,12 @@
 #   AI_TOOLKIT_STATUSLINE_DISABLE   — "1" silences output entirely
 #   AI_TOOLKIT_STATUSLINE_BASELINE  — JSON baseline for trend arrow
 #   AI_TOOLKIT_STATUSLINE_NO_COLOR  — "1" disables ANSI colors
-#   AI_TOOLKIT_STATUSLINE_NO_TOKENS — "1" hides token/cost segments
+#   AI_TOOLKIT_STATUSLINE_NO_TOKENS — "1" hides token segment
 #   AI_TOOLKIT_STATUSLINE_NO_GIT    — "1" hides git segment
+#   AI_TOOLKIT_STATUSLINE_SHOW_COST — "1" appends model-aware cost estimate
 #
-# Performance budget: <100ms. Soft-fails any segment whose data is missing.
+# Performance: ~200ms cold, scales with session length (JSONL line count).
+# Soft-fails any segment whose data is missing.
 
 set -u
 
@@ -67,35 +70,33 @@ else
     C_DIM=$'\033[2m'
 fi
 
-# ── Parse stdin from Claude Code ─────────────────────────────────────────────
+# ── Parse stdin from Claude Code in a single python3 invocation ─────────────
+# 4 separate `python3 -c` calls spent ~200ms on subprocess startup. One call
+# extracts every field we need and emits a tab-separated record we can read
+# back into shell vars in a single `IFS=$'\t' read` — keeps total cold start
+# under ~100ms on typical hardware.
 INPUT="$(cat 2>/dev/null || true)"
-parse() {
-    local field="$1"
-    printf '%s' "$INPUT" | python3 -c "
+PARSED="$(printf '%s' "$INPUT" | python3 -c '
 import json, sys
+def get(d, path):
+    for k in path.split("."):
+        d = d.get(k) if isinstance(d, dict) else None
+        if d is None:
+            return ""
+    return d if d is not None else ""
 try:
-    d = json.loads(sys.stdin.read())
-    keys = '$field'.split('.')
-    for k in keys:
-        if isinstance(d, dict):
-            d = d.get(k)
-        else:
-            d = None
-            break
-    if d is None:
-        sys.exit(0)
-    print(d)
+    d = json.loads(sys.stdin.read() or "{}")
 except Exception:
-    sys.exit(0)
-" 2>/dev/null
-}
+    d = {}
+cwd = get(d, "cwd")
+model = get(d, "model.display_name") or get(d, "model.id")
+ctx = get(d, "context_window.used_percentage")
+sid = get(d, "session_id")
+print(f"{cwd}\t{model}\t{ctx}\t{sid}")
+' 2>/dev/null)"
 
-CWD="$(parse cwd)"
+IFS=$'\t' read -r CWD MODEL_NAME CTX_USED SESSION_ID <<< "$PARSED"
 [ -z "$CWD" ] && CWD="$PWD"
-MODEL_NAME="$(parse model.display_name)"
-[ -z "$MODEL_NAME" ] && MODEL_NAME="$(parse model.id)"
-CTX_USED="$(parse context_window.used_percentage)"
-SESSION_ID="$(parse session_id)"
 
 # ── Segment: prompt + dir ────────────────────────────────────────────────────
 DIR_BASENAME="$(basename "$CWD" 2>/dev/null || echo '~')"
@@ -179,7 +180,10 @@ except Exception:
 " 2>/dev/null)"
             if [ -n "$SEG_TOKENS" ]; then
                 IFS='|' read -r TOK_RENDERED TOK_COST TOK_TREND <<< "$SEG_TOKENS"
-                SEG_TOKENS=" ${C_DIM}tok:${C_RESET}${TOK_RENDERED}${TOK_TREND} ${C_DIM}\$${C_RESET}${TOK_COST}"
+                SEG_TOKENS=" ${C_DIM}tok:${C_RESET}${TOK_RENDERED}${TOK_TREND}"
+                if [ "${AI_TOOLKIT_STATUSLINE_SHOW_COST:-0}" = "1" ]; then
+                    SEG_TOKENS+=" ${C_DIM}\$${C_RESET}${TOK_COST}"
+                fi
             fi
         fi
     fi

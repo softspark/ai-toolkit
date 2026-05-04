@@ -20,6 +20,7 @@ teardown() {
     unset AI_TOOLKIT_STATUSLINE_BASELINE
     unset AI_TOOLKIT_STATUSLINE_NO_TOKENS
     unset AI_TOOLKIT_STATUSLINE_NO_GIT
+    unset AI_TOOLKIT_STATUSLINE_SHOW_COST
 }
 
 # ── Existence ────────────────────────────────────────────────────────────────
@@ -62,7 +63,14 @@ teardown() {
     echo "$output" | grep -qE 'tok:750'
 }
 
-@test "statusline: shows cost estimate when tokens exist" {
+@test "statusline: hides cost segment by default (opt-in only)" {
+    run bash -c 'echo "{\"cwd\":\"/tmp/fakeproj\",\"model\":{\"display_name\":\"claude-opus-4-7\"}}" | bash "'"$HOOK"'"'
+    [ "$status" -eq 0 ]
+    ! echo "$output" | grep -qE '\$[0-9]+\.[0-9]{2}'
+}
+
+@test "statusline: shows cost estimate when AI_TOOLKIT_STATUSLINE_SHOW_COST=1" {
+    export AI_TOOLKIT_STATUSLINE_SHOW_COST=1
     run bash -c 'echo "{\"cwd\":\"/tmp/fakeproj\",\"model\":{\"display_name\":\"claude-opus-4-7\"}}" | bash "'"$HOOK"'"'
     [ "$status" -eq 0 ]
     echo "$output" | grep -qE '\$[0-9]+\.[0-9]{2}'
@@ -116,6 +124,7 @@ teardown() {
 # ── Pricing ──────────────────────────────────────────────────────────────────
 
 @test "statusline: opus pricing differs from haiku for same tokens" {
+    export AI_TOOLKIT_STATUSLINE_SHOW_COST=1
     run bash -c 'echo "{\"cwd\":\"/tmp/fakeproj\",\"model\":{\"display_name\":\"claude-opus-4-7\"}}" | bash "'"$HOOK"'"'
     opus_cost=$(echo "$output" | grep -oE '\$[0-9]+\.[0-9]{2}' | head -1)
     run bash -c 'echo "{\"cwd\":\"/tmp/fakeproj\",\"model\":{\"display_name\":\"claude-haiku-4-5\"}}" | bash "'"$HOOK"'"'

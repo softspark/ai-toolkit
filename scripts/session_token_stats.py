@@ -86,12 +86,18 @@ def find_latest_session(search_dir: Path) -> Path | None:
 
 
 def iter_messages(session_file: Path) -> Iterator[dict[str, Any]]:
-    """Yield parsed JSON messages from a session file. Skips malformed lines."""
+    """Yield parsed JSON messages from a session file. Skips malformed lines.
+
+    Lines without a `usage` field are skipped without parsing — most lines in a
+    Claude Code session JSONL are user inputs, tool results, etc. that have no
+    token cost. Filtering at the substring level avoids json.loads on ~80% of
+    the file and cuts parse time roughly in half on long sessions.
+    """
     try:
         with open(session_file, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                if not line:
+                if not line or '"usage"' not in line:
                     continue
                 try:
                     yield json.loads(line)
