@@ -14,15 +14,18 @@ doc_type: plan
 status: completed
 created: "2026-05-04"
 last_updated: "2026-05-04"
+completed: "2026-05-04"
 completion: "100% of v3.2.0 scope (F2 deferred to v4.0 per spike conclusion)"
+shipped_in: "v3.2.0"
 description: "Three coordinated extensions to ai-toolkit that reduce token usage and surface real cost data: (1) brand-voice output modes for concise/strict Claude responses, (2) MCP description trimmer to compact tool listings before they reach the model, (3) token receipts in statusline reading session JSONL directly. Native extensions, no third-party skill names imported."
 ---
 
 # Plan: Output & Token Discipline
 
-**Status:** Proposed
+**Status:** Completed (shipped in v3.2.0 on 2026-05-04)
 **Author:** lukasz.krzemien
 **Source of inspiration:** external Claude Code plugin observed 2026-05-04 (mechanism only, not naming or branding)
+**Spike companion:** [`kb/history/completed/f2-mcp-trim-spike-20260504.md`](f2-mcp-trim-spike-20260504.md)
 
 ## Cel
 
@@ -94,25 +97,19 @@ Trzy mechanizmy:
 
 ## Feature 2 — MCP context trim — DEFERRED TO v4.0
 
-**Status:** Deferred. See `kb/planning/f2-mcp-trim-spike-conclusion.md` for the spike result.
+**Status:** Deferred. Spike conducted before implementation, conclusion in [`f2-mcp-trim-spike-20260504.md`](f2-mcp-trim-spike-20260504.md).
 
-**Reason:** Claude Code's hook system does not expose `tools/list` metadata to hooks; only individual tool calls and inputs. Modifying MCP tool descriptions before they reach the model requires either a local MCP proxy server (multi-day scope, high blast radius) or source-side forks of MCP servers (high maintenance). Both are out of scope for v3.2.0.
+**Reason:** Claude Code hooks do not expose the MCP `tools/list` response or the system-prompt tool catalog. Hook events (`PreToolUse`, `PermissionRequest`, `Elicitation`) operate on individual tool calls only. Modifying tool descriptions before they reach the model requires a local MCP proxy server — multi-day scope, single-bug-breaks-all-MCP failure mode, out of scope for v3.2.0.
 
-The full proxy approach is parked for v4.0 with its own dedicated PRD and architecture spike.
+**Resolution:** Full proxy-server approach parked for **v4.0** with its own dedicated PRD and architecture spike. The mid-spike "F2-lite observability tool" alternative was also dropped per user decision (2026-05-04) — v3.2.0 ships F1+F3 only; v4.0 picks up the proxy-server work in full scope.
 
+The original Feature 2 design that follows is preserved as historical context for the v4.0 PRD.
 
+### Original design (historical)
 
-### Cel
-Pre-tool-use hook który skraca opisy MCP-tooli zanim trafią do modelu. Zachowuje URL-e, identifiers, parametry funkcji.
+**Cel** — Pre-tool-use hook który skraca opisy MCP-tooli zanim trafią do modelu. Zachowuje URL-e, identifiers, parametry funkcji.
 
-### Decyzje nazewnicze
-- **Wybrane:** nowy skill `mcp-trim` (knowledge-only, dokumentuje użycie) + skrypt `scripts/mcp_description_trimmer.py` + opt-in hook `app/hooks/mcp-trim.sh`
-- **Odrzucone:**
-  - Rozszerzenie `mcp-builder` — buduje serwery, nie modyfikuje runtime, niepasujący scope
-  - Rozszerzenie `mcp-patterns` — to skill wiedzy, nie wykonawczy
-  - Standalone MCP proxy serwer — za duże blast-radius na pierwszą iterację
-
-### Pliki
+**Pliki**
 
 | Ścieżka | Akcja | Cel |
 |---------|-------|-----|
@@ -121,40 +118,20 @@ Pre-tool-use hook który skraca opisy MCP-tooli zanim trafią do modelu. Zachowu
 | `app/hooks/mcp-trim.sh` | new | Opt-in hook (typu PreToolUse jeśli wykonalne — patrz spike) |
 | `tests/mcp_trimmer.bats` | new | Fixtures z jira/filesystem/dart-mcp listings, asercje na zachowanie inputSchema |
 
-### Heurystyki kompresji
+**Heurystyki kompresji** (do reuse w v4.0 proxy)
 
 - Usuń przykłady z `description` >40 znaków
 - Skróć `Use this server to...` do najkrótszej formy zachowującej cel
 - Usuń duplikat nazwy tool'a w opisie
 - **Zachowaj bezwzględnie:** `inputSchema.properties[*].description` (typy), `required`, `enum` values, identyfikatory URL/path
 - Cel: redukcja >40% długości opisu, 0% utraty parametrów
+- **Nigdy nie usuwaj** słów: `not`, `never`, `only`, `except`, `unless` — niosą sygnał discriminacji "kiedy NIE używać"
 
-### Spike przed implementacją (1h)
+**Ryzyka znane przed spike**
 
-- Sprawdzić czy Claude Code's `PreToolUse` hook może modyfikować deklarację tool'a, czy tylko payload wywołania
-- Jeśli tylko payload → wymagany MCP proxy server, dokończenie odsuwane do v2
-- Wynik spike'u: ADR/decision note w `kb/decisions/`
-
-### Profil instalacji
-
-- NIE w `default` ani `standard`
-- Tylko `--with-mcp-trim` flag lub `--profile strict`
-- Ostrzeżenie w README: "może odebrać Claude'owi sygnał kiedy NIE używać tool'a"
-
-### Ryzyka (devil's advocate)
-
-1. **Skompresowanie usuwa sygnał discriminacji** — opis "Use this server only for X, never for Y" po skróceniu może stracić "never for Y". Mitigacja: heurystyka NIE usuwa `not`, `never`, `only`, `except`, `unless`.
-2. **Brak Claude Code API do modyfikacji tool list** — wymaga MCP proxy. Spike rozstrzygnie.
-3. **Niespodziewana regresja w innych projektach** — opt-in z dokładnym dokumentem migracji.
-
-### Success criteria
-
-- Opisy MCP w fixtures zredukowane >40%
-- Deep-equal `inputSchema` z baseline po stripie pól description (zero zmiany w schematach)
-- `tests/mcp_trimmer.bats` pass
-
-### Estymata
-1h spike + 6–10h implementacji (jeśli spike pozytywny) lub 0h (jeśli spike pokaże wymóg proxy server, scope odsuwany)
+1. Skompresowanie usuwa sygnał discriminacji (mitigacja: blacklist powyżej)
+2. Brak Claude Code API do modyfikacji tool list — **potwierdzone przez spike**, wymaga proxy
+3. Niespodziewana regresja w innych projektach — opt-in jest must-have
 
 ---
 
@@ -177,7 +154,8 @@ Pokazać realne (nie estymowane) zużycie tokenów per-sesja w statusline Claude
 | `app/hooks/statusline-tokens.sh` | new | Type `statusLine` w settings.json. Sumuje `usage.input_tokens` + `usage.output_tokens` z bieżącej sesji JSONL |
 | `app/hooks/track-usage.sh` | edit | Po wykryciu `/skill` zapisuj też `prompt_tokens` jeśli `transcript_path` dostępne |
 | `app/skills/briefing/SKILL.md` | edit | Nowa sekcja "Token receipts", komendy `/briefing --tokens --since 7d`, `/briefing --tokens --share` |
-| `scripts/install.py` lub hook injector | edit | Rejestracja `statusLine` w settings.json template (opt-in) |
+| `scripts/merge-hooks.py` | edit | Statusline injection do `settings.json`, preserve user-customized entries (delivered as F3.5) |
+| `app/hooks/ai-toolkit-statusline.sh` | new | Comprehensive statusline (cwd + git + ctx + tokens + cost + model), default install (delivered as F3.5) |
 | `tests/session_token_stats.bats` | new | Fixture JSONL z 3 messages, asercje na sumę i breakdown |
 | `tests/statusline_tokens.bats` | new | Mock JSONL, weryfikacja outputu hooka (max 80 znaków, brak NaN, fallback gdy brak sesji) |
 
@@ -254,17 +232,58 @@ Feature 2 (mcp-trim)  ← spike research najpierw, niezależne od F1/F3
 7. Update `README.md`, `CLAUDE.md`, `ARCHITECTURE.md`, `architecture-overview.md` jeśli zmiana behavior
 8. Commit conventional: `feat(brand-voice): add output modes`, `feat(briefing): add token receipts`, `feat(mcp-trim): add description trimmer`
 
-## Open questions
+## Open questions — resolved
 
-1. Czy `PreToolUse` hook może modyfikować deklarację tool'a w MCP listingu? (rozstrzyga F2 spike)
-2. Czy Claude Code wystawia hookom `CLAUDE_SESSION_ID` env var? Jeśli nie — heurystyka "newest JSONL" w kursorze.
-3. Czy włączyć `concise` mode jako default po F1, czy zostawić opt-in? Decyzja po pomiarach z F3 (dane > opinia).
+1. **Czy `PreToolUse` może modyfikować deklarację tool'a w MCP listingu?** — NIE. Spike potwierdził że żaden hook event nie wystawia `tools/list`. F2 wymaga MCP proxy. Odsunięte do v4.0.
+2. **Czy Claude Code wystawia hookom `CLAUDE_SESSION_ID`?** — częściowo. `scripts/session_token_stats.py` używa fallback "newest JSONL w katalogu projektu" + opcjonalnie cwd → sanitize → match. Działa stabilnie na realnych sesjach (96.6k tokens parsed correctly w smoke tescie).
+3. **Czy włączyć `concise` mode jako default?** — pozostaje opt-in. `brand-voice` z trybami auto-loaduje się tylko gdy projekt ustawi `output-mode: concise` w `CLAUDE.md` lub user wpisze `/brand-voice concise`. Pomiary z F3 dadzą dane do późniejszej decyzji.
+
+## Final delivery (v3.2.0)
+
+### Shipped
+
+| Feature | Outcome | Pliki |
+|---------|---------|-------|
+| **F1 — brand-voice output modes** | Done. Aggregate ratio na 3 fixtures: concise **21%**, strict **14%** (cel ≤60% / ≤40%). | `app/skills/brand-voice/SKILL.md`, `app/skills/brand-voice/modes/{concise,strict}.md`, `app/skills/brand-voice/scripts/measure.py`, `tests/fixtures/output-modes/{debug-explanation,plan-question,review-summary}/`, `tests/test_brand_voice.bats` (14 tests) |
+| **F3 — token receipts** | Done. Smoke-test na realnej sesji: 96.6k tokenów poprawnie sparsowane. | `scripts/session_token_stats.py`, `tests/fixtures/session-jsonl/{three-messages,malformed,empty}.jsonl`, `tests/test_session_token_stats.bats` (15 tests) |
+| **F3.5 — comprehensive default statusline** | Done. Pełny segment: cwd + git + ctx% + tokens + trend + model-aware cost + model. Installed by default via `merge-hooks.py`, user-custom statusLine preserved untouched. | `app/hooks/ai-toolkit-statusline.sh`, `app/hooks.json` (`statusLine` entry), `scripts/merge-hooks.py` (statusLine inject/strip), `tests/test_statusline_hook.bats` (14 tests), `tests/test_merge_hooks_statusline.bats` (8 tests) |
+| **briefing skill extension** | `/briefing --tokens` + wire-up docs + opt-out env vars. | `app/skills/briefing/SKILL.md` |
+
+### Deviations from plan
+
+| Plan said | Shipped | Reason |
+|-----------|---------|--------|
+| 10 fixtures w F1 | 3 fixtures + `must_contain.txt` mechanism | Mniejszy zestaw + extensible konwencja wystarcza do walidacji budżetów; jakość > ilość |
+| F3 hook integracja jako follow-up (manual settings.json edit) | F3.5 dostarczył pełny default install via `merge-hooks.py` | User feedback w trakcie pracy: "niech ai-toolki instaluje go domyslnie od nowej wersji" |
+| F2 implementacja po spike'u | F2 deferred do v4.0 | Spike pokazał że Claude Code hooki nie wystawiają `tools/list` → wymaga proxy server, multi-day scope |
+
+### Quality gates passed
+
+- `validate.py --strict`: 0 errors / 0 warnings
+- `audit_skills.py --ci`: 0 HIGH / 0 WARN / 13 INFO (pre-existing)
+- `audit_skills.py --sarif`: SARIF 2.1.0 valid, 5 rules
+- `npm test`: 1032 / 1032 passing (was 981 in v3.1.1)
+- Registry drift: clean
+- Provenance + checksum-pin: verified
+- Ecosystem doctor: 9 cosmetic drifts (class A) refreshed
+
+### Skill classification change
+
+`brand-voice` przeszedł `user-invocable: false → true` (knowledge → hybrid):
+
+- **Hybrid**: 31 → 32
+- **Knowledge**: 49 → 48
+- **Task**: 32 (no change)
+
+Updated: `README.md`, `kb/reference/architecture-overview.md`, `kb/reference/skills-catalog.md`.
 
 ## Status & rewizje
 
 | Data | Zmiana | Autor |
 |------|--------|-------|
 | 2026-05-04 | Initial draft | lukasz.krzemien |
-| 2026-05-04 | F1 implementation done — brand-voice modes (concise/strict), measure.py, 3 fixtures, 14 bats tests passing. Aggregate ratio: concise 21%, strict 14% on shipped fixtures (well under 60%/40% targets). | claude |
-| 2026-05-04 | F3 implementation done — `scripts/session_token_stats.py` (stdlib JSONL parser), `app/hooks/statusline-tokens.sh`, briefing skill extended with `--tokens` and statusline wire-up docs. 22 new bats tests passing. Smoke-tested on real Claude Code session: 96.6k tokens correctly parsed. Installer integration deferred to follow-up — manual settings.json edit documented in briefing skill. | claude |
-| 2026-05-04 | F3.5 follow-up done — replaced focused tokens-only hook with comprehensive `app/hooks/ai-toolkit-statusline.sh` combining cwd, git, ctx%, tokens, trend, model-aware cost, model name. Extended `merge-hooks.py` to inject `statusLine` into settings.json by default while preserving user-customized entries (no `_source: ai-toolkit` tag). Added `app/hooks.json` `statusLine` entry. Bumped version 3.1.1 → 3.2.0. Added 22 new bats tests (statusline + merge-hooks). CHANGELOG, README "What's New", briefing skill all updated. | claude |
+| 2026-05-04 | F1 implementation done — brand-voice modes, measure.py, 3 fixtures, 14 bats tests. Aggregate ratio: concise 21%, strict 14%. | claude |
+| 2026-05-04 | F3 implementation done — `session_token_stats.py`, `statusline-tokens.sh`, briefing skill extension. 22 new bats tests. Smoke-tested on real session. | claude |
+| 2026-05-04 | F3.5 follow-up done — replaced focused tokens hook with comprehensive `ai-toolkit-statusline.sh`. Extended `merge-hooks.py` for safe statusLine injection. Version bumped 3.1.1 → 3.2.0. 22 new bats tests. CHANGELOG + README updated. | claude |
+| 2026-05-04 | F2 spike completed — see [`f2-mcp-trim-spike-20260504.md`](f2-mcp-trim-spike-20260504.md). Hooks cannot modify `tools/list`. F2 deferred to v4.0 with own PRD. | claude |
+| 2026-05-04 | Plan archived to `kb/history/completed/`. Shipped in v3.2.0. | claude |
