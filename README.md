@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-112-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1033%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1038%20passing-success)](tests/)
 
 <p align="center">
   <img src="assets/ai-toolkit-readme-hero.png" alt="ai-toolkit 3 README hero showing one toolkit for 12 AI editors" width="900">
@@ -19,9 +19,9 @@
 Minor release adding response-length governance and a token-aware status line installed by default.
 
 - **Output modes for `brand-voice`** — `concise` (≤60% tokens) and `strict` (≤40%) modes governing conversational responses, with rule files in `app/skills/brand-voice/modes/` and a `measure.py` evaluator that runs against fixtures with load-bearing-fact assertions.
-- **Default comprehensive status line** — `ai-toolkit install` now wires `~/.claude/settings.json` to a single status line showing cwd, git branch, context-window %, real session tokens (parsed from JSONL), trend vs baseline, and model name. User-customized statusLine entries are preserved. Cost-estimate segment opt-in via `AI_TOOLKIT_STATUSLINE_SHOW_COST=1`.
-- **Real token telemetry** — `scripts/session_token_stats.py` parses Claude Code session JSONL for actual input/output/cache token counts, exposed via `/briefing --tokens` and the status line. Stdlib-only, <100ms in the status-line hot path.
-- **Opt-outs via env vars** — `AI_TOOLKIT_STATUSLINE_DISABLE`, `_NO_TOKENS`, `_NO_GIT`, `_NO_COLOR`, `_SHOW_COST` (opt-in).
+- **Default comprehensive status line** — `ai-toolkit install` now wires `~/.claude/settings.json` to a single line showing cwd, git, a 10-cell context-window progress bar (green <70% / orange 70–89% / red ≥90%), `↑input ↓output` token arrows, effort level, and model. All data read directly from Claude Code's statusLine stdin — no JSONL parsing, ~50 ms cold start. User-customized statusLine entries are preserved untouched. Cost segment opt-in via `AI_TOOLKIT_STATUSLINE_SHOW_COST=1`.
+- **Real token telemetry** — `scripts/session_token_stats.py` parses Claude Code session JSONL for `/briefing --tokens` reporting and baseline capture. Stdlib-only.
+- **Opt-outs via env vars** — `AI_TOOLKIT_STATUSLINE_DISABLE`, `_NO_TOKENS`, `_NO_GIT`, `_NO_EFFORT`, `_NO_COLOR`, `_SHOW_COST` (opt-in), `_DUMP` (debug).
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -154,7 +154,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1033 tests)
+├── tests/               # Bats test suite (1038 tests)
 └── CHANGELOG.md
 ```
 

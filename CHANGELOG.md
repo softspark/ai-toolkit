@@ -16,21 +16,24 @@ Minor release. Two coordinated additions: per-response output discipline and a r
 - **`brand-voice` output modes** — `concise` (≤60% tokens) and `strict` (≤40% tokens) extend the existing brand-voice skill with response-length governance. Activate via `output-mode: concise` in project `CLAUDE.md` or `/brand-voice concise`. Mode rules in `app/skills/brand-voice/modes/`.
 - **`measure.py` token evaluator** — fixture-driven before/after comparison at `app/skills/brand-voice/scripts/measure.py`. Asserts budget compliance and load-bearing fact preservation via optional `must_contain.txt` per fixture. JSON and human report formats.
 - **`session_token_stats.py`** — stdlib-only Claude Code session JSONL parser at `scripts/session_token_stats.py`. Reports real input/output/cache token counts per session, supports `--since`, `--baseline`, `--statusline`, and `--json` modes.
-- **Comprehensive default status line** — new `app/hooks/ai-toolkit-statusline.sh` renders a single line with cwd, git branch + dirty marker, context-window %, real session tokens (k-formatted), trend arrow vs baseline, and model name. Installed automatically into `~/.claude/settings.json` by `ai-toolkit install` (and `update`). User-customized statusLine entries (without the ai-toolkit `_source` tag) are preserved untouched. Cost-estimate segment is opt-in via `AI_TOOLKIT_STATUSLINE_SHOW_COST=1` — off by default to avoid alarming numbers.
+- **Comprehensive default status line** — new `app/hooks/ai-toolkit-statusline.sh` renders a single line with cwd, git branch + dirty marker, context-window as a 10-cell progress bar (green <70% / orange 70–89% / red ≥90%), upload arrow `↑` (input tokens, green) + download arrow `↓` (output tokens, red), effort level, and model name. All token + cost data is read directly from Claude Code's statusLine stdin (`context_window.total_input_tokens`, `total_output_tokens`, `cost.total_cost_usd`, `effort.level`) — no JSONL parsing in the hot path, ~50ms cold start. Installed automatically into `~/.claude/settings.json` by `ai-toolkit install` (and `update`). User-customized statusLine entries (without the ai-toolkit `_source` tag) are preserved untouched. Cost-estimate segment is opt-in via `AI_TOOLKIT_STATUSLINE_SHOW_COST=1`.
 - **`merge-hooks.py` statusLine support** — `inject` writes the toolkit statusLine only when the target has none or has a stale toolkit-installed one. `strip` removes only toolkit-installed entries.
 - **`briefing` skill `--tokens` mode** — `/briefing --tokens [--since 7d]` for explicit reporting and baseline capture. Includes wire-up docs for the status-line hook and `AI_TOOLKIT_STATUSLINE_*` opt-out env vars.
+- **Hook runtime scripts deployed alongside hooks** — `scripts/install_steps/hooks.py` now copies a curated allowlist of Python helpers (`session_token_stats.py`, `version_check.py`) to `~/.softspark/ai-toolkit/scripts/`, so hooks work on a fresh install before the npm-global package catches up. Hook resolution order: `AI_TOOLKIT_DIR` → `~/.softspark/ai-toolkit/` → npm global → walk up from script (dev fallback).
 
 ### Opt-out
 
 - `AI_TOOLKIT_STATUSLINE_DISABLE=1` silences output entirely
-- `AI_TOOLKIT_STATUSLINE_NO_TOKENS=1` hides token segment
+- `AI_TOOLKIT_STATUSLINE_NO_TOKENS=1` hides token arrows segment
 - `AI_TOOLKIT_STATUSLINE_NO_GIT=1` hides git segment
+- `AI_TOOLKIT_STATUSLINE_NO_EFFORT=1` hides effort level segment
 - `AI_TOOLKIT_STATUSLINE_NO_COLOR=1` disables ANSI colors
-- `AI_TOOLKIT_STATUSLINE_SHOW_COST=1` appends model-aware cost estimate (off by default)
+- `AI_TOOLKIT_STATUSLINE_SHOW_COST=1` appends Claude Code's reported `cost.total_cost_usd` (off by default — long Opus sessions show alarming numbers)
+- `AI_TOOLKIT_STATUSLINE_DUMP=1` writes received stdin to `/tmp/cc-statusline-input.json` (debug only)
 
 ### Tests
 
-- 36 new bats tests across `tests/test_brand_voice.bats`, `tests/test_session_token_stats.bats`, `tests/test_statusline_hook.bats`, `tests/test_merge_hooks_statusline.bats`.
+- 38 new bats tests across `tests/test_brand_voice.bats`, `tests/test_session_token_stats.bats`, `tests/test_statusline_hook.bats`, `tests/test_merge_hooks_statusline.bats`, plus install-step assertion in `tests/test_install.bats`.
 
 ---
 

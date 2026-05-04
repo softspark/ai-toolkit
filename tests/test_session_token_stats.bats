@@ -47,6 +47,20 @@ teardown() {
     [ "$with_cache" = "7250" ]
 }
 
+@test "session-stats: exposes novel_input as input + cache_create" {
+    # Fixture: input=600, cache_create=500 → novel_input=1100
+    run $SCRIPT --session "$FIXTURES/three-messages.jsonl" --json
+    novel=$(echo "$output" | python3 -c 'import json,sys; print(json.load(sys.stdin)["totals"]["novel_input"])')
+    [ "$novel" = "1100" ]
+}
+
+@test "session-stats: exposes displayed_total as novel_input + output" {
+    # Fixture: novel_input=1100, output=150 → displayed_total=1250
+    run $SCRIPT --session "$FIXTURES/three-messages.jsonl" --json
+    displayed=$(echo "$output" | python3 -c 'import json,sys; print(json.load(sys.stdin)["totals"]["displayed_total"])')
+    [ "$displayed" = "1250" ]
+}
+
 # ── Malformed input ──────────────────────────────────────────────────────────
 
 @test "session-stats: skips malformed JSON lines without crashing" {

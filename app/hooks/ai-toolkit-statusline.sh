@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # ai-toolkit-statusline.sh — comprehensive Claude Code status line.
 #
-# Renders one line combining: cwd, git state, context-window %, real session
-# tokens (from JSONL), and the model name. Cost-estimate segment is opt-in via
-# AI_TOOLKIT_STATUSLINE_SHOW_COST=1 — off by default to avoid alarming numbers.
+# Renders one line. Left side: cwd, git, ctx%, i/o token split.
+# Right side (right-aligned): effort level, model name.
+# Optional cost segment is opt-in via AI_TOOLKIT_STATUSLINE_SHOW_COST=1.
+#
+# All token + cost data is read directly from Claude Code's statusLine stdin
+# (context_window.total_input_tokens, total_output_tokens, cost.total_cost_usd,
+# effort.level). No JSONL parsing in the hot path.
 #
 # Wire-up: ai-toolkit installer adds this as default `statusLine` in
 # ~/.claude/settings.json. Manual config:
@@ -17,65 +21,47 @@
 # Env vars (all optional):
 #   AI_TOOLKIT_DIR                  — toolkit install location (auto-detected)
 #   AI_TOOLKIT_STATUSLINE_DISABLE   — "1" silences output entirely
-#   AI_TOOLKIT_STATUSLINE_BASELINE  — JSON baseline for trend arrow
 #   AI_TOOLKIT_STATUSLINE_NO_COLOR  — "1" disables ANSI colors
-#   AI_TOOLKIT_STATUSLINE_NO_TOKENS — "1" hides token segment
+#   AI_TOOLKIT_STATUSLINE_NO_TOKENS — "1" hides i/o segment
 #   AI_TOOLKIT_STATUSLINE_NO_GIT    — "1" hides git segment
-#   AI_TOOLKIT_STATUSLINE_SHOW_COST — "1" appends model-aware cost estimate
+#   AI_TOOLKIT_STATUSLINE_NO_EFFORT — "1" hides effort segment
+#   AI_TOOLKIT_STATUSLINE_SHOW_COST — "1" appends Claude Code's reported cost
+#   AI_TOOLKIT_STATUSLINE_DUMP      — "1" writes stdin to /tmp/cc-statusline-input.json
 #
-# Performance: ~200ms cold, scales with session length (JSONL line count).
-# Soft-fails any segment whose data is missing.
+# Performance: ~50ms (single python3 parse of stdin, one git invocation).
 
 set -u
 
 [ "${AI_TOOLKIT_STATUSLINE_DISABLE:-0}" = "1" ] && exit 0
 
-# ── Toolkit dir auto-detect ─────────────────────────────────────────────────
-# Resolution order (first one that has session_token_stats.py wins):
-#   1. AI_TOOLKIT_DIR env var (explicit override)
-#   2. ~/.softspark/ai-toolkit/ — installer copies hook runtime scripts here
-#   3. npm global root @softspark/ai-toolkit — works post-publish
-#   4. Walk up from this script — dev fallback when running from source repo
-TOOLKIT_DIR="${AI_TOOLKIT_DIR:-}"
-
-_have_runtime() { [ -f "$1/scripts/session_token_stats.py" ]; }
-
-if [ -z "$TOOLKIT_DIR" ] && _have_runtime "$HOME/.softspark/ai-toolkit"; then
-    TOOLKIT_DIR="$HOME/.softspark/ai-toolkit"
-fi
-if [ -z "$TOOLKIT_DIR" ]; then
-    NPM_ROOT="$(npm root -g 2>/dev/null)"
-    if [ -n "$NPM_ROOT" ] && _have_runtime "$NPM_ROOT/@softspark/ai-toolkit"; then
-        TOOLKIT_DIR="$NPM_ROOT/@softspark/ai-toolkit"
-    fi
-fi
-if [ -z "$TOOLKIT_DIR" ] || ! _have_runtime "$TOOLKIT_DIR"; then
-    CAND="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)"
-    if [ -n "$CAND" ] && _have_runtime "$CAND"; then
-        TOOLKIT_DIR="$CAND"
-    fi
-fi
-
 # ── Colors ───────────────────────────────────────────────────────────────────
-if [ "${AI_TOOLKIT_STATUSLINE_NO_COLOR:-0}" = "1" ] || [ ! -t 1 ]; then
-    C_RESET="" C_GREEN="" C_CYAN="" C_BLUE="" C_RED="" C_YELLOW="" C_MAGENTA="" C_DIM=""
+# Claude Code captures stdout via pipe but interprets ANSI escapes when it
+# renders the statusline. So always emit colors unless explicitly disabled.
+if [ "${AI_TOOLKIT_STATUSLINE_NO_COLOR:-0}" = "1" ]; then
+    C_RESET="" C_GREEN="" C_BOLD_GREEN="" C_CYAN="" C_BLUE="" C_RED=""
+    C_YELLOW="" C_MAGENTA="" C_DIM="" C_GRAY="" C_BOLD_YELLOW="" C_ORANGE=""
 else
     C_RESET=$'\033[0m'
-    C_GREEN=$'\033[1;32m'
+    C_GREEN=$'\033[0;32m'
+    C_BOLD_GREEN=$'\033[1;32m'
     C_CYAN=$'\033[0;36m'
     C_BLUE=$'\033[1;34m'
     C_RED=$'\033[0;31m'
     C_YELLOW=$'\033[0;33m'
+    C_BOLD_YELLOW=$'\033[1;33m'
     C_MAGENTA=$'\033[0;35m'
     C_DIM=$'\033[2m'
+    C_GRAY=$'\033[0;37m'
+    C_ORANGE=$'\033[38;5;208m'
 fi
 
-# ── Parse stdin from Claude Code in a single python3 invocation ─────────────
-# 4 separate `python3 -c` calls spent ~200ms on subprocess startup. One call
-# extracts every field we need and emits a tab-separated record we can read
-# back into shell vars in a single `IFS=$'\t' read` — keeps total cold start
-# under ~100ms on typical hardware.
+# ── Parse stdin in one python3 invocation ────────────────────────────────────
 INPUT="$(cat 2>/dev/null || true)"
+
+if [ "${AI_TOOLKIT_STATUSLINE_DUMP:-0}" = "1" ] && [ -n "$INPUT" ]; then
+    printf '%s' "$INPUT" > /tmp/cc-statusline-input.json 2>/dev/null
+fi
+
 PARSED="$(printf '%s' "$INPUT" | python3 -c '
 import json, sys
 def get(d, path):
@@ -84,23 +70,38 @@ def get(d, path):
         if d is None:
             return ""
     return d if d is not None else ""
+def fmt_tokens(n):
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return "0"
+    if n >= 1000:
+        return f"{n/1000:.1f}k"
+    return str(n)
 try:
     d = json.loads(sys.stdin.read() or "{}")
 except Exception:
     d = {}
-cwd = get(d, "cwd")
-model = get(d, "model.display_name") or get(d, "model.id")
-ctx = get(d, "context_window.used_percentage")
-sid = get(d, "session_id")
-print(f"{cwd}\t{model}\t{ctx}\t{sid}")
+cwd = get(d, "cwd") or ""
+model = get(d, "model.display_name") or get(d, "model.id") or ""
+ctx_pct = get(d, "context_window.used_percentage")
+in_tok = fmt_tokens(get(d, "context_window.total_input_tokens"))
+out_tok = fmt_tokens(get(d, "context_window.total_output_tokens"))
+cost = get(d, "cost.total_cost_usd")
+try:
+    cost_str = f"{float(cost):.2f}" if cost != "" else ""
+except (TypeError, ValueError):
+    cost_str = ""
+effort = get(d, "effort.level") or ""
+print(f"{cwd}\t{model}\t{ctx_pct}\t{in_tok}\t{out_tok}\t{cost_str}\t{effort}")
 ' 2>/dev/null)"
 
-IFS=$'\t' read -r CWD MODEL_NAME CTX_USED SESSION_ID <<< "$PARSED"
+IFS=$'\t' read -r CWD MODEL_NAME CTX_USED IN_TOK OUT_TOK COST EFFORT <<< "$PARSED"
 [ -z "$CWD" ] && CWD="$PWD"
 
 # ── Segment: prompt + dir ────────────────────────────────────────────────────
 DIR_BASENAME="$(basename "$CWD" 2>/dev/null || echo '~')"
-SEG_PROMPT="${C_GREEN}\xe2\x9e\x9c${C_RESET}  ${C_CYAN}${DIR_BASENAME}${C_RESET}"
+SEG_PROMPT="${C_BOLD_GREEN}\xe2\x9e\x9c${C_RESET}  ${C_CYAN}${DIR_BASENAME}${C_RESET}"
 
 # ── Segment: git ────────────────────────────────────────────────────────────
 SEG_GIT=""
@@ -116,89 +117,85 @@ if [ "${AI_TOOLKIT_STATUSLINE_NO_GIT:-0}" != "1" ] && \
     fi
 fi
 
-# ── Segment: context window ──────────────────────────────────────────────────
+# ── Segment: context window as progress bar ────────────────────────────────
+# 10-cell bar with usage-shaded color: green <50%, yellow 50-79%, red ≥80%.
+build_ctx_bar() {
+    local pct=$1
+    local cells=10
+    local filled=$(( (pct * cells + 50) / 100 ))
+    [ "$filled" -gt "$cells" ] && filled=$cells
+    [ "$filled" -lt 0 ] && filled=0
+    local color
+    if [ "$pct" -ge 90 ]; then
+        color="$C_RED"
+    elif [ "$pct" -ge 70 ]; then
+        color="$C_ORANGE"
+    else
+        color="$C_GREEN"
+    fi
+    local bar=""
+    local i=0
+    while [ "$i" -lt "$filled" ]; do
+        bar+="\xe2\x96\x88"  # █  FULL BLOCK
+        i=$((i+1))
+    done
+    local empty=""
+    while [ "$i" -lt "$cells" ]; do
+        empty+="\xe2\x96\x91"  # ░  LIGHT SHADE
+        i=$((i+1))
+    done
+    printf '%b' "${color}${bar}${C_DIM}${empty}${C_RESET}"
+}
+
 SEG_CTX=""
 if [ -n "$CTX_USED" ]; then
     CTX_INT="$(printf '%.0f' "$CTX_USED" 2>/dev/null || echo "$CTX_USED")"
-    SEG_CTX=" ${C_YELLOW}ctx:${CTX_INT}%${C_RESET}"
+    case "$CTX_INT" in
+        ''|*[!0-9]*) CTX_INT=0 ;;
+    esac
+    SEG_CTX=" $(build_ctx_bar "$CTX_INT") ${C_DIM}${CTX_INT}%${C_RESET}"
 fi
 
-# ── Segment: tokens + cost ───────────────────────────────────────────────────
+# ── Segment: tokens with up/down arrows ─────────────────────────────────────
+# ↑ green = upload (input tokens sent to model)
+# ↓ red   = download (output tokens received from model)
 SEG_TOKENS=""
-if [ "${AI_TOOLKIT_STATUSLINE_NO_TOKENS:-0}" != "1" ]; then
-    STATS_SCRIPT="$TOOLKIT_DIR/scripts/session_token_stats.py"
-    if [ -f "$STATS_SCRIPT" ]; then
-        ARGS=(--cwd "$CWD" --json)
-        STATS_JSON="$(python3 "$STATS_SCRIPT" "${ARGS[@]}" 2>/dev/null || true)"
-        if [ -n "$STATS_JSON" ]; then
-            SEG_TOKENS="$(printf '%s' "$STATS_JSON" | python3 -c "
-import json, os, sys
-try:
-    d = json.loads(sys.stdin.read())
-    t = d.get('totals', {})
-    total = t.get('total', 0)
-    if total <= 0:
-        sys.exit(0)
-    if total >= 1000:
-        rendered = f'{total/1000:.1f}k'
-    else:
-        rendered = str(total)
-
-    model = '${MODEL_NAME}'.lower()
-    if 'opus' in model:
-        rate_in, rate_out = 15.0, 75.0
-    elif 'sonnet' in model:
-        rate_in, rate_out = 3.0, 15.0
-    elif 'haiku' in model:
-        rate_in, rate_out = 0.80, 4.0
-    else:
-        rate_in, rate_out = 5.0, 25.0
-
-    cost_input = (t.get('input', 0) / 1_000_000) * rate_in
-    cost_output = (t.get('output', 0) / 1_000_000) * rate_out
-    cost_cache_w = (t.get('cache_create', 0) / 1_000_000) * rate_in * 1.25
-    cost_cache_r = (t.get('cache_read', 0) / 1_000_000) * rate_in * 0.10
-    cost = cost_input + cost_output + cost_cache_w + cost_cache_r
-
-    baseline_path = os.environ.get('AI_TOOLKIT_STATUSLINE_BASELINE', '')
-    trend = ''
-    if baseline_path and os.path.isfile(baseline_path):
-        try:
-            with open(baseline_path) as f:
-                bl = json.load(f).get('total', 0)
-            if bl > 0:
-                delta = (total - bl) / bl
-                arrow = '↓' if delta < 0 else '↑' if delta > 0 else ''
-                if arrow:
-                    trend = f' {arrow}{abs(delta)*100:.0f}%'
-        except Exception:
-            pass
-
-    print(f'{rendered}|{cost:.2f}|{trend}')
-except Exception:
-    sys.exit(0)
-" 2>/dev/null)"
-            if [ -n "$SEG_TOKENS" ]; then
-                IFS='|' read -r TOK_RENDERED TOK_COST TOK_TREND <<< "$SEG_TOKENS"
-                SEG_TOKENS=" ${C_DIM}tok:${C_RESET}${TOK_RENDERED}${TOK_TREND}"
-                if [ "${AI_TOOLKIT_STATUSLINE_SHOW_COST:-0}" = "1" ]; then
-                    SEG_TOKENS+=" ${C_DIM}\$${C_RESET}${TOK_COST}"
-                fi
-            fi
-        fi
+if [ "${AI_TOOLKIT_STATUSLINE_NO_TOKENS:-0}" != "1" ] && \
+   [ -n "$IN_TOK" ] && [ "$IN_TOK" != "0" -o "$OUT_TOK" != "0" ]; then
+    SEG_TOKENS="  ${C_BOLD_GREEN}\xe2\x86\x91${IN_TOK}${C_RESET} ${C_RED}\xe2\x86\x93${OUT_TOK}${C_RESET}"
+    if [ "${AI_TOOLKIT_STATUSLINE_SHOW_COST:-0}" = "1" ] && [ -n "$COST" ]; then
+        SEG_TOKENS+=" ${C_BOLD_GREEN}\$${COST}${C_RESET}"
     fi
 fi
 
-# ── Segment: model ───────────────────────────────────────────────────────────
-SEG_MODEL=""
-if [ -n "$MODEL_NAME" ]; then
-    SEG_MODEL=" ${C_MAGENTA}${MODEL_NAME}${C_RESET}"
+# ── Right-aligned segments: effort + model ───────────────────────────────────
+SEG_EFFORT=""
+if [ "${AI_TOOLKIT_STATUSLINE_NO_EFFORT:-0}" != "1" ] && [ -n "$EFFORT" ]; then
+    case "$EFFORT" in
+        xhigh|high) E_COLOR="$C_BOLD_YELLOW" ;;
+        medium)     E_COLOR="$C_YELLOW" ;;
+        *)          E_COLOR="$C_DIM" ;;
+    esac
+    SEG_EFFORT="${C_DIM}effort:${C_RESET}${E_COLOR}${EFFORT}${C_RESET}"
 fi
 
-# ── Render ───────────────────────────────────────────────────────────────────
+SEG_MODEL=""
+if [ -n "$MODEL_NAME" ]; then
+    SEG_MODEL="${C_MAGENTA}${MODEL_NAME}${C_RESET}"
+fi
+
+# ── Render (left-aligned, single line) ───────────────────────────────────────
+# Right-align was attempted earlier but Claude Code reserves variable-width
+# space on the right of the rendered statusline for its own UI overlay,
+# truncating any content right-padded near COLUMNS. Left-align with effort
+# and model as trailing segments avoids the truncation.
+SEG_TRAILER=""
+[ -n "$SEG_EFFORT" ] && SEG_TRAILER+=" $SEG_EFFORT"
+[ -n "$SEG_MODEL" ] && SEG_TRAILER+=" $SEG_MODEL"
+
 printf "%b%b%b%b%b\n" \
     "$SEG_PROMPT" \
     "${SEG_GIT:-}" \
     "${SEG_CTX:-}" \
     "${SEG_TOKENS:-}" \
-    "${SEG_MODEL:-}"
+    "${SEG_TRAILER}"

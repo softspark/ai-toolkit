@@ -83,14 +83,32 @@ python3 scripts/session_token_stats.py --statusline --baseline ~/.softspark/ai-t
 
 ### Status line (installed by default in v3.2.0+)
 
-`ai-toolkit install` wires `~/.claude/settings.json` to `app/hooks/ai-toolkit-statusline.sh`, which renders one line combining cwd, git, context %, real session tokens, trend, cost, and model. Custom statusLine entries you set yourself are preserved untouched.
+`ai-toolkit install` wires `~/.claude/settings.json` to `app/hooks/ai-toolkit-statusline.sh`. The hook reads native Claude Code statusLine stdin (no session JSONL parsing) and renders one line:
+
+```
+➜ <dir> git:(branch) ✗ ████░░░░░░ 43%  ↑6.5k ↓252k effort:xhigh <model>
+```
+
+Segments left to right:
+
+- `➜ <dir>` — current directory basename
+- `git:(branch) ✗` — git branch + dirty marker
+- 10-cell **progress bar** for context-window usage. Color tiers: green `<70%`, orange `70–89%`, red `≥90%`
+- `↑in ↓out` — token arrows. Green up = input (upload), red down = output (download). Both cumulative across the session.
+- `effort:level` — Claude Code effort level (low / medium / high / xhigh)
+- model name
+
+Custom statusLine entries you set yourself (without the `_source: ai-toolkit` tag) are preserved untouched on install.
 
 Opt-outs (no reinstall required):
 
 - `AI_TOOLKIT_STATUSLINE_DISABLE=1` — silence the line entirely
-- `AI_TOOLKIT_STATUSLINE_NO_TOKENS=1` — hide token + cost segments
+- `AI_TOOLKIT_STATUSLINE_NO_TOKENS=1` — hide token arrows segment
 - `AI_TOOLKIT_STATUSLINE_NO_GIT=1` — hide git segment
+- `AI_TOOLKIT_STATUSLINE_NO_EFFORT=1` — hide effort level segment
 - `AI_TOOLKIT_STATUSLINE_NO_COLOR=1` — disable ANSI colors
+- `AI_TOOLKIT_STATUSLINE_SHOW_COST=1` — append Claude Code's reported cost (`cost.total_cost_usd`)
+- `AI_TOOLKIT_STATUSLINE_DUMP=1` — write received stdin to `/tmp/cc-statusline-input.json` (debug)
 
 ### Save a baseline
 

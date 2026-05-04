@@ -163,6 +163,11 @@ def aggregate(
     totals["total_with_cache"] = (
         totals["total"] + totals["cache_create"] + totals["cache_read"]
     )
+    # novel_input = tokens the model genuinely processed afresh (literal input
+    # + freshly cached prompt prefix). Excludes cache_read which is recycled.
+    # Used by statusline to render "i/o:novel_input/output".
+    totals["novel_input"] = totals["input"] + totals["cache_create"]
+    totals["displayed_total"] = totals["novel_input"] + totals["output"]
     totals["messages_total"] = message_count
     totals["messages_counted"] = counted
     return totals
