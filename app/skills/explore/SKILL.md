@@ -131,7 +131,7 @@ hybrid_search_kb("project structure {framework}")
 ## When NOT to Use
 
 - To explain a specific module's design — use `/explain`
-- To find a specific identifier or symbol — use `Grep` directly or `/search`
+- To find a specific identifier or symbol — use `Grep` directly or `/research-mastery`
 - To audit architecture for deepening candidates — use `/architecture-audit`
 - To scaffold a new project — use `/app-builder`
 - When the user already knows the codebase — skip the overview and jump to the concrete task

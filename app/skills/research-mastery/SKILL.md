@@ -43,6 +43,18 @@ You MUST search in this order. Do not skip steps.
 **Why**: Fallback for general programming concepts.
 **Rule**: Use only for generic syntax/logic, NEVER for project specifics.
 
+## Local Fallback (No MCP Available)
+
+If `rag-mcp` is not configured, fall back to filesystem tools — still inside `kb/`:
+
+```
+Grep   pattern="your query"   path="kb/"   # search file contents
+Glob   pattern="kb/**/*.md"                # list KB files
+Read   "kb/reference/architecture.md"      # full document
+```
+
+Always cite sources as `[PATH: kb/...]` regardless of which method retrieved them.
+
 ## 🛑 Validation Protocol
 Before acting on information:
 1. **Cite the Source**: "According to `kb/architecture.md`..."

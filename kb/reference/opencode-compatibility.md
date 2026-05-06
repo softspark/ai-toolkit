@@ -129,7 +129,7 @@ User-authored opencode files and user-authored `opencode.json` keys are never de
 ## Behavioral Limits
 
 - opencode does not expose the full Claude hook event surface; only the events in the mapping table above are bridged. Claude-only events (`TaskCompleted`, `TeammateIdle`, `SubagentStart`, `SubagentStop`, `PreCompact`) are silently skipped.
-- Multi-agent orchestration skills (`/orchestrate`, `/workflow`, `/swarm`, `/teams`, `/subagent-development`) run through the Codex adaptation layer — they use opencode subagents and explicit file ownership instead of Claude's `Agent`/`TaskCreate` primitives.
+- Multi-agent orchestration skills (`/orchestrate`, `/workflow`, `/swarm`, `/subagent-development`) run through the Codex adaptation layer — they use opencode subagents and explicit file ownership instead of Claude's `Agent`/`TaskCreate` primitives.
 
 ## Verification
 

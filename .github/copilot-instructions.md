@@ -223,9 +223,6 @@ DB schema design and query tuning: normalization, indexing, N+1, transactions, E
 ### debug
 Systematic debugging via logs, health checks, hypothesis-driven investigation. Triggers: debug, error, trace root cause, fix bug, reproduce symptom, investigation.
 
-### debugging-tactics
-RCA debugging: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, intermittent, flaky, crash, regression, broken after.
-
 ### deploy
 Deploys with pre-flight checks and health verification. Triggers: deploy, deployment, ship, release, push to prod.
 
@@ -279,9 +276,6 @@ Service/infra health via liveness/readiness checks, resource usage, quick diagno
 
 ### hipaa-validate
 HIPAA validator: PHI exposure, audit logging, encryption, access control, BAA refs. Triggers: HIPAA, PHI, healthcare compliance, audit log, BAA.
-
-### hive-mind
-Multi-agent swarm: consensus voting, aggregation, file ownership, map-reduce. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, agent voting.
 
 ### hook-creator
 Create new Claude Code lifecycle hook (PreToolUse/PostToolUse/Stop/SessionStart) with bash + hooks.json. Triggers: create hook, lifecycle hook, PreToolUse, PostToolUse, hook event.
@@ -361,9 +355,6 @@ PHP coding rules: style, patterns, security, testing. Triggers: .php, composer.j
 ### plan
 Breaks features/goals into phased plans with task lists, agent assignments, dependencies. Triggers: plan feature, implementation roadmap, break down task, project phases.
 
-### plan-writing
-Implementation plans + pre-mortems: phases, success criteria, risks, rollback. Triggers: implementation plan, pre-mortem, phased plan, task breakdown.
-
 ### plugin-creator
 Creates opt-in plugin packs with manifests + module scaffolding for Claude/Codex. Triggers: new plugin, plugin pack, plugin scaffold.
 
@@ -421,9 +412,6 @@ Rust: ownership, lifetimes, async (Tokio), Result/anyhow/thiserror, traits, unsa
 ### rust-rules
 Rust coding rules: style, patterns, security, testing. Triggers: .rs, Cargo.toml, Cargo.lock, Tokio, Axum, Serde, clippy, cargo test.
 
-### search
-Searches the KB with semantic + hybrid modes. Triggers: search KB, semantic search, hybrid search, knowledge base query.
-
 ### security-patterns
 App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, TLS, CSP, CORS.
 
@@ -450,9 +438,6 @@ Swift coding rules: style, patterns, security, testing. Triggers: .swift, Packag
 
 ### tdd
 TDD with red-green-refactor loop and vertical slices. Triggers: TDD, test-first, red-green-refactor, test driving development.
-
-### teams
-Launches multi-agent teams for review, debugging, feature dev, security audits, migrations. Triggers: multi-agent workflow, agent teams, team review, parallel agent collaboration.
 
 ### test
 Runs project test suite with coverage, auto-detects framework (pytest, vitest, jest, flutter, go, cargo, phpunit). Triggers: run tests, test suite, coverage report.

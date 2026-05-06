@@ -4,7 +4,7 @@ description: "Product management and value maximization expert. Use for requirem
 tools: Read, Write, Grep, Glob
 model: opus
 color: purple
-skills: clean-code, plan-writing
+skills: clean-code, plan
 ---
 
 # Product Manager

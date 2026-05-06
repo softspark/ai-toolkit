@@ -1,10 +1,10 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 112 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 107 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-112-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1047%20passing-success)](tests/)
 
@@ -14,13 +14,24 @@
 
 ---
 
-## What's New in v3.5.1
+## What's New in v4.0.0
 
-Patch release. Continues v3.5.0 description condensation on 20 skills and fixes generator drift in `GEMINI.md` / `.github/copilot-instructions.md` that was missed by the v3.5.0 release.
+**Breaking release.** Skill catalog consolidated from 112 → 107: removes 5 redundant skills, merges their substantive knowledge into the surviving targets. Eliminates `/skills` truncation and removes overlap that confused agent dispatch.
 
-- **20 skills further trimmed** — `a11y-validate`, `api-patterns`, `app-builder`, `architecture-audit`, `biz-scan`, `ci-cd-patterns`, `design-an-interface`, `docker-devops`, `evolve`, `flutter-patterns`, `git-mastery`, `hive-mind`, `mcp-patterns`, `migrate`, `migration-patterns`, `observability-patterns`, `performance-profiling`, `plan-writing`, `research-mastery`, `typescript-patterns`. Removes redundant trigger keywords already implied by the summary.
-- **Platform artifacts re-synced** — `AGENTS.md`, `llms-full.txt`, `GEMINI.md`, `.github/copilot-instructions.md` regenerated to match the condensed source descriptions.
-- **`/audit.sarif` ignored** — build artifact from `audit_skills.py --ci` no longer pollutes `git status`.
+- **`/search` removed** — `/research-mastery` is the superset (KB → MCP/Context7 → web with hierarchy of truth). Local Grep/Glob fallback is now part of `/research-mastery`.
+- **`/teams` removed** — `/workflow` covers the same scenarios without the experimental `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` flag.
+- **`plan-writing` knowledge skill removed** — estimation patterns (T-shirt sizing, cone of uncertainty) and pre-mortem rules are now part of `/plan`.
+- **`debugging-tactics` knowledge skill removed** — Iron Law, 4-phase methodology, and "5 Whys" are now part of `/debug`.
+- **`hive-mind` knowledge skill removed** — consensus voting and aggregation merged into `/swarm`.
+
+### Migration
+
+| Before | After |
+|--------|-------|
+| `/search <query>` | `/research-mastery <query>` |
+| `/teams <preset>` | `/workflow <type>` |
+| Agent `skills: plan-writing` | Agent `skills: plan` |
+| Agent `skills: debugging-tactics` | Agent `skills: debug` |
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -54,7 +65,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 112 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 107 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 **Windows:** WSL is the recommended runtime. Native Windows works when Git Bash is available for hook scripts; dependency hints cover `winget`, Chocolatey, and Scoop. See [Windows Support](kb/reference/windows-support.md).
 
@@ -144,7 +155,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   ├── skills/          # 112 skills (task / hybrid / knowledge)
+│   ├── skills/          # 107 skills (task / hybrid / knowledge)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
 │   ├── hooks/           # Hook scripts (21 entries, 12 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)

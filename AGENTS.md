@@ -472,7 +472,6 @@ Skills are invocable commands or auto-loaded knowledge sources:
 - **dart-rules**: Dart/Flutter coding rules: style, patterns, security, testing. Triggers: .dart, pubspec.yaml, Flutter, Riverpod, Bloc, widget, StatelessWidget, StatefulWidget.
 - **database-patterns**: DB schema design and query tuning: normalization, indexing, N+1, transactions, EXPLAIN. Triggers: schema, index, slow query, N+1, PostgreSQL, MySQL, EXPLAIN, deadlock, query plan.
 - **debug**: Systematic debugging via logs, health checks, hypothesis-driven investigation. Triggers: debug, error, trace root cause, fix bug, reproduce symptom, investigation.
-- **debugging-tactics**: RCA debugging: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, intermittent, flaky, crash, regression, broken after.
 - **deploy**: Deploys with pre-flight checks and health verification. Triggers: deploy, deployment, ship, release, push to prod.
 - **design-an-interface**: Generates and compares parallel interface designs (Ousterhout 'Design It Twice'). Triggers: design API, interface options, compare modules, design it twice. Codex-adapted: uses native subagents and plan tracking.
 - **design-engineering**: UI craftsmanship: animation rules, easing, micro-interactions, state polish. Triggers: animation, transition, ease-out, motion, micro-interaction, hover, loading state, UI polish.
@@ -491,7 +490,6 @@ Skills are invocable commands or auto-loaded knowledge sources:
 - **grill-me**: Stress-tests a plan via Socratic questioning down each decision branch. Triggers: stress-test, grill me, validate assumptions, challenge plan, socratic review. Codex-adapted: uses native subagents and plan tracking.
 - **health**: Service/infra health via liveness/readiness checks, resource usage, quick diagnostics. Triggers: health check, services up, system status, infra health, degraded service.
 - **hipaa-validate**: HIPAA validator: PHI exposure, audit logging, encryption, access control, BAA refs. Triggers: HIPAA, PHI, healthcare compliance, audit log, BAA.
-- **hive-mind**: Multi-agent swarm: consensus voting, aggregation, file ownership, map-reduce. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, agent voting.
 - **hook-creator**: Create new Claude Code lifecycle hook (PreToolUse/PostToolUse/Stop/SessionStart) with bash + hooks.json. Triggers: create hook, lifecycle hook, PreToolUse, PostToolUse, hook event.
 - **index**: Reindexes KB for semantic search via vector store (Qdrant). Triggers: reindex KB, rebuild index, vector reindex, refresh embeddings.
 - **instinct-review**: Reviews/promotes/removes instincts from `.claude/instincts/*.md`. Triggers: instinct review, curate instincts, manage instincts, promote instinct.
@@ -518,7 +516,6 @@ Skills are invocable commands or auto-loaded knowledge sources:
 - **persona**: Switches engineering persona at runtime. Triggers: persona, switch role, backend-lead, frontend-lead, devops-eng, junior-dev.
 - **php-rules**: PHP coding rules: style, patterns, security, testing. Triggers: .php, composer.json, Laravel, Symfony, PHPUnit, PSR-12, Composer.
 - **plan**: Breaks features/goals into phased plans with task lists, agent assignments, dependencies. Triggers: plan feature, implementation roadmap, break down task, project phases.
-- **plan-writing**: Implementation plans + pre-mortems: phases, success criteria, risks, rollback. Triggers: implementation plan, pre-mortem, phased plan, task breakdown.
 - **plugin-creator**: Creates opt-in plugin packs with manifests + module scaffolding for Claude/Codex. Triggers: new plugin, plugin pack, plugin scaffold.
 - **pr**: Creates GitHub PR after pre-flight checks (lint/typecheck/tests), structured summary from commits. Triggers: pr, pull request, create PR, ready to merge.
 - **prd-to-issues**: Splits a PRD into vertical-slice GitHub issues with HITL/AFK tagging and dependencies. Triggers: PRD to issues, create tickets, break down PRD, work items.
@@ -538,7 +535,6 @@ Skills are invocable commands or auto-loaded knowledge sources:
 - **ruby-rules**: Ruby coding rules: style, patterns, security, testing. Triggers: .rb, Gemfile, .gemspec, Rails, ActiveRecord, Sidekiq, RSpec, Sorbet, rubocop.
 - **rust-patterns**: Rust: ownership, lifetimes, async (Tokio), Result/anyhow/thiserror, traits, unsafe. Triggers: Rust, borrow checker, lifetime, Tokio, cargo, trait, impl, Result, unsafe, clippy.
 - **rust-rules**: Rust coding rules: style, patterns, security, testing. Triggers: .rs, Cargo.toml, Cargo.lock, Tokio, Axum, Serde, clippy, cargo test.
-- **search**: Searches the KB with semantic + hybrid modes. Triggers: search KB, semantic search, hybrid search, knowledge base query.
 - **security-patterns**: App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, TLS, CSP, CORS.
 - **seo-validate**: SEO validator: meta/OG, Schema.org, hreflang, Core Web Vitals, crawlability. Triggers: SEO, meta tags, Schema.org, hreflang, LCP, INP, CLS, Core Web Vitals, sitemap, crawlability.
 - **skill-audit**: Scans skills/agents for security risks: dangerous patterns, secrets, excessive perms. Triggers: skill audit, security scan, agent audit, dangerous pattern.
@@ -548,7 +544,6 @@ Skills are invocable commands or auto-loaded knowledge sources:
 - **swift-patterns**: Swift/iOS: SwiftUI, Combine, async/await, actors, SPM, Core Data, UIKit interop. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, Core Data, @MainActor, @State.
 - **swift-rules**: Swift coding rules: style, patterns, security, testing. Triggers: .swift, Package.swift, .xcodeproj, SwiftUI, Combine, async/await, XCTest.
 - **tdd**: TDD with red-green-refactor loop and vertical slices. Triggers: TDD, test-first, red-green-refactor, test driving development. Codex-adapted: uses native subagents and plan tracking.
-- **teams**: Launches multi-agent teams for review, debugging, feature dev, security audits, migrations. Triggers: multi-agent workflow, agent teams, team review, parallel agent collaboration. Codex-adapted: uses native subagents and plan tracking.
 - **test**: Runs project test suite with coverage, auto-detects framework (pytest, vitest, jest, flutter, go, cargo, phpunit). Triggers: run tests, test suite, coverage report.
 - **testing-patterns**: Testing strategy: pyramid, AAA, mocks/fakes/stubs, flaky tests, coverage. Triggers: test, fixture, mock, stub, e2e, TDD, Playwright, Cypress, flaky, coverage, property-based.
 - **triage-issue**: Bug triage: explores codebase for root cause, files GitHub issue with TDD fix plan. Triggers: triage, investigate bug, fix plan, root cause, file issue, bug report. Codex-adapted: uses native subagents and plan tracking.

@@ -92,7 +92,6 @@
 - **dart-rules**: Dart/Flutter coding rules: style, patterns, security, testing. Triggers: .dart, pubspec.yaml, Flutter, Riverpod, Bloc, widget, StatelessWidget, StatefulWidget.
 - **database-patterns**: DB schema design and query tuning: normalization, indexing, N+1, transactions, EXPLAIN. Triggers: schema, index, slow query, N+1, PostgreSQL, MySQL, EXPLAIN, deadlock, query plan.
 - **debug**: Systematic debugging via logs, health checks, hypothesis-driven investigation. Triggers: debug, error, trace root cause, fix bug, reproduce symptom, investigation.
-- **debugging-tactics**: RCA debugging: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, intermittent, flaky, crash, regression, broken after.
 - **deploy**: Deploys with pre-flight checks and health verification. Triggers: deploy, deployment, ship, release, push to prod.
 - **design-an-interface**: Generates and compares parallel interface designs (Ousterhout 'Design It Twice'). Triggers: design API, interface options, compare modules, design it twice.
 - **design-engineering**: UI craftsmanship: animation rules, easing, micro-interactions, state polish. Triggers: animation, transition, ease-out, motion, micro-interaction, hover, loading state, UI polish.
@@ -111,7 +110,6 @@
 - **grill-me**: Stress-tests a plan via Socratic questioning down each decision branch. Triggers: stress-test, grill me, validate assumptions, challenge plan, socratic review.
 - **health**: Service/infra health via liveness/readiness checks, resource usage, quick diagnostics. Triggers: health check, services up, system status, infra health, degraded service.
 - **hipaa-validate**: HIPAA validator: PHI exposure, audit logging, encryption, access control, BAA refs. Triggers: HIPAA, PHI, healthcare compliance, audit log, BAA.
-- **hive-mind**: Multi-agent swarm: consensus voting, aggregation, file ownership, map-reduce. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, agent voting.
 - **hook-creator**: Create new Claude Code lifecycle hook (PreToolUse/PostToolUse/Stop/SessionStart) with bash + hooks.json. Triggers: create hook, lifecycle hook, PreToolUse, PostToolUse, hook event.
 - **index**: Reindexes KB for semantic search via vector store (Qdrant). Triggers: reindex KB, rebuild index, vector reindex, refresh embeddings.
 - **instinct-review**: Reviews/promotes/removes instincts from `.claude/instincts/*.md`. Triggers: instinct review, curate instincts, manage instincts, promote instinct.
@@ -138,7 +136,6 @@
 - **persona**: Switches engineering persona at runtime. Triggers: persona, switch role, backend-lead, frontend-lead, devops-eng, junior-dev.
 - **php-rules**: PHP coding rules: style, patterns, security, testing. Triggers: .php, composer.json, Laravel, Symfony, PHPUnit, PSR-12, Composer.
 - **plan**: Breaks features/goals into phased plans with task lists, agent assignments, dependencies. Triggers: plan feature, implementation roadmap, break down task, project phases.
-- **plan-writing**: Implementation plans + pre-mortems: phases, success criteria, risks, rollback. Triggers: implementation plan, pre-mortem, phased plan, task breakdown.
 - **plugin-creator**: Creates opt-in plugin packs with manifests + module scaffolding for Claude/Codex. Triggers: new plugin, plugin pack, plugin scaffold.
 - **pr**: Creates GitHub PR after pre-flight checks (lint/typecheck/tests), structured summary from commits. Triggers: pr, pull request, create PR, ready to merge.
 - **prd-to-issues**: Splits a PRD into vertical-slice GitHub issues with HITL/AFK tagging and dependencies. Triggers: PRD to issues, create tickets, break down PRD, work items.
@@ -158,7 +155,6 @@
 - **ruby-rules**: Ruby coding rules: style, patterns, security, testing. Triggers: .rb, Gemfile, .gemspec, Rails, ActiveRecord, Sidekiq, RSpec, Sorbet, rubocop.
 - **rust-patterns**: Rust: ownership, lifetimes, async (Tokio), Result/anyhow/thiserror, traits, unsafe. Triggers: Rust, borrow checker, lifetime, Tokio, cargo, trait, impl, Result, unsafe, clippy.
 - **rust-rules**: Rust coding rules: style, patterns, security, testing. Triggers: .rs, Cargo.toml, Cargo.lock, Tokio, Axum, Serde, clippy, cargo test.
-- **search**: Searches the KB with semantic + hybrid modes. Triggers: search KB, semantic search, hybrid search, knowledge base query.
 - **security-patterns**: App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, TLS, CSP, CORS.
 - **seo-validate**: SEO validator: meta/OG, Schema.org, hreflang, Core Web Vitals, crawlability. Triggers: SEO, meta tags, Schema.org, hreflang, LCP, INP, CLS, Core Web Vitals, sitemap, crawlability.
 - **skill-audit**: Scans skills/agents for security risks: dangerous patterns, secrets, excessive perms. Triggers: skill audit, security scan, agent audit, dangerous pattern.
@@ -168,7 +164,6 @@
 - **swift-patterns**: Swift/iOS: SwiftUI, Combine, async/await, actors, SPM, Core Data, UIKit interop. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, Core Data, @MainActor, @State.
 - **swift-rules**: Swift coding rules: style, patterns, security, testing. Triggers: .swift, Package.swift, .xcodeproj, SwiftUI, Combine, async/await, XCTest.
 - **tdd**: TDD with red-green-refactor loop and vertical slices. Triggers: TDD, test-first, red-green-refactor, test driving development.
-- **teams**: Launches multi-agent teams for review, debugging, feature dev, security audits, migrations. Triggers: multi-agent workflow, agent teams, team review, parallel agent collaboration.
 - **test**: Runs project test suite with coverage, auto-detects framework (pytest, vitest, jest, flutter, go, cargo, phpunit). Triggers: run tests, test suite, coverage report.
 - **testing-patterns**: Testing strategy: pyramid, AAA, mocks/fakes/stubs, flaky tests, coverage. Triggers: test, fixture, mock, stub, e2e, TDD, Playwright, Cypress, flaky, coverage, property-based.
 - **triage-issue**: Bug triage: explores codebase for root cause, files GitHub issue with TDD fix plan. Triggers: triage, investigate bug, fix plan, root cause, file issue, bug report.
@@ -5453,7 +5448,7 @@ python3 scripts/audit_skills.py --ci
 **Verify audit_skills.py:**
 - [ ] `HIGH: 0` (MUST be zero — CI fails otherwise)
 - [ ] `WARN: 0`
-- [ ] `INFO: N` (acceptable — broad-access skills: orchestrate, swarm, teams)
+- [ ] `INFO: N` (acceptable — broad-access skills: orchestrate, swarm, workflow)
 
 ---
 
@@ -7007,7 +7002,6 @@ The main adapted group is multi-agent orchestration:
 - `/orchestrate`
 - `/workflow`
 - `/swarm`
-- `/teams`
 - `/subagent-development`
 
 The adapter also covers skills that previously depended only on Claude's
@@ -10650,7 +10644,7 @@ User-authored opencode files and user-authored `opencode.json` keys are never de
 ## Behavioral Limits
 
 - opencode does not expose the full Claude hook event surface; only the events in the mapping table above are bridged. Claude-only events (`TaskCompleted`, `TeammateIdle`, `SubagentStart`, `SubagentStop`, `PreCompact`) are silently skipped.
-- Multi-agent orchestration skills (`/orchestrate`, `/workflow`, `/swarm`, `/teams`, `/subagent-development`) run through the Codex adaptation layer — they use opencode subagents and explicit file ownership instead of Claude's `Agent`/`TaskCreate` primitives.
+- Multi-agent orchestration skills (`/orchestrate`, `/workflow`, `/swarm`, `/subagent-development`) run through the Codex adaptation layer — they use opencode subagents and explicit file ownership instead of Claude's `Agent`/`TaskCreate` primitives.
 
 ## Verification
 
@@ -10997,7 +10991,7 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (32)
+## Task Skills (30)
 
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
@@ -11050,13 +11044,11 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **analyze** | `/analyze` | medium | Analyze code quality, complexity, and patterns |
 | **cve-scan** | `/cve-scan` | medium | Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, ruby, dart) |
 | **docs** | `/docs` | high | Generate/update docs: README, API docs, architecture notes, changelogs (Tier 1 — single agent) |
-| **search** | `/search` | medium | Search knowledge base (MCP tools with local fallback) |
 | **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |
 | **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, native in Claude, Codex-adapted to `spawn_agent` workflows |
 | **swarm** | `/swarm` | max | Massive parallelism: map-reduce, consensus, relay — Tier 3 |
 | **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2, Codex-adapted to native subagent orchestration |
 | **instinct-review** | `/instinct-review` | low | Review, curate, and manage learned instincts from past sessions |
-| **teams** | `/teams` | max | Launch pre-configured Agent Teams compositions for common workflows |
 | **write-a-prd** | `/write-a-prd` | high | Create PRD through interactive interview, codebase exploration, and module design |
 | **prd-to-plan** | `/prd-to-plan` | high | Convert PRD into phased implementation plan using tracer-bullet vertical slices |
 | **tdd** | `/tdd` | high | Test-driven development with red-green-refactor loop and vertical slices |
@@ -11137,23 +11129,15 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **content-moderation-patterns** | `skills/content-moderation-patterns/` | Two-stage moderation: pre-filter + LLM classifier; categories; thresholds |
 | **model-routing-patterns** | `skills/model-routing-patterns/` | Haiku/Sonnet/Opus routing; escalation; sub-agent delegation; fallback |
 
-## Knowledge Skills - Process (7)
+## Knowledge Skills - Process (5)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
-| **plan-writing** | `skills/plan-writing/` | Implementation plans, success criteria, pre-mortem |
-| **debugging-tactics** | `skills/debugging-tactics/` | Iron Law 4-phase debugging: root cause → pattern → hypothesis → fix |
 | **git-mastery** | `skills/git-mastery/` | Git workflows, branching, conflict resolution |
 | **architecture-decision** | `skills/architecture-decision/` | Architecture notes, trade-off analysis, alternatives |
 | **performance-profiling** | `skills/performance-profiling/` | Profiling, bottleneck analysis, optimization |
 | **research-mastery** | `skills/research-mastery/` | Multi-source research, synthesis, fact-checking |
 | **verification-before-completion** | `skills/verification-before-completion/` | Iron Law: evidence-before-claims, no completion without fresh verification |
-
-## Knowledge Skills - Orchestration (1)
-
-| Skill | Directory | Domain |
-|-------|-----------|--------|
-| **hive-mind** | `skills/hive-mind/` | Multi-agent aggregation, consensus, swarm patterns |
 
 ## Quality Guardrails
 
@@ -11246,7 +11230,6 @@ Common adapted skills:
 - `/orchestrate`
 - `/workflow`
 - `/swarm`
-- `/teams`
 - `/subagent-development`
 - `/tdd`
 

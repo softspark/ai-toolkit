@@ -11,7 +11,7 @@
   },
   "includes": {
     "agents": ["technical-researcher", "fact-checker", "search-specialist"],
-    "skills": ["search", "docs", "research-mastery", "plan-writing"],
+    "skills": ["docs", "research-mastery", "plan"],
     "rules": [],
     "hooks": ["user-prompt-submit.sh"]
   },

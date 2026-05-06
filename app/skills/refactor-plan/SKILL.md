@@ -126,5 +126,5 @@ What is explicitly NOT part of this refactor.
 - For **executing** a refactor directly — use `/refactor`
 - For architecture-level audit without a specific refactor in mind — use `/architecture-audit`
 - For creating a PRD (product requirements) — use `/write-a-prd`
-- For a plan without the GitHub RFC step — use `/plan` or `/plan-writing`
+- For a plan without the GitHub RFC step — use `/plan`
 - For interface design of a single module — use `/design-an-interface`

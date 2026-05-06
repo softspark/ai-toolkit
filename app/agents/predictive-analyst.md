@@ -4,7 +4,7 @@ description: "Precognition agent. Analyzes code changes to predict impact, regre
 model: sonnet
 color: cyan
 tools: Read, Write, Bash, Grep, Glob
-skills: debugging-tactics, git-mastery, testing-patterns
+skills: debug, git-mastery, testing-patterns
 ---
 
 # Predictive Analyst Agent

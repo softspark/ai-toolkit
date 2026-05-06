@@ -69,6 +69,6 @@ Unlike `--persona` at install time (which injects into CLAUDE.md permanently), `
 ## When NOT to Use
 
 - For **permanent** persona injection at install time — use `ai-toolkit install --persona <name>` (project or global)
-- For multi-agent parallel work with different specialists — use `/orchestrate` or `/teams`
+- For multi-agent parallel work with different specialists — use `/orchestrate` or `/workflow`
 - For a specific language or framework context (not a general engineering stance) — use the language-pattern skills (`/typescript-patterns`, etc.)
 - To edit or create a persona file — edit `app/personas/<name>.md` directly; this skill only switches between existing ones

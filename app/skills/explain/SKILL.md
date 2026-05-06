@@ -73,7 +73,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/dependency-graph.py src/auth.py
 ## When NOT to Use
 
 - To critique or improve the code — use `/review` or `/refactor`
-- To find a specific function across the codebase — use `/search` or `/explore`
+- To find a specific function across the codebase — use `/explore` or `Grep`
 - To write the documentation that the explanation turns into — use `/docs`
 - For a full architecture audit or redesign — use `/architecture-audit`
 - When the user asks "why is this broken" — use `/debug`, not `/explain`

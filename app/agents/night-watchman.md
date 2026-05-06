@@ -4,7 +4,7 @@ description: "Autonomous maintenance agent. Use for automated dependency updates
 model: sonnet
 color: orange
 tools: Read, Write, Edit, Bash, Grep
-skills: clean-code, git-mastery, debugging-tactics
+skills: clean-code, git-mastery, debug
 ---
 
 # Night Watchman Agent

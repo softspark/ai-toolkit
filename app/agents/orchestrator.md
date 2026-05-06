@@ -4,7 +4,7 @@ description: "Multi-agent coordination and task orchestration. Use when a task r
 tools: Read, Grep, Glob, Bash, Write, Edit, Agent, TeamCreate, TeamDelete, SendMessage, TaskCreate, TaskList, TaskUpdate
 model: opus
 color: purple
-skills: clean-code, app-builder, plan-writing
+skills: clean-code, app-builder, plan
 ---
 
 # Orchestrator - Multi-Agent Coordination

@@ -7,6 +7,46 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.0.0 — Skill consolidation: 112 → 107, removes 5 overlapping skills (2026-05-06)
+
+**Breaking release.** Five redundant skills removed; their substantive knowledge migrated into the surviving targets. Resolves the `/skills` listing truncation that v3.5.x partially addressed and removes user-facing overlap that made dispatch ambiguous.
+
+### Removed (BREAKING)
+
+- **`/search`** (task skill) — `/research-mastery` is the superset, now includes local Grep/Glob fallback for the no-MCP case.
+- **`/teams`** (task skill) — `/workflow` covers all preset scenarios (debug, feature, security, migration, etc.) without requiring `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+- **`plan-writing`** (knowledge skill) — estimation patterns and pre-mortem rules merged into `/plan`.
+- **`debugging-tactics`** (knowledge skill) — Iron Law, 4-phase methodology, and "5 Whys" merged into `/debug`.
+- **`hive-mind`** (knowledge skill) — consensus voting and aggregation rules merged into `/swarm`.
+
+### Changed
+
+- **`/plan`** — added Estimation & Templates section (T-shirt sizing, cone of uncertainty, SMART vs phase-aligned outcomes, mandatory pre-mortem ≥5 failure modes).
+- **`/debug`** — added Methodology section (Iron Law, 4 phases, "5 Whys" depth gate, architecture escalation after 3 failed fixes).
+- **`/swarm`** — Aggregation section now covers consensus weighted voting and file-ownership escalation rules previously in `hive-mind`.
+- **`/research-mastery`** — added Local Fallback section for Grep/Glob when `rag-mcp` is unavailable.
+- **Agent `skills:` field** — `orchestrator`, `product-manager`, `chief-of-staff` switched from `plan-writing` to `plan`. `meta-architect`, `night-watchman`, `predictive-analyst` switched from `debugging-tactics` to `debug`.
+- **`research-pack` plugin** — dropped `search`, `plan-writing` from skill list; added `plan`.
+- **Cross-references** — `/refactor-plan`, `/persona`, `/explore`, `/mem-search`, `/explain`, `/index` updated to reference surviving skills.
+- **`scripts/codex_skill_adapter.py`** — removed dead `teams`-specific branch; `_adapt_body` no longer takes `skill_name`.
+- **Documentation counts** — `README.md`, `package.json`, `manifest.json`, `app/ARCHITECTURE.md`, `kb/reference/skills-catalog.md` updated from 112 → 107.
+
+### Migration
+
+| Before | After |
+|--------|-------|
+| `/search <query>` | `/research-mastery <query>` |
+| `/teams <preset>` | `/workflow <type>` |
+| Agent `skills: plan-writing` | Agent `skills: plan` |
+| Agent `skills: debugging-tactics` | Agent `skills: debug` |
+| Agent `skills: hive-mind` | Agent `skills: swarm` |
+
+### Why
+
+`/skills` listing reported 2.1%/2% truncation in Claude Code 2.1.131 — 5 descriptions silently dropped. v3.5.x trimmed individual descriptions; v4.0.0 removes the underlying overlap (5 skills with knowledge already covered elsewhere). Net effect: smaller listing, no lost knowledge, clearer dispatch.
+
+---
+
 ## v3.5.1 — Description trim follow-up + GEMINI/Copilot drift fix (2026-05-06)
 
 Patch release. Continues v3.5.0 condensation on 20 skills and re-syncs platform artifacts that v3.5.0 forgot to regenerate.

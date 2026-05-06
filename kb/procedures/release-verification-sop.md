@@ -201,7 +201,7 @@ python3 scripts/audit_skills.py --ci
 **Verify audit_skills.py:**
 - [ ] `HIGH: 0` (MUST be zero — CI fails otherwise)
 - [ ] `WARN: 0`
-- [ ] `INFO: N` (acceptable — broad-access skills: orchestrate, swarm, teams)
+- [ ] `INFO: N` (acceptable — broad-access skills: orchestrate, swarm, workflow)
 
 ---
 

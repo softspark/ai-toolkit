@@ -80,7 +80,6 @@ The main adapted group is multi-agent orchestration:
 - `/orchestrate`
 - `/workflow`
 - `/swarm`
-- `/teams`
 - `/subagent-development`
 
 The adapter also covers skills that previously depended only on Claude's

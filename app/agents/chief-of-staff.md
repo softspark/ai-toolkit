@@ -4,7 +4,7 @@ description: "Executive Summary agent. Aggregates reports from all other agents 
 model: sonnet
 color: purple
 tools: Read, Write, Bash
-skills: research-mastery, plan-writing
+skills: research-mastery, plan
 ---
 
 # Chief of Staff Agent

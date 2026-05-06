@@ -46,6 +46,28 @@ smart_query("project template: {type}")
 hybrid_search_kb("architecture {pattern}")
 ```
 
+## Estimation & Templates
+
+### T-shirt sizing (use for >1 day work)
+
+| Size | Effort | Example |
+|------|--------|---------|
+| XS | <2h | typo, add field |
+| S | 2-4h | simple component, basic API |
+| M | 1-2 days | feature with tests |
+| L | 3-5 days | complex feature |
+| XL | 1-2 weeks | major subsystem |
+
+Avoid hour-precise estimates beyond a week — they are false confidence (cone of uncertainty: 4× variance at idea, 1.5× at design).
+
+### SMART tasks vs phase outcomes
+
+Plan-level tasks should be **phase-aligned outcomes** ("authentication ships behind a feature flag"), not SMART implementation steps ("add JWT middleware"). The latter belongs in the issue tracker after `/prd-to-issues`.
+
+### Pre-mortem (mandatory for >1 day plans)
+
+List ≥5 named failure modes with mitigation. A 2-bullet pre-mortem is theater. Risk register cap: 10 entries ranked by (probability × impact); below line 10 is noise.
+
 ## Related Skills
 
 - Plan approved? -> `/orchestrate` or `/workflow` to execute with agents

@@ -4,7 +4,7 @@ description: "Self-Optimization agent. Analyzes system performance and mistakes 
 model: opus
 color: purple
 tools: Read, Write, Edit, Bash, Grep
-skills: research-mastery, debugging-tactics
+skills: research-mastery, debug
 ---
 
 # Meta-Architect Agent

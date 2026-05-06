@@ -44,6 +44,34 @@ Use the parsed output to focus investigation on the right files and hypotheses.
 
 ---
 
+## Methodology — The Iron Law
+
+```
+NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
+```
+
+Random fixes waste time and create new bugs. Quick patches mask underlying issues. Complete each phase before proceeding to the next.
+
+### Phase 1 — Root Cause Investigation
+Read error messages and stack traces completely. Reproduce reliably (or gather more data — don't guess). Check recent changes (`git diff`, new deps, config). For multi-component systems: log boundary in/out at each layer, identify WHERE it breaks before WHY.
+
+### Phase 2 — Pattern Analysis
+Find similar working code in the same codebase. Compare against references **completely**, not skimming. List every difference, however small.
+
+### Phase 3 — Hypothesis & Testing
+Form a single hypothesis ("X is the root cause because Y"). Test minimally — smallest possible change, one variable at a time. Verify before continuing — if it didn't work, form a NEW hypothesis. Don't stack fixes on top of fixes.
+
+### Phase 4 — Implementation
+Write a failing test case FIRST (use `/tdd`). Implement single fix at root cause. No "while I'm here" improvements.
+
+### "5 Whys" — depth gate
+Ask "Why?" at least 5 times to find the real issue. Stop at the first plausible answer = symptom fixing. Example: crash → null pointer → user object null → API 404 → invalid user ID → **frontend allowed negative IDs** (root cause).
+
+### Architecture escalation (3+ failed fixes)
+If three hypotheses failed and each fix reveals new shared state in different places, the architecture is wrong, not your hypothesis. STOP. Discuss with user before more attempts.
+
+---
+
 ## Debugging Workflow
 
 ### 1. Check Logs

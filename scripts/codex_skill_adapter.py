@@ -98,7 +98,7 @@ def build_codex_skill_text(skill_file: Path) -> str:
 
     if adapted:
         frontmatter = _adapt_frontmatter(frontmatter)
-        body = _adapt_body(skill_file.parent.name, body)
+        body = _adapt_body(body)
 
     rendered_frontmatter = _render_frontmatter(frontmatter)
     return f"---\n{rendered_frontmatter}\n---\n{body.rstrip()}\n"
@@ -221,7 +221,7 @@ def _adapt_allowed_tools(value: str) -> list[str]:
     return tools
 
 
-def _adapt_body(skill_name: str, body: str) -> str:
+def _adapt_body(body: str) -> str:
     body = body.replace(
         "## MANDATORY: You MUST use the Agent tool",
         "## MANDATORY: Use Codex subagents for delegation",
@@ -258,11 +258,6 @@ def _adapt_body(skill_name: str, body: str) -> str:
     if "$ARGUMENTS" in body:
         body = body.replace("$ARGUMENTS", f"$ARGUMENTS\n{_CODEX_NOTE.rstrip()}", 1)
 
-    if skill_name == "teams":
-        body = body.replace(
-            "Launches a pre-configured Agent Teams composition for your task.",
-            "Launches a pre-configured Codex subagent composition for your task.",
-        )
     return body
 
 

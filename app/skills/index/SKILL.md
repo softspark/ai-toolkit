@@ -89,7 +89,7 @@ last_updated: "YYYY-MM-DD"
 
 ## When NOT to Use
 
-- For searching the KB — use `/search` or call `smart_query()` via the rag-mcp tool
+- For searching the KB — use `/research-mastery` or call `smart_query()` via the rag-mcp tool
 - For fixing indexing bugs — use `/debug` on the indexer pipeline
 - To evaluate RAG quality after reindexing — use `/evaluate`
 - When no vector store is configured — document the gap, do not invent one

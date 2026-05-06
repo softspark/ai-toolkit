@@ -30,7 +30,7 @@ Agent(subagent_type="...", prompt="sub-task 2 — own files: path/b/")
 Agent(subagent_type="...", prompt="sub-task N — own files: path/n/")
 ```
 
-After all complete: aggregate results with `hive-mind` skill, produce synthesis report.
+After all complete: aggregate results (see Aggregation section below), produce synthesis report.
 
 ### Consensus
 Same problem, 3 independent agents from different angles. Launch all 3 **in a single response**.
@@ -75,10 +75,15 @@ Agent(
 
 ## Aggregation (after all agents complete)
 
-1. Collect all agent outputs
-2. De-duplicate identical findings
-3. Synthesize unique insights
-4. Generate final swarm report
+1. **Collect** all agent outputs into a uniform format (JSON or Markdown sections)
+2. **De-duplicate** identical findings across agents
+3. **Synthesize** unique insights into one report
+4. **For Consensus mode**: weighted voting — each agent returns confidence 0.0–1.0, winner is highest-confidence solution; record dissents from agents that scored below winner
+5. **Generate** final swarm report
+
+### File ownership during aggregation
+
+When agents touch overlapping paths despite ownership rules: do NOT auto-merge. Escalate to user citing which two agents touched the same hunk. Use `--worktree` mode to prevent this proactively (see below).
 
 ## KB-First Mode (`--with-kb`)
 

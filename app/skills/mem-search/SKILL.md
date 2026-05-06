@@ -104,7 +104,7 @@ Found 3 results across 2 sessions.
 
 ## When NOT to Use
 
-- To search the KB or documentation — use `/search` or `smart_query()`
+- To search the KB or documentation — use `/research-mastery` or `smart_query()`
 - To find a specific commit — use `git log --grep` or `/git-mastery`
 - To list agent tasks — use `TaskList` or `/plan`
 - When memory-pack hooks are not installed — direct the user to install them first

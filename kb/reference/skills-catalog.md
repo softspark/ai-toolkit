@@ -23,7 +23,7 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (32)
+## Task Skills (30)
 
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
@@ -76,13 +76,11 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **analyze** | `/analyze` | medium | Analyze code quality, complexity, and patterns |
 | **cve-scan** | `/cve-scan` | medium | Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, ruby, dart) |
 | **docs** | `/docs` | high | Generate/update docs: README, API docs, architecture notes, changelogs (Tier 1 — single agent) |
-| **search** | `/search` | medium | Search knowledge base (MCP tools with local fallback) |
 | **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |
 | **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, native in Claude, Codex-adapted to `spawn_agent` workflows |
 | **swarm** | `/swarm` | max | Massive parallelism: map-reduce, consensus, relay — Tier 3 |
 | **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2, Codex-adapted to native subagent orchestration |
 | **instinct-review** | `/instinct-review` | low | Review, curate, and manage learned instincts from past sessions |
-| **teams** | `/teams` | max | Launch pre-configured Agent Teams compositions for common workflows |
 | **write-a-prd** | `/write-a-prd` | high | Create PRD through interactive interview, codebase exploration, and module design |
 | **prd-to-plan** | `/prd-to-plan` | high | Convert PRD into phased implementation plan using tracer-bullet vertical slices |
 | **tdd** | `/tdd` | high | Test-driven development with red-green-refactor loop and vertical slices |
@@ -163,23 +161,15 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **content-moderation-patterns** | `skills/content-moderation-patterns/` | Two-stage moderation: pre-filter + LLM classifier; categories; thresholds |
 | **model-routing-patterns** | `skills/model-routing-patterns/` | Haiku/Sonnet/Opus routing; escalation; sub-agent delegation; fallback |
 
-## Knowledge Skills - Process (7)
+## Knowledge Skills - Process (5)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
-| **plan-writing** | `skills/plan-writing/` | Implementation plans, success criteria, pre-mortem |
-| **debugging-tactics** | `skills/debugging-tactics/` | Iron Law 4-phase debugging: root cause → pattern → hypothesis → fix |
 | **git-mastery** | `skills/git-mastery/` | Git workflows, branching, conflict resolution |
 | **architecture-decision** | `skills/architecture-decision/` | Architecture notes, trade-off analysis, alternatives |
 | **performance-profiling** | `skills/performance-profiling/` | Profiling, bottleneck analysis, optimization |
 | **research-mastery** | `skills/research-mastery/` | Multi-source research, synthesis, fact-checking |
 | **verification-before-completion** | `skills/verification-before-completion/` | Iron Law: evidence-before-claims, no completion without fresh verification |
-
-## Knowledge Skills - Orchestration (1)
-
-| Skill | Directory | Domain |
-|-------|-----------|--------|
-| **hive-mind** | `skills/hive-mind/` | Multi-agent aggregation, consensus, swarm patterns |
 
 ## Quality Guardrails
 
@@ -272,7 +262,6 @@ Common adapted skills:
 - `/orchestrate`
 - `/workflow`
 - `/swarm`
-- `/teams`
 - `/subagent-development`
 - `/tdd`
 

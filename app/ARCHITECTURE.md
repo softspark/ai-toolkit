@@ -200,7 +200,6 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 | `swarm` | `/swarm` | Massive parallelism via Agent Teams |
 | `workflow` | `/workflow` | Run agent workflow |
 | `instinct-review` | `/instinct-review` | Review, curate, and manage learned instincts |
-| `teams` | `/teams` | Launch pre-configured Agent Teams compositions |
 | `write-a-prd` | `/write-a-prd` | Create PRD through interactive interview and module design |
 | `prd-to-plan` | `/prd-to-plan` | Convert PRD into phased vertical-slice implementation plan |
 | `tdd` | `/tdd` | Test-driven development with red-green-refactor loop |
@@ -258,21 +257,14 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 | `content-moderation-patterns` | Two-stage moderation: pre-filter + LLM classifier |
 | `model-routing-patterns` | Haiku/Sonnet/Opus routing, escalation, fallback |
 
-### Knowledge Skills - Process (7)
+### Knowledge Skills - Process (5)
 | Skill | Purpose |
 |-------|---------|
-| `plan-writing` | Task breakdown, planning |
-| `debugging-tactics` | Iron Law 4-phase debugging: root cause → pattern → hypothesis → fix |
 | `git-mastery` | Safe history rewriting, bisect, complex merges |
 | `architecture-decision` | Trade-off analysis, architecture note templates |
 | `performance-profiling` | CPU, memory, I/O, database bottleneck profiling |
 | `research-mastery` | Hierarchy of Truth protocol |
 | `verification-before-completion` | Iron Law: evidence-before-claims, no completion without fresh verification |
-
-### Knowledge Skills - Orchestration (1)
-| Skill | Purpose |
-|-------|---------|
-| `hive-mind` | Swarm intelligence: Consensus, Aggregation |
 
 ---
 
