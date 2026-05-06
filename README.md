@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-112-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1046%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1047%20passing-success)](tests/)
 
 <p align="center">
   <img src="assets/ai-toolkit-readme-hero.png" alt="ai-toolkit 3 README hero showing one toolkit for 12 AI editors" width="900">
@@ -14,13 +14,14 @@
 
 ---
 
-## What's New in v3.4.0
+## What's New in v3.4.1
 
-Minor release. Closes the visibility gap for rules and hooks installed from local files.
+Patch release. Fixes a v3.4.0 regression where `ai-toolkit update` could demote URL-tracked hook entries to local-path entries on every refresh. `register_path_source` now never overwrites a URL-tracked entry. Also adds a regression test.
 
-- **`add-rule` and `inject-hook` now track local paths** — file-sourced rules and hooks record `{"path": ..., "sha256": ...}` in `sources.json`, alongside the existing URL entries. URL flow unchanged.
-- **`status` distinguishes URL vs local sources** — local entries show the absolute origin path with a `[local]` tag; URL entries show the URL.
-- **Orphan rule detection** — rule files on disk that have no source recorded (e.g., installed before v3.3.0's registry existed) are listed in `status` with `(orphan, no source recorded — re-run add-rule)`. Run `add-rule <path>` again to register them.
+- **URL-tracked hooks and rules are protected** — `register_path_source` returns early when the existing entry has a `url` field.
+- **`add-rule` and `inject-hook` still track local paths** — file-sourced rules and hooks record `{"path": ..., "sha256": ...}` in `sources.json`, alongside URL entries.
+- **`status` distinguishes URL vs local sources** — local entries show the absolute origin path with a `[local]` tag.
+- **Orphan rule detection** — rule files on disk with no source recorded are listed with `(orphan, no source recorded — re-run add-rule)`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -153,7 +154,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1046 tests)
+├── tests/               # Bats test suite (1047 tests)
 └── CHANGELOG.md
 ```
 

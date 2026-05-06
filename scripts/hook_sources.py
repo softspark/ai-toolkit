@@ -135,6 +135,12 @@ def register_path_source(
         raise ValueError(f"Invalid hook name: {hook_name!r}")
     hooks_dir = hooks_dir or EXTERNAL_HOOKS_DIR
     sources = load_sources(hooks_dir)
+    existing = sources.get(hook_name) or {}
+    # Never demote a URL-tracked entry to a local-path entry. update() flows
+    # call inject() with the cached file path after URL fetch, which would
+    # otherwise overwrite the URL.
+    if "url" in existing:
+        return
     entry: dict[str, Any] = {
         "path": str(Path(path).resolve()),
         "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

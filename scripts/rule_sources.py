@@ -136,6 +136,11 @@ def register_path_source(
         raise ValueError(f"Invalid rule name: {rule_name!r}")
     rules_dir = rules_dir or RULES_DIR
     sources = load_sources(rules_dir)
+    existing = sources.get(rule_name) or {}
+    # Never demote a URL-tracked entry to a local-path entry. Symmetric with
+    # register_path_source() in hook_sources.py.
+    if "url" in existing:
+        return
     entry: dict[str, Any] = {
         "path": str(Path(path).resolve()),
         "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

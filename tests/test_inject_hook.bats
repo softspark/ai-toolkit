@@ -517,6 +517,27 @@ assert 'my-custom-name' in sources, f'Expected my-custom-name in {sources}'
 "
 }
 
+@test "register_path_source does NOT overwrite an existing URL entry" {
+    # Regression: ai-toolkit update fetches URL hooks to a cached file then
+    # calls inject() with that path. inject_hook_cli.py would otherwise demote
+    # the URL entry to a local-path entry on every update.
+    mkdir -p "$TEST_DIR/.softspark/ai-toolkit/hooks/external"
+    cat > "$TEST_DIR/.softspark/ai-toolkit/hooks/external/sources.json" <<'EOF'
+{"schema_version": 1, "hooks": {"upstream": {"url": "https://example.com/hooks.json", "fetched_at": "2026-01-01T00:00:00Z", "sha256": "abc"}}}
+EOF
+    _make_hooks_file "$TEST_DIR/upstream.json" "Stop" "echo cached"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/upstream.json" "$TEST_DIR"
+    python3 -c "
+import json
+with open('$TEST_DIR/.softspark/ai-toolkit/hooks/external/sources.json') as f:
+    d = json.load(f)
+entry = d['hooks']['upstream']
+assert 'url' in entry, f'URL entry was demoted: {entry}'
+assert entry['url'] == 'https://example.com/hooks.json'
+assert 'path' not in entry, f'path should not be set on URL entry: {entry}'
+"
+}
+
 @test "inject_hook_cli.py registers local file path in sources.json" {
     _make_hooks_file "$TEST_DIR/local-plugin.json" "Stop" "echo done"
     EXPECTED_PATH=$(python3 -c "import pathlib; print(pathlib.Path('$TEST_DIR/local-plugin.json').resolve())")

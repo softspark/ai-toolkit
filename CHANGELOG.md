@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.4.1 — URL-tracked sources protected from path-write demotion (2026-05-06)
+
+Patch release. Fixes a regression introduced in v3.4.0 where `ai-toolkit update` could rewrite a URL-tracked hook entry into a local-path entry.
+
+### Fixed
+
+- **`register_path_source` no longer overwrites URL entries** in `scripts/hook_sources.py` and `scripts/rule_sources.py`. The function now returns early when an existing entry has a `url` field. Previously, `scripts/install_steps/markers.py:refresh_url_hooks` re-injected URL hooks from their cached file, and `inject_hook_cli.py` would call `register_path_source` with that cached path — silently demoting the URL record to a local one on every update.
+- **Regression test** in `tests/test_inject_hook.bats` that pre-seeds a URL entry, runs the local-path inject path, and asserts the URL entry survives untouched.
+
+### Recovery
+
+- If your `~/.softspark/ai-toolkit/hooks/external/sources.json` has a `path` instead of a `url` for a hook that was originally URL-installed, run `ai-toolkit remove-hook <name>` followed by `ai-toolkit inject-hook <original-url>` to re-register from the URL.
+
+---
+
 ## v3.4.0 — Local-path source tracking & orphan detection (2026-05-06)
 
 Minor release. Closes the visibility gap for rules and hooks installed from local files: `add-rule` and `inject-hook` now record the origin path in `sources.json`, and `status` flags any rule files on disk that have no source recorded.
