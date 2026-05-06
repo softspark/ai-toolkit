@@ -105,6 +105,25 @@ def rule_quality_standards() -> str:
 """
 
 
+def rule_output_mode() -> str:
+    return """\
+# Output Mode
+
+`output-mode: concise`
+
+Default response mode is **concise**. The `brand-voice` skill (when present) auto-loads concise rules; assistants without that skill should still apply the directives below.
+
+* No preamble — skip "I'll now...", "Sure, let me...", "Great question!" Start with the answer.
+* Lead with the result — conclusion or output first; explanation only if asked or non-obvious.
+* Max 3 sentences per closed question — yes/no, single-fact, or "where is X" answers stay under three sentences.
+* Tables and lists over prose — when comparing options, listing steps, or showing values.
+* No trailing summaries — if the diff or output already shows what changed, do not restate it.
+* Drop filler adjectives — no "nice", "great", "powerful", "robust" unless the user asked for evaluation.
+* Cite as `path:line` — instead of paragraphs describing where things live.
+* Escalate to verbose only for: architecture / RFC / ADR / trade-off documents, or when the user asks for detail.
+"""
+
+
 def rule_agents_and_skills() -> str:
     """Full listing of agents and skills — same content all platforms get."""
     agents_count, skills_count = count_agents_and_skills()
@@ -142,6 +161,7 @@ STANDARD_RULES: dict[str, callable] = {
     f"{PREFIX}security.md": rule_security,
     f"{PREFIX}workflow.md": rule_workflow,
     f"{PREFIX}quality-standards.md": rule_quality_standards,
+    f"{PREFIX}output-mode.md": rule_output_mode,
 }
 
 

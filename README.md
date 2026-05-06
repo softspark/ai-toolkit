@@ -14,6 +14,13 @@
 
 ---
 
+## What's New in v4.1.0
+
+Default `output-mode: concise` directive now propagates to every editor config (Claude Code global + project-local CLAUDE.md, Cursor `.mdc` rules, Windsurf, Cline, Roo, Augment, Codex `.agents/rules`, Antigravity, GitHub Copilot, Gemini CLI, Aider). Auto-installed on every `ai-toolkit install` / `ai-toolkit update`. The `brand-voice` skill (shipped v3.2.0) auto-loads concise rules; assistants without that skill still see the directive in their config.
+
+- **No preamble**, lead with the result, max 3 sentences per closed question, tables over prose, no trailing summaries.
+- **Opt out**: `/brand-voice default` (session) or strip `<!-- TOOLKIT:output-mode -->` block from CLAUDE.md (permanent).
+
 ## What's New in v4.0.1
 
 CI hotfix for v4.0.0. Corrects skill subtype counts in `README.md` "What You Get" table and `kb/reference/architecture-overview.md` (hybrid 32 → 30, knowledge 48 → 45). The metadata contract tests caught the drift on CI; v4.0.0 release path missed three count locations. No skill catalog changes — see v4.0.0 below for the actual consolidation.

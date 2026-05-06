@@ -212,6 +212,17 @@ Derived from the immutable safety constitution (6 articles):
 
 <!-- TOOLKIT:ai-toolkit END -->
 
+<!-- TOOLKIT:output-mode START -->
+<!-- Auto-injected by ai-toolkit. Re-run to update. -->
+
+# Output Mode
+
+`output-mode: concise`
+
+Default response mode is **concise**. Skip preamble, lead with the result, max 3 sentences per closed question, prefer tables/lists over prose, no trailing summaries, drop filler adjectives, cite as `path:line`. Escalate to verbose only for architecture / RFC / ADR / trade-off documents or when the user asks for detail.
+
+<!-- TOOLKIT:output-mode END -->
+
 <!-- TOOLKIT:jira-mcp START -->
 <!-- Auto-injected by ai-toolkit. Re-run to update. -->
 

@@ -142,6 +142,23 @@ def render_generator(config: dict) -> None:
         print()
         print_toolkit_end()
 
+    # Default output mode directive — applies to every editor that loads this file
+    print()
+    print("<!-- TOOLKIT:output-mode START -->")
+    print("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
+    print()
+    print("# Output Mode")
+    print()
+    print("`output-mode: concise`")
+    print()
+    print("Default response mode is **concise**. Skip preamble, lead with the result, "
+          "max 3 sentences per closed question, prefer tables/lists over prose, no "
+          "trailing summaries, drop filler adjectives, cite as `path:line`. Escalate "
+          "to verbose only for architecture / RFC / ADR / trade-off documents or when "
+          "the user asks for detail.")
+    print()
+    print("<!-- TOOLKIT:output-mode END -->")
+
     # Registered custom rules from ~/.softspark/ai-toolkit/rules/
     if RULES_DIR.is_dir():
         for rule_file in sorted(RULES_DIR.glob("*.md")):

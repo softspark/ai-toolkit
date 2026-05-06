@@ -7,6 +7,45 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.1.0 — Default `output-mode: concise` propagated to all editors (2026-05-06)
+
+Minor release. Adds a global `output-mode: concise` directive that propagates to every editor config produced by ai-toolkit. Reduces token usage and removes preamble/filler from assistant responses across Claude Code, Cursor, Windsurf, Cline, Roo Code, Augment, Codex, Antigravity, GitHub Copilot, Gemini CLI, and Aider.
+
+### Added
+
+- **`app/rules/output-mode.md`** — auto-injected into `~/.claude/CLAUDE.md` (global) and project-local `CLAUDE.md` via the existing `inject_rules()` mechanism on every `ai-toolkit install` / `ai-toolkit update`.
+- **`rule_output_mode()` in `scripts/dir_rules_shared.py`** — registered in `STANDARD_RULES`, so directory-based generators (Cursor `.mdc`, Windsurf, Cline, Roo, Augment, Codex, Antigravity) emit a dedicated `ai-toolkit-output-mode.md` file alongside the other six standard rules.
+- **Output Mode block in `scripts/generator_base.render_generator()`** — single-file editor outputs (`GEMINI.md`, `.github/copilot-instructions.md`, `.cursorrules`, Aider `CONVENTIONS.md`) now include the directive between TOOLKIT markers.
+
+### Directives
+
+The `concise` mode applies these rules to assistant responses:
+
+- No preamble — skip "I'll now…", "Sure, let me…", "Great question!"
+- Lead with the result; explanation only if asked or non-obvious.
+- Max 3 sentences per closed question.
+- Tables and lists over prose for comparisons, steps, values.
+- No trailing summaries when the diff or output already shows what changed.
+- Drop filler adjectives ("nice", "great", "powerful", "robust").
+- Cite as `path:line`, not paragraphs of location prose.
+- Escalate to verbose only for architecture / RFC / ADR / trade-off documents or explicit user request.
+
+### Changed
+
+- **Standard rule count for directory-based generators: 6 → 7**. Tests updated: `tests/test_generators.bats` (count assertions in two cases bumped from 6/8 to 7/9).
+
+### How to opt out
+
+- Per-session: `/brand-voice default` (or `/brand-voice strict` for tighter)
+- Per-project: edit `output-mode:` value in project's `CLAUDE.md` or strip the `<!-- TOOLKIT:output-mode -->` block manually
+- Re-install without rules: `ai-toolkit install --skip rules`
+
+### Why
+
+User feedback after v4.0.x consolidation: asked for a hook-like mechanism to enforce concise responses. The `brand-voice` skill already had `concise`/`strict` modes (shipped v3.2.0) but activation required per-project opt-in. This release flips the default to opt-out — every editor that consumes ai-toolkit configs now sees the directive immediately after install/update.
+
+---
+
 ## v4.0.1 — CI hotfix: README "What You Get" table counts (2026-05-06)
 
 Patch release. Fixes CI failure on v4.0.0 main branch — three `tests/test_metadata_contracts.bats` cases failed because the `What You Get` table in `README.md` and the skill type table in `kb/reference/architecture-overview.md` still referenced pre-consolidation counts (32 task / 32 hybrid / 48 knowledge).

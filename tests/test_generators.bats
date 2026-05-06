@@ -540,9 +540,9 @@ generate(Path('$tmp'), language_modules=['rules-python'])
     [ -f "$tmp/.windsurf/rules/ai-toolkit-lang-python.md" ]
     # Standard rules still present
     [ -f "$tmp/.windsurf/rules/ai-toolkit-code-style.md" ]
-    # Total: 6 standard + 2 lang = 8
+    # Total: 7 standard + 2 lang = 9
     count=$(ls "$tmp/.windsurf/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
-    [ "$count" -eq 8 ]
+    [ "$count" -eq 9 ]
     rm -rf "$tmp"
 }
 
@@ -706,7 +706,7 @@ generate(Path('$tmp'))
     rm -rf "$tmp"
 }
 
-@test "generators without language_modules produce only 6 standard files" {
+@test "generators without language_modules produce only 7 standard files" {
     local tmp; tmp="$(mktemp -d)"
     python3 -c "
 import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
@@ -715,7 +715,7 @@ from generate_windsurf_rules import generate
 generate(Path('$tmp'))
 " >/dev/null 2>&1
     count=$(ls "$tmp/.windsurf/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
-    [ "$count" -eq 6 ]
+    [ "$count" -eq 7 ]
     rm -rf "$tmp"
 }
 
