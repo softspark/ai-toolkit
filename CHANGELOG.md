@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.0.1 — CI hotfix: README "What You Get" table counts (2026-05-06)
+
+Patch release. Fixes CI failure on v4.0.0 main branch — three `tests/test_metadata_contracts.bats` cases failed because the `What You Get` table in `README.md` and the skill type table in `kb/reference/architecture-overview.md` still referenced pre-consolidation counts (32 task / 32 hybrid / 48 knowledge).
+
+### Fixed
+
+- **README.md `What You Get` table**: hybrid 32 → 30, knowledge 48 → 45 (task unchanged at 32; total 107).
+- **`kb/reference/architecture-overview.md`**: same correction in the skill type table.
+- **`manifest.json`**: skill subtype description updated from `(30 task + 31 hybrid + 46 knowledge)` to the correct `(32 task + 30 hybrid + 45 knowledge)`.
+
+### Why
+
+v4.0.0 release path missed these three count locations. They are gated by the metadata contract test suite, which I misread locally (the trailing `ok 1047` line is the *last test number*, not a pass count). Confirmed by re-running `bats tests/test_metadata_contracts.bats` directly, which shows three `not ok` failures.
+
+### Process note
+
+Lesson for future releases: always inspect `bats … 2>&1 | grep "^not ok"` rather than trusting tail of npm test. Updating the release-verification SOP separately.
+
+---
+
 ## v4.0.0 — Skill consolidation: 112 → 107, removes 5 overlapping skills (2026-05-06)
 
 **Breaking release.** Five redundant skills removed; their substantive knowledge migrated into the surviving targets. Resolves the `/skills` listing truncation that v3.5.x partially addressed and removes user-facing overlap that made dispatch ambiguous.

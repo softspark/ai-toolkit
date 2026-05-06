@@ -14,6 +14,10 @@
 
 ---
 
+## What's New in v4.0.1
+
+CI hotfix for v4.0.0. Corrects skill subtype counts in `README.md` "What You Get" table and `kb/reference/architecture-overview.md` (hybrid 32 → 30, knowledge 48 → 45). The metadata contract tests caught the drift on CI; v4.0.0 release path missed three count locations. No skill catalog changes — see v4.0.0 below for the actual consolidation.
+
 ## What's New in v4.0.0
 
 **Breaking release.** Skill catalog consolidated from 112 → 107: removes 5 redundant skills, merges their substantive knowledge into the surviving targets. Eliminates `/skills` truncation and removes overlap that confused agent dispatch.
@@ -138,8 +142,8 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Component | Count | Description |
 |-----------|-------|-------------|
 | `skills/` (task) | 32 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/mcp-builder`, ... |
-| `skills/` (hybrid) | 32 | Slash commands with agent knowledge base |
-| `skills/` (knowledge) | 48 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
+| `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
+| `skills/` (knowledge) | 45 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
