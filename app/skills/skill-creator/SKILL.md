@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: "Create new skills from templates with guided workflow"
+description: "Creates new skills from templates via guided workflow. Triggers: new skill, create skill, skill scaffold, skill template."
 effort: high
 disable-model-invocation: true
 argument-hint: "[skill name or description]"

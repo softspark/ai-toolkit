@@ -1,6 +1,6 @@
 ---
 name: panic
-description: "Emergency kill switch that halts all agent activity via a lockfile gate. Use when agents are looping, misbehaving, or the user wants to stop everything NOW — not for normal workflow interruptions."
+description: "Emergency kill switch — halts all agents via lockfile gate. Triggers: panic, stop everything, kill switch, halt agents, agents looping."
 effort: low
 disable-model-invocation: true
 agent: system-governor

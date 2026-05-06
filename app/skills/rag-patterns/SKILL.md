@@ -1,6 +1,6 @@
 ---
 name: rag-patterns
-description: "RAG architecture: embeddings, chunking strategies, hybrid search (BM25 + vector), reranking, CRAG/self-correcting, multi-hop reasoning, evaluation metrics. Triggers: RAG, embedding, vector search, pgvector, Qdrant, Pinecone, Weaviate, chunking, reranker, retrieval, hybrid search, semantic search, knowledge base, cosine similarity. Load when building or tuning RAG systems."
+description: "RAG: embeddings, chunking, hybrid search (BM25+vector), reranking, CRAG, multi-hop. Triggers: RAG, embedding, pgvector, Qdrant, Pinecone, Weaviate, reranker, semantic search."
 effort: medium
 user-invocable: false
 allowed-tools: Read

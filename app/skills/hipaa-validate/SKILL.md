@@ -1,6 +1,6 @@
 ---
 name: hipaa-validate
-description: "Validate code against HIPAA policy: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references"
+description: "HIPAA validator: PHI exposure, audit logging, encryption, access control, BAA refs. Triggers: HIPAA, PHI, healthcare compliance, audit log, BAA."
 user-invocable: true
 effort: medium
 disable-model-invocation: true

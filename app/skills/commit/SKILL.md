@@ -1,6 +1,6 @@
 ---
 name: commit
-description: "Create Conventional Commits with pre-commit validation"
+description: "Creates Conventional Commits with pre-commit validation. Triggers: commit, conventional commit, git commit, message."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[message or scope]"

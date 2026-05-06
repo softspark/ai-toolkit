@@ -1,6 +1,6 @@
 ---
 name: php-rules
-description: "PHP coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .php, composer.json, Laravel, Symfony, PHPUnit, PSR-12, Composer. Load when writing, reviewing, or editing PHP code."
+description: "PHP coding rules: style, patterns, security, testing. Triggers: .php, composer.json, Laravel, Symfony, PHPUnit, PSR-12, Composer."
 effort: medium
 user-invocable: false
 allowed-tools: Read

@@ -1,6 +1,6 @@
 ---
 name: dart-rules
-description: "Dart/Flutter coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .dart, pubspec.yaml, Flutter, Riverpod, Bloc, widget, StatelessWidget, StatefulWidget. Load when writing, reviewing, or editing Dart/Flutter code."
+description: "Dart/Flutter coding rules: style, patterns, security, testing. Triggers: .dart, pubspec.yaml, Flutter, Riverpod, Bloc, widget, StatelessWidget, StatefulWidget."
 effort: medium
 user-invocable: false
 allowed-tools: Read

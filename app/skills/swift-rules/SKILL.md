@@ -1,6 +1,6 @@
 ---
 name: swift-rules
-description: "Swift coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .swift, Package.swift, .xcodeproj, SwiftUI, Combine, async/await, XCTest. Load when writing, reviewing, or editing Swift code."
+description: "Swift coding rules: style, patterns, security, testing. Triggers: .swift, Package.swift, .xcodeproj, SwiftUI, Combine, async/await, XCTest."
 effort: medium
 user-invocable: false
 allowed-tools: Read

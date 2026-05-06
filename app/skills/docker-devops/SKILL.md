@@ -1,6 +1,6 @@
 ---
 name: docker-devops
-description: "Docker, containers, Kubernetes, and DevOps patterns: Dockerfile best practices, multi-stage builds, compose, k8s manifests, Helm charts, service mesh, image hardening. Triggers: Docker, Dockerfile, container, image, Kubernetes, k8s, compose, Helm, registry, layer caching, service mesh, pod, deployment yaml. Load when writing or fixing container/orchestration configs."
+description: "Docker/K8s/DevOps: Dockerfile, multi-stage builds, compose, manifests, Helm, image hardening. Triggers: Docker, Dockerfile, container, Kubernetes, k8s, compose, Helm, pod, deployment yaml."
 effort: medium
 user-invocable: false
 allowed-tools: Read

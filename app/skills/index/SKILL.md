@@ -1,6 +1,6 @@
 ---
 name: index
-description: "Reindex the knowledge base for semantic search via the configured vector store (e.g., Qdrant). Use only when the user explicitly asks to reindex — never trigger speculative rebuilds."
+description: "Reindexes KB for semantic search via vector store (Qdrant). Triggers: reindex KB, rebuild index, vector reindex, refresh embeddings."
 effort: low
 disable-model-invocation: true
 argument-hint: "[path or scope]"

@@ -1,6 +1,6 @@
 ---
 name: brand-voice
-description: "Loaded when writing documentation, content, README, or user-facing text, AND when an output-mode is set for conversational responses. Prevents generic LLM rhetoric, enforces direct technical voice, and supplies optional concise/strict response modes."
+description: "Direct technical voice for docs, README, user-facing text. Concise/strict modes. Triggers: documentation, README, content, output-mode, voice, prose style."
 effort: medium
 user-invocable: true
 allowed-tools: Read

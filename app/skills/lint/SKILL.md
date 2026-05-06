@@ -1,6 +1,6 @@
 ---
 name: lint
-description: "Run the project's linter and type-checker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy, dart analyze). Use when the user asks for static-analysis feedback — not to run tests or refactor."
+description: "Runs linter+typechecker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy). Triggers: lint, typecheck, static analysis."
 effort: low
 disable-model-invocation: true
 argument-hint: "[path]"

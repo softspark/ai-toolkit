@@ -1,6 +1,6 @@
 ---
 name: research-mastery
-description: "Hierarchical information retrieval following strict order: KB first (smart_query/crag_search), then MCP/Context7, then web search, then LLM knowledge as last resort. Triggers: research, find information, verify fact, synthesize sources, fact-check, cross-reference, multi-source, cite sources, investigate topic. Load when any task requires external or cross-source knowledge."
+description: "Hierarchical retrieval: KB first (smart_query/crag_search), then MCP/Context7, then web. Triggers: research, fact-check, verify, synthesize, cross-reference, multi-source, investigate, cite sources."
 effort: medium
 user-invocable: false
 allowed-tools: Read

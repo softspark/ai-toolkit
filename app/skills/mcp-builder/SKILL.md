@@ -1,6 +1,6 @@
 ---
 name: mcp-builder
-description: "Build production-grade MCP (Model Context Protocol) servers from scratch using the 4-phase methodology: research, implement, test, evaluate. Use when creating new MCP integrations for external APIs, databases, or internal services."
+description: "Builds production MCP servers via 4-phase methodology: research, implement, test, evaluate. Triggers: build MCP, new MCP, MCP integration, MCP server scaffold."
 effort: high
 disable-model-invocation: true
 argument-hint: "[service name or API description]"

@@ -1,6 +1,6 @@
 ---
 name: repeat
-description: "Run a prompt or slash command on a recurring interval until task complete or limits reached. Use when user wants to set up a recurring task, poll for status, or run something repeatedly on an interval."
+description: "Runs prompt/slash command on recurring interval until done or limit. Triggers: repeat, recurring task, poll status, run every N minutes, interval."
 user-invocable: true
 effort: medium
 argument-hint: "[interval] [command or prompt] (e.g., /repeat 5m /test, defaults to 10m)"

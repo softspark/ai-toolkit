@@ -1,6 +1,6 @@
 ---
 name: ci-cd-patterns
-description: "CI/CD pipeline and deployment automation: GitHub Actions, GitLab CI, Jenkins, build stages, caching, artifact promotion, blue-green, canary, rollback gates. Triggers: CI, CD, pipeline, GitHub Actions, workflow YAML, deploy automation, release, artifact, rollout, canary, blue-green. Load when designing or fixing a build/release pipeline."
+description: "CI/CD: GitHub Actions, GitLab CI, Jenkins, caching, blue-green, canary, rollback gates. Triggers: CI, CD, pipeline, GitHub Actions, workflow YAML, release, artifact, canary, rollout."
 effort: medium
 user-invocable: false
 allowed-tools: Read

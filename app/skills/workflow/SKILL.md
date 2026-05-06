@@ -1,6 +1,6 @@
 ---
 name: workflow
-description: "Start and manage autonomous agent workflows"
+description: "Starts and manages autonomous agent workflows. Triggers: workflow, start workflow, autonomous agents, agent pipeline."
 user-invocable: true
 effort: max
 argument-hint: "[type] [task description]"

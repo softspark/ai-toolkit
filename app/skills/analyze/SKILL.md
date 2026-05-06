@@ -1,6 +1,6 @@
 ---
 name: analyze
-description: "Analyze code quality, complexity, and patterns across a codebase. Use when the user asks for a quality report, hotspot scan, or systemic architecture signal — not for fixing bugs or reviewing a single PR."
+description: "Analyzes code quality, complexity, patterns across codebase. Triggers: quality report, hotspot scan, code analysis, architecture signal."
 user-invocable: true
 effort: medium
 argument-hint: "[path or pattern]"

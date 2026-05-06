@@ -1,6 +1,6 @@
 ---
 name: build
-description: "Build the project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Use when the user asks to compile, bundle, or produce artifacts — not to run tests or deploy."
+description: "Builds project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Triggers: build, compile, bundle, produce artifacts."
 effort: low
 disable-model-invocation: true
 argument-hint: "[target]"

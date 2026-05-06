@@ -1,6 +1,6 @@
 ---
 name: triage-issue
-description: "Triage a bug by deeply exploring the codebase for root cause, then create a GitHub issue with a TDD-based fix plan. Mostly hands-off — minimal user interaction. Use when user reports a bug, wants to investigate an issue, mentions triage, or wants a fix plan."
+description: "Bug triage: explores codebase for root cause, files GitHub issue with TDD fix plan. Triggers: triage, investigate bug, fix plan, root cause, file issue, bug report."
 user-invocable: true
 effort: high
 argument-hint: "[bug description or symptom]"

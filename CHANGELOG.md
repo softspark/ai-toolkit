@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.5.0 — Skill description condensation: 33% smaller, consistent pattern (2026-05-06)
+
+Minor release. All 112 skill descriptions rewritten into a single consistent pattern: short summary, then `Triggers: <comma-separated keywords>.` Drops the verbose "Load when..." tail entirely. Consequence: Claude Code's skill listing fits in ~2% context budget without truncation, and the trigger lists stay intact for accurate auto-loading.
+
+### Changed
+
+- **All 112 `app/skills/*/SKILL.md` `description:` fields** rewritten to a single pattern: `<short summary>. Triggers: <comma-separated keywords>.` Verbose explanations and "Load when..." tails removed.
+- **Total description length: 26 465 → 17 837 chars (~6 616 → ~4 459 tokens, 33% reduction)** measured at description-frontmatter level.
+- **Top offenders cut hardest** — `a11y-validate` (393 → 192), `testing-patterns` (391 → 174), `typescript-patterns` (386 → 186), `security-patterns` (376 → 179), `research-mastery` (376 → 198), `rag-patterns` (374 → 174), `documentation-standards` (371 → 179), `mcp-patterns` (370 → 185), `docker-devops` (369 → 188), `performance-profiling` (368 → 197).
+- **`scripts/generate_language_rules_skills.py`** generator template updated to emit the same condensed pattern, so `<lang>-rules` skills stay consistent on regeneration. All 9 language-rules skills regenerated.
+
+### Why
+
+`/doctor` reported "Skill listing will be truncated: 60 descriptions dropped (1% budget)" then "30 dropped (2% budget)". Trigger keywords were getting silently stripped from less-used skills, breaking auto-loading. The fix is description-side, not budget-side: tighter descriptions mean Claude Code can keep all 112 in a normal 2% budget with headroom.
+
+### Migration
+
+- No breaking changes. All trigger keywords preserved.
+- Skills auto-load on the same triggers as before.
+- If you customized `app/skills/<name>/SKILL.md` description, your edit is preserved (only ai-toolkit-shipped skills were touched).
+
+---
+
 ## v3.4.1 — URL-tracked sources protected from path-write demotion (2026-05-06)
 
 Patch release. Fixes a regression introduced in v3.4.0 where `ai-toolkit update` could rewrite a URL-tracked hook entry into a local-path entry.

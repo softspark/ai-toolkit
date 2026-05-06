@@ -1,6 +1,6 @@
 ---
 name: evaluate
-description: "Evaluate RAG retrieval accuracy and LLM-as-a-judge quality metrics (faithfulness, relevancy, context precision) against a golden dataset. Use when the user asks to measure RAG quality or detect knowledge gaps — not for evaluating generic LLM outputs."
+description: "Evaluates RAG retrieval and LLM-as-judge metrics (faithfulness, relevancy, context precision). Triggers: measure RAG quality, knowledge gap, RAG eval, golden dataset."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[--threshold N]"

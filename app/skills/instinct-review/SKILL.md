@@ -1,6 +1,6 @@
 ---
 name: instinct-review
-description: "Review, promote, or remove learned instincts extracted from past sessions (`.claude/instincts/*.md`). Use when the user wants to curate the instinct list — not to extract new instincts or edit memory."
+description: "Reviews/promotes/removes instincts from `.claude/instincts/*.md`. Triggers: instinct review, curate instincts, manage instincts, promote instinct."
 effort: low
 user-invocable: true
 argument-hint: "[--list | --promote <id> | --remove <id> | --clear]"

@@ -1,6 +1,6 @@
 ---
 name: cpp-rules
-description: "C++ coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .cpp, .cc, .cxx, .hpp, .h, CMakeLists.txt, Makefile, GoogleTest, clang-tidy. Load when writing, reviewing, or editing C++ code."
+description: "C++ coding rules: style, patterns, security, testing. Triggers: .cpp, .cc, .cxx, .hpp, .h, CMakeLists.txt, Makefile, GoogleTest, clang-tidy."
 effort: medium
 user-invocable: false
 allowed-tools: Read

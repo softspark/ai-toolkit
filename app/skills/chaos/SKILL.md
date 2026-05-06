@@ -1,6 +1,6 @@
 ---
 name: chaos
-description: "Inject controlled faults for resilience testing on non-production targets. Use when the user explicitly asks for a chaos experiment, latency injection, or dependency kill — never implicit."
+description: "Injects controlled faults for resilience testing on non-prod. Triggers: chaos, fault injection, latency injection, dependency kill, resilience test."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[target]"

@@ -1,6 +1,6 @@
 ---
 name: design-engineering
-description: "UI craftsmanship (Emil Kowalski school): animation frequency rules, easing curves, micro-interactions, state polish, invisible-details philosophy. Triggers: animation, transition, ease-out, ease-in-out, motion, micro-interaction, hover state, loading state, UI polish, design detail, spring curve, delightful UX. Load when building or reviewing interactive UI."
+description: "UI craftsmanship: animation rules, easing, micro-interactions, state polish. Triggers: animation, transition, ease-out, motion, micro-interaction, hover, loading state, UI polish."
 effort: medium
 user-invocable: false
 allowed-tools: Read

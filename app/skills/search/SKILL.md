@@ -1,6 +1,6 @@
 ---
 name: search
-description: "Search the knowledge base with semantic and hybrid modes"
+description: "Searches the KB with semantic + hybrid modes. Triggers: search KB, semantic search, hybrid search, knowledge base query."
 user-invocable: true
 effort: medium
 argument-hint: "[query]"

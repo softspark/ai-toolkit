@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: "Refactor code for quality and maintainability"
+description: "Refactors code for quality and maintainability. Triggers: refactor, clean up, restructure, improve code, modernize."
 user-invocable: true
 effort: high
 argument-hint: "[target and goal]"

@@ -1,6 +1,6 @@
 ---
 name: pr
-description: "Create a GitHub pull request after running pre-flight checks (lint, typecheck, tests) and generating a structured summary from commit history. Use when the branch is ready to merge — not for drafting work-in-progress."
+description: "Creates GitHub PR after pre-flight checks (lint/typecheck/tests), structured summary from commits. Triggers: pr, pull request, create PR, ready to merge."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[title or branch]"

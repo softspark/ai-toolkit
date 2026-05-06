@@ -1,6 +1,6 @@
 ---
 name: architecture-decision
-description: "Architecture decision making via trade-off analysis in RFC/RFD/ADR format: context, constraints, 3+ options, comparison, recommendation. Triggers: architecture decision, ADR, RFC, RFD, trade-offs, options comparison, design choice, pick between, should we use, evaluate approach. Load when weighing 2+ architectural options or writing decision records."
+description: "Architecture decisions in ADR/RFC/RFD format: context, constraints, options, recommendation. Triggers: ADR, RFC, RFD, trade-offs, design choice, pick between, evaluate approach."
 effort: medium
 user-invocable: false
 allowed-tools: Read, Write

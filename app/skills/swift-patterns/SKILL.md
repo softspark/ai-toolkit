@@ -1,6 +1,6 @@
 ---
 name: swift-patterns
-description: "Swift and iOS development patterns: SwiftUI, Combine, async/await, property wrappers, actors, Swift Package Manager, Core Data, UIKit interop, @MainActor. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, property wrapper, Core Data, SPM, UIKit, @MainActor, @State, @Binding. Load when writing or reviewing Swift code."
+description: "Swift/iOS: SwiftUI, Combine, async/await, actors, SPM, Core Data, UIKit interop. Triggers: Swift, SwiftUI, Combine, iOS, Xcode, actor, Core Data, @MainActor, @State."
 effort: medium
 user-invocable: false
 allowed-tools: Read

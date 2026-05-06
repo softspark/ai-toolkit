@@ -1,6 +1,6 @@
 ---
 name: content-moderation-patterns
-description: "Loaded when user builds content moderation, safety filters, or policy enforcement with Claude. Covers pre-filter vs LLM-classify, category design, confidence thresholds, and human-in-the-loop."
+description: "Content moderation with Claude: pre-filter vs LLM-classify, categories, thresholds, HITL. Triggers: moderation, safety filter, policy enforcement, content classifier."
 effort: medium
 user-invocable: false
 allowed-tools: Read

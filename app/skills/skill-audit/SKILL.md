@@ -1,6 +1,6 @@
 ---
 name: skill-audit
-description: "Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions"
+description: "Scans skills/agents for security risks: dangerous patterns, secrets, excessive perms. Triggers: skill audit, security scan, agent audit, dangerous pattern."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[skill-name | --all | --fix]"

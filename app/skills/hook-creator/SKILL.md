@@ -1,6 +1,6 @@
 ---
 name: hook-creator
-description: "Create a new Claude Code lifecycle hook (PreToolUse, PostToolUse, Stop, SessionStart, etc.) with a bash script and hooks.json registration. Use when the user wants automated behavior tied to a specific event — not for one-off commands."
+description: "Create new Claude Code lifecycle hook (PreToolUse/PostToolUse/Stop/SessionStart) with bash + hooks.json. Triggers: create hook, lifecycle hook, PreToolUse, PostToolUse, hook event."
 effort: high
 disable-model-invocation: true
 argument-hint: "[hook event or description]"

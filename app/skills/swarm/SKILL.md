@@ -1,6 +1,6 @@
 ---
 name: swarm
-description: "Execute tasks via Map-Reduce, Consensus, or Relay swarms"
+description: "Runs tasks via Map-Reduce, Consensus, or Relay swarms. Triggers: swarm, map-reduce, consensus swarm, relay swarm, parallel agents."
 user-invocable: true
 effort: max
 argument-hint: "[map-reduce|consensus|relay] [--with-kb] [--worktree] [task]"

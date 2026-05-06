@@ -1,6 +1,6 @@
 ---
 name: architecture-audit
-description: "Explore codebase organically for architectural friction, discover shallow modules, and propose module-deepening refactors as GitHub issue RFCs using parallel sub-agent interface designs. Use when user wants to improve architecture, find shallow modules, deepen modules, or reduce coupling."
+description: "Audits codebase for architectural friction and shallow modules, proposes deepening refactors as RFCs. Triggers: improve architecture, shallow modules, deepen modules, reduce coupling."
 user-invocable: true
 effort: high
 argument-hint: "[area to audit or 'full codebase']"

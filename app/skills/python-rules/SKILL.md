@@ -1,6 +1,6 @@
 ---
 name: python-rules
-description: "Python coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .py, .pyi, pyproject.toml, requirements.txt, Pipfile, FastAPI, Django, Flask, pytest, SQLAlchemy, ruff, mypy. Load when writing, reviewing, or editing Python code."
+description: "Python coding rules: style, patterns, security, testing. Triggers: .py, .pyi, pyproject.toml, requirements.txt, Pipfile, FastAPI, Django, Flask, pytest, SQLAlchemy, ruff, mypy."
 effort: medium
 user-invocable: false
 allowed-tools: Read

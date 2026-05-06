@@ -1,6 +1,6 @@
 ---
 name: docs
-description: "Generate and update README, API docs, and architecture notes"
+description: "Generates/updates README, API docs, architecture notes. Triggers: docs, README, API docs, architecture note, documentation."
 user-invocable: true
 effort: high
 argument-hint: "[type: readme/api/architecture-note]"

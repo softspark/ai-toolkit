@@ -1,6 +1,6 @@
 ---
 name: onboard
-description: "Guide setup of ai-toolkit in a new project: install symlinks, create CLAUDE.md, capture undocumented intent via interview. Use when the user starts a fresh project or migrates an existing one to ai-toolkit."
+description: "Sets up ai-toolkit in a project: symlinks, CLAUDE.md, intent interview. Triggers: onboard, setup project, install ai-toolkit, migrate project."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[project-path]"

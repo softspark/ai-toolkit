@@ -1,6 +1,6 @@
 ---
 name: night-watch
-description: "Run autonomous maintenance tasks (dependency updates, dead code removal, small refactors) in an isolated branch. Use only when the user triggers it explicitly — typically off-hours; never auto-invoked."
+description: "Autonomous maintenance (dep updates, dead code, small refactors) in isolated branch, off-hours. Triggers: night watch, autonomous maintenance, dep updates."
 effort: medium
 disable-model-invocation: true
 context: fork

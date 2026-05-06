@@ -1,6 +1,6 @@
 ---
 name: agent-creator
-description: "Creates new specialized agents with frontmatter, tool selection, and delegation guidance"
+description: "Creates new specialized agents with frontmatter, tools, delegation. Triggers: new agent, create agent, agent scaffold, specialized agent."
 effort: high
 disable-model-invocation: true
 argument-hint: "[agent name or role]"

@@ -1,6 +1,6 @@
 ---
 name: a11y-validate
-description: "Validate code against accessibility standards: WCAG 2.1 Level AA, EN 301 549, and the European Accessibility Act (EAA / Directive EU 2019/882). Covers semantics, text alternatives, keyboard/focus, color/contrast, forms, media, ARIA, motion, mobile, and EAA documentation requirements. Framework-aware (React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/React Native/Flutter/static HTML)."
+description: "Accessibility validator for WCAG 2.1 AA, EN 301 549, EAA. Covers ARIA, contrast, keyboard, forms, media. Triggers: a11y, accessibility, WCAG, EAA, ARIA, contrast, keyboard nav, screen reader."
 user-invocable: true
 effort: medium
 disable-model-invocation: true

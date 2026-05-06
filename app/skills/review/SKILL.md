@@ -1,6 +1,6 @@
 ---
 name: review
-description: "Review code for quality, security, and correctness"
+description: "Reviews code for quality, security, correctness. Triggers: code review, quality review, security review, review PR, review branch."
 user-invocable: true
 effort: high
 argument-hint: "[target: branch, pr, file path, or staged changes]"

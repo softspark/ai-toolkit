@@ -1,6 +1,6 @@
 ---
 name: ruby-patterns
-description: "Ruby and Rails development patterns: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet/RBS, Hanami, Roda, Rack middleware. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, gem, Gemfile, bundler, rake, Hanami, Sorbet. Load when writing or reviewing Ruby code."
+description: "Ruby/Rails: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet, Hanami. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, Gemfile, bundler, Hanami, Sorbet."
 effort: medium
 user-invocable: false
 allowed-tools: Read

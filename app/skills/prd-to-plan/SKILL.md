@@ -1,6 +1,6 @@
 ---
 name: prd-to-plan
-description: "Convert a PRD into a phased implementation plan using tracer-bullet vertical slices. Use when user wants to break down a PRD, create an implementation plan, plan phases from a PRD, or mentions tracer bullets."
+description: "Converts PRD into phased plan via tracer-bullet vertical slices. Triggers: PRD to plan, break down PRD, implementation plan, tracer bullets, phased plan."
 user-invocable: true
 effort: high
 argument-hint: "[PRD issue number or paste PRD]"

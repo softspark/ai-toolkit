@@ -1,6 +1,6 @@
 ---
 name: json-mode-patterns
-description: "Loaded when user needs structured JSON output from Claude. Covers tool-use-as-JSON-mode, schema design, parsing, partial recovery, and validation."
+description: "Structured JSON output from Claude: tool-use-as-JSON, schema, parsing, partial recovery. Triggers: JSON mode, structured output, schema validation, JSON parsing."
 effort: medium
 user-invocable: false
 allowed-tools: Read

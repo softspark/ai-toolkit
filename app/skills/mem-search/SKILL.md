@@ -1,6 +1,6 @@
 ---
 name: mem-search
-description: "Search past coding sessions using natural language. Finds relevant observations, decisions, and context from previous work."
+description: "Searches past coding sessions for observations, decisions, context. Triggers: mem-search, recall session, past work, prior decisions, session history."
 effort: medium
 argument-hint: "[search query]"
 allowed-tools: Bash, Read

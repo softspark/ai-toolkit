@@ -1,6 +1,6 @@
 ---
 name: biz-scan
-description: "Scans codebase for business opportunities by analyzing database schemas, API endpoints, tracking events, and feature flags to surface underutilized capabilities, missing KPIs, and monetization gaps. Use when the user asks about revenue opportunities, business metrics, KPI coverage, analytics gaps, or monetization analysis of a codebase."
+description: "Scans codebase (schemas, endpoints, events, flags) for revenue opportunities, missing KPIs, monetization gaps. Triggers: business metrics, KPI coverage, analytics gaps, monetization, revenue opportunity."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[area]"

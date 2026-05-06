@@ -1,6 +1,6 @@
 ---
 name: debug
-description: "Debug errors and trace root causes systematically using logs, health checks, and hypothesis-driven investigation. Use when a bug or error message is in hand — not for architectural questions or when there is no reproducible symptom."
+description: "Systematic debugging via logs, health checks, hypothesis-driven investigation. Triggers: debug, error, trace root cause, fix bug, reproduce symptom, investigation."
 user-invocable: true
 effort: medium
 argument-hint: "[symptom]"

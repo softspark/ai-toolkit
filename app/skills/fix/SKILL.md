@@ -1,6 +1,6 @@
 ---
 name: fix
-description: "Apply a targeted fix to a known bug or lint error and verify it with the same command that surfaced the problem. Use when the root cause is already identified — not for unknown symptoms or open-ended debugging."
+description: "Applies targeted fix to known bug/lint error, verifies with same command that surfaced it. Triggers: fix, apply fix, fix bug, fix lint, targeted fix."
 effort: low
 disable-model-invocation: true
 argument-hint: "[test or lint target]"

@@ -1,6 +1,6 @@
 ---
 name: health
-description: "Report service and infrastructure health status via liveness/readiness checks, resource usage, and quick diagnostics. Use when the user asks whether services are up or degraded — not for deep debugging of a known error."
+description: "Service/infra health via liveness/readiness checks, resource usage, quick diagnostics. Triggers: health check, services up, system status, infra health, degraded service."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[service]"

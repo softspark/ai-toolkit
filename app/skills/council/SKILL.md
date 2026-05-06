@@ -1,6 +1,6 @@
 ---
 name: council
-description: "4-perspective decision evaluation for architecture choices. Use when user wants multi-angle analysis, needs to decide between alternatives, or mentions 'council', 'evaluate decision', 'pros cons'."
+description: "4-perspective decision evaluation for architecture choices. Triggers: council, evaluate decision, pros cons, multi-angle, alternatives."
 user-invocable: true
 effort: high
 argument-hint: "[decision question or proposal to evaluate]"

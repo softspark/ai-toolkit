@@ -1,6 +1,6 @@
 ---
 name: teams
-description: "Launches pre-configured multi-agent teams for code review, debugging, feature development, security audits, and database migrations. Use when the user asks to start a multi-agent workflow, coordinate agent teams, run a team review, or needs parallel agent collaboration on a complex task."
+description: "Launches multi-agent teams for review, debugging, feature dev, security audits, migrations. Triggers: multi-agent workflow, agent teams, team review, parallel agent collaboration."
 effort: max
 user-invocable: true
 argument-hint: "<preset> [task-description]"

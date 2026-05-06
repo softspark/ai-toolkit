@@ -1,6 +1,6 @@
 ---
 name: verification-before-completion
-description: "Loaded when agent is about to claim work is complete, fixed, or passing — requires running verification commands and confirming output before making any success claims. Evidence before assertions, always."
+description: "Forces verification commands before success claims. Evidence before assertions. Triggers: complete, fixed, passing, done, ready, verified."
 user-invocable: false
 allowed-tools: Read
 ---

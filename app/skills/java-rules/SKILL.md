@@ -1,6 +1,6 @@
 ---
 name: java-rules
-description: "Java coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .java, pom.xml, build.gradle, Spring, Spring Boot, JPA, Hibernate, JUnit, Maven, Gradle. Load when writing, reviewing, or editing Java code."
+description: "Java coding rules: style, patterns, security, testing. Triggers: .java, pom.xml, build.gradle, Spring, Spring Boot, JPA, Hibernate, JUnit, Maven, Gradle."
 effort: medium
 user-invocable: false
 allowed-tools: Read

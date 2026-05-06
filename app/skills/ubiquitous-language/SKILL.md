@@ -1,6 +1,6 @@
 ---
 name: ubiquitous-language
-description: "Extract a DDD-style ubiquitous language glossary from the conversation, flagging ambiguities and proposing canonical terms. Saves to UBIQUITOUS_LANGUAGE.md. Use when user wants to define domain terms, build a glossary, harden terminology, or mentions DDD or domain model."
+description: "Extracts DDD ubiquitous language glossary, flags ambiguities, saves to UBIQUITOUS_LANGUAGE.md. Triggers: define domain terms, build glossary, harden terminology, DDD, domain model."
 user-invocable: true
 effort: medium
 argument-hint: "[domain or context to extract terms from]"

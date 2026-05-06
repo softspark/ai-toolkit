@@ -1,6 +1,6 @@
 ---
 name: command-creator
-description: "Creates new Claude Code slash commands with frontmatter, workflow guidance, and validation"
+description: "Creates new Claude Code slash commands with frontmatter and validation. Triggers: new slash command, create command, command scaffold."
 effort: high
 disable-model-invocation: true
 argument-hint: "[command name or description]"

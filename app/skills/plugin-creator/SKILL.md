@@ -1,6 +1,6 @@
 ---
 name: plugin-creator
-description: "Creates experimental opt-in plugin packs with manifests, conventions, and optional module scaffolding for Claude and Codex runtimes"
+description: "Creates opt-in plugin packs with manifests + module scaffolding for Claude/Codex. Triggers: new plugin, plugin pack, plugin scaffold."
 effort: high
 disable-model-invocation: true
 argument-hint: "[plugin pack name or domain]"

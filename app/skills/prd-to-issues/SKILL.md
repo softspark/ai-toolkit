@@ -1,6 +1,6 @@
 ---
 name: prd-to-issues
-description: "Break a PRD into independently-grabbable GitHub issues using vertical slices with HITL/AFK tagging and dependency ordering. Use when user wants to convert a PRD to issues, create tickets, or break down a PRD into work items."
+description: "Splits a PRD into vertical-slice GitHub issues with HITL/AFK tagging and dependencies. Triggers: PRD to issues, create tickets, break down PRD, work items."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[PRD issue number]"

@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: "Coordinate multiple specialized agents in parallel"
+description: "Coordinates multiple specialized agents in parallel. Triggers: orchestrate, multi-agent, parallel agents, coordinate agents."
 user-invocable: true
 effort: max
 argument-hint: "[task]"

@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: "Deploy with pre-flight checks and health verification"
+description: "Deploys with pre-flight checks and health verification. Triggers: deploy, deployment, ship, release, push to prod."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[environment]"

@@ -1,6 +1,6 @@
 ---
 name: migrate
-description: "Run or create database migrations with the detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle) and verify backups exist first. Use when the user asks to apply, roll back, or generate a migration — not for general schema design."
+description: "Run/create DB migrations with detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle), checks backup. Triggers: apply migration, rollback, generate migration, db migration."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[direction]"

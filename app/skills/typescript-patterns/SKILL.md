@@ -1,6 +1,6 @@
 ---
 name: typescript-patterns
-description: "TypeScript type safety patterns: strict mode, generics, conditional types, template literals, discriminated unions, branded types, Zod, satisfies operator, const assertions. Triggers: TypeScript, TS, generics, conditional type, utility type, strict, Zod, satisfies, discriminated union, type safety, type narrowing, template literal type. Load when writing or reviewing TypeScript code."
+description: "TypeScript type safety: generics, conditional types, discriminated unions, Zod, satisfies, branded types. Triggers: TypeScript, TS, generics, Zod, satisfies, type narrowing, strict mode."
 effort: medium
 user-invocable: false
 allowed-tools: Read

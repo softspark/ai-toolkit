@@ -1,6 +1,6 @@
 ---
 name: csharp-rules
-description: "C#/.NET coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .cs, .csproj, .sln, ASP.NET, ASP.NET Core, EF Core, LINQ, NUnit, xUnit, dotnet. Load when writing, reviewing, or editing C#/.NET code."
+description: "C#/.NET coding rules: style, patterns, security, testing. Triggers: .cs, .csproj, .sln, ASP.NET, ASP.NET Core, EF Core, LINQ, NUnit, xUnit, dotnet."
 effort: medium
 user-invocable: false
 allowed-tools: Read

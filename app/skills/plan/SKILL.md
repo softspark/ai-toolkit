@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Breaks down feature requests and project goals into phased implementation plans with task lists, agent assignments, dependency graphs, and success criteria. Use when the user asks to plan a feature, create an implementation roadmap, break down a coding task, or outline project phases."
+description: "Breaks features/goals into phased plans with task lists, agent assignments, dependencies. Triggers: plan feature, implementation roadmap, break down task, project phases."
 user-invocable: true
 effort: high
 argument-hint: "[goal]"

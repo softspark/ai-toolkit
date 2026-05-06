@@ -1,6 +1,6 @@
 ---
 name: explore
-description: "Explore codebase structure, stack, and architecture"
+description: "Explores codebase structure, stack, and architecture. Triggers: explore codebase, project structure, stack overview, architecture map."
 user-invocable: true
 effort: medium
 argument-hint: "[path or question]"

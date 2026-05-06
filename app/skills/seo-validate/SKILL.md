@@ -1,6 +1,6 @@
 ---
 name: seo-validate
-description: "Validate code against SEO best practices: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Supports React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML."
+description: "SEO validator: meta/OG, Schema.org, hreflang, Core Web Vitals, crawlability. Triggers: SEO, meta tags, Schema.org, hreflang, LCP, INP, CLS, Core Web Vitals, sitemap, crawlability."
 user-invocable: true
 effort: medium
 disable-model-invocation: true

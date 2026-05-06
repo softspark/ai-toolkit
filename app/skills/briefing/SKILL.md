@@ -1,6 +1,6 @@
 ---
 name: briefing
-description: "Generate an executive daily briefing that aggregates reports from all agents into a short, decision-focused summary. Use when the user asks for a status update across the whole system — not for one-agent activity reports."
+description: "Executive daily briefing aggregating reports from all agents into decision-focused summary. Triggers: briefing, daily summary, status across system, executive update."
 effort: medium
 disable-model-invocation: true
 agent: chief-of-staff

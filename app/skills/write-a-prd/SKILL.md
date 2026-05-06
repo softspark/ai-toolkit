@@ -1,6 +1,6 @@
 ---
 name: write-a-prd
-description: "Create a Product Requirements Document through interactive interview, codebase exploration, and deep module design. Use when user wants to write a PRD, create product requirements, or plan a new feature from scratch."
+description: "Creates PRD via interactive interview + codebase exploration + module design. Triggers: write PRD, product requirements, plan new feature, PRD interview."
 user-invocable: true
 effort: high
 argument-hint: "[feature or problem description]"

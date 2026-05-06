@@ -1,6 +1,6 @@
 ---
 name: hive-mind
-description: "Multi-agent swarm coordination: consensus voting with confidence scores, output aggregation, file ownership, targeted vs broadcast messaging, map-reduce workflows. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, team of agents, aggregate results, agent voting, distributed agents. Load when orchestrating 3+ agents working in parallel."
+description: "Multi-agent swarm: consensus voting, output aggregation, file ownership, map-reduce. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, team of agents, agent voting."
 effort: medium
 user-invocable: false
 allowed-tools: Read

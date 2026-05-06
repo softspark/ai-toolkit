@@ -1,6 +1,6 @@
 ---
 name: rust-rules
-description: "Rust coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .rs, Cargo.toml, Cargo.lock, Tokio, Axum, Serde, clippy, cargo test. Load when writing, reviewing, or editing Rust code."
+description: "Rust coding rules: style, patterns, security, testing. Triggers: .rs, Cargo.toml, Cargo.lock, Tokio, Axum, Serde, clippy, cargo test."
 effort: medium
 user-invocable: false
 allowed-tools: Read

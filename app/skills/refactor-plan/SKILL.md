@@ -1,6 +1,6 @@
 ---
 name: refactor-plan
-description: "Create a detailed refactor plan with tiny commits via user interview, then file as a GitHub issue RFC. Use when user wants to plan a refactor, create a refactoring RFC, or break a refactor into safe incremental steps."
+description: "Creates detailed refactor plan with tiny commits via interview, files as GitHub RFC. Triggers: refactor plan, refactoring RFC, incremental refactor, safe steps."
 user-invocable: true
 effort: high
 argument-hint: "[area or module to refactor]"

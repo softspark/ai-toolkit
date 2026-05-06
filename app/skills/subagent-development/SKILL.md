@@ -1,6 +1,6 @@
 ---
 name: subagent-development
-description: "Execute implementation plans using fresh subagents per task with two-stage review: spec compliance first, then code quality. Use when executing plans with independent tasks."
+description: "Executes plans via fresh subagents per task with two-stage review (spec → quality). Triggers: subagent execution, execute plan, fresh agent per task, spec compliance review."
 user-invocable: true
 effort: high
 argument-hint: "[plan file or task description]"

@@ -125,18 +125,12 @@ def _build_skill_body(lang_dir: Path) -> str:
 def _build_description(lang: str) -> str:
     meta = TRIGGERS.get(lang)
     if not meta:
-        return (
-            f"{lang.capitalize()} coding rules: coding-style, frameworks, "
-            f"patterns, security, testing. Load when writing or reviewing "
-            f"{lang.capitalize()} code."
-        )
+        return f"{lang.capitalize()} coding rules: style, patterns, security, testing."
     label = meta["label"]
     triggers = meta["triggers"]
     return (
-        f"{label} coding rules from ai-toolkit: coding-style, frameworks, "
-        f"patterns, security, testing. "
-        f"Triggers: {triggers}. "
-        f"Load when writing, reviewing, or editing {label} code."
+        f"{label} coding rules: style, patterns, security, testing. "
+        f"Triggers: {triggers}."
     )
 
 

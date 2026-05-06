@@ -1,6 +1,6 @@
 ---
 name: java-patterns
-description: "Java development patterns: Spring Boot, CompletableFuture, records, sealed types, streams, JPA/Hibernate, Maven/Gradle, virtual threads (Loom). Triggers: Java, Spring, Spring Boot, JPA, Hibernate, Maven, Gradle, CompletableFuture, record type, sealed class, virtual thread. Load when writing or reviewing Java code."
+description: "Java: Spring Boot, CompletableFuture, records, sealed types, JPA/Hibernate, virtual threads. Triggers: Java, Spring, JPA, Hibernate, Maven, Gradle, virtual thread, sealed class."
 effort: medium
 user-invocable: false
 allowed-tools: Read

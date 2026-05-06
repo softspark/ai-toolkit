@@ -1,6 +1,6 @@
 ---
 name: predict
-description: "Analyzes code diffs and file changes to identify potential regressions, maps dependency impact across the codebase, and generates a risk-scored impact report. Use when reviewing pull requests, assessing code change risk, checking for breaking changes, or analyzing the blast radius of a diff."
+description: "Analyzes diffs for regression risk and blast radius, generates risk-scored impact report. Triggers: PR review, code change risk, breaking change, blast radius, regression check."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[change description]"

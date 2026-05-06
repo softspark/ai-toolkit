@@ -1,6 +1,6 @@
 ---
 name: ruby-rules
-description: "Ruby coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .rb, Gemfile, .gemspec, Rails, ActiveRecord, Sidekiq, RSpec, Sorbet, rubocop. Load when writing, reviewing, or editing Ruby code."
+description: "Ruby coding rules: style, patterns, security, testing. Triggers: .rb, Gemfile, .gemspec, Rails, ActiveRecord, Sidekiq, RSpec, Sorbet, rubocop."
 effort: medium
 user-invocable: false
 allowed-tools: Read

@@ -1,6 +1,6 @@
 ---
 name: performance-profiling
-description: "Performance measurement and optimization: four golden signals (latency/traffic/errors/saturation), p50/p95/p99, baseline-change-measure loop, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, profile, bottleneck, optimization, load test, benchmark, CPU profiling, memory leak. Load when diagnosing or optimizing slow code or services."
+description: "Performance: golden signals (latency/traffic/errors/saturation), p50/p95/p99, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, bottleneck, load test, memory leak."
 effort: medium
 allowed-tools: Read, Grep
 user-invocable: false

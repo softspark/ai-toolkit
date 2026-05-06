@@ -1,6 +1,6 @@
 ---
 name: qa-session
-description: "Interactive QA session where user reports bugs conversationally and agent files GitHub issues with domain language. Explores codebase in background for context. Use when user wants to report bugs, do QA, file issues conversationally, or mentions QA session."
+description: "Interactive QA: user reports bugs conversationally, agent files GitHub issues. Triggers: QA session, report bug, file issue, conversational QA, bug intake."
 user-invocable: true
 effort: high
 argument-hint: "[area to QA or first bug report]"

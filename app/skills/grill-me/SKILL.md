@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "Stress-test a plan or design through relentless Socratic questioning, walking down each decision branch until reaching shared understanding. Use when user wants to stress-test a plan, get grilled, validate assumptions, or mentions 'grill me'."
+description: "Stress-tests a plan via Socratic questioning down each decision branch. Triggers: stress-test, grill me, validate assumptions, challenge plan, socratic review."
 user-invocable: true
 effort: medium
 argument-hint: "[plan or design to stress-test]"

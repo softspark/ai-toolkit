@@ -1,6 +1,6 @@
 ---
 name: design-an-interface
-description: "Generate multiple radically different interface designs using parallel sub-agents, then compare on simplicity, depth, and correctness. Based on 'Design It Twice' from Ousterhout. Use when user wants to design an API, explore interface options, compare module shapes, or mentions 'design it twice'."
+description: "Generates multiple alternative interface designs in parallel and compares them (Ousterhout 'Design It Twice'). Triggers: design API, interface options, compare modules, design it twice."
 user-invocable: true
 effort: high
 argument-hint: "[module or interface to design]"

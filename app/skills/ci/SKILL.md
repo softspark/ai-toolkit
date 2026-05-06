@@ -1,6 +1,6 @@
 ---
 name: ci
-description: "Detect, generate, or troubleshoot CI/CD pipeline configuration for the current project type (GitHub Actions, GitLab CI). Use when the user asks to set up, update, or debug a build pipeline — not for running tests locally."
+description: "Detect/generate/debug CI pipeline config (GitHub Actions, GitLab CI). Triggers: CI setup, build pipeline, GitHub Actions config, debug CI, GitLab CI."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[platform]"

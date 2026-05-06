@@ -1,6 +1,6 @@
 ---
 name: database-patterns
-description: "Database schema design and query optimization: normalization, indexing strategies, joins, N+1, transactions, isolation levels, partitioning, EXPLAIN plans. Triggers: schema, table design, index, slow query, N+1, PostgreSQL, MySQL, SQL Server, SQL, EXPLAIN, query plan, transaction, deadlock. Load when designing tables or tuning queries."
+description: "DB schema design and query tuning: normalization, indexing, N+1, transactions, EXPLAIN. Triggers: schema, index, slow query, N+1, PostgreSQL, MySQL, EXPLAIN, deadlock, query plan."
 effort: medium
 user-invocable: false
 allowed-tools: Read

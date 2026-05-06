@@ -1,6 +1,6 @@
 ---
 name: typescript-rules
-description: "TypeScript/JavaScript coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .ts, .tsx, .js, .jsx, package.json, tsconfig.json, React, Next.js, Vue, Vite, Vitest, Jest, ESLint. Load when writing, reviewing, or editing TypeScript/JavaScript code."
+description: "TypeScript/JavaScript coding rules: style, patterns, security, testing. Triggers: .ts, .tsx, .js, .jsx, package.json, tsconfig.json, React, Next.js, Vue, Vite, Vitest, Jest, ESLint."
 effort: medium
 user-invocable: false
 allowed-tools: Read

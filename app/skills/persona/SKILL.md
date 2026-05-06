@@ -1,6 +1,6 @@
 ---
 name: persona
-description: "Switch engineering persona at runtime: backend-lead, frontend-lead, devops-eng, junior-dev"
+description: "Switches engineering persona at runtime. Triggers: persona, switch role, backend-lead, frontend-lead, devops-eng, junior-dev."
 effort: low
 user-invocable: true
 argument-hint: "[backend-lead | frontend-lead | devops-eng | junior-dev | --list | --clear]"

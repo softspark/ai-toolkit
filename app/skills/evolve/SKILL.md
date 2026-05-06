@@ -1,6 +1,6 @@
 ---
 name: evolve
-description: "Analyzes failure patterns and inefficiencies in agent/skill definitions, then drafts and applies targeted improvements to system prompts, tool permissions, and behavioral rules. Use when the user asks to improve agent behavior, refine skill definitions, update system prompts, or optimize agent configurations based on observed failures."
+description: "Analyzes failure patterns in agents/skills and drafts targeted prompt/permission improvements. Triggers: improve agent, refine skill, update system prompt, optimize agent, fix failure pattern."
 effort: medium
 disable-model-invocation: true
 context: fork

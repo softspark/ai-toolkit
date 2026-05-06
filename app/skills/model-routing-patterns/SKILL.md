@@ -1,6 +1,6 @@
 ---
 name: model-routing-patterns
-description: "Loaded when user builds multi-model pipelines (Haiku/Sonnet/Opus). Covers cost-optimized routing, escalation, sub-agent delegation, and fallback chains."
+description: "Multi-model pipelines (Haiku/Sonnet/Opus): cost routing, escalation, fallback chains. Triggers: model routing, Haiku, Sonnet, Opus, escalation, fallback chain."
 effort: medium
 user-invocable: false
 allowed-tools: Read

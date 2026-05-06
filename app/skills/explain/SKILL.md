@@ -1,6 +1,6 @@
 ---
 name: explain
-description: "Explain code, architecture, or concepts with Mermaid diagrams and sequence flows. Use when the user asks 'what does X do' or 'how does Y work' — not to critique code quality or implement changes."
+description: "Explains code/architecture with Mermaid diagrams and sequence flows. Triggers: what does X do, how does Y work, explain code, sequence diagram."
 user-invocable: true
 effort: medium
 argument-hint: "[file or module path]"

@@ -1,6 +1,6 @@
 ---
 name: flutter-patterns
-description: "Flutter and Dart development patterns: widget composition, state management (Riverpod/Bloc/Provider), navigation, async, platform channels, performance. Triggers: Flutter, Dart, widget, StatefulWidget, Riverpod, Bloc, Provider, pubspec, Navigator, platform channel, hot reload, StatelessWidget. Load when writing or reviewing Flutter code."
+description: "Flutter/Dart: widget composition, state mgmt (Riverpod/Bloc/Provider), navigation, platform channels. Triggers: Flutter, Dart, widget, Riverpod, Bloc, pubspec, Navigator, hot reload."
 effort: medium
 user-invocable: false
 allowed-tools: Read

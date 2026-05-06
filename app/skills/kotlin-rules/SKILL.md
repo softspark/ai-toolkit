@@ -1,6 +1,6 @@
 ---
 name: kotlin-rules
-description: "Kotlin coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .kt, .kts, build.gradle.kts, Ktor, Jetpack Compose, coroutines, kotlinx. Load when writing, reviewing, or editing Kotlin code."
+description: "Kotlin coding rules: style, patterns, security, testing. Triggers: .kt, .kts, build.gradle.kts, Ktor, Jetpack Compose, coroutines, kotlinx."
 effort: medium
 user-invocable: false
 allowed-tools: Read

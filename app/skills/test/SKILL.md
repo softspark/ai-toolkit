@@ -1,6 +1,6 @@
 ---
 name: test
-description: "Run the project's test suite with coverage reporting, auto-detecting the framework (pytest, vitest, jest, flutter test, go test, cargo test, phpunit). Use when the user asks to run existing tests — not to author new ones test-first."
+description: "Runs project test suite with coverage, auto-detects framework (pytest, vitest, jest, flutter, go, cargo, phpunit). Triggers: run tests, test suite, coverage report."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[file or pattern]"

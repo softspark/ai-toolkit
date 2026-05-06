@@ -1,6 +1,6 @@
 ---
 name: rollback
-description: "Roll back a git commit, database migration, or deployment to a previous known-good state with safety checks and health verification. Use when the user wants to revert recent changes safely — not to undo local edits or halt the whole system."
+description: "Rolls back git commit, DB migration, or deploy to known-good with safety + health checks. Triggers: rollback, revert deploy, revert migration, rollback commit, git revert."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[target: git/db/deploy]"

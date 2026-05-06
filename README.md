@@ -14,14 +14,14 @@
 
 ---
 
-## What's New in v3.4.1
+## What's New in v3.5.0
 
-Patch release. Fixes a v3.4.0 regression where `ai-toolkit update` could demote URL-tracked hook entries to local-path entries on every refresh. `register_path_source` now never overwrites a URL-tracked entry. Also adds a regression test.
+Minor release. All 112 skill descriptions rewritten into a single consistent pattern.
 
-- **URL-tracked hooks and rules are protected** — `register_path_source` returns early when the existing entry has a `url` field.
-- **`add-rule` and `inject-hook` still track local paths** — file-sourced rules and hooks record `{"path": ..., "sha256": ...}` in `sources.json`, alongside URL entries.
-- **`status` distinguishes URL vs local sources** — local entries show the absolute origin path with a `[local]` tag.
-- **Orphan rule detection** — rule files on disk with no source recorded are listed with `(orphan, no source recorded — re-run add-rule)`.
+- **33% reduction in skill listing size** — 26 465 → 17 837 chars (~2 157 tokens saved). All 112 skills now fit in Claude Code's 2% `skillListingBudgetFraction` budget without truncation.
+- **Consistent description pattern** — every skill follows `<short summary>. Triggers: <comma-separated keywords>.` Verbose "Load when..." tails dropped.
+- **Trigger keywords preserved** — auto-loading on the same keywords as before, no behavior change.
+- **Generator template updated** — `scripts/generate_language_rules_skills.py` emits the new pattern, so `<lang>-rules` skills stay consistent on regeneration.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

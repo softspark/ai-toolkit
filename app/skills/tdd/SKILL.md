@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: "Test-driven development with red-green-refactor loop and vertical slices. Use when user wants TDD, test-first development, red-green-refactor, or building features with tests driving the implementation."
+description: "TDD with red-green-refactor loop and vertical slices. Triggers: TDD, test-first, red-green-refactor, test driving development."
 user-invocable: true
 effort: high
 argument-hint: "[feature or behavior to implement]"

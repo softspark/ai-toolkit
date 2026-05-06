@@ -1,6 +1,6 @@
 ---
 name: medplum-rules
-description: "Medplum (FHIR healthcare) coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: medplum.config.mts, medplum.config.ts, FHIR, Medplum, Bot, Subscription, Questionnaire. Load when writing, reviewing, or editing Medplum (FHIR healthcare) code."
+description: "Medplum (FHIR healthcare) coding rules: style, patterns, security, testing. Triggers: medplum.config.mts, medplum.config.ts, FHIR, Medplum, Bot, Subscription, Questionnaire."
 effort: medium
 user-invocable: false
 allowed-tools: Read

@@ -1,6 +1,6 @@
 ---
 name: prompt-caching-patterns
-description: "Loaded when user builds with Anthropic API and needs to cut cost or latency via prompt caching. Covers TTL, cache breakpoints, stacking, invalidation, and measuring hit rate."
+description: "Anthropic API prompt caching: TTL, breakpoints, stacking, invalidation, hit rate. Triggers: prompt caching, cache_control, cache breakpoint, cache TTL, hit rate."
 effort: medium
 user-invocable: false
 allowed-tools: Read

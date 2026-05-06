@@ -1,6 +1,6 @@
 ---
 name: golang-rules
-description: "Go coding rules from ai-toolkit: coding-style, frameworks, patterns, security, testing. Triggers: .go, go.mod, go.sum, Gin, Echo, Gorilla, testing, gofmt. Load when writing, reviewing, or editing Go code."
+description: "Go coding rules: style, patterns, security, testing. Triggers: .go, go.mod, go.sum, Gin, Echo, Gorilla, testing, gofmt."
 effort: medium
 user-invocable: false
 allowed-tools: Read
