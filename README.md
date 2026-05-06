@@ -14,14 +14,13 @@
 
 ---
 
-## What's New in v3.5.0
+## What's New in v3.5.1
 
-Minor release. All 112 skill descriptions rewritten into a single consistent pattern.
+Patch release. Continues v3.5.0 description condensation on 20 skills and fixes generator drift in `GEMINI.md` / `.github/copilot-instructions.md` that was missed by the v3.5.0 release.
 
-- **33% reduction in skill listing size** — 26 465 → 17 837 chars (~2 157 tokens saved). All 112 skills now fit in Claude Code's 2% `skillListingBudgetFraction` budget without truncation.
-- **Consistent description pattern** — every skill follows `<short summary>. Triggers: <comma-separated keywords>.` Verbose "Load when..." tails dropped.
-- **Trigger keywords preserved** — auto-loading on the same keywords as before, no behavior change.
-- **Generator template updated** — `scripts/generate_language_rules_skills.py` emits the new pattern, so `<lang>-rules` skills stay consistent on regeneration.
+- **20 skills further trimmed** — `a11y-validate`, `api-patterns`, `app-builder`, `architecture-audit`, `biz-scan`, `ci-cd-patterns`, `design-an-interface`, `docker-devops`, `evolve`, `flutter-patterns`, `git-mastery`, `hive-mind`, `mcp-patterns`, `migrate`, `migration-patterns`, `observability-patterns`, `performance-profiling`, `plan-writing`, `research-mastery`, `typescript-patterns`. Removes redundant trigger keywords already implied by the summary.
+- **Platform artifacts re-synced** — `AGENTS.md`, `llms-full.txt`, `GEMINI.md`, `.github/copilot-instructions.md` regenerated to match the condensed source descriptions.
+- **`/audit.sarif` ignored** — build artifact from `audit_skills.py --ci` no longer pollutes `git status`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
