@@ -52,6 +52,47 @@ EOF
     echo "$output" | grep -qi 'no install state'
 }
 
+@test "status: lists external rules and hooks from sources.json" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/rules"
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/hooks/external"
+    cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'
+{
+  "installed_version": "1.2.1",
+  "installed_at": "2026-01-01T00:00:00Z",
+  "last_updated": "2026-01-01T00:00:00Z",
+  "profile": "standard",
+  "installed_modules": ["core"]
+}
+EOF
+    cat > "$TEST_TMP/.softspark/ai-toolkit/rules/sources.json" <<'EOF'
+{"schema_version": 1, "rules": {"jira-mcp": {"url": "https://example.com/r.md", "fetched_at": "2026-05-04T11:24:40Z"}}}
+EOF
+    cat > "$TEST_TMP/.softspark/ai-toolkit/hooks/external/sources.json" <<'EOF'
+{"schema_version": 1, "hooks": {"jira-mcp-hooks": {"url": "https://example.com/h.json", "fetched_at": "2026-05-04T11:24:40Z"}}}
+EOF
+    run $CLI status
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'External sources:'
+    echo "$output" | grep -q 'rule  jira-mcp'
+    echo "$output" | grep -q 'hook  jira-mcp-hooks'
+}
+
+@test "status: omits External sources section when no registries exist" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
+    cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'
+{
+  "installed_version": "1.2.1",
+  "installed_at": "2026-01-01T00:00:00Z",
+  "last_updated": "2026-01-01T00:00:00Z",
+  "profile": "standard",
+  "installed_modules": ["core"]
+}
+EOF
+    run $CLI status
+    [ "$status" -eq 0 ]
+    ! echo "$output" | grep -q 'External sources:'
+}
+
 # ── install_state.py (direct Python) ───────────────────────────────────────
 
 @test "install_state: record_install creates state.json" {

@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.3.0 — External-source visibility & skill-listing budget default (2026-05-06)
+
+Minor release. Two coordinated install-time additions: `ai-toolkit status` now surfaces every registered external rule and hook, and fresh installs / updates set a sane `skillListingBudgetFraction` so all 112 skill descriptions stay loadable in Claude Code.
+
+### Added
+
+- **`ai-toolkit status` shows external sources** — `scripts/install_steps/install_state.py` reads `~/.softspark/ai-toolkit/rules/sources.json` and `~/.softspark/ai-toolkit/hooks/external/sources.json` and prints an `External sources:` section listing each registered rule/hook with its source URL and last-fetched timestamp. The section is omitted entirely when no external sources are registered. Closes the long-standing gap where `add-rule`/`inject-hook` had no read-side counterpart.
+- **`skillListingBudgetFraction` default in `~/.claude/settings.json`** — new `_install_skill_listing_budget()` step in `scripts/install_steps/hooks.py` writes `"skillListingBudgetFraction": 0.02` on install/update, but only when the key is absent. Existing user values are never overwritten. Prevents Claude Code's default 1% budget from truncating ~60 of the toolkit's 112 skill descriptions.
+
+### Changed
+
+- **`ai-toolkit status` help text** — updated in `bin/ai-toolkit.js` to mention external rules/hooks alongside modules, version, and profile.
+
+
+
+Patch release. Lint-only fix in the default status line hook — no behavior change.
+
+### Fixed
+
+- **`app/hooks/ai-toolkit-statusline.sh` shellcheck warnings** — removed the unused `C_GRAY` color variable (SC2034) and replaced the deprecated `[ p -o q ]` form with `{ [ p ] || [ q ]; }` (SC2166). CI shellcheck gate at `--severity=warning` now passes clean across `app/hooks/*.sh`.
+
+---
+
 ## v3.2.1 — Statusline shellcheck cleanup (2026-05-04)
 
 Patch release. Lint-only fix in the default status line hook — no behavior change.

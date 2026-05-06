@@ -7,7 +7,27 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from paths import TOOLKIT_DATA_DIR, STATE_FILE
+from paths import TOOLKIT_DATA_DIR, STATE_FILE, RULES_DIR, EXTERNAL_HOOKS_DIR
+
+
+def _load_sources(sources_file: Path, key: str) -> list[tuple[str, str, str]]:
+    """Read a sources.json registry and return (name, url, fetched_at) tuples."""
+    if not sources_file.is_file():
+        return []
+    try:
+        with open(sources_file, encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return []
+    entries = data.get(key, {}) if isinstance(data, dict) else {}
+    if not isinstance(entries, dict):
+        return []
+    out: list[tuple[str, str, str]] = []
+    for name, meta in sorted(entries.items()):
+        if not isinstance(meta, dict):
+            continue
+        out.append((name, str(meta.get("url", "")), str(meta.get("fetched_at", ""))))
+    return out
 
 
 def _state_path() -> Path:
@@ -203,6 +223,18 @@ def print_status() -> None:
     mcp = state.get("mcp_templates", [])
     if mcp:
         print(f"  MCP:        {', '.join(mcp)}")
+
+    ext_rules = _load_sources(RULES_DIR / "sources.json", "rules")
+    ext_hooks = _load_sources(EXTERNAL_HOOKS_DIR / "sources.json", "hooks")
+    if ext_rules or ext_hooks:
+        print()
+        print("  External sources:")
+        for name, url, fetched_at in ext_rules:
+            stamp = f" ({fetched_at})" if fetched_at else ""
+            print(f"    rule  {name}  <- {url}{stamp}")
+        for name, url, fetched_at in ext_hooks:
+            stamp = f" ({fetched_at})" if fetched_at else ""
+            print(f"    hook  {name}  <- {url}{stamp}")
 
     extends = state.get("extends")
     if extends:

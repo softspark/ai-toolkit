@@ -203,6 +203,32 @@ assert d['env']['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] == '1', 'toolkit env var
 "
 }
 
+@test "install.py sets skillListingBudgetFraction default in settings.json" {
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" >/dev/null 2>&1
+    python3 -c "
+import json
+with open('$TEST_PROJECT/.claude/settings.json') as f:
+    d = json.load(f)
+assert d.get('skillListingBudgetFraction') == 0.02, f'expected 0.02, got {d.get(\"skillListingBudgetFraction\")}'
+"
+}
+
+@test "install.py preserves user-set skillListingBudgetFraction" {
+    mkdir -p "$TEST_PROJECT/.claude"
+    cat > "$TEST_PROJECT/.claude/settings.json" << 'SETTINGS'
+{
+    "skillListingBudgetFraction": 0.05
+}
+SETTINGS
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" >/dev/null 2>&1
+    python3 -c "
+import json
+with open('$TEST_PROJECT/.claude/settings.json') as f:
+    d = json.load(f)
+assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"skillListingBudgetFraction\"]}'
+"
+}
+
 @test "install.py is idempotent (re-running is safe)" {
     python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" >/dev/null 2>&1
     run python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT"

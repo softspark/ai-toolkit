@@ -62,7 +62,7 @@ const SCRIPT_COMMANDS = {
 const COMMANDS = {
   install: 'First-time global install into ~/.claude/ (use --local for project-local configs only)',
   update: 'Re-apply toolkit with saved modules from state.json (use --local for project-local only)',
-  status: 'Show installed modules, version, and profile from state.json',
+  status: 'Show installed modules, version, profile, and registered external rules/hooks',
   reset: 'Wipe and recreate project-local configs from scratch (requires --local)',
   uninstall: 'Remove ai-toolkit from ~/.claude/',
   'add-rule': 'Register a rule file or URL in ~/.softspark/ai-toolkit/rules/ (URL rules auto-refresh on update)',

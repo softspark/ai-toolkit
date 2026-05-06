@@ -26,6 +26,7 @@ def install_hooks(claude_dir: Path, hooks_scripts_dir: Path,
         if output_styles_dir.is_dir():
             print("  Would install: output styles to ~/.claude/output-styles/ + set outputStyle in settings.json")
         print("  Would set: env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in settings.json")
+        print("  Would set: skillListingBudgetFraction=0.02 in settings.json (only if absent)")
         return
 
     _copy_hook_scripts(claude_dir, hooks_scripts_dir)
@@ -44,6 +45,7 @@ def install_hooks(claude_dir: Path, hooks_scripts_dir: Path,
 
     _install_output_styles(claude_dir)
     _install_env_vars(claude_dir)
+    _install_skill_listing_budget(claude_dir)
 
 
 def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
@@ -151,3 +153,27 @@ def _install_env_vars(claude_dir: Path) -> None:
         with open(settings_path, "w", encoding="utf-8") as f:
             json.dump(settings_data, f, indent=4)
         print("  Set: env vars in settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)")
+
+
+# Default for skill listing budget. 0.02 (~2% of context) keeps all 112+ skill
+# descriptions loadable without truncation. Only applied if the user has not
+# already set the key — explicit user overrides are preserved.
+SKILL_LISTING_BUDGET_DEFAULT = 0.02
+
+
+def _install_skill_listing_budget(claude_dir: Path) -> None:
+    """Set skillListingBudgetFraction default if user has not configured one."""
+    settings_path = claude_dir / "settings.json"
+    if settings_path.is_file():
+        with open(settings_path, encoding="utf-8") as f:
+            settings_data = json.load(f)
+    else:
+        settings_data = {}
+
+    if "skillListingBudgetFraction" in settings_data:
+        return
+
+    settings_data["skillListingBudgetFraction"] = SKILL_LISTING_BUDGET_DEFAULT
+    with open(settings_path, "w", encoding="utf-8") as f:
+        json.dump(settings_data, f, indent=4)
+    print(f"  Set: skillListingBudgetFraction = {SKILL_LISTING_BUDGET_DEFAULT} in settings.json")
