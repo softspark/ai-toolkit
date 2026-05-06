@@ -120,6 +120,32 @@ def register_url_source(
     save_sources(rules_dir, sources)
 
 
+def register_path_source(
+    rules_dir: Path | None,
+    rule_name: str,
+    path: Path,
+    content: bytes | None = None,
+) -> None:
+    """Add or update a local-file source entry.
+
+    Stores the absolute origin path (so future ``add-rule`` re-runs from the
+    same project register cleanly) plus a sha256 of the current content.
+    """
+    import re
+    if not rule_name or not re.fullmatch(r"[a-zA-Z0-9_-]+", rule_name):
+        raise ValueError(f"Invalid rule name: {rule_name!r}")
+    rules_dir = rules_dir or RULES_DIR
+    sources = load_sources(rules_dir)
+    entry: dict[str, Any] = {
+        "path": str(Path(path).resolve()),
+        "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    if content is not None:
+        entry["sha256"] = hashlib.sha256(content).hexdigest()
+    sources[rule_name] = entry
+    save_sources(rules_dir, sources)
+
+
 def unregister_source(rules_dir: Path | None, rule_name: str) -> bool:
     """Remove a source entry. Returns True if found and removed."""
     rules_dir = rules_dir or RULES_DIR

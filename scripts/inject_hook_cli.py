@@ -377,6 +377,18 @@ def inject(hooks_file: str, target_dir: str, source_override: str = "") -> None:
     save_json(str(settings_path), settings)
     print(f"Injected hooks from '{source}' into {settings_path}")
 
+    # Register local-file source so `status` and future updates can see it.
+    # URL sources are already registered earlier inside _fetch_and_cache().
+    if not is_url:
+        try:
+            from hook_sources import register_path_source
+            register_path_source(
+                None, source, Path(hooks_file),
+                content=Path(hooks_file).read_bytes(),
+            )
+        except Exception as exc:  # registration failure must not block injection
+            print(f"Warning: could not register local source: {exc}", file=sys.stderr)
+
     # Propagate Codex-compatible events to ~/.codex/hooks.json
     _inject_codex(tagged, source, target_dir)
 

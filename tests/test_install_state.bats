@@ -77,6 +77,63 @@ EOF
     echo "$output" | grep -q 'hook  jira-mcp-hooks'
 }
 
+@test "status: shows local-path source with [local] tag" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/rules"
+    cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'
+{
+  "installed_version": "1.2.1",
+  "installed_at": "2026-01-01T00:00:00Z",
+  "last_updated": "2026-01-01T00:00:00Z",
+  "profile": "standard",
+  "installed_modules": ["core"]
+}
+EOF
+    cat > "$TEST_TMP/.softspark/ai-toolkit/rules/sources.json" <<'EOF'
+{"schema_version": 1, "rules": {"my-local": {"path": "/abs/repo/my-local.md", "fetched_at": "2026-05-06T09:00:00Z", "sha256": "deadbeef"}}}
+EOF
+    # Materialize the file so it is not flagged as orphan
+    : > "$TEST_TMP/.softspark/ai-toolkit/rules/my-local.md"
+    run $CLI status
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'rule  my-local  <- /abs/repo/my-local.md \[local\]'
+}
+
+@test "status: flags orphan rule files (file present, not in sources.json)" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/rules"
+    cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'
+{
+  "installed_version": "1.2.1",
+  "installed_at": "2026-01-01T00:00:00Z",
+  "last_updated": "2026-01-01T00:00:00Z",
+  "profile": "standard",
+  "installed_modules": ["core"]
+}
+EOF
+    : > "$TEST_TMP/.softspark/ai-toolkit/rules/legacy-rule.md"
+    run $CLI status
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'rule  legacy-rule  <- (orphan, no source recorded'
+}
+
+@test "add_rule: registers local file with path in sources.json" {
+    mkdir -p "$TEST_TMP/work"
+    echo "test content" > "$TEST_TMP/work/local-rule.md"
+    EXPECTED_PATH=$(python3 -c "import pathlib; print(pathlib.Path('$TEST_TMP/work/local-rule.md').resolve())")
+    cd "$TEST_TMP/work"
+    run python3 "$TOOLKIT_DIR/scripts/add_rule.py" "$TEST_TMP/work/local-rule.md"
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/sources.json" ]
+    python3 -c "
+import json
+with open('$TEST_TMP/.softspark/ai-toolkit/rules/sources.json') as f:
+    d = json.load(f)
+entry = d['rules']['local-rule']
+assert entry['path'] == '$EXPECTED_PATH', f'got path={entry.get(\"path\")}'
+assert 'sha256' in entry, 'sha256 missing'
+assert 'fetched_at' in entry, 'fetched_at missing'
+"
+}
+
 @test "status: omits External sources section when no registries exist" {
     mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
     cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'

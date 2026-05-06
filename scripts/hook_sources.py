@@ -119,6 +119,32 @@ def register_url_source(
     save_sources(hooks_dir, sources)
 
 
+def register_path_source(
+    hooks_dir: Path | None,
+    hook_name: str,
+    path: Path,
+    content: bytes | None = None,
+) -> None:
+    """Add or update a local-file source entry for a hook.
+
+    Stores the absolute origin path so subsequent ``ai-toolkit update`` runs
+    can detect drift, plus a sha256 of the injected content.
+    """
+    import re
+    if not hook_name or not re.fullmatch(r"[a-zA-Z0-9_-]+", hook_name):
+        raise ValueError(f"Invalid hook name: {hook_name!r}")
+    hooks_dir = hooks_dir or EXTERNAL_HOOKS_DIR
+    sources = load_sources(hooks_dir)
+    entry: dict[str, Any] = {
+        "path": str(Path(path).resolve()),
+        "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    if content is not None:
+        entry["sha256"] = hashlib.sha256(content).hexdigest()
+    sources[hook_name] = entry
+    save_sources(hooks_dir, sources)
+
+
 def unregister_source(hooks_dir: Path | None, hook_name: str) -> bool:
     """Remove a source entry. Returns True if found and removed."""
     hooks_dir = hooks_dir or EXTERNAL_HOOKS_DIR

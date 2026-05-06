@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-112-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1042%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1046%20passing-success)](tests/)
 
 <p align="center">
   <img src="assets/ai-toolkit-readme-hero.png" alt="ai-toolkit 3 README hero showing one toolkit for 12 AI editors" width="900">
@@ -14,13 +14,13 @@
 
 ---
 
-## What's New in v3.3.0
+## What's New in v3.4.0
 
-Minor release. Two install-time additions: visibility for external rules/hooks and a sane default for Claude Code's skill listing budget.
+Minor release. Closes the visibility gap for rules and hooks installed from local files.
 
-- **`ai-toolkit status` lists external sources** — every rule and hook registered via `add-rule` / `inject-hook` is now visible in `status` output with its source URL and last-fetched timestamp. No more grepping `~/.softspark/ai-toolkit/*/sources.json` by hand.
-- **`skillListingBudgetFraction = 0.02` set by default** — install/update writes the key into `~/.claude/settings.json` only when missing, so all 112 skill descriptions stay loadable in Claude Code without truncation. User-set values are preserved.
-- **Updated `status` help text** — `bin/ai-toolkit.js` now mentions external rules/hooks alongside modules, version, and profile.
+- **`add-rule` and `inject-hook` now track local paths** — file-sourced rules and hooks record `{"path": ..., "sha256": ...}` in `sources.json`, alongside the existing URL entries. URL flow unchanged.
+- **`status` distinguishes URL vs local sources** — local entries show the absolute origin path with a `[local]` tag; URL entries show the URL.
+- **Orphan rule detection** — rule files on disk that have no source recorded (e.g., installed before v3.3.0's registry existed) are listed in `status` with `(orphan, no source recorded — re-run add-rule)`. Run `add-rule <path>` again to register them.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -153,7 +153,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1042 tests)
+├── tests/               # Bats test suite (1046 tests)
 └── CHANGELOG.md
 ```
 

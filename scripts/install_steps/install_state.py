@@ -10,8 +10,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from paths import TOOLKIT_DATA_DIR, STATE_FILE, RULES_DIR, EXTERNAL_HOOKS_DIR
 
 
-def _load_sources(sources_file: Path, key: str) -> list[tuple[str, str, str]]:
-    """Read a sources.json registry and return (name, url, fetched_at) tuples."""
+def _load_sources(sources_file: Path, key: str) -> list[tuple[str, str, str, str]]:
+    """Read a sources.json registry.
+
+    Returns a list of ``(name, origin, fetched_at, kind)`` tuples where
+    ``kind`` is ``"url"`` for remote sources, ``"local"`` for path-tracked
+    sources, and ``"unknown"`` if neither field is present.
+    """
     if not sources_file.is_file():
         return []
     try:
@@ -22,12 +27,28 @@ def _load_sources(sources_file: Path, key: str) -> list[tuple[str, str, str]]:
     entries = data.get(key, {}) if isinstance(data, dict) else {}
     if not isinstance(entries, dict):
         return []
-    out: list[tuple[str, str, str]] = []
+    out: list[tuple[str, str, str, str]] = []
     for name, meta in sorted(entries.items()):
         if not isinstance(meta, dict):
             continue
-        out.append((name, str(meta.get("url", "")), str(meta.get("fetched_at", ""))))
+        if "url" in meta:
+            origin, kind = str(meta["url"]), "url"
+        elif "path" in meta:
+            origin, kind = str(meta["path"]), "local"
+        else:
+            origin, kind = "", "unknown"
+        out.append((name, origin, str(meta.get("fetched_at", "")), kind))
     return out
+
+
+def _orphan_rule_files(rules_dir: Path, registered: set[str]) -> list[str]:
+    """Return rule names present on disk but missing from sources.json."""
+    if not rules_dir.is_dir():
+        return []
+    return sorted(
+        f.stem for f in rules_dir.glob("*.md")
+        if f.stem not in registered
+    )
 
 
 def _state_path() -> Path:
@@ -226,15 +247,20 @@ def print_status() -> None:
 
     ext_rules = _load_sources(RULES_DIR / "sources.json", "rules")
     ext_hooks = _load_sources(EXTERNAL_HOOKS_DIR / "sources.json", "hooks")
-    if ext_rules or ext_hooks:
+    rule_orphans = _orphan_rule_files(RULES_DIR, {n for n, _, _, _ in ext_rules})
+    if ext_rules or ext_hooks or rule_orphans:
         print()
         print("  External sources:")
-        for name, url, fetched_at in ext_rules:
+        for name, origin, fetched_at, kind in ext_rules:
+            tag = " [local]" if kind == "local" else ""
             stamp = f" ({fetched_at})" if fetched_at else ""
-            print(f"    rule  {name}  <- {url}{stamp}")
-        for name, url, fetched_at in ext_hooks:
+            print(f"    rule  {name}  <- {origin}{tag}{stamp}")
+        for name in rule_orphans:
+            print(f"    rule  {name}  <- (orphan, no source recorded — re-run add-rule)")
+        for name, origin, fetched_at, kind in ext_hooks:
+            tag = " [local]" if kind == "local" else ""
             stamp = f" ({fetched_at})" if fetched_at else ""
-            print(f"    hook  {name}  <- {url}{stamp}")
+            print(f"    hook  {name}  <- {origin}{tag}{stamp}")
 
     extends = state.get("extends")
     if extends:

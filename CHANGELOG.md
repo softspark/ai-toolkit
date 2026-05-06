@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v3.4.0 — Local-path source tracking & orphan detection (2026-05-06)
+
+Minor release. Closes the visibility gap for rules and hooks installed from local files: `add-rule` and `inject-hook` now record the origin path in `sources.json`, and `status` flags any rule files on disk that have no source recorded.
+
+### Added
+
+- **`register_path_source()` in `scripts/rule_sources.py` and `scripts/hook_sources.py`** — records `{"path": <abs_path>, "fetched_at": ..., "sha256": ...}` for local-file injections. Schema-compatible with existing URL entries (mutually exclusive `url` vs `path` field, `schema_version` unchanged at 1).
+- **`add-rule` registers local paths** — `scripts/add_rule.py` now calls `register_path_source` after copying a local file, and prints the origin path with a hint to re-run `add-rule` to refresh.
+- **`inject-hook` registers local paths** — `scripts/inject_hook_cli.py` writes a `path`-tracked entry into `~/.softspark/ai-toolkit/hooks/external/sources.json` for file-sourced hooks. URL behavior unchanged. Registration failures are non-fatal — injection always proceeds.
+- **`ai-toolkit status` distinguishes URL vs local sources** — local-path entries display the absolute path with a `[local]` tag; URL entries display the URL. Format: `rule  <name>  <- <origin>[ [local]] (<fetched_at>)`.
+- **Orphan rule detection in `status`** — files in `~/.softspark/ai-toolkit/rules/` that have no entry in `sources.json` are listed as `(orphan, no source recorded — re-run add-rule)`. Surfaces rules registered before the registry existed (pre-v3.3.0).
+
+### Migration
+
+- Existing URL-tracked sources continue to work unchanged.
+- To upgrade an orphan local rule into the registry, re-run `ai-toolkit add-rule <path>` from the rule's source directory. The new run records the path.
+
+---
+
 ## v3.3.0 — External-source visibility & skill-listing budget default (2026-05-06)
 
 Minor release. Two coordinated install-time additions: `ai-toolkit status` now surfaces every registered external rule and hook, and fresh installs / updates set a sane `skillListingBudgetFraction` so all 112 skill descriptions stay loadable in Claude Code.

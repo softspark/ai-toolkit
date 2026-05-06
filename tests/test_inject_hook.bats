@@ -6,6 +6,9 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 setup() {
     TEST_DIR="$(mktemp -d)"
     mkdir -p "$TEST_DIR/.claude"
+    # Isolate ~/.softspark/ — register_path_source writes to it under HOME
+    export HOME="$TEST_DIR"
+    export SOFTSPARK_HOME="$TEST_DIR/.softspark"
 }
 
 teardown() {
@@ -511,5 +514,21 @@ with open('$TEST_DIR/.claude/settings.json') as f:
     data = json.load(f)
 sources = [e.get('_source') for e in data['hooks']['Stop']]
 assert 'my-custom-name' in sources, f'Expected my-custom-name in {sources}'
+"
+}
+
+@test "inject_hook_cli.py registers local file path in sources.json" {
+    _make_hooks_file "$TEST_DIR/local-plugin.json" "Stop" "echo done"
+    EXPECTED_PATH=$(python3 -c "import pathlib; print(pathlib.Path('$TEST_DIR/local-plugin.json').resolve())")
+    run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/local-plugin.json" "$TEST_DIR"
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_DIR/.softspark/ai-toolkit/hooks/external/sources.json" ]
+    python3 -c "
+import json
+with open('$TEST_DIR/.softspark/ai-toolkit/hooks/external/sources.json') as f:
+    d = json.load(f)
+entry = d['hooks']['local-plugin']
+assert entry['path'] == '$EXPECTED_PATH', f'got path={entry.get(\"path\")}'
+assert 'sha256' in entry, 'sha256 missing'
 "
 }

@@ -87,7 +87,11 @@ def main() -> None:
         dest = rules_dir / f"{rule_name}.md"
         shutil.copy2(rule_file, dest)
 
+        from rule_sources import register_path_source
+        register_path_source(rules_dir, rule_name, rule_file, content=dest.read_bytes())
+
         print(f"Registered: '{rule_name}' -> {dest}")
+        print(f"Source path: {rule_file.resolve()} (re-run add-rule to refresh)")
 
     print()
     print("Apply now:")
