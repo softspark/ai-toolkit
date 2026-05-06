@@ -54,3 +54,4 @@ dist/
 /.github/prompts/
 /.github/instructions/
 /.gemini/
+/audit.sarif

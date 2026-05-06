@@ -1,6 +1,6 @@
 ---
 name: app-builder
-description: "App scaffolding: Next.js, Vite, Nuxt, Astro, FastAPI, Django, Laravel, RN, Flutter, Unity. Triggers: scaffold, bootstrap, new project, starter, build app, landing page, dashboard, mobile app."
+description: "App scaffolding: Next.js, Vite, Nuxt, Astro, FastAPI, Django, Laravel, RN, Flutter. Triggers: scaffold, bootstrap, new project, starter, dashboard, mobile app."
 effort: medium
 user-invocable: false
 allowed-tools: Read

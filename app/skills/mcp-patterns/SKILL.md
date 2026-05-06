@@ -1,6 +1,6 @@
 ---
 name: mcp-patterns
-description: "MCP server design: tool schemas, resources, stdio/SSE transports, capability negotiation. Triggers: MCP, Model Context Protocol, MCP server, JSON-RPC, stdio, SSE, Claude Desktop config."
+description: "MCP server design: tool schemas, resources, stdio/SSE, capability negotiation. Triggers: MCP, Model Context Protocol, JSON-RPC, stdio, SSE, Claude Desktop."
 effort: medium
 user-invocable: false
 allowed-tools: Read

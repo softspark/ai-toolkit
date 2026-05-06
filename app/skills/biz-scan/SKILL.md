@@ -1,6 +1,6 @@
 ---
 name: biz-scan
-description: "Scans codebase (schemas, endpoints, events, flags) for revenue opportunities, missing KPIs, monetization gaps. Triggers: business metrics, KPI coverage, analytics gaps, monetization, revenue opportunity."
+description: "Scans codebase for revenue opportunities, KPIs, monetization gaps. Triggers: business metrics, KPI, analytics gaps, monetization, revenue."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[area]"

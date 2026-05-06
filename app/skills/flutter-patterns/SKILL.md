@@ -1,6 +1,6 @@
 ---
 name: flutter-patterns
-description: "Flutter/Dart: widget composition, state mgmt (Riverpod/Bloc/Provider), navigation, platform channels. Triggers: Flutter, Dart, widget, Riverpod, Bloc, pubspec, Navigator, hot reload."
+description: "Flutter/Dart: widgets, state mgmt (Riverpod/Bloc), navigation, platform channels. Triggers: Flutter, Dart, widget, Riverpod, Bloc, pubspec, hot reload."
 effort: medium
 user-invocable: false
 allowed-tools: Read

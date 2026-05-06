@@ -1,6 +1,6 @@
 ---
 name: plan-writing
-description: "Implementation plans + pre-mortems: phases, success criteria, risks, rollback, acceptance tests. Triggers: implementation plan, pre-mortem, phased plan, task breakdown, risk register."
+description: "Implementation plans + pre-mortems: phases, success criteria, risks, rollback. Triggers: implementation plan, pre-mortem, phased plan, task breakdown."
 effort: medium
 user-invocable: false
 allowed-tools: Read

@@ -1,6 +1,6 @@
 ---
 name: research-mastery
-description: "Hierarchical retrieval: KB first (smart_query/crag_search), then MCP/Context7, then web. Triggers: research, fact-check, verify, synthesize, cross-reference, multi-source, investigate, cite sources."
+description: "Hierarchical retrieval: KB → MCP/Context7 → web. Triggers: research, fact-check, verify, synthesize, cross-reference, multi-source, cite sources."
 effort: medium
 user-invocable: false
 allowed-tools: Read

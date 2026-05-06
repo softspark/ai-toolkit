@@ -1,6 +1,6 @@
 ---
 name: architecture-audit
-description: "Audits codebase for architectural friction and shallow modules, proposes deepening refactors as RFCs. Triggers: improve architecture, shallow modules, deepen modules, reduce coupling."
+description: "Audits codebase for architectural friction, shallow modules; proposes RFCs. Triggers: improve architecture, shallow modules, deepen modules, reduce coupling."
 user-invocable: true
 effort: high
 argument-hint: "[area to audit or 'full codebase']"

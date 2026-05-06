@@ -1,6 +1,6 @@
 ---
 name: a11y-validate
-description: "Accessibility validator for WCAG 2.1 AA, EN 301 549, EAA. Covers ARIA, contrast, keyboard, forms, media. Triggers: a11y, accessibility, WCAG, EAA, ARIA, contrast, keyboard nav, screen reader."
+description: "Accessibility validator: WCAG 2.1 AA, EN 301 549, EAA. Triggers: a11y, accessibility, WCAG, EAA, ARIA, contrast, keyboard, screen reader."
 user-invocable: true
 effort: medium
 disable-model-invocation: true

@@ -1,6 +1,6 @@
 ---
 name: observability-patterns
-description: "Observability: structured logs, metrics (RED/USE), tracing (OpenTelemetry), SLO/SLI. Triggers: logging, metrics, Prometheus, Grafana, OpenTelemetry, trace, span, monitoring, alerting."
+description: "Observability: structured logs, metrics (RED/USE), tracing, SLO/SLI. Triggers: logging, metrics, Prometheus, Grafana, OpenTelemetry, trace, monitoring."
 effort: medium
 user-invocable: false
 allowed-tools: Read

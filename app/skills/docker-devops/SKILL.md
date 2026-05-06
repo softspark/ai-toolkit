@@ -1,6 +1,6 @@
 ---
 name: docker-devops
-description: "Docker/K8s/DevOps: Dockerfile, multi-stage builds, compose, manifests, Helm, image hardening. Triggers: Docker, Dockerfile, container, Kubernetes, k8s, compose, Helm, pod, deployment yaml."
+description: "Docker/K8s: Dockerfile, multi-stage, compose, manifests, Helm. Triggers: Docker, Dockerfile, container, Kubernetes, k8s, compose, Helm, pod."
 effort: medium
 user-invocable: false
 allowed-tools: Read

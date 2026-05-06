@@ -1,6 +1,6 @@
 ---
 name: git-mastery
-description: "Advanced Git: rebase, bisect, reflog, cherry-pick, worktrees, history rewriting, LFS. Triggers: git rebase, bisect, cherry-pick, reflog, force push, merge conflict, worktree, submodule."
+description: "Advanced Git: rebase, bisect, reflog, cherry-pick, worktrees, LFS. Triggers: rebase, bisect, cherry-pick, reflog, force push, merge conflict, worktree."
 effort: medium
 user-invocable: false
 allowed-tools: Read, Grep, Glob

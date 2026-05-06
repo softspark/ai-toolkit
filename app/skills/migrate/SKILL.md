@@ -1,6 +1,6 @@
 ---
 name: migrate
-description: "Run/create DB migrations with detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle), checks backup. Triggers: apply migration, rollback, generate migration, db migration."
+description: "Run/create DB migrations (Alembic, Prisma, Laravel, Django, Flyway, Drizzle); checks backup. Triggers: apply migration, rollback, generate migration."
 effort: medium
 disable-model-invocation: true
 argument-hint: "[direction]"

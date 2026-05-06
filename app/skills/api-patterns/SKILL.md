@@ -1,6 +1,6 @@
 ---
 name: api-patterns
-description: "REST/GraphQL API design: naming, versioning, pagination, idempotency, OpenAPI. Triggers: API design, REST, GraphQL, endpoint, OpenAPI, Swagger, pagination, idempotency key, rate limit."
+description: "REST/GraphQL API design: naming, versioning, pagination, idempotency, OpenAPI. Triggers: API design, REST, GraphQL, OpenAPI, Swagger, idempotency, rate limit."
 effort: medium
 user-invocable: false
 allowed-tools: Read

@@ -1,6 +1,6 @@
 ---
 name: design-an-interface
-description: "Generates multiple alternative interface designs in parallel and compares them (Ousterhout 'Design It Twice'). Triggers: design API, interface options, compare modules, design it twice."
+description: "Generates and compares parallel interface designs (Ousterhout 'Design It Twice'). Triggers: design API, interface options, compare modules, design it twice."
 user-invocable: true
 effort: high
 argument-hint: "[module or interface to design]"

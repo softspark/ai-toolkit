@@ -66,20 +66,20 @@
 
 ## Skills
 
-- **a11y-validate**: Accessibility validator for WCAG 2.1 AA, EN 301 549, EAA. Covers ARIA, contrast, keyboard, forms, media. Triggers: a11y, accessibility, WCAG, EAA, ARIA, contrast, keyboard nav, screen reader.
+- **a11y-validate**: Accessibility validator: WCAG 2.1 AA, EN 301 549, EAA. Triggers: a11y, accessibility, WCAG, EAA, ARIA, contrast, keyboard, screen reader.
 - **agent-creator**: Creates new specialized agents with frontmatter, tools, delegation. Triggers: new agent, create agent, agent scaffold, specialized agent.
 - **analyze**: Analyzes code quality, complexity, patterns across codebase. Triggers: quality report, hotspot scan, code analysis, architecture signal.
-- **api-patterns**: REST/GraphQL API design: naming, versioning, pagination, idempotency, OpenAPI. Triggers: API design, REST, GraphQL, endpoint, OpenAPI, Swagger, pagination, idempotency key, rate limit.
-- **app-builder**: App scaffolding: Next.js, Vite, Nuxt, Astro, FastAPI, Django, Laravel, RN, Flutter, Unity. Triggers: scaffold, bootstrap, new project, starter, build app, landing page, dashboard, mobile app.
-- **architecture-audit**: Audits codebase for architectural friction and shallow modules, proposes deepening refactors as RFCs. Triggers: improve architecture, shallow modules, deepen modules, reduce coupling.
+- **api-patterns**: REST/GraphQL API design: naming, versioning, pagination, idempotency, OpenAPI. Triggers: API design, REST, GraphQL, OpenAPI, Swagger, idempotency, rate limit.
+- **app-builder**: App scaffolding: Next.js, Vite, Nuxt, Astro, FastAPI, Django, Laravel, RN, Flutter. Triggers: scaffold, bootstrap, new project, starter, dashboard, mobile app.
+- **architecture-audit**: Audits codebase for architectural friction, shallow modules; proposes RFCs. Triggers: improve architecture, shallow modules, deepen modules, reduce coupling.
 - **architecture-decision**: Architecture decisions in ADR/RFC/RFD format: context, constraints, options, recommendation. Triggers: ADR, RFC, RFD, trade-offs, design choice, pick between, evaluate approach.
-- **biz-scan**: Scans codebase (schemas, endpoints, events, flags) for revenue opportunities, missing KPIs, monetization gaps. Triggers: business metrics, KPI coverage, analytics gaps, monetization, revenue opportunity.
+- **biz-scan**: Scans codebase for revenue opportunities, KPIs, monetization gaps. Triggers: business metrics, KPI, analytics gaps, monetization, revenue.
 - **brand-voice**: Direct technical voice for docs, README, user-facing text. Concise/strict modes. Triggers: documentation, README, content, output-mode, voice, prose style.
 - **briefing**: Executive daily briefing aggregating reports from all agents into decision-focused summary. Triggers: briefing, daily summary, status across system, executive update.
 - **build**: Builds project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Triggers: build, compile, bundle, produce artifacts.
 - **chaos**: Injects controlled faults for resilience testing on non-prod. Triggers: chaos, fault injection, latency injection, dependency kill, resilience test.
 - **ci**: Detect/generate/debug CI pipeline config (GitHub Actions, GitLab CI). Triggers: CI setup, build pipeline, GitHub Actions config, debug CI, GitLab CI.
-- **ci-cd-patterns**: CI/CD: GitHub Actions, GitLab CI, Jenkins, caching, blue-green, canary, rollback gates. Triggers: CI, CD, pipeline, GitHub Actions, workflow YAML, release, artifact, canary, rollout.
+- **ci-cd-patterns**: CI/CD: GitHub Actions, GitLab CI, Jenkins, caching, blue-green, canary. Triggers: CI, CD, pipeline, GitHub Actions, workflow YAML, release, canary, rollout.
 - **clean-code**: Code quality: meaningful names, SRP, DRY, small functions, guard clauses, refactoring. Triggers: clean code, naming, code smell, SRP, DRY, long function, god class, dead code.
 - **command-creator**: Creates new Claude Code slash commands with frontmatter and validation. Triggers: new slash command, create command, command scaffold.
 - **commit**: Creates Conventional Commits with pre-commit validation. Triggers: commit, conventional commit, git commit, message.
@@ -94,24 +94,24 @@
 - **debug**: Systematic debugging via logs, health checks, hypothesis-driven investigation. Triggers: debug, error, trace root cause, fix bug, reproduce symptom, investigation.
 - **debugging-tactics**: RCA debugging: investigation, hypothesis, validation, fix. No fix without RCA. Triggers: bug, error, exception, stack trace, intermittent, flaky, crash, regression, broken after.
 - **deploy**: Deploys with pre-flight checks and health verification. Triggers: deploy, deployment, ship, release, push to prod.
-- **design-an-interface**: Generates multiple alternative interface designs in parallel and compares them (Ousterhout 'Design It Twice'). Triggers: design API, interface options, compare modules, design it twice.
+- **design-an-interface**: Generates and compares parallel interface designs (Ousterhout 'Design It Twice'). Triggers: design API, interface options, compare modules, design it twice.
 - **design-engineering**: UI craftsmanship: animation rules, easing, micro-interactions, state polish. Triggers: animation, transition, ease-out, motion, micro-interaction, hover, loading state, UI polish.
-- **docker-devops**: Docker/K8s/DevOps: Dockerfile, multi-stage builds, compose, manifests, Helm, image hardening. Triggers: Docker, Dockerfile, container, Kubernetes, k8s, compose, Helm, pod, deployment yaml.
+- **docker-devops**: Docker/K8s: Dockerfile, multi-stage, compose, manifests, Helm. Triggers: Docker, Dockerfile, container, Kubernetes, k8s, compose, Helm, pod.
 - **docs**: Generates/updates README, API docs, architecture notes. Triggers: docs, README, API docs, architecture note, documentation.
 - **documentation-standards**: KB conventions: YAML frontmatter, 5-category taxonomy (reference/howto/procedures/troubleshooting/best-practices). Triggers: kb/, SOP, runbook, howto, frontmatter, knowledge base.
 - **ecommerce-patterns**: E-commerce: cart, checkout, payments (Stripe/Adyen), order state, inventory, promos, tax. Triggers: cart, checkout, SKU, payment, Stripe, Shopify, Medusa, Magento, coupon, refund.
 - **evaluate**: Evaluates RAG retrieval and LLM-as-judge metrics (faithfulness, relevancy, context precision). Triggers: measure RAG quality, knowledge gap, RAG eval, golden dataset.
-- **evolve**: Analyzes failure patterns in agents/skills and drafts targeted prompt/permission improvements. Triggers: improve agent, refine skill, update system prompt, optimize agent, fix failure pattern.
+- **evolve**: Analyzes agent/skill failures, drafts prompt/permission fixes. Triggers: improve agent, refine skill, system prompt, optimize agent.
 - **explain**: Explains code/architecture with Mermaid diagrams and sequence flows. Triggers: what does X do, how does Y work, explain code, sequence diagram.
 - **explore**: Explores codebase structure, stack, and architecture. Triggers: explore codebase, project structure, stack overview, architecture map.
 - **fix**: Applies targeted fix to known bug/lint error, verifies with same command that surfaced it. Triggers: fix, apply fix, fix bug, fix lint, targeted fix.
-- **flutter-patterns**: Flutter/Dart: widget composition, state mgmt (Riverpod/Bloc/Provider), navigation, platform channels. Triggers: Flutter, Dart, widget, Riverpod, Bloc, pubspec, Navigator, hot reload.
-- **git-mastery**: Advanced Git: rebase, bisect, reflog, cherry-pick, worktrees, history rewriting, LFS. Triggers: git rebase, bisect, cherry-pick, reflog, force push, merge conflict, worktree, submodule.
+- **flutter-patterns**: Flutter/Dart: widgets, state mgmt (Riverpod/Bloc), navigation, platform channels. Triggers: Flutter, Dart, widget, Riverpod, Bloc, pubspec, hot reload.
+- **git-mastery**: Advanced Git: rebase, bisect, reflog, cherry-pick, worktrees, LFS. Triggers: rebase, bisect, cherry-pick, reflog, force push, merge conflict, worktree.
 - **golang-rules**: Go coding rules: style, patterns, security, testing. Triggers: .go, go.mod, go.sum, Gin, Echo, Gorilla, testing, gofmt.
 - **grill-me**: Stress-tests a plan via Socratic questioning down each decision branch. Triggers: stress-test, grill me, validate assumptions, challenge plan, socratic review.
 - **health**: Service/infra health via liveness/readiness checks, resource usage, quick diagnostics. Triggers: health check, services up, system status, infra health, degraded service.
 - **hipaa-validate**: HIPAA validator: PHI exposure, audit logging, encryption, access control, BAA refs. Triggers: HIPAA, PHI, healthcare compliance, audit log, BAA.
-- **hive-mind**: Multi-agent swarm: consensus voting, output aggregation, file ownership, map-reduce. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, team of agents, agent voting.
+- **hive-mind**: Multi-agent swarm: consensus voting, aggregation, file ownership, map-reduce. Triggers: swarm, hive mind, multi-agent, consensus, parallel agents, agent voting.
 - **hook-creator**: Create new Claude Code lifecycle hook (PreToolUse/PostToolUse/Stop/SessionStart) with bash + hooks.json. Triggers: create hook, lifecycle hook, PreToolUse, PostToolUse, hook event.
 - **index**: Reindexes KB for semantic search via vector store (Qdrant). Triggers: reindex KB, rebuild index, vector reindex, refresh embeddings.
 - **instinct-review**: Reviews/promotes/removes instincts from `.claude/instincts/*.md`. Triggers: instinct review, curate instincts, manage instincts, promote instinct.
@@ -123,22 +123,22 @@
 - **kotlin-rules**: Kotlin coding rules: style, patterns, security, testing. Triggers: .kt, .kts, build.gradle.kts, Ktor, Jetpack Compose, coroutines, kotlinx.
 - **lint**: Runs linter+typechecker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy). Triggers: lint, typecheck, static analysis.
 - **mcp-builder**: Builds production MCP servers via 4-phase methodology: research, implement, test, evaluate. Triggers: build MCP, new MCP, MCP integration, MCP server scaffold.
-- **mcp-patterns**: MCP server design: tool schemas, resources, stdio/SSE transports, capability negotiation. Triggers: MCP, Model Context Protocol, MCP server, JSON-RPC, stdio, SSE, Claude Desktop config.
+- **mcp-patterns**: MCP server design: tool schemas, resources, stdio/SSE, capability negotiation. Triggers: MCP, Model Context Protocol, JSON-RPC, stdio, SSE, Claude Desktop.
 - **medplum-rules**: Medplum (FHIR healthcare) coding rules: style, patterns, security, testing. Triggers: medplum.config.mts, medplum.config.ts, FHIR, Medplum, Bot, Subscription, Questionnaire.
 - **mem-search**: Searches past coding sessions for observations, decisions, context. Triggers: mem-search, recall session, past work, prior decisions, session history.
-- **migrate**: Run/create DB migrations with detected tool (Alembic, Prisma, Laravel, Django, Flyway, Drizzle), checks backup. Triggers: apply migration, rollback, generate migration, db migration.
-- **migration-patterns**: Zero-downtime DB migrations: expand-contract, double-write, backfill, blue-green schema. Triggers: migration, schema change, zero-downtime, backfill, ALTER TABLE, online DDL, safe deploy.
+- **migrate**: Run/create DB migrations (Alembic, Prisma, Laravel, Django, Flyway, Drizzle); checks backup. Triggers: apply migration, rollback, generate migration.
+- **migration-patterns**: Zero-downtime DB migrations: expand-contract, double-write, backfill, blue-green. Triggers: migration, schema change, backfill, ALTER TABLE, online DDL.
 - **model-routing-patterns**: Multi-model pipelines (Haiku/Sonnet/Opus): cost routing, escalation, fallback chains. Triggers: model routing, Haiku, Sonnet, Opus, escalation, fallback chain.
 - **night-watch**: Autonomous maintenance (dep updates, dead code, small refactors) in isolated branch, off-hours. Triggers: night watch, autonomous maintenance, dep updates.
-- **observability-patterns**: Observability: structured logs, metrics (RED/USE), tracing (OpenTelemetry), SLO/SLI. Triggers: logging, metrics, Prometheus, Grafana, OpenTelemetry, trace, span, monitoring, alerting.
+- **observability-patterns**: Observability: structured logs, metrics (RED/USE), tracing, SLO/SLI. Triggers: logging, metrics, Prometheus, Grafana, OpenTelemetry, trace, monitoring.
 - **onboard**: Sets up ai-toolkit in a project: symlinks, CLAUDE.md, intent interview. Triggers: onboard, setup project, install ai-toolkit, migrate project.
 - **orchestrate**: Coordinates multiple specialized agents in parallel. Triggers: orchestrate, multi-agent, parallel agents, coordinate agents.
 - **panic**: Emergency kill switch — halts all agents via lockfile gate. Triggers: panic, stop everything, kill switch, halt agents, agents looping.
-- **performance-profiling**: Performance: golden signals (latency/traffic/errors/saturation), p50/p95/p99, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, bottleneck, load test, memory leak.
+- **performance-profiling**: Performance: golden signals, p50/p95/p99, flame graphs, load testing. Triggers: performance, slow, latency, p99, flame graph, bottleneck, memory leak.
 - **persona**: Switches engineering persona at runtime. Triggers: persona, switch role, backend-lead, frontend-lead, devops-eng, junior-dev.
 - **php-rules**: PHP coding rules: style, patterns, security, testing. Triggers: .php, composer.json, Laravel, Symfony, PHPUnit, PSR-12, Composer.
 - **plan**: Breaks features/goals into phased plans with task lists, agent assignments, dependencies. Triggers: plan feature, implementation roadmap, break down task, project phases.
-- **plan-writing**: Implementation plans + pre-mortems: phases, success criteria, risks, rollback, acceptance tests. Triggers: implementation plan, pre-mortem, phased plan, task breakdown, risk register.
+- **plan-writing**: Implementation plans + pre-mortems: phases, success criteria, risks, rollback. Triggers: implementation plan, pre-mortem, phased plan, task breakdown.
 - **plugin-creator**: Creates opt-in plugin packs with manifests + module scaffolding for Claude/Codex. Triggers: new plugin, plugin pack, plugin scaffold.
 - **pr**: Creates GitHub PR after pre-flight checks (lint/typecheck/tests), structured summary from commits. Triggers: pr, pull request, create PR, ready to merge.
 - **prd-to-issues**: Splits a PRD into vertical-slice GitHub issues with HITL/AFK tagging and dependencies. Triggers: PRD to issues, create tickets, break down PRD, work items.
@@ -151,7 +151,7 @@
 - **refactor**: Refactors code for quality and maintainability. Triggers: refactor, clean up, restructure, improve code, modernize.
 - **refactor-plan**: Creates detailed refactor plan with tiny commits via interview, files as GitHub RFC. Triggers: refactor plan, refactoring RFC, incremental refactor, safe steps.
 - **repeat**: Runs prompt/slash command on recurring interval until done or limit. Triggers: repeat, recurring task, poll status, run every N minutes, interval.
-- **research-mastery**: Hierarchical retrieval: KB first (smart_query/crag_search), then MCP/Context7, then web. Triggers: research, fact-check, verify, synthesize, cross-reference, multi-source, investigate, cite sources.
+- **research-mastery**: Hierarchical retrieval: KB → MCP/Context7 → web. Triggers: research, fact-check, verify, synthesize, cross-reference, multi-source, cite sources.
 - **review**: Reviews code for quality, security, correctness. Triggers: code review, quality review, security review, review PR, review branch.
 - **rollback**: Rolls back git commit, DB migration, or deploy to known-good with safety + health checks. Triggers: rollback, revert deploy, revert migration, rollback commit, git revert.
 - **ruby-patterns**: Ruby/Rails: blocks, metaprogramming, ActiveRecord, Sidekiq, RSpec, Sorbet, Hanami. Triggers: Ruby, Rails, ActiveRecord, Sidekiq, RSpec, Gemfile, bundler, Hanami, Sorbet.
@@ -172,7 +172,7 @@
 - **test**: Runs project test suite with coverage, auto-detects framework (pytest, vitest, jest, flutter, go, cargo, phpunit). Triggers: run tests, test suite, coverage report.
 - **testing-patterns**: Testing strategy: pyramid, AAA, mocks/fakes/stubs, flaky tests, coverage. Triggers: test, fixture, mock, stub, e2e, TDD, Playwright, Cypress, flaky, coverage, property-based.
 - **triage-issue**: Bug triage: explores codebase for root cause, files GitHub issue with TDD fix plan. Triggers: triage, investigate bug, fix plan, root cause, file issue, bug report.
-- **typescript-patterns**: TypeScript type safety: generics, conditional types, discriminated unions, Zod, satisfies, branded types. Triggers: TypeScript, TS, generics, Zod, satisfies, type narrowing, strict mode.
+- **typescript-patterns**: TypeScript types: generics, discriminated unions, Zod, satisfies, branded types. Triggers: TypeScript, TS, generics, Zod, satisfies, strict mode.
 - **typescript-rules**: TypeScript/JavaScript coding rules: style, patterns, security, testing. Triggers: .ts, .tsx, .js, .jsx, package.json, tsconfig.json, React, Next.js, Vue, Vite, Vitest, Jest, ESLint.
 - **ubiquitous-language**: Extracts DDD ubiquitous language glossary, flags ambiguities, saves to UBIQUITOUS_LANGUAGE.md. Triggers: define domain terms, build glossary, harden terminology, DDD, domain model.
 - **verification-before-completion**: Forces verification commands before success claims. Evidence before assertions. Triggers: complete, fixed, passing, done, ready, verified.
