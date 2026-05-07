@@ -7,9 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## v4.1.1 - Release gate hardening (2026-05-07)
+## v4.2.0 - SEO GEO pipeline and release gate hardening (2026-05-07)
 
-Patch release. Fixes a flaky release-blocking URL rule test and aligns CI/prepublish validation with the strict release SOP.
+Minor release. Adds AI pipeline, content citability, and topical authority guidance to `seo-validate` from PR #9 by @fakenso, and keeps the release gate fixes prepared for v4.1.1 in the same unreleased train.
+
+### Added
+
+- **SEO AI pipeline reference** - Added `app/skills/seo-validate/reference/ai-pipeline.md` covering the Prepare/Retrieve/Signal/Serve pipeline, ranking signals, Query Fan Out, and format routing.
+- **Content citability reference** - Added `app/skills/seo-validate/reference/content-citability.md` covering chunk architecture, semantic triples, hedging patterns, decision frameworks, contrast patterns, negative definitions, freshness, and E-E-A-T.
+- **Topical authority scope** - Added `--scope topical` to `seo-validate`, with checks for pillar/cluster structure, internal link density, generic anchors, orphan pages, ID-based slugs, and keyword cannibalization.
+- **Expanded GEO guidance** - Expanded Category 6 from INFO-only guidance to INFO/WARN heuristics for chunk boundaries, author quality, and freshness. Updated `seo-specialist` with AI pipeline, multi-platform SEO, and topical authority responsibilities.
 
 ### Fixed
 
@@ -21,6 +28,7 @@ Patch release. Fixes a flaky release-blocking URL rule test and aligns CI/prepub
 - `npm test`: 1047/1047 passing.
 - `python3 scripts/validate.py --strict`: 0 errors, 0 warnings.
 - `python3 scripts/audit_skills.py --ci`: HIGH 0, WARN 0.
+- `python3 scripts/evaluate_skills.py`: 107/107 passing.
 
 ---
 

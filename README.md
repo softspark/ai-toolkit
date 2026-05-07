@@ -14,13 +14,14 @@
 
 ---
 
-## What's New in v4.1.1
+## What's New in v4.2.0
 
-Patch release focused on release reliability.
+SEO/GEO release focused on AI citation readiness and stricter release gates.
 
-- **Hermetic URL rule test**: the `add-rule` URL test no longer depends on `raw.githubusercontent.com` during the full Bats suite.
-- **Strict CI validation**: CI and `prepublishOnly` now run `python3 scripts/validate.py --strict`.
-- **Release gate parity**: local prepublish behavior now matches the release preparation SOP.
+- **AI pipeline guidance**: `seo-validate` now includes Google AI pipeline, Query Fan Out, and content citability references.
+- **Topical authority checks**: new `--scope topical` covers cluster structure, internal links, orphan pages, slugs, and cannibalization.
+- **Expanded GEO heuristics**: Category 6 now checks chunk boundaries, hedging, decision frameworks, freshness, and author quality.
+- **Release gate parity**: CI and `prepublishOnly` now run strict validation, and the URL rule test is hermetic.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
