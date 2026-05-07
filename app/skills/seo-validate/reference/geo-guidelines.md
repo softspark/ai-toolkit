@@ -1,8 +1,10 @@
 # GEO — Generative Engine Optimization
 
-Reference for `seo-validate` Category 6. Structuring content so AI answer engines (ChatGPT, Perplexity, Google AI Overviews, Bing Copilot, Claude) can extract, cite, and quote it accurately.
+Reference for `seo-validate` Category 6. Structuring content so AI answer engines (ChatGPT, Perplexity, Google AI Overviews, Bing Copilot, Claude, Google AI Mode) can extract, cite, and quote it accurately.
 
-GEO is emerging practice, not a ranking algorithm with known penalties. **All findings in Category 6 are severity `INFO`** — guidance, not enforcement.
+GEO patterns have measurable impact on AI citation probability. **Category 6 findings are `WARN` (chunk size, author quality, freshness) or `INFO` (hedging, frameworks, contrast, bio)** — guidance based on citation research, not penalty-causing.
+
+See [ai-pipeline.md](ai-pipeline.md) for Google's 4-stage pipeline and 7 ranking signals. See [content-citability.md](content-citability.md) for chunk anatomy, semantic triples, and hedging patterns.
 
 ## Core Principles
 
@@ -224,17 +226,124 @@ These don't render content for crawlers at all. **Category 7 (rendering) superse
 
 ---
 
+## Chunk Architecture
+
+Google's retrieval stage (Stage 2 of the pipeline — see [ai-pipeline.md](ai-pipeline.md)) splits content into chunks of ≤500 tokens (~375 words). AI does not read your article — it extracts one chunk and uses it as the answer. If the answer is distributed across multiple sections or buried after a long preamble, AI cannot assemble it.
+
+**The 375-word rule:** Each H2 section should stay within ~375 words. If a section runs longer, add an H3 — each H3 becomes its own independent chunk candidate.
+
+### Anatomy of a citable chunk
+
+```
+H2: [Question or keyword-rich heading]
+│
+├── Direct answer — 2–3 sentences. Fact first. No preamble.
+│
+├── Elaboration — data, context, nuance. 3–5 sentences.
+│
+├── Visual element — list, table, or code block.
+│
+└── TL;DR (optional) — 1-sentence summary for long sections.
+```
+
+### Before / after
+
+**Before (unchunkable):**
+```
+H2: Choosing the Right Mattress
+
+When you're looking for a new mattress, there are many factors to consider.
+The market offers a wide variety of options, and it can be overwhelming...
+[70 words of preamble]
+Eventually, firmness is one of the most important factors...
+```
+*AI extracts the preamble as the "answer" — zero information.*
+
+**After (chunk-optimised):**
+```
+H2: How to Choose Mattress Firmness by Body Weight
+
+Match firmness to your weight: under 70 kg → H1–H2; 70–90 kg → H3; over 90 kg → H4.
+Higher body weight needs firmer support to maintain spinal alignment.
+
+| Weight    | Firmness  |
+|-----------|-----------|
+| < 70 kg   | H1–H2     |
+| 70–90 kg  | H3        |
+| > 90 kg   | H4        |
+```
+*AI extracts the first two sentences. Table is precision bonus.*
+
+---
+
+## Semantic Triples vs Marketing Prose
+
+AI answer engines parse content as Subject → Predicate → Object triples. Marketing prose requires inference; triples require none — lower hallucination risk, higher citation frequency.
+
+| Style | Example | AI extractable? |
+|---|---|---|
+| Marketing prose | "Our exceptional collection will enchant you with its elegance." | No — zero extractable facts |
+| Semantic triples | "Firmness: H3. Dimensions: 160×200 cm. Ideal for: side sleepers, 70–90 kg. Not for: stomach sleepers." | Yes — 4 distinct facts |
+
+Each triple answers a different AI sub-query. Six triples on a product page = six citation opportunities.
+
+---
+
+## Opinionated Content
+
+AI skips hedged claims. "This may be a good choice for many people" cannot be used as an answer to "which mattress should I buy?" Google's Jetstream signal explicitly rewards declarative, opinionated content.
+
+**Hedging to eliminate → replacement:**
+
+| Hedging | Replacement |
+|---|---|
+| "may be a good choice" | "We recommend X for Y" |
+| "worth considering" | "Our top pick for Z is X" |
+| "for many people" | "for side sleepers weighing 70–90 kg" |
+| "it depends" | "It depends on your weight: under 70 kg → H2, over 90 kg → H4" |
+
+**Rule:** Every guide and product page must take a position. Recommendation + named persona + justification = citable.
+
+---
+
+## The 13-Week Freshness Rule
+
+50% of top AI-cited content was published or updated within the last 13 weeks (Blyskall, 40M AI Overviews results). After 13 weeks without a visible update, citation probability drops.
+
+**Both signals required:**
+1. `dateModified` in JSON-LD — machine-readable freshness signal.
+2. Visible "Updated: [date]" near the byline — AI engines parse visible text; users trust visible dates.
+
+JSON-LD alone is insufficient.
+
+**Refresh strategy:**
+
+| Action | Interval |
+|---|---|
+| Full content review + update | Every 12 weeks for top pillar pages |
+| Date + minor fact refresh | Every 13 weeks for cluster articles |
+| Add new FAQ or data point | On new data availability for product pages |
+
+---
+
 ## Checklist (Category 6 findings)
 
+- [ ] Each H2 section is ≤375 words; sections exceeding this have an H3 sub-heading.
+- [ ] First paragraph under each heading is ≤60 words before a concrete fact or recommendation.
+- [ ] No hedging language ("may be", "worth considering", "for many") in recommendation contexts.
+- [ ] At least one decision framework ("if X → choose Y") per guide or category page.
+- [ ] At least one explicit contrast ("X vs Y", "unlike X") per comparison page.
+- [ ] At least one negative definition ("not recommended for…") per product or category page.
+- [ ] Author block: real name (not "Admin"), ≥30-word bio, `Person` schema with `sameAs`.
+- [ ] `dateModified` in JSON-LD AND visible "Updated: [date]" text present.
 - [ ] FAQ-style content uses `FAQPage` schema.
 - [ ] Summary content uses `speakable` schema.
-- [ ] Paragraphs >400 words are broken up with sub-headings.
 - [ ] Citations use `<cite>` and author bylines.
 - [ ] Quoted content uses `<blockquote>`/`<q>` with `cite` attr.
 - [ ] How-to content uses `<ol>` + `HowTo` schema.
 - [ ] Comparative data uses `<table>` with proper headers.
 - [ ] Glossary content uses `<dl>`/`<dt>`/`<dd>`.
-- [ ] Semantic HTML (`<article>`, `<section>`, `<main>`, `<nav>`, `<aside>`) is used over `<div>`.
+- [ ] Semantic HTML (`<article>`, `<section>`, `<main>`) used over `<div>`.
 - [ ] Critical content is NOT hidden behind tabs/accordions (except native `<details>`).
 
 ---
