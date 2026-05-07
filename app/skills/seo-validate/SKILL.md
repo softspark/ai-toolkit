@@ -410,7 +410,7 @@ Topical authority is the degree to which a domain is recognised as an expert sou
 | Content page URL slug contains numeric IDs, UUIDs, or is purely numeric (e.g., `/post/12345`, `/p/abc-uuid`) | WARN | heuristic | Natural-language slugs (5–7 descriptive words) show +11.4% AI citation rate vs. ID-based URLs (Blyskall study) |
 | Two or more pages on the same domain target the same primary keyword in H1 and title | WARN | heuristic | Keyword cannibalization: pages compete against each other, diluting authority; consolidate into pillar + cluster |
 
-**Topical authority strategy note:** Query Fan Out means AI generates 50+ sub-queries per user question, 95% of which have zero Monthly Search Volume in any keyword tool. Covering a topic with a pillar + cluster architecture answers the full sub-query space that keyword tools cannot see. See [reference/ai-pipeline.md](reference/ai-pipeline.md#3-query-fan-out).
+**Topical authority strategy note:** Query Fan Out means AI generates 50+ sub-queries per user question, 95% of which have zero Monthly Search Volume in any keyword tool. Covering a topic with a pillar + cluster architecture answers the full sub-query space that keyword tools cannot see. See [reference/ai-pipeline.md](reference/ai-pipeline.md).
 
 ---
 
