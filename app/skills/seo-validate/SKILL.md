@@ -6,7 +6,7 @@ effort: medium
 disable-model-invocation: true
 context: fork
 agent: seo-specialist
-argument-hint: "[path] [--scope full|technical|content|performance|geo|rendering] [--severity high|warn|info] [--framework auto|next|nuxt|astro|gatsby|sveltekit|remix|angular|vue|react-spa|vite-spa|cra|static] [--rendering auto|csr|ssr|ssg|isr|hybrid] [--output markdown|json]"
+argument-hint: "[path] [--scope full|technical|content|performance|geo|rendering|topical] [--severity high|warn|info] [--framework auto|next|nuxt|astro|gatsby|sveltekit|remix|angular|vue|react-spa|vite-spa|cra|static] [--rendering auto|csr|ssr|ssg|isr|hybrid] [--output markdown|json]"
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -14,7 +14,7 @@ allowed-tools: Read, Grep, Glob, Bash
 
 $ARGUMENTS
 
-Scan a codebase for SEO issues using pattern-matching heuristics. Detects W3C/HTML violations, meta tag gaps, structured data problems, hreflang errors, Core Web Vitals risks (LCP/INP/CLS), resource-hint misuse, above-the-fold anti-patterns, GEO gaps, SPA/CSR/SSG crawlability problems, technical SEO misconfigurations, and accessibility-for-SEO issues. Read-only — never modifies files.
+Scan a codebase for SEO issues using pattern-matching heuristics. Detects W3C/HTML violations, meta tag gaps, structured data problems, hreflang errors, Core Web Vitals risks (LCP/INP/CLS), resource-hint misuse, above-the-fold anti-patterns, GEO gaps (chunk architecture, hedging language, decision frameworks, semantic triples, freshness), topical authority gaps (pillar/cluster structure, orphan pages, cannibalization), SPA/CSR/SSG crawlability problems, technical SEO misconfigurations, and accessibility-for-SEO issues. Read-only — never modifies files.
 
 **Standards basis**: W3C HTML5 Recommendation, W3C WCAG 2.2, Schema.org vocabulary, IETF RFC 5646 (BCP 47 language tags) for hreflang, web.dev Core Web Vitals thresholds (LCP <2.5s, INP <200ms, CLS <0.1), Google Search Central crawlability guidelines, and emerging GEO (Generative Engine Optimization) practices.
 
@@ -26,6 +26,7 @@ Scan a codebase for SEO issues using pattern-matching heuristics. Detects W3C/HT
 /seo-validate --scope rendering              # Only SPA/CSR/SSG crawlability checks
 /seo-validate --scope performance            # Only Core Web Vitals static signals
 /seo-validate --scope geo                    # Only GEO (Generative Engine Optimization)
+/seo-validate --scope topical               # Only topical authority and cluster architecture
 /seo-validate --severity high                # Filter to HIGH findings only
 /seo-validate --framework next               # Force framework (skip auto-detection)
 /seo-validate --rendering csr                # Force rendering-mode interpretation
@@ -33,12 +34,13 @@ Scan a codebase for SEO issues using pattern-matching heuristics. Detects W3C/HT
 ```
 
 **Scopes:**
-- `full` (default) — all 9 categories
+- `full` (default) — all 10 categories
 - `technical` — HTML semantics, hreflang, CWV, rendering, technical SEO (categories 1, 4, 5, 7, 8)
 - `content` — meta/OG, structured data, GEO, a11y-for-SEO (categories 2, 3, 6, 9)
 - `performance` — only CWV static signals (category 5)
-- `geo` — only GEO (category 6)
+- `geo` — only GEO / citability checks (category 6)
 - `rendering` — only category 7 (SPA/CSR/SSG crawlability) — useful for migration audits
+- `topical` — only topical authority and cluster architecture (category 10)
 
 **Severity filtering:** `--severity high` shows only HIGH, `--severity warn` shows HIGH+WARN, `--severity info` shows all. Default: all.
 
@@ -273,20 +275,30 @@ See: [reference/core-web-vitals.md](reference/core-web-vitals.md)
 
 ### Category 6: GEO (Generative Engine Optimization)
 
-Content structure for AI answer engines (ChatGPT, Perplexity, Google AI Overviews, Bing Copilot). **All findings here are severity `INFO`** — emerging practice, not penalty-causing.
+Content structure for AI answer engines (ChatGPT, Perplexity, Google AI Overviews, Bing Copilot, Google AI Mode). **Most findings here are severity `INFO` or `WARN`** — guidance based on measured citation patterns, not penalty-causing.
+
+Google's retrieval stage splits content into chunks of ≤500 tokens (~375 words). Each section must be a self-contained answer unit. See [reference/ai-pipeline.md](reference/ai-pipeline.md) for the full 4-stage pipeline and 7 ranking signals. See [reference/content-citability.md](reference/content-citability.md) for chunk anatomy, semantic triples, and hedging patterns.
 
 | Pattern | Severity | Confidence | Description |
 |---------|----------|------------|-------------|
 | No `FAQPage` schema on FAQ-style content | INFO | heuristic | Highly extractable by LLMs |
 | No `speakable` schema on summary content | INFO | heuristic | Voice/audio answer engines |
-| Long paragraphs (>400 words) without sub-headings | INFO | heuristic | Harder for LLMs to extract |
+| H2 section body exceeds ~375 words without an H3 sub-heading | WARN | heuristic | Exceeds single chunk boundary (~500 tokens); AI cannot extract cleanly — split with H3 |
+| First paragraph under a heading exceeds 60 words before a concrete fact, number, or direct recommendation | INFO | heuristic | AI extracts first 2–3 sentences as the answer; preamble displaces the answer |
+| Hedging language in recommendation or product context: "may be", "might be", "could be", "worth considering", "for many", "for most people" | INFO | heuristic | AI skips hedged claims; Jetstream signal rewards declarative recommendations (see [content-citability.md](reference/content-citability.md)) |
+| No decision framework ("if X → choose Y" / "for X, use Y") in guide or category content | INFO | heuristic | Decision frameworks are the most-cited AI construction; covers Jetstream cross-attention signal |
+| No contrast or comparison ("X vs Y", "unlike X", "in contrast to X") in content with comparative headings | INFO | heuristic | Jetstream directly rewards explicit contrasts; absence reduces AI citation probability |
+| No negative definition ("not recommended for", "not suitable for", "avoid if") on product or category pages | INFO | heuristic | Covers AI exclusion sub-queries ("which product is not for stomach sleepers?") |
+| Author name uses generic placeholder: "Admin", "Team", "Staff", "Editor", or no author at all | WARN | heuristic | E-E-A-T Experience signal requires a real named author; generic names suppressed by Google Bury Rules |
+| Author block contains fewer than 30 words of bio text near the author name | INFO | heuristic | LLM answer engines use author credentials as an authority signal; stub bios do not qualify |
+| Article `dateModified` (JSON-LD or `<time>`) is older than 13 weeks with no visible update notice | WARN | heuristic | 50% of top AI-cited content updated within 13 weeks (Blyskall, 40M AI Overviews study); stale content drops from citation pools |
 | Missing explicit citation/source markup (`<cite>`, author bylines) | INFO | heuristic | LLM answer engines prefer attributable sources |
 | No `<q>` or quote schema on quoted content | INFO | heuristic | Aids AI extraction |
 | No Q&A structure on how-to content | INFO | heuristic | LLMs favor structured Q&A |
 | Heavy reliance on `<div>` over semantic HTML | INFO | heuristic | Semantic HTML improves AI parsing |
 | Key facts hidden behind JS interactions (tabs, accordions) | INFO | heuristic | LLMs see initial DOM only |
 
-See: [reference/geo-guidelines.md](reference/geo-guidelines.md)
+See: [reference/geo-guidelines.md](reference/geo-guidelines.md), [reference/content-citability.md](reference/content-citability.md), [reference/ai-pipeline.md](reference/ai-pipeline.md)
 
 ---
 
@@ -385,6 +397,23 @@ Accessibility ↔ SEO overlap. WCAG compliance improves ranking signals.
 
 ---
 
+### Category 10: Topical Authority & Cluster Architecture
+
+Topical authority is the degree to which a domain is recognised as an expert source across an entire topic, not just individual pages. AI retrieval (Gecko Score / semantic embedding) rewards domains with deep, interlinked coverage. Classical SEO also benefits — Senuto's study of 212K phrases across 7,200 semantic groups showed topical coverage dominates top-10 rankings independently of individual technical metrics.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| Long-form page (>800 words) has internal link density below 1 link per 800 characters of body text | WARN | heuristic | Google's internal linking guideline: ~1 contextual internal link per 800 chars; low density = weak cluster signal |
+| Internal link uses generic anchor text: "click here", "read more", "here", "this page", "learn more" | WARN | definitive | Anchor text is a topical signal; descriptive claim-based anchors transfer semantic context to the linked page |
+| Page >2,000 words with no outbound internal links to topically related pages | INFO | heuristic | Pillar pages must link out to cluster articles; absence breaks the pillar→cluster signal and reduces Gecko relevance |
+| Page has >500 words of indexable content with zero detected inbound internal links (orphan page) | WARN | heuristic | Orphan pages receive minimal crawl budget and no authority pass-through; every content page needs at least one inbound link |
+| Content page URL slug contains numeric IDs, UUIDs, or is purely numeric (e.g., `/post/12345`, `/p/abc-uuid`) | WARN | heuristic | Natural-language slugs (5–7 descriptive words) show +11.4% AI citation rate vs. ID-based URLs (Blyskall study) |
+| Two or more pages on the same domain target the same primary keyword in H1 and title | WARN | heuristic | Keyword cannibalization: pages compete against each other, diluting authority; consolidate into pillar + cluster |
+
+**Topical authority strategy note:** Query Fan Out means AI generates 50+ sub-queries per user question, 95% of which have zero Monthly Search Volume in any keyword tool. Covering a topic with a pillar + cluster architecture answers the full sub-query space that keyword tools cannot see. See [reference/ai-pipeline.md](reference/ai-pipeline.md).
+
+---
+
 ## Output Format
 
 ```markdown
@@ -393,7 +422,7 @@ Accessibility ↔ SEO overlap. WCAG compliance improves ranking signals.
 ### Summary
 | Metric | Value |
 |--------|-------|
-| Scope | full / technical / content / performance / geo / rendering |
+| Scope | full / technical / content / performance / geo / rendering / topical |
 | Framework detected | next / nuxt / astro / gatsby / sveltekit / remix / angular / vue / react-spa / vite-spa / cra / static |
 | Rendering mode | csr / ssr / ssg / isr / hybrid |
 | Files scanned | N |
@@ -445,7 +474,7 @@ See: reference/spa-ssg-patterns.md#react-spa-migration
 - **Standards citation**: Every HIGH/WARN finding must cite a W3C/Schema.org/RFC/web.dev reference.
 - **Skip non-source files**: Binary files, lock files (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`), vendored directories (`node_modules/`, `vendor/`, `.git/`, `dist/`, `build/`, `out/`, `.next/`, `.nuxt/`, `.svelte-kit/`, `public/build/`).
 - **No false confidence**: Label heuristic findings clearly; above-the-fold detection is always heuristic.
-- **GEO is INFO-only**: Never flag GEO findings as HIGH/WARN — it is emerging practice.
+- **GEO severity**: Category 6 findings may be WARN (chunk size, author quality, freshness) or INFO (hedging, frameworks, contrast, bio) — see table. Never raise GEO findings to HIGH.
 - **SPA HIGH bar**: Only flag Category 7 HIGH when the app is clearly a content site (has public routes with meaningful content). Auth-gated apps (dashboards, admin panels) should stay at WARN/INFO since SEO is not a concern.
 - **Noscript is not a substitute for SSR/SSG**: `<noscript>` catches only the "no-JS" case, not the "crawler without JS execution" case — don't upgrade a CSR HIGH to WARN just because noscript exists.
 - **No auto-fix in v1**: Fixing SEO issues requires design/content decisions beyond pattern matching.
@@ -454,7 +483,9 @@ See: reference/spa-ssg-patterns.md#react-spa-migration
 
 - [reference/w3c-guidelines.md](reference/w3c-guidelines.md) — HTML5 semantic requirements, meta tag specs, language tag rules.
 - [reference/core-web-vitals.md](reference/core-web-vitals.md) — LCP/INP/CLS thresholds, resource hints, above-the-fold heuristic, per-framework image components.
-- [reference/geo-guidelines.md](reference/geo-guidelines.md) — GEO principles, `speakable` schema, citation/source markup, AI-extractable content structure.
+- [reference/geo-guidelines.md](reference/geo-guidelines.md) — GEO principles, `speakable` schema, citation/source markup, AI-extractable content structure, chunk anatomy, 13-week freshness strategy.
 - [reference/geo-aeo-patterns.md](reference/geo-aeo-patterns.md) — AEO (Answer Engine Optimization): `FAQPage`/`HowTo`/`QAPage` schema, `llms.txt`, AI bot `robots.txt` directives, E-E-A-T signals, automated grep patterns for Category 6.
+- [reference/content-citability.md](reference/content-citability.md) — Chunk architecture, semantic triples, opinionated vs hedging language, decision frameworks, contrast patterns, negative definitions, justified superlatives, grep patterns.
+- [reference/ai-pipeline.md](reference/ai-pipeline.md) — Google's 4-stage AI pipeline (Prepare/Retrieve/Signal/Serve), 7 ranking signals (Gecko, Jetstream, PCTR, Freshness, BM25, Base, Boost/Bury), Query Fan Out, probabilistic ranking, format routing.
 - [reference/schema-types.md](reference/schema-types.md) — Schema.org JSON-LD templates (Article, FAQ, BreadcrumbList, Organization, Product, LocalBusiness) with required properties.
 - [reference/spa-ssg-patterns.md](reference/spa-ssg-patterns.md) — Rendering-mode decision tree, SPA pitfalls, per-framework detection patterns, prerendering strategies.
