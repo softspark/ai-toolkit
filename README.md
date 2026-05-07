@@ -14,35 +14,13 @@
 
 ---
 
-## What's New in v4.1.0
+## What's New in v4.1.1
 
-Default `output-mode: concise` directive now propagates to every editor config (Claude Code global + project-local CLAUDE.md, Cursor `.mdc` rules, Windsurf, Cline, Roo, Augment, Codex `.agents/rules`, Antigravity, GitHub Copilot, Gemini CLI, Aider). Auto-installed on every `ai-toolkit install` / `ai-toolkit update`. The `brand-voice` skill (shipped v3.2.0) auto-loads concise rules; assistants without that skill still see the directive in their config.
+Patch release focused on release reliability.
 
-- **No preamble**, lead with the result, max 3 sentences per closed question, tables over prose, no trailing summaries.
-- **Opt out**: `/brand-voice default` (session) or strip `<!-- TOOLKIT:output-mode -->` block from CLAUDE.md (permanent).
-
-## What's New in v4.0.1
-
-CI hotfix for v4.0.0. Corrects skill subtype counts in `README.md` "What You Get" table and `kb/reference/architecture-overview.md` (hybrid 32 → 30, knowledge 48 → 45). The metadata contract tests caught the drift on CI; v4.0.0 release path missed three count locations. No skill catalog changes — see v4.0.0 below for the actual consolidation.
-
-## What's New in v4.0.0
-
-**Breaking release.** Skill catalog consolidated from 112 → 107: removes 5 redundant skills, merges their substantive knowledge into the surviving targets. Eliminates `/skills` truncation and removes overlap that confused agent dispatch.
-
-- **`/search` removed** — `/research-mastery` is the superset (KB → MCP/Context7 → web with hierarchy of truth). Local Grep/Glob fallback is now part of `/research-mastery`.
-- **`/teams` removed** — `/workflow` covers the same scenarios without the experimental `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` flag.
-- **`plan-writing` knowledge skill removed** — estimation patterns (T-shirt sizing, cone of uncertainty) and pre-mortem rules are now part of `/plan`.
-- **`debugging-tactics` knowledge skill removed** — Iron Law, 4-phase methodology, and "5 Whys" are now part of `/debug`.
-- **`hive-mind` knowledge skill removed** — consensus voting and aggregation merged into `/swarm`.
-
-### Migration
-
-| Before | After |
-|--------|-------|
-| `/search <query>` | `/research-mastery <query>` |
-| `/teams <preset>` | `/workflow <type>` |
-| Agent `skills: plan-writing` | Agent `skills: plan` |
-| Agent `skills: debugging-tactics` | Agent `skills: debug` |
+- **Hermetic URL rule test**: the `add-rule` URL test no longer depends on `raw.githubusercontent.com` during the full Bats suite.
+- **Strict CI validation**: CI and `prepublishOnly` now run `python3 scripts/validate.py --strict`.
+- **Release gate parity**: local prepublish behavior now matches the release preparation SOP.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

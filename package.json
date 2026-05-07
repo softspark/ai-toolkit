@@ -1,6 +1,6 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "AI coding toolkit: 107 skills, 44 agents, 12-editor write-through (Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo, Aider, Augment, Antigravity, Codex, opencode), machine-enforced safety constitution, SARIF audit, signed npm provenance.",
   "keywords": [
     "claude",
@@ -41,7 +41,7 @@
     "ai-toolkit": "bin/ai-toolkit.js"
   },
   "scripts": {
-    "prepublishOnly": "npm run generate:all && python3 scripts/validate.py && npm test",
+    "prepublishOnly": "npm run generate:all && python3 scripts/validate.py --strict && npm test",
     "test": "bats tests/ --jobs 4 --no-parallelize-within-files",
     "validate": "python3 scripts/validate.py",
     "evaluate": "python3 scripts/evaluate_skills.py",

@@ -9,6 +9,9 @@ Stdlib-only — no external dependencies.
 from __future__ import annotations
 
 import ssl
+import json
+import os
+from pathlib import Path
 import urllib.error
 import urllib.request
 
@@ -33,6 +36,13 @@ def fetch_url(url: str) -> bytes:
         raise ValueError(
             f"Only HTTPS URLs are supported (got: {url.split('://')[0]}://)"
         )
+
+    fixture_map = os.environ.get("AI_TOOLKIT_TEST_URL_FIXTURE_MAP")
+    if fixture_map and os.environ.get("AI_TOOLKIT_TEST_MODE") == "1":
+        fixtures = json.loads(fixture_map)
+        fixture_path = fixtures.get(url)
+        if fixture_path:
+            return Path(fixture_path).read_bytes()
 
     ctx = ssl.create_default_context()
     with urllib.request.urlopen(url, timeout=_FETCH_TIMEOUT, context=ctx) as resp:

@@ -7,6 +7,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.1.1 - Release gate hardening (2026-05-07)
+
+Patch release. Fixes a flaky release-blocking URL rule test and aligns CI/prepublish validation with the strict release SOP.
+
+### Fixed
+
+- **URL rule registration test** - Replaced the live `raw.githubusercontent.com` dependency with a local fixture path guarded by `AI_TOOLKIT_TEST_MODE=1`, keeping production URL fetching HTTPS-only while making the full Bats suite hermetic.
+- **Release validation gate** - Updated CI and `prepublishOnly` to run `python3 scripts/validate.py --strict`, matching the release preparation SOP.
+
+### Verification
+
+- `npm test`: 1047/1047 passing.
+- `python3 scripts/validate.py --strict`: 0 errors, 0 warnings.
+- `python3 scripts/audit_skills.py --ci`: HIGH 0, WARN 0.
+
+---
+
 ## v4.1.0 — Default `output-mode: concise` propagated to all editors (2026-05-06)
 
 Minor release. Adds a global `output-mode: concise` directive that propagates to every editor config produced by ai-toolkit. Reduces token usage and removes preamble/filler from assistant responses across Claude Code, Cursor, Windsurf, Cline, Roo Code, Augment, Codex, Antigravity, GitHub Copilot, Gemini CLI, and Aider.

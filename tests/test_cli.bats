@@ -291,11 +291,17 @@ teardown() {
 
 @test "cli: add-rule with URL stores source in sources.json" {
     export HOME="$TEST_TMP"
-    # Use a known public raw GitHub URL (small file, always available)
-    run $CLI add-rule "https://raw.githubusercontent.com/softspark/ai-toolkit/main/LICENSE" license-rule
+    fixture_url="https://example.com/ai-toolkit-test-rule.md"
+    fixture_file="$TEST_TMP/url-rule-fixture.md"
+    printf '# URL fixture rule\n' > "$fixture_file"
+    export AI_TOOLKIT_TEST_MODE=1
+    export AI_TOOLKIT_TEST_URL_FIXTURE_MAP="{\"$fixture_url\":\"$fixture_file\"}"
+
+    run $CLI add-rule "$fixture_url" license-rule
     [ "$status" -eq 0 ]
     [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/license-rule.md" ]
     [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/sources.json" ]
+    grep -q 'URL fixture rule' "$TEST_TMP/.softspark/ai-toolkit/rules/license-rule.md"
     python3 -c "
 import json
 with open('$TEST_TMP/.softspark/ai-toolkit/rules/sources.json') as f:

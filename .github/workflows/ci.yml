@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Run validate.py
-        run: python3 scripts/validate.py
+        run: python3 scripts/validate.py --strict
 
       - name: Run evaluate_skills.py
         run: python3 scripts/evaluate_skills.py
@@ -76,5 +76,4 @@ jobs:
 
       - name: Run audit_skills.py
         run: python3 scripts/audit_skills.py --ci
-
 
