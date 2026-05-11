@@ -39,7 +39,7 @@ Optimization for both classical search engines AND generative engines (ChatGPT, 
 
 ### Structured Data
 - Schema.org markup
-- Rich snippets
+- Rich snippets (note: Google dropped FAQ rich results on May 7, 2026; Search Console API support removed August 2026)
 - Knowledge graph
 - Breadcrumbs
 
@@ -157,7 +157,7 @@ Goal: get cited by ChatGPT, Claude, Perplexity, Gemini, and Google AI Overviews 
 5. **Named author + author bio with credentials.** Authority signal that survives synthesis.
 6. **Original quotes from named experts.** Quotation blocks are over-represented in LLM citations.
 7. **Comparison tables with explicit labels.** Tables are extracted whole; vague prose is summarised away.
-8. **Schema.org `Article`, `FAQPage`, `HowTo`, `QAPage`, `Person`.** Mandatory for entity disambiguation.
+8. **Schema.org `Article`, `HowTo`, `QAPage`, `Person`.** Mandatory for entity disambiguation. `FAQPage` schema: Google dropped FAQ rich results on **May 7, 2026** (Search Console API removed August 2026) — keep markup only if targeting other engines (Bing, etc.).
 9. **`llms.txt` at site root.** Curated index of canonical pages for LLM crawlers (Anthropic-proposed convention).
 10. **Stable URLs with semantic slugs.** LLMs cache citations — URL changes erase your authority overnight.
 11. **Cross-linking with descriptive anchors.** "this article" is dead anchor text; use the actual claim.
@@ -189,7 +189,7 @@ Goal: get cited by ChatGPT, Claude, Perplexity, Gemini, and Google AI Overviews 
 - [ ] At least one comparison table OR numbered list per long-form page
 - [ ] Author block with real name (not "Admin"), role, and ≥30 words of bio
 - [ ] Schema.org `Article` with `author` (`Person` + `sameAs`), `datePublished`, `dateModified`
-- [ ] Schema.org `FAQPage` for any page with Q/A structure
+  - [ ] ~~Schema.org `FAQPage`~~ — Google dropped FAQ rich results on **May 7, 2026**; Search Console reporting ends June 2026, API removed August 2026. Remove or keep only if targeting non-Google engines.
 - [ ] `dateModified` updated AND visible "Updated: [date]" text present
 - [ ] `llms.txt` at site root with curated canonical URLs
 - [ ] Page contains at least 3 unique data points (numbers, dates, version strings)
