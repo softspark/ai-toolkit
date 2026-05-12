@@ -88,7 +88,7 @@ Use `ci-cd-patterns` skill for pipeline templates and best practices.
 - GitHub Actions YAML parses `on:` as a reserved word only when unquoted. Writing `"on":` (quoted) produces a valid-looking file whose workflow **never triggers**. YAML anchors in this field also silently break.
 - GitLab CI's `rules:` and `only:/except:` are mutually exclusive at the job level. Mixing them fails parse on pipeline run but not at `git push` time — test with `gitlab-ci-lint` before committing.
 - `secrets.*` in GitHub Actions is undefined in workflows triggered from **forked** PRs (security boundary). Jobs that need secrets must gate on `github.event.pull_request.head.repo.full_name == github.repository` or use `pull_request_target` carefully.
-- `actions/checkout@v4` defaults to `fetch-depth: 1` (shallow). Commands that need history (`git log`, `git describe`, conventional-commit tools) fail with misleading errors — set `fetch-depth: 0` for those jobs.
+- `actions/checkout@v6` defaults to `fetch-depth: 1` (shallow). Commands that need history (`git log`, `git describe`, conventional-commit tools) fail with misleading errors — set `fetch-depth: 0` for those jobs.
 
 ## When NOT to Use
 

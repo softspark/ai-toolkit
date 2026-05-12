@@ -61,7 +61,7 @@ jobs:
         run: brew install bats-core parallel
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
 
@@ -76,4 +76,3 @@ jobs:
 
       - name: Run audit_skills.py
         run: python3 scripts/audit_skills.py --ci
-

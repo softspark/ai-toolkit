@@ -417,7 +417,7 @@ dotnet_diagnostic.CA1848.severity = warning
 ### CI (GitHub Actions)
 ```yaml
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v6
   - uses: actions/setup-dotnet@v4
     with: { dotnet-version: '9.0.x' }
   - run: dotnet restore

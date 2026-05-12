@@ -231,7 +231,7 @@ jobs:
   doctor:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: python3 scripts/ecosystem_doctor.py --format text | tee /tmp/doctor.txt
       - run: python3 scripts/ecosystem_doctor.py --check
 ```

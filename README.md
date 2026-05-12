@@ -8,13 +8,13 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1051%20passing-success)](tests/)
 
-## What's New in v4.2.3
+## What's New in v4.2.4
 
-Patch release updating SEO guidance after Google's FAQ rich result deprecation.
+Patch release removing Node 20 action-runtime warnings from GitHub Actions.
 
-- **SEO agent guidance**: `seo-specialist` now treats `FAQPage` as deprecated for Google rich results.
-- **Schema recommendations**: citability guidance now prioritizes `Article`, `HowTo`, `QAPage`, and `Person` for Google-facing surfaces.
-- **GEO audit checklist**: FAQ markup is now scoped to non-Google engines instead of recommended as a default.
+- **CI action runtime**: `ci.yml`, `publish.yml`, and the reusable `action.yml` now use `actions/setup-node@v6`.
+- **Generated guidance**: CI templates and CI/CD skill examples now use current GitHub Actions versions.
+- **Release readiness**: the next publish run executes on the Node 24-compatible action runtime.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

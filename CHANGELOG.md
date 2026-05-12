@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.2.4 - GitHub Actions Node 24 readiness (2026-05-12)
+
+Patch release. Removes GitHub Actions Node 20 action-runtime deprecation warnings from CI, publish, and reusable action surfaces.
+
+### Changed
+
+- **GitHub Actions runtime** - Updated `actions/setup-node` from `v4` to `v6` in CI, publish, and reusable composite action workflows.
+- **Generated CI guidance** - Refreshed CI templates, CI/CD skill examples, Docker DevOps examples, and LLM index output to use current GitHub Actions action versions.
+
+### Verification
+
+- Source checked against the official [`actions/setup-node` documentation](https://github.com/actions/setup-node), which documents `v6` usage and Node 24 action runtime support.
+
+---
+
 ## v4.2.3 - SEO FAQ rich results deprecation (2026-05-12)
 
 Patch release. Updates `seo-specialist` guidance after Google deprecated FAQ rich results.
