@@ -14,7 +14,9 @@ TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 SESSION="${CLAUDE_SESSION_ID:-unknown}"
 
 INPUT=$(cat)
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
+TOOL_NAME=$(hook_tool_name)
 
 if [ -z "$TOOL_NAME" ]; then
     TOOL_NAME="${CLAUDE_TOOL_NAME:-unknown}"
@@ -39,7 +41,7 @@ log_event() {
 
 case "$TOOL_NAME" in
     Bash)
-        COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+        COMMAND=$(hook_command)
         [ -z "$COMMAND" ] && exit 0
 
         # Check for dangerous command patterns
@@ -64,7 +66,7 @@ case "$TOOL_NAME" in
         ;;
 
     Write|Edit|MultiEdit)
-        FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
+        FILE_PATH=$(hook_file_path)
         [ -z "$FILE_PATH" ] && exit 0
 
         BASENAME=$(basename "$FILE_PATH")

@@ -39,7 +39,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "bash ~/.softspark/ai-toolkit/hooks/notify-waiting.sh"
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/notify-waiting.sh\""
                     }
                 ]
             }
@@ -82,6 +82,16 @@
                     {
                         "type": "command",
                         "command": "\"$HOME/.softspark/ai-toolkit/hooks/commit-quality.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/revert-guard.sh\""
                     }
                 ]
             }
@@ -128,6 +138,26 @@
                         "command": "\"$HOME/.softspark/ai-toolkit/hooks/governance-capture.sh\""
                     }
                 ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Edit|MultiEdit|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/test-cohesion.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "mcp__rag-mcp__smart_query|mcp__rag-mcp__hybrid_search_kb|mcp__rag-mcp__crag_search|mcp__rag-mcp__multi_hop_search|mcp__rag-mcp__verify_answer|WebSearch|WebFetch",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/search-tracker.sh\""
+                    }
+                ]
             }
         ],
         "Stop": [
@@ -158,6 +188,16 @@
                     {
                         "type": "command",
                         "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-gate.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/stop-search-check.sh\""
                     }
                 ]
             }
@@ -240,6 +280,30 @@
                     {
                         "type": "command",
                         "command": "\"$HOME/.softspark/ai-toolkit/hooks/session-end.sh\""
+                    }
+                ]
+            }
+        ],
+        "InstructionsLoaded": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/instructions-audit.sh\""
+                    }
+                ]
+            }
+        ],
+        "ConfigChange": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "user_settings",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/config-desync-guard.sh\""
                     }
                 ]
             }

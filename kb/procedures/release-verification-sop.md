@@ -144,7 +144,7 @@ ai-toolkit doctor
 - Environment: node, bash, python3, bats
 - Global Install: .claude exists, agents/skills symlinks (0 broken), settings.json hooks
 - Hook Scripts: all present and executable
-- Hook Configuration: 12 events registered
+- Hook Configuration: 14 events registered
 - Generated Artifacts: AGENTS.md, llms.txt, llms-full.txt
 - Planned Assets: plugin.json, benchmarks, plugin packs
 - Benchmark Freshness: < 30 days
@@ -194,7 +194,7 @@ python3 scripts/audit_skills.py --ci
 
 **Verify validate.py:**
 - [ ] Agents >= 44, Skills >= 99, Tests >= 900
-- [ ] Hook events: 12, Hook scripts: >= 20
+- [ ] Hook events: 14, Hook scripts: >= 30
 - [ ] Plugin packs >= 10, KB documents >= 20
 - [ ] `Errors: 0 | Warnings: 0` → `VALIDATION PASSED`
 

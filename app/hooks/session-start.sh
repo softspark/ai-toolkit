@@ -8,9 +8,21 @@
 echo "MANDATORY: Before answering ANY technical question, apply ALL rules from your CLAUDE.md files (global + project). Follow the exact order of operations defined there. Do NOT skip mandatory steps even if you think you already know the answer."
 echo "REMINDER: When writing features or fixing bugs, ensure tests cover the changes. When modifying API, config, or setup, update relevant documentation. Propose these steps to the user — do not silently skip them."
 
+# shellcheck source=_locate-toolkit.sh
+source "$(dirname "$0")/_locate-toolkit.sh"
+
+# 1a. Reset per-session edit state (used by revert-guard, test-cohesion, quality-gate)
+SESSION_ID_INPUT=""
+if [ ! -t 0 ]; then
+    STDIN_PAYLOAD="$(cat)"
+    SESSION_ID_INPUT="$(printf '%s' "$STDIN_PAYLOAD" | jq -r '.session_id // empty' 2>/dev/null)"
+fi
+if [ -n "$TOOLKIT_DIR" ] && command -v python3 >/dev/null 2>&1; then
+    python3 "$TOOLKIT_DIR/scripts/session_state.py" reset \
+        ${SESSION_ID_INPUT:+--session-id "$SESSION_ID_INPUT"} >/dev/null 2>&1 || true
+fi
+
 # 2. Check for updates (cached, max once per 24h, non-blocking)
-TOOLKIT_DIR="$(npm root -g 2>/dev/null)/@softspark/ai-toolkit"
-[ ! -d "$TOOLKIT_DIR" ] && TOOLKIT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 VERSION_MSG=$(python3 "$TOOLKIT_DIR/scripts/version_check.py" 2>/dev/null)
 if [ -n "$VERSION_MSG" ]; then
     echo "$VERSION_MSG"

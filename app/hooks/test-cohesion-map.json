@@ -1,0 +1,77 @@
+[
+    {
+        "match": "app/hooks/quality-gate.sh",
+        "tests": ["tests/test_hooks.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "app/hooks/quality-check.sh",
+        "tests": ["tests/test_hooks.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "app/hooks/revert-guard.sh",
+        "tests": ["tests/test_revert_guard_hook.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "app/hooks/test-cohesion.sh",
+        "tests": ["tests/test_test_cohesion_hook.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "app/hooks/config-desync-guard.sh",
+        "tests": ["tests/test_config_desync_guard.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "app/hooks/instructions-audit.sh",
+        "tests": ["tests/test_instructions_audit.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "app/hooks/user-prompt-submit.sh",
+        "tests": ["tests/test_hooks.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "app/hooks/*.sh",
+        "tests": ["tests/test_hooks.bats", "tests/test_hooks_per_editor.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "app/hooks.json",
+        "tests": ["tests/test_hooks.bats", "tests/test_merge_hooks_statusline.bats", "tests/test_hooks_per_editor.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "scripts/merge-hooks.py",
+        "tests": ["tests/test_merge_hooks_statusline.bats", "tests/test_inject_hook.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "scripts/session_state.py",
+        "tests": ["tests/test_session_state.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "scripts/test_cohesion.py",
+        "tests": ["tests/test_test_cohesion_resolver.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "scripts/inject_hook_cli.py",
+        "tests": ["tests/test_inject_hook.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "scripts/inject_rule_cli.py",
+        "tests": ["tests/test_inject.bats"],
+        "runner": "bats"
+    },
+    {
+        "match": "scripts/validate.py",
+        "tests": ["tests/test_validate.bats", "tests/test_validate_negative.bats"],
+        "runner": "bats"
+    }
+]

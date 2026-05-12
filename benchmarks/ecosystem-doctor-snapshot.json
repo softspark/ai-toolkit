@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-05-12T10:01:38Z",
+  "last_run": "2026-05-12T19:04:22Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "b746d5dbbc5a2936",
+      "docs_hash": "ceaf27b7126f44dd",
       "headings": [
         "Agent",
         "Chat",
@@ -57,7 +57,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "9e0292a9f92392e0",
+      "docs_hash": "6ea2ec6ef023c1bd",
       "headings": [
         "Claude Code overview",
         "Documentation Index",
@@ -137,7 +137,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "3f963da56d00add9",
+      "docs_hash": "c8fb328bf1954fc2",
       "headings": [
         "About",
         "Contributing",
@@ -189,7 +189,7 @@
       "version": "codex-cli 0.130.0"
     },
     "cursor": {
-      "docs_hash": "705adfd617433088",
+      "docs_hash": "787203a4eee076f7",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -205,7 +205,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "93694630a3d04327",
+      "docs_hash": "26555623f610ff8e",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -244,7 +244,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "d9b9fcdfe3b67469",
+      "docs_hash": "1566c05f84f5c1a7",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot integrations",
@@ -353,7 +353,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "66295add1d0f0645",
+      "docs_hash": "7a8a7569f81eba1b",
       "headings": [
         "Advanced",
         "App Deploys",

@@ -32,6 +32,10 @@ VALID_HOOK_EVENTS = frozenset({
     "SessionStart", "Notification", "PreToolUse", "PostToolUse", "Stop",
     "PreCompact", "SubagentStop", "UserPromptSubmit", "TaskCompleted",
     "TeammateIdle", "SubagentStart", "SessionEnd", "PermissionRequest", "Setup",
+    "InstructionsLoaded", "ConfigChange", "PostToolUseFailure", "PostToolBatch",
+    "UserPromptExpansion", "PostCompact", "StopFailure", "CwdChanged",
+    "FileChanged", "PermissionDenied", "Elicitation", "ElicitationResult",
+    "WorktreeCreate", "WorktreeRemove", "TaskCreated",
 })
 
 

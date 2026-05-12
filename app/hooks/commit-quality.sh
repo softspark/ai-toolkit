@@ -5,7 +5,9 @@
 # Non-blocking: always exits 0 (warnings only).
 
 INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
+COMMAND=$(hook_command)
 
 if [ -z "$COMMAND" ]; then
     exit 0

@@ -5,7 +5,9 @@
 # Exit 2 = block the tool call. Stderr message goes to Claude as feedback.
 
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
+FILE_PATH=$(hook_file_path)
 
 if [ -z "$FILE_PATH" ]; then
     exit 0
@@ -30,8 +32,8 @@ case "$BASENAME" in
         BLOCKED=1 ;;
     pyproject.toml)
         # Only block if editing [tool.ruff] section — check new_string/content for ruff markers
-        CONTENT=$(echo "$INPUT" | jq -r '(.tool_input.new_string // .tool_input.content // "")' 2>/dev/null)
-        OLD=$(echo "$INPUT" | jq -r '(.tool_input.old_string // "")' 2>/dev/null)
+        CONTENT=$(hook_new_content)
+        OLD=$(hook_old_content)
         if printf '%s\n%s' "$OLD" "$CONTENT" | grep -qi '\[tool\.ruff'; then
             BLOCKED=1
         fi

@@ -5,7 +5,9 @@
 # Exit 2 = block the command. Stderr message goes to Claude as feedback.
 
 INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
+COMMAND=$(hook_command)
 
 if [ -z "$COMMAND" ]; then
     # Fallback: try CLAUDE_TOOL_INPUT env var

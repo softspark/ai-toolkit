@@ -29,7 +29,14 @@ ALL_PATHS=$(echo "$INPUT" | jq -r '
         .tool_input.source,
         .tool_input.destination,
         .tool_input.command,
-        (.tool_input.paths[]? // empty)
+        .tool_input.command_line,
+        (.tool_input.paths[]? // empty),
+        .tool_info.file_path,
+        .tool_info.path,
+        .tool_info.command,
+        .tool_info.command_line,
+        (.tool_info.paths[]? // empty),
+        (.file_changes[]?.path // empty)
     ] | map(select(. != null and . != "")) | .[]
 ' 2>/dev/null)
 

@@ -41,16 +41,21 @@ WINDSURF_HOOKS: dict[str, list[str]] = {
     "post_write_code": [
         "post-tool-use.sh",
         "governance-capture.sh",
+        "test-cohesion.sh",
     ],
     "pre_run_command": [
         "guard-destructive.sh",
         "commit-quality.sh",
+        "revert-guard.sh",
     ],
     "post_run_command": [
         "governance-capture.sh",
     ],
     "pre_mcp_tool_use": [
         "guard-config.sh",
+    ],
+    "post_mcp_tool_use": [
+        "search-tracker.sh",
     ],
     "pre_user_prompt": [
         "user-prompt-submit.sh",
@@ -59,6 +64,7 @@ WINDSURF_HOOKS: dict[str, list[str]] = {
     "post_cascade_response": [
         "quality-check.sh",
         "save-session.sh",
+        "stop-search-check.sh",
     ],
     "post_setup_worktree": [
         "session-context.sh",

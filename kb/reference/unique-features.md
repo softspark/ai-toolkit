@@ -21,11 +21,11 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
-**12 lifecycle events / 22 global hook entries:**
+**14 lifecycle events / 28 global hook entries:**
 
 | Event | Script | Action |
 |-------|--------|--------|
-| SessionStart | `session-start.sh` | MANDATORY rules reminder + session context + instincts |
+| SessionStart | `session-start.sh` | MANDATORY rules reminder + session context + instincts + reset session-edit state |
 | SessionStart | `mcp-health.sh` | Check MCP server command availability (non-blocking warning) |
 | SessionStart | `session-context.sh` | Capture environment snapshot to `~/.softspark/ai-toolkit/sessions/current-context.json` |
 | Notification | `notify-waiting.sh` | Cross-platform desktop notification |
@@ -33,19 +33,25 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PreToolUse | `guard-path.sh` | Block wrong-user path hallucination |
 | PreToolUse | `guard-config.sh` | Block edits to linter/formatter config files unless explicitly requested |
 | PreToolUse | `commit-quality.sh` | Advisory validation of git commit messages |
-| UserPromptSubmit | `user-prompt-submit.sh` | Prompt governance reminder |
+| PreToolUse | `revert-guard.sh` | Block `git checkout/restore/reset --hard/clean` on files edited this session (Art. VI.2) |
+| UserPromptSubmit | `user-prompt-submit.sh` | Prompt governance reminder + arm search-first flag only when RAG/Web is available |
 | UserPromptSubmit | `track-usage.sh` | Record skill invocations to local stats |
-| PostToolUse | `post-tool-use.sh` | Lightweight validation reminders after edits |
+| PostToolUse | `post-tool-use.sh` | Lightweight validation reminders + append edit to session state |
 | PostToolUse | `governance-capture.sh` | Log security-sensitive operations to JSONL |
+| PostToolUse | `test-cohesion.sh` | Run cohesion-mapped tests after edits; block on failure (Art. VI.3) |
+| PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
 | Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
-| Stop | `quality-gate.sh` | Block final response on lint/type errors |
+| Stop | `quality-gate.sh` | Block final response on lint/type errors + cohesion tests for session edits |
+| Stop | `stop-search-check.sh` | Continue conversation if search-first rule was skipped and a provider exists; no-op offline |
 | TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
 | SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |
 | SubagentStop | `subagent-stop.sh` | Completion checklist for subagent handoff |
 | PreCompact | `pre-compact.sh` | Smart compaction: prioritized context |
 | PreCompact | `pre-compact-save.sh` | Save timestamped context backup |
 | SessionEnd | `session-end.sh` | Persist a session-end handoff note |
+| InstructionsLoaded | `instructions-audit.sh` | Append every CLAUDE.md / rules load to audit log (which rules actually entered context) |
+| ConfigChange | `config-desync-guard.sh` | Warn when `~/.claude/settings.json` drifts from `app/hooks.json` (advisory) |
 | TeammateIdle | *(inline)* | Completeness reminder |
 
 **5 skill-scoped hooks:**

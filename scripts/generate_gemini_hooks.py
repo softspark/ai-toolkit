@@ -29,7 +29,7 @@ import json
 import sys
 from pathlib import Path
 
-HOOKS_PREFIX = '"$HOME/.softspark/ai-toolkit/hooks/'
+HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_FORMAT=json "$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
 
 # Event -> list of (matcher, script) pairs. Matcher semantics:
@@ -46,13 +46,16 @@ GEMINI_HOOKS: dict[str, list[tuple[str, str]]] = {
         # run_shell_command covers Bash-equivalent destructive patterns
         ("run_shell_command", "guard-destructive.sh"),
         ("run_shell_command", "commit-quality.sh"),
+        ("run_shell_command", "revert-guard.sh"),
         # File-touching tools — guard paths + config
         ("write_file|edit|replace|read_file", "guard-path.sh"),
         ("write_file|edit|replace", "guard-config.sh"),
     ],
     "AfterTool": [
         ("write_file|edit|replace", "post-tool-use.sh"),
+        ("write_file|edit|replace", "test-cohesion.sh"),
         ("run_shell_command|write_file|edit|replace", "governance-capture.sh"),
+        ("google_web_search|web_fetch", "search-tracker.sh"),
     ],
     "BeforeAgent": [
         ("", "user-prompt-submit.sh"),
@@ -62,6 +65,7 @@ GEMINI_HOOKS: dict[str, list[tuple[str, str]]] = {
         # Closest equivalent to Claude's Stop event. Gemini has no native Stop.
         ("", "quality-check.sh"),
         ("", "save-session.sh"),
+        ("", "stop-search-check.sh"),
     ],
     "BeforeModel": [
         # Light-weight observability slot. Reuses the session-context probe.

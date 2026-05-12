@@ -37,6 +37,7 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     "PreToolUse": [
         ("Bash", "guard-destructive.sh"),
         ("Bash", "commit-quality.sh"),
+        ("Bash", "revert-guard.sh"),
     ],
     "PermissionRequest": [
         # Fires when Codex asks the user to approve a tool call. Our guard
@@ -51,6 +52,7 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     "Stop": [
         ("", "quality-check.sh"),
         ("", "save-session.sh"),
+        ("", "stop-search-check.sh"),
     ],
 }
 

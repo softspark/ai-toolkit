@@ -7,6 +7,39 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.2.5 - Hook safety and no-RAG compatibility (2026-05-12)
+
+Patch release. Hardens Claude Code hook enforcement while keeping the toolkit safe for users who do not have RAG/MCP search providers installed.
+
+### Added
+
+- **Capability-aware search hooks** - Added shared search capability detection so search-first enforcement uses RAG/MCP when available and degrades to guidance when no provider is installed.
+- **Revert guard** - Added destructive Git restore/checkout protection that blocks unsafe rollback commands when they would discard unrelated user work.
+- **Test cohesion hook** - Added source-to-test mapping for focused Bats verification after relevant edits, with project-level override support.
+- **Hook payload adapter** - Added shared hook input/output helpers for consistent Claude, Gemini, Augment, Codex, Cursor, and Windsurf hook payload handling.
+
+### Changed
+
+- **Hook installation** - Installs hook JSON maps and runtime helper scripts needed by the new hooks into the global toolkit runtime directory.
+- **Generated editor configs** - Regenerated multi-editor hook guidance and project agent surfaces after the hook expansion.
+
+### Fixed
+
+- **No-RAG installs** - Search-first hooks no longer block users who installed the toolkit without `rag-mcp` or another supported search provider.
+- **Doctor coverage** - `ai-toolkit doctor` now verifies the new hook helper scripts and runtime hook files.
+
+### Ecosystem
+
+- Refreshed `benchmarks/ecosystem-doctor-snapshot.json` after class-A documentation drift only: upstream docs changed content hashes without heading or marker deltas.
+
+### Verification
+
+- `npm view @softspark/ai-toolkit version`: latest published version is `4.2.4`; `4.2.5` is available.
+- Local Claude test confirmed RAG-backed prompts still call `rag-mcp` when present.
+- Local Claude destructive-revert scenario was refused before data loss.
+
+---
+
 ## v4.2.4 - GitHub Actions Node 24 readiness (2026-05-12)
 
 Patch release. Removes GitHub Actions Node 20 action-runtime deprecation warnings from CI, publish, and reusable action surfaces.

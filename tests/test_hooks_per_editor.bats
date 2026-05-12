@@ -104,9 +104,17 @@ teardown_file() {
     grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.gemini/settings.json"
 }
 
+@test "hooks: gemini commands request JSON-safe hook output" {
+    grep -q 'AI_TOOLKIT_HOOK_FORMAT=json' "$HPE_DIR/.gemini/settings.json"
+}
+
 @test "hooks: augment commands use \$HOME prefix (not absolute /Users)" {
     ! grep -qE '"/Users/|"/home/' "$HPE_DIR/.augment/settings.json"
     grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.augment/settings.json"
+}
+
+@test "hooks: augment commands request JSON-safe hook output" {
+    grep -q 'AI_TOOLKIT_HOOK_FORMAT=json' "$HPE_DIR/.augment/settings.json"
 }
 
 # ── Idempotence ────────────────────────────────────────────────────────────

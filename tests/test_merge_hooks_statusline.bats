@@ -174,9 +174,62 @@ with open(sys.argv[1]) as f:
 
 notifications = data["hooks"]["Notification"]
 commands = [entry["hooks"][0]["command"] for entry in notifications]
-assert commands.count("bash ~/.softspark/ai-toolkit/hooks/notify-waiting.sh") == 1, commands
+assert commands.count('"$HOME/.softspark/ai-toolkit/hooks/notify-waiting.sh"') == 1, commands
 assert all("display notification" not in command for command in commands), commands
 assert "bash ~/my-notify.sh" in commands, commands
+PY
+}
+
+@test "merge-hooks: upgrades legacy 'bash ~' notify-waiting to '\$HOME' form" {
+    cat > "$TARGET" <<'EOF'
+{
+    "hooks": {
+        "Notification": [
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash ~/.softspark/ai-toolkit/hooks/notify-waiting.sh"
+                    }
+                ]
+            },
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash ~/my-notify.sh"
+                    }
+                ]
+            }
+        ]
+    }
+}
+EOF
+    run $MERGE inject "$TOOLKIT_HOOKS" "$TARGET"
+    [ "$status" -eq 0 ]
+    python3 - "$TARGET" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+notifications = data["hooks"]["Notification"]
+commands = [entry["hooks"][0]["command"] for entry in notifications]
+# Legacy 'bash ~/' toolkit form removed
+assert commands.count("bash ~/.softspark/ai-toolkit/hooks/notify-waiting.sh") == 0, commands
+# New '"$HOME/..."' toolkit form present exactly once
+assert commands.count('"$HOME/.softspark/ai-toolkit/hooks/notify-waiting.sh"') == 1, commands
+# User-custom hook with similar 'bash ~/' prefix survives
+assert "bash ~/my-notify.sh" in commands, commands
+# Toolkit-injected entry is tagged
+toolkit_entries = [
+    e for e in notifications
+    if e["hooks"][0]["command"] == '"$HOME/.softspark/ai-toolkit/hooks/notify-waiting.sh"'
+]
+assert toolkit_entries[0].get("_source") == "ai-toolkit", toolkit_entries
 PY
 }
 

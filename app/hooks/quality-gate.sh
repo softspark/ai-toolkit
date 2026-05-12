@@ -7,6 +7,8 @@
 
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
+# shellcheck source=_locate-toolkit.sh
+source "$(dirname "$0")/_locate-toolkit.sh"
 
 run_required() {
     local label="$1"
@@ -34,6 +36,51 @@ require_command() {
     echo "QUALITY GATE SKIPPED: ${command_name} is not installed." >&2
     return 1
 }
+
+cohesion_for_session_edits() {
+    # Run cohesion-mapped tests for every path touched this session.
+    # Used by projects that ship a test-cohesion-map.json (e.g. ai-toolkit).
+    [ -z "$TOOLKIT_DIR" ] && return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+
+    local edits
+    edits=$(python3 "$TOOLKIT_DIR/scripts/session_state.py" list 2>/dev/null)
+    [ -z "$edits" ] && return 0
+
+    # shellcheck disable=SC2206  # word-splitting is intentional, paths have no spaces
+    local edits_array=()
+    while IFS= read -r line; do
+        [ -n "$line" ] && edits_array+=("$line")
+    done <<<"$edits"
+    [ "${#edits_array[@]}" -eq 0 ] && return 0
+
+    local commands
+    commands=$(python3 "$TOOLKIT_DIR/scripts/test_cohesion.py" resolve \
+        --changed-paths "${edits_array[@]}" --repo-root "$PWD" 2>/dev/null)
+    [ -z "$commands" ] && return 0
+
+    local tmp
+    tmp="$(mktemp "${TMPDIR:-/tmp}/ai-toolkit-cohesion.XXXXXX")"
+    while IFS= read -r cmd; do
+        [ -z "$cmd" ] && continue
+        if ! bash -c "$cmd" >"$tmp" 2>&1; then
+            echo "QUALITY GATE FAILED: cohesion tests failed." >&2
+            echo "Command: $cmd" >&2
+            tail -25 "$tmp" >&2
+            rm -f "$tmp"
+            exit 2
+        fi
+    done <<<"$commands"
+    rm -f "$tmp"
+}
+
+# Cohesion-driven branch (ai-toolkit-style repos): runs ONLY tests mapped to
+# files edited in this session via .claude/test-cohesion-map.json (or the
+# toolkit default at app/hooks/test-cohesion-map.json).
+if [ -f .claude/test-cohesion-map.json ] || \
+   { [ -f app/hooks.json ] && [ -d tests ] && [ -f scripts/validate.py ]; }; then
+    cohesion_for_session_edits
+fi
 
 if [ -f pyproject.toml ] || [ -f setup.py ]; then
     if require_command ruff; then

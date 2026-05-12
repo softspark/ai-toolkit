@@ -38,6 +38,11 @@ run_hook_with_input() {
     [ "$status" -eq 2 ]
 }
 
+@test "guard-destructive: reads Windsurf command_line payload" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_info":{"command_line":"rm -rf /tmp/foo"}}'
+    [ "$status" -eq 2 ]
+}
+
 @test "guard-destructive: blocks rm -fr" {
     run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"rm -fr /tmp/foo"}}'
     [ "$status" -eq 2 ]
@@ -400,8 +405,14 @@ EOF
     [ -z "$output" ]
 }
 
-@test "user-prompt-submit: outputs Step 0 reminder" {
+@test "user-prompt-submit: outputs no-provider advisory by default" {
     run_hook_with_input "user-prompt-submit.sh" '{"prompt":"how does auth work?"}'
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "advisory only"
+}
+
+@test "user-prompt-submit: outputs Step 0 reminder in strict mode" {
+    AI_TOOLKIT_SEARCH_FIRST=strict run_hook_with_input "user-prompt-submit.sh" '{"prompt":"how does auth work?"}'
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Step 0"
 }
@@ -421,6 +432,17 @@ EOF
     echo "$output" | grep -q "KB-first"
 }
 
+@test "user-prompt-submit: reads Windsurf user_prompt payload" {
+    run_hook_with_input "user-prompt-submit.sh" '{"tool_info":{"user_prompt":"debug failing hook payload mapping"}}'
+    echo "$output" | grep -q "debugging"
+}
+
+@test "user-prompt-submit: emits JSON context when requested" {
+    AI_TOOLKIT_HOOK_FORMAT=json run_hook_with_input "user-prompt-submit.sh" '{"prompt":"add a button to the form"}'
+    [ "$status" -eq 0 ]
+    echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); assert data['hookSpecificOutput']['additionalContext']"
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # post-tool-use.sh
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -435,6 +457,17 @@ EOF
 @test "post-tool-use: reports markdown file update" {
     run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"docs/README.md"}}'
     echo "$output" | grep -q "docs and examples"
+}
+
+@test "post-tool-use: reads Windsurf file_path payload" {
+    run_hook_with_input "post-tool-use.sh" '{"tool_name":"post_write_code","tool_info":{"file_path":"docs/README.md"}}'
+    echo "$output" | grep -q "docs and examples"
+}
+
+@test "post-tool-use: emits JSON context when requested" {
+    AI_TOOLKIT_HOOK_FORMAT=json run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"docs/README.md"}}'
+    [ "$status" -eq 0 ]
+    echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); assert 'docs/README.md' in data['hookSpecificOutput']['additionalContext']"
 }
 
 @test "post-tool-use: reports test file update" {

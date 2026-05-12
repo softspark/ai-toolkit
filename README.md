@@ -6,15 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1051%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1116%20passing-success)](tests/)
 
-## What's New in v4.2.4
+## What's New in v4.2.5
 
-Patch release removing Node 20 action-runtime warnings from GitHub Actions.
+Patch release hardening Claude Code hooks while keeping installs safe for users without RAG/MCP.
 
-- **CI action runtime**: `ci.yml`, `publish.yml`, and the reusable `action.yml` now use `actions/setup-node@v6`.
-- **Generated guidance**: CI templates and CI/CD skill examples now use current GitHub Actions versions.
-- **Release readiness**: the next publish run executes on the Node 24-compatible action runtime.
+- **Capability-aware search hooks**: search-first enforcement now degrades to guidance when no RAG/MCP provider is installed.
+- **Revert safety**: destructive `git checkout`/`git restore` flows are blocked when they would discard unrelated user work.
+- **Test cohesion**: source edits can trigger only their mapped Bats tests, with project-level override support.
+- **Cross-editor hook payloads**: shared hook I/O helpers normalize Claude, Gemini, Augment, Codex, Cursor, and Windsurf payloads.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -140,14 +141,14 @@ ai-toolkit/
 │   ├── agents/          # 44 agent definitions
 │   ├── skills/          # 107 skills (task / hybrid / knowledge)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
-│   ├── hooks/           # Hook scripts (22 entries, 12 lifecycle events)
+│   ├── hooks/           # Hook scripts (28 entries, 14 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
 │   ├── constitution.md  # 6 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1051 tests)
+├── tests/               # Bats test suite (1116 tests)
 └── CHANGELOG.md
 ```
 
@@ -159,7 +160,7 @@ ai-toolkit/
 
 **Machine-enforced constitution** — 6-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
-**22 lifecycle hooks** — Executable scripts across 12 events (SessionStart → SessionEnd). Guards, governance, quality gates, session persistence, MCP health checks. See [Hooks Catalog](kb/reference/hooks-catalog.md).
+**28 lifecycle hooks** — Executable scripts across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
 
 **Security scanning** — `/skill-audit` for code-level risks, `/cve-scan` for dependency CVEs. Both CI-ready with exit codes.
 

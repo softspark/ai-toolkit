@@ -43,6 +43,7 @@ CURSOR_HOOKS: dict[str, list[tuple[str, str]]] = {
     "beforeShellExecution": [
         ("", "guard-destructive.sh"),
         ("", "commit-quality.sh"),
+        ("", "revert-guard.sh"),
     ],
     "beforeReadFile": [
         ("", "guard-path.sh"),
@@ -50,6 +51,7 @@ CURSOR_HOOKS: dict[str, list[tuple[str, str]]] = {
     "afterFileEdit": [
         ("", "post-tool-use.sh"),
         ("", "governance-capture.sh"),
+        ("", "test-cohesion.sh"),
     ],
     "beforeSubmitPrompt": [
         ("", "user-prompt-submit.sh"),
@@ -57,6 +59,9 @@ CURSOR_HOOKS: dict[str, list[tuple[str, str]]] = {
     ],
     "beforeMCPExecution": [
         ("", "guard-config.sh"),
+    ],
+    "afterMCPExecution": [
+        ("", "search-tracker.sh"),
     ],
     "preCompact": [
         ("", "pre-compact.sh"),
@@ -71,6 +76,7 @@ CURSOR_HOOKS: dict[str, list[tuple[str, str]]] = {
     "stop": [
         ("", "quality-check.sh"),
         ("", "save-session.sh"),
+        ("", "stop-search-check.sh"),
     ],
     "sessionEnd": [
         ("", "session-end.sh"),

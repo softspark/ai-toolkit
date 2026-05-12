@@ -13,7 +13,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 22 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Supported Surface
 
@@ -327,6 +327,114 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 **Action:** Captures an environment snapshot to `~/.softspark/ai-toolkit/sessions/current-context.json`. Records working directory, git branch, git status summary, Node.js version, Python version, and timestamp. Used by other hooks and tools to access session metadata without re-running discovery commands. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
+---
+
+## New Hooks (Constitution Art. VI Enforcement)
+
+These six hooks turn Constitution Article VI ("Repair Discipline") from prose into executable enforcement. Each one closes a specific gap that previously relied on agent goodwill.
+
+### PreToolUse (revert protection) — `revert-guard.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PreToolUse` |
+| Matcher | `Bash` |
+| Script | `~/.softspark/ai-toolkit/hooks/revert-guard.sh` |
+| Fires | Before any Bash command |
+
+**Action:** Blocks (exit 2) `git checkout/restore -- <file>`, `git reset --hard`, or `git clean -fd` when the affected files were edited in the current session (per `session_state.py` log). Forces the agent to fix root causes instead of reverting work-in-progress (Art. VI.2). Branch switches (`git checkout main`) and reverts on untouched files pass through unchanged.
+
+**Override (one-off):** `CLAUDE_REVERT_OK=1`. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### PostToolUse (test cohesion) — `test-cohesion.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PostToolUse` |
+| Matcher | `Edit\|MultiEdit\|Write` |
+| Script | `~/.softspark/ai-toolkit/hooks/test-cohesion.sh` |
+| Fires | After every file edit |
+
+**Action:** Runs the test commands mapped to the edited path via `test-cohesion-map.json`. Lookup order: project-local `.claude/test-cohesion-map.json`, then toolkit default `app/hooks/test-cohesion-map.json`. Blocks (exit 2) when the related test command fails. Runs **only** related tests, not the full suite (one of the user-stated requirements).
+
+Map schema:
+```json
+[
+  {
+    "match": "src/auth/*.py",
+    "tests": ["tests/test_auth.py"],
+    "runner": "pytest",
+    "command": null
+  }
+]
+```
+First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`. Use `"command"` for full overrides.
+
+**Overrides:** `CLAUDE_SKIP_COHESION=1` (one-off), `CLAUDE_HOOK_BOOTSTRAP=1` (when editing the hook itself). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### PostToolUse (search-first tracker) — `search-tracker.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PostToolUse` |
+| Matcher | `mcp__rag-mcp__smart_query\|mcp__rag-mcp__hybrid_search_kb\|mcp__rag-mcp__crag_search\|mcp__rag-mcp__multi_hop_search\|mcp__rag-mcp__verify_answer\|WebSearch\|WebFetch` |
+| Script | `~/.softspark/ai-toolkit/hooks/search-tracker.sh` |
+| Fires | After any search-style tool call |
+
+**Action:** Clears `~/.softspark/ai-toolkit/state/search-required.flag`. Pairs with `user-prompt-submit.sh` (sets flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if flag still set). Together they enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs.
+
+Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### Stop (search-first enforcement) — `stop-search-check.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `Stop` |
+| Matcher | *(all)* |
+| Script | `~/.softspark/ai-toolkit/hooks/stop-search-check.sh` |
+| Fires | When Claude finishes a response |
+
+**Action:** If `search-required.flag` is still present (no search tool ran during this turn) and a search provider is still detectable, emits `{"decision":"block","reason":"..."}` to continue the conversation with a search-first reminder. If no RAG/Web provider is detected, it clears the stale flag and exits 0, so offline/no-MCP users are not blocked.
+
+**Overrides:** `CLAUDE_SKIP_SEARCH_FIRST=1`, `AI_TOOLKIT_SEARCH_FIRST=off`, or `AI_TOOLKIT_SEARCH_FIRST=strict` to force enforcement. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### InstructionsLoaded — `instructions-audit.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `InstructionsLoaded` |
+| Matcher | *(all)* |
+| Script | `~/.softspark/ai-toolkit/hooks/instructions-audit.sh` |
+| Fires | Whenever CLAUDE.md / `.claude/rules/*.md` is loaded into context |
+
+**Action:** Appends `<ts>\t<memory_type>\t<load_reason>\t<file_path>` to `~/.softspark/ai-toolkit/state/loaded-instructions.log`. Provides audit visibility: when a rule does NOT enter context (silently dropped, token budget, glob miss), the absence is observable. Auto-rotates at 2000 lines.
+
+Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### ConfigChange — `config-desync-guard.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `ConfigChange` |
+| Matcher | `user_settings` |
+| Script | `~/.softspark/ai-toolkit/hooks/config-desync-guard.sh` |
+| Fires | When `~/.claude/settings.json` changes |
+
+**Action:** Compares `_source: ai-toolkit` entries between `~/.claude/settings.json` (installed) and the toolkit source `app/hooks.json`. If they diverge (missing/stale entries), emits an advisory to stderr suggesting `ai-toolkit update` or `ai-toolkit doctor --fix`. Non-blocking by design — user's legitimate settings edits never get rejected.
+
+**Override (silence advisory):** `CLAUDE_SKIP_CONFIG_DESYNC=1`. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### Supporting Infrastructure
+
+| Component | Purpose |
+|-----------|---------|
+| `scripts/session_state.py` | Append-only edit log keyed by session_id. Cleared on SessionStart. Read by revert-guard, test-cohesion, quality-gate. |
+| `scripts/test_cohesion.py` | Resolves changed paths → test commands via cohesion map. First-match-wins. Stdlib-only. |
+| `app/hooks/test-cohesion-map.json` | Toolkit-default path → tests mapping (used when no project map exists). |
+| `app/hooks/_locate-toolkit.sh` | Shared bash helper that exports `$TOOLKIT_DIR` for hooks needing scripts/. |
+| `app/hooks/_hook-io.sh` | Shared bash helper that normalizes hook payloads across Claude, Augment, Gemini, Windsurf, and Cursor-style JSON. |
+| `app/hooks/_search-capability.sh` | Shared bash helper that enables search-first blocking only when RAG/Web is configured or strict mode is requested. |
+
 ## Runtime Profiles
 
 Set in `.claude/settings.local.json`:
@@ -346,42 +454,59 @@ Set in `.claude/settings.local.json`:
 ```
 ~/.softspark/ai-toolkit/
 ├── rules/          # Registered rules (add-rule.sh)
+├── state/          # Per-session runtime state (NEW)
+│   ├── session-edits.json         # Append-only edit log per session
+│   ├── search-required.flag       # Set by user-prompt-submit, cleared by search-tracker
+│   ├── loaded-instructions.log    # Audit trail of which rules entered context
+│   └── test-cohesion-last.log     # Last cohesion test command output
 └── hooks/          # Hook scripts (copied on install)
-    ├── _profile-check.sh    # Shared: profile skip logic (sourced by hooks)
+    ├── _profile-check.sh         # Shared: profile skip logic (sourced by hooks)
+    ├── _locate-toolkit.sh        # NEW: shared $TOOLKIT_DIR locator
+    ├── _hook-io.sh               # NEW: shared multi-editor payload/output adapter
+    ├── _search-capability.sh     # NEW: capability-aware search-first enforcement
     ├── session-start.sh
-    ├── session-context.sh   # NEW: capture session env snapshot
+    ├── session-context.sh
     ├── guard-destructive.sh
     ├── guard-path.sh
-    ├── guard-config.sh      # NEW: block config file edits
-    ├── mcp-health.sh        # NEW: check MCP runtime availability
-    ├── user-prompt-submit.sh
-    ├── post-tool-use.sh
-    ├── governance-capture.sh # NEW: log security-sensitive operations
+    ├── guard-config.sh
+    ├── revert-guard.sh           # NEW: block revert on session-edited files (Art. VI.2)
+    ├── mcp-health.sh
+    ├── user-prompt-submit.sh     # extended: arms search-required flag
+    ├── post-tool-use.sh          # extended: appends edits to session state
+    ├── governance-capture.sh
+    ├── test-cohesion.sh          # NEW: runs mapped tests after edits (Art. VI.3)
+    ├── test-cohesion-map.json    # NEW: path → tests mapping
+    ├── search-tracker.sh         # NEW: clears search-required flag
     ├── quality-check.sh
-    ├── quality-gate.sh
+    ├── quality-gate.sh           # extended: cohesion-tests session edits
+    ├── stop-search-check.sh      # NEW: enforces search-first on Stop
     ├── save-session.sh
     ├── subagent-start.sh
     ├── subagent-stop.sh
     ├── track-usage.sh
     ├── pre-compact.sh
-    ├── pre-compact-save.sh  # NEW: timestamped context snapshot
-    ├── commit-quality.sh    # NEW: advisory commit message check
+    ├── pre-compact-save.sh
+    ├── commit-quality.sh
+    ├── instructions-audit.sh     # NEW: logs CLAUDE.md / rules loads
+    ├── config-desync-guard.sh    # NEW: warns on settings ↔ source drift
     └── session-end.sh
 
 ~/.claude/settings.json
 └── hooks:          # Hook definitions referencing ~/.softspark/ai-toolkit/hooks/
-    ├── SessionStart     → session-start.sh, mcp-health.sh, session-context.sh
-    ├── Notification     → osascript (inline)
-    ├── PreToolUse       → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh
-    ├── UserPromptSubmit → user-prompt-submit.sh, track-usage.sh
-    ├── PostToolUse      → post-tool-use.sh, governance-capture.sh
-    ├── Stop             → quality-check.sh, save-session.sh, quality-gate.sh
-    ├── TaskCompleted    → quality-gate.sh
-    ├── TeammateIdle     → echo (inline)
-    ├── SubagentStart    → subagent-start.sh
-    ├── SubagentStop     → subagent-stop.sh
-    ├── PreCompact       → pre-compact.sh, pre-compact-save.sh
-    └── SessionEnd       → session-end.sh
+    ├── SessionStart       → session-start.sh, mcp-health.sh, session-context.sh
+    ├── Notification       → notify-waiting.sh
+    ├── PreToolUse         → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh, revert-guard.sh
+    ├── UserPromptSubmit   → user-prompt-submit.sh, track-usage.sh
+    ├── PostToolUse        → post-tool-use.sh, governance-capture.sh, test-cohesion.sh, search-tracker.sh
+    ├── Stop               → quality-check.sh, save-session.sh, quality-gate.sh, stop-search-check.sh
+    ├── TaskCompleted      → quality-gate.sh
+    ├── TeammateIdle       → echo (inline)
+    ├── SubagentStart      → subagent-start.sh
+    ├── SubagentStop       → subagent-stop.sh
+    ├── PreCompact         → pre-compact.sh, pre-compact-save.sh
+    ├── SessionEnd         → session-end.sh
+    ├── InstructionsLoaded → instructions-audit.sh
+    └── ConfigChange       → config-desync-guard.sh
 ```
 
 **Key design decisions:**
@@ -399,7 +524,7 @@ Set in `.claude/settings.local.json`:
 
 **Hook script not found:**
 ```bash
-ls ~/.softspark/ai-toolkit/hooks/     # should list 21 .sh files (plus _profile-check.sh helper)
+ls ~/.softspark/ai-toolkit/hooks/     # should list 27 .sh files (plus _profile-check.sh + _locate-toolkit.sh + _hook-io.sh + _search-capability.sh helpers + test-cohesion-map.json)
 ai-toolkit update            # re-copies scripts
 ```
 

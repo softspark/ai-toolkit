@@ -32,7 +32,7 @@ import os
 import sys
 from pathlib import Path
 
-HOOKS_PREFIX = '"$HOME/.softspark/ai-toolkit/hooks/'
+HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_FORMAT=json "$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
 
 # Event -> list of (matcher, script). Matcher is a regex over tool_name.
@@ -45,16 +45,20 @@ AUGMENT_HOOKS: dict[str, list[tuple[str, str]]] = {
     "PreToolUse": [
         ("launch-process", "guard-destructive.sh"),
         ("launch-process", "commit-quality.sh"),
+        ("launch-process", "revert-guard.sh"),
         ("view|str-replace-editor|save-file|remove-files", "guard-path.sh"),
         ("str-replace-editor|save-file", "guard-config.sh"),
     ],
     "PostToolUse": [
         ("str-replace-editor|save-file", "post-tool-use.sh"),
+        ("str-replace-editor|save-file", "test-cohesion.sh"),
         ("launch-process|str-replace-editor|save-file", "governance-capture.sh"),
+        ("web-fetch|web-search|codebase-retrieval", "search-tracker.sh"),
     ],
     "Stop": [
         ("", "quality-check.sh"),
         ("", "save-session.sh"),
+        ("", "stop-search-check.sh"),
     ],
     "SessionEnd": [
         ("", "session-end.sh"),

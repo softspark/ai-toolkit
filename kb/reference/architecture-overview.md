@@ -264,7 +264,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
-22 entries across 12 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+28 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
 
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|

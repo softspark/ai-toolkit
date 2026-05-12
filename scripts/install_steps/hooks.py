@@ -58,6 +58,9 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
         shutil.copy2(hook_file, dst)
         dst.chmod(dst.stat().st_mode | 0o111)
         copied += 1
+    for runtime_file in sorted(hooks_src.glob("*.json")):
+        shutil.copy2(runtime_file, hooks_scripts_dir / runtime_file.name)
+        copied += 1
     print(f"  Copied: {copied} hook scripts to ~/.softspark/ai-toolkit/hooks/")
     legacy_hooks = claude_dir / "hooks"
     if legacy_hooks.is_symlink():
@@ -68,7 +71,9 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
 # Python helpers that hooks invoke at runtime. Kept narrow on purpose — only
 # scripts that a deployed hook actually executes belong here.
 HOOK_RUNTIME_SCRIPTS: tuple[str, ...] = (
+    "session_state.py",
     "session_token_stats.py",
+    "test_cohesion.py",
     "version_check.py",
 )
 

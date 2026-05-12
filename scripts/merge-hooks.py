@@ -41,7 +41,16 @@ LEGACY_TOOLKIT_HOOKS = {
                     ),
                 }
             ],
-        }
+        },
+        {
+            "matcher": "",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": "bash ~/.softspark/ai-toolkit/hooks/notify-waiting.sh",
+                }
+            ],
+        },
     ],
 }
 
