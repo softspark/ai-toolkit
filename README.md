@@ -6,16 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1116%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1131%20passing-success)](tests/)
 
-## What's New in v4.2.5
+## What's New in v4.3.0
 
-Patch release hardening Claude Code hooks while keeping installs safe for users without RAG/MCP.
+Minor release. Closes the asymmetry between `inject-rule` / `inject-hook` and MCP servers -- external tools (rag-mcp, jira-mcp, custom integrations) can now register MCP templates the same way they register rules and hooks.
 
-- **Capability-aware search hooks**: search-first enforcement now degrades to guidance when no RAG/MCP provider is installed.
-- **Revert safety**: destructive `git checkout`/`git restore` flows are blocked when they would discard unrelated user work.
-- **Test cohesion**: source edits can trigger only their mapped Bats tests, with project-level override support.
-- **Cross-editor hook payloads**: shared hook I/O helpers normalize Claude, Gemini, Augment, Codex, Cursor, and Windsurf payloads.
+- **`ai-toolkit inject-mcp <file|url>`**: register an external MCP template into `~/.mcp.json` + every editor with a `global_path` (Claude, Cursor, Codex, Gemini, Windsurf, Cline, Augment, Copilot) in one command.
+- **`ai-toolkit remove-mcp <name>`**: strip injected servers from `~/.mcp.json` and every editor config in one command.
+- **URL templates + auto-refresh**: HTTPS-sourced templates are cached and re-fetched on every `ai-toolkit update`, just like URL rules and hooks.
+- **`--name` and `--force` flags**: explicit source naming for both files and URLs, plus collision-safe overwrites that still protect `ai-toolkit` built-in entries.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -148,7 +148,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1116 tests)
+├── tests/               # Bats test suite (1131 tests)
 └── CHANGELOG.md
 ```
 

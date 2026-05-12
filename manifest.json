@@ -1,5 +1,5 @@
 {
-  "version": "4.2.5",
+  "version": "4.3.0",
   "components": {
     "agents": {
       "description": "44 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",

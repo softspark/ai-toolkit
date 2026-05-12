@@ -7,6 +7,40 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.3.0 - inject-mcp extension API (2026-05-12)
+
+Minor release. Closes the asymmetry between `inject-rule` / `inject-hook` and MCP servers by adding `inject-mcp` and `remove-mcp` as first-class members of the extension API. External tools (rag-mcp, jira-mcp, custom integrations) can now register their MCP templates the same way they register rules and hooks -- from a local file or HTTPS URL, with full editor propagation and auto-refresh on `ai-toolkit update`.
+
+### Added
+
+- **`ai-toolkit inject-mcp <file|url> [--name <name>] [--force]`** - Inject an external MCP server template into `~/.mcp.json` (toolkit source-of-truth) and propagate it to every editor with a `global_path` (Claude, Cursor, Codex, Gemini, Windsurf, Cline, Augment, Copilot). Servers in `~/.mcp.json` are tagged with `_source` for idempotent re-injection; native editor configs receive the same servers without `_source`.
+- **`ai-toolkit remove-mcp <name>`** - Strip all servers tagged with the given source from `~/.mcp.json` and every editor config, unregister URL sources, and remove cached template files.
+- **`--name <name>` flag** - Override the auto-derived source name for both local files and URLs. Required when filename stem is generic (e.g., `mcp-template.json` → `--name rag-mcp`).
+- **`--force` flag** - Overwrite servers tagged with a different `_source`. Without `--force`, collisions exit with code 3. Entries tagged `"_source": "ai-toolkit"` are protected even with `--force`.
+- **URL fetch + cache + auto-refresh** - HTTPS templates are cached in `~/.softspark/ai-toolkit/mcp-templates/external/<name>.json` and registered in `sources.json` with sha256 pin. On every `ai-toolkit update`, URL-sourced templates are re-fetched and re-injected; cached version is used on fetch failure.
+- **`scripts/mcp_sources.py`** - Source registry for external MCP templates, mirroring `hook_sources.py`.
+- **`scripts/inject_mcp_cli.py`** - CLI entry point implementing both inject and remove modes.
+- **`refresh_url_mcp()` in `install_steps/markers.py`** - Update flow integration, called from `install.py` alongside `refresh_url_hooks()`.
+
+### Changed
+
+- **`paths.py`** - Added `MCP_TEMPLATES_DIR` and `EXTERNAL_MCP_DIR` constants.
+- **`bin/ai-toolkit.js`** - Registered `inject-mcp` / `remove-mcp` handlers and help text.
+- **`kb/reference/extension-api.md`** - Documented inject-mcp / remove-mcp + flags. Version bumped to 1.5.0.
+- **`kb/reference/mcp-templates.md`** - Added External Templates section pointing to inject-mcp. Version bumped to 1.2.0.
+
+### Tests
+
+- **`tests/test_inject_mcp.bats`** - 15 bats cases covering local-file inject, URL fetch via fixture, `--name` override, `--force` collision override, ai-toolkit source protection, idempotent re-inject, editor propagation to Cursor (JSON) and Codex (TOML), `_source` strip from native configs, sources.json registry, `--remove` cleanup, HTTPS-only enforcement.
+
+### Verification
+
+- 15/15 bats cases passing in `test_inject_mcp.bats`.
+- E2E smoke test: injecting an external `mcp-template.json` writes 9 files (`~/.mcp.json` + 8 editor configs) with `_source` only in source-of-truth and stripped from native configs.
+- No regressions in `test_inject_hook.bats` or `test_mcp_manager.bats`.
+
+---
+
 ## v4.2.5 - Hook safety and no-RAG compatibility (2026-05-12)
 
 Patch release. Hardens Claude Code hook enforcement while keeping the toolkit safe for users who do not have RAG/MCP search providers installed.

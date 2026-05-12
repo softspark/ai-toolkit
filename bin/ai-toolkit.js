@@ -69,6 +69,8 @@ const COMMANDS = {
   'remove-rule': 'Unregister a rule from ~/.softspark/ai-toolkit/rules/ and remove its block from CLAUDE.md',
   'inject-hook': 'Inject external hooks (file or URL) into ~/.claude/settings.json (URL hooks auto-refresh on update)',
   'remove-hook': 'Remove injected hooks by source name from ~/.claude/settings.json (also unregisters URL source)',
+  'inject-mcp': 'Inject external MCP template (file or URL) into ~/.mcp.json + all editor MCP configs (URL templates auto-refresh on update)',
+  'remove-mcp': 'Remove injected MCP servers by source name from ~/.mcp.json and all editor configs',
   validate: 'Verify toolkit integrity',
   doctor: 'Check install health, hooks, and artifact drift',
   eject: 'Export standalone config (no symlinks, no toolkit dependency)',
@@ -257,6 +259,14 @@ function showHelp() {
   console.log('\nOptions for remove-hook:');
   console.log('  <source-name>   Source tag to remove (also unregisters URL source if present)');
   console.log('  [target-dir]    Target dir containing .claude/settings.json (default: $HOME)');
+  console.log('\nOptions for inject-mcp:');
+  console.log('  <template-file-or-url>  Path to JSON file or HTTPS URL with {"mcpServers": {...}}');
+  console.log('  [target-dir]            Target dir for .mcp.json + editor configs (default: $HOME)');
+  console.log('  --name <name>           Override source name (default: filename/URL stem)');
+  console.log('  --force                 Overwrite servers tagged with a different _source');
+  console.log('\nOptions for remove-mcp:');
+  console.log('  <source-name>   Source tag to remove (also unregisters URL source and cleans editor configs)');
+  console.log('  [target-dir]    Target dir containing .mcp.json (default: $HOME)');
   console.log('\nOptions for add-rule:');
   console.log('  <rule-file>     Path to .md rule file or HTTPS URL to register globally');
   console.log('  [rule-name]     Override rule name (default: filename/URL stem without .md)');
@@ -418,6 +428,37 @@ function handleRemoveHook(args) {
 }
 
 /**
+ * Handle `ai-toolkit inject-mcp` -- injects external MCP template (file or URL) into .mcp.json
+ * and propagates to all editor MCP configs.
+ * @param {string[]} args
+ */
+function handleInjectMcp(args) {
+  const source = args[0];
+  if (!source) {
+    console.error('Usage: ai-toolkit inject-mcp <template-file-or-url> [target-dir] [--name <name>] [--force]');
+    process.exit(1);
+  }
+  const isUrl = source.startsWith('https://') || source.startsWith('http://');
+  const resolvedSource = isUrl ? source : path.resolve(CWD, source);
+  const remaining = args.slice(1);
+  run(scriptPath('inject_mcp_cli.py'), [resolvedSource, ...remaining]);
+}
+
+/**
+ * Handle `ai-toolkit remove-mcp` -- removes injected MCP servers by source name.
+ * @param {string[]} args
+ */
+function handleRemoveMcp(args) {
+  const sourceName = args[0];
+  if (!sourceName) {
+    console.error('Usage: ai-toolkit remove-mcp <template-source-name> [target-dir]');
+    process.exit(1);
+  }
+  const targetDir = args[1] || process.env.HOME;
+  run(scriptPath('inject_mcp_cli.py'), ['--remove', sourceName, targetDir]);
+}
+
+/**
  * Handle `ai-toolkit mcp` -- delegates to mcp_manager.py with subcommand.
  * @param {string[]} args
  */
@@ -566,6 +607,8 @@ const SPECIAL_HANDLERS = {
   'add-rule':     handleAddRule,
   'inject-hook':  handleInjectHook,
   'remove-hook':  handleRemoveHook,
+  'inject-mcp':   handleInjectMcp,
+  'remove-mcp':   handleRemoveMcp,
   'llms-txt':     (_args) => generateLlmsTxt(),
   'antigravity-rules': (_args) => run(scriptPath('generate_antigravity.py'), [CWD]),
   'cursor-mdc':   (_args) => run(scriptPath('generate_cursor_mdc.py'), [CWD]),

@@ -141,6 +141,46 @@ def refresh_url_hooks(target_dir: str | None = None) -> None:
             inject(str(cached_file), target, source_override=hook_name)
 
 
+def refresh_url_mcp(target_dir: str | None = None) -> None:
+    """Re-fetch all URL-sourced MCP templates and re-inject them.
+
+    Called during ``ai-toolkit update`` to keep URL-sourced MCP templates
+    current. On fetch failure, warns and keeps the cached version.
+    """
+    from mcp_sources import get_url_templates, register_url_source
+    from paths import EXTERNAL_MCP_DIR
+    from url_fetch import fetch_url
+    import json
+
+    url_templates = get_url_templates()
+    if not url_templates:
+        return
+
+    print("  Refreshing URL-sourced MCP templates...")
+    target = target_dir or str(Path.home())
+
+    for template_name, url in url_templates.items():
+        cached_file = EXTERNAL_MCP_DIR / f"{template_name}.json"
+        try:
+            data = fetch_url(url)
+            json.loads(data)
+            cached_file.write_bytes(data)
+            register_url_source(None, template_name, url, content=data)
+            print(f"  Refreshed: {template_name} (from {url})")
+        except Exception as exc:
+            if cached_file.is_file():
+                print(f"  Warning: could not refresh '{template_name}' from {url}: {exc}")
+                print(f"           Using cached version.")
+            else:
+                print(f"  Warning: could not fetch '{template_name}' from {url}: {exc}")
+                print(f"           No cached version — template will be skipped.")
+                continue
+
+        if cached_file.is_file():
+            from inject_mcp_cli import inject
+            inject(str(cached_file), target, source_override=template_name, force=True)
+
+
 def _inject_rules_dry_run(rules_dir: Path) -> None:
     rules_src = app_dir / "rules"
     rule_names = " ".join(

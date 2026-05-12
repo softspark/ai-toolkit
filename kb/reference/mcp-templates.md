@@ -2,11 +2,11 @@
 title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
-tags: [mcp, templates, servers, configuration, editors]
-version: "1.1.0"
+tags: [mcp, templates, servers, configuration, editors, inject-mcp, external-templates]
+version: "1.2.0"
 created: "2026-04-07"
-last_updated: "2026-04-12"
-description: "Reference for 26 MCP server templates plus native editor MCP installation support."
+last_updated: "2026-05-12"
+description: "Reference for 26 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
 ---
 
 # MCP Server Templates
@@ -14,6 +14,8 @@ description: "Reference for 26 MCP server templates plus native editor MCP insta
 ## Overview
 
 ai-toolkit ships 26 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
+
+**External templates:** Tools outside the toolkit (MCP servers, plugins, custom integrations) can register their own MCP templates via `ai-toolkit inject-mcp <file|url>` -- the toolkit caches the template, tags every server with a `_source` field, and propagates the config to every editor that exposes a `global_path`. URL-sourced templates are auto-refreshed on every `ai-toolkit update`. See [PATH: kb/reference/extension-api.md] for the inject-mcp / remove-mcp reference.
 
 ## CLI
 

@@ -26,6 +26,8 @@ LEGACY_DATA_DIR = Path.home() / ".ai-toolkit"
 # Sub-directories under TOOLKIT_DATA_DIR
 HOOKS_DIR = TOOLKIT_DATA_DIR / "hooks"
 EXTERNAL_HOOKS_DIR = HOOKS_DIR / "external"
+MCP_TEMPLATES_DIR = TOOLKIT_DATA_DIR / "mcp-templates"
+EXTERNAL_MCP_DIR = MCP_TEMPLATES_DIR / "external"
 RULES_DIR = TOOLKIT_DATA_DIR / "rules"
 SESSIONS_DIR = TOOLKIT_DATA_DIR / "sessions"
 COMPACTIONS_DIR = TOOLKIT_DATA_DIR / "compactions"
