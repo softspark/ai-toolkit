@@ -150,6 +150,16 @@
                         "command": "\"$HOME/.softspark/ai-toolkit/hooks/save-session.sh\""
                     }
                 ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-gate.sh\""
+                    }
+                ]
             }
         ],
         "TaskCompleted": [

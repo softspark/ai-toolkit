@@ -7,6 +7,35 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.2.1 - Claude Code hook enforcement and README cleanup (2026-05-12)
+
+Patch release. Tightens Claude Code runtime enforcement, fixes duplicated hook cleanup during install/update, and removes the README hero image for release.
+
+### Changed
+
+- **Stop quality gate** - Registered `quality-gate.sh` for `Stop` in addition to `TaskCompleted`, so final Claude Code responses are blocked when supported lint/type checks fail.
+- **README release surface** - Removed the README hero image block while keeping badges and release notes intact.
+- **Runtime guidance** - Clarified in `CLAUDE.md` that Claude Code consumes `CLAUDE.md`, settings, hooks, skills, and agents, while `AGENTS.md` is generated for Codex/OpenCode/Gemini compatibility.
+
+### Fixed
+
+- **Quality gate exit codes** - Reworked shell pipelines so `ruff`, `tsc`, `dart analyze`, `phpstan`, and `go test` failures are not masked by output truncation.
+- **Hook merge cleanup** - `scripts/merge-hooks.py` now removes legacy untagged ai-toolkit hook entries matching current toolkit hook signatures while preserving custom hooks.
+
+### Ecosystem
+
+- Refreshed `benchmarks/ecosystem-doctor-snapshot.json` for current editor/runtime docs. Claude Code now exposes `Stop` in docs; the toolkit already supported `Stop` hooks, and this release registers the strict quality gate there.
+
+### Verification
+
+- `python3 scripts/ecosystem_doctor.py --offline --check`: no drift.
+- `python3 scripts/validate.py --strict`: 0 errors, 0 warnings.
+- `python3 scripts/audit_skills.py --ci`: HIGH 0, WARN 0.
+- `npm test`: 1049/1049 passing.
+- `npm --cache /tmp/ai-toolkit-npm-cache pack --dry-run`: `softspark-ai-toolkit-4.2.1.tgz`.
+
+---
+
 ## v4.2.0 - SEO GEO pipeline and release gate hardening (2026-05-07)
 
 Minor release. Adds AI pipeline, content citability, and topical authority guidance to `seo-validate` from PR #9 by @fakenso, and keeps the release gate fixes prepared for v4.1.1 in the same unreleased train.

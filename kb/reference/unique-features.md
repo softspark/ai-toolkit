@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-04-13"
+last_updated: "2026-05-12"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -12,7 +12,7 @@ description: "Detailed description of ai-toolkit's unique features: constitution
 
 ## 1. Machine-Enforced Constitution
 
-Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 5-article constitution via `PreToolUse` hooks. The hook actually **blocks** execution of:
+Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 6-article constitution via hooks. The hooks actually **block** execution of:
 - Mass deletion (`rm -rf`, `DROP TABLE`)
 - Blind overwrites of uncommitted work
 - Any action that could cause irreversible data loss
@@ -21,7 +21,7 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
-**12 lifecycle events / 21 global hook entries:**
+**12 lifecycle events / 22 global hook entries:**
 
 | Event | Script | Action |
 |-------|--------|--------|
@@ -39,6 +39,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PostToolUse | `governance-capture.sh` | Log security-sensitive operations to JSONL |
 | Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
+| Stop | `quality-gate.sh` | Block final response on lint/type errors |
 | TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
 | SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |
 | SubagentStop | `subagent-stop.sh` | Completion checklist for subagent handoff |

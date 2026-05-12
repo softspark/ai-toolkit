@@ -65,11 +65,49 @@ def _is_toolkit_entry(entry: dict) -> bool:
     return False
 
 
-def strip_toolkit(hooks: dict) -> dict:
-    """Remove all entries tagged with _source == SOURCE_TAG."""
+def _entry_signature(entry: dict) -> tuple:
+    """Return the behavior-defining parts of a hook entry.
+
+    Older ai-toolkit installs wrote hook entries without ``_source``. Matching
+    on the event, matcher, and handler payload lets current installs remove
+    those legacy duplicates while preserving unrelated user hooks.
+    """
+    handlers = []
+    for hook in entry.get("hooks", []):
+        if not isinstance(hook, dict):
+            handlers.append(hook)
+            continue
+        handlers.append(tuple(sorted(
+            (key, value)
+            for key, value in hook.items()
+            if key != "_source"
+        )))
+    return (entry.get("matcher", ""), tuple(handlers))
+
+
+def strip_toolkit(hooks: dict, toolkit_hooks: dict | None = None) -> dict:
+    """Remove entries tagged with ai-toolkit or matching legacy toolkit hooks."""
+    legacy_signatures: dict[str, set[tuple]] = {}
+    if toolkit_hooks:
+        for event, entries in toolkit_hooks.items():
+            legacy_signatures[event] = {
+                _entry_signature(entry)
+                for entry in entries
+                if isinstance(entry, dict)
+            }
+
     result = {}
     for event, entries in hooks.items():
-        filtered = [e for e in entries if not _is_toolkit_entry(e)]
+        signatures = legacy_signatures.get(event, set())
+        filtered = [
+            e
+            for e in entries
+            if not _is_toolkit_entry(e)
+            and not (
+                isinstance(e, dict)
+                and _entry_signature(e) in signatures
+            )
+        ]
         if filtered:
             result[event] = filtered
     return result
@@ -85,7 +123,7 @@ def merge(toolkit_hooks: dict, target_hooks: dict) -> dict:
     Returns:
         Merged hooks dictionary with old toolkit entries replaced by new ones.
     """
-    merged = strip_toolkit(target_hooks)
+    merged = strip_toolkit(target_hooks, toolkit_hooks)
     for event, entries in toolkit_hooks.items():
         if event not in merged:
             merged[event] = []

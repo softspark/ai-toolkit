@@ -127,7 +127,7 @@ Proactive security design expert. Use for Threat Modeling, architecture security
 Security expert. Use for OWASP Top 10, CVE analysis, security audits, penetration testing, vulnerability assessment, hardening. Triggers: security, owasp, cve, vulnerability, audit, hardening, penetration, pentest, injection test, api security.
 
 ### seo-specialist
-Search engine + generative engine optimization specialist. Trigger words: SEO, GEO, AEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org, llms.txt, ChatGPT visibility, Claude citation, Perplexity ranking, AI Overviews
+Search engine + generative engine optimization specialist. Trigger words: SEO, GEO, AEO, search engine, meta tags, structured data, Core Web Vitals, sitemap, robots.txt, schema.org, llms.txt, ChatGPT visibility, Claude citation, Perplexity ranking, AI Overviews, topical authority, chunk architecture, semantic triples, query fan out
 
 ### system-governor
 The Guardian of the Constitution. Validates all evolutionary changes and enforces immutable rules. Has VETO power.

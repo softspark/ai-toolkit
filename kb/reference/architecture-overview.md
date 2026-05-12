@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.4.4"
+version: "1.4.5"
 created: "2026-03-23"
-last_updated: "2026-04-15"
+last_updated: "2026-05-12"
 description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -264,7 +264,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
-21 entries across 12 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+22 entries across 12 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
 
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|
@@ -282,6 +282,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
 | Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
+| Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |
 | TaskCompleted | Agent Teams: task done | `quality-gate.sh` | Block completion on errors |
 | TeammateIdle | Agent Teams: idle | *(inline)* | Completeness reminder |
 | SubagentStart | Subagent spawn | `subagent-start.sh` | Scope reminder for subagents |

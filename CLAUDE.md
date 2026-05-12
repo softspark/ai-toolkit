@@ -3,6 +3,11 @@
 ## Overview
 Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, and Codex CLI — skills, agents, lifecycle hooks, persona presets, experimental opt-in plugin packs, and safety constitution, distributed as a global npm package.
 
+## Claude Code Runtime Rules
+- Claude Code reads `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, settings, and hooks. It does **not** treat `AGENTS.md` as an instruction source.
+- `AGENTS.md` is generated for Codex/OpenCode/Gemini compatibility. Do not move mandatory Claude behavior there.
+- Any rule that must be enforced at a fixed lifecycle point belongs in `app/hooks.json` + `app/hooks/*.sh` with tests. `CLAUDE.md` guidance is context, not enforcement.
+
 ## CRITICAL: Documentation & Count Accuracy
 **Every change to skills, agents, hooks, or editors MUST be reflected in ALL docs:**
 README.md, CLAUDE.md, ARCHITECTURE.md, package.json, plugin.json, skills-catalog.md, architecture-overview.md, llms.txt, AGENTS.md.

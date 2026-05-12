@@ -1,5 +1,5 @@
 {
-  "version": "4.2.0",
+  "version": "4.2.1",
   "components": {
     "agents": {
       "description": "44 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
@@ -16,7 +16,7 @@
       "tags": ["core", "skills", "commands"]
     },
     "hooks": {
-      "description": "21 global hook entries across 12 lifecycle events + 5 skill-scoped lifecycle hooks",
+      "description": "22 global hook entries across 12 lifecycle events + 5 skill-scoped lifecycle hooks",
       "path": "app/hooks.json + app/hooks/*.sh",
       "target": "~/.claude/settings.json (merge) + ~/.softspark/ai-toolkit/hooks/ (copy)",
       "type": "merge+copy",
@@ -30,7 +30,7 @@
       "tags": ["plugins", "packs", "experimental"]
     },
     "constitution": {
-      "description": "5-article machine-enforced safety constitution",
+      "description": "6-article machine-enforced safety constitution",
       "path": "app/constitution.md",
       "target": ".claude/constitution.md",
       "type": "symlink",

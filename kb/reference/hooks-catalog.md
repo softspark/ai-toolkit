@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.0"
+version: "1.5.1"
 created: "2026-03-27"
-last_updated: "2026-04-24"
+last_updated: "2026-05-12"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -13,7 +13,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 22 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Supported Surface
 
@@ -161,6 +161,19 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 - Session ID and last assistant message (first 5 lines)
 - Git branch, uncommitted change count, and diff stat (last 5 lines)
 - Agent-written checkpoints from `.claude/session-context.md.checkpoints` (if present — written by proactive checkpointing per Constitution Art. I §5)
+
+Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### Stop (quality gate) — `quality-gate.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `Stop` |
+| Matcher | *(all)* |
+| Script | `~/.softspark/ai-toolkit/hooks/quality-gate.sh` |
+| Fires | Before Claude is allowed to finish a response |
+
+**Action:** Runs lint/typecheck. **Blocks stopping (exit 2)** if errors found, so Claude must continue and fix the issues. Missing local tooling is reported as skipped rather than blocking the session.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -362,7 +375,7 @@ Set in `.claude/settings.local.json`:
     ├── PreToolUse       → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh
     ├── UserPromptSubmit → user-prompt-submit.sh, track-usage.sh
     ├── PostToolUse      → post-tool-use.sh, governance-capture.sh
-    ├── Stop             → quality-check.sh, save-session.sh
+    ├── Stop             → quality-check.sh, save-session.sh, quality-gate.sh
     ├── TaskCompleted    → quality-gate.sh
     ├── TeammateIdle     → echo (inline)
     ├── SubagentStart    → subagent-start.sh

@@ -66,6 +66,67 @@ EOF
     ! echo "$cmd" | grep -q "old-toolkit.sh"
 }
 
+@test "merge-hooks: removes legacy untagged toolkit hook duplicates" {
+    cat > "$TARGET" <<'EOF'
+{
+    "hooks": {
+        "Stop": [
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\""
+                    }
+                ]
+            },
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash ~/my-custom-stop.sh"
+                    }
+                ]
+            }
+        ]
+    }
+}
+EOF
+    run $MERGE inject "$TOOLKIT_HOOKS" "$TARGET"
+    [ "$status" -eq 0 ]
+    python3 - "$TARGET" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+stop = data["hooks"]["Stop"]
+quality_check = [
+    entry for entry in stop
+    if entry["hooks"][0]["command"] == '"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh"'
+]
+custom = [
+    entry for entry in stop
+    if entry["hooks"][0]["command"] == "bash ~/my-custom-stop.sh"
+]
+assert len(quality_check) == 1, quality_check
+assert quality_check[0].get("_source") == "ai-toolkit", quality_check
+assert len(custom) == 1, custom
+PY
+}
+
 @test "merge-hooks: PRESERVES user-customized statusLine (no _source tag)" {
     cat > "$TARGET" <<'EOF'
 {"statusLine":{"type":"command","command":"bash ~/my-custom-line.sh"}}

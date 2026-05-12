@@ -6091,9 +6091,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.4.4"
+version: "1.4.5"
 created: "2026-03-23"
-last_updated: "2026-04-15"
+last_updated: "2026-05-12"
 description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -6352,7 +6352,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
-21 entries across 12 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+22 entries across 12 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
 
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|
@@ -6370,6 +6370,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
 | Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
+| Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |
 | TaskCompleted | Agent Teams: task done | `quality-gate.sh` | Block completion on errors |
 | TeammateIdle | Agent Teams: idle | *(inline)* | Completeness reminder |
 | SubagentStart | Subagent spawn | `subagent-start.sh` | Scope reminder for subagents |
@@ -8757,9 +8758,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.0"
+version: "1.5.1"
 created: "2026-03-27"
-last_updated: "2026-04-24"
+last_updated: "2026-05-12"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -8767,7 +8768,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 21 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 22 global hook entries across 12 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Supported Surface
 
@@ -8915,6 +8916,19 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 - Session ID and last assistant message (first 5 lines)
 - Git branch, uncommitted change count, and diff stat (last 5 lines)
 - Agent-written checkpoints from `.claude/session-context.md.checkpoints` (if present — written by proactive checkpointing per Constitution Art. I §5)
+
+Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+### Stop (quality gate) — `quality-gate.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `Stop` |
+| Matcher | *(all)* |
+| Script | `~/.softspark/ai-toolkit/hooks/quality-gate.sh` |
+| Fires | Before Claude is allowed to finish a response |
+
+**Action:** Runs lint/typecheck. **Blocks stopping (exit 2)** if errors found, so Claude must continue and fix the issues. Missing local tooling is reported as skipped rather than blocking the session.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -9116,7 +9130,7 @@ Set in `.claude/settings.local.json`:
     ├── PreToolUse       → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh
     ├── UserPromptSubmit → user-prompt-submit.sh, track-usage.sh
     ├── PostToolUse      → post-tool-use.sh, governance-capture.sh
-    ├── Stop             → quality-check.sh, save-session.sh
+    ├── Stop             → quality-check.sh, save-session.sh, quality-gate.sh
     ├── TaskCompleted    → quality-gate.sh
     ├── TeammateIdle     → echo (inline)
     ├── SubagentStart    → subagent-start.sh
@@ -11749,7 +11763,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-04-13"
+last_updated: "2026-05-12"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -11757,7 +11771,7 @@ description: "Detailed description of ai-toolkit's unique features: constitution
 
 ## 1. Machine-Enforced Constitution
 
-Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 5-article constitution via `PreToolUse` hooks. The hook actually **blocks** execution of:
+Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 6-article constitution via hooks. The hooks actually **block** execution of:
 - Mass deletion (`rm -rf`, `DROP TABLE`)
 - Blind overwrites of uncommitted work
 - Any action that could cause irreversible data loss
@@ -11766,7 +11780,7 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
-**12 lifecycle events / 21 global hook entries:**
+**12 lifecycle events / 22 global hook entries:**
 
 | Event | Script | Action |
 |-------|--------|--------|
@@ -11784,6 +11798,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PostToolUse | `governance-capture.sh` | Log security-sensitive operations to JSONL |
 | Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
+| Stop | `quality-gate.sh` | Block final response on lint/type errors |
 | TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
 | SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |
 | SubagentStop | `subagent-stop.sh` | Completion checklist for subagent handoff |

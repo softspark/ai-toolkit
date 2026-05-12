@@ -274,6 +274,21 @@ run_hook_with_input() {
     true
 }
 
+@test "quality-gate: blocks when ruff exits non-zero" {
+    cd "$TEST_TMP"
+    touch pyproject.toml
+    mkdir -p "$TEST_TMP/bin"
+    cat > "$TEST_TMP/bin/ruff" <<'EOF'
+#!/usr/bin/env bash
+echo "bad.py:1:1: F401 unused import"
+exit 1
+EOF
+    chmod +x "$TEST_TMP/bin/ruff"
+    PATH="$TEST_TMP/bin:$PATH" run_hook "quality-gate.sh"
+    [ "$status" -eq 2 ]
+    echo "$output" | grep -q "QUALITY GATE FAILED: ruff found errors"
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # quality-check.sh
 # ═══════════════════════════════════════════════════════════════════════════════

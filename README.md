@@ -6,22 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1047%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1049%20passing-success)](tests/)
 
-<p align="center">
-  <img src="assets/ai-toolkit-readme-hero.png" alt="ai-toolkit 3 README hero showing one toolkit for 12 AI editors" width="900">
-</p>
+## What's New in v4.2.1
 
----
+Patch release focused on making Claude Code rule enforcement harder to bypass and cleaning the release-facing README.
 
-## What's New in v4.2.0
-
-SEO/GEO release focused on AI citation readiness and stricter release gates.
-
-- **AI pipeline guidance**: `seo-validate` now includes Google AI pipeline, Query Fan Out, and content citability references.
-- **Topical authority checks**: new `--scope topical` covers cluster structure, internal links, orphan pages, slugs, and cannibalization.
-- **Expanded GEO heuristics**: Category 6 now checks chunk boundaries, hedging, decision frameworks, freshness, and author quality.
-- **Release gate parity**: CI and `prepublishOnly` now run strict validation, and the URL rule test is hermetic.
+- **Stop quality gate**: `quality-gate.sh` now runs on `Stop` as well as `TaskCompleted`, blocking final responses when lint/type checks fail.
+- **Reliable hook failures**: shell pipelines in the quality gate now preserve the failing tool exit code instead of hiding errors behind `head`.
+- **Cleaner installs**: hook merging now strips legacy untagged ai-toolkit duplicates while preserving user-owned hooks.
+- **README cleanup**: removed the hero image block for a lighter release README.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -131,7 +125,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 45 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
-| `hooks/` | 21 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
+| `hooks/` | 22 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
 | `constitution.md` | 6 articles | Machine-enforced safety rules |
 | `rules/` | auto-injected | Language-specific and custom rules injected into your configs |
@@ -147,14 +141,14 @@ ai-toolkit/
 │   ├── agents/          # 44 agent definitions
 │   ├── skills/          # 107 skills (task / hybrid / knowledge)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
-│   ├── hooks/           # Hook scripts (21 entries, 12 lifecycle events)
+│   ├── hooks/           # Hook scripts (22 entries, 12 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
 │   ├── constitution.md  # 6 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1047 tests)
+├── tests/               # Bats test suite (1049 tests)
 └── CHANGELOG.md
 ```
 
@@ -166,7 +160,7 @@ ai-toolkit/
 
 **Machine-enforced constitution** — 6-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
-**21 lifecycle hooks** — Executable scripts across 12 events (SessionStart → SessionEnd). Guards, governance, quality gates, session persistence, MCP health checks. See [Hooks Catalog](kb/reference/hooks-catalog.md).
+**22 lifecycle hooks** — Executable scripts across 12 events (SessionStart → SessionEnd). Guards, governance, quality gates, session persistence, MCP health checks. See [Hooks Catalog](kb/reference/hooks-catalog.md).
 
 **Security scanning** — `/skill-audit` for code-level risks, `/cve-scan` for dependency CVEs. Both CI-ready with exit codes.
 
