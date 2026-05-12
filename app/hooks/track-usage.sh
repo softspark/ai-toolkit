@@ -10,6 +10,7 @@
 STATS_FILE="${HOME}/.softspark/ai-toolkit/stats.json"
 
 # Read prompt from stdin (Claude Code passes JSON with .prompt field)
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 # shellcheck source=_hook-io.sh
 source "$(dirname "$0")/_hook-io.sh"

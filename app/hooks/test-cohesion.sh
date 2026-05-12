@@ -32,6 +32,7 @@ source "$(dirname "$0")/_hook-io.sh"
 [ "${CLAUDE_HOOK_BOOTSTRAP:-0}" = "1" ] && exit 0
 [ "${CLAUDE_SKIP_COHESION:-0}" = "1" ] && exit 0
 
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 FILE_PATH=$(hook_file_path)
 

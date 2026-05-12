@@ -4,6 +4,7 @@
 # Fires on: PreToolUse (Bash)
 # Non-blocking: always exits 0 (warnings only).
 
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 # shellcheck source=_hook-io.sh
 source "$(dirname "$0")/_hook-io.sh"

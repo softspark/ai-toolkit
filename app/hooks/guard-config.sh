@@ -4,6 +4,7 @@
 # Fires on: PreToolUse (Edit|Write|MultiEdit)
 # Exit 2 = block the tool call. Stderr message goes to Claude as feedback.
 
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 # shellcheck source=_hook-io.sh
 source "$(dirname "$0")/_hook-io.sh"

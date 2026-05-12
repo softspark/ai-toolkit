@@ -13,6 +13,7 @@ source "$(dirname "$0")/_hook-io.sh"
 source "$(dirname "$0")/_search-capability.sh"
 
 # Read prompt from stdin (Claude Code passes JSON with .prompt field)
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 PROMPT_TEXT=$(hook_prompt)
 LOWERED="$(printf '%s' "$PROMPT_TEXT" | tr '[:upper:]' '[:lower:]')"

@@ -22,6 +22,7 @@ source "$(dirname "$0")/_locate-toolkit.sh"
 # shellcheck source=_hook-io.sh
 source "$(dirname "$0")/_hook-io.sh"
 
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 COMMAND=$(hook_command)
 
