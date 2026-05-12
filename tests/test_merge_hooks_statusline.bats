@@ -127,6 +127,59 @@ assert len(custom) == 1, custom
 PY
 }
 
+@test "merge-hooks: removes legacy untagged notification command duplicates" {
+    cat > "$TARGET" <<'EOF'
+{
+    "hooks": {
+        "Notification": [
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
+                    }
+                ]
+            },
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
+                    }
+                ]
+            },
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash ~/my-notify.sh"
+                    }
+                ]
+            }
+        ]
+    }
+}
+EOF
+    run $MERGE inject "$TOOLKIT_HOOKS" "$TARGET"
+    [ "$status" -eq 0 ]
+    python3 - "$TARGET" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+notifications = data["hooks"]["Notification"]
+commands = [entry["hooks"][0]["command"] for entry in notifications]
+assert commands.count("bash ~/.softspark/ai-toolkit/hooks/notify-waiting.sh") == 1, commands
+assert all("display notification" not in command for command in commands), commands
+assert "bash ~/my-notify.sh" in commands, commands
+PY
+}
+
 @test "merge-hooks: PRESERVES user-customized statusLine (no _source tag)" {
     cat > "$TARGET" <<'EOF'
 {"statusLine":{"type":"command","command":"bash ~/my-custom-line.sh"}}

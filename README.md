@@ -6,16 +6,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1049%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1051%20passing-success)](tests/)
 
-## What's New in v4.2.1
+## What's New in v4.2.2
 
-Patch release focused on making Claude Code rule enforcement harder to bypass and cleaning the release-facing README.
+Patch release focused on cleaning legacy hook duplicates found during post-release verification.
 
-- **Stop quality gate**: `quality-gate.sh` now runs on `Stop` as well as `TaskCompleted`, blocking final responses when lint/type checks fail.
-- **Reliable hook failures**: shell pipelines in the quality gate now preserve the failing tool exit code instead of hiding errors behind `head`.
-- **Cleaner installs**: hook merging now strips legacy untagged ai-toolkit duplicates while preserving user-owned hooks.
-- **README cleanup**: removed the hero image block for a lighter release README.
+- **Legacy notification cleanup**: `merge-hooks.py` now removes old direct `osascript` notification hooks from pre-script installs.
+- **External hook cleanup**: `inject-hook` now removes legacy untagged duplicates that match the re-injected external hook payload.
+- **Regression coverage**: added tests for both cleanup paths so repeated updates keep hook settings idempotent.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -148,7 +147,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1049 tests)
+├── tests/               # Bats test suite (1051 tests)
 └── CHANGELOG.md
 ```
 

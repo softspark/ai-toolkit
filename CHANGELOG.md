@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.2.2 - Legacy hook duplicate cleanup (2026-05-12)
+
+Patch release. Cleans up legacy untagged hook duplicates found during post-release verification of v4.2.1.
+
+### Fixed
+
+- **Legacy notification hook cleanup** - `scripts/merge-hooks.py` now removes old direct `osascript` notification hooks from pre-script installs while preserving user-owned notification hooks.
+- **External hook duplicate cleanup** - `scripts/inject_hook_cli.py` now removes legacy untagged entries matching the same event, matcher, and handler payload as the external hook being re-injected.
+
+### Verification
+
+- `bats tests/test_merge_hooks_statusline.bats tests/test_inject_hook.bats`: 42/42 passing.
+- Local `~/.claude/settings.json`: 0 behavior duplicates, 0 exact duplicates, 0 untagged hook groups after cleanup.
+
+---
+
 ## v4.2.1 - Claude Code hook enforcement and README cleanup (2026-05-12)
 
 Patch release. Tightens Claude Code runtime enforcement, fixes duplicated hook cleanup during install/update, and removes the README hero image for release.

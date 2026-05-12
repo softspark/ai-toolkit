@@ -120,20 +120,56 @@ def _entry_source(entry: dict) -> str | None:
     return None
 
 
-def strip_source(hooks: dict, source: str) -> dict:
+def _entry_signature(entry: dict) -> tuple:
+    """Return behavior-defining hook fields without source tags."""
+    handlers = []
+    for hook in entry.get("hooks", []):
+        if not isinstance(hook, dict):
+            handlers.append(hook)
+            continue
+        handlers.append(tuple(sorted(
+            (key, value)
+            for key, value in hook.items()
+            if key != "_source"
+        )))
+    return (entry.get("matcher", ""), tuple(handlers))
+
+
+def strip_source(hooks: dict, source: str, replacement_hooks: dict | None = None) -> dict:
     """Remove all entries whose ``_source`` matches *source*.
 
     Args:
         hooks: Existing hooks dict (event-name -> list of entries).
         source: Source tag to strip.
+        replacement_hooks: Optional hook entries being re-injected. When
+            provided, untagged legacy entries with the same event/matcher/
+            handler payload are stripped as belonging to the same source.
 
     Returns:
         New hooks dict with matching entries removed.  Empty event lists
         are omitted.
     """
+    legacy_signatures: dict[str, set[tuple]] = {}
+    if replacement_hooks:
+        for event, entries in replacement_hooks.items():
+            legacy_signatures[event] = {
+                _entry_signature(entry)
+                for entry in entries
+                if isinstance(entry, dict)
+            }
+
     result: dict = {}
     for event, entries in hooks.items():
-        filtered = [e for e in entries if _entry_source(e) != source]
+        signatures = legacy_signatures.get(event, set())
+        filtered = [
+            e for e in entries
+            if _entry_source(e) != source
+            and not (
+                isinstance(e, dict)
+                and _entry_source(e) is None
+                and _entry_signature(e) in signatures
+            )
+        ]
         if filtered:
             result[event] = filtered
     return result
@@ -174,7 +210,7 @@ def merge_hooks(new_hooks: dict, existing_hooks: dict, source: str) -> dict:
     Returns:
         Merged hooks dict.
     """
-    merged = strip_source(existing_hooks, source)
+    merged = strip_source(existing_hooks, source, new_hooks)
     for event, entries in new_hooks.items():
         if event not in merged:
             merged[event] = []

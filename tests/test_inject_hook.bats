@@ -79,6 +79,58 @@ print(len([e for e in data['hooks']['Stop'] if e.get('_source') == 'my-plugin'])
     [ "$count" -eq 1 ]
 }
 
+@test "inject_hook_cli.py removes legacy untagged duplicate entries on re-injection" {
+    _make_hooks_file "$TEST_DIR/jira-mcp-hooks.json" \
+        "PreToolUse" "jira-mcp hook comment-approval"
+
+    mkdir -p "$TEST_DIR/.claude"
+    cat > "$TEST_DIR/.claude/settings.json" <<'EOF'
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jira-mcp hook comment-approval"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jira-mcp hook comment-approval"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/jira-mcp-hooks.json" "$TEST_DIR"
+
+    python3 - "$TEST_DIR/.claude/settings.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+entries = data["hooks"]["PreToolUse"]
+matching = [
+    entry for entry in entries
+    if entry["hooks"][0]["command"] == "jira-mcp hook comment-approval"
+]
+assert len(matching) == 1, matching
+assert matching[0].get("_source") == "jira-mcp-hooks", matching
+PY
+}
+
 @test "inject_hook_cli.py updates entries on re-injection" {
     # First injection with one command
     _make_hooks_file "$TEST_DIR/updatable.json" "Stop" "echo v1"

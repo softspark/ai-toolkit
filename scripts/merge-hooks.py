@@ -27,6 +27,23 @@ import os
 import sys
 
 SOURCE_TAG = "ai-toolkit"
+LEGACY_TOOLKIT_HOOKS = {
+    "Notification": [
+        {
+            "matcher": "",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": (
+                        "osascript -e 'display notification "
+                        '"Claude Code needs your attention" with title "Claude Code"'
+                        "'"
+                    ),
+                }
+            ],
+        }
+    ],
+}
 
 
 def load_json(path: str) -> dict:
@@ -95,6 +112,12 @@ def strip_toolkit(hooks: dict, toolkit_hooks: dict | None = None) -> dict:
                 for entry in entries
                 if isinstance(entry, dict)
             }
+    for event, entries in LEGACY_TOOLKIT_HOOKS.items():
+        legacy_signatures.setdefault(event, set()).update(
+            _entry_signature(entry)
+            for entry in entries
+            if isinstance(entry, dict)
+        )
 
     result = {}
     for event, entries in hooks.items():
