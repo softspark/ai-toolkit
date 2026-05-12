@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.2.3 - SEO FAQ rich results deprecation (2026-05-12)
+
+Patch release. Updates `seo-specialist` guidance after Google deprecated FAQ rich results.
+
+### Changed
+
+- **SEO structured data guidance** - `seo-specialist` now treats `FAQPage` as deprecated for Google rich results and recommends keeping it only when explicitly targeting non-Google engines.
+- **Citability schema checklist** - Prioritizes `Article`, `HowTo`, `QAPage`, and `Person` schema guidance for Google-facing SEO/GEO work.
+
+### Verification
+
+- Source checked against [Google Search Central `FAQPage` structured data documentation](https://developers.google.com/search/docs/appearance/structured-data/faqpage).
+
+---
+
 ## v4.2.2 - Legacy hook duplicate cleanup (2026-05-12)
 
 Patch release. Cleans up legacy untagged hook duplicates found during post-release verification of v4.2.1.

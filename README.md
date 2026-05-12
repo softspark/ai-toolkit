@@ -8,13 +8,13 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1051%20passing-success)](tests/)
 
-## What's New in v4.2.2
+## What's New in v4.2.3
 
-Patch release focused on cleaning legacy hook duplicates found during post-release verification.
+Patch release updating SEO guidance after Google's FAQ rich result deprecation.
 
-- **Legacy notification cleanup**: `merge-hooks.py` now removes old direct `osascript` notification hooks from pre-script installs.
-- **External hook cleanup**: `inject-hook` now removes legacy untagged duplicates that match the re-injected external hook payload.
-- **Regression coverage**: added tests for both cleanup paths so repeated updates keep hook settings idempotent.
+- **SEO agent guidance**: `seo-specialist` now treats `FAQPage` as deprecated for Google rich results.
+- **Schema recommendations**: citability guidance now prioritizes `Article`, `HowTo`, `QAPage`, and `Person` for Google-facing surfaces.
+- **GEO audit checklist**: FAQ markup is now scoped to non-Google engines instead of recommended as a default.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
