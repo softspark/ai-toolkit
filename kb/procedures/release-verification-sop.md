@@ -3,10 +3,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.4.2"
+version: "1.4.3"
 created: "2026-04-08"
-last_updated: "2026-04-29"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing."
+last_updated: "2026-05-19"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing. v1.4.3 tightens the Phase 8.4 URL pin check so the success-message count includes only entries with a `url:` field, not local `path:` entries, and documents the `sources.json` envelope shape."
 ---
 
 # SOP: Release Verification
@@ -303,11 +303,13 @@ python3 scripts/audit_skills.py --permissions | head -40
 
 ### 8.4 URL-sourced rules/hooks are checksum-pinned
 
+`sources.json` is an envelope of the form `{"schema_version": 1, "rules"|"hooks": {...}}`, so the jq filter must pick the nested map before piping into the pin assertion. The URL-count in the success message ignores local `path:`-only entries — only entries with a `url:` field are pinned and counted.
+
 ```bash
 jq '.rules // .hooks // {}' ~/.softspark/ai-toolkit/rules/sources.json 2>/dev/null \
-  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; print(f'RULE PIN OK: {len(d)} URL rules, all with sha256')"
+  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; url_n=sum(1 for v in d.values() if v.get('url')); print(f'RULE PIN OK: {url_n} URL rules, all with sha256')"
 jq '.hooks // {}' ~/.softspark/ai-toolkit/hooks/external/sources.json 2>/dev/null \
-  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; print(f'HOOK PIN OK: {len(d)} URL hooks, all with sha256')"
+  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; url_n=sum(1 for v in d.values() if v.get('url')); print(f'HOOK PIN OK: {url_n} URL hooks, all with sha256')"
 ```
 
 **Verify:**
