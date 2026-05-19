@@ -19,6 +19,20 @@ hook_prompt() {
     hook_json '.prompt // .tool_info.user_prompt // .user_prompt // .input // empty'
 }
 
+hook_session_id() {
+    local sid
+    sid=$(hook_json '.session_id // empty')
+    if [ -z "$sid" ] || [ "$sid" = "null" ]; then
+        local tp
+        tp=$(hook_json '.transcript_path // empty')
+        if [ -n "$tp" ] && [ "$tp" != "null" ]; then
+            sid=$(basename "$tp" .jsonl)
+        fi
+    fi
+    [ -z "$sid" ] && sid="default"
+    printf '%s' "$sid" | LC_ALL=C tr -c 'a-zA-Z0-9_-' '_'
+}
+
 hook_command() {
     hook_json '.tool_input.command // .tool_input.command_line // .tool_info.command // .tool_info.command_line // .command // empty'
 }

@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 
 DEFAULT_RUNNERS: dict[str, str] = {
-    "bats": "bats --no-parallelize-within-files",
+    "bats": "bats",
     "pytest": "pytest -x",
     "vitest": "npx vitest run",
     "jest": "npx jest --bail",

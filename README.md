@@ -6,16 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1131%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1133%20passing-success)](tests/)
 
-## What's New in v4.3.0
+## What's New in v4.3.1
 
-Minor release. Closes the asymmetry between `inject-rule` / `inject-hook` and MCP servers -- external tools (rag-mcp, jira-mcp, custom integrations) can now register MCP templates the same way they register rules and hooks.
+Patch release. Fixes a cross-session race in the search-first enforcement trio: the single global `search-required.flag` was shared by every parallel Claude Code window, so a Stop in one session could block another with someone else's prompt. Also unblocks the `bats 1.13` regression in the test-cohesion runner.
 
-- **`ai-toolkit inject-mcp <file|url>`**: register an external MCP template into `~/.mcp.json` + every editor with a `global_path` (Claude, Cursor, Codex, Gemini, Windsurf, Cline, Augment, Copilot) in one command.
-- **`ai-toolkit remove-mcp <name>`**: strip injected servers from `~/.mcp.json` and every editor config in one command.
-- **URL templates + auto-refresh**: HTTPS-sourced templates are cached and re-fetched on every `ai-toolkit update`, just like URL rules and hooks.
-- **`--name` and `--force` flags**: explicit source naming for both files and URLs, plus collision-safe overwrites that still protect `ai-toolkit` built-in entries.
+- **Per-session search-first flag**: `user-prompt-submit.sh`, `search-tracker.sh`, and `stop-search-check.sh` now key the flag by `session_id` (`search-required-<session_id>.flag`), so parallel Claude Code windows no longer interfere with each other.
+- **Stale-flag GC**: `session-start.sh` deletes per-session flags older than 60 minutes, so crashed sessions leave no residue.
+- **`bats 1.13` compatibility**: `scripts/test_cohesion.py` no longer passes `--no-parallelize-within-files` (it now requires `--jobs 2` in bats 1.13 and was redundant in sequential mode anyway).
+- **Two new isolation tests**: `tests/test_search_first_flow.bats` verifies per-session flag scoping for both Stop and PostToolUse paths.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -148,7 +148,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1131 tests)
+├── tests/               # Bats test suite (1133 tests)
 └── CHANGELOG.md
 ```
 

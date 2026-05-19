@@ -23,7 +23,7 @@ LOWERED="$(printf '%s' "$PROMPT_TEXT" | tr '[:upper:]' '[:lower:]')"
 # Cleared by search-tracker.sh after smart_query / hybrid_search_kb / web runs.
 PROMPT_LEN=${#PROMPT_TEXT}
 STATE_DIR="$HOME/.softspark/ai-toolkit/state"
-FLAG="$STATE_DIR/search-required.flag"
+FLAG="$STATE_DIR/search-required-$(hook_session_id).flag"
 mkdir -p "$STATE_DIR" 2>/dev/null
 if [ "$PROMPT_LEN" -gt 30 ] && \
    [ "${CLAUDE_SKIP_SEARCH_FIRST:-0}" != "1" ] && \

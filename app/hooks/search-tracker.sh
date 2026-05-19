@@ -12,7 +12,11 @@
 
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
 
-FLAG="$HOME/.softspark/ai-toolkit/state/search-required.flag"
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
+INPUT=$(cat 2>/dev/null || true)
+FLAG="$HOME/.softspark/ai-toolkit/state/search-required-$(hook_session_id).flag"
 rm -f "$FLAG" 2>/dev/null
 exit 0

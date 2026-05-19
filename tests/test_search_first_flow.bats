@@ -19,7 +19,8 @@ teardown() {
 }
 
 FLAG_PATH() {
-    echo "$HOME/.softspark/ai-toolkit/state/search-required.flag"
+    local sid="${1:-default}"
+    echo "$HOME/.softspark/ai-toolkit/state/search-required-${sid}.flag"
 }
 
 @test "search-first: long technical prompt without provider does NOT set flag" {
@@ -103,4 +104,34 @@ FLAG_PATH() {
     run bash "$HOOKS/stop-search-check.sh"
     [ "$status" -eq 0 ]
     [ -z "$output" ]
+}
+
+@test "search-first: per-session flags isolated between sessions" {
+    # Session A submits a long prompt → flag set for session A only.
+    AI_TOOLKIT_SEARCH_FIRST=strict bash -c "echo '{\"session_id\":\"sessA\",\"prompt\":\"long question about hooks dedup behavior and tests\"}' | bash '$HOOKS/user-prompt-submit.sh'" >/dev/null
+    [ -f "$(FLAG_PATH sessA)" ]
+    [ ! -f "$(FLAG_PATH sessB)" ]
+
+    # Session B Stop check must NOT find a flag and must NOT block.
+    AI_TOOLKIT_SEARCH_FIRST=strict run bash -c "echo '{\"session_id\":\"sessB\"}' | bash '$HOOKS/stop-search-check.sh'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+
+    # Session A flag still present (B did not consume it).
+    [ -f "$(FLAG_PATH sessA)" ]
+
+    # Session A Stop check (still no search) blocks A using A's prompt.
+    AI_TOOLKIT_SEARCH_FIRST=strict run bash -c "echo '{\"session_id\":\"sessA\"}' | bash '$HOOKS/stop-search-check.sh'"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"block"* ]]
+    [[ "$output" == *"hooks dedup behavior"* ]]
+    [ ! -f "$(FLAG_PATH sessA)" ]
+}
+
+@test "search-first: search-tracker clears only the calling session's flag" {
+    touch "$(FLAG_PATH sessA)" "$(FLAG_PATH sessB)"
+    run bash -c "echo '{\"session_id\":\"sessA\"}' | bash '$HOOKS/search-tracker.sh'"
+    [ "$status" -eq 0 ]
+    [ ! -f "$(FLAG_PATH sessA)" ]
+    [ -f "$(FLAG_PATH sessB)" ]
 }

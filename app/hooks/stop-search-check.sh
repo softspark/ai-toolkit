@@ -21,7 +21,9 @@ source "$(dirname "$0")/_search-capability.sh"
 
 [ "${CLAUDE_SKIP_SEARCH_FIRST:-0}" = "1" ] && exit 0
 
-FLAG="$HOME/.softspark/ai-toolkit/state/search-required.flag"
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
+INPUT=$(cat 2>/dev/null || true)
+FLAG="$HOME/.softspark/ai-toolkit/state/search-required-$(hook_session_id).flag"
 [ -f "$FLAG" ] || exit 0
 
 if ! ai_toolkit_has_search_provider; then

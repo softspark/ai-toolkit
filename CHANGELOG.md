@@ -7,6 +7,28 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.3.1 - per-session search-first flag (2026-05-19)
+
+Patch release. Fixes a cross-session race condition in the search-first enforcement trio (`user-prompt-submit.sh` + `search-tracker.sh` + `stop-search-check.sh`): the single global flag file `~/.softspark/ai-toolkit/state/search-required.flag` was shared by every parallel Claude Code window, so a Stop in session B could consume session A's flag (or vice versa), blocking unrelated turns with someone else's prompt. Also unblocks `bats 1.13` regression in the test-cohesion runner default.
+
+### Fixed
+
+- **Search-first flag is now per-session** - `user-prompt-submit.sh`, `search-tracker.sh`, and `stop-search-check.sh` key the flag by `session_id` from the hook stdin payload (`search-required-<session_id>.flag`), falling back to `transcript_path` basename, then `default`. Parallel sessions no longer interfere with each other. Each Stop check reads only its own session's flag.
+- **`bats 1.13` regression in test-cohesion runner** - `scripts/test_cohesion.py` no longer passes `--no-parallelize-within-files` (now requires `--jobs 2` in bats 1.13). Default sequential mode is used, which is what the hook expected anyway.
+
+### Added
+
+- **`hook_session_id()` helper in `_hook-io.sh`** - Resolves and sanitizes the per-session key for any hook that needs to scope state to a single Claude Code window.
+- **`session-start.sh` GC** - Stale per-session search-required flags older than 60 minutes are deleted on every `SessionStart`, so crashed sessions do not leave residue.
+- **Two new bats tests** in `tests/test_search_first_flow.bats` verifying per-session isolation and that `search-tracker` only clears its own session's flag.
+
+### Changed
+
+- **`kb/reference/hooks-catalog.md`** - Documents the new per-session flag layout, GC behavior, and isolation guarantee.
+- **`README.md`** - Test count badge 1131 → 1133.
+
+---
+
 ## v4.3.0 - inject-mcp extension API (2026-05-12)
 
 Minor release. Closes the asymmetry between `inject-rule` / `inject-hook` and MCP servers by adding `inject-mcp` and `remove-mcp` as first-class members of the extension API. External tools (rag-mcp, jira-mcp, custom integrations) can now register their MCP templates the same way they register rules and hooks -- from a local file or HTTPS URL, with full editor propagation and auto-refresh on `ai-toolkit update`.

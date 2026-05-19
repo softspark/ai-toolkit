@@ -22,6 +22,10 @@ if [ -n "$TOOLKIT_DIR" ] && command -v python3 >/dev/null 2>&1; then
         ${SESSION_ID_INPUT:+--session-id "$SESSION_ID_INPUT"} >/dev/null 2>&1 || true
 fi
 
+# 1b. GC stale per-session search-required flags (older than 60 min)
+find "$HOME/.softspark/ai-toolkit/state" -maxdepth 1 -name 'search-required-*.flag' \
+    -type f -mmin +60 -delete 2>/dev/null || true
+
 # 2. Check for updates (cached, max once per 24h, non-blocking)
 VERSION_MSG=$(python3 "$TOOLKIT_DIR/scripts/version_check.py" 2>/dev/null)
 if [ -n "$VERSION_MSG" ]; then

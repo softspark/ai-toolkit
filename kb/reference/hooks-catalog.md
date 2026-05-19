@@ -381,7 +381,7 @@ First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`.
 | Script | `~/.softspark/ai-toolkit/hooks/search-tracker.sh` |
 | Fires | After any search-style tool call |
 
-**Action:** Clears `~/.softspark/ai-toolkit/state/search-required.flag`. Pairs with `user-prompt-submit.sh` (sets flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if flag still set). Together they enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs.
+**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag` (per-session, keyed by `session_id` from the hook stdin payload, falling back to `transcript_path` basename, then `default`). Pairs with `user-prompt-submit.sh` (sets the flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag is still set). Together they enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs and without cross-session interference when multiple Claude Code windows run in parallel.
 
 Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -394,7 +394,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/stop-search-check.sh` |
 | Fires | When Claude finishes a response |
 
-**Action:** If `search-required.flag` is still present (no search tool ran during this turn) and a search provider is still detectable, emits `{"decision":"block","reason":"..."}` to continue the conversation with a search-first reminder. If no RAG/Web provider is detected, it clears the stale flag and exits 0, so offline/no-MCP users are not blocked.
+**Action:** If `search-required-<session_id>.flag` for the calling session is still present (no search tool ran during this turn) and a search provider is still detectable, emits `{"decision":"block","reason":"..."}` to continue the conversation with a search-first reminder. If no RAG/Web provider is detected, it clears the stale flag and exits 0, so offline/no-MCP users are not blocked. Flags are scoped by `session_id` from the hook stdin payload so a Stop in session B never consumes session A's flag (and vice versa). Stale per-session flags older than 60 minutes are GC'd on the next `SessionStart`.
 
 **Overrides:** `CLAUDE_SKIP_SEARCH_FIRST=1`, `AI_TOOLKIT_SEARCH_FIRST=off`, or `AI_TOOLKIT_SEARCH_FIRST=strict` to force enforcement. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -456,7 +456,7 @@ Set in `.claude/settings.local.json`:
 ├── rules/          # Registered rules (add-rule.sh)
 ├── state/          # Per-session runtime state (NEW)
 │   ├── session-edits.json         # Append-only edit log per session
-│   ├── search-required.flag       # Set by user-prompt-submit, cleared by search-tracker
+│   ├── search-required-<sid>.flag # Per-session: set by user-prompt-submit, cleared by search-tracker/stop-search-check, GC'd at SessionStart (>60min)
 │   ├── loaded-instructions.log    # Audit trail of which rules entered context
 │   └── test-cohesion-last.log     # Last cohesion test command output
 └── hooks/          # Hook scripts (copied on install)
