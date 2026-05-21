@@ -2,7 +2,7 @@
 # search-tracker.sh — Clear search-required flag when a search tool runs.
 #
 # Fires on: PostToolUse
-# Matcher: mcp__rag-mcp__smart_query|mcp__rag-mcp__hybrid_search_kb|mcp__rag-mcp__crag_search|mcp__rag-mcp__multi_hop_search|WebSearch|WebFetch
+# Matcher: mcp__.*__(smart_query|hybrid_search_kb|crag_search|multi_hop_search|verify_answer)|WebSearch|WebFetch
 # Non-blocking: always exits 0.
 # Skipped when TOOLKIT_HOOK_PROFILE=minimal.
 #

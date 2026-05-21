@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-05-12T19:04:22Z",
+  "last_run": "2026-05-21T08:27:23Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,17 +24,18 @@
       }
     },
     "augment": {
-      "docs_hash": "ceaf27b7126f44dd",
+      "docs_hash": "8be23f4fb78816c3",
       "headings": [
-        "Agent",
-        "Chat",
+        "Code",
         "Documentation Index",
         "Introduction",
+        "On this page",
+        "Other automation",
+        "Review",
         "\u200bAuggie CLI",
-        "\u200bGet started in minutes",
-        "\u200bJetBrains IDEs",
-        "\u200bLearn more",
-        "\u200bVisual Studio Code"
+        "\u200bAutomate your SDLC",
+        "\u200bCosmos",
+        "\u200bGet started in minutes"
       ],
       "markers": {
         ".augment": true,
@@ -57,10 +58,11 @@
       }
     },
     "claude-code": {
-      "docs_hash": "6ea2ec6ef023c1bd",
+      "docs_hash": "0518086bd4527849",
       "headings": [
-        "Claude Code overview",
         "Documentation Index",
+        "On this page",
+        "Overview",
         "\u200bGet started",
         "\u200bNext steps",
         "\u200bUse Claude Code everywhere",
@@ -103,24 +105,27 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.139 (Claude Code)"
+      "version": "2.1.146 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "b59e8836b3217cdb",
+      "docs_hash": "c2ce2443743365fa",
       "headings": [
-        "Cline CLI",
-        "Cline Documentation",
-        "Core Workflows",
-        "Customization",
+        "API Reference",
+        "CLI",
+        "Cline Overview",
         "Documentation Index",
-        "Features",
-        "Install Cline",
-        "MCP Servers",
-        "Models &amp; Providers",
-        "Quick Start",
-        "What is Cline?",
-        "Your First Project",
-        "\u200bExplore the Docs",
+        "JetBrains Plugin",
+        "Kanban",
+        "Observability",
+        "On this page",
+        "SDK",
+        "Security &amp; Governance",
+        "Team Management",
+        "VS Code Extension",
+        "\u200bAgent Core (SDK)",
+        "\u200bApplications",
+        "\u200bEnterprise Solutions",
+        "\u200bOther IDE Supports",
         "\u200bWhat is Cline?"
       ],
       "markers": {
@@ -137,7 +142,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "c8fb328bf1954fc2",
+      "docs_hash": "70f184b6cdd1f765",
       "headings": [
         "About",
         "Contributing",
@@ -156,7 +161,7 @@
         "Packages 0",
         "Provide feedback",
         "Quickstart",
-        "Releases 784",
+        "Releases 795",
         "Repository files navigation",
         "Resources",
         "Saved searches",
@@ -186,10 +191,10 @@
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.130.0"
+      "version": "codex-cli 0.132.0"
     },
     "cursor": {
-      "docs_hash": "787203a4eee076f7",
+      "docs_hash": "60edb30c9ddcdadd",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -205,7 +210,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "26555623f610ff8e",
+      "docs_hash": "c6aab087667f7717",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -244,16 +249,16 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "1566c05f84f5c1a7",
+      "docs_hash": "ab274112faeec90f",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot integrations",
         "About agent management",
         "About agent skills",
-        "About agentic memory for GitHub Copilot",
         "About billing for GitHub Copilot in organizations and enterprises",
         "About billing for individual GitHub Copilot plans",
         "About custom agents",
+        "About customizing GitHub Copilot responses",
         "Articles",
         "Did you find what you needed?",
         "GitHub Copilot",
@@ -276,7 +281,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "509c72e157ecb6f3",
+      "docs_hash": "2c48c702b9e592a7",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -292,7 +297,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "c1c8ba8f6b2e7ddf",
+      "docs_hash": "5277673e235393f7",
       "headings": [
         "Add features",
         "Ask questions",
@@ -331,20 +336,19 @@
       }
     },
     "roo-code": {
-      "docs_hash": "960b2e1caf562b43",
+      "docs_hash": "54908ae23136b646",
       "headings": [
         "A mindset for success\u200b",
         "Additional Resources\u200b",
         "Getting Started\u200b",
         "Roo Code Docs",
-        "Tutorial &amp; Feature Videos\u200b",
         "What can Roo Code do for you\u200b"
       ],
       "markers": {
         "Code Actions": false,
         "MCP": true,
         "Orchestrator mode": false,
-        "custom modes": true,
+        "custom modes": false,
         "description": true,
         "groups": false,
         "roleDefinition": false,
@@ -353,7 +357,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "7a8a7569f81eba1b",
+      "docs_hash": "fa29ba621f291d81",
       "headings": [
         "Advanced",
         "App Deploys",
@@ -362,6 +366,7 @@
         "Documentation Index",
         "MCP",
         "Memories",
+        "On this page",
         "Recommended Plugins",
         "Terminal",
         "Usage",

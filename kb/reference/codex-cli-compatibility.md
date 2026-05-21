@@ -3,9 +3,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.0"
+version: "1.0.1"
 created: "2026-04-12"
-last_updated: "2026-04-13"
+last_updated: "2026-05-21"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -110,6 +110,11 @@ This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
 `~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
 `remove-hook` cleans both Claude and Codex targets.
 
+Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. This keeps
+non-blocking reminders and startup context out of the visible Codex hook output
+while preserving hook side effects and blocking decisions such as search-first
+Stop enforcement.
+
 ## Behavioral Limits
 
 Codex wrappers preserve workflow intent, but not every Claude runtime behavior
@@ -120,6 +125,10 @@ Known limits:
 - No native Codex equivalent of tmux-backed Agent Teams lifecycle events
 - No separate task object model equivalent to Claude `Task*` APIs
 - Hook event coverage is narrower than Claude Code
+- MCP search tool calls may not fire the shared `PostToolUse` search tracker,
+  so `stop-search-check.sh` also checks `~/.codex/log/codex-tui.log` for
+  `smart_query`, `hybrid_search_kb`, `crag_search`, `multi_hop_search`, and
+  `verify_answer` calls after the search-first flag timestamp before blocking.
 
 These are runtime platform limits, not installation defects.
 

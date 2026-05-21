@@ -8,7 +8,7 @@ Universal multi-agent system for software development. Works across all reposito
 |-----------|-------|
 | Agents | See agents catalog |
 | Skills | See skills catalog |
-| Hooks | 12 events / 22 entries (SessionStart ×3, Notification ×1, PreToolUse ×4, UserPromptSubmit ×2, PostToolUse ×2, Stop ×3, TaskCompleted ×1, TeammateIdle ×1, SubagentStart ×1, SubagentStop ×1, PreCompact ×2, SessionEnd ×1) |
+| Hooks | 14 events / 28 entries (SessionStart ×3, Notification ×1, PreToolUse ×5, UserPromptSubmit ×2, PostToolUse ×4, Stop ×4, TaskCompleted ×1, TeammateIdle ×1, SubagentStart ×1, SubagentStop ×1, PreCompact ×2, SessionEnd ×1, InstructionsLoaded ×1, ConfigChange ×1) |
 
 ---
 
@@ -332,7 +332,9 @@ Lead Session (You)
 | `UserPromptSubmit` | Before prompt execution | Prompt governance reminder |
 | `UserPromptSubmit` | Before prompt execution | Usage tracking (skill invocations) |
 | `PostToolUse` | After edit/write tools | Lightweight validation reminder |
+| `PostToolUse` | After search tools | Clears the per-session search-first flag |
 | `Stop` | After Claude response | Multi-language quality check + saves session context |
+| `Stop` | After Claude response | Blocks skipped search-first only when a real MCP/Web search provider is configured, with Codex log fallback |
 | `TaskCompleted` | Teammate marks task done | Multi-language lint + type check (blocking) |
 | `TeammateIdle` | Teammate goes idle | Reminds to verify completeness |
 | `SubagentStart` | Subagent starts | Scope reminder for spawned subagents |
@@ -352,6 +354,9 @@ Lead Session (You)
 `app/rules/` contains per-language coding rules. Supported languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, and common (shared). Auto-detected from project files via `--auto-detect` or selected with `--modules rules-<lang>`.
 
 Language rules are propagated to **all configured editors** — not just Claude. `dir_rules_shared.build_language_rules()` reads `app/rules/<lang>/*.md`, strips frontmatter, and returns combined content per language. Each directory-based generator (Cursor, Windsurf, Cline, Roo, Augment, Antigravity, Codex) emits `ai-toolkit-lang-<lang>` files in its native format. Registered custom rules (`~/.softspark/ai-toolkit/rules/`) are similarly propagated as `ai-toolkit-custom-<name>` files via `build_registered_rules()`.
+
+### Codex Integration
+Codex receives `AGENTS.md`, `.agents/rules/*.md`, optional `.agents/skills/*`, and `.codex/hooks.json`. `generate_codex_hooks.py` emits only Codex-supported lifecycle events and prefixes commands with `AI_TOOLKIT_HOOK_QUIET=1`, so informational hook context is not shown at session start or prompt submit while side effects and blocking Stop decisions still run. Claude's bundled `UserPromptSubmit` hook also runs in quiet mode for the same reason.
 
 ### opencode Integration (v2.5.0+)
 opencode is the 11th supported editor. Five generators handle its integration surface:

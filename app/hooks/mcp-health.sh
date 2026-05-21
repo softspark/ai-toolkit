@@ -45,7 +45,9 @@ for CONFIG in "${CONFIG_FILES[@]}"; do
         [ -z "$CMD" ] && continue
         if ! command -v "$CMD" >/dev/null 2>&1; then
             HINT=$(get_install_hint "$CMD")
-            echo "MCP health: ${SERVER_NAME} command not found (${CMD}). Install with: ${HINT}"
+            if [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ]; then
+                echo "MCP health: ${SERVER_NAME} command not found (${CMD}). Install with: ${HINT}"
+            fi
         fi
     done <<< "$SERVERS"
 done

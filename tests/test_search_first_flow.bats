@@ -29,6 +29,29 @@ FLAG_PATH() {
     [ ! -f "$(FLAG_PATH)" ]
 }
 
+@test "search-first: hook matcher and permissions alone do NOT count as provider" {
+    mkdir -p "$TEST_TMP/.claude"
+    cat > "$TEST_TMP/.claude/settings.json" <<'JSON'
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__rag-mcp__smart_query|WebSearch|WebFetch",
+        "hooks": [{"type": "command", "command": "search-tracker.sh"}]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": ["mcp__customer-rag__smart_query", "WebSearch"]
+  }
+}
+JSON
+    cd "$TEST_TMP"
+    run bash -c "echo '{\"prompt\":\"how does the merge-hooks dedup logic work and is it tested?\"}' | bash '$HOOKS/user-prompt-submit.sh'"
+    [ "$status" -eq 0 ]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
 @test "search-first: long technical prompt with strict mode sets flag" {
     AI_TOOLKIT_SEARCH_FIRST=strict run bash -c "echo '{\"prompt\":\"how does the merge-hooks dedup logic work and is it tested?\"}' | bash '$HOOKS/user-prompt-submit.sh'"
     [ "$status" -eq 0 ]
@@ -38,6 +61,22 @@ FLAG_PATH() {
 @test "search-first: long technical prompt with rag mcp config sets flag" {
     printf '{"mcpServers":{"rag-mcp":{"command":"rag-mcp"}}}\n' > "$TEST_TMP/.mcp.json"
     cd "$TEST_TMP"
+    run bash -c "echo '{\"prompt\":\"how does the merge-hooks dedup logic work and is it tested?\"}' | bash '$HOOKS/user-prompt-submit.sh'"
+    [ "$status" -eq 0 ]
+    [ -f "$(FLAG_PATH)" ]
+}
+
+@test "search-first: project settings.local mcpServers provider sets flag" {
+    mkdir -p "$TEST_TMP/.claude"
+    printf '{"mcpServers":{"customer-rag":{"command":"customer-rag"}}}\n' > "$TEST_TMP/.claude/settings.local.json"
+    cd "$TEST_TMP"
+    run bash -c "echo '{\"prompt\":\"how does the merge-hooks dedup logic work and is it tested?\"}' | bash '$HOOKS/user-prompt-submit.sh'"
+    [ "$status" -eq 0 ]
+    [ -f "$(FLAG_PATH)" ]
+}
+
+@test "search-first: global mcp config provider sets flag" {
+    printf '{"mcpServers":{"rag-mcp":{"command":"rag-mcp"}}}\n' > "$TEST_TMP/.mcp.json"
     run bash -c "echo '{\"prompt\":\"how does the merge-hooks dedup logic work and is it tested?\"}' | bash '$HOOKS/user-prompt-submit.sh'"
     [ "$status" -eq 0 ]
     [ -f "$(FLAG_PATH)" ]
@@ -77,6 +116,30 @@ FLAG_PATH() {
     [[ "$output" == *"decision"* ]]
     [[ "$output" == *"block"* ]]
     [[ "$output" == *"smart_query"* ]]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
+@test "search-first: Stop check allows when Codex log shows search after flag" {
+    mkdir -p "$TEST_TMP/.codex/log"
+    printf '%s\n%s\n' "100" "what is the merge-hooks dedup logic and tests around it" > "$(FLAG_PATH)"
+    cat > "$TEST_TMP/.codex/log/codex-tui.log" <<'LOG'
+1970-01-01T00:02:00Z INFO ToolCall: mcp__rag_mcp__smart_query {"query":"hooks"}
+LOG
+    AI_TOOLKIT_SEARCH_FIRST=strict run bash "$HOOKS/stop-search-check.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
+@test "search-first: Stop check ignores Codex searches older than flag" {
+    mkdir -p "$TEST_TMP/.codex/log"
+    printf '%s\n%s\n' "200" "what is the merge-hooks dedup logic and tests around it" > "$(FLAG_PATH)"
+    cat > "$TEST_TMP/.codex/log/codex-tui.log" <<'LOG'
+1970-01-01T00:02:00Z INFO ToolCall: mcp__rag_mcp__smart_query {"query":"old hooks"}
+LOG
+    AI_TOOLKIT_SEARCH_FIRST=strict run bash "$HOOKS/stop-search-check.sh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"block"* ]]
     [ ! -f "$(FLAG_PATH)" ]
 }
 

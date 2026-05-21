@@ -6,16 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1133%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1142%20passing-success)](tests/)
 
-## What's New in v4.3.1
+## What's New in v4.3.2
 
-Patch release. Fixes a cross-session race in the search-first enforcement trio: the single global `search-required.flag` was shared by every parallel Claude Code window, so a Stop in one session could block another with someone else's prompt. Also unblocks the `bats 1.13` regression in the test-cohesion runner.
+Patch release. Fixes noisy hook output and hardens search-first behavior across Claude and Codex.
 
-- **Per-session search-first flag**: `user-prompt-submit.sh`, `search-tracker.sh`, and `stop-search-check.sh` now key the flag by `session_id` (`search-required-<session_id>.flag`), so parallel Claude Code windows no longer interfere with each other.
-- **Stale-flag GC**: `session-start.sh` deletes per-session flags older than 60 minutes, so crashed sessions leave no residue.
-- **`bats 1.13` compatibility**: `scripts/test_cohesion.py` no longer passes `--no-parallelize-within-files` (it now requires `--jobs 2` in bats 1.13 and was redundant in sequential mode anyway).
-- **Two new isolation tests**: `tests/test_search_first_flow.bats` verifies per-session flag scoping for both Stop and PostToolUse paths.
+- **Quiet hook context**: Codex startup hooks and Claude/Codex `UserPromptSubmit` now suppress non-blocking reminder output while preserving side effects and blocking decisions.
+- **Search provider detection**: search-first hooks now count only real MCP server definitions, not hook matchers or permission allowlists, so no-RAG installs stay advisory instead of blocked.
+- **Codex search-first fallback**: `stop-search-check.sh` recognizes search calls recorded in the Codex TUI log when MCP tool calls do not trigger `PostToolUse`.
+- **Runtime refresh coverage**: installer tests now assert that Claude `UserPromptSubmit` is installed with quiet mode enabled.
+- **Ecosystem snapshot refresh**: release prep refreshed upstream editor/tool drift baselines after class A/C documentation and version drift review.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -125,7 +126,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 45 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
-| `hooks/` | 22 global + 5 skill-scoped | Quality gates, path safety, prompt governance, session lifecycle |
+| `hooks/` | 28 entries / 14 events | Quality gates, path safety, prompt governance, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
 | `constitution.md` | 6 articles | Machine-enforced safety rules |
 | `rules/` | auto-injected | Language-specific and custom rules injected into your configs |
@@ -148,7 +149,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1133 tests)
+├── tests/               # Bats test suite (1142 tests)
 └── CHANGELOG.md
 ```
 

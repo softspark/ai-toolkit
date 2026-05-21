@@ -1,5 +1,5 @@
 {
-  "version": "4.3.1",
+  "version": "4.3.2",
   "components": {
     "agents": {
       "description": "44 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
@@ -16,7 +16,7 @@
       "tags": ["core", "skills", "commands"]
     },
     "hooks": {
-      "description": "22 global hook entries across 12 lifecycle events + 5 skill-scoped lifecycle hooks",
+      "description": "28 hook entries across 14 lifecycle events",
       "path": "app/hooks.json + app/hooks/*.sh",
       "target": "~/.claude/settings.json (merge) + ~/.softspark/ai-toolkit/hooks/ (copy)",
       "type": "merge+copy",

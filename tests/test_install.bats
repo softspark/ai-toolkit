@@ -72,6 +72,10 @@ teardown() {
     for event in PreCompact PostToolUse UserPromptSubmit SubagentStart SubagentStop SessionEnd; do
         grep -q "\"$event\"" "$settings" || { echo "MISSING hook event: $event"; return 1; }
     done
+    grep -q 'AI_TOOLKIT_HOOK_QUIET=1.*user-prompt-submit.sh' "$settings" || {
+        echo "UserPromptSubmit hook should run quietly"
+        return 1
+    }
 
     # Hook scripts installed and executable
     for script in pre-compact.sh post-tool-use.sh user-prompt-submit.sh subagent-start.sh subagent-stop.sh session-end.sh; do

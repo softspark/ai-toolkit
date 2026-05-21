@@ -24,23 +24,71 @@ ai_toolkit_has_search_provider() {
     [ -n "${AI_TOOLKIT_SEARCH_PROVIDER:-}" ] && return 0
     [ -n "${CLAUDE_SEARCH_PROVIDER:-}" ] && return 0
 
-    local candidates=(
+    local json_candidates=(
         "$PWD/.mcp.json"
+        "$PWD/.claude/settings.local.json"
+        "$PWD/.claude/settings.json"
         "$PWD/.claude/mcp.json"
         "$PWD/.cursor/mcp.json"
         "$PWD/.gemini/settings.json"
+        "$HOME/.mcp.json"
         "$HOME/.claude.json"
         "$HOME/.claude/settings.json"
-        "$HOME/.codex/config.toml"
+        "$HOME/.cursor/mcp.json"
         "$HOME/.gemini/settings.json"
     )
     local path
-    for path in "${candidates[@]}"; do
+    for path in "${json_candidates[@]}"; do
         [ -f "$path" ] || continue
-        if grep -Eqi 'rag[-_]?mcp|smart_query|hybrid_search_kb|crag_search|multi_hop_search|websearch|web-fetch|web_fetch|web_search' "$path"; then
+        if ai_toolkit_json_has_search_provider "$path"; then
+            return 0
+        fi
+    done
+
+    local toml_candidates=(
+        "$HOME/.codex/config.toml"
+    )
+    for path in "${toml_candidates[@]}"; do
+        [ -f "$path" ] || continue
+        if ai_toolkit_toml_has_search_provider "$path"; then
             return 0
         fi
     done
 
     return 1
+}
+
+ai_toolkit_search_provider_pattern() {
+    printf '%s\n' '(^|[^[:alnum:]])(([^[:space:]]*[-_])?rag([-_][^[:space:]]*)?|rag[-_]?mcp|web[-_]?search|search)([^[:alnum:]]|$)'
+}
+
+ai_toolkit_json_has_search_provider() {
+    local path="$1"
+    local pattern
+    pattern="$(ai_toolkit_search_provider_pattern)"
+
+    command -v jq >/dev/null 2>&1 || return 1
+    jq -er '
+        [
+            (.mcpServers // {} | to_entries[]? | .key),
+            (.mcp_servers // {} | to_entries[]? | .key),
+            (.mcp // {} | to_entries[]? | .key)
+        ] | join(" ")
+    ' "$path" 2>/dev/null | grep -Eiq "$pattern"
+}
+
+ai_toolkit_toml_has_search_provider() {
+    local path="$1"
+    local pattern
+    pattern="$(ai_toolkit_search_provider_pattern)"
+
+    awk '
+        /^\[mcp_servers[."]/ {
+            line=$0
+            sub(/^\[mcp_servers[."]?/, "", line)
+            sub(/"\]$/, "", line)
+            sub(/\]$/, "", line)
+            print line
+        }
+    ' "$path" 2>/dev/null | grep -Eiq "$pattern"
 }

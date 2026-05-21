@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 
-HOOKS_PREFIX = '"$HOME/.softspark/ai-toolkit/hooks/'
+HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_QUIET=1 "$HOME/.softspark/ai-toolkit/hooks/'
 
 # Hooks compatible with Codex, grouped by event.
 # Format: (matcher, script_name)

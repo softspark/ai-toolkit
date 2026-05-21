@@ -326,6 +326,12 @@ EOF
     echo "$output" | grep -q "REMINDER"
 }
 
+@test "session-start: quiet mode suppresses startup context" {
+    AI_TOOLKIT_HOOK_QUIET=1 run_hook "session-start.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
 @test "session-start: includes session context when file exists" {
     mkdir -p "$TEST_TMP/project/.claude"
     echo "Working on feature X" > "$TEST_TMP/project/.claude/session-context.md"
@@ -443,6 +449,13 @@ EOF
     echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); assert data['hookSpecificOutput']['additionalContext']"
 }
 
+@test "user-prompt-submit: quiet mode suppresses context but still arms search flag" {
+    AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_SEARCH_FIRST=strict run_hook_with_input "user-prompt-submit.sh" '{"session_id":"quiet-search","prompt":"debug this hook output issue with enough detail"}'
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ -f "$HOME/.softspark/ai-toolkit/state/search-required-quiet-search.flag" ]
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # post-tool-use.sh
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -468,6 +481,12 @@ EOF
     AI_TOOLKIT_HOOK_FORMAT=json run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"docs/README.md"}}'
     [ "$status" -eq 0 ]
     echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); assert 'docs/README.md' in data['hookSpecificOutput']['additionalContext']"
+}
+
+@test "post-tool-use: quiet mode suppresses informational context" {
+    AI_TOOLKIT_HOOK_QUIET=1 run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"docs/README.md"}}'
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
 }
 
 @test "post-tool-use: reports test file update" {

@@ -86,6 +86,21 @@ print('ok')
     grep -q '.softspark/ai-toolkit/hooks' "$CX_DIR/.codex/hooks.json"
 }
 
+@test "codex: generated hooks run in quiet mode" {
+    run python3 -c "
+import json
+data = json.load(open('$CX_DIR/.codex/hooks.json'))
+for entries in data['hooks'].values():
+    for entry in entries:
+        for hook in entry.get('hooks', []):
+            command = hook.get('command', '')
+            assert command.startswith('AI_TOOLKIT_HOOK_QUIET=1 '), command
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
 @test "codex: Pre/PostToolUse entries use the Bash matcher (upstream limitation)" {
     run python3 -c "
 import json

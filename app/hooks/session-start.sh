@@ -4,12 +4,18 @@
 # Fires on: SessionStart (startup|compact)
 # Output goes to Claude's context as plain text.
 
-# 1. Mandatory rules reminder
-echo "MANDATORY: Before answering ANY technical question, apply ALL rules from your CLAUDE.md files (global + project). Follow the exact order of operations defined there. Do NOT skip mandatory steps even if you think you already know the answer."
-echo "REMINDER: When writing features or fixing bugs, ensure tests cover the changes. When modifying API, config, or setup, update relevant documentation. Propose these steps to the user — do not silently skip them."
-
 # shellcheck source=_locate-toolkit.sh
 source "$(dirname "$0")/_locate-toolkit.sh"
+
+emit_context() {
+    if [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ]; then
+        printf '%s\n' "$1"
+    fi
+}
+
+# 1. Mandatory rules reminder
+emit_context "MANDATORY: Before answering ANY technical question, apply ALL rules from your CLAUDE.md files (global + project). Follow the exact order of operations defined there. Do NOT skip mandatory steps even if you think you already know the answer."
+emit_context "REMINDER: When writing features or fixing bugs, ensure tests cover the changes. When modifying API, config, or setup, update relevant documentation. Propose these steps to the user — do not silently skip them."
 
 # 1a. Reset per-session edit state (used by revert-guard, test-cohesion, quality-gate)
 SESSION_ID_INPUT=""
@@ -29,7 +35,7 @@ find "$HOME/.softspark/ai-toolkit/state" -maxdepth 1 -name 'search-required-*.fl
 # 2. Check for updates (cached, max once per 24h, non-blocking)
 VERSION_MSG=$(python3 "$TOOLKIT_DIR/scripts/version_check.py" 2>/dev/null)
 if [ -n "$VERSION_MSG" ]; then
-    echo "$VERSION_MSG"
+    emit_context "$VERSION_MSG"
     # Strip shell/AppleScript/PowerShell metacharacters before interpolating into
     # notification commands. VERSION_MSG is version_check.py output which should
     # be plain ASCII, but sanitize anyway as defense in depth.
@@ -46,20 +52,20 @@ fi
 
 # 3. Load session context (if available)
 SESSION_FILE=".claude/session-context.md"
-if [ -f "$SESSION_FILE" ]; then
-    echo "=== Session Context ==="
+if [ -f "$SESSION_FILE" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ]; then
+    printf '%s\n' "=== Session Context ==="
     cat "$SESSION_FILE"
-    echo "====================="
+    printf '%s\n' "====================="
 fi
 
 # 3. Load active instincts (if any)
 INSTINCTS_DIR=".claude/instincts"
-if [ -d "$INSTINCTS_DIR" ] && ls "$INSTINCTS_DIR"/*.md >/dev/null 2>&1; then
-    echo "=== Active Instincts ==="
+if [ -d "$INSTINCTS_DIR" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && ls "$INSTINCTS_DIR"/*.md >/dev/null 2>&1; then
+    printf '%s\n' "=== Active Instincts ==="
     for f in "$INSTINCTS_DIR"/*.md; do
-        echo "- $(head -1 "$f")"
+        printf '%s\n' "- $(head -1 "$f")"
     done
-    echo "========================"
+    printf '%s\n' "========================"
 fi
 
 exit 0

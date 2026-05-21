@@ -31,6 +31,59 @@ if ! ai_toolkit_has_search_provider; then
     exit 0
 fi
 
+ai_toolkit_codex_log_has_search_since() {
+    local flag="$1"
+    local log="$HOME/.codex/log/codex-tui.log"
+    [ -f "$log" ] || return 1
+
+    python3 - "$flag" "$log" <<'PY' 2>/dev/null
+import re
+import sys
+from datetime import datetime
+from pathlib import Path
+
+flag_path = Path(sys.argv[1])
+log_path = Path(sys.argv[2])
+try:
+    since = int(flag_path.read_text(encoding="utf-8").splitlines()[0])
+except (OSError, ValueError, IndexError):
+    sys.exit(1)
+
+tool_pattern = re.compile(
+    r"(ToolCall: (mcp__[^ ]*__(smart_query|hybrid_search_kb|crag_search|multi_hop_search|verify_answer)|web_(search|fetch))|"
+    r'tool\.name="(smart_query|hybrid_search_kb|crag_search|multi_hop_search|verify_answer)")',
+    re.IGNORECASE,
+)
+
+try:
+    with log_path.open("rb") as handle:
+        handle.seek(0, 2)
+        size = handle.tell()
+        handle.seek(max(0, size - 2_000_000))
+        lines = handle.read().decode("utf-8", errors="replace").splitlines()
+except OSError:
+    sys.exit(1)
+
+for line in lines:
+    if not tool_pattern.search(line):
+        continue
+    raw_ts = line.split(" ", 1)[0]
+    try:
+        ts = datetime.fromisoformat(raw_ts.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        continue
+    if ts >= since:
+        sys.exit(0)
+
+sys.exit(1)
+PY
+}
+
+if ai_toolkit_codex_log_has_search_since "$FLAG"; then
+    rm -f "$FLAG" 2>/dev/null
+    exit 0
+fi
+
 # Read the original prompt (line 2 of the flag file) for the reminder.
 PROMPT_PREVIEW=$(sed -n '2p' "$FLAG" 2>/dev/null | head -c 200)
 rm -f "$FLAG" 2>/dev/null  # one-shot; do not loop forever

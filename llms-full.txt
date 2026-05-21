@@ -5250,10 +5250,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.4.2"
+version: "1.4.3"
 created: "2026-04-08"
-last_updated: "2026-04-29"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing."
+last_updated: "2026-05-19"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing. v1.4.3 tightens the Phase 8.4 URL pin check so the success-message count includes only entries with a `url:` field, not local `path:` entries, and documents the `sources.json` envelope shape."
 ---
 
 # SOP: Release Verification
@@ -5550,11 +5550,13 @@ python3 scripts/audit_skills.py --permissions | head -40
 
 ### 8.4 URL-sourced rules/hooks are checksum-pinned
 
+`sources.json` is an envelope of the form `{"schema_version": 1, "rules"|"hooks": {...}}`, so the jq filter must pick the nested map before piping into the pin assertion. The URL-count in the success message ignores local `path:`-only entries — only entries with a `url:` field are pinned and counted.
+
 ```bash
 jq '.rules // .hooks // {}' ~/.softspark/ai-toolkit/rules/sources.json 2>/dev/null \
-  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; print(f'RULE PIN OK: {len(d)} URL rules, all with sha256')"
+  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; url_n=sum(1 for v in d.values() if v.get('url')); print(f'RULE PIN OK: {url_n} URL rules, all with sha256')"
 jq '.hooks // {}' ~/.softspark/ai-toolkit/hooks/external/sources.json 2>/dev/null \
-  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; print(f'HOOK PIN OK: {len(d)} URL hooks, all with sha256')"
+  | python3 -c "import json, sys; d=json.load(sys.stdin) or {}; bad=[n for n,v in d.items() if v.get('url') and not v.get('sha256')]; assert not bad, f'UNPINNED: {bad}'; url_n=sum(1 for v in d.values() if v.get('url')); print(f'HOOK PIN OK: {url_n} URL hooks, all with sha256')"
 ```
 
 **Verify:**
@@ -6926,9 +6928,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.0"
+version: "1.0.1"
 created: "2026-04-12"
-last_updated: "2026-04-13"
+last_updated: "2026-05-21"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -7033,6 +7035,11 @@ This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
 `~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
 `remove-hook` cleans both Claude and Codex targets.
 
+Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. This keeps
+non-blocking reminders and startup context out of the visible Codex hook output
+while preserving hook side effects and blocking decisions such as search-first
+Stop enforcement.
+
 ## Behavioral Limits
 
 Codex wrappers preserve workflow intent, but not every Claude runtime behavior
@@ -7043,6 +7050,10 @@ Known limits:
 - No native Codex equivalent of tmux-backed Agent Teams lifecycle events
 - No separate task object model equivalent to Claude `Task*` APIs
 - Hook event coverage is narrower than Claude Code
+- MCP search tool calls may not fire the shared `PostToolUse` search tracker,
+  so `stop-search-check.sh` also checks `~/.codex/log/codex-tui.log` for
+  `smart_query`, `hybrid_search_kb`, `crag_search`, `multi_hop_search`, and
+  `verify_answer` calls after the search-first flag timestamp before blocking.
 
 These are runtime platform limits, not installation defects.
 
@@ -8824,9 +8835,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.1"
+version: "1.5.2"
 created: "2026-03-27"
-last_updated: "2026-05-12"
+last_updated: "2026-05-21"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -8870,6 +8881,11 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 2. Injects REMINDER about tests and documentation
 3. Loads session context from `.claude/session-context.md` (if exists)
 4. Loads active instincts from `.claude/instincts/*.md` (if any)
+
+When `AI_TOOLKIT_HOOK_QUIET=1`, the hook still performs session-state reset,
+stale search-flag cleanup, and update notification side effects, but suppresses
+all informational stdout so runtimes such as Codex do not show startup hook
+context in the UI.
 
 ### Notification — `notify-waiting.sh`
 
@@ -8925,7 +8941,10 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 
 **Action:** Adds a lightweight governance reminder: plan mode for architectural work, evidence-first debugging, KB-first research, and validation expectations.
 
-Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+Skipped when `TOOLKIT_HOOK_PROFILE=minimal`. The bundled `app/hooks.json`
+registers this command with `AI_TOOLKIT_HOOK_QUIET=1`, so it still arms or
+clears the per-session search-first flag but suppresses the informational
+reminder output.
 
 ### UserPromptSubmit (usage tracking) — `track-usage.sh`
 
@@ -9198,11 +9217,11 @@ First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`.
 | Field | Value |
 |-------|-------|
 | Event | `PostToolUse` |
-| Matcher | `mcp__rag-mcp__smart_query\|mcp__rag-mcp__hybrid_search_kb\|mcp__rag-mcp__crag_search\|mcp__rag-mcp__multi_hop_search\|mcp__rag-mcp__verify_answer\|WebSearch\|WebFetch` |
+| Matcher | `mcp__.*__(smart_query\|hybrid_search_kb\|crag_search\|multi_hop_search\|verify_answer)\|WebSearch\|WebFetch` |
 | Script | `~/.softspark/ai-toolkit/hooks/search-tracker.sh` |
 | Fires | After any search-style tool call |
 
-**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag` (per-session, keyed by `session_id` from the hook stdin payload, falling back to `transcript_path` basename, then `default`). Pairs with `user-prompt-submit.sh` (sets the flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag is still set). Together they enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs and without cross-session interference when multiple Claude Code windows run in parallel.
+**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag` (per-session, keyed by `session_id` from the hook stdin payload, falling back to `transcript_path` basename, then `default`). Pairs with `user-prompt-submit.sh` (sets the flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag is still set). Search provider detection parses actual MCP server names from `mcpServers`, `mcp_servers`, or `mcp` config blocks; hook matchers and permission allowlists do not count as providers. Together the hooks enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs and without cross-session interference when multiple Claude Code windows run in parallel.
 
 Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -9215,7 +9234,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/stop-search-check.sh` |
 | Fires | When Claude finishes a response |
 
-**Action:** If `search-required-<session_id>.flag` for the calling session is still present (no search tool ran during this turn) and a search provider is still detectable, emits `{"decision":"block","reason":"..."}` to continue the conversation with a search-first reminder. If no RAG/Web provider is detected, it clears the stale flag and exits 0, so offline/no-MCP users are not blocked. Flags are scoped by `session_id` from the hook stdin payload so a Stop in session B never consumes session A's flag (and vice versa). Stale per-session flags older than 60 minutes are GC'd on the next `SessionStart`.
+**Action:** If `search-required-<session_id>.flag` for the calling session is still present (no search tool ran during this turn) and a search provider is still detectable, emits `{"decision":"block","reason":"..."}` to continue the conversation with a search-first reminder. If no RAG/Web provider is detected, it clears the stale flag and exits 0, so offline/no-MCP users are not blocked. On Codex, where MCP search tools may not trigger the shared `PostToolUse` tracker, the hook also checks `~/.codex/log/codex-tui.log` for search tool calls after the flag timestamp before blocking. Flags are scoped by `session_id` from the hook stdin payload so a Stop in session B never consumes session A's flag (and vice versa). Stale per-session flags older than 60 minutes are GC'd on the next `SessionStart`.
 
 **Overrides:** `CLAUDE_SKIP_SEARCH_FIRST=1`, `AI_TOOLKIT_SEARCH_FIRST=off`, or `AI_TOOLKIT_SEARCH_FIRST=strict` to force enforcement. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -9253,7 +9272,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | `scripts/test_cohesion.py` | Resolves changed paths → test commands via cohesion map. First-match-wins. Stdlib-only. |
 | `app/hooks/test-cohesion-map.json` | Toolkit-default path → tests mapping (used when no project map exists). |
 | `app/hooks/_locate-toolkit.sh` | Shared bash helper that exports `$TOOLKIT_DIR` for hooks needing scripts/. |
-| `app/hooks/_hook-io.sh` | Shared bash helper that normalizes hook payloads across Claude, Augment, Gemini, Windsurf, and Cursor-style JSON. |
+| `app/hooks/_hook-io.sh` | Shared bash helper that normalizes hook payloads across Claude, Augment, Gemini, Windsurf, and Cursor-style JSON. Honors `AI_TOOLKIT_HOOK_QUIET=1` for non-blocking context output. |
 | `app/hooks/_search-capability.sh` | Shared bash helper that enables search-first blocking only when RAG/Web is configured or strict mode is requested. |
 
 ## Runtime Profiles
@@ -9269,6 +9288,11 @@ Set in `.claude/settings.local.json`:
 | `minimal` | Only destructive guard + SessionStart |
 | `standard` | All hooks (default) |
 | `strict` | Standard + mypy --strict on task completion |
+
+Set `AI_TOOLKIT_HOOK_QUIET=1` on hook commands to suppress non-blocking
+informational context while preserving side effects and blocking decisions.
+Codex-generated hooks use this mode by default, and Claude's bundled
+`UserPromptSubmit` entry uses it to avoid visible prompt hook context.
 
 ## Architecture
 

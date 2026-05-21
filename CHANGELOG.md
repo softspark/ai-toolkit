@@ -7,6 +7,40 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.3.2 - quiet hooks and no-RAG search-first hardening (2026-05-21)
+
+Patch release. Fixes noisy lifecycle hook output in Codex and Claude prompt-submit flows while preserving search-first enforcement and blocking decisions.
+
+### Fixed
+
+- **Quiet Codex startup hooks** - `scripts/generate_codex_hooks.py` now prefixes generated Codex hook commands with `AI_TOOLKIT_HOOK_QUIET=1`, preventing informational `SessionStart` and prompt reminders from appearing as visible hook context.
+- **Quiet Claude prompt-submit hook** - `app/hooks.json` now installs `user-prompt-submit.sh` with `AI_TOOLKIT_HOOK_QUIET=1`, suppressing non-blocking prompt governance output while still arming the per-session search-first flag.
+- **No-RAG false positives** - `_search-capability.sh` now detects search providers from actual MCP server definitions only, so hook matchers and permission allowlists no longer make no-RAG installs block incorrectly.
+- **Codex search tracking gap** - `stop-search-check.sh` now checks the Codex TUI log for search tool calls after the search-first flag timestamp before blocking, covering Codex MCP calls that do not fire the shared `PostToolUse` tracker.
+
+### Changed
+
+- **Hook output helper** - `_hook-io.sh` supports `AI_TOOLKIT_HOOK_QUIET=1` for non-blocking context output.
+- **Runtime hook docs** - `kb/reference/hooks-catalog.md` and `kb/reference/codex-cli-compatibility.md` document quiet mode and the Codex search-first fallback.
+- **Manifest hook count** - `manifest.json` now describes the current 28 hook entries across 14 lifecycle events.
+
+### Tests
+
+- **Hook quiet-mode coverage** - `tests/test_hooks.bats`, `tests/test_codex.bats`, and `tests/test_install.bats` cover quiet mode for `SessionStart`, `UserPromptSubmit`, `PostToolUse`, Codex hook generation, and installed Claude hook configuration.
+- **Search-first flow coverage** - `tests/test_search_first_flow.bats` covers real-provider detection, no-RAG behavior, custom `customer-rag` style providers, and Codex log fallback.
+
+### Ecosystem
+
+- **Snapshot refresh** - `benchmarks/ecosystem-doctor-snapshot.json` refreshed after class A/C upstream documentation and version drift review. No generator contract changes were required.
+
+### Verification
+
+- `npm test` - 1142 passing.
+- `python3 scripts/validate.py --strict` - passed.
+- `python3 scripts/audit_skills.py --ci` - passed with 0 HIGH / 0 WARN.
+
+---
+
 ## v4.3.1 - per-session search-first flag (2026-05-19)
 
 Patch release. Fixes a cross-session race condition in the search-first enforcement trio (`user-prompt-submit.sh` + `search-tracker.sh` + `stop-search-check.sh`): the single global flag file `~/.softspark/ai-toolkit/state/search-required.flag` was shared by every parallel Claude Code window, so a Stop in session B could consume session A's flag (or vice versa), blocking unrelated turns with someone else's prompt. Also unblocks `bats 1.13` regression in the test-cohesion runner default.
