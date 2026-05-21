@@ -6928,7 +6928,7 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.1"
+version: "1.0.2"
 created: "2026-04-12"
 last_updated: "2026-05-21"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
@@ -7039,6 +7039,10 @@ Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. This keeps
 non-blocking reminders and startup context out of the visible Codex hook output
 while preserving hook side effects and blocking decisions such as search-first
 Stop enforcement.
+
+Plain-text informational hook context is also silent by default in the shared
+hook helper. Set `AI_TOOLKIT_HOOK_VERBOSE=1` only when debugging hook output
+outside the Codex UI.
 
 ## Behavioral Limits
 
@@ -8835,7 +8839,7 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.2"
+version: "1.5.3"
 created: "2026-03-27"
 last_updated: "2026-05-21"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -8882,10 +8886,10 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 3. Loads session context from `.claude/session-context.md` (if exists)
 4. Loads active instincts from `.claude/instincts/*.md` (if any)
 
-When `AI_TOOLKIT_HOOK_QUIET=1`, the hook still performs session-state reset,
-stale search-flag cleanup, and update notification side effects, but suppresses
-all informational stdout so runtimes such as Codex do not show startup hook
-context in the UI.
+By default the hook performs session-state reset, stale search-flag cleanup, and
+update notification side effects without printing informational stdout. Set
+`AI_TOOLKIT_HOOK_VERBOSE=1` to print the startup reminders and loaded context
+for debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
 
 ### Notification — `notify-waiting.sh`
 
@@ -8939,12 +8943,16 @@ context in the UI.
 | Script | `~/.softspark/ai-toolkit/hooks/user-prompt-submit.sh` |
 | Fires | Before Claude starts working on a submitted prompt |
 
-**Action:** Adds a lightweight governance reminder: plan mode for architectural work, evidence-first debugging, KB-first research, and validation expectations.
+**Action:** Maintains the per-session search-first flag used by Stop enforcement
+and can provide a lightweight governance reminder: plan mode for architectural
+work, evidence-first debugging, KB-first research, and validation expectations.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`. The bundled `app/hooks.json`
 registers this command with `AI_TOOLKIT_HOOK_QUIET=1`, so it still arms or
 clears the per-session search-first flag but suppresses the informational
-reminder output.
+reminder output. In plain-text mode, informational reminders are silent by
+default and require `AI_TOOLKIT_HOOK_VERBOSE=1`; JSON hook output remains
+available with `AI_TOOLKIT_HOOK_FORMAT=json`.
 
 ### UserPromptSubmit (usage tracking) — `track-usage.sh`
 
@@ -9272,7 +9280,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | `scripts/test_cohesion.py` | Resolves changed paths → test commands via cohesion map. First-match-wins. Stdlib-only. |
 | `app/hooks/test-cohesion-map.json` | Toolkit-default path → tests mapping (used when no project map exists). |
 | `app/hooks/_locate-toolkit.sh` | Shared bash helper that exports `$TOOLKIT_DIR` for hooks needing scripts/. |
-| `app/hooks/_hook-io.sh` | Shared bash helper that normalizes hook payloads across Claude, Augment, Gemini, Windsurf, and Cursor-style JSON. Honors `AI_TOOLKIT_HOOK_QUIET=1` for non-blocking context output. |
+| `app/hooks/_hook-io.sh` | Shared bash helper that normalizes hook payloads across Claude, Augment, Gemini, Windsurf, and Cursor-style JSON. Honors `AI_TOOLKIT_HOOK_QUIET=1` and `AI_TOOLKIT_HOOK_VERBOSE=1` for non-blocking context output. |
 | `app/hooks/_search-capability.sh` | Shared bash helper that enables search-first blocking only when RAG/Web is configured or strict mode is requested. |
 
 ## Runtime Profiles
@@ -9289,10 +9297,11 @@ Set in `.claude/settings.local.json`:
 | `standard` | All hooks (default) |
 | `strict` | Standard + mypy --strict on task completion |
 
-Set `AI_TOOLKIT_HOOK_QUIET=1` on hook commands to suppress non-blocking
-informational context while preserving side effects and blocking decisions.
-Codex-generated hooks use this mode by default, and Claude's bundled
-`UserPromptSubmit` entry uses it to avoid visible prompt hook context.
+Non-blocking informational context is silent in plain-text mode by default while
+side effects and blocking decisions still run. Set `AI_TOOLKIT_HOOK_VERBOSE=1`
+only when debugging hook context locally. `AI_TOOLKIT_HOOK_QUIET=1` keeps hook
+commands explicitly silent, and Codex-generated hooks plus Claude's bundled
+`UserPromptSubmit` entry use it to avoid visible prompt hook context.
 
 ## Architecture
 

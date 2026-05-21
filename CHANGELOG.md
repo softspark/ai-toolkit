@@ -7,6 +7,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.3.3 - silent hook context roll-forward (2026-05-21)
+
+Patch release. Rolls forward the quiet-hook release with a stricter default: non-blocking plain-text hook context is now silent even when a runtime uses a stale or manually copied command without `AI_TOOLKIT_HOOK_QUIET=1`.
+
+### Fixed
+
+- **Silent plain-text context by default** - non-blocking hook context output now requires `AI_TOOLKIT_HOOK_VERBOSE=1` in plain-text mode, so prompt-submit and startup reminders do not leak into the visible chat window.
+- **SessionStart default output** - `session-start.sh` keeps session-state reset, stale search-flag cleanup, and update-notification side effects, but no longer prints startup reminders or loaded context unless verbose mode is enabled.
+
+### Changed
+
+- **Hook output helper** - `_hook-io.sh` supports `AI_TOOLKIT_HOOK_VERBOSE=1` for local debugging while keeping plain-text context silent by default.
+- **Runtime hook docs** - `kb/reference/hooks-catalog.md` and `kb/reference/codex-cli-compatibility.md` document the new silent-by-default behavior and verbose opt-in.
+
+### Tests
+
+- **Silent default coverage** - `tests/test_hooks.bats` now verifies default silence for `SessionStart` and `UserPromptSubmit`, plus verbose opt-in for the same context messages.
+
+### Verification
+
+- `npm test` - 1144 passing.
+- `python3 scripts/validate.py --strict` - passed.
+
+---
+
 ## v4.3.2 - quiet hooks and no-RAG search-first hardening (2026-05-21)
 
 Patch release. Fixes noisy lifecycle hook output in Codex and Claude prompt-submit flows while preserving search-first enforcement and blocking decisions.

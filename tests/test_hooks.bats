@@ -315,15 +315,21 @@ EOF
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @test "session-start: outputs mandatory rules reminder" {
-    run_hook "session-start.sh"
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "MANDATORY"
 }
 
 @test "session-start: outputs test/docs reminder" {
-    run_hook "session-start.sh"
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "REMINDER"
+}
+
+@test "session-start: suppresses startup context by default" {
+    run_hook "session-start.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
 }
 
 @test "session-start: quiet mode suppresses startup context" {
@@ -336,7 +342,7 @@ EOF
     mkdir -p "$TEST_TMP/project/.claude"
     echo "Working on feature X" > "$TEST_TMP/project/.claude/session-context.md"
     cd "$TEST_TMP/project"
-    run_hook "session-start.sh"
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Session Context"
 }
@@ -345,7 +351,7 @@ EOF
     mkdir -p "$TEST_TMP/project/.claude/instincts"
     echo "Always verify before commit" > "$TEST_TMP/project/.claude/instincts/verify.md"
     cd "$TEST_TMP/project"
-    run_hook "session-start.sh"
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Active Instincts"
 }
@@ -411,35 +417,41 @@ EOF
     [ -z "$output" ]
 }
 
-@test "user-prompt-submit: outputs no-provider advisory by default" {
-    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"how does auth work?"}'
+@test "user-prompt-submit: outputs no-provider advisory in verbose mode" {
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "user-prompt-submit.sh" '{"prompt":"how does auth work?"}'
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "advisory only"
 }
 
-@test "user-prompt-submit: outputs Step 0 reminder in strict mode" {
-    AI_TOOLKIT_SEARCH_FIRST=strict run_hook_with_input "user-prompt-submit.sh" '{"prompt":"how does auth work?"}'
+@test "user-prompt-submit: outputs Step 0 reminder in verbose strict mode" {
+    AI_TOOLKIT_HOOK_VERBOSE=1 AI_TOOLKIT_SEARCH_FIRST=strict run_hook_with_input "user-prompt-submit.sh" '{"prompt":"how does auth work?"}'
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Step 0"
 }
 
+@test "user-prompt-submit: suppresses context by default" {
+    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"how does auth work?"}'
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
 @test "user-prompt-submit: detects architectural prompt" {
-    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"design a migration strategy"}'
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "user-prompt-submit.sh" '{"prompt":"design a migration strategy"}'
     echo "$output" | grep -q "architectural"
 }
 
 @test "user-prompt-submit: detects debugging prompt" {
-    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"debug this error in auth"}'
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "user-prompt-submit.sh" '{"prompt":"debug this error in auth"}'
     echo "$output" | grep -q "debugging"
 }
 
 @test "user-prompt-submit: default prompt gets generic reminder" {
-    run_hook_with_input "user-prompt-submit.sh" '{"prompt":"add a button to the form"}'
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "user-prompt-submit.sh" '{"prompt":"add a button to the form"}'
     echo "$output" | grep -q "KB-first"
 }
 
 @test "user-prompt-submit: reads Windsurf user_prompt payload" {
-    run_hook_with_input "user-prompt-submit.sh" '{"tool_info":{"user_prompt":"debug failing hook payload mapping"}}'
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "user-prompt-submit.sh" '{"tool_info":{"user_prompt":"debug failing hook payload mapping"}}'
     echo "$output" | grep -q "debugging"
 }
 
@@ -468,12 +480,12 @@ EOF
 }
 
 @test "post-tool-use: reports markdown file update" {
-    run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"docs/README.md"}}'
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"docs/README.md"}}'
     echo "$output" | grep -q "docs and examples"
 }
 
 @test "post-tool-use: reads Windsurf file_path payload" {
-    run_hook_with_input "post-tool-use.sh" '{"tool_name":"post_write_code","tool_info":{"file_path":"docs/README.md"}}'
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "post-tool-use.sh" '{"tool_name":"post_write_code","tool_info":{"file_path":"docs/README.md"}}'
     echo "$output" | grep -q "docs and examples"
 }
 
@@ -490,19 +502,19 @@ EOF
 }
 
 @test "post-tool-use: reports test file update" {
-    run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"tests/test_auth.bats"}}'
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"tests/test_auth.bats"}}'
     echo "$output" | grep -q "test file"
 }
 
 @test "post-tool-use: reports config file update" {
-    run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"config/settings.json"}}'
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook_with_input "post-tool-use.sh" '{"tool_name":"Edit","tool_input":{"file_path":"config/settings.json"}}'
     echo "$output" | grep -q "config file"
 }
 
 @test "post-tool-use: handles missing file path" {
     unset CLAUDE_TOOL_INPUT_FILE_PATH
     export CLAUDE_TOOL_NAME="Write"
-    run_hook "post-tool-use.sh"
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "post-tool-use.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "PostToolUse"
 }

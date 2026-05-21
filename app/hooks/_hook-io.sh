@@ -64,7 +64,7 @@ hook_emit_context() {
     if [ "${AI_TOOLKIT_HOOK_FORMAT:-}" = "json" ]; then
         jq -nc --arg msg "$message" \
             '{"hookSpecificOutput":{"additionalContext":$msg},"suppressOutput":true}'
-    else
+    elif [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" = "1" ]; then
         printf '%s\n' "$message"
     fi
 }

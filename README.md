@@ -6,17 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1142%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1144%20passing-success)](tests/)
 
-## What's New in v4.3.2
+## What's New in v4.3.3
 
-Patch release. Fixes noisy hook output and hardens search-first behavior across Claude and Codex.
+Patch release. Rolls forward quiet hook handling so informational hook context stays out of the visible chat window even with stale or manually copied hook commands.
 
-- **Quiet hook context**: Codex startup hooks and Claude/Codex `UserPromptSubmit` now suppress non-blocking reminder output while preserving side effects and blocking decisions.
-- **Search provider detection**: search-first hooks now count only real MCP server definitions, not hook matchers or permission allowlists, so no-RAG installs stay advisory instead of blocked.
-- **Codex search-first fallback**: `stop-search-check.sh` recognizes search calls recorded in the Codex TUI log when MCP tool calls do not trigger `PostToolUse`.
-- **Runtime refresh coverage**: installer tests now assert that Claude `UserPromptSubmit` is installed with quiet mode enabled.
-- **Ecosystem snapshot refresh**: release prep refreshed upstream editor/tool drift baselines after class A/C documentation and version drift review.
+- **Silent hook context by default**: `SessionStart`, `UserPromptSubmit`, and other non-blocking plain-text context output now require `AI_TOOLKIT_HOOK_VERBOSE=1`.
+- **Side effects preserved**: search-first flags, session-state reset, stale-flag cleanup, and blocking decisions still run without printing reminder text.
+- **Runtime refresh applied**: installed hook scripts and Codex/Claude hook config pick up the silent default.
+- **Test coverage updated**: hook tests now cover default silence and verbose opt-in, bringing the suite to 1144 tests.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -149,7 +148,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1142 tests)
+├── tests/               # Bats test suite (1144 tests)
 └── CHANGELOG.md
 ```
 

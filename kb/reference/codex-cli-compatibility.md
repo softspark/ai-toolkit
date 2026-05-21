@@ -3,7 +3,7 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.1"
+version: "1.0.2"
 created: "2026-04-12"
 last_updated: "2026-05-21"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
@@ -114,6 +114,10 @@ Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. This keeps
 non-blocking reminders and startup context out of the visible Codex hook output
 while preserving hook side effects and blocking decisions such as search-first
 Stop enforcement.
+
+Plain-text informational hook context is also silent by default in the shared
+hook helper. Set `AI_TOOLKIT_HOOK_VERBOSE=1` only when debugging hook output
+outside the Codex UI.
 
 ## Behavioral Limits
 

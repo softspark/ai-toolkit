@@ -8,9 +8,9 @@
 source "$(dirname "$0")/_locate-toolkit.sh"
 
 emit_context() {
-    if [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ]; then
-        printf '%s\n' "$1"
-    fi
+    [ "${AI_TOOLKIT_HOOK_QUIET:-0}" = "1" ] && return 0
+    [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" != "1" ] && return 0
+    printf '%s\n' "$1"
 }
 
 # 1. Mandatory rules reminder
@@ -52,7 +52,7 @@ fi
 
 # 3. Load session context (if available)
 SESSION_FILE=".claude/session-context.md"
-if [ -f "$SESSION_FILE" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ]; then
+if [ -f "$SESSION_FILE" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" = "1" ]; then
     printf '%s\n' "=== Session Context ==="
     cat "$SESSION_FILE"
     printf '%s\n' "====================="
@@ -60,7 +60,7 @@ fi
 
 # 3. Load active instincts (if any)
 INSTINCTS_DIR=".claude/instincts"
-if [ -d "$INSTINCTS_DIR" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && ls "$INSTINCTS_DIR"/*.md >/dev/null 2>&1; then
+if [ -d "$INSTINCTS_DIR" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" = "1" ] && ls "$INSTINCTS_DIR"/*.md >/dev/null 2>&1; then
     printf '%s\n' "=== Active Instincts ==="
     for f in "$INSTINCTS_DIR"/*.md; do
         printf '%s\n' "- $(head -1 "$f")"
