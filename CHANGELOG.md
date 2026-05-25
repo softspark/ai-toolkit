@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.4.1 - Codex hook output compatibility fix (2026-05-25)
+
+Patch release. Fixes Codex `UserPromptSubmit` hook JSON validation failures and visible hook-context noise while preserving hook side effects.
+
+### Fixed
+
+- **Codex `UserPromptSubmit` default output** - generated Codex hooks now keep `user-prompt-submit.sh` in quiet plain-text mode, preserving search-first flag side effects without emitting visible `additionalContext` in the Codex TUI.
+- **Event-specific JSON context** - `hook_emit_context` can include `hookSpecificOutput.hookEventName`, and `user-prompt-submit.sh` emits `"UserPromptSubmit"` with `additionalContext` when JSON context mode is explicitly enabled.
+- **Prompt hook output corruption** - `user-prompt-submit.sh` now suppresses filesystem redirection errors when search-first state writes are blocked by sandboxing or local permissions, keeping JSON output parseable.
+- **Usage tracking tracebacks** - `track-usage.sh` now treats stats writes as best-effort and suppresses Python tracebacks when `~/.softspark/ai-toolkit/stats.json` cannot be written.
+
+### Verification
+
+- `bats tests/test_hooks.bats --filter 'track-usage|user-prompt-submit|post-tool-use'`
+- `python3 scripts/validate.py --strict`
+
 ## v4.4.0 - native editor skill pointers and hook governance hardening (2026-05-25)
 
 Minor release. Adds native skill pointer generation for more editor surfaces and hardens search-first governance so quiet hooks still inject model context without noisy transcript output.

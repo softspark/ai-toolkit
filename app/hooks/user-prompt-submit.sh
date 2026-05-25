@@ -28,9 +28,9 @@ mkdir -p "$STATE_DIR" 2>/dev/null
 if [ "$PROMPT_LEN" -gt 30 ] && \
    [ "${CLAUDE_SKIP_SEARCH_FIRST:-0}" != "1" ] && \
    ai_toolkit_has_search_provider; then
-    printf '%s\n%s\n' "$(date -u +%s)" "$PROMPT_TEXT" > "$FLAG" 2>/dev/null
+    { printf '%s\n%s\n' "$(date -u +%s)" "$PROMPT_TEXT" > "$FLAG"; } 2>/dev/null
 else
-    rm -f "$FLAG" 2>/dev/null
+    { rm -f "$FLAG"; } 2>/dev/null
 fi
 
 if ai_toolkit_has_search_provider; then
@@ -50,6 +50,6 @@ else
 UserPromptSubmit: apply KB-first research, keep changes minimal, and update tests/docs when behavior changes."
 fi
 
-hook_emit_context "$CONTEXT_MSG"
+hook_emit_context "UserPromptSubmit" "$CONTEXT_MSG"
 
 exit 0

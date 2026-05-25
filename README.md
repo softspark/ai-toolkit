@@ -6,16 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1149%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1151%20passing-success)](tests/)
 
-## What's New in v4.4.0
+## What's New in v4.4.1
 
-Minor release. Adds native skill pointers for more editor surfaces and hardens quiet hook governance for Claude and Codex.
+Patch release. Fixes Codex `UserPromptSubmit` hook output validation and visible hook-context noise while preserving hook side effects.
 
-- **Native editor skills**: Cursor, Windsurf, and Cline now get generated skill pointer catalogs alongside existing rule surfaces.
-- **Quiet JSON governance**: `UserPromptSubmit` keeps output quiet while still injecting `additionalContext` for search-first and workflow reminders.
-- **Codex search-first hardening**: Stop enforcement recognizes current Codex MCP log shapes and tolerates noisy skill-loader output.
-- **Release coverage updated**: generator, install, Codex, hook, and search-first tests cover the new behavior; suite count is 1149 tests.
+- **Codex-safe prompt hook defaults**: generated Codex hooks keep `UserPromptSubmit` side effects quiet without emitting visible `additionalContext` in the TUI.
+- **Event-specific hook context**: JSON context output now includes `hookSpecificOutput.hookEventName` when enabled, matching Codex's event-specific schema.
+- **Silent best-effort stats**: `track-usage.sh` no longer leaks Python tracebacks when local stats writes are blocked.
+- **Sandbox-safe search flags**: search-first flag write failures no longer corrupt JSON hook output.
+- **Release coverage updated**: hook regression coverage now includes blocked state and stats writes; suite count is 1151 tests.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -148,7 +149,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1149 tests)
+├── tests/               # Bats test suite (1151 tests)
 └── CHANGELOG.md
 ```
 

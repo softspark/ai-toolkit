@@ -22,10 +22,10 @@ SKILL_NAME=$(printf '%s' "$PROMPT_TEXT" | grep -oE '^/[a-z][a-z0-9-]*' | head -1
 [ -z "$SKILL_NAME" ] && exit 0
 
 # Ensure directory exists
-mkdir -p "$(dirname "$STATS_FILE")"
+mkdir -p "$(dirname "$STATS_FILE")" 2>/dev/null || true
 
 # Atomic update via python3
-python3 - "$STATS_FILE" "$SKILL_NAME" <<'PY'
+python3 - "$STATS_FILE" "$SKILL_NAME" 2>/dev/null <<'PY' || true
 import json
 import sys
 import os

@@ -25,10 +25,6 @@ from pathlib import Path
 
 
 HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_QUIET=1 "$HOME/.softspark/ai-toolkit/hooks/'
-HOOKS_JSON_CONTEXT_PREFIX = (
-    'AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json "$HOME/.softspark/ai-toolkit/hooks/'
-)
-
 # Hooks compatible with Codex, grouped by event.
 # Format: (matcher, script_name)
 CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
@@ -66,12 +62,7 @@ def build_hooks_json() -> dict:
     for event, entries in CODEX_HOOKS.items():
         hooks[event] = []
         for matcher, script in entries:
-            prefix = (
-                HOOKS_JSON_CONTEXT_PREFIX
-                if event == "UserPromptSubmit" and script == "user-prompt-submit.sh"
-                else HOOKS_PREFIX
-            )
-            entry: dict = {"hooks": [{"type": "command", "command": f"{prefix}{script}\""}]}
+            entry: dict = {"hooks": [{"type": "command", "command": f"{HOOKS_PREFIX}{script}\""}]}
             if matcher:
                 entry["matcher"] = matcher
             hooks[event].append(entry)

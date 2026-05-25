@@ -57,10 +57,16 @@ hook_new_content() {
 }
 
 hook_emit_context() {
-    local message="$1"
+    local event="${2:+$1}"
+    local message="${2:-$1}"
     if [ "${AI_TOOLKIT_HOOK_FORMAT:-}" = "json" ]; then
-        jq -nc --arg msg "$message" \
-            '{"hookSpecificOutput":{"additionalContext":$msg},"suppressOutput":true}'
+        if [ -n "$event" ]; then
+            jq -nc --arg event "$event" --arg msg "$message" \
+                '{"hookSpecificOutput":{"hookEventName":$event,"additionalContext":$msg},"suppressOutput":true}'
+        else
+            jq -nc --arg msg "$message" \
+                '{"hookSpecificOutput":{"additionalContext":$msg},"suppressOutput":true}'
+        fi
     elif [ "${AI_TOOLKIT_HOOK_QUIET:-0}" = "1" ]; then
         return 0
     elif [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" = "1" ]; then

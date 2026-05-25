@@ -101,7 +101,7 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
-@test "codex: UserPromptSubmit injects quiet JSON context" {
+@test "codex: UserPromptSubmit stays quiet while preserving side effects" {
     run python3 -c "
 import json
 data = json.load(open('$CX_DIR/.codex/hooks.json'))
@@ -112,7 +112,8 @@ commands = [
 ]
 matches = [c for c in commands if c.endswith('/user-prompt-submit.sh\"')]
 assert len(matches) == 1, matches
-assert 'AI_TOOLKIT_HOOK_FORMAT=json' in matches[0], matches[0]
+assert 'AI_TOOLKIT_HOOK_QUIET=1' in matches[0], matches[0]
+assert 'AI_TOOLKIT_HOOK_FORMAT=json' not in matches[0], matches[0]
 print('ok')
 "
     [ "$status" -eq 0 ]

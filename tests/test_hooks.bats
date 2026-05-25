@@ -406,6 +406,14 @@ EOF
     [ "$status" -eq 0 ]
 }
 
+@test "track-usage: write failures stay silent" {
+    rm -rf "$HOME/.softspark/ai-toolkit"
+    touch "$HOME/.softspark/ai-toolkit"
+    AI_TOOLKIT_HOOK_QUIET=1 run_hook_with_input "track-usage.sh" '{"prompt":"/debug hook"}'
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # user-prompt-submit.sh
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -458,7 +466,7 @@ EOF
 @test "user-prompt-submit: emits JSON context when requested" {
     AI_TOOLKIT_HOOK_FORMAT=json run_hook_with_input "user-prompt-submit.sh" '{"prompt":"add a button to the form"}'
     [ "$status" -eq 0 ]
-    echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); assert data['hookSpecificOutput']['additionalContext']"
+    echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); out=data['hookSpecificOutput']; assert out['hookEventName'] == 'UserPromptSubmit'; assert out['additionalContext']"
 }
 
 @test "user-prompt-submit: quiet mode suppresses plain-text context but still arms search flag" {
@@ -471,8 +479,15 @@ EOF
 @test "user-prompt-submit: quiet JSON mode still emits additionalContext" {
     AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json AI_TOOLKIT_SEARCH_FIRST=strict run_hook_with_input "user-prompt-submit.sh" '{"session_id":"quiet-json-search","prompt":"debug this hook output issue with enough detail"}'
     [ "$status" -eq 0 ]
-    echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); assert data['suppressOutput'] is True; assert 'Step 0' in data['hookSpecificOutput']['additionalContext']"
+    echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); out=data['hookSpecificOutput']; assert data['suppressOutput'] is True; assert out['hookEventName'] == 'UserPromptSubmit'; assert 'Step 0' in out['additionalContext']"
     [ -f "$HOME/.softspark/ai-toolkit/state/search-required-quiet-json-search.flag" ]
+}
+
+@test "user-prompt-submit: state write failures do not corrupt JSON output" {
+    touch "$HOME/.softspark/ai-toolkit/state"
+    AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json AI_TOOLKIT_SEARCH_FIRST=strict run_hook_with_input "user-prompt-submit.sh" '{"session_id":"blocked-state","prompt":"debug this hook output issue with enough detail"}'
+    [ "$status" -eq 0 ]
+    echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); out=data['hookSpecificOutput']; assert out['hookEventName'] == 'UserPromptSubmit'; assert out['additionalContext']"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -3,7 +3,7 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.5"
+version: "1.5.6"
 created: "2026-03-27"
 last_updated: "2026-05-25"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -114,11 +114,28 @@ work, evidence-first debugging, KB-first research, and validation expectations.
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`. The bundled `app/hooks.json`
 registers this command with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json`.
 This keeps the hook visually quiet (`suppressOutput: true`) while still
-injecting `hookSpecificOutput.additionalContext` before Claude starts working.
+injecting event-specific JSON context before Claude starts working in runtimes
+that consume hidden context:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "..."
+  },
+  "suppressOutput": true
+}
+```
+
 That context is the proactive half of search-first enforcement; the paired
 `stop-search-check.sh` remains the corrective half. In plain-text mode,
 informational reminders are silent by default and require
 `AI_TOOLKIT_HOOK_VERBOSE=1`.
+
+Codex-generated hooks intentionally run this script without
+`AI_TOOLKIT_HOOK_FORMAT=json` by default because Codex renders
+`additionalContext` visibly in the TUI; the search-first flag side effect still
+arms the corrective Stop hook.
 
 ### UserPromptSubmit (usage tracking) — `track-usage.sh`
 
@@ -129,7 +146,7 @@ informational reminders are silent by default and require
 | Script | `~/.softspark/ai-toolkit/hooks/track-usage.sh` |
 | Fires | Before Claude starts working on a submitted prompt |
 
-**Action:** Records skill invocations (slash commands like `/commit`, `/review`) to `~/.softspark/ai-toolkit/stats.json` for local usage analytics. Non-slash prompts are ignored.
+**Action:** Records skill invocations (slash commands like `/commit`, `/review`) to `~/.softspark/ai-toolkit/stats.json` for local usage analytics. Non-slash prompts are ignored. Stats writes are best-effort and stay silent if the local state path is not writable.
 
 ### PostToolUse (edit feedback) — `post-tool-use.sh`
 

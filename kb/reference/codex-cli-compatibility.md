@@ -3,9 +3,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.2"
+version: "1.0.3"
 created: "2026-04-12"
-last_updated: "2026-05-21"
+last_updated: "2026-05-25"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -110,12 +110,27 @@ This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
 `~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
 `remove-hook` cleans both Claude and Codex targets.
 
-Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. The
-`UserPromptSubmit` governance hook additionally sets `AI_TOOLKIT_HOOK_FORMAT=json`
-so it can pass quiet `additionalContext` before the model responds. This keeps
-non-blocking reminders and startup context out of visible hook output while
-preserving hook side effects, proactive search-first context, and blocking
-decisions such as search-first Stop enforcement.
+Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. The generated
+`UserPromptSubmit` governance hook does not set `AI_TOOLKIT_HOOK_FORMAT=json`
+by default because Codex currently renders `additionalContext` as visible hook
+context in the TUI. This keeps prompt-submit output quiet while preserving hook
+side effects and blocking decisions such as search-first Stop enforcement.
+
+Codex `UserPromptSubmit` JSON output is event-specific. When emitting context,
+the hook must include the event name alongside the context:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "..."
+  },
+  "suppressOutput": true
+}
+```
+
+Older `{"hookSpecificOutput":{"additionalContext":"..."}}` output can be valid
+JSON but fail newer Codex event-output validation.
 
 Plain-text informational hook context is also silent by default in the shared
 hook helper. Set `AI_TOOLKIT_HOOK_VERBOSE=1` only when debugging hook output
