@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.2.1"
+version: "1.3.0"
 created: "2026-04-23"
-last_updated: "2026-04-28"
+last_updated: "2026-05-25"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -47,9 +47,9 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://cursor.com/docs |
 | Changelog | https://cursor.com/changelog |
 | Stable docs mirror | https://cursor.com/llms.txt (all doc pages have .md twins) |
-| Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json` |
-| Compat read paths | `.claude/skills/`, `.claude/agents/`, `.agents/skills/` (Cursor cross-reads these so ai-toolkit's Claude/Codex installs work automatically) |
-| Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py`, `scripts/generate_cursor_hooks.py` (profile=full), `scripts/generate_cursor_agents.py` (profile=full) |
+| Config paths | `.cursorrules`, `.cursor/rules/*.mdc`, `.cursor/rules/*.md`, `AGENTS.md`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `.cursor/skills/*/SKILL.md`, `~/.cursor/skills/*/SKILL.md`, `.cursor/agents/*.md`, `.cursor/hooks.json` |
+| Compat read paths | `.agents/skills/`, `~/.agents/skills/`, `.claude/skills/`, `~/.claude/skills/`, `.codex/skills/`, `~/.codex/skills/` |
+| Our generators | `scripts/generate_cursor_rules.py`, `scripts/generate_cursor_mdc.py`, `scripts/generate_cursor_hooks.py` (profile=full), `scripts/generate_cursor_agents.py` (profile=full), `scripts/generate_cursor_skills.py` (profile=full pointer) |
 | Tracked capabilities | `cursorrules`, `.cursor/rules`, `AGENTS.md`, `mcp.json`, Composer, Agent Mode, hooks.json, subagents, skills, plugins |
 
 ### Windsurf
@@ -60,10 +60,10 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://docs.windsurf.com |
 | Changelog | https://windsurf.com/changelog |
 | Stable docs mirror | https://docs.windsurf.com/llms.txt + per-page .md twins |
-| Config paths | `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `AGENTS.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/mcp_config.json` |
+| Config paths | `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurf/skills/*/SKILL.md`, `AGENTS.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json` |
 | Compat read paths | `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/` |
-| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py`, `scripts/generate_windsurf_hooks.py` (profile=full) |
-| Tracked capabilities | Cascade, `windsurfrules`, `AGENTS.md`, activation triggers (`always_on`/`glob`/`model_decision`), workflows, MCP, memories, hooks |
+| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py`, `scripts/generate_windsurf_hooks.py` (profile=full), `scripts/generate_windsurf_skills.py` (global + profile=full pointer) |
+| Tracked capabilities | Cascade, `windsurfrules`, `AGENTS.md`, activation triggers (`always_on`/`glob`/`model_decision`), workflows, skills, MCP, memories, hooks |
 | Activation modes emitted | always_on (agents/security/quality), glob (testing + language rules), model_decision (code-style/workflow) |
 
 ### GitHub Copilot
@@ -98,11 +98,11 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `cline` |
 | Docs | https://docs.cline.bot |
 | Release notes | https://github.com/cline/cline/releases |
-| Config paths | `.clinerules/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/`, `.cline/skills/`, `~/.cline/data/settings/cline_mcp_settings.json`, `~/Documents/Cline/Rules/` |
-| Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py` |
+| Config paths | `.clinerules/*.md` (compat), `.clinerules/workflows/*.md` (compat workflows), `.cline/rules/*.md`, `.cline/hooks/`, `.cline/skills/*/SKILL.md`, `~/.cline/rules/*.md`, `~/.cline/hooks/`, `~/.cline/skills/*/SKILL.md`, `~/.cline/data/settings/cline_mcp_settings.json` |
+| Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py`, `scripts/generate_cline_skills.py` |
 | Tracked capabilities | `clinerules`, Plan Mode, Act Mode, MCP, custom modes, workflows, hooks, skills, subagents, conditional rules |
-| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Skills (`.cline/skills/`) and hooks (`.clinerules/hooks/`) remain experimental upstream and are not yet generated. |
-| Global install | `ai-toolkit install --editors cline` writes only documented global rules under `~/Documents/Cline/Rules/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
+| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Project rules still use `.clinerules/` for compatibility; the documented `~/.cline/rules/` path is used for global install. Skills are emitted as a pointer catalogue in `profile=full` and global installs. |
+| Global install | `ai-toolkit install --editors cline` writes documented global rules under `~/.cline/rules/` and a skill pointer under `~/.cline/skills/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
 
 ### Roo Code
 

@@ -131,6 +131,33 @@ LOG
     [ ! -f "$(FLAG_PATH)" ]
 }
 
+@test "search-first: Stop check scans enough Codex log to survive noisy output" {
+    mkdir -p "$TEST_TMP/.codex/log"
+    printf '%s\n%s\n' "100" "what is the merge-hooks dedup logic and tests around it" > "$(FLAG_PATH)"
+    {
+        printf '%s\n' '1970-01-01T00:02:00Z INFO ToolCall: mcp__rag_mcp__smart_query {"query":"hooks"}'
+        python3 - <<'PY'
+print("x" * 3_000_000)
+PY
+    } > "$TEST_TMP/.codex/log/codex-tui.log"
+    AI_TOOLKIT_SEARCH_FIRST=strict run bash "$HOOKS/stop-search-check.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
+@test "search-first: Stop check recognizes Codex mcp tool.name log shape" {
+    mkdir -p "$TEST_TMP/.codex/log"
+    printf '%s\n%s\n' "100" "what is the merge-hooks dedup logic and tests around it" > "$(FLAG_PATH)"
+    cat > "$TEST_TMP/.codex/log/codex-tui.log" <<'LOG'
+1970-01-01T00:02:00Z INFO mcp.tools.call{tool.name="smart_query" tool.call_id="call_123"}: codex_core::mcp_tool_call: new
+LOG
+    AI_TOOLKIT_SEARCH_FIRST=strict run bash "$HOOKS/stop-search-check.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
 @test "search-first: Stop check ignores Codex searches older than flag" {
     mkdir -p "$TEST_TMP/.codex/log"
     printf '%s\n%s\n' "200" "what is the merge-hooks dedup logic and tests around it" > "$(FLAG_PATH)"

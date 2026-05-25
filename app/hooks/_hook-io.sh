@@ -58,12 +58,11 @@ hook_new_content() {
 
 hook_emit_context() {
     local message="$1"
-    if [ "${AI_TOOLKIT_HOOK_QUIET:-0}" = "1" ]; then
-        return 0
-    fi
     if [ "${AI_TOOLKIT_HOOK_FORMAT:-}" = "json" ]; then
         jq -nc --arg msg "$message" \
             '{"hookSpecificOutput":{"additionalContext":$msg},"suppressOutput":true}'
+    elif [ "${AI_TOOLKIT_HOOK_QUIET:-0}" = "1" ]; then
+        return 0
     elif [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" = "1" ]; then
         printf '%s\n' "$message"
     fi

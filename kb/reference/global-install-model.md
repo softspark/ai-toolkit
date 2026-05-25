@@ -60,10 +60,10 @@ The `--profile` flag controls how much of each editor's native surface is activa
 `ai-toolkit install --editors <name>` can write global files only for editors
 with documented, file-based config surfaces:
 
-- `windsurf`: `~/.codeium/windsurf/memories/global_rules.md`
+- `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `gemini`: `~/.gemini/GEMINI.md`
 - `augment`: `~/.augment/rules/ai-toolkit.md`
-- `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md`
+- `cline`: `~/.cline/rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `roo`: `~/.roo/rules/ai-toolkit-*.md`
 - `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
 - `codex`: `~/AGENTS.md`, `~/.agents/rules/*`, `~/.agents/skills/*`, `~/.codex/hooks.json`

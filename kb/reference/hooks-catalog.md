@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.3"
+version: "1.5.5"
 created: "2026-03-27"
-last_updated: "2026-05-21"
+last_updated: "2026-05-25"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -112,11 +112,13 @@ and can provide a lightweight governance reminder: plan mode for architectural
 work, evidence-first debugging, KB-first research, and validation expectations.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`. The bundled `app/hooks.json`
-registers this command with `AI_TOOLKIT_HOOK_QUIET=1`, so it still arms or
-clears the per-session search-first flag but suppresses the informational
-reminder output. In plain-text mode, informational reminders are silent by
-default and require `AI_TOOLKIT_HOOK_VERBOSE=1`; JSON hook output remains
-available with `AI_TOOLKIT_HOOK_FORMAT=json`.
+registers this command with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json`.
+This keeps the hook visually quiet (`suppressOutput: true`) while still
+injecting `hookSpecificOutput.additionalContext` before Claude starts working.
+That context is the proactive half of search-first enforcement; the paired
+`stop-search-check.sh` remains the corrective half. In plain-text mode,
+informational reminders are silent by default and require
+`AI_TOOLKIT_HOOK_VERBOSE=1`.
 
 ### UserPromptSubmit (usage tracking) — `track-usage.sh`
 
@@ -393,7 +395,7 @@ First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`.
 | Script | `~/.softspark/ai-toolkit/hooks/search-tracker.sh` |
 | Fires | After any search-style tool call |
 
-**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag` (per-session, keyed by `session_id` from the hook stdin payload, falling back to `transcript_path` basename, then `default`). Pairs with `user-prompt-submit.sh` (sets the flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag is still set). Search provider detection parses actual MCP server names from `mcpServers`, `mcp_servers`, or `mcp` config blocks; hook matchers and permission allowlists do not count as providers. Together the hooks enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs and without cross-session interference when multiple Claude Code windows run in parallel.
+**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag` (per-session, keyed by `session_id` from the hook stdin payload, falling back to `transcript_path` basename, then `default`). Pairs with `user-prompt-submit.sh` (sets the flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag is still set). Search provider detection parses actual MCP server names from `mcpServers`, `mcp_servers`, or `mcp` config blocks; hook matchers and permission allowlists do not count as providers. Codex Stop enforcement also scans the recent `~/.codex/log/codex-tui.log` window for `ToolCall: mcp__...__smart_query` and `tool.name="smart_query"`-style entries because Codex MCP tool calls may not fire the shared `PostToolUse` tracker. Together the hooks enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs and without cross-session interference when multiple Claude Code windows run in parallel.
 
 Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -444,7 +446,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | `scripts/test_cohesion.py` | Resolves changed paths → test commands via cohesion map. First-match-wins. Stdlib-only. |
 | `app/hooks/test-cohesion-map.json` | Toolkit-default path → tests mapping (used when no project map exists). |
 | `app/hooks/_locate-toolkit.sh` | Shared bash helper that exports `$TOOLKIT_DIR` for hooks needing scripts/. |
-| `app/hooks/_hook-io.sh` | Shared bash helper that normalizes hook payloads across Claude, Augment, Gemini, Windsurf, and Cursor-style JSON. Honors `AI_TOOLKIT_HOOK_QUIET=1` and `AI_TOOLKIT_HOOK_VERBOSE=1` for non-blocking context output. |
+| `app/hooks/_hook-io.sh` | Shared bash helper that normalizes hook payloads across Claude, Augment, Gemini, Windsurf, and Cursor-style JSON. JSON context output takes precedence over `AI_TOOLKIT_HOOK_QUIET=1`, so quiet hooks can still emit `additionalContext` with `suppressOutput: true`; plain-text output requires `AI_TOOLKIT_HOOK_VERBOSE=1`. |
 | `app/hooks/_search-capability.sh` | Shared bash helper that enables search-first blocking only when RAG/Web is configured or strict mode is requested. |
 
 ## Runtime Profiles

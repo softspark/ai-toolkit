@@ -54,11 +54,11 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
     # in the requested set, install it unconditionally.
 
     if "windsurf" in eds:
-        windsurf_file = target_dir / ".codeium" / "windsurf" / "memories" / "global_rules.md"
         if dry_run:
             print("  Would inject: ~/.codeium/windsurf/memories/global_rules.md")
+            print("  Would generate: ~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md")
         else:
-            inject_with_rules("generate-windsurf.sh", windsurf_file, rules_dir)
+            _install_windsurf_global(target_dir, rules_dir)
         installed.append("windsurf")
 
     if "gemini" in eds:
@@ -79,7 +79,8 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
 
     if "cline" in eds:
         if dry_run:
-            print("  Would generate: ~/Documents/Cline/Rules/ai-toolkit-*.md")
+            print("  Would generate: ~/.cline/rules/ai-toolkit-*.md")
+            print("  Would generate: ~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")
         else:
             _install_cline_global(target_dir, rules_dir)
         installed.append("cline")
@@ -149,11 +150,23 @@ def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
     _install_codex_skills(target_dir)
 
 
+def _install_windsurf_global(target_dir: Path, rules_dir: Path) -> None:
+    """Install Windsurf global rules plus an Agent Skills catalogue pointer."""
+    windsurf_file = target_dir / ".codeium" / "windsurf" / "memories" / "global_rules.md"
+    inject_with_rules("generate-windsurf.sh", windsurf_file, rules_dir)
+
+    from generate_windsurf_skills import generate as gen_windsurf_skills
+    gen_windsurf_skills(
+        target_dir,
+        skill_root=".codeium/windsurf/skills",
+    )
+
+
 def _install_cline_global(target_dir: Path, rules_dir: Path) -> None:
-    """Install Cline global rules in the documented user rules directory."""
+    """Install Cline global rules in the documented ~/.cline directory."""
     from generate_cline_rules import generate as gen_cline_rules
 
-    rules_root = target_dir / "Documents" / "Cline" / "Rules"
+    rules_root = target_dir / ".cline" / "rules"
     gen_cline_rules(
         target_dir,
         rules_dir=rules_dir,
@@ -161,7 +174,10 @@ def _install_cline_global(target_dir: Path, rules_dir: Path) -> None:
         emit_workflows=False,
         managed_scopes=("standard", "custom"),
     )
-    print("  Created: ~/Documents/Cline/Rules/ai-toolkit-*.md")
+    print("  Created: ~/.cline/rules/ai-toolkit-*.md")
+
+    from generate_cline_skills import generate as gen_cline_skills
+    gen_cline_skills(target_dir)
 
 
 def _install_roo_global(target_dir: Path, rules_dir: Path) -> None:
@@ -693,9 +709,11 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         print("  Would generate: .gemini/settings.json hooks (profile >= standard)")
     if add_native_surfaces:
         if "cursor" in eds:
-            print("  Would generate: .cursor/hooks.json + .cursor/agents/ (profile=full)")
+            print("  Would generate: .cursor/hooks.json + .cursor/agents/ + .cursor/skills/ (profile=full)")
         if "windsurf" in eds:
-            print("  Would generate: .windsurf/hooks.json (profile=full)")
+            print("  Would generate: .windsurf/hooks.json + .windsurf/skills/ (profile=full)")
+        if "cline" in eds:
+            print("  Would generate: .cline/skills/ (profile=full)")
         if "augment" in eds:
             print("  Would generate: .augment/agents/ + .augment/commands/ + "
                   "$HOME/.augment/settings.json + .augment/skills/ (profile=full)")
@@ -907,6 +925,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         if add_native_surfaces:
             _try_generator("generate_cursor_hooks", cwd)
             _try_generator("generate_cursor_agents", cwd)
+            _try_generator("generate_cursor_skills", cwd)
 
     if "windsurf" in eds:
         inject_with_rules(
@@ -919,6 +938,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
                            rules_dir=rules_dir)
         if add_native_surfaces:
             _try_generator("generate_windsurf_hooks", cwd)
+            _try_generator("generate_windsurf_skills", cwd)
 
     if "cline" in eds:
         # Migrate: remove legacy .clinerules single file (replaced by directory)
@@ -933,6 +953,8 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             rules_dir=rules_dir,
             managed_scopes=("standard", "lang", "custom"),
         )
+        if add_native_surfaces:
+            _try_generator("generate_cline_skills", cwd)
 
     if "roo" in eds:
         roo_output = run_script("generate-roo-modes.sh", capture=True)

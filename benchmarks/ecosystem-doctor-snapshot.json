@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-05-21T08:27:23Z",
+  "last_run": "2026-05-25T11:12:53Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,14 +24,21 @@
       }
     },
     "augment": {
-      "docs_hash": "8be23f4fb78816c3",
+      "docs_hash": "2546ce56fc2d92e4",
       "headings": [
+        "Admin",
+        "Auggie CLI",
         "Code",
+        "Cosmos",
         "Documentation Index",
+        "Getting Started",
         "Introduction",
+        "Models &amp; Pricing",
         "On this page",
         "Other automation",
+        "Other clients",
         "Review",
+        "Troubleshooting",
         "\u200bAuggie CLI",
         "\u200bAutomate your SDLC",
         "\u200bCosmos",
@@ -58,7 +65,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "0518086bd4527849",
+      "docs_hash": "78dbdbf9b1b09fe8",
       "headings": [
         "Documentation Index",
         "On this page",
@@ -105,15 +112,20 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.146 (Claude Code)"
+      "version": "2.1.150 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "c2ce2443743365fa",
+      "docs_hash": "0d30b8f46cb45976",
       "headings": [
         "API Reference",
+        "Best Practices",
         "CLI",
         "Cline Overview",
+        "Configurations",
         "Documentation Index",
+        "Features",
+        "Getting Started",
+        "IDE Specific Features",
         "JetBrains Plugin",
         "Kanban",
         "Observability",
@@ -121,6 +133,8 @@
         "SDK",
         "Security &amp; Governance",
         "Team Management",
+        "Troubleshooting",
+        "Usage",
         "VS Code Extension",
         "\u200bAgent Core (SDK)",
         "\u200bApplications",
@@ -142,7 +156,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "70f184b6cdd1f765",
+      "docs_hash": "8cad495445dd03e0",
       "headings": [
         "About",
         "Contributing",
@@ -161,7 +175,7 @@
         "Packages 0",
         "Provide feedback",
         "Quickstart",
-        "Releases 795",
+        "Releases 799",
         "Repository files navigation",
         "Resources",
         "Saved searches",
@@ -191,10 +205,10 @@
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.132.0"
+      "version": "codex-cli 0.133.0"
     },
     "cursor": {
-      "docs_hash": "60edb30c9ddcdadd",
+      "docs_hash": "56c9209877480e01",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -210,7 +224,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "c6aab087667f7717",
+      "docs_hash": "6a47f9b11ff1527d",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -249,7 +263,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "ab274112faeec90f",
+      "docs_hash": "a5b81592ca646743",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot integrations",
@@ -281,7 +295,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "2c48c702b9e592a7",
+      "docs_hash": "6f089d2c7caabceb",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -297,7 +311,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "5277673e235393f7",
+      "docs_hash": "74eb2d934df9b613",
       "headings": [
         "Add features",
         "Ask questions",
@@ -357,18 +371,23 @@
       }
     },
     "windsurf": {
-      "docs_hash": "fa29ba621f291d81",
+      "docs_hash": "eddf51fabbcaa0a3",
       "headings": [
+        "Accounts",
         "Advanced",
+        "Agent Command Center",
         "App Deploys",
         "Cascade",
         "Context Awareness",
         "Documentation Index",
+        "Editor",
         "MCP",
         "Memories",
         "On this page",
         "Recommended Plugins",
+        "Security",
         "Terminal",
+        "Troubleshooting",
         "Usage",
         "Welcome to Windsurf",
         "Workflows",
@@ -390,11 +409,13 @@
         "AGENTS.md": true,
         "Cascade": true,
         "MCP": true,
+        "SKILL.md": false,
         "always_on": false,
         "glob": true,
         "hooks": true,
         "memories": true,
         "model_decision": false,
+        "skills": true,
         "windsurfrules": false,
         "workflows": true
       }

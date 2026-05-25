@@ -72,8 +72,8 @@ teardown() {
     for event in PreCompact PostToolUse UserPromptSubmit SubagentStart SubagentStop SessionEnd; do
         grep -q "\"$event\"" "$settings" || { echo "MISSING hook event: $event"; return 1; }
     done
-    grep -q 'AI_TOOLKIT_HOOK_QUIET=1.*user-prompt-submit.sh' "$settings" || {
-        echo "UserPromptSubmit hook should run quietly"
+    grep -q 'AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json.*user-prompt-submit.sh' "$settings" || {
+        echo "UserPromptSubmit hook should run quietly while injecting JSON context"
         return 1
     }
 

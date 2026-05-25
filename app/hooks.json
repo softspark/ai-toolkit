@@ -103,7 +103,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "AI_TOOLKIT_HOOK_QUIET=1 \"$HOME/.softspark/ai-toolkit/hooks/user-prompt-submit.sh\""
+                        "command": "AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json \"$HOME/.softspark/ai-toolkit/hooks/user-prompt-submit.sh\""
                     }
                 ]
             },

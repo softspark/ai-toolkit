@@ -461,11 +461,18 @@ EOF
     echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); assert data['hookSpecificOutput']['additionalContext']"
 }
 
-@test "user-prompt-submit: quiet mode suppresses context but still arms search flag" {
+@test "user-prompt-submit: quiet mode suppresses plain-text context but still arms search flag" {
     AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_SEARCH_FIRST=strict run_hook_with_input "user-prompt-submit.sh" '{"session_id":"quiet-search","prompt":"debug this hook output issue with enough detail"}'
     [ "$status" -eq 0 ]
     [ -z "$output" ]
     [ -f "$HOME/.softspark/ai-toolkit/state/search-required-quiet-search.flag" ]
+}
+
+@test "user-prompt-submit: quiet JSON mode still emits additionalContext" {
+    AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json AI_TOOLKIT_SEARCH_FIRST=strict run_hook_with_input "user-prompt-submit.sh" '{"session_id":"quiet-json-search","prompt":"debug this hook output issue with enough detail"}'
+    [ "$status" -eq 0 ]
+    echo "$output" | python3 -c "import json,sys; data=json.load(sys.stdin); assert data['suppressOutput'] is True; assert 'Step 0' in data['hookSpecificOutput']['additionalContext']"
+    [ -f "$HOME/.softspark/ai-toolkit/state/search-required-quiet-json-search.flag" ]
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════

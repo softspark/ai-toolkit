@@ -7,6 +7,44 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.4.0 - native editor skill pointers and hook governance hardening (2026-05-25)
+
+Minor release. Adds native skill pointer generation for more editor surfaces and hardens search-first governance so quiet hooks still inject model context without noisy transcript output.
+
+### Added
+
+- **Native editor skill pointers** - Added Cursor, Windsurf, and Cline skill pointer generators so supported editors can discover the ai-toolkit skill catalog through their native skill directories.
+- **Shared skill pointer builder** - Added `scripts/skill_pointer.py` to keep generated skill pointer metadata consistent across editor-specific generators.
+- **Release coverage** - Added generator and hook tests covering the new skill pointer outputs, quiet JSON `UserPromptSubmit` context, and noisy Codex search-first log fallback.
+
+### Changed
+
+- **Editor registry and install flow** - Updated supported-tool metadata and install behavior for Cursor, Windsurf, and Cline native skill pointer targets.
+- **Codex hook generation** - `scripts/generate_codex_hooks.py` now emits quiet JSON context for `user-prompt-submit.sh`, matching Claude Code's installed hook behavior.
+- **Hook runtime documentation** - Updated the hooks catalog, Codex compatibility notes, global install model, supported tools registry, and maintenance SOP with the new runtime behavior.
+
+### Fixed
+
+- **Quiet hook context injection** - `_hook-io.sh` now lets `AI_TOOLKIT_HOOK_FORMAT=json` emit `hookSpecificOutput.additionalContext` even when `AI_TOOLKIT_HOOK_QUIET=1` is set.
+- **Search-first false positives in Codex** - `stop-search-check.sh` now scans a larger recent Codex log window and recognizes both `ToolCall: mcp__...__smart_query` and `tool.name="smart_query"` log shapes.
+- **Installed runtime drift** - Claude and Codex hook manifests now install `UserPromptSubmit` with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json`.
+
+### Ecosystem
+
+- **Snapshot refresh** - Refreshed the ecosystem doctor snapshot after upstream documentation/content drift review and generator updates.
+
+### Verification
+
+- `bats tests/test_generators.bats`
+- `bats tests/test_cli.bats`
+- `bats tests/test_skills_native.bats tests/test_native_surfaces.bats`
+- `bats tests/test_hooks.bats tests/test_search_first_flow.bats`
+- `bats tests/test_install.bats tests/test_codex.bats`
+- `python3 scripts/validate.py --strict`
+- `git diff --check`
+
+---
+
 ## v4.3.3 - silent hook context roll-forward (2026-05-21)
 
 Patch release. Rolls forward the quiet-hook release with a stricter default: non-blocking plain-text hook context is now silent even when a runtime uses a stale or manually copied command without `AI_TOOLKIT_HOOK_QUIET=1`.

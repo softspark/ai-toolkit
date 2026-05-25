@@ -110,10 +110,12 @@ This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
 `~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
 `remove-hook` cleans both Claude and Codex targets.
 
-Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. This keeps
-non-blocking reminders and startup context out of the visible Codex hook output
-while preserving hook side effects and blocking decisions such as search-first
-Stop enforcement.
+Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. The
+`UserPromptSubmit` governance hook additionally sets `AI_TOOLKIT_HOOK_FORMAT=json`
+so it can pass quiet `additionalContext` before the model responds. This keeps
+non-blocking reminders and startup context out of visible hook output while
+preserving hook side effects, proactive search-first context, and blocking
+decisions such as search-first Stop enforcement.
 
 Plain-text informational hook context is also silent by default in the shared
 hook helper. Set `AI_TOOLKIT_HOOK_VERBOSE=1` only when debugging hook output
@@ -133,6 +135,8 @@ Known limits:
   so `stop-search-check.sh` also checks `~/.codex/log/codex-tui.log` for
   `smart_query`, `hybrid_search_kb`, `crag_search`, `multi_hop_search`, and
   `verify_answer` calls after the search-first flag timestamp before blocking.
+  The scan is bounded to a recent log window, but sized to tolerate noisy Codex
+  skill-loader output between the search call and the Stop hook.
 
 These are runtime platform limits, not installation defects.
 

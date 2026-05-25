@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-04-23",
+  "last_updated": "2026-05-25",
   "tools": [
     {
       "id": "claude-code",
@@ -80,12 +80,20 @@
         ".cursor/mcp.json",
         "~/.cursor/mcp.json",
         ".cursor/skills/*/SKILL.md",
+        "~/.cursor/skills/*/SKILL.md",
+        ".agents/skills/*/SKILL.md",
+        "~/.agents/skills/*/SKILL.md",
+        ".claude/skills/*/SKILL.md",
+        "~/.claude/skills/*/SKILL.md",
+        ".codex/skills/*/SKILL.md",
+        "~/.codex/skills/*/SKILL.md",
         ".cursor/agents/*.md",
         ".cursor/hooks.json"
       ],
       "our_generators": [
         "scripts/generate_cursor_rules.py",
-        "scripts/generate_cursor_mdc.py"
+        "scripts/generate_cursor_mdc.py",
+        "scripts/generate_cursor_skills.py"
       ],
       "capability_markers": [
         "cursorrules",
@@ -114,14 +122,17 @@
         ".windsurfrules",
         ".windsurf/rules/*.md",
         ".windsurf/workflows/*.md",
+        ".windsurf/skills/*/SKILL.md",
         "AGENTS.md",
         "~/.codeium/windsurf/memories/global_rules.md",
+        "~/.codeium/windsurf/skills/*/SKILL.md",
         "~/.codeium/windsurf/mcp_config.json",
         "~/.codeium/windsurf/global_workflows/*.md"
       ],
       "our_generators": [
         "scripts/generate_windsurf.py",
-        "scripts/generate_windsurf_rules.py"
+        "scripts/generate_windsurf_rules.py",
+        "scripts/generate_windsurf_skills.py"
       ],
       "capability_markers": [
         "Cascade",
@@ -131,6 +142,8 @@
         "glob",
         "model_decision",
         "workflows",
+        "skills",
+        "SKILL.md",
         "MCP",
         "memories",
         "hooks"
@@ -225,14 +238,19 @@
       "config_paths": [
         ".clinerules/*.md",
         ".clinerules/workflows/*.md",
-        ".clinerules/hooks/",
-        ".cline/skills/",
+        ".cline/rules/*.md",
+        ".cline/hooks/",
+        ".cline/skills/*/SKILL.md",
+        "~/.cline/rules/*.md",
+        "~/.cline/hooks/",
+        "~/.cline/skills/*/SKILL.md",
         "~/.cline/data/settings/cline_mcp_settings.json",
-        "~/Documents/Cline/Rules/"
+        ".claude/skills/*/SKILL.md"
       ],
       "our_generators": [
         "scripts/generate_cline.py",
-        "scripts/generate_cline_rules.py"
+        "scripts/generate_cline_rules.py",
+        "scripts/generate_cline_skills.py"
       ],
       "capability_markers": [
         "clinerules",

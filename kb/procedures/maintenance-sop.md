@@ -3,9 +3,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.0.0"
+version: "3.0.1"
 created: "2026-03-23"
-last_updated: "2026-04-23"
+last_updated: "2026-05-25"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -34,7 +34,7 @@ ai-toolkit install --local --editors all                  # all supported editor
 ai-toolkit install --local --editors cursor,aider         # specific editors only
 ```
 
-Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`, `codex`.
+Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`, `codex`, `gemini`, `opencode`.
 
 To restrict which language rules are injected, use `--lang`:
 
@@ -201,6 +201,43 @@ Manual path:
 5. Update `kb/reference/hooks-catalog.md`, `README.md`, and any affected architecture docs
 
 Use `PreToolUse` for blocking validations, `PostToolUse` for non-blocking feedback, `UserPromptSubmit` for prompt governance, and `PreCompact` / `SessionEnd` for context preservation and handoff.
+
+## Troubleshooting Rule Enforcement in Claude Code
+
+Use this when Claude appears to ignore `CLAUDE.md`, `.claude/rules/*.md`, output styles, or search-first rules.
+
+1. **Check current Claude docs first.** Confirm the live contract for memory, settings, output styles, and hooks:
+   - `https://code.claude.com/docs/en/memory`
+   - `https://code.claude.com/docs/en/settings`
+   - `https://code.claude.com/docs/en/output-styles`
+   - `https://code.claude.com/docs/en/hooks`
+2. **Verify instruction loading.** Run `/memory` in Claude Code and confirm the expected `CLAUDE.md`, `CLAUDE.local.md`, and `.claude/rules/*.md` files are listed. Remember that Claude Code reads `CLAUDE.md`, not `AGENTS.md`, unless `CLAUDE.md` imports it.
+3. **Verify the active output style.** Check `.claude/settings.local.json` or `/config`. Output style changes apply after `/clear` or a new session.
+4. **Inspect installed hooks.** Ensure `~/.claude/settings.json` contains the ai-toolkit `UserPromptSubmit` and `Stop` entries. The governance hook must run with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json` so it injects `additionalContext` without noisy transcript output.
+5. **Reproduce the hook path directly.**
+   ```bash
+   printf '{"session_id":"debug","prompt":"debug this technical rule issue"}' \
+     | AI_TOOLKIT_SEARCH_FIRST=strict AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json \
+       ~/.softspark/ai-toolkit/hooks/user-prompt-submit.sh
+   ```
+   The output must be valid JSON with `hookSpecificOutput.additionalContext`.
+6. **Check corrective enforcement.** If the assistant still skips required research, `stop-search-check.sh` should block Stop with the search-first message. If it does not, inspect `~/.softspark/ai-toolkit/state/search-required-*.flag` and the Codex/Claude transcript logs.
+7. **Repair drift.** Run:
+   ```bash
+   ai-toolkit update --only hooks
+   python3 scripts/ecosystem_doctor.py --tool claude-code --format text
+   scripts/validate.py
+   ```
+
+## Verification
+
+After changing rule-enforcement behavior, run at minimum:
+
+```bash
+bats tests/test_hooks.bats tests/test_search_first_flow.bats
+bats tests/test_install.bats tests/test_codex.bats
+python3 scripts/validate.py --strict
+```
 
 ## Managing Plugins
 

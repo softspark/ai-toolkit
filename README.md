@@ -6,16 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1144%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1149%20passing-success)](tests/)
 
-## What's New in v4.3.3
+## What's New in v4.4.0
 
-Patch release. Rolls forward quiet hook handling so informational hook context stays out of the visible chat window even with stale or manually copied hook commands.
+Minor release. Adds native skill pointers for more editor surfaces and hardens quiet hook governance for Claude and Codex.
 
-- **Silent hook context by default**: `SessionStart`, `UserPromptSubmit`, and other non-blocking plain-text context output now require `AI_TOOLKIT_HOOK_VERBOSE=1`.
-- **Side effects preserved**: search-first flags, session-state reset, stale-flag cleanup, and blocking decisions still run without printing reminder text.
-- **Runtime refresh applied**: installed hook scripts and Codex/Claude hook config pick up the silent default.
-- **Test coverage updated**: hook tests now cover default silence and verbose opt-in, bringing the suite to 1144 tests.
+- **Native editor skills**: Cursor, Windsurf, and Cline now get generated skill pointer catalogs alongside existing rule surfaces.
+- **Quiet JSON governance**: `UserPromptSubmit` keeps output quiet while still injecting `additionalContext` for search-first and workflow reminders.
+- **Codex search-first hardening**: Stop enforcement recognizes current Codex MCP log shapes and tolerates noisy skill-loader output.
+- **Release coverage updated**: generator, install, Codex, hook, and search-first tests cover the new behavior; suite count is 1149 tests.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -101,11 +101,11 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Platform | Config Files | Scope |
 |----------|-------------|-------|
 | Claude Code | `~/.claude/` | global |
-| Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` | project (`~/.cursor/mcp.json` for MCP only) |
-| Windsurf | `~/.codeium/.../global_rules.md` + `.windsurf/rules/*.md` | global + project |
+| Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | project (`~/.cursor/mcp.json` for MCP only) |
+| Windsurf | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.windsurf/rules/*.md` | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | global |
 | GitHub Copilot | `.github/copilot-instructions.md` | project |
-| Cline | `~/Documents/Cline/Rules/*.md` + `.clinerules/*.md` | global + project |
+| Cline | `~/.cline/rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | global + project |
 | Roo Code | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | global + project |
 | Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | global + project |
@@ -148,7 +148,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1144 tests)
+├── tests/               # Bats test suite (1149 tests)
 └── CHANGELOG.md
 ```
 

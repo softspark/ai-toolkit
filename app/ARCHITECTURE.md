@@ -356,7 +356,7 @@ Lead Session (You)
 Language rules are propagated to **all configured editors** — not just Claude. `dir_rules_shared.build_language_rules()` reads `app/rules/<lang>/*.md`, strips frontmatter, and returns combined content per language. Each directory-based generator (Cursor, Windsurf, Cline, Roo, Augment, Antigravity, Codex) emits `ai-toolkit-lang-<lang>` files in its native format. Registered custom rules (`~/.softspark/ai-toolkit/rules/`) are similarly propagated as `ai-toolkit-custom-<name>` files via `build_registered_rules()`.
 
 ### Codex Integration
-Codex receives `AGENTS.md`, `.agents/rules/*.md`, optional `.agents/skills/*`, and `.codex/hooks.json`. `generate_codex_hooks.py` emits only Codex-supported lifecycle events and prefixes commands with `AI_TOOLKIT_HOOK_QUIET=1`, so informational hook context is not shown at session start or prompt submit while side effects and blocking Stop decisions still run. Claude's bundled `UserPromptSubmit` hook also runs in quiet mode for the same reason.
+Codex receives `AGENTS.md`, `.agents/rules/*.md`, optional `.agents/skills/*`, and `.codex/hooks.json`. `generate_codex_hooks.py` emits only Codex-supported lifecycle events and prefixes commands with `AI_TOOLKIT_HOOK_QUIET=1`, so informational hook output is not shown at session start or prompt submit while side effects and blocking Stop decisions still run. The `UserPromptSubmit` governance hook also sets `AI_TOOLKIT_HOOK_FORMAT=json` so proactive `additionalContext` reaches the model quietly. Claude's bundled `UserPromptSubmit` hook uses the same quiet JSON context path.
 
 ### opencode Integration (v2.5.0+)
 opencode is the 11th supported editor. Five generators handle its integration surface:

@@ -955,12 +955,26 @@ sys.path.insert(0, f"{sys.argv[1]}/scripts")
 from generate_cline_rules import generate
 generate(
     Path(sys.argv[2]),
-    output_root=Path(sys.argv[3]) / "Documents" / "Cline" / "Rules",
+    output_root=Path(sys.argv[3]) / ".cline" / "rules",
     emit_workflows=False,
 )
 PYEOF
-    [ -f "$home/Documents/Cline/Rules/ai-toolkit-security.md" ]
+    [ -f "$home/.cline/rules/ai-toolkit-security.md" ]
     [ ! -d "$tmp/.clinerules" ]
+    rm -rf "$tmp"
+}
+
+@test "native skill pointer generators create editor skill catalogues" {
+    tmp="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_cursor_skills.py" "$tmp" >/dev/null
+    python3 "$TOOLKIT_DIR/scripts/generate_windsurf_skills.py" "$tmp" >/dev/null
+    python3 "$TOOLKIT_DIR/scripts/generate_cline_skills.py" "$tmp" >/dev/null
+    [ -f "$tmp/.cursor/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ -f "$tmp/.windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ -f "$tmp/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    grep -q '^name: ai-toolkit-skill-catalogue$' "$tmp/.cursor/skills/ai-toolkit-skill-catalogue/SKILL.md"
+    grep -q 'Catalogue' "$tmp/.windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md"
+    grep -q '.claude/skills' "$tmp/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md"
     rm -rf "$tmp"
 }
 

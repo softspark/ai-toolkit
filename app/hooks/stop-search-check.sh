@@ -59,7 +59,10 @@ try:
     with log_path.open("rb") as handle:
         handle.seek(0, 2)
         size = handle.tell()
-        handle.seek(max(0, size - 2_000_000))
+        # Codex logs can be noisy between the search call and Stop hook
+        # execution, especially when skill loading emits repeated warnings.
+        # Keep this bounded, but large enough to avoid false positives.
+        handle.seek(max(0, size - 20_000_000))
         lines = handle.read().decode("utf-8", errors="replace").splitlines()
 except OSError:
     sys.exit(1)
