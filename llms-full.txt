@@ -6965,9 +6965,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.2"
+version: "1.0.3"
 created: "2026-04-12"
-last_updated: "2026-05-21"
+last_updated: "2026-05-25"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -7072,12 +7072,27 @@ This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
 `~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
 `remove-hook` cleans both Claude and Codex targets.
 
-Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. The
-`UserPromptSubmit` governance hook additionally sets `AI_TOOLKIT_HOOK_FORMAT=json`
-so it can pass quiet `additionalContext` before the model responds. This keeps
-non-blocking reminders and startup context out of visible hook output while
-preserving hook side effects, proactive search-first context, and blocking
-decisions such as search-first Stop enforcement.
+Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. The generated
+`UserPromptSubmit` governance hook does not set `AI_TOOLKIT_HOOK_FORMAT=json`
+by default because Codex currently renders `additionalContext` as visible hook
+context in the TUI. This keeps prompt-submit output quiet while preserving hook
+side effects and blocking decisions such as search-first Stop enforcement.
+
+Codex `UserPromptSubmit` JSON output is event-specific. When emitting context,
+the hook must include the event name alongside the context:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "..."
+  },
+  "suppressOutput": true
+}
+```
+
+Older `{"hookSpecificOutput":{"additionalContext":"..."}}` output can be valid
+JSON but fail newer Codex event-output validation.
 
 Plain-text informational hook context is also silent by default in the shared
 hook helper. Set `AI_TOOLKIT_HOOK_VERBOSE=1` only when debugging hook output
@@ -8880,7 +8895,7 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.5"
+version: "1.5.6"
 created: "2026-03-27"
 last_updated: "2026-05-25"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -8991,11 +9006,28 @@ work, evidence-first debugging, KB-first research, and validation expectations.
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`. The bundled `app/hooks.json`
 registers this command with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json`.
 This keeps the hook visually quiet (`suppressOutput: true`) while still
-injecting `hookSpecificOutput.additionalContext` before Claude starts working.
+injecting event-specific JSON context before Claude starts working in runtimes
+that consume hidden context:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "..."
+  },
+  "suppressOutput": true
+}
+```
+
 That context is the proactive half of search-first enforcement; the paired
 `stop-search-check.sh` remains the corrective half. In plain-text mode,
 informational reminders are silent by default and require
 `AI_TOOLKIT_HOOK_VERBOSE=1`.
+
+Codex-generated hooks intentionally run this script without
+`AI_TOOLKIT_HOOK_FORMAT=json` by default because Codex renders
+`additionalContext` visibly in the TUI; the search-first flag side effect still
+arms the corrective Stop hook.
 
 ### UserPromptSubmit (usage tracking) — `track-usage.sh`
 
@@ -9006,7 +9038,7 @@ informational reminders are silent by default and require
 | Script | `~/.softspark/ai-toolkit/hooks/track-usage.sh` |
 | Fires | Before Claude starts working on a submitted prompt |
 
-**Action:** Records skill invocations (slash commands like `/commit`, `/review`) to `~/.softspark/ai-toolkit/stats.json` for local usage analytics. Non-slash prompts are ignored.
+**Action:** Records skill invocations (slash commands like `/commit`, `/review`) to `~/.softspark/ai-toolkit/stats.json` for local usage analytics. Non-slash prompts are ignored. Stats writes are best-effort and stay silent if the local state path is not writable.
 
 ### PostToolUse (edit feedback) — `post-tool-use.sh`
 
