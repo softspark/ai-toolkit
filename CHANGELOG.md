@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.4.2 - Ecosystem sync: Claude Code 2.1.158 + Codex 0.134 hook events (2026-05-30)
+
+Patch release. Syncs the tool registry and `hook-creator` skill with newly detected upstream hook events and refreshes the ecosystem drift snapshot. No generated output or runtime behavior changes.
+
+### Changed
+
+- **Claude Code hook events** - Recorded `MessageDisplay` (new in Claude Code 2.1.152) in `scripts/ecosystem_tools.json` and the `hook-creator` skill's Supported Hook Events table. Also added three real-but-untracked events to the registry: `PostToolUseFailure`, `PostToolBatch`, `UserPromptExpansion`.
+- **Codex hook events** - Recorded the four Codex events we did not track (`PreCompact`, `PostCompact`, `SubagentStart`, `SubagentStop`); Codex exposes 10 lifecycle events. Updated the `scripts/generate_codex_hooks.py` docstring (6 to 10) and `kb/reference/supported-tools-registry.md`.
+- **Ecosystem snapshot** - Refreshed `benchmarks/ecosystem-doctor-snapshot.json` to baseline Claude Code 2.1.158 and Codex 0.134, and bumped the registry `last_updated`.
+
+### Ecosystem
+
+- Class-B drift (new Claude Code and Codex hook events) tracked in the registry and skill docs; wiring the Codex subagent/compaction events into generated `.codex/hooks.json` is deferred to a future release. GitHub Copilot docs reorg classified class C (not adopted). Seven editors showed cosmetic-only doc drift (class A).
+
+### Verification
+
+- `python3 scripts/validate.py --strict`
+- `python3 scripts/ecosystem_doctor.py --offline --check`
+- `npm test` (1151 passing)
+
 ## v4.4.1 - Codex hook output compatibility fix (2026-05-25)
 
 Patch release. Fixes Codex `UserPromptSubmit` hook JSON validation failures and visible hook-context noise while preserving hook side effects.

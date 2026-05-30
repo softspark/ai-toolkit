@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-05-25",
+  "last_updated": "2026-05-30",
   "tools": [
     {
       "id": "claude-code",
@@ -24,12 +24,16 @@
       "capability_markers": [
         "PreToolUse",
         "PostToolUse",
+        "PostToolUseFailure",
+        "PostToolBatch",
         "SessionStart",
         "SessionEnd",
         "SubagentStart",
         "SubagentStop",
         "UserPromptSubmit",
+        "UserPromptExpansion",
         "Notification",
+        "MessageDisplay",
         "Stop",
         "StopFailure",
         "PreCompact",
@@ -452,6 +456,10 @@
         "hook event: UserPromptSubmit",
         "hook event: Stop",
         "hook event: PermissionRequest",
+        "hook event: PreCompact",
+        "hook event: PostCompact",
+        "hook event: SubagentStart",
+        "hook event: SubagentStop",
         "hook handler: command",
         "hook handler: prompt",
         "hook handler: agent",

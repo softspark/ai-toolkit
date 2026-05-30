@@ -8,15 +8,14 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1151%20passing-success)](tests/)
 
-## What's New in v4.4.1
+## What's New in v4.4.2
 
-Patch release. Fixes Codex `UserPromptSubmit` hook output validation and visible hook-context noise while preserving hook side effects.
+Patch release. Syncs the tool registry and `hook-creator` skill with newly detected upstream hook events and refreshes the ecosystem drift snapshot. No generated output or runtime behavior changes.
 
-- **Codex-safe prompt hook defaults**: generated Codex hooks keep `UserPromptSubmit` side effects quiet without emitting visible `additionalContext` in the TUI.
-- **Event-specific hook context**: JSON context output now includes `hookSpecificOutput.hookEventName` when enabled, matching Codex's event-specific schema.
-- **Silent best-effort stats**: `track-usage.sh` no longer leaks Python tracebacks when local stats writes are blocked.
-- **Sandbox-safe search flags**: search-first flag write failures no longer corrupt JSON hook output.
-- **Release coverage updated**: hook regression coverage now includes blocked state and stats writes; suite count is 1151 tests.
+- **Claude Code `MessageDisplay`**: the hook event added in Claude Code 2.1.152 is now tracked in the registry and documented in the `hook-creator` skill.
+- **Three more Claude Code events tracked**: `PostToolUseFailure`, `PostToolBatch`, and `UserPromptExpansion` were real but missing from the registry.
+- **Codex hook events**: recorded the four untracked Codex events (`PreCompact`, `PostCompact`, `SubagentStart`, `SubagentStop`); Codex exposes 10 lifecycle events total.
+- **Drift snapshot refreshed**: baselined Claude Code 2.1.158 and Codex 0.134; `ecosystem_doctor.py --check` is green.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

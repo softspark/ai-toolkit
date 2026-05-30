@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor]
 version: "1.1.0"
 created: "2026-04-12"
-last_updated: "2026-04-28"
+last_updated: "2026-05-30"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 

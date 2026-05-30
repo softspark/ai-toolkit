@@ -4,10 +4,11 @@
 Maps compatible ai-toolkit hooks to Codex lifecycle events.
 Hook scripts are shared with Claude Code (stored in ~/.softspark/ai-toolkit/hooks/).
 
-Codex supports 6 events (PascalCase in config.toml / hooks.json):
-``PreToolUse``, ``PostToolUse``, ``PermissionRequest``, ``SessionStart``,
-``UserPromptSubmit``, ``Stop``. PreToolUse/PostToolUse only support
-the ``Bash`` matcher.
+Codex exposes 10 lifecycle events (PascalCase in config.toml / hooks.json):
+``PreToolUse``, ``PostToolUse``, ``PermissionRequest``, ``PreCompact``,
+``PostCompact``, ``SessionStart``, ``UserPromptSubmit``, ``SubagentStart``,
+``SubagentStop``, ``Stop``. PreToolUse/PostToolUse only support the ``Bash``
+matcher. We currently wire the subset defined in ``CODEX_HOOKS`` below.
 
 Handler types in Codex: ``command`` (what we emit), ``prompt``, and ``agent``.
 Reference: codex-rs/config/src/hook_config.rs.

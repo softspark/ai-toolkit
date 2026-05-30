@@ -23,6 +23,7 @@ Create a new Claude Code hook following ai-toolkit conventions.
 | `SessionEnd` | Session is closing | any | Flush logs, save transcripts |
 | `UserPromptSubmit` | User submits a prompt | any | Prompt governance, usage tracking |
 | `Notification` | Claude sends a notification | any | OS alerts, Slack pings |
+| `MessageDisplay` | Assistant message is about to be shown to the user | any | Transform or hide assistant message text before display |
 
 ### Tool lifecycle
 
