@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.5.1 - ShellCheck fix for loop-guard hook (2026-06-02)
+
+Patch release. Clears two ShellCheck `SC2034` warnings in `loop-guard.sh` that turned the `main` CI ShellCheck job red after v4.5.0. The publish workflow does not run ShellCheck, so v4.5.0 published despite the red CI; this patch makes `main` green again. No runtime behavior change.
+
+### Fixed
+- **`loop-guard.sh` ShellCheck** — `INPUT` now carries the `# shellcheck disable=SC2034` directive (it is consumed via the sourced `_hook-io.sh`, matching `guard-destructive.sh`), and `AI_TOOLKIT_HOOK_FORMAT` is `export`ed. `shellcheck --severity=warning app/hooks/*.sh` is clean.
+
+---
+
 ## v4.5.0 - Unicode-safety scanner, loop guard, honest instincts (2026-06-02)
 
 Minor release. Hardens the security audit against invisible prompt injection, adds a repeated-action loop guard, fixes destructive-guard false positives, and turns the instinct system from a dormant promise into a working manual feature.

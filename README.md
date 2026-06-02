@@ -8,9 +8,9 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1179%20passing-success)](tests/)
 
-## What's New in v4.5.0
+## What's New in v4.5.1
 
-Minor release. Hardens the security audit against invisible prompt injection, adds a repeated-action loop guard, fixes destructive-guard false positives, and makes the instinct system actually work.
+v4.5.1 is a patch that clears a ShellCheck lint in the loop-guard hook. The v4.5.0 feature set: hardens the security audit against invisible prompt injection, adds a repeated-action loop guard, fixes destructive-guard false positives, and makes the instinct system actually work.
 
 - **Unicode-safety scanner**: the skill/agent audit now flags invisible and smuggled Unicode (tag-block ASCII smuggling, Trojan Source bidi controls) across all shipped prompt text — a prompt-injection vector regex checks never caught. Runs in the `--ci` gate.
 - **Loop guard**: a new advisory `PostToolUse` hook warns when the same action repeats, catching stuck loops that the `/repeat` failure-counter circuit breaker misses.

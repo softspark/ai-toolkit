@@ -8895,7 +8895,7 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.6"
+version: "1.5.7"
 created: "2026-03-27"
 last_updated: "2026-05-25"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."

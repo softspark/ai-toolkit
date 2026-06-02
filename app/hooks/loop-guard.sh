@@ -14,6 +14,7 @@ source "$(dirname "$0")/_profile-check.sh"
 # shellcheck source=_hook-io.sh
 source "$(dirname "$0")/_hook-io.sh"
 
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 TOOL_NAME=$(hook_tool_name)
 [ -z "$TOOL_NAME" ] && exit 0
@@ -52,7 +53,7 @@ fi
 COUNT=$(grep -cxF "$HASH" "$LOG" 2>/dev/null | tr -d ' ')
 [ -z "$COUNT" ] && COUNT=0
 if [ "$COUNT" -ge "$THRESHOLD" ]; then
-    AI_TOOLKIT_HOOK_FORMAT=json
+    export AI_TOOLKIT_HOOK_FORMAT=json
     hook_emit_context "PostToolUse" \
         "Loop guard: the same ${TOOL_NAME} action has repeated ${COUNT}x within the last ${WINDOW} steps. If you are not making progress, stop and reassess — try a different approach or ask the user — instead of retrying the identical action."
 fi
