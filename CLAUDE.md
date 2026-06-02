@@ -12,6 +12,7 @@ Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cli
 **Every change to skills, agents, hooks, or editors MUST be reflected in ALL docs:**
 README.md, CLAUDE.md, ARCHITECTURE.md, package.json, plugin.json, skills-catalog.md, architecture-overview.md, llms.txt, AGENTS.md.
 Run `python3 scripts/validate.py --strict` + `python3 scripts/audit_skills.py --ci` before every commit.
+When you touch any `app/hooks/*.sh`, ALSO run `shellcheck --severity=warning app/hooks/*.sh` — it runs in `ci.yml` but NOT in `validate.py`, `npm test`, or `publish.yml`, so a hook lint failure can publish on tag while turning `main` CI red (v4.5.1 postmortem).
 Stale counts = broken user trust. This is non-negotiable.
 
 ## Tech Stack
@@ -25,6 +26,7 @@ Stale counts = broken user trust. This is non-negotiable.
 # Validate: python3 scripts/validate.py
 # Evaluate: python3 scripts/evaluate_skills.py
 # Audit:    python3 scripts/audit_skills.py --ci  (security scan, exit 1 on HIGH)
+# Shellcheck: shellcheck --severity=warning app/hooks/*.sh  (hook lint; required before tagging, not run by publish.yml)
 # Benchmark: python3 scripts/benchmark_ecosystem.py --offline
 # Harvest: python3 scripts/harvest_ecosystem.py --offline
 # Generate: python3 scripts/generate_agents_md.py > AGENTS.md

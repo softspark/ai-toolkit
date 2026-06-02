@@ -2,11 +2,11 @@
 title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
-tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem]
-version: "1.10.1"
+tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
+version: "1.11.0"
 created: "2026-04-10"
-last_updated: "2026-04-28"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, and the registry-vs-generators drift gate added in v1.10.0."
+last_updated: "2026-06-02"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, and the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5)."
 ---
 
 # SOP: Release Preparation
@@ -55,8 +55,8 @@ python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
-# 5. Validate + audit + SARIF + test + ecosystem check
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && npm test
+# 5. Validate + audit + SARIF + shellcheck + test + ecosystem check
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && shellcheck --severity=warning app/hooks/*.sh && npm test
 
 # 5a. Supply-chain standard (v2.8.0+) — non-negotiable
 grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --provenance"; exit 1; }
@@ -278,6 +278,12 @@ python3 scripts/audit_skills.py --ci
 python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS ingest
 python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
 
+# ShellCheck on hooks (added in 1.11.0). Mirrors the ci.yml "ShellCheck hooks"
+# job. NOT run by validate.py, npm test, OR publish.yml — so a hook with a
+# ShellCheck warning passes every other gate AND still publishes on tag while
+# turning main CI red. Run it here, before tagging.
+shellcheck --severity=warning app/hooks/*.sh && echo "OK: shellcheck clean"
+
 # Registry / generator drift (added in 1.10.0). Meta-generators excluded.
 META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
 diff \
@@ -299,12 +305,15 @@ echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp
 - `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
 - `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
 - `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
+- `shellcheck --severity=warning app/hooks/*.sh`: no output, exit 0. A common false positive is `SC2034` on `INPUT` or env vars (e.g. `AI_TOOLKIT_HOOK_FORMAT`) that a *sourced* helper (`_hook-io.sh`) consumes — ShellCheck cannot see cross-file use. Fix with a `# shellcheck disable=SC2034` directive or `export`, matching `guard-destructive.sh`. Never tag with a red ShellCheck.
 - Registry drift: `OK: registry matches filesystem`. If `DRIFT:` appears, add the missing `scripts/generate_*.py` rows to `kb/reference/supported-tools-registry.md` before tagging.
 - `npm test`: `1..N` with zero `not ok` (read from the cached `/tmp/npm-test.log`, do not rerun)
 
+> **Why this matters (v4.5.1 postmortem):** `publish.yml` runs only `validate.py` + `npm test`, so it published v4.5.0 even though the `main` CI `ShellCheck hooks` job was red on two `SC2034` warnings in a new hook. The publish workflow does **not** depend on the CI workflow. Until that is fixed, ShellCheck is a manual pre-tag gate — run it here every time.
+
 **One-liner:**
 ```bash
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py' | sort -u) && npm test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py' | sort -u) && npm test
 ```
 
 **If tests fail:** Fix the issue, do NOT skip. Common failures:
@@ -432,9 +441,10 @@ git push origin --delete vX.Y.Z
 | 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
 | 11 | Security audit (SARIF) | `audit_skills.py --sarif` | Valid SARIF 2.1.0 JSON |
 | 12 | Per-skill permissions | `audit_skills.py --permissions` | New broad-access skills justified in CHANGELOG |
-| 13 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
-| 14 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
-| 15 | Tests | `npm test` | All pass |
-| 16 | Commit | `git commit` | Clean working tree |
-| 17 | Tag | `git tag vX.Y.Z` | Tag exists |
-| 18 | Push | `git push origin main --tags` | CI triggered with `id-token: write` |
+| 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh` | Exit 0, no output (mirrors ci.yml; publish.yml does NOT run it) |
+| 14 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
+| 15 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
+| 16 | Tests | `npm test` | All pass |
+| 17 | Commit | `git commit` | Clean working tree |
+| 18 | Tag | `git tag vX.Y.Z` | Tag exists |
+| 19 | Push | `git push origin main --tags` | CI triggered with `id-token: write` |
