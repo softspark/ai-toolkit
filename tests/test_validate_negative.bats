@@ -343,3 +343,21 @@ EOF
     [ "$status" -ne 0 ]
     echo "$output" | grep -q "Missing required field: service"
 }
+
+# ── Editor hooks honesty ───────────────────────────────────────────────────
+
+@test "validate.py catches README Hooks column overclaiming enforcement" {
+    # Fixture scripts/ has no generate_*_hooks.py, so only Claude + opencode
+    # have hooks. Claiming hook enforcement for Copilot is an overclaim.
+    cat > "$TEST_DIR/README.md" <<'EOF'
+# Test
+
+| Platform | Config Files | Hooks | Scope |
+|----------|-------------|:-----:|-------|
+| Claude Code | `~/.claude/` | ✅ | global |
+| GitHub Copilot | `.github/copilot-instructions.md` | ✅ | project |
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -qi "overclaim"
+}

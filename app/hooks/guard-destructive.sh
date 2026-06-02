@@ -18,6 +18,24 @@ fi
 # Normalize command for matching: collapse whitespace, strip backslash escapes
 NORMALIZED=$(printf '%s' "$COMMAND" | tr -s '[:space:]' ' ' | sed 's/\\//g')
 
+# Benign data contexts: a single, non-chained command whose program only PRINTS
+# or RECORDS text (echo/printf) or writes a commit/tag message (git commit/tag)
+# cannot itself execute a destructive op — the dangerous tokens are data, not
+# actions. Skip matching so "git commit -m 'fix DROP TABLE race'" is not blocked.
+# Bail out of the allowlist when a command separator is present (&&, ||, ;, |) so
+# chained commands like `git commit -m x && rm -rf /tmp` are still inspected.
+if ! printf '%s' "$NORMALIZED" | grep -qE '(&&|\|\||;|\|)'; then
+    if printf '%s' "$NORMALIZED" | grep -qE '^[[:space:]]*(echo|printf|git[[:space:]]+(commit|tag))([[:space:]]|$)'; then
+        exit 0
+    fi
+fi
+
+# Safe git force variants (--force-with-lease / --force-if-includes) are the
+# recommended way to force-push without clobbering others' work. Strip them
+# before matching so they do not trip the broad --force patterns; a bare
+# --force or -f left behind still blocks.
+SAFE_STRIPPED=$(printf '%s' "$NORMALIZED" | sed -E 's/--force-with-lease(=[^ ]*)?//g; s/--force-if-includes//g')
+
 # Destructive patterns — word-boundary aware where possible
 DESTRUCTIVE_PATTERNS=(
     # rm variants (short flags, long flags, separated flags, sudo, xargs/find piped)
@@ -69,7 +87,7 @@ DESTRUCTIVE_PATTERNS=(
 # Build combined regex
 REGEX=$(IFS='|'; echo "${DESTRUCTIVE_PATTERNS[*]}")
 
-if echo "$NORMALIZED" | grep -qEi "($REGEX)"; then
+if echo "$SAFE_STRIPPED" | grep -qEi "($REGEX)"; then
     echo "WARNING: Potentially destructive command detected. Please verify." >&2
     exit 2
 fi

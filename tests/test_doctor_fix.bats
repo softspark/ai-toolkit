@@ -85,3 +85,32 @@ teardown() {
     [ "$status" -eq 0 ]
     echo "$output" | grep -q '\-\-fix'
 }
+
+# ── Language rules drift (project-local check 10) ─────────────────────────────
+
+@test "doctor: flags a detected language missing its injected rules" {
+    proj="$TEST_TMP/proj-drift"
+    mkdir -p "$proj/.claude"
+    printf '%s\n' '<!-- TOOLKIT:language-rules START -->' 'Detected languages: `python-rules`.' '<!-- TOOLKIT:language-rules END -->' > "$proj/.claude/CLAUDE.md"
+    printf '[package]\nname = "x"\n' > "$proj/Cargo.toml"
+    printf 'print(1)\n' > "$proj/main.py"
+    run bash -c "cd '$proj' && python3 '$TOOLKIT_DIR/scripts/doctor.py'"
+    echo "$output" | grep -q "rust-rules not injected"
+}
+
+@test "doctor: language drift passes when rules match detected languages" {
+    proj="$TEST_TMP/proj-sync"
+    mkdir -p "$proj/.claude"
+    printf '%s\n' '<!-- TOOLKIT:language-rules START -->' 'Detected languages: `python-rules`.' '<!-- TOOLKIT:language-rules END -->' > "$proj/.claude/CLAUDE.md"
+    printf 'print(1)\n' > "$proj/main.py"
+    run bash -c "cd '$proj' && python3 '$TOOLKIT_DIR/scripts/doctor.py'"
+    echo "$output" | grep -q "project language rules in sync"
+}
+
+@test "doctor: language drift skips a non-local-install directory" {
+    proj="$TEST_TMP/proj-plain"
+    mkdir -p "$proj"
+    printf 'print(1)\n' > "$proj/main.py"
+    run bash -c "cd '$proj' && python3 '$TOOLKIT_DIR/scripts/doctor.py'"
+    echo "$output" | grep -q "not a local-install project"
+}

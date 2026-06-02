@@ -5,13 +5,13 @@ Persistent session memory with SQLite storage and full-text search.
 ## Includes
 - Skills: `/mem-search` (FTS5 search across past sessions)
 - Hooks: `observation-capture.sh` (PostToolUse), `session-summary.sh` (Stop)
-- Scripts: `init_db.py` (database setup), `strip_private.py` (privacy filter)
+- Scripts: `init_db.py` (database setup), `strip_private.py` (privacy filter + secret redaction)
 
 ## How It Works
 1. **Capture**: Every tool use is recorded to `~/.softspark/ai-toolkit/memory.db` (PostToolUse hook)
 2. **Summarize**: Session summary generated on each Stop hook (tools used, observation count, time range)
 3. **Search**: `/mem-search <query>` runs FTS5 full-text search with progressive disclosure
-4. **Privacy**: Content between `<private>...</private>` tags is stripped before storage
+4. **Privacy**: `strip_private.py` runs before storage — it removes `<private>...</private>` blocks and redacts high-confidence secrets (API keys, tokens, private keys) to `[REDACTED:<label>]`
 
 ## Database Schema
 - `sessions` — one row per Claude Code session (id, project_dir, started_at, ended_at, summary)

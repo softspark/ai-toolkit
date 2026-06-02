@@ -6,16 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1151%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1179%20passing-success)](tests/)
 
-## What's New in v4.4.2
+## What's New in v4.5.0
 
-Patch release. Syncs the tool registry and `hook-creator` skill with newly detected upstream hook events and refreshes the ecosystem drift snapshot. No generated output or runtime behavior changes.
+Minor release. Hardens the security audit against invisible prompt injection, adds a repeated-action loop guard, fixes destructive-guard false positives, and makes the instinct system actually work.
 
-- **Claude Code `MessageDisplay`**: the hook event added in Claude Code 2.1.152 is now tracked in the registry and documented in the `hook-creator` skill.
-- **Three more Claude Code events tracked**: `PostToolUseFailure`, `PostToolBatch`, and `UserPromptExpansion` were real but missing from the registry.
-- **Codex hook events**: recorded the four untracked Codex events (`PreCompact`, `PostCompact`, `SubagentStart`, `SubagentStop`); Codex exposes 10 lifecycle events total.
-- **Drift snapshot refreshed**: baselined Claude Code 2.1.158 and Codex 0.134; `ecosystem_doctor.py --check` is green.
+- **Unicode-safety scanner**: the skill/agent audit now flags invisible and smuggled Unicode (tag-block ASCII smuggling, Trojan Source bidi controls) across all shipped prompt text — a prompt-injection vector regex checks never caught. Runs in the `--ci` gate.
+- **Loop guard**: a new advisory `PostToolUse` hook warns when the same action repeats, catching stuck loops that the `/repeat` failure-counter circuit breaker misses.
+- **`git push --force-with-lease` unblocked**: the destructive-command guard no longer false-positives on safe force-pushes or on commit messages that merely mention `DROP TABLE`/`rm -rf`.
+- **Instincts load by default**: hand-authored `.claude/instincts/*.md` now load at session start (previously dormant behind a verbose flag). The skill docs were corrected to drop a never-implemented auto-extractor claim.
+- **Editor honesty + secret scrubbing**: the platform matrix marks which editors get hook enforcement, and memory-pack now redacts secrets before storing session observations.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -98,22 +99,22 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 
 ## Platform Support
 
-| Platform | Config Files | Scope |
-|----------|-------------|-------|
-| Claude Code | `~/.claude/` | global |
-| Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | project (`~/.cursor/mcp.json` for MCP only) |
-| Windsurf | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.windsurf/rules/*.md` | global + project |
-| Gemini CLI | `~/.gemini/GEMINI.md` | global |
-| GitHub Copilot | `.github/copilot-instructions.md` | project |
-| Cline | `~/.cline/rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | global + project |
-| Roo Code | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | global rules + project |
-| Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | global + project |
-| Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | global + project |
-| Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | project |
-| Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.agents/skills/*` + `.codex/hooks.json` | project + global plugin |
-| opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | project + global (`~/.config/opencode/`) |
+| Platform | Config Files | Hooks | Scope |
+|----------|-------------|:-----:|-------|
+| Claude Code | `~/.claude/` | ✅ | global |
+| Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
+| Windsurf | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.windsurf/rules/*.md` | ✅ | global + project |
+| Gemini CLI | `~/.gemini/GEMINI.md` | ✅ | global |
+| GitHub Copilot | `.github/copilot-instructions.md` | — | project |
+| Cline | `~/.cline/rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
+| Roo Code | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
+| Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
+| Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | ✅ | global + project |
+| Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | — | project |
+| Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.agents/skills/*` + `.codex/hooks.json` | ✅ | project + global plugin |
+| opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | ✅ | project + global (`~/.config/opencode/`) |
 
-> Claude Code is always installed (primary platform). Other editors on demand with `--editors`. All platforms receive the same agent/skill catalog, guidelines, and registered custom rules.
+> Claude Code is always installed (primary platform). Other editors on demand with `--editors`. Every platform receives the agent/skill catalog, guidelines, and registered custom rules as text. The **Hooks** column marks platforms that also get lifecycle hook enforcement — the machine-enforced constitution (guard-destructive, quality gates, search-first discipline). Platforms marked — receive those rules as guidance only, without blocking hooks.
 
 ---
 
@@ -125,7 +126,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 45 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
-| `hooks/` | 28 entries / 14 events | Quality gates, path safety, prompt governance, session lifecycle |
+| `hooks/` | 29 entries / 14 events | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
 | `constitution.md` | 6 articles | Machine-enforced safety rules |
 | `rules/` | auto-injected | Language-specific and custom rules injected into your configs |
@@ -141,14 +142,14 @@ ai-toolkit/
 │   ├── agents/          # 44 agent definitions
 │   ├── skills/          # 107 skills (task / hybrid / knowledge)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
-│   ├── hooks/           # Hook scripts (28 entries, 14 lifecycle events)
+│   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
 │   ├── constitution.md  # 6 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1151 tests)
+├── tests/               # Bats test suite (1179 tests)
 └── CHANGELOG.md
 ```
 
@@ -160,7 +161,7 @@ ai-toolkit/
 
 **Machine-enforced constitution** — 6-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
-**28 lifecycle hooks** — Executable scripts across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
+**29 lifecycle hooks** — Executable scripts across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
 
 **Security scanning** — `/skill-audit` for code-level risks, `/cve-scan` for dependency CVEs. Both CI-ready with exit codes.
 

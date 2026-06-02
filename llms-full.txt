@@ -8905,7 +8905,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Supported Surface
 
@@ -8976,6 +8976,10 @@ for debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
 - `format /`, `dd if=`
 - `git push --force`
 - `chmod -R 777`
+
+**Exemptions (avoid false positives):**
+- `git push --force-with-lease` / `--force-if-includes` — the safe force-push variants are allowed.
+- A single, non-chained `echo`/`printf`/`git commit`/`git tag` carrying a destructive token as *data* (e.g. a commit message mentioning `DROP TABLE`) is allowed. Chained commands (`&&`, `;`, `|`) are still inspected in full.
 
 ### PreToolUse (file ops) — `guard-path.sh`
 
@@ -9295,6 +9299,19 @@ First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`.
 
 **Overrides:** `CLAUDE_SKIP_COHESION=1` (one-off), `CLAUDE_HOOK_BOOTSTRAP=1` (when editing the hook itself). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
+### PostToolUse (loop guard) — `loop-guard.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PostToolUse` |
+| Matcher | `Bash\|Edit\|MultiEdit\|Write` |
+| Script | `~/.softspark/ai-toolkit/hooks/loop-guard.sh` |
+| Fires | After every Bash command or file edit |
+
+**Action:** Advisory only, never blocks. Hashes a `tool|identity` signature of each action (command for Bash; file path + new content for edits) and keeps the last `AI_TOOLKIT_LOOP_WINDOW` (default 6) hashes per session. When the same signature repeats `AI_TOOLKIT_LOOP_THRESHOLD` times (default 3) it emits a `PostToolUse` `additionalContext` advisory telling Claude to reassess instead of retrying. Catches successful-but-identical loops that the `/repeat` circuit breaker (which only counts failures) does not. Edits track content, so normal iterative editing of one file does not trip it. Only short hashes are stored — never raw payloads.
+
+**Tunables:** `AI_TOOLKIT_LOOP_WINDOW`, `AI_TOOLKIT_LOOP_THRESHOLD`. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`; honours `AI_TOOLKIT_DISABLED_HOOKS`.
+
 ### PostToolUse (search-first tracker) — `search-tracker.sh`
 
 | Field | Value |
@@ -9371,6 +9388,8 @@ Set in `.claude/settings.local.json`:
 | `minimal` | Only destructive guard + SessionStart |
 | `standard` | All hooks (default) |
 | `strict` | Standard + mypy --strict on task completion |
+
+**Disabling individual hooks:** set `AI_TOOLKIT_DISABLED_HOOKS` to a comma-separated list of hook names (with or without `.sh`), e.g. `{ "env": { "AI_TOOLKIT_DISABLED_HOOKS": "loop-guard,quality-check" } }`. Listed hooks become no-ops. This covers profile-gated hooks only; the safety guards (`guard-destructive`/`guard-path`/`guard-config`) intentionally cannot be env-disabled — remove them deliberately with `ai-toolkit remove-hook`.
 
 Non-blocking informational context is silent in plain-text mode by default while
 side effects and blocking decisions still run. Set `AI_TOOLKIT_HOOK_VERBOSE=1`
@@ -9453,7 +9472,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
 
 **Hook script not found:**
 ```bash
-ls ~/.softspark/ai-toolkit/hooks/     # should list 27 .sh files (plus _profile-check.sh + _locate-toolkit.sh + _hook-io.sh + _search-capability.sh helpers + test-cohesion-map.json)
+ls ~/.softspark/ai-toolkit/hooks/     # should list 28 .sh files (plus _profile-check.sh + _locate-toolkit.sh + _hook-io.sh + _search-capability.sh helpers + test-cohesion-map.json)
 ai-toolkit update            # re-copies scripts
 ```
 

@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.5.0 - Unicode-safety scanner, loop guard, honest instincts (2026-06-02)
+
+Minor release. Hardens the security audit against invisible prompt injection, adds a repeated-action loop guard, fixes destructive-guard false positives, and turns the instinct system from a dormant promise into a working manual feature.
+
+### Added
+- **Unicode-safety scanner** — `scripts/audit_skills.py` now flags invisible/smuggled Unicode across shipped prompt text (skills, agents, rules, personas, mcp-templates): tag-block ASCII smuggling (`U+E0000–E007F`) and Trojan Source bidi controls as HIGH, zero-width/invisible format chars as WARN. Emoji ZWJ (`U+200D`) is allowlisted. Runs inside the existing `--ci` gate.
+- **`loop-guard.sh`** — advisory `PostToolUse` hook (`Bash|Edit|MultiEdit|Write`) that warns when the same action repeats within a short window, catching successful-but-identical loops the `/repeat` circuit breaker (failures-only) misses. Edits track content, so iterative editing of one file does not trip it. Tunable via `AI_TOOLKIT_LOOP_WINDOW`/`AI_TOOLKIT_LOOP_THRESHOLD`. Hook entries: 28 → 29.
+- **Per-hook opt-out** — `AI_TOOLKIT_DISABLED_HOOKS` (comma list) disables named profile-gated hooks via `_profile-check.sh`. Safety guards are intentionally excluded — remove them with `ai-toolkit remove-hook`.
+- **Editor hooks honesty** — the README platform matrix gained a **Hooks** column marking which editors get lifecycle hook enforcement; `validate.py` cross-checks the claim against the actual `generate_*_hooks.py` generators and fails on drift.
+- **`doctor` language-rules drift check** — warns when a local-install project gained a language (e.g. a new `Cargo.toml`) whose `<lang>-rules` were never injected.
+- **Live-app rubric verification** — `verification-before-completion` documents an optional weighted-rubric scoring pass for behavioral/visual work.
+
+### Changed
+- **Instincts load by default** — `session-start.sh` loads `.claude/instincts/*.md` whenever present (previously gated behind `AI_TOOLKIT_HOOK_VERBOSE=1`, so they never surfaced by default). `AI_TOOLKIT_HOOK_QUIET=1` suppresses; no instincts on disk means no output.
+- **memory-pack `strip_private.py`** — now redacts high-confidence secrets (API keys, tokens, private keys) to `[REDACTED:<label>]` in addition to stripping `<private>` blocks before SQLite storage.
+
+### Fixed
+- **`guard-destructive.sh` false positives** — `git push --force-with-lease`/`--force-if-includes` are no longer blocked, and a single non-chained `echo`/`printf`/`git commit`/`git tag` carrying a destructive token as data (e.g. a commit message mentioning `DROP TABLE`) passes. Chained commands (`&&`, `||`, `;`, `|`) and real executions (e.g. `psql -c "DROP TABLE"`) are still inspected and blocked.
+- **`instinct-review` documentation** — removed the false claim of an automatic session-end instinct extractor that never existed; the skill now documents the real manual authoring + curation flow.
+
+Test count: 1151 → 1179. No skill/agent count change.
+
+---
+
 ## v4.4.2 - Ecosystem sync: Claude Code 2.1.158 + Codex 0.134 hook events (2026-05-30)
 
 Patch release. Syncs the tool registry and `hook-creator` skill with newly detected upstream hook events and refreshes the ecosystem drift snapshot. No generated output or runtime behavior changes.

@@ -58,9 +58,11 @@ if [ -f "$SESSION_FILE" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && [ "${AI
     printf '%s\n' "====================="
 fi
 
-# 3. Load active instincts (if any)
+# 3. Load active instincts (if any). These are explicit, hand-authored files, so
+# they load by default whenever present (unlike auto-saved session context above,
+# which stays verbose-gated). No instincts on disk => no output, no token cost.
 INSTINCTS_DIR=".claude/instincts"
-if [ -d "$INSTINCTS_DIR" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" = "1" ] && ls "$INSTINCTS_DIR"/*.md >/dev/null 2>&1; then
+if [ -d "$INSTINCTS_DIR" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && ls "$INSTINCTS_DIR"/*.md >/dev/null 2>&1; then
     printf '%s\n' "=== Active Instincts ==="
     for f in "$INSTINCTS_DIR"/*.md; do
         printf '%s\n' "- $(head -1 "$f")"

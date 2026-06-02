@@ -785,6 +785,9 @@ def validate_metadata_contracts(
     # Cross-validate versions: package.json vs manifest.json vs plugin.json
     _validate_version_sync(tk_dir, vr)
 
+    # Cross-validate the README platform matrix's Hooks column against reality
+    _validate_editor_hooks_honesty(tk_dir, vr)
+
     print()
     return actual_tests
 
@@ -834,6 +837,87 @@ def _validate_version_sync(tk_dir: Path, vr: ValidationResult) -> None:
                         f"README \"What's New in v{whats_new_ver}\" "
                         f"is stale (package.json is v{pkg_version})"
                     )
+
+
+# Editors that receive lifecycle hook enforcement without a generate_*_hooks.py
+# generator: Claude is native (app/hooks), opencode bridges via its plugin
+# (generate_opencode_plugin.py). Every other hook-enabled editor is derived
+# from the generate_<editor>_hooks.py set so this check stays honest as
+# generators come and go.
+_NATIVE_HOOK_EDITORS = {"claude", "opencode"}
+
+# README platform label (lowercased) -> canonical editor key.
+_README_PLATFORM_KEY = {
+    "claude code": "claude",
+    "cursor": "cursor",
+    "windsurf": "windsurf",
+    "gemini cli": "gemini",
+    "github copilot": "copilot",
+    "cline": "cline",
+    "roo code": "roo",
+    "aider": "aider",
+    "augment": "augment",
+    "google antigravity": "antigravity",
+    "codex cli": "codex",
+    "opencode": "opencode",
+}
+
+
+def _validate_editor_hooks_honesty(tk_dir: Path, vr: ValidationResult) -> None:
+    """Ensure the README platform matrix's Hooks column matches reality.
+
+    Guards against the overclaim that every editor gets hook enforcement when
+    only a subset does — the machine-enforced constitution needs generated
+    hooks, and rules-only editors receive guidance text without blocking hooks.
+    """
+    scripts_dir = tk_dir / "scripts"
+    readme = tk_dir / "README.md"
+    if not scripts_dir.is_dir() or not readme.is_file():
+        return  # installed copy without source — nothing to cross-check
+
+    # Actual hook-enabled editors: native set + generate_<editor>_hooks.py stems.
+    actual = set(_NATIVE_HOOK_EDITORS)
+    for gen in scripts_dir.glob("generate_*_hooks.py"):
+        stem = gen.name[len("generate_"):-len("_hooks.py")]
+        actual.add(stem)
+
+    content = readme.read_text(encoding="utf-8")
+    if "| Hooks |" not in content:
+        return  # matrix has no Hooks column to validate
+
+    claimed: set[str] = set()
+    parsed_any = False
+    for line in content.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        key = _README_PLATFORM_KEY.get(cells[0].lower())
+        if key is None:
+            continue  # header, separator, or unknown row
+        parsed_any = True
+        if "✅" in cells[2]:  # ✅
+            claimed.add(key)
+
+    if not parsed_any:
+        return
+
+    missing = actual - claimed       # has hooks but README omits the ✅
+    overclaimed = claimed - actual   # README claims ✅ but no generator exists
+    if missing:
+        vr.error(
+            "README Hooks column understates enforcement for: "
+            + ", ".join(sorted(missing))
+        )
+    if overclaimed:
+        vr.error(
+            "README Hooks column overclaims enforcement for: "
+            + ", ".join(sorted(overclaimed))
+            + " (no hook generator or native bridge found)"
+        )
+    if not missing and not overclaimed:
+        print(f"  OK: editor hooks honesty ({len(claimed)} hook-enabled editors)")
 
 
 ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]

@@ -8,7 +8,7 @@ Universal multi-agent system for software development. Works across all reposito
 |-----------|-------|
 | Agents | See agents catalog |
 | Skills | See skills catalog |
-| Hooks | 14 events / 28 entries (SessionStart ×3, Notification ×1, PreToolUse ×5, UserPromptSubmit ×2, PostToolUse ×4, Stop ×4, TaskCompleted ×1, TeammateIdle ×1, SubagentStart ×1, SubagentStop ×1, PreCompact ×2, SessionEnd ×1, InstructionsLoaded ×1, ConfigChange ×1) |
+| Hooks | 14 events / 29 entries (SessionStart ×3, Notification ×1, PreToolUse ×5, UserPromptSubmit ×2, PostToolUse ×5, Stop ×4, TaskCompleted ×1, TeammateIdle ×1, SubagentStart ×1, SubagentStop ×1, PreCompact ×2, SessionEnd ×1, InstructionsLoaded ×1, ConfigChange ×1) |
 
 ---
 

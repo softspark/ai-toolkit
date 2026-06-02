@@ -73,6 +73,16 @@ Scan skill and agent definitions for security risks before installation or after
 | `-----BEGIN.*PRIVATE KEY` | HIGH | Private key |
 | `ghp_[a-zA-Z0-9]{36}` | HIGH | GitHub PAT |
 
+### Unicode Safety
+
+Shipped prompt text (skills, agents, rules, personas, mcp-templates) is scanned for invisible/smuggled characters that a human reviewer cannot see. `U+200D` (ZWJ) is allowlisted so legitimate emoji sequences do not flag.
+
+| Pattern | Severity | Description |
+|---------|----------|-------------|
+| Tag block `U+E0000–U+E007F` | HIGH | ASCII smuggling / invisible prompt injection |
+| Bidi controls (LRE/RLE/PDF/LRO/RLO, LRI/RLI/FSI/PDI) | HIGH | Trojan Source text reordering |
+| Zero-width / invisible format chars (ZWSP, ZWNJ, WJ, BOM, soft hyphen, …) | WARN | Verify it is intentional |
+
 ## Output Format
 
 ```markdown

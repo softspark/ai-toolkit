@@ -60,6 +60,7 @@ EXPECTED_HOOKS = [
     "config-desync-guard.sh",
     "instructions-audit.sh",
     "post-tool-use.sh",
+    "loop-guard.sh",
     "quality-check.sh",
     "quality-gate.sh",
     "revert-guard.sh",
@@ -550,6 +551,55 @@ def check_url_hooks(dr: DiagResult, fix_mode: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check 10: Language Rules Drift (project-local)
+# ---------------------------------------------------------------------------
+
+def check_language_drift(dr: DiagResult) -> None:
+    """Warn when the current project gained a language but its rules were not injected.
+
+    Runs only inside a local-install project (cwd has .claude/CLAUDE.md with the
+    language-rules block). A new Cargo.toml / go.mod that appears after install
+    otherwise leaves the matching <lang>-rules unlinked with zero signal.
+    """
+    print()
+    print("## 10. Language Rules Drift")
+
+    claude_md = Path.cwd() / ".claude" / "CLAUDE.md"
+    if not claude_md.is_file():
+        dr.skip("not a local-install project (no .claude/CLAUDE.md)")
+        return
+    try:
+        content = claude_md.read_text(encoding="utf-8")
+    except OSError:
+        dr.skip("could not read .claude/CLAUDE.md")
+        return
+    if "TOOLKIT:language-rules" not in content:
+        dr.skip("no language-rules block in .claude/CLAUDE.md")
+        return
+
+    try:
+        from install_steps.detect_language import detect_languages
+    except Exception:
+        dr.skip("language detection unavailable")
+        return
+
+    missing = []
+    for module in detect_languages(Path.cwd(), toolkit_dir):
+        if not module.startswith("rules-"):
+            continue
+        skill = f"{module[len('rules-'):]}-rules"
+        if skill not in content:
+            missing.append(skill)
+
+    if not missing:
+        dr.ok("project language rules in sync")
+        return
+    for skill in missing:
+        lang = skill[: -len("-rules")]
+        dr.warn(f"{lang} detected but {skill} not injected — run: ai-toolkit install --local --lang {lang}")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -571,6 +621,7 @@ def main() -> None:
     check_benchmark_freshness(dr)
     check_stale_rules(dr, fix_mode)
     check_url_hooks(dr, fix_mode)
+    check_language_drift(dr)
 
     # Summary
     print("========================")

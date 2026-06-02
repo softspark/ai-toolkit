@@ -2,7 +2,8 @@
 """Skill & Agent Security Auditor.
 
 Deterministic scanner for ai-toolkit skills and agents.
-Detects dangerous code patterns, hardcoded secrets, and permission issues.
+Detects dangerous code patterns, hardcoded secrets, permission issues, and
+invisible/smuggled Unicode in shipped prompt text.
 
 Stdlib-only. JSON output to stdout. Non-zero exit on HIGH findings.
 
@@ -22,6 +23,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -147,6 +149,73 @@ def scan_secrets(filepath: Path, findings: list[Finding]) -> None:
             if severity == "WARN" and _is_placeholder_value(m):
                 continue
             findings.append(Finding(severity, rel, lineno, regex, desc))
+
+
+# ---------------------------------------------------------------------------
+# Unicode safety — invisible / smuggled characters in shipped prompt text.
+# Prompt files (skills, agents, rules, personas, mcp-templates) ARE the
+# product. A poisoned PR can carry instructions a human reviewer cannot see:
+# regex-over-decoded-text checks (above) never catch them.
+# ---------------------------------------------------------------------------
+
+# ASCII smuggling: U+E0000–U+E007F mirror ASCII inside Unicode "tag" chars.
+_UNICODE_TAG_BLOCK = range(0xE0000, 0xE0080)
+
+# Trojan Source bidi controls (CVE-2021-42574) — reorder rendered text vs. its
+# logical/source order, hiding instructions from a reviewer.
+_UNICODE_BIDI_HIGH = frozenset({
+    0x202A, 0x202B, 0x202C, 0x202D, 0x202E,  # LRE RLE PDF LRO RLO
+    0x2066, 0x2067, 0x2068, 0x2069,          # LRI RLI FSI PDI
+})
+
+# Invisible / zero-width formatting that can hide or splice text.
+# U+200D (ZERO WIDTH JOINER) is deliberately EXCLUDED — it is required by
+# legitimate emoji sequences and i18n text, so flagging it floods false
+# positives and trains maintainers to disable the gate.
+_UNICODE_INVISIBLE_WARN = frozenset({
+    0x200B, 0x200C, 0x200E, 0x200F, 0x2060, 0xFEFF, 0x00AD,
+    0x180E, 0x115F, 0x1160, 0x3164, 0xFFA0, 0x17B4, 0x17B5,
+})
+
+
+def _char_name(cp: int) -> str:
+    """Best-effort Unicode name for diagnostics."""
+    try:
+        return unicodedata.name(chr(cp))
+    except ValueError:
+        return f"U+{cp:04X}"
+
+
+def scan_unicode(filepath: Path, findings: list[Finding]) -> None:
+    """Flag invisible / smuggled Unicode in shipped prompt text."""
+    try:
+        text = filepath.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return
+    rel = str(filepath)
+    for lineno, line in enumerate(text.splitlines(), 1):
+        for ch in line:
+            cp = ord(ch)
+            if cp < 0x80:  # plain ASCII — fast path, always safe
+                continue
+            if cp in _UNICODE_TAG_BLOCK:
+                findings.append(Finding(
+                    "HIGH", rel, lineno, "unicode-tag-block",
+                    f"Unicode tag char {_char_name(cp)} (U+{cp:04X}) — "
+                    "ASCII smuggling / invisible prompt injection",
+                ))
+            elif cp in _UNICODE_BIDI_HIGH:
+                findings.append(Finding(
+                    "HIGH", rel, lineno, "unicode-bidi-control",
+                    f"Bidi control {_char_name(cp)} (U+{cp:04X}) — "
+                    "Trojan Source text reordering",
+                ))
+            elif cp in _UNICODE_INVISIBLE_WARN:
+                findings.append(Finding(
+                    "WARN", rel, lineno, "unicode-invisible",
+                    f"Invisible/zero-width char {_char_name(cp)} (U+{cp:04X}) — "
+                    "verify it is intentional",
+                ))
 
 
 # Description quality — per Anthropic docs (code.claude.com/docs/en/skills.md):
@@ -373,15 +442,26 @@ def audit(toolkit_root: Path) -> list[Finding]:
                 scan_file_patterns(sh, BASH_WARN, "WARN", findings)
                 scan_secrets(sh, findings)
 
-            # Secrets in any text file
+            # Secrets + invisible Unicode in any text file
             for md in skill_dir.rglob("*.md"):
                 scan_secrets(md, findings)
+                scan_unicode(md, findings)
 
     # Scan agents
     if agents.is_dir():
         for agent_md in sorted(agents.glob("*.md")):
             check_agent(agent_md, findings)
             scan_secrets(agent_md, findings)
+            scan_unicode(agent_md, findings)
+
+    # Unicode safety across the rest of the shipped prompt surface.
+    for extra in ("rules", "personas", "mcp-templates"):
+        extra_dir = app / extra
+        if not extra_dir.is_dir():
+            continue
+        for f in sorted(extra_dir.rglob("*")):
+            if f.is_file() and f.suffix in (".md", ".json"):
+                scan_unicode(f, findings)
 
     # Sort: HIGH first, then WARN, then INFO
     order = {"HIGH": 0, "WARN": 1, "INFO": 2}

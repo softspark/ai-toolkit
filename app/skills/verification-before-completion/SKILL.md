@@ -105,6 +105,25 @@ CORRECT:  Agent reports success → Check VCS diff → Verify changes → Report
 WRONG:    Trust agent report at face value
 ```
 
+## Live-App Rubric Verification (optional)
+
+When the success criterion is **behavioral or visual** (a UI flow, a generated app, a multi-step interaction), a pass/fail command is not enough — the proof is the running app, observed. Use a weighted rubric instead of a single assertion:
+
+1. **Define the rubric BEFORE building** — 3–6 criteria, each with a weight and an explicit pass bar. Example:
+
+   | Criterion | Weight | Pass bar |
+   |-----------|--------|----------|
+   | Core flow completes end-to-end | 0.40 | No error, reaches success state |
+   | Empty / loading / error states render | 0.25 | All three visible |
+   | Matches the requested layout | 0.20 | No major deviation |
+   | No console errors | 0.15 | Console clean |
+
+2. **Launch the app and observe** — actually run it and capture the behavior (screenshot, console, network). Do not infer from the source.
+3. **Score with a fresh evaluator** — have an independent agent grade the observed behavior against the rubric, not the implementer who wrote it (self-grading anchors high). Compute the weighted score.
+4. **Gate on the threshold** — below the bar (e.g. < 0.8) the claim is NOT verified: list the failing criteria as concrete defects and iterate. At or above the bar, state the score WITH the captured evidence.
+
+The rubric is the verification command for work that has no green/red exit code. The same Iron Law applies: observed evidence before the claim, every time.
+
 ## Constitutional Anchors
 
 This skill enforces **Constitution Art. VI.4 (Verify Before Claiming Done)**. The diff re-read is not optional: before any completion claim, confirm no orphaned references, no missing test coverage for changed paths, no stale docs. A task is not done while any of those exist.

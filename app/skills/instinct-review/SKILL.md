@@ -13,9 +13,9 @@ $ARGUMENTS
 
 ## What This Does
 
-Manages the instinct system that learns patterns from your sessions.
+Manages the instinct system: project-local behavioral notes that Claude loads at the start of a session.
 
-Instincts are stored in `.claude/instincts/` and loaded at session start.
+Instincts are markdown files in `.claude/instincts/`, loaded at session start by `session-start.sh` whenever any exist (set `AI_TOOLKIT_HOOK_QUIET=1` to suppress).
 
 ## Commands
 
@@ -48,10 +48,10 @@ Interactive review: shows each instinct and asks promote/remove/keep.
 
 ## How Instincts Work
 
-1. **Extraction**: At session end, the Stop hook extracts patterns from the session
-2. **Storage**: Saved as `.claude/instincts/<pattern-name>.md` with confidence score
-3. **Loading**: At session start, instincts are loaded and shown to Claude
-4. **Curation**: Use `/instinct-review` to promote good ones and remove bad ones
+1. **Authoring**: Instinct files are written by hand — one markdown file per pattern in `.claude/instincts/`. There is no automatic session-end extractor today (see [When NOT to Use](#when-not-to-use)).
+2. **Storage**: `.claude/instincts/<pattern-name>.md`, each carrying a confidence score (see format below).
+3. **Loading**: At session start, `session-start.sh` loads every instinct file into context whenever any exist. No instincts on disk means nothing is loaded; set `AI_TOOLKIT_HOOK_QUIET=1` to suppress.
+4. **Curation**: Use `/instinct-review` to list, promote, remove, or clear them.
 
 ## Instinct Format
 
@@ -88,14 +88,14 @@ Last seen: 2026-03-25
 ## Gotchas
 
 - Instincts live in **project-local** `.claude/instincts/`, not in `~/.softspark/ai-toolkit/`. Running this skill in a different project sees a different set — do not treat the list as global state.
-- The Stop hook that extracts instincts may write draft files even when no meaningful pattern was observed. A `.claude/instincts/` with 40 files is usually 35 noise + 5 signal — curate ruthlessly.
+- Every instinct file loads into session context by default (whenever the directory is non-empty), so each one costs startup tokens. This is why curation matters — prune aggressively and keep the set small.
 - Promoted instincts (confidence = 1.0) load into every session's context, costing tokens. Too many pinned instincts bloat startup. Keep ≤10 pinned.
-- Instinct files are plain markdown but the extraction format may evolve between ai-toolkit versions. A `--clear` after a version bump is often cleaner than trying to migrate old formats.
+- Instinct files are plain markdown following the format above. If you accumulate many, a `--clear` and re-author is often cleaner than migrating stale notes after a major toolkit bump.
 - The filename (`<pattern-name>.md`) is the identity used by `--promote` and `--remove`. Renaming files manually breaks those flags until the user reopens the review UI.
 
 ## When NOT to Use
 
-- To **extract** new instincts — extraction is automatic via the Stop hook
+- To **auto-extract** instincts from a session — not implemented. No Stop hook writes instinct files; author them by hand (or via a future extraction tool). This skill curates existing files, it does not generate them.
 - To search past session memory — use `/mem-search`
 - To edit global toolkit memory files — those live in `~/.claude/projects/*/memory/` and are managed by the auto-memory system, not this skill
-- To permanently disable the instinct system — edit `settings.json` to remove the Stop hook; `--clear` only wipes current state, extraction continues on the next session
+- To stop instincts from loading — delete the files with `--clear`, or set `AI_TOOLKIT_HOOK_QUIET=1` to suppress all session-start output. There is no extraction process to disable.

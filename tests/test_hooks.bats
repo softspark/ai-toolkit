@@ -173,6 +173,31 @@ run_hook_with_input() {
     [ "$status" -eq 0 ]
 }
 
+@test "guard-destructive: allows git push --force-with-lease (safe force)" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"git push --force-with-lease origin main"}}'
+    [ "$status" -eq 0 ]
+}
+
+@test "guard-destructive: allows git push --force-if-includes (safe force)" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"git push --force-if-includes origin main"}}'
+    [ "$status" -eq 0 ]
+}
+
+@test "guard-destructive: allows commit message mentioning DROP TABLE (data, not exec)" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"git commit -m \"fix DROP TABLE race condition\""}}'
+    [ "$status" -eq 0 ]
+}
+
+@test "guard-destructive: allows echo mentioning rm -rf (data, not exec)" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"echo \"never run rm -rf / on prod\""}}'
+    [ "$status" -eq 0 ]
+}
+
+@test "guard-destructive: still blocks rm -rf chained after a benign git commit" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"git commit -m wip && rm -rf /tmp/foo"}}'
+    [ "$status" -eq 2 ]
+}
+
 @test "guard-destructive: allows rm single file (no -r)" {
     run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"rm /tmp/test.log"}}'
     [ "$status" -eq 0 ]
@@ -347,13 +372,31 @@ EOF
     echo "$output" | grep -q "Session Context"
 }
 
-@test "session-start: includes active instincts" {
+@test "session-start: loads active instincts by default (no verbose needed)" {
     mkdir -p "$TEST_TMP/project/.claude/instincts"
     echo "Always verify before commit" > "$TEST_TMP/project/.claude/instincts/verify.md"
     cd "$TEST_TMP/project"
-    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
+    run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Active Instincts"
+    echo "$output" | grep -q "Always verify before commit"
+}
+
+@test "session-start: QUIET suppresses instinct loading" {
+    mkdir -p "$TEST_TMP/project/.claude/instincts"
+    echo "Always verify before commit" > "$TEST_TMP/project/.claude/instincts/verify.md"
+    cd "$TEST_TMP/project"
+    AI_TOOLKIT_HOOK_QUIET=1 run_hook "session-start.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "session-start: no instincts dir means no instinct output" {
+    mkdir -p "$TEST_TMP/project/.claude"
+    cd "$TEST_TMP/project"
+    run_hook "session-start.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -743,4 +786,67 @@ assert 'git_branch' in d, 'missing git_branch field'
     [ -n "$file" ]
     grep -q "test-session-abc" "$file"
     unset CLAUDE_SESSION_ID
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _profile-check.sh — per-hook soft opt-out (AI_TOOLKIT_DISABLED_HOOKS)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@test "disable-hooks: named hook emits normally when not disabled" {
+    run bash -c "echo '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"/tmp/x.py\"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/post-tool-use.sh'"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"additionalContext"* ]]
+}
+
+@test "disable-hooks: AI_TOOLKIT_DISABLED_HOOKS silences the named hook" {
+    run bash -c "echo '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"/tmp/x.py\"}}' | AI_TOOLKIT_HOOK_FORMAT=json AI_TOOLKIT_DISABLED_HOOKS='post-tool-use' bash '$HOOKS_DIR/post-tool-use.sh'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "disable-hooks: accepts .sh suffix and comma-separated lists" {
+    run bash -c "echo '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"/tmp/x.py\"}}' | AI_TOOLKIT_HOOK_FORMAT=json AI_TOOLKIT_DISABLED_HOOKS='foo.sh, post-tool-use.sh ,bar' bash '$HOOKS_DIR/post-tool-use.sh'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "disable-hooks: unrelated name in the list does not disable the hook" {
+    run bash -c "echo '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"/tmp/x.py\"}}' | AI_TOOLKIT_HOOK_FORMAT=json AI_TOOLKIT_DISABLED_HOOKS='some-other-hook' bash '$HOOKS_DIR/post-tool-use.sh'"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"additionalContext"* ]]
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# loop-guard.sh — repeated-action advisory
+# ─────────────────────────────────────────────────────────────────────────────
+
+@test "loop-guard: same command repeated to threshold emits advisory" {
+    P='{"session_id":"loop-rep","tool_name":"Bash","tool_input":{"command":"npm run build"}}'
+    printf '%s' "$P" | AI_TOOLKIT_HOOK_FORMAT=json bash "$HOOKS_DIR/loop-guard.sh" >/dev/null
+    printf '%s' "$P" | AI_TOOLKIT_HOOK_FORMAT=json bash "$HOOKS_DIR/loop-guard.sh" >/dev/null
+    run bash -c "printf '%s' '$P' | AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/loop-guard.sh'"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Loop guard"* ]]
+}
+
+@test "loop-guard: single command does not warn" {
+    run bash -c "printf '%s' '{\"session_id\":\"loop-single\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls -la\"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/loop-guard.sh'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "loop-guard: distinct commands do not warn" {
+    printf '%s' '{"session_id":"loop-distinct","tool_name":"Bash","tool_input":{"command":"echo a"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash "$HOOKS_DIR/loop-guard.sh" >/dev/null
+    printf '%s' '{"session_id":"loop-distinct","tool_name":"Bash","tool_input":{"command":"echo b"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash "$HOOKS_DIR/loop-guard.sh" >/dev/null
+    run bash -c "printf '%s' '{\"session_id\":\"loop-distinct\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"echo c\"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/loop-guard.sh'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "loop-guard: iterative edits to the same file do not warn (content differs)" {
+    printf '%s' '{"session_id":"loop-edit","tool_name":"Edit","tool_input":{"file_path":"/tmp/a.py","new_string":"v1"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash "$HOOKS_DIR/loop-guard.sh" >/dev/null
+    printf '%s' '{"session_id":"loop-edit","tool_name":"Edit","tool_input":{"file_path":"/tmp/a.py","new_string":"v2"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash "$HOOKS_DIR/loop-guard.sh" >/dev/null
+    run bash -c "printf '%s' '{\"session_id\":\"loop-edit\",\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"/tmp/a.py\",\"new_string\":\"v3\"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/loop-guard.sh'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
 }

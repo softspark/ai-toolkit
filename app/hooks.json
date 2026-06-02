@@ -141,6 +141,16 @@
             },
             {
                 "_source": "ai-toolkit",
+                "matcher": "Bash|Edit|MultiEdit|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/loop-guard.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
                 "matcher": "Edit|MultiEdit|Write",
                 "hooks": [
                     {
