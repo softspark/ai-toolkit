@@ -7,6 +7,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.6.0 - Editor ecosystem sync + Codex rules in AGENTS.md (2026-06-05)
+
+Minor release. Syncs the editor registry with current upstream reality (Windsurf→Devin rebrand, Roo Code archive, Gemini CLI sunset, moved docs hosts) and fixes several generators that wrote to paths their editors never read. Headline: Codex now actually receives the universal coding rules.
+
+### Added
+- **Codex CLI: all 10 native hook events** — wired the 5 previously-missing events (`PostToolUse`, `PreCompact`, `PostCompact`, `SubagentStart`, `SubagentStop`) to the shared toolkit hook scripts, mirroring `app/hooks.json`. Was 5 of 10.
+
+### Changed
+- **Codex CLI: coding rules now in `AGENTS.md`** — the universal code-style/testing/security/output-mode rule bodies are inlined into `AGENTS.md`, the only instruction path Codex reads. They were previously emitted to `.agents/rules/`, which Codex never reads (confirmed against `developers.openai.com/codex`). Language rules continue via `.agents/skills/`.
+- **Google Antigravity: plural `.agents/`** — generators now emit `.agents/rules/` and `.agents/workflows/` (the Antigravity 2.0 default); singular `.agent/` is still read by Antigravity as a fallback.
+- **Conditional skill pointers** — Cursor/Cline/Augment skip the `ai-toolkit-skill-catalogue` pointer when real skills are discoverable at `.claude/skills/` (project or `~/.claude/skills/`), emitting it only as the editor-only fallback. Windsurf keeps its pointer unconditionally (its `.claude/skills` scan is gated behind a Devin "Claude Code config reading" setting).
+- **Cursor subagents** — emit `model: inherit`; dropped the undocumented `tools`/`color` fields to match the current Cursor schema.
+- **Augment subagents** — omit the `model` field (Augment uses the CLI default model; `inherit` is not a documented value).
+- **Ecosystem registry sync** — Windsurf → Devin Desktop (docs/changelog redirects); Roo Code repo archived + docs moved to `roocodeinc.github.io`; Claude Code docs host `code.claude.com`; Codex docs `developers.openai.com/codex`; Gemini CLI free/paid tier sunset 2026-06-18 (enterprise continues); Cline config-path corrections; stale Gemini `Stop` marker dropped.
+
+### Fixed
+- **opencode commands were empty** — the prompt now lives in the markdown body. Commands previously put it in a `template:` frontmatter block (JSON-config-only) with an empty body, so every generated opencode command was effectively blank.
+- **Cline global rules** — now written to `~/Documents/Cline/Rules/` (the documented Cline global path) instead of the never-read `~/.cline/rules/`.
+- **Augment commands** — dropped the undocumented `agent:` frontmatter field; fixed a false `generate_augment_hooks.py` docstring claim about per-workspace settings.
+
+### Removed
+- **`scripts/generate_codex_rules.py`** and the `ai-toolkit codex-rules` / `npm run generate:codex-rules` subcommands — Codex never read the `.agents/rules/` output. Coding rules now ship via `AGENTS.md` (universal) and `.agents/skills/` (language). Installs need no migration; if you scripted `ai-toolkit codex-rules`, the rules are now produced by `ai-toolkit codex-md`. Test count: 1181 → 1179 (dead-path tests removed).
+
+### Ecosystem
+- Class B (integrate): Codex 10 hook events. Class E (now-default): Antigravity plural `.agents/`, conditional skill pointers. Class D (deprecation): Windsurf→Devin, Roo Code archive, Gemini CLI tier sunset. Plus registry URL/version/config-path corrections across 9 tools.
+
+---
+
 ## v4.5.1 - ShellCheck fix for loop-guard hook (2026-06-02)
 
 Patch release. Clears two ShellCheck `SC2034` warnings in `loop-guard.sh` that turned the `main` CI ShellCheck job red after v4.5.0. The publish workflow does not run ShellCheck, so v4.5.0 published despite the red CI; this patch makes `main` green again. No runtime behavior change.

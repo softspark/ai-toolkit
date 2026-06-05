@@ -8,15 +8,15 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1179%20passing-success)](tests/)
 
-## What's New in v4.5.1
+## What's New in v4.6.0
 
-v4.5.1 is a patch that clears a ShellCheck lint in the loop-guard hook. The v4.5.0 feature set: hardens the security audit against invisible prompt injection, adds a repeated-action loop guard, fixes destructive-guard false positives, and makes the instinct system actually work.
+v4.6.0 syncs the editor ecosystem with current upstream reality and fixes several generators that were writing to paths their editors never read.
 
-- **Unicode-safety scanner**: the skill/agent audit now flags invisible and smuggled Unicode (tag-block ASCII smuggling, Trojan Source bidi controls) across all shipped prompt text — a prompt-injection vector regex checks never caught. Runs in the `--ci` gate.
-- **Loop guard**: a new advisory `PostToolUse` hook warns when the same action repeats, catching stuck loops that the `/repeat` failure-counter circuit breaker misses.
-- **`git push --force-with-lease` unblocked**: the destructive-command guard no longer false-positives on safe force-pushes or on commit messages that merely mention `DROP TABLE`/`rm -rf`.
-- **Instincts load by default**: hand-authored `.claude/instincts/*.md` now load at session start (previously dormant behind a verbose flag). The skill docs were corrected to drop a never-implemented auto-extractor claim.
-- **Editor honesty + secret scrubbing**: the platform matrix marks which editors get hook enforcement, and memory-pack now redacts secrets before storing session observations.
+- **Codex finally gets its coding rules**: the universal code-style/testing/security rules are now inlined into `AGENTS.md` (the only file Codex reads) instead of the never-read `.agents/rules/`. Codex also now wires all 10 native lifecycle hook events.
+- **opencode commands fixed**: the prompt now lives in the markdown body — it previously went into a `template:` frontmatter block that opencode ignores, producing empty commands.
+- **Cline global rules land where Cline reads them**: `~/Documents/Cline/Rules/` instead of the never-read `~/.cline/rules/`.
+- **Smarter skill pointers**: Cursor/Cline/Augment skip the catalogue pointer when real skills are already discoverable at `.claude/skills/`, emitting it only as the editor-only fallback.
+- **Registry sync**: Windsurf → Devin Desktop, Roo Code archived, Antigravity `.agents/` plural default, Gemini CLI free/paid sunset (2026-06-18), corrected docs URLs across the board.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

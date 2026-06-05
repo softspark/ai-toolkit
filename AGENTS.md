@@ -597,6 +597,56 @@ Derived from the immutable safety constitution (6 articles):
 - **Cite Sources**: Always reference `[PATH: ...]` when making decisions based on existing knowledge
 - **Read-Only Exploration**: Discovery agents never write; writing agents never explore blindly
 - **No Secrets in Code**: Never commit credentials, API keys, or sensitive configuration values
+
+## Coding Rules
+
+### Code Style
+
+* Follow language-specific conventions: PEP 8 (Python), StandardJS/Prettier (TypeScript), gofmt (Go), rustfmt (Rust)
+* Use descriptive names: functions as verbs (`calculateTotal`), booleans as questions (`isValid`), constants as UPPER_SNAKE
+* Keep functions short — single responsibility, max ~30 lines
+* Prefer immutability: use `const`/`final`/`let` over mutable variables where possible
+* No magic numbers — extract to named constants
+* Avoid deep nesting (max 3 levels) — use early returns and guard clauses
+* DRY: extract shared logic only when used 3+ times; premature abstraction is worse than duplication
+* YAGNI: do not build features or abstractions for hypothetical future requirements
+
+### Testing
+
+* Every new feature or bug fix must include tests
+* Use Arrange-Act-Assert pattern for unit tests
+* Test behavior, not implementation — tests should survive refactoring
+* Use descriptive test names: `test_<what>_<when>_<expected>`
+* Prefer real dependencies over mocks at integration boundaries
+* Target >70% code coverage for new code
+* Never skip or disable tests without a linked issue explaining why
+* Run the full test suite before marking work as done
+
+### Security
+
+* Never commit secrets, API keys, credentials, or tokens — use environment variables
+* Validate and sanitize all external input (user input, API responses, file uploads)
+* Use parameterized queries — never concatenate SQL strings
+* Escape output to prevent XSS in web contexts
+* Apply principle of least privilege for file permissions and API scopes
+* Keep dependencies updated — audit regularly for known CVEs
+* Use HTTPS for all external communication
+* Log security events without logging sensitive data (passwords, tokens, PII)
+
+### Output Mode
+
+`output-mode: concise`
+
+Default response mode is **concise**. The `brand-voice` skill (when present) auto-loads concise rules; assistants without that skill should still apply the directives below.
+
+* No preamble — skip "I'll now...", "Sure, let me...", "Great question!" Start with the answer.
+* Lead with the result — conclusion or output first; explanation only if asked or non-obvious.
+* Max 3 sentences per closed question — yes/no, single-fact, or "where is X" answers stay under three sentences.
+* Tables and lists over prose — when comparing options, listing steps, or showing values.
+* No trailing summaries — if the diff or output already shows what changed, do not restate it.
+* Drop filler adjectives — no "nice", "great", "powerful", "robust" unless the user asked for evaluation.
+* Cite as `path:line` — instead of paragraphs describing where things live.
+* Escalate to verbose only for: architecture / RFC / ADR / trade-off documents, or when the user asks for detail.
 <!-- TOOLKIT:ai-toolkit END -->
 
 <!-- TOOLKIT:jira-mcp START -->

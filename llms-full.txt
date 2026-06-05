@@ -4841,11 +4841,11 @@ What `uninstall` does:
 title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
-tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem]
-version: "1.10.1"
+tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
+version: "1.11.0"
 created: "2026-04-10"
-last_updated: "2026-04-28"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, and the registry-vs-generators drift gate added in v1.10.0."
+last_updated: "2026-06-02"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, and the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5)."
 ---
 
 # SOP: Release Preparation
@@ -4890,12 +4890,11 @@ python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
 # 3. Write CHANGELOG.md entry
 # 4. Regenerate artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
-# 5. Validate + audit + SARIF + test + ecosystem check
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && npm test
+# 5. Validate + audit + SARIF + shellcheck + test + ecosystem check
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && shellcheck --severity=warning app/hooks/*.sh && npm test
 
 # 5a. Supply-chain standard (v2.8.0+) — non-negotiable
 grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --provenance"; exit 1; }
@@ -5092,7 +5091,6 @@ Add entry at the top of `CHANGELOG.md` (after the header, before previous releas
 
 ```bash
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 ```
@@ -5117,6 +5115,12 @@ python3 scripts/audit_skills.py --ci
 python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS ingest
 python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
 
+# ShellCheck on hooks (added in 1.11.0). Mirrors the ci.yml "ShellCheck hooks"
+# job. NOT run by validate.py, npm test, OR publish.yml — so a hook with a
+# ShellCheck warning passes every other gate AND still publishes on tag while
+# turning main CI red. Run it here, before tagging.
+shellcheck --severity=warning app/hooks/*.sh && echo "OK: shellcheck clean"
+
 # Registry / generator drift (added in 1.10.0). Meta-generators excluded.
 META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
 diff \
@@ -5138,12 +5142,15 @@ echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp
 - `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
 - `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
 - `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
+- `shellcheck --severity=warning app/hooks/*.sh`: no output, exit 0. A common false positive is `SC2034` on `INPUT` or env vars (e.g. `AI_TOOLKIT_HOOK_FORMAT`) that a *sourced* helper (`_hook-io.sh`) consumes — ShellCheck cannot see cross-file use. Fix with a `# shellcheck disable=SC2034` directive or `export`, matching `guard-destructive.sh`. Never tag with a red ShellCheck.
 - Registry drift: `OK: registry matches filesystem`. If `DRIFT:` appears, add the missing `scripts/generate_*.py` rows to `kb/reference/supported-tools-registry.md` before tagging.
 - `npm test`: `1..N` with zero `not ok` (read from the cached `/tmp/npm-test.log`, do not rerun)
 
+> **Why this matters (v4.5.1 postmortem):** `publish.yml` runs only `validate.py` + `npm test`, so it published v4.5.0 even though the `main` CI `ShellCheck hooks` job was red on two `SC2034` warnings in a new hook. The publish workflow does **not** depend on the CI workflow. Until that is fixed, ShellCheck is a manual pre-tag gate — run it here every time.
+
 **One-liner:**
 ```bash
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py' | sort -u) && npm test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py' | sort -u) && npm test
 ```
 
 **If tests fail:** Fix the issue, do NOT skip. Common failures:
@@ -5266,17 +5273,18 @@ git push origin --delete vX.Y.Z
 | 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
 | 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
 | 7 | CHANGELOG.md | Add release entry (incl. `Ecosystem` subsection if any B/D/E/F drift) | Entry exists for vX.Y.Z |
-| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py`, `generate_llms_txt.py` | No unexpected diff |
+| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_llms_txt.py` | No unexpected diff |
 | 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
 | 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
 | 11 | Security audit (SARIF) | `audit_skills.py --sarif` | Valid SARIF 2.1.0 JSON |
 | 12 | Per-skill permissions | `audit_skills.py --permissions` | New broad-access skills justified in CHANGELOG |
-| 13 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
-| 14 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
-| 15 | Tests | `npm test` | All pass |
-| 16 | Commit | `git commit` | Clean working tree |
-| 17 | Tag | `git tag vX.Y.Z` | Tag exists |
-| 18 | Push | `git push origin main --tags` | CI triggered with `id-token: write` |
+| 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh` | Exit 0, no output (mirrors ci.yml; publish.yml does NOT run it) |
+| 14 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
+| 15 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
+| 16 | Tests | `npm test` | All pass |
+| 17 | Commit | `git commit` | Clean working tree |
+| 18 | Tag | `git tag vX.Y.Z` | Tag exists |
+| 19 | Push | `git push origin main --tags` | CI triggered with `id-token: write` |
 
 ---
 
@@ -5320,9 +5328,8 @@ Verifies all critical paths from the user's perspective.
 ```bash
 # Pre-commit (Phase 0)
 python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGENTS.md
-python3 scripts/generate_codex_rules.py .                   # 2. Refresh standard Codex rules
-python3 scripts/generate_llms_txt.py > llms.txt             # 3. Regenerate llms.txt
-python3 scripts/validate.py --strict                        # 4. Validation passed?
+python3 scripts/generate_llms_txt.py > llms.txt             # 2. Regenerate llms.txt
+python3 scripts/validate.py --strict                        # 3. Validation passed?
 npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 5. All tests passed? (single run, cached)
 
 # Post-install verification (Phases 1-7)
@@ -5352,7 +5359,6 @@ counts but does NOT auto-regenerate — you must do it locally.
 ```bash
 # 1. Regenerate generated artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
@@ -5377,7 +5383,7 @@ by the developer as part of their PR.
 
 **One-liner (copy-paste):**
 ```bash
-python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_codex_rules.py . && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---
@@ -6236,7 +6242,7 @@ Machine (global)                              Project (local)
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agent/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
+Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.windsurf/rules/*.md`, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agents/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md` (universal coding rules inlined — Codex reads only AGENTS.md, not `.agents/rules/`), `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
 
@@ -6270,9 +6276,8 @@ If a project already has `.mcp.json`, local install mirrors its `mcpServers` ent
 | `aider-conf` | `./` | Generates `.aider.conf.yml` |
 | `conventions-md` | `./` | Generates `CONVENTIONS.md` (Aider auto-loaded) |
 | `augment-dir-rules` | `./` | Generates `.augment/rules/ai-toolkit-*.md` |
-| `antigravity-rules` | `./` | Generates `.agent/rules/` + `.agent/workflows/` |
+| `antigravity-rules` | `./` | Generates `.agents/rules/` + `.agents/workflows/` |
 | `codex-md` | `./` | Generates Codex-facing `AGENTS.md` |
-| `codex-rules` | `./` | Generates `.agents/rules/*.md` |
 | `codex-hooks` | `./` | Generates `.codex/hooks.json` |
 | `agents-md` | toolkit | Regenerates `AGENTS.md` |
 | `llms-txt` | `./` | Generates `llms.txt` |
@@ -6898,8 +6903,7 @@ Usage: ai-toolkit <command> [options]
 |---------|-------------|
 | `generate-all` | Generate all platform configs at once |
 | `agents-md` | Regenerate `AGENTS.md` from agent definitions |
-| `codex-md` | Generate `AGENTS.md` with marker injection for Codex CLI |
-| `codex-rules` | Generate `.agents/rules/*.md` for Codex CLI |
+| `codex-md` | Generate `AGENTS.md` (coding rules inlined) with marker injection for Codex CLI |
 | `codex-hooks` | Generate `.codex/hooks.json` for Codex CLI |
 | `cursor-rules` | Generate `.cursorrules` (legacy single file) |
 | `cursor-mdc` | Generate `.cursor/rules/*.mdc` (recommended) |
@@ -6915,7 +6919,7 @@ Usage: ai-toolkit <command> [options]
 | `conventions-md` | Generate `CONVENTIONS.md` for Aider |
 | `augment-rules` | Generate `.augment/rules/ai-toolkit.md` (legacy) |
 | `augment-dir-rules` | Generate `.augment/rules/ai-toolkit-*.md` (recommended) |
-| `antigravity-rules` | Generate `.agent/rules/` and `.agent/workflows/` |
+| `antigravity-rules` | Generate `.agents/rules/` and `.agents/workflows/` |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
 
 ## Other Commands
@@ -8592,10 +8596,10 @@ with documented, file-based config surfaces:
 - `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `gemini`: `~/.gemini/GEMINI.md`
 - `augment`: `~/.augment/rules/ai-toolkit.md`
-- `cline`: `~/.cline/rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
+- `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `roo`: `~/.roo/rules/ai-toolkit-*.md`
 - `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
-- `codex`: `~/AGENTS.md`, `~/.agents/rules/*`, `~/.agents/skills/*`, `~/.codex/hooks.json`
+- `codex`: `~/AGENTS.md` (coding rules inlined), `~/.agents/skills/*`, `~/.codex/hooks.json`
 - `opencode`: `~/.config/opencode/*`
 
 Cursor, GitHub Copilot, and Google Antigravity rule installs stay project-local.
@@ -8628,7 +8632,7 @@ These files still stay local to a repository as part of the core install model:
 - `.roomodes`
 - `.aider.conf.yml`
 - `.augment/rules/ai-toolkit-*.md`
-- `.agent/rules/*.md` and `.agent/workflows/*.md` (Google Antigravity)
+- `.agents/rules/*.md` and `.agents/workflows/*.md` (Google Antigravity; singular `.agent/` still read as fallback)
 - `.git/hooks/pre-commit` (fallback)
 - project-specific documentation or safety overlays
 
@@ -10872,7 +10876,7 @@ opencode also reads `CLAUDE.md` as a fallback, so a user without the native inte
 
 - `AGENTS.md` (shared with Codex CLI via distinct marker sections)
 - `.opencode/agents/ai-toolkit-*.md` (one per ai-toolkit agent, `mode: subagent`)
-- `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill, required `template: |` frontmatter field)
+- `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill; the prompt lives in the markdown body)
 - `.opencode/plugins/ai-toolkit-hooks.js` (JS plugin bridging Bash hooks)
 - `opencode.json` (MCP key merged from `.mcp.json`, user keys preserved)
 
@@ -10920,7 +10924,7 @@ Opencode treats these files as auto-completable with `@` and can delegate to the
 
 Only user-invocable skills (`user-invocable: true` or no `disable-model-invocation`) emit to `.opencode/commands/`. Knowledge skills (`user-invocable: false`) are intentionally skipped — they are not intended as commands.
 
-Each command file carries opencode's required `template: |` frontmatter field, built from the SKILL.md body.
+Each command file carries the prompt in its markdown body (built from the SKILL.md body). opencode reads the body as the prompt; the `template` field is JSON-config-only and is ignored in `.md` command files.
 
 ## Hook Bridge (JS Plugin)
 
@@ -11765,9 +11769,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-04-23"
-last_updated: "2026-05-30"
+last_updated: "2026-06-05"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -11788,8 +11792,9 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `claude-code` |
-| Docs | https://platform.claude.com/docs/en/claude-code |
+| Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
+| Changelog | https://code.claude.com/docs/en/changelog (lists current 2.1.165) |
 | Config paths | `~/.claude/settings.json`, `.claude/settings.local.json`, `CLAUDE.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+) |
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
@@ -11819,9 +11824,9 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `windsurf` |
-| Docs | https://docs.windsurf.com |
-| Changelog | https://windsurf.com/changelog |
-| Stable docs mirror | https://docs.windsurf.com/llms.txt + per-page .md twins |
+| Docs | https://docs.devin.ai/desktop (Windsurf rebranded to Devin Desktop ~2026-06-02; docs.windsurf.com resolves here) |
+| Changelog | https://docs.devin.ai/desktop/changelog (windsurf.com/changelog 308-permanent-redirects here) |
+| Stable docs mirror | https://docs.devin.ai/desktop/... per-page .md twins; legacy `.windsurf/`, `.windsurfrules`, `~/.codeium/windsurf/` paths still read as fallback (new canonical: `.devin/`) |
 | Config paths | `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurf/skills/*/SKILL.md`, `AGENTS.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json` |
 | Compat read paths | `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/` |
 | Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py`, `scripts/generate_windsurf_hooks.py` (profile=full), `scripts/generate_windsurf_skills.py` (global + profile=full pointer) |
@@ -11849,9 +11854,9 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Release notes | https://github.com/google-gemini/gemini-cli/releases |
 | Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md`, `.gemini/extensions/gemini-extension.json` |
 | Our generators | `scripts/generate_gemini.py`, `scripts/generate_gemini_hooks.py` (profile>=standard), `scripts/generate_gemini_commands.py` (profile=full), `scripts/generate_gemini_skills.py` (profile=full) |
-| Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `SessionStart`, `SessionEnd`, `Stop`, `SKILL.md`, `activate_skill`, custom commands, `gemini-extension.json` |
+| Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `SessionStart`, `SessionEnd`, `SKILL.md`, `activate_skill`, custom commands, `gemini-extension.json` (no native `Stop` event — generator maps Stop-equivalent to `AfterAgent`) |
 | Version probe | `gemini --version` |
-| Latest upstream | v0.39.0 (2026-04-23) |
+| Latest upstream | v0.45.1 (2026-06-04). NOTE: Gemini CLI drops free/paid tiers 2026-06-18 in favor of Antigravity CLI (we ship `generate_antigravity.py`); enterprise Code Assist keeps Gemini CLI. |
 
 ### Cline
 
@@ -11860,19 +11865,19 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `cline` |
 | Docs | https://docs.cline.bot |
 | Release notes | https://github.com/cline/cline/releases |
-| Config paths | `.clinerules/*.md` (compat), `.clinerules/workflows/*.md` (compat workflows), `.cline/rules/*.md`, `.cline/hooks/`, `.cline/skills/*/SKILL.md`, `~/.cline/rules/*.md`, `~/.cline/hooks/`, `~/.cline/skills/*/SKILL.md`, `~/.cline/data/settings/cline_mcp_settings.json` |
+| Config paths | `.clinerules/*.md`, `.clinerules/workflows/*.md`, `.clinerules/skills/*/SKILL.md`, `.clinerules/hooks/` (project), `.cline/skills/*/SKILL.md`, `~/.cline/skills/*/SKILL.md`, `~/Documents/Cline/Rules/Hooks/` (global hooks), `~/.cline/data/settings/cline_mcp_settings.json`, `.claude/skills/*/SKILL.md` (native discovery, always-on since v3.57.0). NOTE: `.cline/rules/` and `.cline/hooks/` were removed as phantom paths — Cline reads rules from `.clinerules/`. |
 | Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py`, `scripts/generate_cline_skills.py` |
 | Tracked capabilities | `clinerules`, Plan Mode, Act Mode, MCP, custom modes, workflows, hooks, skills, subagents, conditional rules |
-| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Project rules still use `.clinerules/` for compatibility; the documented `~/.cline/rules/` path is used for global install. Skills are emitted as a pointer catalogue in `profile=full` and global installs. |
-| Global install | `ai-toolkit install --editors cline` writes documented global rules under `~/.cline/rules/` and a skill pointer under `~/.cline/skills/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
+| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Project rules still use `.clinerules/` for compatibility; global rules are written to `~/Documents/Cline/Rules/` (the documented Cline global rules dir — `~/.cline/rules/` is not a Cline-read path). Skills are emitted as a pointer catalogue in `profile=full` and global installs. |
+| Global install | `ai-toolkit install --editors cline` writes documented global rules under `~/Documents/Cline/Rules/` and a skill pointer under `~/.cline/skills/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
 
 ### Roo Code
 
 | Field | Value |
 |-------|-------|
 | ID | `roo-code` |
-| Docs | https://docs.roocode.com |
-| Release notes | https://github.com/RooCodeInc/Roo-Code/releases |
+| Docs | https://roocodeinc.github.io/Roo-Code (docs.roocode.com 301-redirects here) |
+| Release notes | https://github.com/RooCodeInc/Roo-Code/releases (**ARCHIVED** — repo read-only since 2026-05-15, frozen at v3.54.0; community fork reportedly continues) |
 | Config paths | `.roomodes`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json`, `~/.roo/rules/`, `~/.roo/custom_modes.yaml`, `mcp_settings.json` (global via Roo settings UI) |
 | Our generators | `scripts/generate_roo_modes.py`, `scripts/generate_roo_rules.py` |
 | Tracked capabilities | `roomodes`, custom modes, Code Actions, MCP, Orchestrator mode, `whenToUse`, `description`, `roleDefinition`, `groups` |
@@ -11911,7 +11916,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `google-antigravity` |
 | Docs | https://antigravity.google/docs (JavaScript SPA — use bundle strings / sitemap to verify) |
 | Changelog | https://antigravity.google/changelog (SPA; changelog entries embedded in main-*.js) |
-| Config paths | `.agent/rules/*.md`, `.agent/workflows/*.md`, `.agent/skills/*/SKILL.md`, `AGENTS.md`, `GEMINI.md` |
+| Config paths | `.agents/rules/*.md`, `.agents/workflows/*.md` (plural is the Antigravity 2.0 default; singular `.agent/rules`, `.agent/workflows` still read as fallback), `.agent/skills/*/SKILL.md`, `AGENTS.md`, `GEMINI.md` |
 | Our generators | `scripts/generate_antigravity.py` (rules + workflows + skill pointer) |
 | Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, `AGENTS.md`, `GEMINI.md`, agent permissions |
 | Doc access note | Docs are JS-SPA — verify via `main-*.js` bundle strings or community skill repos. `WebFetch` returns an empty shell. |
@@ -11921,11 +11926,12 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `codex-cli` |
-| Docs | https://github.com/openai/codex (redirects from developers.openai.com/codex) |
+| Docs | https://developers.openai.com/codex (now a live docs site with `/codex/{hooks,skills,rules}` pages; latest stable rust-v0.137.0, 2026-06-04) |
 | Release notes | https://github.com/openai/codex/releases |
-| Config paths | `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `~/.codex/config.toml` |
-| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_rules.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
-| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We currently wire a subset: `SessionStart`, `PreToolUse`, `PermissionRequest`, `UserPromptSubmit`, `Stop`. |
+| Config paths | `AGENTS.md`, `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `~/.codex/config.toml` |
+| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
+| Rules delivery | Universal coding rules are inlined into `AGENTS.md` (Codex reads instructions only from AGENTS.md, not `.agents/rules/`); language rules ship as `<lang>-rules` skills under `.agents/skills/`. |
+| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We wire all 10 to shared toolkit hook scripts, mirroring the Claude Code mapping in `app/hooks.json`. |
 | Tracked handler types | `command` (emitted by default); `prompt` and `agent` available upstream but authored by hand |
 | Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.agents/skills/*/SKILL.md` (native Codex skill discovery path) |
 | Version probe | `codex --version` |
