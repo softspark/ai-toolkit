@@ -106,12 +106,12 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Windsurf | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.windsurf/rules/*.md` | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | ✅ | global |
 | GitHub Copilot | `.github/copilot-instructions.md` | — | project |
-| Cline | `~/.cline/rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
+| Cline | `~/Documents/Cline/Rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
 | Roo Code | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
 | Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | ✅ | global + project |
-| Google Antigravity | `.agent/rules/*.md` + `.agent/workflows/*.md` | — | project |
-| Codex CLI | `AGENTS.md` + `.agents/rules/*.md` + `.agents/skills/*` + `.codex/hooks.json` | ✅ | project + global plugin |
+| Google Antigravity | `.agents/rules/*.md` + `.agents/workflows/*.md` | — | project |
+| Codex CLI | `AGENTS.md` (coding rules inlined) + `.agents/skills/*` + `.codex/hooks.json` | ✅ | project + global plugin |
 | opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | ✅ | project + global (`~/.config/opencode/`) |
 
 > Claude Code is always installed (primary platform). Other editors on demand with `--editors`. Every platform receives the agent/skill catalog, guidelines, and registered custom rules as text. The **Hooks** column marks platforms that also get lifecycle hook enforcement — the machine-enforced constitution (guard-destructive, quality gates, search-first discipline). Platforms marked — receive those rules as guidance only, without blocking hooks.

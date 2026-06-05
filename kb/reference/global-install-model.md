@@ -63,10 +63,10 @@ with documented, file-based config surfaces:
 - `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `gemini`: `~/.gemini/GEMINI.md`
 - `augment`: `~/.augment/rules/ai-toolkit.md`
-- `cline`: `~/.cline/rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
+- `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `roo`: `~/.roo/rules/ai-toolkit-*.md`
 - `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
-- `codex`: `~/AGENTS.md`, `~/.agents/rules/*`, `~/.agents/skills/*`, `~/.codex/hooks.json`
+- `codex`: `~/AGENTS.md` (coding rules inlined), `~/.agents/skills/*`, `~/.codex/hooks.json`
 - `opencode`: `~/.config/opencode/*`
 
 Cursor, GitHub Copilot, and Google Antigravity rule installs stay project-local.
@@ -99,7 +99,7 @@ These files still stay local to a repository as part of the core install model:
 - `.roomodes`
 - `.aider.conf.yml`
 - `.augment/rules/ai-toolkit-*.md`
-- `.agent/rules/*.md` and `.agent/workflows/*.md` (Google Antigravity)
+- `.agents/rules/*.md` and `.agents/workflows/*.md` (Google Antigravity; singular `.agent/` still read as fallback)
 - `.git/hooks/pre-commit` (fallback)
 - project-specific documentation or safety overlays
 

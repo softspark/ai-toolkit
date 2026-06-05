@@ -14,7 +14,7 @@ Claude Code (~/.claude/):
 Other tools (global config locations):
   - Windsurf: ~/.codeium/windsurf/memories/global_rules.md + ~/.codeium/windsurf/skills/
   - Gemini:   ~/.gemini/GEMINI.md
-  - Cline:    ~/.cline/rules/ + ~/.cline/skills/
+  - Cline:    ~/Documents/Cline/Rules/ + ~/.cline/skills/
   - Roo Code: ~/.roo/rules/
   - Aider:    ~/.aider.conf.yml (created only if absent)
   - Augment:  ~/.augment/rules/ai-toolkit.md

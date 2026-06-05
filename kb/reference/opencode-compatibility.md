@@ -23,7 +23,7 @@ opencode also reads `CLAUDE.md` as a fallback, so a user without the native inte
 
 - `AGENTS.md` (shared with Codex CLI via distinct marker sections)
 - `.opencode/agents/ai-toolkit-*.md` (one per ai-toolkit agent, `mode: subagent`)
-- `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill, required `template: |` frontmatter field)
+- `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill; the prompt lives in the markdown body)
 - `.opencode/plugins/ai-toolkit-hooks.js` (JS plugin bridging Bash hooks)
 - `opencode.json` (MCP key merged from `.mcp.json`, user keys preserved)
 
@@ -71,7 +71,7 @@ Opencode treats these files as auto-completable with `@` and can delegate to the
 
 Only user-invocable skills (`user-invocable: true` or no `disable-model-invocation`) emit to `.opencode/commands/`. Knowledge skills (`user-invocable: false`) are intentionally skipped — they are not intended as commands.
 
-Each command file carries opencode's required `template: |` frontmatter field, built from the SKILL.md body.
+Each command file carries the prompt in its markdown body (built from the SKILL.md body). opencode reads the body as the prompt; the `template` field is JSON-config-only and is ignored in `.md` command files.
 
 ## Hook Bridge (JS Plugin)
 

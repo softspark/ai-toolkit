@@ -2,25 +2,24 @@
 """Generate ``.cursor/agents/ai-toolkit-*.md`` files for Cursor IDE.
 
 Each ai-toolkit agent is mirrored as a Cursor custom agent. Per Cursor's
-docs (docs.cursor.com -> custom agents), agent files use YAML frontmatter:
+subagent docs (cursor.com/docs/subagents) the frontmatter schema documents
+only these fields:
 
     ---
-    name: <slug>
-    description: "<one-line summary shown in the picker>"
-    model: <model-id>     # optional, inherits user default if absent
-    color: <color-name>   # optional UI hint
-    tools: [Read, Write, ...]  # list of allowed tool names
+    name: <slug>              # lowercase letters and hyphens
+    description: "<one-line summary shown in the Task picker>"
+    model: inherit            # `inherit` (default) or a specific model id
     ---
 
     <system prompt body>
 
 Design choices:
 
-* ``model`` is omitted. Our agents store short aliases (``opus``, ``sonnet``,
-  ``haiku``) that do not map to Cursor's provider-qualified model ids.
-  Omitting the field makes Cursor fall back to the user's default model,
-  which is the same behaviour our opencode generator uses.
-* ``tools`` is emitted as a YAML flow-list parsed verbatim from the source.
+* ``model: inherit`` is emitted — the documented default value. Our agents
+  store short aliases (``opus``/``sonnet``/``haiku``) that do not map to
+  Cursor's provider-qualified model ids, so we use the literal ``inherit``.
+* ``tools`` and ``color`` are NOT emitted — the current Cursor schema documents
+  only name/description/model/readonly/is_background (tools/color were dropped).
 * Files are prefixed ``ai-toolkit-`` so install/uninstall can identify ours.
 * Regeneration removes stale ``ai-toolkit-*.md`` files whose source agent
   no longer exists, but leaves user-authored agents untouched.
@@ -53,34 +52,19 @@ def _agent_body(agent_file: Path) -> str:
     return parts[2].lstrip("\n")
 
 
-def _parse_tools(tools_raw: str) -> list[str]:
-    """Parse the comma-separated ``tools:`` frontmatter value into a list."""
-    if not tools_raw:
-        return []
-    return [t.strip() for t in tools_raw.split(",") if t.strip()]
-
-
 def _render_cursor_agent(agent_file: Path) -> str:
     """Render a single Cursor custom agent .md file."""
     name = frontmatter_field(agent_file, "name")
     description = frontmatter_field(agent_file, "description")
-    color = frontmatter_field(agent_file, "color")
-    tools_raw = frontmatter_field(agent_file, "tools")
-    tools = _parse_tools(tools_raw)
 
     safe_desc = description.replace('"', "'")
 
     lines: list[str] = ["---"]
     lines.append(f"name: {name}")
     lines.append(f'description: "{safe_desc}"')
-    # model intentionally omitted — Cursor falls back to the user default.
-    if color:
-        lines.append(f"color: {color}")
-    if tools:
-        tools_flow = ", ".join(tools)
-        lines.append(f"tools: [{tools_flow}]")
-    else:
-        lines.append("tools: []")
+    # `inherit` is the documented default model value; our short aliases do not
+    # map to Cursor's provider-qualified model ids.
+    lines.append("model: inherit")
     lines.append("---")
     lines.append("")
     body = _agent_body(agent_file).rstrip()

@@ -8,7 +8,8 @@ Codex exposes 10 lifecycle events (PascalCase in config.toml / hooks.json):
 ``PreToolUse``, ``PostToolUse``, ``PermissionRequest``, ``PreCompact``,
 ``PostCompact``, ``SessionStart``, ``UserPromptSubmit``, ``SubagentStart``,
 ``SubagentStop``, ``Stop``. PreToolUse/PostToolUse only support the ``Bash``
-matcher. We currently wire the subset defined in ``CODEX_HOOKS`` below.
+matcher. We wire all 10 events in ``CODEX_HOOKS`` below to the shared toolkit
+hook scripts, mirroring the Claude Code mapping in ``app/hooks.json``.
 
 Handler types in Codex: ``command`` (what we emit), ``prompt``, and ``agent``.
 Reference: codex-rs/config/src/hook_config.rs.
@@ -39,6 +40,12 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
         ("Bash", "commit-quality.sh"),
         ("Bash", "revert-guard.sh"),
     ],
+    "PostToolUse": [
+        # Fires after Bash/apply_patch/MCP tool output. Capture governance
+        # signals and detect repetition loops (mirrors app/hooks.json).
+        ("Bash", "governance-capture.sh"),
+        ("Bash", "loop-guard.sh"),
+    ],
     "PermissionRequest": [
         # Fires when Codex asks the user to approve a tool call. Our guard
         # reviews the tool input and can veto destructive patterns before the
@@ -48,6 +55,21 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     "UserPromptSubmit": [
         ("", "user-prompt-submit.sh"),
         ("", "track-usage.sh"),
+    ],
+    "SubagentStart": [
+        ("", "subagent-start.sh"),
+    ],
+    "SubagentStop": [
+        ("", "subagent-stop.sh"),
+    ],
+    "PreCompact": [
+        # Capture session memory before Codex compacts the conversation.
+        ("", "pre-compact.sh"),
+        ("", "pre-compact-save.sh"),
+    ],
+    "PostCompact": [
+        # Re-establish working context after compaction.
+        ("", "session-context.sh"),
     ],
     "Stop": [
         ("", "quality-check.sh"),

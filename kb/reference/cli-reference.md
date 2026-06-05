@@ -87,8 +87,7 @@ Usage: ai-toolkit <command> [options]
 |---------|-------------|
 | `generate-all` | Generate all platform configs at once |
 | `agents-md` | Regenerate `AGENTS.md` from agent definitions |
-| `codex-md` | Generate `AGENTS.md` with marker injection for Codex CLI |
-| `codex-rules` | Generate `.agents/rules/*.md` for Codex CLI |
+| `codex-md` | Generate `AGENTS.md` (coding rules inlined) with marker injection for Codex CLI |
 | `codex-hooks` | Generate `.codex/hooks.json` for Codex CLI |
 | `cursor-rules` | Generate `.cursorrules` (legacy single file) |
 | `cursor-mdc` | Generate `.cursor/rules/*.mdc` (recommended) |
@@ -104,7 +103,7 @@ Usage: ai-toolkit <command> [options]
 | `conventions-md` | Generate `CONVENTIONS.md` for Aider |
 | `augment-rules` | Generate `.augment/rules/ai-toolkit.md` (legacy) |
 | `augment-dir-rules` | Generate `.augment/rules/ai-toolkit-*.md` (recommended) |
-| `antigravity-rules` | Generate `.agent/rules/` and `.agent/workflows/` |
+| `antigravity-rules` | Generate `.agents/rules/` and `.agents/workflows/` |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
 
 ## Other Commands

@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-05-30",
+  "last_updated": "2026-06-05",
   "tools": [
     {
       "id": "claude-code",
       "display_name": "Claude Code",
       "kind": "primary",
       "urls": {
-        "docs": "https://platform.claude.com/docs/en/claude-code",
+        "docs": "https://code.claude.com/docs",
         "release_notes": "https://github.com/anthropics/claude-code/releases",
-        "changelog": null
+        "changelog": "https://code.claude.com/docs/en/changelog"
       },
       "config_paths": [
         "~/.claude/settings.json",
@@ -97,6 +97,8 @@
       "our_generators": [
         "scripts/generate_cursor_rules.py",
         "scripts/generate_cursor_mdc.py",
+        "scripts/generate_cursor_hooks.py",
+        "scripts/generate_cursor_agents.py",
         "scripts/generate_cursor_skills.py"
       ],
       "capability_markers": [
@@ -118,9 +120,9 @@
       "display_name": "Windsurf",
       "kind": "editor",
       "urls": {
-        "docs": "https://docs.windsurf.com",
-        "release_notes": "https://windsurf.com/changelog",
-        "changelog": "https://windsurf.com/changelog"
+        "docs": "https://docs.devin.ai/desktop",
+        "release_notes": "https://docs.devin.ai/desktop/changelog",
+        "changelog": "https://docs.devin.ai/desktop/changelog"
       },
       "config_paths": [
         ".windsurfrules",
@@ -219,12 +221,12 @@
         "BeforeModel",
         "SessionStart",
         "SessionEnd",
-        "Stop",
         "SKILL.md",
         "activate_skill",
         "custom commands",
         "gemini-extension.json"
       ],
+      "status_note": "Gemini CLI drops free + paid (AI Pro/Ultra) tiers on 2026-06-18 in favor of the new Antigravity CLI (we ship generate_antigravity.py); enterprise Gemini Code Assist Standard/Enterprise keeps full Gemini CLI support. The .gemini/* generators remain valid for the enterprise audience.",
       "version_probe": {
         "kind": "command",
         "command": "gemini --version"
@@ -242,12 +244,11 @@
       "config_paths": [
         ".clinerules/*.md",
         ".clinerules/workflows/*.md",
-        ".cline/rules/*.md",
-        ".cline/hooks/",
+        ".clinerules/skills/*/SKILL.md",
+        ".clinerules/hooks/",
         ".cline/skills/*/SKILL.md",
-        "~/.cline/rules/*.md",
-        "~/.cline/hooks/",
         "~/.cline/skills/*/SKILL.md",
+        "~/Documents/Cline/Rules/Hooks/",
         "~/.cline/data/settings/cline_mcp_settings.json",
         ".claude/skills/*/SKILL.md"
       ],
@@ -275,10 +276,12 @@
       "display_name": "Roo Code",
       "kind": "editor",
       "urls": {
-        "docs": "https://docs.roocode.com",
+        "docs": "https://roocodeinc.github.io/Roo-Code",
         "release_notes": "https://github.com/RooCodeInc/Roo-Code/releases",
         "changelog": null
       },
+      "status": "archived",
+      "status_note": "Upstream RooCodeInc/Roo-Code repo archived/read-only as of 2026-05-15, frozen at v3.54.0; docs.roocode.com 301-redirects to roocodeinc.github.io/Roo-Code. A community fork reportedly continues maintenance. JSON .roomodes is NOT deprecated; both generators remain valid.",
       "config_paths": [
         ".roomodes",
         ".roo/rules/*.md",
@@ -399,6 +402,8 @@
         "changelog": null
       },
       "config_paths": [
+        ".agents/rules/*.md",
+        ".agents/workflows/*.md",
         ".agent/rules/*.md",
         ".agent/workflows/*.md",
         ".agent/skills/*/SKILL.md",
@@ -427,20 +432,18 @@
       "display_name": "Codex CLI",
       "kind": "editor",
       "urls": {
-        "docs": "https://github.com/openai/codex",
+        "docs": "https://developers.openai.com/codex",
         "release_notes": "https://github.com/openai/codex/releases",
         "changelog": null
       },
       "config_paths": [
         "AGENTS.md",
-        ".agents/rules/*.md",
         ".agents/skills/*/SKILL.md",
         ".codex/hooks.json",
         "~/.codex/config.toml"
       ],
       "our_generators": [
         "scripts/generate_codex.py",
-        "scripts/generate_codex_rules.py",
         "scripts/generate_codex_hooks.py",
         "scripts/generate_codex_skills.py"
       ],

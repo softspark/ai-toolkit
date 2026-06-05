@@ -5,8 +5,10 @@ User-invocable skills become opencode slash commands. Knowledge skills
 (``user-invocable: false``) are excluded — they load automatically via
 AGENTS.md context instead of `/` invocation.
 
-Generated commands use the required ``template`` frontmatter field.
-Files are prefixed ``ai-toolkit-`` for clean uninstall.
+Generated commands put the prompt in the markdown BODY. opencode reads the
+body as the prompt template; the ``template`` frontmatter field is JSON-config
+only and is ignored in .md command files. Files are prefixed ``ai-toolkit-``
+for clean uninstall.
 
 opencode commands: https://opencode.ai/docs/commands/
 """
@@ -47,12 +49,11 @@ def _skill_body(skill_file: Path) -> str:
 
 def _render_opencode_command(skill_file: Path) -> str:
     """Render a single opencode command .md file from a user-invocable skill."""
-    name = frontmatter_field(skill_file, "name")
     description = frontmatter_field(skill_file, "description")
     agent_field = frontmatter_field(skill_file, "agent")
-    # opencode does NOT read "body" — the prompt is entirely in the `template`
-    # frontmatter field. We embed the SKILL.md body as the template using a
-    # YAML block scalar (``|``) which preserves newlines without escaping.
+    # opencode reads the command prompt from the markdown BODY of the file.
+    # The frontmatter only defines command properties; the `template` field is
+    # JSON-config-only and is ignored in .md command files.
     body = _skill_body(skill_file).rstrip()
 
     lines: list[str] = ["---"]
@@ -62,10 +63,9 @@ def _render_opencode_command(skill_file: Path) -> str:
     if agent_field:
         # opencode accepts an `agent` frontmatter field pointing at a subagent
         lines.append(f"agent: {_map_agent_name(agent_field)}")
-    lines.append("template: |")
-    for tpl_line in body.splitlines() or [""]:
-        lines.append(f"  {tpl_line}" if tpl_line else "  ")
     lines.append("---")
+    lines.append("")
+    lines.append(body)
     lines.append("")
     return "\n".join(lines)
 

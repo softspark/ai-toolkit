@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-05-30T19:51:17Z",
+  "last_run": "2026-06-05T09:16:41Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "46ef1d20d537234f",
+      "docs_hash": "544c8cce7baacb2e",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -65,7 +65,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "b2ee6850b58cee40",
+      "docs_hash": "f84eb6cd31b39797",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -120,10 +120,10 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.158 (Claude Code)"
+      "version": "2.1.165 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "9ec25e5132332d2f",
+      "docs_hash": "d94f88d02b733ee6",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -164,37 +164,51 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "f7a6a5144e0f61a2",
+      "docs_hash": "b86ae1b6bda0e071",
       "headings": [
-        "About",
-        "Contributing",
-        "Contributors",
-        "Docs",
-        "Folders and files",
-        "Footer",
-        "Footer navigation",
-        "Forks",
-        "History",
-        "Installing and running Codex CLI",
-        "Languages",
-        "Latest commit",
-        "License",
-        "Navigation Menu",
-        "Packages 0",
-        "Provide feedback",
+        "API",
+        "API Reference",
+        "Administration",
+        "Advertiser API",
+        "Agents SDK",
+        "Automation",
+        "Build",
+        "Categories",
+        "Codex",
+        "Codex for Open Source",
+        "Community",
+        "Configuration",
+        "Contribute",
+        "Conversion apps",
+        "Core Concepts",
+        "Core concepts",
+        "Deploy",
+        "Docs agent",
+        "Evaluation",
+        "Events",
+        "Explore use cases",
+        "File Upload",
+        "Get started",
+        "Getting Started",
+        "Going live",
+        "Guides",
+        "Learn",
+        "Legacy APIs",
+        "Measurement",
+        "Plan",
+        "Programs",
         "Quickstart",
-        "Releases 804",
-        "Repository files navigation",
+        "Realtime and audio",
+        "Recent",
+        "Releases",
         "Resources",
-        "Saved searches",
-        "Search code, repositories, users, issues, pull requests...",
-        "Security policy",
-        "Stars",
-        "Uh oh!",
-        "Use saved searches to filter your results more quickly",
-        "Using Codex with your ChatGPT plan",
-        "Watchers",
-        "openai/codex"
+        "Run and scale",
+        "Search the Codex docs",
+        "Specialized models",
+        "Suggested",
+        "Tools",
+        "Topics",
+        "Using Codex"
       ],
       "markers": {
         ".agents/skills": false,
@@ -213,14 +227,14 @@
         "hook handler: agent": false,
         "hook handler: command": false,
         "hook handler: prompt": false,
-        "hooks": false,
+        "hooks": true,
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.134.0"
+      "version": "codex-cli 0.136.0"
     },
     "cursor": {
-      "docs_hash": "6aa8a8d7cc046f13",
+      "docs_hash": "aee861b1ed20480d",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -236,7 +250,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "5569709cc2e463a8",
+      "docs_hash": "0bbd00c009a9357b",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -265,7 +279,6 @@
         "SKILL.md": false,
         "SessionEnd": false,
         "SessionStart": false,
-        "Stop": true,
         "activate_skill": false,
         "custom commands": false,
         "gemini-extension.json": false,
@@ -275,16 +288,17 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "56ac2d5768f930b5",
+      "docs_hash": "2314ef6e31c223a1",
       "headings": [
         "About Copilot auto model selection",
+        "About Copilot automations",
         "About Copilot integrations",
+        "About agent apps",
         "About agent management",
         "About agent skills",
         "About billing for GitHub Copilot in organizations and enterprises",
+        "About cloud and local sandboxes for GitHub Copilot",
         "About custom agents",
-        "About customizing GitHub Copilot responses",
-        "About enterprise accounts for Copilot Business",
         "Articles",
         "Did you find what you needed?",
         "GitHub Copilot",
@@ -307,7 +321,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "f933b31ac7414c29",
+      "docs_hash": "5ea5426c4445e746",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -323,7 +337,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "fe7f7590e4553574",
+      "docs_hash": "0e54c8a8f59b6474",
       "headings": [
         "Add features",
         "Ask questions",
@@ -383,45 +397,44 @@
       }
     },
     "windsurf": {
-      "docs_hash": "a30041baf564742f",
+      "docs_hash": "3405457d501ab760",
       "headings": [
-        "Accounts",
         "Advanced",
         "Agent Command Center",
         "App Deploys",
-        "Cascade",
         "Context Awareness",
+        "Devin Desktop",
+        "Devin Local",
         "Documentation Index",
-        "Editor",
         "MCP",
         "Memories",
         "On this page",
         "Recommended Plugins",
-        "Security",
+        "Releases",
         "Terminal",
-        "Troubleshooting",
         "Usage",
-        "Welcome to Windsurf",
+        "Welcome to Devin Desktop",
+        "Windsurf Plugins",
         "Workflows",
         "\u200b1. Select setup flow",
         "\u200b2. Choose editor theme",
         "\u200b3. Sign up / Log in",
         "\u200b4. Let\u2019s Surf!",
         "\u200bCustom App Icons (beta)",
+        "\u200bDevin Desktop Next",
         "\u200bForgot to Import VS Code Configurations?",
         "\u200bIncompatible Extensions",
         "\u200bOnboarding",
         "\u200bSet Up",
         "\u200bThings to Try",
-        "\u200bUninstall Windsurf",
-        "\u200bUpdate Windsurf",
-        "\u200bWindsurf Next"
+        "\u200bUninstall Devin Desktop",
+        "\u200bUpdate Devin Desktop"
       ],
       "markers": {
         "AGENTS.md": true,
         "Cascade": true,
         "MCP": true,
-        "SKILL.md": false,
+        "SKILL.md": true,
         "always_on": false,
         "glob": true,
         "hooks": true,

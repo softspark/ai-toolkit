@@ -74,12 +74,12 @@ PY
 # ── Rules / workflows still emitted ────────────────────────────────────────
 
 @test "antigravity: rules still created alongside the skill pointer" {
-    count=$(ls "$AG_TMP/.agent/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    count=$(ls "$AG_TMP/.agents/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
     [ "$count" -ge 6 ]
 }
 
 @test "antigravity: workflows still created alongside the skill pointer" {
-    count=$(ls "$AG_TMP/.agent/workflows"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
+    count=$(ls "$AG_TMP/.agents/workflows"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
     [ "$count" -ge 10 ]
 }
 

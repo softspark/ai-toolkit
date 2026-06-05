@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Generate Augment settings.json hooks block.
 
-Augment stores hooks in `~/.augment/settings.json` (user scope) — there is no
-per-workspace hooks file. `/etc/augment/settings.json` exists for system-wide
-policy and we never write there. The generator accepts an optional target
-directory; when omitted it defaults to the user's `$HOME` and writes
-`~/.augment/settings.json`.
+Augment reads hooks from several settings.json layers (per
+docs.augmentcode.com/cli/hooks): `<workspace>/.augment/settings.local.json`,
+`<workspace>/.augment/settings.json`, `~/.augment/settings.json` (user scope),
+and `/etc/augment/settings.json` (system policy). This generator writes the
+user-scope file: it accepts an optional target directory and defaults to the
+user's `$HOME`, writing `~/.augment/settings.json`. Project-local hook emission
+for `--local` installs is a possible future extension.
 
 Augment hook events (per docs.augmentcode.com/cli/hooks.md):
     PreToolUse, PostToolUse, SessionStart, SessionEnd, Stop

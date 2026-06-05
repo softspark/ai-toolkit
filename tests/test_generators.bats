@@ -267,19 +267,19 @@ teardown_file() {
     [ "$(cat "$GEN_DIR/antigravity.status")" = "0" ]
 }
 
-@test "generate_antigravity.py creates .agent/rules/ directory" {
-    [ -d "$AG_DIR/.agent/rules" ]
+@test "generate_antigravity.py creates .agents/rules/ directory" {
+    [ -d "$AG_DIR/.agents/rules" ]
 }
 
-@test "generate_antigravity.py creates .agent/workflows/ directory" {
-    [ -d "$AG_DIR/.agent/workflows" ]
+@test "generate_antigravity.py creates .agents/workflows/ directory" {
+    [ -d "$AG_DIR/.agents/workflows" ]
 }
 
 @test "generate_antigravity.py creates all 6 rule files" {
     expected="ai-toolkit-agents-and-skills.md ai-toolkit-code-style.md ai-toolkit-quality-standards.md ai-toolkit-security.md ai-toolkit-testing.md ai-toolkit-workflow.md"
     missing=0
     for f in $expected; do
-        [ -f "$AG_DIR/.agent/rules/$f" ] || missing=$((missing + 1))
+        [ -f "$AG_DIR/.agents/rules/$f" ] || missing=$((missing + 1))
     done
     [ "$missing" -eq 0 ]
 }
@@ -288,20 +288,20 @@ teardown_file() {
     expected="ai-toolkit-api-design.md ai-toolkit-code-review.md ai-toolkit-codebase-onboarding.md ai-toolkit-database-migration.md ai-toolkit-debug.md ai-toolkit-docs.md ai-toolkit-feature-development.md ai-toolkit-incident-response.md ai-toolkit-performance-optimization.md ai-toolkit-refactor.md ai-toolkit-security-audit.md ai-toolkit-tdd.md ai-toolkit-test-coverage.md"
     missing=0
     for f in $expected; do
-        [ -f "$AG_DIR/.agent/workflows/$f" ] || missing=$((missing + 1))
+        [ -f "$AG_DIR/.agents/workflows/$f" ] || missing=$((missing + 1))
     done
     [ "$missing" -eq 0 ]
 }
 
 @test "generate_antigravity.py rule files are non-empty markdown" {
-    for f in "$AG_DIR"/.agent/rules/ai-toolkit-*.md; do
+    for f in "$AG_DIR"/.agents/rules/ai-toolkit-*.md; do
         [ -s "$f" ] || { echo "Empty: $f"; return 1; }
         grep -q '^#' "$f" || { echo "No heading: $f"; return 1; }
     done
 }
 
 @test "generate_antigravity.py workflow files have YAML frontmatter" {
-    for f in "$AG_DIR"/.agent/workflows/ai-toolkit-*.md; do
+    for f in "$AG_DIR"/.agents/workflows/ai-toolkit-*.md; do
         head -1 "$f" | grep -q '^---' || { echo "No frontmatter: $f"; return 1; }
         grep -q '^description:' "$f" || { echo "No description: $f"; return 1; }
     done
@@ -311,40 +311,40 @@ teardown_file() {
     missing=0
     for f in "$TOOLKIT_DIR"/app/agents/*.md; do
         agent_name="${f##*/}"; agent_name="${agent_name%.md}"
-        grep -q "$agent_name" "$AG_DIR/.agent/rules/ai-toolkit-agents-and-skills.md" || missing=$((missing + 1))
+        grep -q "$agent_name" "$AG_DIR/.agents/rules/ai-toolkit-agents-and-skills.md" || missing=$((missing + 1))
     done
     [ "$missing" -eq 0 ]
 }
 
 @test "generate_antigravity.py agents-and-skills file references skills" {
-    grep -qiE 'skill' "$AG_DIR/.agent/rules/ai-toolkit-agents-and-skills.md"
+    grep -qiE 'skill' "$AG_DIR/.agents/rules/ai-toolkit-agents-and-skills.md"
 }
 
 @test "generate_antigravity.py preserves user files" {
     # Create user files
-    echo "* My rule" > "$AG_DIR/.agent/rules/my-custom.md"
-    echo "* My flow" > "$AG_DIR/.agent/workflows/deploy.md"
+    echo "* My rule" > "$AG_DIR/.agents/rules/my-custom.md"
+    echo "* My flow" > "$AG_DIR/.agents/workflows/deploy.md"
     # Re-run generator
     python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" >/dev/null 2>&1
     # Verify user files untouched
-    grep -q "My rule" "$AG_DIR/.agent/rules/my-custom.md"
-    grep -q "My flow" "$AG_DIR/.agent/workflows/deploy.md"
+    grep -q "My rule" "$AG_DIR/.agents/rules/my-custom.md"
+    grep -q "My flow" "$AG_DIR/.agents/workflows/deploy.md"
 }
 
 @test "generate_antigravity.py is idempotent" {
     # Run twice, count files — should be same
-    count1=$(ls "$AG_DIR/.agent/rules"/ai-toolkit-*.md | wc -l | xargs)
+    count1=$(ls "$AG_DIR/.agents/rules"/ai-toolkit-*.md | wc -l | xargs)
     python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" >/dev/null 2>&1
-    count2=$(ls "$AG_DIR/.agent/rules"/ai-toolkit-*.md | wc -l | xargs)
+    count2=$(ls "$AG_DIR/.agents/rules"/ai-toolkit-*.md | wc -l | xargs)
     [ "$count1" -eq "$count2" ]
 }
 
 @test "generate_antigravity.py cleans stale toolkit files" {
     # Create a fake stale toolkit file
-    echo "stale" > "$AG_DIR/.agent/rules/ai-toolkit-obsolete.md"
+    echo "stale" > "$AG_DIR/.agents/rules/ai-toolkit-obsolete.md"
     python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$AG_DIR" >/dev/null 2>&1
     # Stale file should be removed
-    [ ! -f "$AG_DIR/.agent/rules/ai-toolkit-obsolete.md" ]
+    [ ! -f "$AG_DIR/.agents/rules/ai-toolkit-obsolete.md" ]
 }
 
 # ── generate_cursor_mdc.py ──────────────────────────────────────────────────
@@ -442,37 +442,6 @@ PY
     [ "$count" -ge 6 ]
 }
 
-@test "generate_codex_rules.py repo regeneration preserves lang/custom overlays while cleaning stale standard files" {
-    local tmp rules_dir
-    tmp="$(mktemp -d)"
-    rules_dir="$(mktemp -d)"
-    cat > "$rules_dir/demo-rule.md" <<'EOF'
-# Demo Rule
-EOF
-    python3 - <<PY >/dev/null 2>&1
-import sys
-from pathlib import Path
-sys.path.insert(0, "$TOOLKIT_DIR/scripts")
-from generate_codex_rules import generate
-
-target = Path("$tmp")
-rules_dir = Path("$rules_dir")
-generate(
-    target,
-    language_modules=["rules-typescript"],
-    rules_dir=rules_dir,
-    managed_scopes=("standard", "lang", "custom"),
-)
-(target / ".agents" / "rules" / "ai-toolkit-obsolete.md").write_text("stale\n", encoding="utf-8")
-generate(target)
-PY
-    [ -f "$tmp/.agents/rules/ai-toolkit-lang-common.md" ]
-    [ -f "$tmp/.agents/rules/ai-toolkit-lang-typescript.md" ]
-    [ -f "$tmp/.agents/rules/ai-toolkit-custom-demo-rule.md" ]
-    [ ! -f "$tmp/.agents/rules/ai-toolkit-obsolete.md" ]
-    rm -rf "$tmp" "$rules_dir"
-}
-
 # ── generate_augment_rules.py ──────────────────────────────────────────────
 
 @test "generate_augment_rules.py exits 0" {
@@ -510,7 +479,7 @@ PY
 # ── cross-platform: all dir-rules generators produce same file count ────────
 
 @test "all directory-based generators produce at least 6 rule files" {
-    for dir in "$AG_DIR/.agent/rules" "$CURSOR_DIR/.cursor/rules" "$WS_DIR/.windsurf/rules" "$CL_DIR/.clinerules" "$ROO_DIR/.roo/rules" "$AUG_DIR/.augment/rules"; do
+    for dir in "$AG_DIR/.agents/rules" "$CURSOR_DIR/.cursor/rules" "$WS_DIR/.windsurf/rules" "$CL_DIR/.clinerules" "$ROO_DIR/.roo/rules" "$AUG_DIR/.augment/rules"; do
         count=$(ls "$dir"/ai-toolkit-*.* 2>/dev/null | wc -l | xargs)
         [ "$count" -ge 6 ] || { echo "Expected >=6 in $dir, got $count"; return 1; }
     done
@@ -581,8 +550,8 @@ from pathlib import Path
 from generate_antigravity import generate
 generate(Path('$tmp'), language_modules=['rules-rust'])
 " >/dev/null 2>&1
-    [ -f "$tmp/.agent/rules/ai-toolkit-lang-common.md" ]
-    [ -f "$tmp/.agent/rules/ai-toolkit-lang-rust.md" ]
+    [ -f "$tmp/.agents/rules/ai-toolkit-lang-common.md" ]
+    [ -f "$tmp/.agents/rules/ai-toolkit-lang-rust.md" ]
     rm -rf "$tmp"
 }
 
@@ -782,11 +751,12 @@ generate(Path('$tmp'))
     [ ! -f "$OC_DIR/.opencode/commands/ai-toolkit-rag-patterns.md" ]
 }
 
-@test "generated opencode commands have template field" {
+@test "generated opencode commands carry the prompt in the body (not template)" {
     local f="$OC_DIR/.opencode/commands/ai-toolkit-debug.md"
     [ -f "$f" ]
-    grep -q '^template: |' "$f"
+    ! grep -q '^template:' "$f"
     grep -q '^description: ' "$f"
+    [ "$(sed '1,/^---$/d' "$f" | grep -c .)" -ge 1 ]
 }
 
 # ── generate_opencode_plugin.py ─────────────────────────────────────────────
@@ -955,11 +925,11 @@ sys.path.insert(0, f"{sys.argv[1]}/scripts")
 from generate_cline_rules import generate
 generate(
     Path(sys.argv[2]),
-    output_root=Path(sys.argv[3]) / ".cline" / "rules",
+    output_root=Path(sys.argv[3]) / "Documents" / "Cline" / "Rules",
     emit_workflows=False,
 )
 PYEOF
-    [ -f "$home/.cline/rules/ai-toolkit-security.md" ]
+    [ -f "$home/Documents/Cline/Rules/ai-toolkit-security.md" ]
     [ ! -d "$tmp/.clinerules" ]
     rm -rf "$tmp"
 }

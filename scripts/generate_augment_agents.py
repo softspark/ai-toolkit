@@ -2,12 +2,12 @@
 """Generate ``.augment/agents/ai-toolkit-*.md`` files for Augment Code.
 
 Each ai-toolkit agent in ``app/agents/`` is mirrored as an Augment native
-subagent. Augment's subagent frontmatter (per docs.augmentcode.com) supports:
+subagent. Augment's subagent frontmatter (per docs.augmentcode.com/cli/subagents)
+documents: name, description, color, model, tools, disabled_tools.
 
     ---
     name: <slug>
     description: "<single-line description>"
-    model: inherit            # or explicit model id
     color: <color-name>       # optional UI hint
     tools: [Read, Write, ...]
     disabled_tools: []
@@ -17,9 +17,10 @@ subagent. Augment's subagent frontmatter (per docs.augmentcode.com) supports:
 
 Design choices:
 
-* ``model: inherit`` is used unconditionally. ai-toolkit stores short aliases
-  (``opus``/``sonnet``/``haiku``) that do not map to Augment's full model ids
-  without assuming a provider, so we defer to the user's default model.
+* ``model`` is omitted. The docs state "If not specified, the CLI default model
+  is used" and do not document ``inherit`` as a value. ai-toolkit stores short
+  aliases (``opus``/``sonnet``/``haiku``) that do not map to Augment's full
+  model ids, so we omit the field to defer to the CLI default.
 * ``tools`` are passed through verbatim from the source file, normalized into
   YAML flow-list form (``[Read, Write, ...]``) so Augment parses them as a
   native list.
@@ -79,11 +80,9 @@ def _render_augment_agent(agent_file: Path) -> str:
     lines: list[str] = ["---"]
     lines.append(f"name: {name}")
     lines.append(f'description: "{safe_desc}"')
-    # Augment recommends ``model: inherit`` for plugins that want to follow
-    # the user's active model selection. ai-toolkit agents are authored with
-    # short aliases that do not map to Augment's provider-qualified ids, so
-    # we deliberately emit ``inherit`` instead of translating.
-    lines.append("model: inherit")
+    # `model` is omitted: Augment's docs say the CLI default model is used when
+    # absent, and `inherit` is not a documented value. Our short aliases do not
+    # map to Augment's provider-qualified ids, so we defer to the CLI default.
     if color:
         lines.append(f"color: {color}")
     if tools:

@@ -5,13 +5,13 @@ User-invocable skills become Augment custom slash commands. Knowledge skills
 (``user-invocable: false``) are excluded — they load automatically via
 AGENTS.md/rules context instead of ``/`` invocation.
 
-Per docs.augmentcode.com, Augment custom commands are plain markdown files
-with an optional YAML frontmatter header. The body of the file IS the prompt
-(no ``template:`` field, no TOML). Supported frontmatter fields:
+Per docs.augmentcode.com/cli/custom-commands, Augment custom commands are plain
+markdown files with an optional YAML frontmatter header. The body of the file IS
+the prompt (no ``template:`` field, no TOML). The documented frontmatter fields
+are ``description``, ``argument-hint``, and ``model`` (no ``agent`` field):
 
     ---
     description: "<short one-liner shown in the palette>"
-    agent: <optional agent slug to route into>
     argument-hint: "<optional hint shown after the command name>"
     ---
 
@@ -44,20 +44,9 @@ def _skill_body(skill_file: Path) -> str:
     return parts[2].lstrip("\n") if len(parts) >= 3 else text
 
 
-def _map_agent_name(value: str) -> str:
-    """Map ai-toolkit agent names to our prefixed Augment subagent slugs."""
-    value = value.strip()
-    if not value:
-        return value
-    if value.startswith(COMMAND_PREFIX):
-        return value
-    return f"{COMMAND_PREFIX}{value}"
-
-
 def _render_augment_command(skill_file: Path) -> str:
     """Render a single Augment command .md file from a user-invocable skill."""
     description = frontmatter_field(skill_file, "description")
-    agent_field = frontmatter_field(skill_file, "agent")
     argument_hint = frontmatter_field(skill_file, "argument-hint")
     body = _skill_body(skill_file).rstrip()
 
@@ -65,8 +54,6 @@ def _render_augment_command(skill_file: Path) -> str:
     if description:
         safe_desc = description.replace('"', "'")
         lines.append(f'description: "{safe_desc}"')
-    if agent_field:
-        lines.append(f"agent: {_map_agent_name(agent_field)}")
     if argument_hint:
         safe_hint = argument_hint.replace('"', "'")
         lines.append(f'argument-hint: "{safe_hint}"')

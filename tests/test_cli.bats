@@ -639,7 +639,6 @@ required = [
     'generate:roo-rules',
     'generate:augment-rules',
     'generate:cline',
-    'generate:codex-rules',
     'generate:opencode-agents',
     'generate:opencode-commands',
 ]

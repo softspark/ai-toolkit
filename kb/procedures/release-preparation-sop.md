@@ -51,7 +51,6 @@ python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
 # 3. Write CHANGELOG.md entry
 # 4. Regenerate artifacts
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 
@@ -253,7 +252,6 @@ Add entry at the top of `CHANGELOG.md` (after the header, before previous releas
 
 ```bash
 python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_codex_rules.py .
 python3 scripts/generate_llms_txt.py > llms.txt
 python3 scripts/generate_llms_txt.py --full > llms-full.txt
 ```
@@ -436,7 +434,7 @@ git push origin --delete vX.Y.Z
 | 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
 | 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
 | 7 | CHANGELOG.md | Add release entry (incl. `Ecosystem` subsection if any B/D/E/F drift) | Entry exists for vX.Y.Z |
-| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_codex_rules.py`, `generate_llms_txt.py` | No unexpected diff |
+| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_llms_txt.py` | No unexpected diff |
 | 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
 | 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
 | 11 | Security audit (SARIF) | `audit_skills.py --sarif` | Valid SARIF 2.1.0 JSON |

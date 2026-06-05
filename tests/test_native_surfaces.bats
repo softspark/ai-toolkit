@@ -61,12 +61,12 @@ teardown_file() {
     [ "$bad" = "0" ]
 }
 
-@test "augment_agents: frontmatter emits model: inherit (no short alias leak)" {
-    # Short aliases (opus/sonnet/haiku) must not appear as model values —
-    # planning doc rule 5: Augment uses model: inherit.
+@test "augment_agents: frontmatter omits model (Augment uses CLI default; no alias leak)" {
+    # Augment docs: "If not specified, the CLI default model is used"; `inherit`
+    # is not a documented value. We omit model entirely, which also guarantees
+    # no short alias (opus/sonnet/haiku) leaks as a model value.
     for f in "$NS_DIR"/.augment/agents/ai-toolkit-*.md; do
-        grep -q '^model: inherit$' "$f" || { echo "missing model: inherit in $f"; return 1; }
-        ! grep -qE '^model: (opus|sonnet|haiku)$' "$f"
+        ! grep -qE '^model:' "$f" || { echo "unexpected model line in $f"; return 1; }
     done
 }
 
@@ -147,10 +147,11 @@ PYEOF
     done
 }
 
-@test "augment_commands: agent field is prefixed when present" {
-    # debug's source skill references agent: debugger -> must be rewritten
-    f="$NS_DIR/.augment/commands/ai-toolkit-debug.md"
-    grep -q '^agent: ai-toolkit-debugger$' "$f"
+@test "augment_commands: undocumented agent field is not emitted" {
+    # docs.augmentcode.com/cli/custom-commands documents only description/
+    # argument-hint/model — `agent` is not a frontmatter field, so we must not
+    # emit it (Augment silently ignores it).
+    ! grep -rqE '^agent:' "$NS_DIR/.augment/commands/"
 }
 
 @test "augment_commands: regeneration cleans stale and skills-gone-private" {
@@ -186,12 +187,18 @@ PYEOF
     ! grep -qrE '^model: (opus|sonnet|haiku)$' "$NS_DIR/.cursor/agents/"
 }
 
-@test "cursor_agents: frontmatter has name, description, tools list" {
+@test "cursor_agents: frontmatter has name, description, model" {
     for f in "$NS_DIR"/.cursor/agents/ai-toolkit-*.md; do
         grep -q '^name: '         "$f" || { echo "no name in $f";        return 1; }
         grep -q '^description: "' "$f" || { echo "no description in $f"; return 1; }
-        grep -q '^tools: \['      "$f" || { echo "no tools list in $f";  return 1; }
+        grep -q '^model: inherit' "$f" || { echo "no model in $f";       return 1; }
     done
+}
+
+@test "cursor_agents: frontmatter omits undocumented tools/color fields (current schema)" {
+    # cursor.com/docs/subagents documents only name/description/model/readonly/
+    # is_background; tools and color were dropped from the schema.
+    ! grep -qrE '^(tools|color):' "$NS_DIR/.cursor/agents/"
 }
 
 @test "cursor_agents: body carries the ai-engineer persona content" {

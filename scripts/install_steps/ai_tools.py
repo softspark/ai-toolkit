@@ -79,7 +79,7 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
 
     if "cline" in eds:
         if dry_run:
-            print("  Would generate: ~/.cline/rules/ai-toolkit-*.md")
+            print("  Would generate: ~/Documents/Cline/Rules/ai-toolkit-*.md")
             print("  Would generate: ~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")
         else:
             _install_cline_global(target_dir, rules_dir)
@@ -125,8 +125,8 @@ def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
     """Install Codex at the global level (~/ layer).
 
     Creates:
-      - ~/AGENTS.md (marker injection with rules)
-      - ~/.agents/rules/*.md (directory-based rules)
+      - ~/AGENTS.md (marker injection; universal coding rules inlined here —
+        Codex reads instructions only from AGENTS.md, not .agents/rules/)
       - ~/.agents/skills/* (skill symlinks)
       - ~/.codex/hooks.json (lifecycle hooks)
     """
@@ -136,18 +136,29 @@ def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
         rules_dir,
     )
 
-    from generate_codex_rules import generate as gen_codex_rules
-    gen_codex_rules(
-        target_dir,
-        rules_dir=rules_dir,
-        managed_scopes=("standard", "custom"),
-    )
-
     from generate_codex_hooks import generate as gen_codex_hooks
     gen_codex_hooks(target_dir)
     print("  Created: ~/.codex/hooks.json")
 
     _install_codex_skills(target_dir)
+
+
+def _claude_skills_discoverable(project_dir: Path | None = None) -> bool:
+    """True when real ai-toolkit skills already exist at a ``.claude/skills``
+    directory the editor scans natively (project-local or global
+    ``~/.claude/skills``), making an editor skill-catalogue pointer redundant.
+
+    Cursor, Cline and Augment discover ``SKILL.md`` from ``.claude/skills`` and
+    ``~/.claude/skills`` by default, so when those are populated the pointer adds
+    nothing. (Windsurf/Devin gates that scan behind a setting and is excluded
+    from the conditional by its callers.) Returns ``False`` for editor-only
+    installs (no Claude skills present), where the pointer is the only
+    skill-discovery surface.
+    """
+    candidates = [Path.home() / ".claude" / "skills"]
+    if project_dir is not None:
+        candidates.insert(0, project_dir / ".claude" / "skills")
+    return any(d.is_dir() and any(d.glob("*/SKILL.md")) for d in candidates)
 
 
 def _install_windsurf_global(target_dir: Path, rules_dir: Path) -> None:
@@ -156,6 +167,9 @@ def _install_windsurf_global(target_dir: Path, rules_dir: Path) -> None:
     inject_with_rules("generate-windsurf.sh", windsurf_file, rules_dir)
 
     from generate_windsurf_skills import generate as gen_windsurf_skills
+    # Windsurf is excluded from the .claude/skills conditional: its native scan
+    # of .claude/skills is gated behind a Devin "Claude Code config reading"
+    # setting, so we always emit the pointer as a reliable fallback.
     gen_windsurf_skills(
         target_dir,
         skill_root=".codeium/windsurf/skills",
@@ -166,7 +180,9 @@ def _install_cline_global(target_dir: Path, rules_dir: Path) -> None:
     """Install Cline global rules in the documented ~/.cline directory."""
     from generate_cline_rules import generate as gen_cline_rules
 
-    rules_root = target_dir / ".cline" / "rules"
+    # Cline reads GLOBAL rules from ~/Documents/Cline/Rules/ (docs.cline.bot);
+    # ~/.cline/rules/ is not a Cline-read path.
+    rules_root = target_dir / "Documents" / "Cline" / "Rules"
     gen_cline_rules(
         target_dir,
         rules_dir=rules_dir,
@@ -174,10 +190,10 @@ def _install_cline_global(target_dir: Path, rules_dir: Path) -> None:
         emit_workflows=False,
         managed_scopes=("standard", "custom"),
     )
-    print("  Created: ~/.cline/rules/ai-toolkit-*.md")
+    print("  Created: ~/Documents/Cline/Rules/ai-toolkit-*.md")
 
     from generate_cline_skills import generate as gen_cline_skills
-    gen_cline_skills(target_dir)
+    gen_cline_skills(target_dir, emit_skill_pointer=not _claude_skills_discoverable(target_dir))
 
 
 def _install_roo_global(target_dir: Path, rules_dir: Path) -> None:
@@ -371,6 +387,10 @@ _EDITOR_MARKERS: dict[str, str] = {
     ".aider.conf.yml": "aider",
     "CONVENTIONS.md": "aider",
     ".augment/rules": "augment",
+    # Antigravity 2.0 default is plural .agents/; .agents/workflows is the
+    # unambiguous marker (Codex also writes .agents/rules but no workflows).
+    # Singular .agent/rules is kept to detect legacy installs.
+    ".agents/workflows": "antigravity",
     ".agent/rules": "antigravity",
     ".agents/skills": "codex",
     ".codex": "codex",
@@ -694,7 +714,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         "roo":          "  Would generate: .roomodes + .roo/rules/*.md",
         "aider":        "  Would generate: .aider.conf.yml + CONVENTIONS.md",
         "augment":      "  Would generate: .augment/rules/ai-toolkit-*.md",
-        "antigravity":  "  Would generate: .agent/rules/ + .agent/workflows/",
+        "antigravity":  "  Would generate: .agents/rules/ + .agents/workflows/",
         "gemini":       "  Would generate: GEMINI.md",
         "opencode":     "  Would generate: AGENTS.md + .opencode/{agents,commands,plugins}/ + opencode.json",
     }
@@ -899,6 +919,12 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
     add_copilot_dir = _profile in {"standard", "strict", "full"}
     add_gemini_hooks = _profile in {"standard", "strict", "full"}
     add_native_surfaces = _profile == "full"
+    # Skip the editor skill-catalogue pointer when real skills are already
+    # discoverable at .claude/skills (project or ~/.claude/skills global):
+    # Cursor/Cline/Augment read those natively and by default. Emit it only as
+    # the editor-only fallback when no Claude skills are present. Windsurf is
+    # excluded (its .claude scan is gated) and keeps its pointer unconditionally.
+    emit_pointer = not _claude_skills_discoverable(cwd)
 
     if "copilot" in eds:
         inject_with_rules(
@@ -925,7 +951,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         if add_native_surfaces:
             _try_generator("generate_cursor_hooks", cwd)
             _try_generator("generate_cursor_agents", cwd)
-            _try_generator("generate_cursor_skills", cwd)
+            _try_generator("generate_cursor_skills", cwd, emit_skill_pointer=emit_pointer)
 
     if "windsurf" in eds:
         inject_with_rules(
@@ -938,6 +964,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
                            rules_dir=rules_dir)
         if add_native_surfaces:
             _try_generator("generate_windsurf_hooks", cwd)
+            # Windsurf pointer stays unconditional (its .claude scan is gated).
             _try_generator("generate_windsurf_skills", cwd)
 
     if "cline" in eds:
@@ -954,7 +981,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             managed_scopes=("standard", "lang", "custom"),
         )
         if add_native_surfaces:
-            _try_generator("generate_cline_skills", cwd)
+            _try_generator("generate_cline_skills", cwd, emit_skill_pointer=emit_pointer)
 
     if "roo" in eds:
         roo_output = run_script("generate-roo-modes.sh", capture=True)
@@ -980,7 +1007,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             # Augment hooks live under $HOME/.augment/settings.json. The
             # generator takes HOME (not cwd) per bucket-1 contract.
             _try_generator("generate_augment_hooks", Path.home())
-            _try_generator("generate_augment_skills", cwd)
+            _try_generator("generate_augment_skills", cwd, emit_skill_pointer=emit_pointer)
 
     if "antigravity" in eds:
         from generate_antigravity import generate as gen_antigravity
@@ -988,19 +1015,13 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
                         rules_dir=rules_dir)
 
     if "codex" in eds:
-        # AGENTS.md — marker injection (like CLAUDE.md)
+        # AGENTS.md — marker injection; universal coding rules are inlined into
+        # AGENTS.md (Codex reads instructions only from AGENTS.md, not a
+        # .agents/rules/ directory). Language rules reach Codex via .agents/skills/.
         inject_with_rules(
             "generate_codex.py",
             cwd / "AGENTS.md",
             rules_dir,
-        )
-        # .agents/rules/ — directory-based rules
-        from generate_codex_rules import generate as gen_codex_rules
-        gen_codex_rules(
-            cwd,
-            language_modules=language_modules,
-            rules_dir=rules_dir,
-            managed_scopes=("standard", "lang", "custom"),
         )
         # .codex/hooks.json — Codex lifecycle hooks
         from generate_codex_hooks import generate as gen_codex_hooks

@@ -14,8 +14,6 @@ setup_file() {
     echo $? > "$CX_LOG_DIR/codex-md.status"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_hooks.py" "$CX_DIR" > "$CX_LOG_DIR/codex-hooks.log" 2>/dev/null
     echo $? > "$CX_LOG_DIR/codex-hooks.status"
-    python3 "$TOOLKIT_DIR/scripts/generate_codex_rules.py" "$CX_DIR" > "$CX_LOG_DIR/codex-rules.log" 2>/dev/null
-    echo $? > "$CX_LOG_DIR/codex-rules.status"
 }
 
 teardown_file() {
@@ -33,18 +31,29 @@ teardown_file() {
     [ "$status" -eq 0 ]
 }
 
-@test "codex: hooks.json uses the 6 upstream-supported event names" {
-    # Per codex-rs/config/src/hook_config.rs the accepted keys are
-    # PreToolUse, PermissionRequest, PostToolUse, SessionStart,
-    # UserPromptSubmit, Stop. We emit a subset; verify no unsupported
-    # event sneaks in.
+@test "codex: hooks.json uses only upstream-supported event names (10 events)" {
+    # Per codex-rs/config/src/hook_config.rs HookEventName the accepted keys
+    # are the 10 below. Verify no unsupported event sneaks in.
     run python3 -c "
 import json
-supported = {'PreToolUse','PermissionRequest','PostToolUse','SessionStart','UserPromptSubmit','Stop'}
+supported = {'PreToolUse','PostToolUse','PermissionRequest','PreCompact','PostCompact','SessionStart','UserPromptSubmit','SubagentStart','SubagentStop','Stop'}
 data = json.load(open('$CX_DIR/.codex/hooks.json'))
 events = set(data['hooks'].keys())
 extra = events - supported
 assert not extra, f'unsupported events: {extra}'
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
+@test "codex: hooks.json wires the full lifecycle (compaction + subagent events)" {
+    # Regression: earlier versions wired only 5 of 10 events. All native+default.
+    run python3 -c "
+import json
+data = json.load(open('$CX_DIR/.codex/hooks.json'))
+for evt in ('PostToolUse','SubagentStart','SubagentStop','PreCompact','PostCompact'):
+    assert evt in data['hooks'], f'{evt} missing'
 print('ok')
 "
     [ "$status" -eq 0 ]
@@ -157,16 +166,15 @@ print('ok')
     grep -qi 'Codex CLI' "$CX_LOG_DIR/codex-md"
 }
 
-# ── generate_codex_rules.py ─────────────────────────────────────────────────
+# ── universal coding rules in AGENTS.md ─────────────────────────────────────
 
-@test "codex: rules generator exits 0" {
-    [ "$(cat "$CX_LOG_DIR/codex-rules.status")" = "0" ]
-}
-
-@test "codex: rules generator emits into .agents/rules/ (Codex discovery path)" {
-    [ -d "$CX_DIR/.agents/rules" ]
-    count=$(ls "$CX_DIR/.agents/rules"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
-    [ "$count" -ge 6 ]
+@test "codex: AGENTS.md inlines the universal coding rules (Codex reads only AGENTS.md)" {
+    # Codex does not read .agents/rules/; the rule bodies must live in AGENTS.md.
+    grep -q '^## Coding Rules' "$CX_LOG_DIR/codex-md"
+    for h in 'Code Style' 'Testing' 'Security' 'Output Mode'; do
+        grep -q "^### $h" "$CX_LOG_DIR/codex-md" || { echo "missing rule: $h"; return 1; }
+    done
+    grep -qi 'parameterized queries' "$CX_LOG_DIR/codex-md"
 }
 
 # ── ecosystem registry integrity ────────────────────────────────────────────
@@ -180,7 +188,6 @@ assert len(entries) == 1
 gens = set(entries[0]['our_generators'])
 expected = {
     'scripts/generate_codex.py',
-    'scripts/generate_codex_rules.py',
     'scripts/generate_codex_hooks.py',
     'scripts/generate_codex_skills.py',
 }

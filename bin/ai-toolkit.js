@@ -98,9 +98,8 @@ const COMMANDS = {
   'conventions-md': 'Generate CONVENTIONS.md for Aider (auto-loaded)',
   'augment-rules': 'Generate .augment/rules/ai-toolkit.md for Augment (legacy)',
   'augment-dir-rules': 'Generate .augment/rules/ai-toolkit-*.md for Augment (recommended)',
-  'antigravity-rules': 'Generate .agent/rules/ and .agent/workflows/ for Google Antigravity',
-  'codex-md': 'Generate AGENTS.md for OpenAI Codex CLI',
-  'codex-rules': 'Generate .agents/rules/ for OpenAI Codex CLI',
+  'antigravity-rules': 'Generate .agents/rules/ and .agents/workflows/ for Google Antigravity',
+  'codex-md': 'Generate AGENTS.md (coding rules inlined) for OpenAI Codex CLI',
   'codex-hooks': 'Generate .codex/hooks.json for OpenAI Codex CLI',
   'opencode-md': 'Generate AGENTS.md for opencode',
   'opencode-agents': 'Generate .opencode/agents/ for opencode (subagents)',
@@ -504,7 +503,6 @@ function handleGenerateAll(_args) {
   run(scriptPath('generate_cline_rules.py'), [CWD]);
   run(scriptPath('generate_roo_rules.py'), [CWD]);
   run(scriptPath('generate_augment_rules.py'), [CWD]);
-  run(scriptPath('generate_codex_rules.py'), [CWD]);
   run(scriptPath('generate_codex_hooks.py'), [CWD]);
   run(scriptPath('generate_opencode_agents.py'), [CWD]);
   run(scriptPath('generate_opencode_commands.py'), [CWD]);
@@ -617,7 +615,6 @@ const SPECIAL_HANDLERS = {
   'roo-dir-rules': (_args) => run(scriptPath('generate_roo_rules.py'), [CWD]),
   'conventions-md': (_args) => { const out = runGenerator('generate_conventions.py'); fs.writeFileSync(path.join(CWD, 'CONVENTIONS.md'), out); console.log('Generated: CONVENTIONS.md'); },
   'augment-dir-rules': (_args) => run(scriptPath('generate_augment_rules.py'), [CWD]),
-  'codex-rules': (_args) => run(scriptPath('generate_codex_rules.py'), [CWD]),
   'codex-hooks': (_args) => run(scriptPath('generate_codex_hooks.py'), [CWD]),
   'opencode-agents': (_args) => run(scriptPath('generate_opencode_agents.py'), [CWD]),
   'opencode-commands': (_args) => run(scriptPath('generate_opencode_commands.py'), [CWD]),

@@ -13,6 +13,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from codex_skill_adapter import codex_skill_description
+from dir_rules_shared import (
+    rule_code_style,
+    rule_output_mode,
+    rule_security,
+    rule_testing,
+)
 from emission import (
     agents_dir,
     skills_dir,
@@ -54,6 +60,23 @@ def _emit_skills() -> str:
     return "\n".join(lines)
 
 
+def _emit_coding_rules() -> str:
+    """Inline the universal coding-rule bodies so Codex receives them.
+
+    Codex reads project instructions only from AGENTS.md (and AGENTS.override.md);
+    it does not read a ``.agents/rules/`` directory. Workflow + quality standards
+    are already emitted above, so this adds code-style, testing, security, and
+    output-mode under a single ``## Coding Rules`` section (H1 demoted to H3).
+    """
+    sections: list[str] = []
+    for rule_fn in (rule_code_style, rule_testing, rule_security, rule_output_mode):
+        body = rule_fn().rstrip()
+        if body.startswith("# "):
+            body = "### " + body[2:]
+        sections.append(body)
+    return "## Coding Rules\n\n" + "\n\n".join(sections)
+
+
 def main() -> None:
     print_toolkit_start()
 
@@ -85,6 +108,11 @@ def main() -> None:
     print(generate_quality_standards())
     print()
     print(generate_workflow_guidelines())
+
+    # Universal coding rules — Codex reads instructions only from AGENTS.md,
+    # so inline them here (previously emitted to the unread .agents/rules/).
+    print()
+    print(_emit_coding_rules())
 
     print_toolkit_end()
 

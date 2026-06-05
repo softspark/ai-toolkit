@@ -70,11 +70,13 @@ teardown_file() {
     [ ! -f "$OC_DIR/.opencode/commands/ai-toolkit-rag-patterns.md" ]
 }
 
-@test "opencode: command frontmatter uses the template field (not a body)" {
-    # Upstream: packages/web/src/content/docs/commands.mdx — the prompt
-    # lives in `template:`, the markdown body is ignored.
+@test "opencode: command prompt lives in the markdown body (not template frontmatter)" {
+    # Upstream opencode.ai/docs/commands: the markdown BODY becomes the prompt
+    # template; `template:` frontmatter is JSON-config-only and ignored in .md.
     for f in "$OC_DIR"/.opencode/commands/ai-toolkit-*.md; do
-        grep -q '^template: |' "$f" || { echo "Missing template in $f"; return 1; }
+        ! grep -q '^template:' "$f" || { echo "stale template frontmatter in $f"; return 1; }
+        body_lines=$(sed '1,/^---$/d' "$f" | grep -c .)
+        [ "$body_lines" -ge 1 ] || { echo "empty command body in $f"; return 1; }
     done
 }
 

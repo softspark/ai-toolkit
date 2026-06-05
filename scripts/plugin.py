@@ -33,7 +33,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import app_dir, inject_section, inject_rule, remove_rule_section
 from codex_skill_adapter import cleanup_codex_skills, sync_codex_skill
 from generate_codex_hooks import generate as generate_codex_hooks
-from generate_codex_rules import generate as generate_codex_rules
 from install_steps.ai_tools import inject_with_rules
 from paths import HOOKS_DIR as _HOOKS_DIR
 from paths import RULES_DIR, TOOLKIT_DATA_DIR
@@ -536,8 +535,9 @@ def _install_codex_extra_skills(pack: dict, pack_dir: Path) -> None:
 
 def _install_codex_base() -> None:
     _ensure_core_hook_scripts()
+    # Universal coding rules are inlined into AGENTS.md by generate_codex.py;
+    # Codex does not read a .agents/rules/ directory.
     inject_with_rules("generate_codex.py", CODEX_ROOT / "AGENTS.md", RULES_DIR)
-    generate_codex_rules(CODEX_ROOT, rules_dir=RULES_DIR)
     hooks_path = CODEX_ROOT / ".codex" / "hooks.json"
     existing = _load_json(hooks_path, {"hooks": {}})
     plugin_entries: dict[str, list[dict]] = {}

@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-04-23"
-last_updated: "2026-05-30"
+last_updated: "2026-06-05"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -26,8 +26,9 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `claude-code` |
-| Docs | https://platform.claude.com/docs/en/claude-code |
+| Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
+| Changelog | https://code.claude.com/docs/en/changelog (lists current 2.1.165) |
 | Config paths | `~/.claude/settings.json`, `.claude/settings.local.json`, `CLAUDE.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+) |
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
@@ -57,9 +58,9 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `windsurf` |
-| Docs | https://docs.windsurf.com |
-| Changelog | https://windsurf.com/changelog |
-| Stable docs mirror | https://docs.windsurf.com/llms.txt + per-page .md twins |
+| Docs | https://docs.devin.ai/desktop (Windsurf rebranded to Devin Desktop ~2026-06-02; docs.windsurf.com resolves here) |
+| Changelog | https://docs.devin.ai/desktop/changelog (windsurf.com/changelog 308-permanent-redirects here) |
+| Stable docs mirror | https://docs.devin.ai/desktop/... per-page .md twins; legacy `.windsurf/`, `.windsurfrules`, `~/.codeium/windsurf/` paths still read as fallback (new canonical: `.devin/`) |
 | Config paths | `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurf/skills/*/SKILL.md`, `AGENTS.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json` |
 | Compat read paths | `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/` |
 | Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py`, `scripts/generate_windsurf_hooks.py` (profile=full), `scripts/generate_windsurf_skills.py` (global + profile=full pointer) |
@@ -87,9 +88,9 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Release notes | https://github.com/google-gemini/gemini-cli/releases |
 | Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md`, `.gemini/extensions/gemini-extension.json` |
 | Our generators | `scripts/generate_gemini.py`, `scripts/generate_gemini_hooks.py` (profile>=standard), `scripts/generate_gemini_commands.py` (profile=full), `scripts/generate_gemini_skills.py` (profile=full) |
-| Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `SessionStart`, `SessionEnd`, `Stop`, `SKILL.md`, `activate_skill`, custom commands, `gemini-extension.json` |
+| Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `SessionStart`, `SessionEnd`, `SKILL.md`, `activate_skill`, custom commands, `gemini-extension.json` (no native `Stop` event — generator maps Stop-equivalent to `AfterAgent`) |
 | Version probe | `gemini --version` |
-| Latest upstream | v0.39.0 (2026-04-23) |
+| Latest upstream | v0.45.1 (2026-06-04). NOTE: Gemini CLI drops free/paid tiers 2026-06-18 in favor of Antigravity CLI (we ship `generate_antigravity.py`); enterprise Code Assist keeps Gemini CLI. |
 
 ### Cline
 
@@ -98,19 +99,19 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `cline` |
 | Docs | https://docs.cline.bot |
 | Release notes | https://github.com/cline/cline/releases |
-| Config paths | `.clinerules/*.md` (compat), `.clinerules/workflows/*.md` (compat workflows), `.cline/rules/*.md`, `.cline/hooks/`, `.cline/skills/*/SKILL.md`, `~/.cline/rules/*.md`, `~/.cline/hooks/`, `~/.cline/skills/*/SKILL.md`, `~/.cline/data/settings/cline_mcp_settings.json` |
+| Config paths | `.clinerules/*.md`, `.clinerules/workflows/*.md`, `.clinerules/skills/*/SKILL.md`, `.clinerules/hooks/` (project), `.cline/skills/*/SKILL.md`, `~/.cline/skills/*/SKILL.md`, `~/Documents/Cline/Rules/Hooks/` (global hooks), `~/.cline/data/settings/cline_mcp_settings.json`, `.claude/skills/*/SKILL.md` (native discovery, always-on since v3.57.0). NOTE: `.cline/rules/` and `.cline/hooks/` were removed as phantom paths — Cline reads rules from `.clinerules/`. |
 | Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py`, `scripts/generate_cline_skills.py` |
 | Tracked capabilities | `clinerules`, Plan Mode, Act Mode, MCP, custom modes, workflows, hooks, skills, subagents, conditional rules |
-| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Project rules still use `.clinerules/` for compatibility; the documented `~/.cline/rules/` path is used for global install. Skills are emitted as a pointer catalogue in `profile=full` and global installs. |
-| Global install | `ai-toolkit install --editors cline` writes documented global rules under `~/.cline/rules/` and a skill pointer under `~/.cline/skills/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
+| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Project rules still use `.clinerules/` for compatibility; global rules are written to `~/Documents/Cline/Rules/` (the documented Cline global rules dir — `~/.cline/rules/` is not a Cline-read path). Skills are emitted as a pointer catalogue in `profile=full` and global installs. |
+| Global install | `ai-toolkit install --editors cline` writes documented global rules under `~/Documents/Cline/Rules/` and a skill pointer under `~/.cline/skills/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
 
 ### Roo Code
 
 | Field | Value |
 |-------|-------|
 | ID | `roo-code` |
-| Docs | https://docs.roocode.com |
-| Release notes | https://github.com/RooCodeInc/Roo-Code/releases |
+| Docs | https://roocodeinc.github.io/Roo-Code (docs.roocode.com 301-redirects here) |
+| Release notes | https://github.com/RooCodeInc/Roo-Code/releases (**ARCHIVED** — repo read-only since 2026-05-15, frozen at v3.54.0; community fork reportedly continues) |
 | Config paths | `.roomodes`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json`, `~/.roo/rules/`, `~/.roo/custom_modes.yaml`, `mcp_settings.json` (global via Roo settings UI) |
 | Our generators | `scripts/generate_roo_modes.py`, `scripts/generate_roo_rules.py` |
 | Tracked capabilities | `roomodes`, custom modes, Code Actions, MCP, Orchestrator mode, `whenToUse`, `description`, `roleDefinition`, `groups` |
@@ -149,7 +150,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `google-antigravity` |
 | Docs | https://antigravity.google/docs (JavaScript SPA — use bundle strings / sitemap to verify) |
 | Changelog | https://antigravity.google/changelog (SPA; changelog entries embedded in main-*.js) |
-| Config paths | `.agent/rules/*.md`, `.agent/workflows/*.md`, `.agent/skills/*/SKILL.md`, `AGENTS.md`, `GEMINI.md` |
+| Config paths | `.agents/rules/*.md`, `.agents/workflows/*.md` (plural is the Antigravity 2.0 default; singular `.agent/rules`, `.agent/workflows` still read as fallback), `.agent/skills/*/SKILL.md`, `AGENTS.md`, `GEMINI.md` |
 | Our generators | `scripts/generate_antigravity.py` (rules + workflows + skill pointer) |
 | Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, `AGENTS.md`, `GEMINI.md`, agent permissions |
 | Doc access note | Docs are JS-SPA — verify via `main-*.js` bundle strings or community skill repos. `WebFetch` returns an empty shell. |
@@ -159,11 +160,12 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `codex-cli` |
-| Docs | https://github.com/openai/codex (redirects from developers.openai.com/codex) |
+| Docs | https://developers.openai.com/codex (now a live docs site with `/codex/{hooks,skills,rules}` pages; latest stable rust-v0.137.0, 2026-06-04) |
 | Release notes | https://github.com/openai/codex/releases |
-| Config paths | `AGENTS.md`, `.agents/rules/*.md`, `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `~/.codex/config.toml` |
-| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_rules.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
-| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We currently wire a subset: `SessionStart`, `PreToolUse`, `PermissionRequest`, `UserPromptSubmit`, `Stop`. |
+| Config paths | `AGENTS.md`, `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `~/.codex/config.toml` |
+| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
+| Rules delivery | Universal coding rules are inlined into `AGENTS.md` (Codex reads instructions only from AGENTS.md, not `.agents/rules/`); language rules ship as `<lang>-rules` skills under `.agents/skills/`. |
+| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We wire all 10 to shared toolkit hook scripts, mirroring the Claude Code mapping in `app/hooks.json`. |
 | Tracked handler types | `command` (emitted by default); `prompt` and `agent` available upstream but authored by hand |
 | Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.agents/skills/*/SKILL.md` (native Codex skill discovery path) |
 | Version probe | `codex --version` |
