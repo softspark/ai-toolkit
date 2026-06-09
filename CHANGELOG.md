@@ -7,11 +7,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v4.7.0 - Devin Desktop .devin tree + Antigravity CLI surfaces (2026-06-10)
 
-Ecosystem sync per `kb/procedures/ecosystem-sync-sop.md` (window 2026-06-05 → 2026-06-10, doctor run + per-tool docs review with adversarial verification).
+Minor release. Ecosystem sync per `kb/procedures/ecosystem-sync-sop.md` (window 2026-06-05 → 2026-06-10, doctor run + per-tool docs review with adversarial verification). No skill/agent count change; no new broad-access skills.
 
-### Added
+### Ecosystem (class B/D/F drift)
 - **Windsurf/Devin Desktop: `.devin/` dual-emit** — `generate_windsurf_rules.py` and `generate_windsurf_skills.py` now write rules, workflows, and the skill pointer to `.devin/{rules,workflows,skills}/` (primary tree since the 2026-06-02 rebrand) alongside legacy `.windsurf/` (still read as fallback). `.devin/rules` added to editor auto-detection. Test count: 1179 → 1186.
 - **Antigravity: CLI skill pointer** — `generate_antigravity.py` dual-emits the skill pointer to `.agent/skills/` (IDE) and `.agents/skills/` (CLI, plural). Editor auto-detection no longer misreads a pointer-only `.agents/skills/` as a Codex install.
 - **Registry coverage** — added verified config surfaces to `scripts/ecosystem_tools.json`: Claude Code project `.claude/settings.json` + `.claude/rules/*.md` + `http` hook handler; Cursor subagent fallback dirs; Devin Local config files; Gemini CLI hook events (`BeforeToolSelection`, `AfterModel`, `Notification`, `PreCompress`) + `~/.agents/skills` alias; Cline CLI/SDK unified `.cline/` layout, `AGENTS.md` rules sources, and plugins; Augment workspace settings + `Notification` event; Codex project-layer `.codex/config.toml`; opencode skill discovery aliases; Antigravity CLI `.agents/{skills,hooks.json,mcp_config.json}`.

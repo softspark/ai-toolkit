@@ -8,15 +8,15 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1186%20passing-success)](tests/)
 
-## What's New in v4.6.0
+## What's New in v4.7.0
 
-v4.6.0 syncs the editor ecosystem with current upstream reality and fixes several generators that were writing to paths their editors never read.
+v4.7.0 follows the Windsurf → Devin Desktop transition to its config surfaces and brings the editor registry up to date with verified upstream docs.
 
-- **Codex finally gets its coding rules**: the universal code-style/testing/security rules are now inlined into `AGENTS.md` (the only file Codex reads) instead of the never-read `.agents/rules/`. Codex also now wires all 10 native lifecycle hook events.
-- **opencode commands fixed**: the prompt now lives in the markdown body — it previously went into a `template:` frontmatter block that opencode ignores, producing empty commands.
-- **Cline global rules land where Cline reads them**: `~/Documents/Cline/Rules/` instead of the never-read `~/.cline/rules/`.
-- **Smarter skill pointers**: Cursor/Cline/Augment skip the catalogue pointer when real skills are already discoverable at `.claude/skills/`, emitting it only as the editor-only fallback.
-- **Registry sync**: Windsurf → Devin Desktop, Roo Code archived, Antigravity `.agents/` plural default, Gemini CLI free/paid sunset (2026-06-18), corrected docs URLs across the board.
+- **Devin Desktop `.devin/` tree**: windsurf generators now dual-emit rules, workflows, and the skill pointer to `.devin/` (primary since the 2026-06-02 rebrand) alongside legacy `.windsurf/` (still read as fallback); `.devin/rules` joins editor auto-detection.
+- **Antigravity CLI skill pointer**: dual-emitted to `.agent/skills/` (IDE) and `.agents/skills/` (CLI, plural); auto-detection no longer misreads a pointer-only `.agents/skills/` as a Codex install.
+- **Cascade deprecation**: the Cascade-scoped `.windsurf/hooks.json` surface dies with Cascade on 2026-07-01 — deprecation note added, migration target is Devin CLI lifecycle hooks.
+- **Registry accuracy**: phantom `.cursor/rules/*.md` removed (Cursor ignores plain `.md`), Augment guidelines path corrected to `.augment-guidelines`, plus verified config surfaces added for Claude Code, Gemini CLI, Cline CLI/SDK, Codex, opencode, and Antigravity CLI.
+- **Troubleshooting**: maintenance SOP gains the `claude --safe-mode` (v2.1.169) isolation step.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
