@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1179%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1186%20passing-success)](tests/)
 
 ## What's New in v4.6.0
 
@@ -103,14 +103,14 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 |----------|-------------|:-----:|-------|
 | Claude Code | `~/.claude/` | ✅ | global |
 | Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
-| Windsurf | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.windsurf/rules/*.md` | ✅ | global + project |
+| Windsurf (Devin Desktop) | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.devin/rules/*.md` + `.windsurf/rules/*.md` (legacy) | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | ✅ | global |
 | GitHub Copilot | `.github/copilot-instructions.md` | — | project |
 | Cline | `~/Documents/Cline/Rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
 | Roo Code | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
 | Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | ✅ | global + project |
-| Google Antigravity | `.agents/rules/*.md` + `.agents/workflows/*.md` | — | project |
+| Google Antigravity | `.agents/rules/*.md` + `.agents/workflows/*.md` + skill pointer in `.agent/skills/*` (IDE) and `.agents/skills/*` (CLI) | — | project |
 | Codex CLI | `AGENTS.md` (coding rules inlined) + `.agents/skills/*` + `.codex/hooks.json` | ✅ | project + global plugin |
 | opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | ✅ | project + global (`~/.config/opencode/`) |
 
@@ -149,7 +149,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1179 tests)
+├── tests/               # Bats test suite (1186 tests)
 └── CHANGELOG.md
 ```
 

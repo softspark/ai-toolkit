@@ -851,6 +851,7 @@ _README_PLATFORM_KEY = {
     "claude code": "claude",
     "cursor": "cursor",
     "windsurf": "windsurf",
+    "windsurf (devin desktop)": "windsurf",
     "gemini cli": "gemini",
     "github copilot": "copilot",
     "cline": "cline",

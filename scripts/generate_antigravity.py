@@ -11,19 +11,19 @@ Antigravity reads rules from:
   * ``.agents/rules/*.md`` — per-category rule files (this generator)
   * ``.agents/workflows/*.md`` — workflow templates (this generator)
 
-Antigravity also supports the Agent Skills standard via ``.agent/skills/
-<skill-name>/SKILL.md`` (the changelog entry "Agent Skills now available in
-Antigravity" confirms this surface). We do not duplicate our full skill
-catalogue into ``.agent/skills/``; instead we emit a single pointer skill
-that teaches Antigravity to look up the real catalogue in
-``~/.softspark/ai-toolkit/app/skills/`` (global install) or
+Antigravity also supports the Agent Skills standard. The IDE reads
+``.agent/skills/<skill-name>/SKILL.md`` (singular), while the Antigravity CLI
+(GA 2026-05-19) reads ``.agents/skills/`` (plural) — so the skill pointer is
+dual-emitted to both. We do not duplicate our full skill catalogue; instead we
+emit a single pointer skill that teaches Antigravity to look up the real
+catalogue in ``~/.softspark/ai-toolkit/app/skills/`` (global install) or
 ``.claude/skills/`` (local install).
 
 Usage:
   python3 scripts/generate_antigravity.py [target-dir]
 
 Writes rules/workflows to target-dir/.agents/{rules,workflows}/ and the skill
-pointer to target-dir/.agent/skills/ (skills location is unchanged upstream).
+pointer to target-dir/.agent/skills/ (IDE) + target-dir/.agents/skills/ (CLI).
 """
 from __future__ import annotations
 
@@ -82,11 +82,17 @@ def _pointer_skill_md() -> str:
 
 
 def _write_skill_pointer(target_dir: Path) -> None:
-    """Write the pointer SKILL.md under .agent/skills/<name>/."""
-    skill_dir = target_dir / ".agent" / "skills" / POINTER_SKILL_NAME
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "SKILL.md").write_text(_pointer_skill_md(), encoding="utf-8")
-    print(f"  Generated: .agent/skills/{POINTER_SKILL_NAME}/SKILL.md")
+    """Write the pointer SKILL.md for both the IDE and the CLI surface.
+
+    The IDE reads ``.agent/skills/`` (singular); the Antigravity CLI reads
+    ``.agents/skills/`` (plural).
+    """
+    content = _pointer_skill_md()
+    for tree in (".agent", ".agents"):
+        skill_dir = target_dir / tree / "skills" / POINTER_SKILL_NAME
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text(content, encoding="utf-8")
+        print(f"  Generated: {tree}/skills/{POINTER_SKILL_NAME}/SKILL.md")
 
 
 # ---------------------------------------------------------------------------
@@ -97,10 +103,11 @@ def generate(target_dir: Path, *,
              language_modules: list[str] | None = None,
              rules_dir: Path | None = None,
              emit_skill_pointer: bool = True) -> None:
-    """Write ``.agents/rules/``, ``.agents/workflows/``, and ``.agent/skills/``.
+    """Write ``.agents/{rules,workflows}/`` and the dual skill pointers.
 
-    ``emit_skill_pointer`` controls whether the pointer SKILL.md is written.
-    Set to ``False`` if you manage ``.agent/skills/`` yourself.
+    ``emit_skill_pointer`` controls whether the pointer SKILL.md is written
+    to ``.agent/skills/`` (IDE) and ``.agents/skills/`` (CLI). Set to
+    ``False`` if you manage those directories yourself.
     """
     rules = dict(STANDARD_RULES)
     rules.update(build_language_rules(language_modules))

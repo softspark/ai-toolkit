@@ -68,7 +68,31 @@ PY
         # Accept empty directory, reject any SKILL.md.
         ! find "$tmp/.agent/skills" -name SKILL.md | grep -q .
     }
+    [ ! -d "$tmp/.agents/skills" ] || {
+        ! find "$tmp/.agents/skills" -name SKILL.md | grep -q .
+    }
     rm -rf "$tmp"
+}
+
+# ── Skill pointer dual-emit (IDE singular + CLI plural) ────────────────────
+
+@test "antigravity: pointer skill is dual-emitted to .agents/skills (CLI)" {
+    [ -f "$AG_TMP/.agents/skills/$POINTER_SKILL/SKILL.md" ]
+    diff "$AG_TMP/.agent/skills/$POINTER_SKILL/SKILL.md" \
+         "$AG_TMP/.agents/skills/$POINTER_SKILL/SKILL.md"
+}
+
+@test "antigravity: pointer-only .agents/skills does not auto-detect codex" {
+    run python3 - <<PY
+import sys
+from pathlib import Path
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+from install_steps.ai_tools import _detect_editors
+print(",".join(_detect_editors(Path("$AG_TMP"))))
+PY
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"antigravity"* ]]
+    [[ "$output" != *"codex"* ]]
 }
 
 # ── Rules / workflows still emitted ────────────────────────────────────────

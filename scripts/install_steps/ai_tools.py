@@ -381,6 +381,9 @@ _EDITOR_MARKERS: dict[str, str] = {
     ".cursor/rules": "cursor",
     ".windsurfrules": "windsurf",
     ".windsurf/rules": "windsurf",
+    # .devin/ is the primary Devin Desktop tree since the 2026-06-02 rebrand;
+    # .windsurf/ markers stay to detect legacy installs.
+    ".devin/rules": "windsurf",
     ".clinerules": "cline",
     ".roomodes": "roo",
     ".roo/rules": "roo",
@@ -411,9 +414,23 @@ def _detect_editors(cwd: Path) -> list[str]:
     found: set[str] = set()
     for marker, editor in _EDITOR_MARKERS.items():
         p = cwd / marker
-        if p.exists():
-            found.add(editor)
+        if not p.exists():
+            continue
+        if marker == ".agents/skills" and _is_pointer_only_skills_dir(p):
+            # The Antigravity CLI pointer skill also lives in .agents/skills/;
+            # only real (materialized) skills indicate a Codex install.
+            continue
+        found.add(editor)
     return sorted(found)
+
+
+def _is_pointer_only_skills_dir(skills_dir: Path) -> bool:
+    """True when a skills dir holds only the ai-toolkit pointer skill."""
+    try:
+        entries = [e.name for e in skills_dir.iterdir() if not e.name.startswith(".")]
+    except OSError:
+        return False
+    return entries == ["ai-toolkit-skill-catalogue"]
 
 
 def _resolve_editors(editors_arg: str, cwd: Path) -> list[str]:
@@ -709,7 +726,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
     _EDITOR_DRY_RUN = {
         "copilot":      "  Would inject: .github/copilot-instructions.md",
         "cursor":       "  Would generate: .cursorrules + .cursor/rules/*.mdc",
-        "windsurf":     "  Would generate: .windsurfrules + .windsurf/rules/*.md",
+        "windsurf":     "  Would generate: .windsurfrules + .devin/rules/*.md + .windsurf/rules/*.md",
         "cline":        "  Would generate: .clinerules/*.md",
         "roo":          "  Would generate: .roomodes + .roo/rules/*.md",
         "aider":        "  Would generate: .aider.conf.yml + CONVENTIONS.md",
@@ -731,7 +748,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         if "cursor" in eds:
             print("  Would generate: .cursor/hooks.json + .cursor/agents/ + .cursor/skills/ (profile=full)")
         if "windsurf" in eds:
-            print("  Would generate: .windsurf/hooks.json + .windsurf/skills/ (profile=full)")
+            print("  Would generate: .windsurf/hooks.json + .devin/skills/ + .windsurf/skills/ (profile=full)")
         if "cline" in eds:
             print("  Would generate: .cline/skills/ (profile=full)")
         if "augment" in eds:

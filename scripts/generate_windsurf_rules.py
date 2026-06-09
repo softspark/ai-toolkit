@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
-"""Generate ``.windsurf/rules/*.md`` (and workflows) for Windsurf IDE.
+"""Generate ``.devin/rules/*.md`` and ``.windsurf/rules/*.md`` (and workflows)
+for Devin Desktop (formerly Windsurf).
 
-Windsurf reads directory-based rules from ``.windsurf/rules/*.md`` (since
-mid-2025). Each rule file supports YAML frontmatter with these fields
-(from docs.windsurf.com/windsurf/cascade/memories):
+Windsurf rebranded to Devin Desktop on 2026-06-02. ``.devin/`` is now the
+primary read+write workspace tree; ``.windsurf/`` is a legacy read-only
+fallback that current builds still honor (docs.devin.ai/desktop/devin-desktop-faq:
+"The application already supports .devin/ as the primary workspace directory
+and falls back to .windsurf/ for backward compatibility"). We dual-emit the
+same content to both trees so old Windsurf builds keep working during the
+transition.
+
+Each rule file supports YAML frontmatter with these fields
+(from docs.devin.ai/desktop — memories docs):
 
 * ``trigger`` — activation mode: ``always_on`` | ``glob`` | ``model_decision``
-  | ``manual``. When omitted, Windsurf defaults to manual-only.
+  | ``manual``. When omitted, the IDE defaults to manual-only.
 * ``globs`` — comma-separated glob patterns (only when ``trigger: glob``).
 * ``description`` — shown to the model when ``trigger: model_decision``.
 
-Windsurf also reads workflow markdown files from ``.windsurf/workflows/*.md``
-which users invoke via ``/<name>`` slash commands (Cascade). This generator
+Workflow markdown files (invoked via ``/<name>`` slash commands) are emitted
+to ``.devin/workflows/*.md`` and ``.windsurf/workflows/*.md``. This generator
 emits the same workflow catalogue used by Antigravity and Cline.
 
 The legacy ``.windsurfrules`` single-file format is still produced by
@@ -142,20 +150,26 @@ def _build_rules(language_modules: list[str] | None,
 
 
 # ---------------------------------------------------------------------------
-# Workflows — .windsurf/workflows/<name>.md invocable via /<name>
+# Workflows — <tree>/workflows/<name>.md invocable via /<name>
 # ---------------------------------------------------------------------------
 
+# .devin/ is primary since the 2026-06-02 Devin Desktop rebrand; .windsurf/
+# is the legacy fallback still read by pre-rebrand builds.
+CONFIG_TREES: tuple[str, ...] = (".devin", ".windsurf")
+
+
 def _write_workflows(target_dir: Path, *, cleanup: bool = True) -> None:
-    """Write ``.windsurf/workflows/*.md`` files for Cascade slash commands."""
-    workflows_dir = target_dir / ".windsurf" / "workflows"
-    workflows_dir.mkdir(parents=True, exist_ok=True)
+    """Write ``workflows/*.md`` slash-command files to both config trees."""
+    for tree in CONFIG_TREES:
+        workflows_dir = target_dir / tree / "workflows"
+        workflows_dir.mkdir(parents=True, exist_ok=True)
 
-    if cleanup:
-        cleanup_stale(workflows_dir, set(STANDARD_WORKFLOWS.keys()))
+        if cleanup:
+            cleanup_stale(workflows_dir, set(STANDARD_WORKFLOWS.keys()))
 
-    for filename, content_fn in STANDARD_WORKFLOWS.items():
-        (workflows_dir / filename).write_text(content_fn(), encoding="utf-8")
-        print(f"  Generated: .windsurf/workflows/{filename}")
+        for filename, content_fn in STANDARD_WORKFLOWS.items():
+            (workflows_dir / filename).write_text(content_fn(), encoding="utf-8")
+            print(f"  Generated: {tree}/workflows/{filename}")
 
 
 # ---------------------------------------------------------------------------
@@ -170,15 +184,16 @@ def generate(target_dir: Path, *,
              managed_scopes: tuple[str, ...] = (
                  STANDARD_SCOPE, LANG_SCOPE, CUSTOM_SCOPE,
              )) -> None:
-    """Write ``.windsurf/rules/*.md`` and ``.windsurf/workflows/*.md``."""
+    """Write ``rules/*.md`` and ``workflows/*.md`` to both config trees."""
     rules = _build_rules(language_modules, rules_dir)
-    write_rules(
-        target_dir,
-        rules,
-        ".windsurf/rules",
-        cleanup=cleanup,
-        managed_scopes=managed_scopes,
-    )
+    for tree in CONFIG_TREES:
+        write_rules(
+            target_dir,
+            rules,
+            f"{tree}/rules",
+            cleanup=cleanup,
+            managed_scopes=managed_scopes,
+        )
 
     if emit_workflows:
         _write_workflows(target_dir, cleanup=cleanup)

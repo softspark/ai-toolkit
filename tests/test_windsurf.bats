@@ -1,7 +1,8 @@
 #!/usr/bin/env bats
-# Windsurf-specific integration tests for generate_windsurf_rules.py.
-# Verifies activation-mode frontmatter (trigger, globs, description) and
-# the new .windsurf/workflows/ directory emission.
+# Windsurf/Devin-Desktop integration tests for generate_windsurf_rules.py.
+# Verifies activation-mode frontmatter (trigger, globs, description), the
+# workflows directory emission, and the .devin/ + .windsurf/ dual-emit
+# (.devin/ is primary since the 2026-06-02 Devin Desktop rebrand).
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
@@ -87,6 +88,45 @@ teardown_file() {
             return 1
         }
     done
+}
+
+# ── Dual-emit: .devin/ primary tree ────────────────────────────────────────
+
+@test "windsurf: rules are dual-emitted to .devin/rules" {
+    [ -d "$WS_TMP/.devin/rules" ]
+    [ -f "$WS_TMP/.devin/rules/ai-toolkit-security.md" ]
+}
+
+@test "windsurf: .devin and .windsurf rule trees are identical" {
+    diff -r "$WS_TMP/.devin/rules" "$WS_TMP/.windsurf/rules"
+}
+
+@test "windsurf: workflows are dual-emitted to .devin/workflows" {
+    [ -d "$WS_TMP/.devin/workflows" ]
+    diff -r "$WS_TMP/.devin/workflows" "$WS_TMP/.windsurf/workflows"
+}
+
+@test "windsurf: skill pointer is dual-emitted to .devin and .windsurf" {
+    tmp="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_windsurf_skills.py" "$tmp" >/dev/null
+    [ -f "$tmp/.devin/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ -f "$tmp/.windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    rm -rf "$tmp"
+}
+
+@test "windsurf: .devin/rules alone is detected as a windsurf install" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/.devin/rules"
+    run python3 - <<PY
+import sys
+from pathlib import Path
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+from install_steps.ai_tools import _detect_editors
+print(",".join(_detect_editors(Path("$tmp"))))
+PY
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"windsurf"* ]]
+    rm -rf "$tmp"
 }
 
 # ── Regeneration / idempotency ────────────────────────────────────────────

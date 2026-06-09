@@ -16,6 +16,7 @@ CONVENTIONS.md
 # Generated directory-based configs
 /.cursor/rules/
 /.windsurf/
+/.devin/
 /.cline/
 /.roo/
 
