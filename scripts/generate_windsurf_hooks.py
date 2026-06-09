@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Generate .windsurf/hooks.json for Windsurf Cascade.
 
+DEPRECATED SURFACE: the Cascade agent is available only through 2026-07-01
+(Devin Local is the default agent since the 2026-06-02 Devin Desktop rebrand),
+and this hooks.json schema is Cascade-scoped. Migrate to the Devin CLI
+lifecycle-hooks surface (docs.devin.ai/cli/extensibility/hooks/*) before that
+date; tracked in the ecosystem registry status_note for windsurf.
+
 Writes `<target>/.windsurf/hooks.json`. Existing user hook entries are
 preserved; only entries tagged `_source: ai-toolkit` are replaced on
 regeneration. Windsurf merges system / user / workspace hooks at runtime, so

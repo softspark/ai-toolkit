@@ -3,9 +3,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.0.1"
+version: "3.1.0"
 created: "2026-03-23"
-last_updated: "2026-05-25"
+last_updated: "2026-06-10"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -211,18 +211,19 @@ Use this when Claude appears to ignore `CLAUDE.md`, `.claude/rules/*.md`, output
    - `https://code.claude.com/docs/en/settings`
    - `https://code.claude.com/docs/en/output-styles`
    - `https://code.claude.com/docs/en/hooks`
-2. **Verify instruction loading.** Run `/memory` in Claude Code and confirm the expected `CLAUDE.md`, `CLAUDE.local.md`, and `.claude/rules/*.md` files are listed. Remember that Claude Code reads `CLAUDE.md`, not `AGENTS.md`, unless `CLAUDE.md` imports it.
-3. **Verify the active output style.** Check `.claude/settings.local.json` or `/config`. Output style changes apply after `/clear` or a new session.
-4. **Inspect installed hooks.** Ensure `~/.claude/settings.json` contains the ai-toolkit `UserPromptSubmit` and `Stop` entries. The governance hook must run with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json` so it injects `additionalContext` without noisy transcript output.
-5. **Reproduce the hook path directly.**
+2. **Isolate with safe mode (v2.1.169+).** Start a session with `claude --safe-mode` (or `CLAUDE_CODE_SAFE_MODE=1`) — it disables hooks, skills, agents, and CLAUDE.md. If the problem persists in safe mode, the cause is upstream, not toolkit customization; if it disappears, bisect toolkit components with `ai-toolkit update --only <component>`.
+3. **Verify instruction loading.** Run `/memory` in Claude Code and confirm the expected `CLAUDE.md`, `CLAUDE.local.md`, and `.claude/rules/*.md` files are listed. Remember that Claude Code reads `CLAUDE.md`, not `AGENTS.md`, unless `CLAUDE.md` imports it.
+4. **Verify the active output style.** Check `.claude/settings.local.json` or `/config`. Output style changes apply after `/clear` or a new session.
+5. **Inspect installed hooks.** Ensure `~/.claude/settings.json` contains the ai-toolkit `UserPromptSubmit` and `Stop` entries. The governance hook must run with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json` so it injects `additionalContext` without noisy transcript output.
+6. **Reproduce the hook path directly.**
    ```bash
    printf '{"session_id":"debug","prompt":"debug this technical rule issue"}' \
      | AI_TOOLKIT_SEARCH_FIRST=strict AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json \
        ~/.softspark/ai-toolkit/hooks/user-prompt-submit.sh
    ```
    The output must be valid JSON with `hookSpecificOutput.additionalContext`.
-6. **Check corrective enforcement.** If the assistant still skips required research, `stop-search-check.sh` should block Stop with the search-first message. If it does not, inspect `~/.softspark/ai-toolkit/state/search-required-*.flag` and the Codex/Claude transcript logs.
-7. **Repair drift.** Run:
+7. **Check corrective enforcement.** If the assistant still skips required research, `stop-search-check.sh` should block Stop with the search-first message. If it does not, inspect `~/.softspark/ai-toolkit/state/search-required-*.flag` and the Codex/Claude transcript logs.
+8. **Repair drift.** Run:
    ```bash
    ai-toolkit update --only hooks
    python3 scripts/ecosystem_doctor.py --tool claude-code --format text

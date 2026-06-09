@@ -7,6 +7,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+Ecosystem sync per `kb/procedures/ecosystem-sync-sop.md` (window 2026-06-05 → 2026-06-10, doctor run + per-tool docs review with adversarial verification).
+
+### Added
+- **Windsurf/Devin Desktop: `.devin/` dual-emit** — `generate_windsurf_rules.py` and `generate_windsurf_skills.py` now write rules, workflows, and the skill pointer to `.devin/{rules,workflows,skills}/` (primary tree since the 2026-06-02 rebrand) alongside legacy `.windsurf/` (still read as fallback). `.devin/rules` added to editor auto-detection. Test count: 1179 → 1186.
+- **Antigravity: CLI skill pointer** — `generate_antigravity.py` dual-emits the skill pointer to `.agent/skills/` (IDE) and `.agents/skills/` (CLI, plural). Editor auto-detection no longer misreads a pointer-only `.agents/skills/` as a Codex install.
+- **Registry coverage** — added verified config surfaces to `scripts/ecosystem_tools.json`: Claude Code project `.claude/settings.json` + `.claude/rules/*.md` + `http` hook handler; Cursor subagent fallback dirs; Devin Local config files; Gemini CLI hook events (`BeforeToolSelection`, `AfterModel`, `Notification`, `PreCompress`) + `~/.agents/skills` alias; Cline CLI/SDK unified `.cline/` layout, `AGENTS.md` rules sources, and plugins; Augment workspace settings + `Notification` event; Codex project-layer `.codex/config.toml`; opencode skill discovery aliases; Antigravity CLI `.agents/{skills,hooks.json,mcp_config.json}`.
+
+### Changed
+- **Cascade deprecation note** — `.windsurf/hooks.json` (Cascade-scoped) marked deprecated: Cascade is available only through 2026-07-01; migration target is the Devin CLI lifecycle-hooks surface (tracked in registry status_note).
+- **Cursor registry fix** — removed phantom `.cursor/rules/*.md` path (plain `.md` files are ignored by Cursor's rules system); fixed the stale claim in `generate_cursor_mdc.py` docstring.
+- **Augment registry fix** — `.augment/guidelines.md` replaced with documented `.augment-guidelines` + `~/.augment/user-guidelines.md`; `our_generators` synced to all 6 augment generators.
+- **Maintenance SOP** — added `claude --safe-mode` (v2.1.169) isolation step to the rule-enforcement troubleshooting flow.
+- Doctor snapshot refreshed (Claude Code 2.1.170, Codex CLI 0.138.0); class-C items recorded as not adopted (`fallbackModel`, Copilot `excludeAgent`); opencode v1.16.0 experimental v2 skill registry tracked as a watch item.
+
+---
+
 ## v4.6.0 - Editor ecosystem sync + Codex rules in AGENTS.md (2026-06-05)
 
 Minor release. Syncs the editor registry with current upstream reality (Windsurf→Devin rebrand, Roo Code archive, Gemini CLI sunset, moved docs hosts) and fixes several generators that wrote to paths their editors never read. Headline: Codex now actually receives the universal coding rules.

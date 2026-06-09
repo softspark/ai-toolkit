@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Generate ``.cursor/rules/*.mdc`` files for Cursor IDE.
 
-Cursor reads rules from ``.cursor/rules/`` (since Cursor 0.45). Both ``.mdc``
-and plain ``.md`` extensions are accepted; we emit ``.mdc`` because only it
-carries the full YAML frontmatter used to control activation:
+Cursor reads rules from ``.cursor/rules/`` (since Cursor 0.45). Only ``.mdc``
+files are read — plain ``.md`` files in ``.cursor/rules/`` are ignored by the
+rules system (per cursor.com/docs/context/rules). ``.mdc`` carries the YAML
+frontmatter used to control activation:
 
   - ``alwaysApply: true``   — always in context
   - ``globs: ["**/*.ts"]``  — auto-attached for matching files

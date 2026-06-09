@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-06-05T09:16:41Z",
+  "last_run": "2026-06-09T22:04:06Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "544c8cce7baacb2e",
+      "docs_hash": "f4c5995e8333a4d5",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -51,6 +51,7 @@
         "Auggie CLI": true,
         "MCP": true,
         "Next Edit": false,
+        "Notification": true,
         "PostToolUse": false,
         "PreToolUse": false,
         "SKILL.md": false,
@@ -65,7 +66,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "f84eb6cd31b39797",
+      "docs_hash": "e6f6b4d9d4057cb0",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -114,16 +115,17 @@
         "WorktreeRemove": false,
         "hook handler: agent": false,
         "hook handler: command": false,
+        "hook handler: http": false,
         "hook handler: mcp_tool": false,
         "hook handler: prompt": false,
         "output style": true,
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.165 (Claude Code)"
+      "version": "2.1.170 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "d94f88d02b733ee6",
+      "docs_hash": "806fa530c90e227d",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -151,6 +153,7 @@
         "\u200bWhat is Cline?"
       ],
       "markers": {
+        "AGENTS.md": false,
         "Act Mode": true,
         "MCP": true,
         "Plan Mode": false,
@@ -158,13 +161,14 @@
         "conditional rules": false,
         "custom modes": false,
         "hooks": true,
+        "plugins": true,
         "skills": true,
         "subagents": true,
         "workflows": true
       }
     },
     "codex-cli": {
-      "docs_hash": "b86ae1b6bda0e071",
+      "docs_hash": "1b4a56a8e918d721",
       "headings": [
         "API",
         "API Reference",
@@ -231,10 +235,10 @@
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.136.0"
+      "version": "codex-cli 0.138.0"
     },
     "cursor": {
-      "docs_hash": "aee861b1ed20480d",
+      "docs_hash": "b68e4adf6e21f543",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -250,7 +254,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "0bbd00c009a9357b",
+      "docs_hash": "a0e9a213229063c8",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -271,11 +275,15 @@
       ],
       "markers": {
         "AfterAgent": false,
+        "AfterModel": false,
         "AfterTool": false,
         "BeforeAgent": false,
         "BeforeModel": false,
         "BeforeTool": false,
+        "BeforeToolSelection": false,
         "GEMINI.md": true,
+        "Notification": true,
+        "PreCompress": false,
         "SKILL.md": false,
         "SessionEnd": false,
         "SessionStart": false,
@@ -288,7 +296,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "2314ef6e31c223a1",
+      "docs_hash": "ead818d74ead1f2e",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -331,13 +339,14 @@
         "agent manager": false,
         "agent permissions": false,
         "artifacts": false,
+        "hooks": false,
         "rules": false,
         "skills": false,
         "workflows": false
       }
     },
     "opencode": {
-      "docs_hash": "0e54c8a8f59b6474",
+      "docs_hash": "f546c8b741790cb8",
       "headings": [
         "Add features",
         "Ask questions",
@@ -397,7 +406,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "3405457d501ab760",
+      "docs_hash": "91034c064d9f8290",
       "headings": [
         "Advanced",
         "Agent Command Center",

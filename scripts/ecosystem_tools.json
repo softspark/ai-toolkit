@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-06-05",
+  "last_updated": "2026-06-10",
   "tools": [
     {
       "id": "claude-code",
@@ -14,8 +14,10 @@
       },
       "config_paths": [
         "~/.claude/settings.json",
+        ".claude/settings.json",
         ".claude/settings.local.json",
         "CLAUDE.md",
+        ".claude/rules/*.md",
         ".claude/agents/*.md",
         ".claude/skills/*/SKILL.md",
         "~/.claude/themes/*.json"
@@ -60,7 +62,8 @@
         "hook handler: command",
         "hook handler: prompt",
         "hook handler: agent",
-        "hook handler: mcp_tool"
+        "hook handler: mcp_tool",
+        "hook handler: http"
       ],
       "version_probe": {
         "kind": "command",
@@ -79,7 +82,6 @@
       "config_paths": [
         ".cursorrules",
         ".cursor/rules/*.mdc",
-        ".cursor/rules/*.md",
         "AGENTS.md",
         ".cursor/mcp.json",
         "~/.cursor/mcp.json",
@@ -92,6 +94,11 @@
         ".codex/skills/*/SKILL.md",
         "~/.codex/skills/*/SKILL.md",
         ".cursor/agents/*.md",
+        "~/.cursor/agents/*.md",
+        ".claude/agents/*.md",
+        "~/.claude/agents/*.md",
+        ".codex/agents/*.md",
+        "~/.codex/agents/*.md",
         ".cursor/hooks.json"
       ],
       "our_generators": [
@@ -125,6 +132,12 @@
         "changelog": "https://docs.devin.ai/desktop/changelog"
       },
       "config_paths": [
+        ".devin/rules/*.md",
+        ".devin/workflows/*.md",
+        ".devin/skills/*/SKILL.md",
+        ".devin/config.json",
+        ".devin/config.local.json",
+        "~/.config/devin/config.json",
         ".windsurfrules",
         ".windsurf/rules/*.md",
         ".windsurf/workflows/*.md",
@@ -138,8 +151,10 @@
       "our_generators": [
         "scripts/generate_windsurf.py",
         "scripts/generate_windsurf_rules.py",
-        "scripts/generate_windsurf_skills.py"
+        "scripts/generate_windsurf_skills.py",
+        "scripts/generate_windsurf_hooks.py"
       ],
+      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary read+write workspace tree; .windsurfrules, .windsurf/* and ~/.codeium/windsurf/* are legacy read-only fallbacks. Our generators dual-emit .devin/* + .windsurf/*. Cascade agent is available only through 2026-07-01 (Devin Local is the default agent since 2026-06-02); the .windsurf/hooks.json surface emitted by generate_windsurf_hooks.py is Cascade-scoped and dies with Cascade — migrate to the Devin CLI lifecycle-hooks surface (docs.devin.ai/cli/extensibility/hooks/*) before that date. Devin CLI ('Devin for Terminal', launched 2026-04-29) shares the Devin Local harness, reads AGENTS.md and the same SKILL.md standard; not yet tracked as a separate registry entry.",
       "capability_markers": [
         "Cascade",
         "windsurfrules",
@@ -204,6 +219,7 @@
         ".gemini/skills/*/SKILL.md",
         ".agents/skills/*/SKILL.md",
         "~/.gemini/skills/*/SKILL.md",
+        "~/.agents/skills/*/SKILL.md",
         ".gemini/extensions/gemini-extension.json"
       ],
       "our_generators": [
@@ -216,9 +232,13 @@
         "settings.json",
         "BeforeTool",
         "AfterTool",
+        "BeforeToolSelection",
         "BeforeAgent",
         "AfterAgent",
         "BeforeModel",
+        "AfterModel",
+        "Notification",
+        "PreCompress",
         "SessionStart",
         "SessionEnd",
         "SKILL.md",
@@ -246,11 +266,19 @@
         ".clinerules/workflows/*.md",
         ".clinerules/skills/*/SKILL.md",
         ".clinerules/hooks/",
+        ".cline/rules/*.md",
+        ".cline/hooks/",
+        ".cline/plugins/",
         ".cline/skills/*/SKILL.md",
+        "~/.cline/rules/",
+        "~/.cline/hooks/",
+        "~/.cline/plugins/",
         "~/.cline/skills/*/SKILL.md",
         "~/Documents/Cline/Rules/Hooks/",
         "~/.cline/data/settings/cline_mcp_settings.json",
-        ".claude/skills/*/SKILL.md"
+        ".claude/skills/*/SKILL.md",
+        "AGENTS.md",
+        "~/.agents/AGENTS.md"
       ],
       "our_generators": [
         "scripts/generate_cline.py",
@@ -267,7 +295,9 @@
         "hooks",
         "skills",
         "subagents",
-        "conditional rules"
+        "conditional rules",
+        "AGENTS.md",
+        "plugins"
       ],
       "version_probe": null
     },
@@ -357,11 +387,16 @@
       },
       "config_paths": [
         ".augment/rules/*.md",
-        ".augment/guidelines.md",
+        ".augment-guidelines",
         ".augment/agents/*.md",
         ".augment/commands/*.md",
         ".augment/skills/*/SKILL.md",
+        ".augment/settings.json",
+        ".augment/settings.local.json",
+        ".claude/skills/*/SKILL.md",
+        ".agents/skills/*/SKILL.md",
         "~/.augment/rules/*.md",
+        "~/.augment/user-guidelines.md",
         "~/.augment/agents/*.md",
         "~/.augment/commands/*.md",
         "~/.augment/settings.json",
@@ -369,7 +404,11 @@
       ],
       "our_generators": [
         "scripts/generate_augment.py",
-        "scripts/generate_augment_rules.py"
+        "scripts/generate_augment_rules.py",
+        "scripts/generate_augment_agents.py",
+        "scripts/generate_augment_commands.py",
+        "scripts/generate_augment_skills.py",
+        "scripts/generate_augment_hooks.py"
       ],
       "capability_markers": [
         ".augment",
@@ -388,6 +427,7 @@
         "SessionStart",
         "SessionEnd",
         "Stop",
+        "Notification",
         "ACP Mode"
       ],
       "version_probe": null
@@ -404,6 +444,9 @@
       "config_paths": [
         ".agents/rules/*.md",
         ".agents/workflows/*.md",
+        ".agents/skills/*/SKILL.md",
+        ".agents/hooks.json",
+        ".agents/mcp_config.json",
         ".agent/rules/*.md",
         ".agent/workflows/*.md",
         ".agent/skills/*/SKILL.md",
@@ -413,6 +456,7 @@
       "our_generators": [
         "scripts/generate_antigravity.py"
       ],
+      "status_note": "Antigravity CLI (GA 2026-05-19) reads workspace skills from .agents/skills/ (plural); the IDE still uses .agent/skills/ (singular) — our generator dual-emits the skill pointer to both. CLI hooks live in .agents/hooks.json with Claude-style event names (PreToolUse, not BeforeTool) and a JSON stdin/stdout decision contract. CLI MCP config is .agents/mcp_config.json with a required serverUrl field (url/httpUrl rejected silently); the GLOBAL MCP config path is reported inconsistently across sources (~/.gemini/antigravity-cli/ vs ~/.gemini/config/), so only the workspace path is registered until verified via agy inspect. Official docs are fully JS-rendered — the doctor is blind to them; verify changes manually each sync.",
       "capability_markers": [
         "Antigravity",
         "agent manager",
@@ -421,6 +465,7 @@
         "workflows",
         "rules",
         "skills",
+        "hooks",
         "AGENTS.md",
         "GEMINI.md",
         "agent permissions"
@@ -440,6 +485,7 @@
         "AGENTS.md",
         ".agents/skills/*/SKILL.md",
         ".codex/hooks.json",
+        ".codex/config.toml",
         "~/.codex/config.toml"
       ],
       "our_generators": [
@@ -489,8 +535,13 @@
         ".opencode/plugins/*",
         ".opencode/skills/*/SKILL.md",
         "AGENTS.md",
-        ".claude/skills/*/SKILL.md"
+        ".claude/skills/*/SKILL.md",
+        ".agents/skills/*/SKILL.md",
+        "~/.config/opencode/skills/*/SKILL.md",
+        "~/.claude/skills/*/SKILL.md",
+        "~/.agents/skills/*/SKILL.md"
       ],
+      "status_note": "opencode v1.16.0 (2026-06-05) ships an experimental v2 skill registry with flat-file skills and a 'slash' frontmatter key; undocumented as of 2026-06-09. Watch item: re-check next sync whether the v2 format reaches the documented SKILL.md spec before touching generate_opencode*.py. Note sst/opencode redirects to anomalyco/opencode.",
       "our_generators": [
         "scripts/generate_opencode.py",
         "scripts/generate_opencode_agents.py",
