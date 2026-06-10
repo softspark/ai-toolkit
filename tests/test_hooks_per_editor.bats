@@ -3,7 +3,8 @@
 #
 # Covers the four native-hooks generators shipped in v3.0.0:
 #   scripts/generate_cursor_hooks.py    -> .cursor/hooks.json
-#   scripts/generate_windsurf_hooks.py  -> .windsurf/hooks.json
+#   scripts/generate_windsurf_hooks.py  -> .windsurf/hooks.json (Cascade, deprecated)
+#   scripts/generate_devin_hooks.py     -> .devin/hooks.v1.json (Devin CLI, Claude format)
 #   scripts/generate_gemini_hooks.py    -> .gemini/settings.json (hooks block)
 #   scripts/generate_augment_hooks.py   -> .augment/settings.json (hooks block)
 #
@@ -25,6 +26,7 @@ setup_file() {
     export HPE_DIR; HPE_DIR="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py"   "$HPE_DIR" >/dev/null
     python3 "$TOOLKIT_DIR/scripts/generate_windsurf_hooks.py" "$HPE_DIR" >/dev/null
+    python3 "$TOOLKIT_DIR/scripts/generate_devin_hooks.py"    "$HPE_DIR" >/dev/null
     python3 "$TOOLKIT_DIR/scripts/generate_gemini_hooks.py"   "$HPE_DIR" >/dev/null
     python3 "$TOOLKIT_DIR/scripts/generate_augment_hooks.py"  "$HPE_DIR" >/dev/null
 }
@@ -41,6 +43,10 @@ teardown_file() {
 
 @test "hooks: windsurf writes .windsurf/hooks.json" {
     [ -f "$HPE_DIR/.windsurf/hooks.json" ]
+}
+
+@test "hooks: devin writes .devin/hooks.v1.json" {
+    [ -f "$HPE_DIR/.devin/hooks.v1.json" ]
 }
 
 @test "hooks: gemini writes .gemini/settings.json" {
@@ -61,6 +67,19 @@ teardown_file() {
     python3 -c "import json; json.load(open('$HPE_DIR/.windsurf/hooks.json'))"
 }
 
+@test "hooks: devin/hooks.v1.json is valid JSON" {
+    python3 -c "import json; json.load(open('$HPE_DIR/.devin/hooks.v1.json'))"
+}
+
+@test "hooks: devin/hooks.v1.json has no top-level hooks wrapper (standalone format)" {
+    python3 -c "
+import json
+data = json.load(open('$HPE_DIR/.devin/hooks.v1.json'))
+assert 'hooks' not in data, 'standalone .devin/hooks.v1.json must NOT wrap under a hooks key'
+assert 'PreToolUse' in data, 'events live at the top level'
+"
+}
+
 @test "hooks: gemini/settings.json is valid JSON" {
     python3 -c "import json; json.load(open('$HPE_DIR/.gemini/settings.json'))"
 }
@@ -77,6 +96,10 @@ teardown_file() {
 
 @test "hooks: windsurf entries carry _source: ai-toolkit" {
     grep -q '"_source": "ai-toolkit"' "$HPE_DIR/.windsurf/hooks.json"
+}
+
+@test "hooks: devin entries carry _source: ai-toolkit" {
+    grep -q '"_source": "ai-toolkit"' "$HPE_DIR/.devin/hooks.v1.json"
 }
 
 @test "hooks: gemini entries carry _source: ai-toolkit" {
@@ -97,6 +120,15 @@ teardown_file() {
 @test "hooks: windsurf commands use \$HOME prefix (not absolute /Users)" {
     ! grep -qE '"/Users/|"/home/' "$HPE_DIR/.windsurf/hooks.json"
     grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.windsurf/hooks.json"
+}
+
+@test "hooks: devin commands use \$HOME prefix (not absolute /Users)" {
+    ! grep -qE '"/Users/|"/home/' "$HPE_DIR/.devin/hooks.v1.json"
+    grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.devin/hooks.v1.json"
+}
+
+@test "hooks: devin runs plain (no AI_TOOLKIT_HOOK_FORMAT=json; Devin uses flat decision shape)" {
+    ! grep -q 'AI_TOOLKIT_HOOK_FORMAT=json' "$HPE_DIR/.devin/hooks.v1.json"
 }
 
 @test "hooks: gemini commands use \$HOME prefix (not absolute /Users)" {
@@ -135,6 +167,16 @@ teardown_file() {
     first_sha=$(shasum "$tmp/.windsurf/hooks.json" | awk '{print $1}')
     python3 "$TOOLKIT_DIR/scripts/generate_windsurf_hooks.py" "$tmp" >/dev/null
     second_sha=$(shasum "$tmp/.windsurf/hooks.json" | awk '{print $1}')
+    rm -rf "$tmp"
+    [ "$first_sha" = "$second_sha" ]
+}
+
+@test "hooks: devin is idempotent (second run produces identical bytes)" {
+    tmp="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_devin_hooks.py" "$tmp" >/dev/null
+    first_sha=$(shasum "$tmp/.devin/hooks.v1.json" | awk '{print $1}')
+    python3 "$TOOLKIT_DIR/scripts/generate_devin_hooks.py" "$tmp" >/dev/null
+    second_sha=$(shasum "$tmp/.devin/hooks.v1.json" | awk '{print $1}')
     rm -rf "$tmp"
     [ "$first_sha" = "$second_sha" ]
 }
@@ -226,6 +268,22 @@ EOF
     rm -rf "$tmp"
 }
 
+@test "hooks: devin preserves user-authored entries" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/.devin"
+    cat > "$tmp/.devin/hooks.v1.json" <<'EOF'
+{
+  "PreToolUse": [
+    {"_source": "user", "matcher": "^exec$", "hooks": [{"type": "command", "command": "echo user-hook"}]}
+  ]
+}
+EOF
+    python3 "$TOOLKIT_DIR/scripts/generate_devin_hooks.py" "$tmp" >/dev/null
+    grep -q '"_source": "user"' "$tmp/.devin/hooks.v1.json"
+    grep -q '"_source": "ai-toolkit"' "$tmp/.devin/hooks.v1.json"
+    rm -rf "$tmp"
+}
+
 # ── Regeneration rewrites only ai-toolkit entries ──────────────────────────
 
 @test "hooks: cursor regeneration does not duplicate ai-toolkit entries" {
@@ -258,6 +316,28 @@ EOF
 
 @test "hooks: windsurf wires pre_write_code" {
     grep -q '"pre_write_code"' "$HPE_DIR/.windsurf/hooks.json"
+}
+
+@test "hooks: devin wires Claude-style PreToolUse with a Devin exec matcher" {
+    python3 -c "
+import json
+data = json.load(open('$HPE_DIR/.devin/hooks.v1.json'))
+assert 'PreToolUse' in data, 'missing PreToolUse'
+matchers = {g.get('matcher') for g in data['PreToolUse']}
+assert '^exec$' in matchers, f'expected ^exec\$ matcher (Devin tool name), got {matchers}'
+# Devin tool names, not Claude's Bash/Edit:
+assert not any('Bash' in (m or '') for m in matchers), 'must not use Claude Bash matcher'
+"
+}
+
+@test "hooks: devin maps session-context to SessionStart (no worktree event)" {
+    python3 -c "
+import json
+data = json.load(open('$HPE_DIR/.devin/hooks.v1.json'))
+assert 'SessionStart' in data, 'session-context must move to SessionStart'
+blob = json.dumps(data)
+assert 'session-context.sh' in blob
+"
 }
 
 @test "hooks: gemini wires SessionStart (upstream PascalCase event name)" {

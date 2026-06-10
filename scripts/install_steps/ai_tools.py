@@ -748,7 +748,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         if "cursor" in eds:
             print("  Would generate: .cursor/hooks.json + .cursor/agents/ + .cursor/skills/ (profile=full)")
         if "windsurf" in eds:
-            print("  Would generate: .windsurf/hooks.json + .devin/skills/ + .windsurf/skills/ (profile=full)")
+            print("  Would generate: .devin/hooks.v1.json + .windsurf/hooks.json (Cascade, deprecated) + .devin/skills/ + .windsurf/skills/ (profile=full)")
         if "cline" in eds:
             print("  Would generate: .cline/skills/ (profile=full)")
         if "augment" in eds:
@@ -980,7 +980,10 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         gen_windsurf_rules(cwd, language_modules=language_modules,
                            rules_dir=rules_dir)
         if add_native_surfaces:
+            # .windsurf/hooks.json is Cascade-scoped and dies 2026-07-01;
+            # .devin/hooks.v1.json is the Devin CLI replacement (Claude format).
             _try_generator("generate_windsurf_hooks", cwd)
+            _try_generator("generate_devin_hooks", cwd)
             # Windsurf pointer stays unconditional (its .claude scan is gated).
             _try_generator("generate_windsurf_skills", cwd)
 

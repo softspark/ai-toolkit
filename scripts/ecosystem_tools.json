@@ -135,6 +135,7 @@
         ".devin/rules/*.md",
         ".devin/workflows/*.md",
         ".devin/skills/*/SKILL.md",
+        ".devin/hooks.v1.json",
         ".devin/config.json",
         ".devin/config.local.json",
         "~/.config/devin/config.json",
@@ -152,9 +153,10 @@
         "scripts/generate_windsurf.py",
         "scripts/generate_windsurf_rules.py",
         "scripts/generate_windsurf_skills.py",
-        "scripts/generate_windsurf_hooks.py"
+        "scripts/generate_windsurf_hooks.py",
+        "scripts/generate_devin_hooks.py"
       ],
-      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary read+write workspace tree; .windsurfrules, .windsurf/* and ~/.codeium/windsurf/* are legacy read-only fallbacks. Our generators dual-emit .devin/* + .windsurf/*. Cascade agent is available only through 2026-07-01 (Devin Local is the default agent since 2026-06-02); the .windsurf/hooks.json surface emitted by generate_windsurf_hooks.py is Cascade-scoped and dies with Cascade — migrate to the Devin CLI lifecycle-hooks surface (docs.devin.ai/cli/extensibility/hooks/*) before that date. Devin CLI ('Devin for Terminal', launched 2026-04-29) shares the Devin Local harness, reads AGENTS.md and the same SKILL.md standard; not yet tracked as a separate registry entry.",
+      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary read+write workspace tree; .windsurfrules, .windsurf/* and ~/.codeium/windsurf/* are legacy read-only fallbacks. Our generators dual-emit .devin/* + .windsurf/*. HOOKS MIGRATION (done): Cascade agent is available only through 2026-07-01 (Devin Local default since 2026-06-02), and the Cascade-scoped .windsurf/hooks.json (generate_windsurf_hooks.py, agent_action_name/tool_info format) dies with it — Devin CLI/Local do NOT read it as a fallback. generate_devin_hooks.py now emits .devin/hooks.v1.json in the Claude-compatible hook format Devin CLI uses (docs.devin.ai/cli/extensibility/hooks): Claude-style events (PreToolUse/PostToolUse/UserPromptSubmit/Stop/SessionStart) with matchers on Devin tool names (read/edit/exec/mcp__*), flat {decision,reason} block contract + exit 2. Globally-installed users ALSO inherit ~/.claude/settings.json hooks automatically (Devin read_config_from.claude defaults on). Both hook generators run at profile=full; drop generate_windsurf_hooks.py in the first release after 2026-07-01. Devin CLI ('Devin for Terminal', launched 2026-04-29) shares the Devin Local harness, reads AGENTS.md and the same SKILL.md standard; not yet tracked as a separate registry entry.",
       "capability_markers": [
         "Cascade",
         "windsurfrules",

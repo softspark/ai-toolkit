@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.5.7"
+version: "1.6.0"
 created: "2026-03-27"
-last_updated: "2026-05-25"
+last_updated: "2026-06-10"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -570,6 +570,31 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
 - Hooks in `settings.json` (not `hooks.json`) — Claude Code only reads settings files
 - `_source: "ai-toolkit"` tag on every entry — allows idempotent merge/strip
 - Hooks are **global only** — `--local` does not install hooks into project settings
+
+## Per-Editor Native Hooks (profile=full)
+
+Beyond the global Claude Code hooks above, full-profile project installs emit native hook files for editors that support their own hook lifecycle. All reuse the same `~/.softspark/ai-toolkit/hooks/*.sh` scripts and the `_source: ai-toolkit` merge tag.
+
+| Editor | File | Generator | Format |
+|--------|------|-----------|--------|
+| Cursor | `.cursor/hooks.json` | `generate_cursor_hooks.py` | Cursor hooks schema |
+| Windsurf (Cascade) | `.windsurf/hooks.json` | `generate_windsurf_hooks.py` | Cascade `agent_action_name`/`tool_info` — **deprecated, dies 2026-07-01** |
+| Devin CLI | `.devin/hooks.v1.json` | `generate_devin_hooks.py` | Claude-compatible (the replacement for Cascade) |
+| Gemini CLI | `.gemini/settings.json` (hooks block) | `generate_gemini_hooks.py` | Gemini `BeforeTool`/`AfterTool` events |
+| Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
+
+### Devin CLI hooks (`.devin/hooks.v1.json`)
+
+Windsurf rebranded to Devin Desktop (2026-06-02); the Cascade agent — and its `.windsurf/hooks.json` surface — is available only through **2026-07-01**. Devin Local / Devin CLI do **not** read `.windsurf/hooks.json` as a fallback, so hooks must be regenerated onto the Devin CLI format.
+
+Devin CLI uses a **Claude-compatible** hook format (docs.devin.ai/cli/extensibility/hooks). Key facts driving the generator:
+
+- **Standalone file shape:** in `.devin/hooks.v1.json` the entire file IS the hooks object — no top-level `"hooks"` wrapper key (unlike `.claude/settings.json`).
+- **Events:** Claude-style PascalCase — `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `SessionStart`. `post_setup_worktree` has no Devin equivalent (`session-context.sh` moves to `SessionStart`); `post_cascade_response` maps to `Stop` (which carries no response text on stdin).
+- **Matchers:** regex against the Devin **tool name** (`read`, `edit`, `exec`, `grep`, `glob`, `mcp__<server>__<tool>`) — NOT Claude's `Bash`/`Edit`, so the shared guards reliably fire.
+- **Block contract:** the guard scripts emit `{"decision":"block","reason":...}` on stdout (plain mode) AND exit 2 — Devin honors both. Hooks run **without** `AI_TOOLKIT_HOOK_FORMAT=json` because Devin expects the flat `{"decision","reason"}` shape, not Claude's `hookSpecificOutput` envelope.
+- **Stdin payload:** flat `{ "hook_event_name", "tool_name", "tool_input" }` — already handled by `_hook-io.sh` via its `.tool_name` / `.tool_input.*` branches, so no normalizer change was needed.
+- **Global bonus:** Devin CLI reads `~/.claude/settings.json` + `.claude/settings.json` hooks directly (`read_config_from.claude` default on, since CLI `2026.3.20-2`), so a global `ai-toolkit install` already covers Devin even without the project-local file.
 
 ## Troubleshooting
 

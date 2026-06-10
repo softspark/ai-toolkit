@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-04-23"
-last_updated: "2026-06-09"
+last_updated: "2026-06-10"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -62,12 +62,13 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://docs.devin.ai/desktop (Windsurf rebranded to Devin Desktop ~2026-06-02; docs.windsurf.com resolves here) |
 | Changelog | https://docs.devin.ai/desktop/changelog (windsurf.com/changelog 308-permanent-redirects here) |
 | Stable docs mirror | https://docs.devin.ai/desktop/... per-page .md twins; legacy `.windsurf/`, `.windsurfrules`, `~/.codeium/windsurf/` paths still read as fallback (new canonical: `.devin/`) |
-| Config paths | **Primary (Devin Desktop):** `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/skills/*/SKILL.md`, `.devin/config.json`, `.devin/config.local.json`, `~/.config/devin/config.json` (Devin Local MCP/permissions). **Legacy fallback:** `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json`. Plus `AGENTS.md`. |
-| Compat read paths | `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/` |
-| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py` (dual-emits `.devin/` + `.windsurf/`), `scripts/generate_windsurf_hooks.py` (profile=full; **Cascade-scoped, deprecated**), `scripts/generate_windsurf_skills.py` (global + profile=full pointer, dual-emits) |
+| Config paths | **Primary (Devin Desktop):** `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/skills/*/SKILL.md`, `.devin/hooks.v1.json` (Devin CLI hooks, Claude format), `.devin/config.json`, `.devin/config.local.json`, `~/.config/devin/config.json` (Devin Local MCP/permissions). **Legacy fallback:** `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json`. Plus `AGENTS.md`. |
+| Compat read paths | skills: `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/`. **Hooks: Devin CLI reads `.claude/settings.json` + `~/.claude/settings.json` hooks directly (`read_config_from.claude` default on), so globally-installed toolkit hooks work under Devin with no project-local file.** |
+| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py` (dual-emits `.devin/` + `.windsurf/`), `scripts/generate_windsurf_hooks.py` (profile=full; **Cascade-scoped, deprecated, drop after 2026-07-01**), `scripts/generate_devin_hooks.py` (profile=full; `.devin/hooks.v1.json`, Claude-format Devin CLI hooks), `scripts/generate_windsurf_skills.py` (global + profile=full pointer, dual-emits) |
 | Tracked capabilities | Cascade, `windsurfrules`, `AGENTS.md`, activation triggers (`always_on`/`glob`/`model_decision`), workflows, skills, MCP, memories, hooks |
 | Activation modes emitted | always_on (agents/security/quality), glob (testing + language rules), model_decision (code-style/workflow) |
-| Sunset notes | Cascade agent is available only through **2026-07-01**; Devin Local is the default agent since 2026-06-02. The `.windsurf/hooks.json` surface dies with Cascade — migrate to Devin CLI lifecycle hooks (docs.devin.ai/cli/extensibility/hooks/\*) before that date. Devin CLI ("Devin for Terminal") shares the Devin Local harness, reads `AGENTS.md` and the standard `SKILL.md` format; not yet a separate registry entry. |
+| Hooks migration | **Done.** Cascade `.windsurf/hooks.json` (`agent_action_name`/`tool_info` format) dies 2026-07-01 with no Devin fallback. `generate_devin_hooks.py` emits `.devin/hooks.v1.json` in the Claude-compatible format Devin CLI uses: Claude-style events (PreToolUse/PostToolUse/UserPromptSubmit/Stop/SessionStart), matchers on Devin tool names (`read`/`edit`/`exec`/`mcp__*`), blocking via flat `{"decision":"block","reason":...}` + exit 2 (no `AI_TOOLKIT_HOOK_FORMAT=json` — Devin does not use Claude's `hookSpecificOutput` envelope). `post_setup_worktree`→`SessionStart`; `post_cascade_response`→`Stop` (no response text on stdin). Both hook generators run at profile=full during the transition; drop `generate_windsurf_hooks.py` in the first release after 2026-07-01. |
+| Sunset notes | Cascade agent is available only through **2026-07-01**; Devin Local is the default agent since 2026-06-02. Devin CLI ("Devin for Terminal") shares the Devin Local harness, reads `AGENTS.md`, the standard `SKILL.md` format, and Claude-format hooks; not yet a separate registry entry. |
 
 ### GitHub Copilot
 

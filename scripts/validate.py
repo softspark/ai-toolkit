@@ -846,6 +846,9 @@ def _validate_version_sync(tk_dir: Path, vr: ValidationResult) -> None:
 # generators come and go.
 _NATIVE_HOOK_EDITORS = {"claude", "opencode"}
 
+# generate_<stem>_hooks.py stems that belong to an existing README platform key.
+_HOOK_STEM_ALIAS = {"devin": "windsurf"}
+
 # README platform label (lowercased) -> canonical editor key.
 _README_PLATFORM_KEY = {
     "claude code": "claude",
@@ -877,10 +880,12 @@ def _validate_editor_hooks_honesty(tk_dir: Path, vr: ValidationResult) -> None:
         return  # installed copy without source — nothing to cross-check
 
     # Actual hook-enabled editors: native set + generate_<editor>_hooks.py stems.
+    # Some stems map back to a README platform key (e.g. the Devin CLI hooks
+    # generator is part of the windsurf/Devin-Desktop integration).
     actual = set(_NATIVE_HOOK_EDITORS)
     for gen in scripts_dir.glob("generate_*_hooks.py"):
         stem = gen.name[len("generate_"):-len("_hooks.py")]
-        actual.add(stem)
+        actual.add(_HOOK_STEM_ALIAS.get(stem, stem))
 
     content = readme.read_text(encoding="utf-8")
     if "| Hooks |" not in content:
