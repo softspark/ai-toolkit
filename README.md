@@ -6,17 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1186%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1196%20passing-success)](tests/)
 
-## What's New in v4.7.0
+## What's New in v4.8.0
 
-v4.7.0 follows the Windsurf → Devin Desktop transition to its config surfaces and brings the editor registry up to date with verified upstream docs.
+v4.8.0 migrates the deprecated Windsurf Cascade hooks onto the Devin CLI surface before Cascade sunsets on 2026-07-01.
 
-- **Devin Desktop `.devin/` tree**: windsurf generators now dual-emit rules, workflows, and the skill pointer to `.devin/` (primary since the 2026-06-02 rebrand) alongside legacy `.windsurf/` (still read as fallback); `.devin/rules` joins editor auto-detection.
-- **Antigravity CLI skill pointer**: dual-emitted to `.agent/skills/` (IDE) and `.agents/skills/` (CLI, plural); auto-detection no longer misreads a pointer-only `.agents/skills/` as a Codex install.
-- **Cascade deprecation**: the Cascade-scoped `.windsurf/hooks.json` surface dies with Cascade on 2026-07-01 — deprecation note added, migration target is Devin CLI lifecycle hooks.
-- **Registry accuracy**: phantom `.cursor/rules/*.md` removed (Cursor ignores plain `.md`), Augment guidelines path corrected to `.augment-guidelines`, plus verified config surfaces added for Claude Code, Gemini CLI, Cline CLI/SDK, Codex, opencode, and Antigravity CLI.
-- **Troubleshooting**: maintenance SOP gains the `claude --safe-mode` (v2.1.169) isolation step.
+- **Devin CLI hooks**: new `generate_devin_hooks.py` emits `.devin/hooks.v1.json` in the Claude-compatible format Devin CLI uses — Claude-style events (`PreToolUse`/`PostToolUse`/`UserPromptSubmit`/`Stop`/`SessionStart`) with matchers on Devin tool names (`read`/`edit`/`exec`/`mcp__*`), reusing the existing toolkit hook scripts.
+- **Cascade deprecation**: `.windsurf/hooks.json` is Cascade-scoped and dies 2026-07-01 with no Devin fallback; both generators run during the transition, the Cascade one drops in the first release after the sunset.
+- **Global hooks reach Devin for free**: Devin CLI reads `~/.claude/settings.json` hooks directly, so a global `ai-toolkit install` already covers Devin even without the project-local file.
+- No normalizer change needed: `_hook-io.sh` already parses Devin's flat `hook_event_name`/`tool_name`/`tool_input` payload.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -149,7 +148,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1186 tests)
+├── tests/               # Bats test suite (1196 tests)
 └── CHANGELOG.md
 ```
 

@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.8.0 - Devin CLI hooks (Cascade migration) (2026-06-10)
+
+Minor release. Migrates the deprecated Windsurf Cascade hooks onto the Devin CLI surface ahead of the 2026-07-01 Cascade sunset. Class D/F ecosystem change per `kb/procedures/ecosystem-sync-sop.md`. No skill/agent count change; no new broad-access skills.
+
+### Added
+- **Devin CLI hooks** — new `scripts/generate_devin_hooks.py` emits `.devin/hooks.v1.json` in the Claude-compatible hook format Devin CLI uses (docs.devin.ai/cli/extensibility/hooks). Wired into `ai-toolkit install --local --editors windsurf --profile full` alongside the existing (now deprecated) Cascade generator. Events are Claude-style (`PreToolUse`/`PostToolUse`/`UserPromptSubmit`/`Stop`/`SessionStart`) with matchers on Devin tool names (`read`/`edit`/`exec`/`mcp__*`); blocking uses the flat `{"decision":"block","reason":...}` shape + exit 2 (no `AI_TOOLKIT_HOOK_FORMAT=json`). Reuses the existing `~/.softspark/ai-toolkit/hooks/*.sh` scripts; `_hook-io.sh` already parses Devin's flat `hook_event_name`/`tool_name`/`tool_input` payload, so no normalizer change was needed. Test count: 1186 → 1196.
+
+### Changed
+- **Cascade hooks deprecation** — `scripts/generate_windsurf_hooks.py` (`.windsurf/hooks.json`) is marked deprecated: the Cascade agent and its hook surface stop working 2026-07-01, and Devin Local / Devin CLI do not read `.windsurf/hooks.json` as a fallback. Both generators run during the transition; `generate_windsurf_hooks.py` will be dropped in the first release after the sunset.
+- **Global hooks reach Devin for free** — documented that Devin CLI reads `~/.claude/settings.json` + `.claude/settings.json` hooks directly (`read_config_from.claude` default on), so a global `ai-toolkit install` already covers Devin even without the project-local file.
+- Registry: `.devin/hooks.v1.json` + `generate_devin_hooks.py` added to the windsurf entry in `scripts/ecosystem_tools.json` and `kb/reference/supported-tools-registry.md`; new "Per-Editor Native Hooks" section in `kb/reference/hooks-catalog.md`. `validate.py` maps the `devin` hook-generator stem back to the windsurf README platform key.
+
+---
+
 ## v4.7.0 - Devin Desktop .devin tree + Antigravity CLI surfaces (2026-06-10)
 
 Minor release. Ecosystem sync per `kb/procedures/ecosystem-sync-sop.md` (window 2026-06-05 → 2026-06-10, doctor run + per-tool docs review with adversarial verification). No skill/agent count change; no new broad-access skills.
