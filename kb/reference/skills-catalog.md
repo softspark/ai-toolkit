@@ -161,7 +161,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **content-moderation-patterns** | `skills/content-moderation-patterns/` | Two-stage moderation: pre-filter + LLM classifier; categories; thresholds |
 | **model-routing-patterns** | `skills/model-routing-patterns/` | Haiku/Sonnet/Opus routing; escalation; sub-agent delegation; fallback |
 
-## Knowledge Skills - Process (5)
+## Knowledge Skills - Process (6)
 
 | Skill | Directory | Domain |
 |-------|-----------|--------|
@@ -169,6 +169,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **architecture-decision** | `skills/architecture-decision/` | Architecture notes, trade-off analysis, alternatives |
 | **performance-profiling** | `skills/performance-profiling/` | Profiling, bottleneck analysis, optimization |
 | **research-mastery** | `skills/research-mastery/` | Multi-source research, synthesis, fact-checking |
+| **deep-research** | `skills/deep-research/` | Web/multi-source research methodology, retrieval budget, adversarial verification, citation discipline |
 | **verification-before-completion** | `skills/verification-before-completion/` | Iron Law: evidence-before-claims, no completion without fresh verification |
 
 ## Quality Guardrails

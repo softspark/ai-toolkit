@@ -21,6 +21,7 @@
 - [Plan: Output & Token Discipline](kb/history/completed/output-token-discipline-plan-20260504.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
+- [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/planning/drop-cascade-hooks-after-sunset.md)
 - [PRD: MCP Context Trim v4.0](kb/planning/mcp-context-trim-v4-prd.md)
 - [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
 - [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)

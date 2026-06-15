@@ -16,6 +16,64 @@ Based on Emil Kowalski's design engineering philosophy — UI polish, component 
 - **Invisible details create love.** Most UI refinements users never consciously register — but combined they produce something stunning.
 - **Beauty differentiates.** When functionality is table stakes, aesthetic excellence becomes genuine leverage.
 
+## Anti-Slop Visual Checklist
+
+Defaults that signal machine-generated UI. Each is a falsifiable thing to avoid:
+
+- **Avoid** full-bleed saturated gradient backgrounds (purple-to-pink hero washes). A flat surface or a near-flat tonal shift reads as intentional; a loud gradient reads as a template.
+- **Avoid** emoji as load-bearing decoration — emoji standing in for icons, bullet markers, or section badges. Use a real icon set or typographic hierarchy instead.
+- **Avoid** the rounded-card-with-left-accent-border cliche repeated across every block. If three sections share that exact treatment, vary the layout or drop the accent.
+- **Avoid** hand-drawn fake imagery in SVG (synthetic "photos", invented logos, faux screenshots). Use a real asset or an honest labeled placeholder.
+- **Avoid** the overused default font stack (Inter/Roboto on system-ui for everything with no scale or weight intent). Pick type with a reason and lift the actual stack from source when one exists.
+
+## Minimum-Scale Floors
+
+Accessibility-grounded hard thresholds. Going below these is a defect, not a style choice:
+
+| Context | Floor | Basis |
+|---|---|---|
+| Slide / presentation body text | ~24px | Readable from the back of a room |
+| Print body text | ~12pt | Legible at arm's length on paper |
+| Mobile touch targets | 44px × 44px | Apple HIG minimum tappable size |
+
+Treat these as the lower bound, not the target. Captions and footnotes may approach the floor; primary content should sit comfortably above it.
+
+## Context-First Discipline
+
+High-fidelity work MUST be rooted in real context before any pixels are produced. This mirrors the toolkit's verify-don't-recall ethos:
+
+- **Read the source first.** Inspect the codebase, design tokens, UI kit, and screenshots that already exist before generating anything.
+- **Lift exact values.** Copy real hex codes, the spacing scale, the font stack, and radii straight from source. Do NOT reconstruct token values from memory — recalled values drift.
+- **Mock from scratch only as a last resort.** Building a screen with no reference is the fallback when no codebase, kit, or screenshot exists, not the default.
+
+## Question-Budget Gate
+
+Calibrate questions to how bounded the ask is, then proceed:
+
+- **Rich context + bounded ask** → ask nothing, build. Example: "match this card to the existing dashboard" with the repo in hand.
+- **Open ask** → ask before building. Example: "prototype my onboarding" needs goals, target audience, and which dimension to diverge on (UX flow vs. visual treatment vs. copy). Resolve those three, then start.
+
+## Explore Many Variations
+
+For exploratory or open work, produce **3+ atomic variations** across distinct axes, never three tweaks of one idea:
+
+- Vary on different dimensions: layout, color, type treatment, interaction model.
+- Deliberately mix safe matches with at least one novel direction — do not converge early.
+- Order them basic → advanced so the reviewer can scan the gradient (the "Design It Twice" premise extended past two).
+
+## Match Existing Vocabulary
+
+When editing a live UI, conform to it instead of imposing a new style:
+
+- Reverse-engineer the palette, interactive states (hover/active/disabled), motion timing, and shadow/card/density treatment.
+- Match the copy tone too — terse product UI and chatty marketing copy are different vocabularies.
+- A change that introduces a foreign style is a regression even when it looks good in isolation.
+
+## No-Filler Content
+
+- **Every element earns its place.** No dummy stats, decorative sections, or lorem blocks added just to fill space. If a block has no purpose, cut it.
+- **Honest placeholder beats a bad fake.** A labeled placeholder ("[product screenshot]") is better than an invented icon or hand-drawn fake image. Do NOT fabricate assets — ask for the real ones.
+
 ## Animation Decision Framework
 
 ### Frequency determines approach
@@ -248,6 +306,13 @@ Deliberate actions stay slow (2s linear for hold-to-delete), system responses sn
 | Identical enter/exit speed | Make exit faster (e.g., 2s enter, 200ms exit) |
 | Simultaneous element appearance | Stagger 30-80ms between items |
 
+## Two-Stage Verification Handoff
+
+Visual work ships through two passes, mirroring the toolkit's verification-before-completion and subagent two-stage review ethos:
+
+1. **Cheap self-check.** Load the rendered result yourself, eyeball it, and fix the obvious breaks (broken layout, wrong token, console errors) before handing off. Never claim done on output you have not opened.
+2. **Independent verifier pass.** A separate reviewer (or fresh subagent) does the deeper check — visual fidelity against source, layout under different widths, console clean. On pass it stays silent; it surfaces ONLY on failure, with the specific defect.
+
 ## Anti-Patterns
 
 - `transition: all` — animates unintended properties, hurts performance
@@ -265,6 +330,14 @@ Deliberate actions stay slow (2s linear for hold-to-delete), system responses sn
 - **NEVER** add motion for decorative reasons alone — every animation must serve meaning (status change, spatial relationship, progress)
 - **CRITICAL**: exit is faster than enter. A 2s linear enter (hold-to-delete) needs a 200ms ease-out exit. Symmetrical durations feel sluggish.
 - **MANDATORY**: any animation longer than 300ms for UI feedback needs an explicit justification — the user perceives >300ms as "laggy", not "smooth"
+- **MUST** lift exact values (hex, spacing, font stack, radii) from the real codebase, tokens, UI kit, or screenshots before high-fidelity work — never reconstruct token values from memory; mock from scratch only when no source exists
+- **MUST** keep slide body text at ~24px+, print at ~12pt+, and mobile touch targets at 44px+ — these are accessibility floors, not preferences
+- **NEVER** ship the slop defaults — saturated full-bleed gradients, emoji as decoration, repeated rounded-card-with-accent-border, hand-drawn fake imagery in SVG, or the unconsidered default font stack
+- **NEVER** add filler (dummy stats, decorative sections, lorem) to fill space, and never fabricate assets — an honest labeled placeholder beats an invented icon or fake image; ask for the real one
+- **MUST** match the existing UI's vocabulary (palette, states, motion, shadow/density, copy tone) when editing a live surface instead of imposing a new style
+- **MUST** ask about goals, audience, and which dimension to diverge on (UX vs. visuals vs. copy) before building an open-ended ask; skip questions only when context is rich and the ask is bounded
+- **CARVE-OUT**: a sanctioned design audit, accessibility-failure demonstration, or authorized red-team mockup may deliberately reproduce a slop pattern or sub-floor scale to illustrate the defect — label it as such; the bans above target shipped UI, not sanctioned analysis
+- **SHOULD** produce 3+ atomic variations across distinct axes (layout, color, type, interaction), ordered basic → advanced, for any exploratory or open design ask
 
 ## Gotchas
 

@@ -183,3 +183,15 @@ actual_test_count() {
     unique=$(find "$TOOLKIT_DIR/app/skills" -maxdepth 1 -mindepth 1 -type d -not -name '_*' -exec basename {} \; | sort -u | wc -l | xargs)
     [ "$unique" = "$total" ]
 }
+
+@test "canonical generated files contain no leaked custom rules" {
+    # AGENTS.md / GEMINI.md / copilot-instructions.md are the toolkit's own
+    # committed files. They must NOT embed a maintainer's personal registered
+    # rules from ~/.softspark/ai-toolkit/rules/ — regression guard for the
+    # AI_TOOLKIT_NO_CUSTOM_RULES gate. Only toolkit-owned markers are allowed.
+    for f in AGENTS.md GEMINI.md .github/copilot-instructions.md; do
+        bad=$(grep -oE 'TOOLKIT:[a-z0-9._-]+' "$TOOLKIT_DIR/$f" 2>/dev/null \
+            | sort -u | grep -vE '^TOOLKIT:(ai-toolkit|output-mode)$' || true)
+        [ -z "$bad" ] || { echo "$f leaks custom rules: $bad"; false; }
+    done
+}

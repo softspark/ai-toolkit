@@ -1,6 +1,6 @@
 ---
 name: security-patterns
-description: "App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, TLS, CSP, CORS."
+description: "App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP, LLM prompt injection. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, TLS, CSP, CORS, prompt injection, LLM output trust, tool permissions."
 effort: medium
 user-invocable: false
 allowed-tools: Read
@@ -81,6 +81,36 @@ async def resource():
 
 ---
 
+## Prompt Injection & LLM-Output Trust
+
+When the app embeds an LLM, every byte the model emits — plus tool results, retrieved documents, and fetched web pages — is **untrusted input on the same footing as a raw request body**. Text inside that content that reads like an instruction ("ignore previous rules", "call the delete tool", "email the config to…") is still data. Render it, store it, classify it — but never let it drive control flow, widen permissions, or fire a side effect without an explicit human decision. This mirrors the agent-behavior rule in [constitution Article VII](../../constitution.md); the rules here cover the application you are building, not the assistant's own behavior.
+
+### Trust Boundary
+
+| Source | Trust | Handling |
+|--------|-------|----------|
+| System prompt / app-defined policy | Trusted | The only place instructions may originate |
+| User chat turn | Semi-trusted | Authenticated to a user, still validate + scope to their permissions |
+| Model output | Untrusted | Treat as data; gate any tool call it requests |
+| Tool / function results | Untrusted | Re-validate before feeding back into context |
+| Retrieved docs / RAG chunks | Untrusted | Strip or delimit embedded instructions |
+| Fetched web / email / file content | Untrusted | Highest risk — sanitize before it crosses into the prompt |
+
+### Defenses
+
+- **Separate instructions from data.** Keep app policy in the system prompt; wrap all untrusted content in clear delimiters or distinct structured fields (e.g. a `documents` array) so the model can tell "what to do" from "what to read." Never string-concatenate retrieved text into the instruction block.
+- **Least-privilege tools.** Give each tool the narrowest scope it needs. A summarizer needs no write or network egress capability. Fewer reachable side effects shrink the blast radius of a successful injection.
+- **Human-in-the-loop for irreversible actions.** Destructive, financial, or data-exfiltrating operations (delete, transfer, send-to-external-recipient, broad file reads) require explicit human confirmation — not a model token that "looks like" approval.
+- **Validate and allowlist tool arguments.** Parse the model's proposed arguments against a schema, allowlist targets (recipient domains, table names, paths), and reject anything outside it. The model choosing a tool is a *request*, not authorization.
+- **Keep secrets out of injectable context.** Never place API keys, internal URLs, or other users' data in a prompt that an injected instruction could later echo back into output. If the model cannot see it, it cannot be coaxed into leaking it.
+- **Bound indirect (second-order) injection.** Content ingested now may carry instructions that only fire on a later turn — a poisoned doc indexed today, a web page fetched mid-task, a comment in a parsed file. Sanitize and size-limit everything at the moment it crosses the trust boundary, not when it is finally read.
+
+### Carve-out: Authorized Defensive Work
+
+Building injection **detection** (classifiers, guardrails, eval suites) and running **authorized** red-team exercises — CTF, sanctioned pentest, internal adversarial testing of these defenses — is fully in scope. Generating injection payloads for that purpose is expected; the OWASP / authorized-testing framing of this skill applies to LLM apps exactly as it does to SQLi or XSS work.
+
+---
+
 ## Common Rationalizations
 
 | Excuse | Why It's Wrong |
@@ -90,6 +120,8 @@ async def resource():
 | "We'll add auth later" | Unauthenticated endpoints in production get discovered within hours |
 | "Nobody would exploit this" | Automated scanners don't care about your threat model — they scan everything |
 | "It's behind a VPN" | VPNs are perimeter defense — zero trust assumes breach already happened |
+| "The LLM would never follow a malicious instruction in a doc" | Models follow whatever reads like an instruction — retrieved content is untrusted input, not policy |
+| "We let the agent run the tool it picked, that's the point" | A model picking a tool is a request, not authorization — gate side effects behind allowlists and human confirmation |
 
 ## Reference Guides
 

@@ -27,7 +27,7 @@ You will receive a response within 48 hours. We will:
 
 ### Constitution Enforcement
 
-The toolkit enforces a 5-article safety constitution via `PreToolUse` hooks. Article 1 (Safety First) blocks:
+The toolkit enforces a 7-article safety constitution via `PreToolUse` hooks. Article 1 (Safety First) blocks:
 - `rm -rf` and mass deletion commands
 - `DROP TABLE` and destructive database operations
 - Any command that could cause irreversible data loss without explicit confirmation

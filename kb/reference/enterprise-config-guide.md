@@ -79,7 +79,7 @@ ai-toolkit config check       # CI enforcement check
 | `profile` | enum | `minimal`, `standard`, `strict`, `full`, `offline-slm` |
 | `agents` | object | `enabled`, `disabled`, `custom` arrays |
 | `rules` | object | `inject`, `remove` arrays |
-| `constitution` | object | `amendments` array (article 6+ only) |
+| `constitution` | object | `amendments` array (article 8+ only) |
 | `enforce` | object | Non-overridable constraints (base configs only) |
 | `overrides` | object | Explicit overrides with justification |
 
@@ -114,7 +114,7 @@ When a project extends a base, configs are merged with these rules:
 | **Scalars** | Project wins |
 | **Agents** | Union enabled, project can disable (unless required) |
 | **Rules** | Union inject, project can remove |
-| **Constitution** | Base articles immutable, project adds only (6+) |
+| **Constitution** | Base articles immutable, project adds only (8+) |
 | **Enforce** | Base wins (cannot weaken, only strengthen) |
 | **Profile** | Project can change |
 
@@ -175,9 +175,9 @@ Requirements:
 
 ## Constitution Immutability
 
-- **Articles I-VI** (toolkit core) are absolutely immutable
+- **Articles I-VII** (toolkit core) are absolutely immutable
 - **Base config articles** are immutable — projects cannot modify them
-- Projects can **only ADD** new articles (article 7+)
+- Projects can **only ADD** new articles (article 8+)
 
 ```json
 {

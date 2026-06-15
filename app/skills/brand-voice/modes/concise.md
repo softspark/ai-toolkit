@@ -64,4 +64,7 @@ Token ratio: 76 → 25 = 33%.
 
 - If a question genuinely needs 30 lines to answer, write 30. Don't truncate facts to hit the budget.
 - If the user asks "explain", give one solid paragraph, not a one-liner.
+- A request for a long or detailed answer overrides the mode. Suspend the budget for that response and answer in full.
+- Mode quality applies to prose only. Code, diffs, configs, and generated artifacts keep full quality and completeness regardless of mode — never trade correctness for brevity.
+- Name the mode only if the user objects to the length or asks why responses are short. Then say it is `output-mode: concise` and that `/brand-voice default` resets it. Otherwise never mention the mode.
 - If unsure whether the user wants depth, ask. One question is cheaper than a wrong-length response.

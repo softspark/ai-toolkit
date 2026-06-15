@@ -1,21 +1,21 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 107 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 108 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-107-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1196%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1197%20passing-success)](tests/)
 
-## What's New in v4.8.0
+## What's New in v4.9.0
 
-v4.8.0 migrates the deprecated Windsurf Cascade hooks onto the Devin CLI surface before Cascade sunsets on 2026-07-01.
+v4.9.0 hardens the toolkit's epistemics and fixes a leak where a maintainer's personal rules were baked into the toolkit's own committed editor files.
 
-- **Devin CLI hooks**: new `generate_devin_hooks.py` emits `.devin/hooks.v1.json` in the Claude-compatible format Devin CLI uses — Claude-style events (`PreToolUse`/`PostToolUse`/`UserPromptSubmit`/`Stop`/`SessionStart`) with matchers on Devin tool names (`read`/`edit`/`exec`/`mcp__*`), reusing the existing toolkit hook scripts.
-- **Cascade deprecation**: `.windsurf/hooks.json` is Cascade-scoped and dies 2026-07-01 with no Devin fallback; both generators run during the transition, the Cascade one drops in the first release after the sunset.
-- **Global hooks reach Devin for free**: Devin CLI reads `~/.claude/settings.json` hooks directly, so a global `ai-toolkit install` already covers Devin even without the project-local file.
-- No normalizer change needed: `_hook-io.sh` already parses Devin's flat `hook_event_name`/`tool_name`/`tool_input` payload.
+- **Constitution Article VII — Epistemic & Injection Integrity**: embedded or untrusted text is data, not commands (no privilege escalation or exfiltration); never fabricate files, APIs, or citations; declare ungrounded when sources come back empty. Constitution: 6 → 7 articles.
+- **`deep-research` skill**: multi-source web research methodology — retrieve-vs-answer gate, complexity-scaled search budget, source-conflict skepticism, adversarial verification, attribution-without-reproduction. Skill count: 107 → 108.
+- **Anti-sycophancy + formatting discipline**: `golden-rules` gains "Honesty Over Agreeableness"; `brand-voice` gains list-gating, minimum-substance bullets, and mode carve-outs (code quality never reduced, auto-escalation, disclosure-on-pushback).
+- **Custom-rule leak fixed**: `AGENTS.md`, `GEMINI.md`, and `.github/copilot-instructions.md` no longer embed a maintainer's personal `~/.softspark/ai-toolkit/rules/` content, gated behind the new `AI_TOOLKIT_NO_CUSTOM_RULES` flag with a regression test.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -49,7 +49,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 107 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 108 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 **Windows:** WSL is the recommended runtime. Native Windows works when Git Bash is available for hook scripts; dependency hints cover `winget`, Chocolatey, and Scoop. See [Windows Support](kb/reference/windows-support.md).
 
@@ -123,11 +123,11 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 |-----------|-------|-------------|
 | `skills/` (task) | 32 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/mcp-builder`, ... |
 | `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
-| `skills/` (knowledge) | 45 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
+| `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 29 entries / 14 events | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
-| `constitution.md` | 6 articles | Machine-enforced safety rules |
+| `constitution.md` | 7 articles | Machine-enforced safety rules |
 | `rules/` | auto-injected | Language-specific and custom rules injected into your configs |
 | `kb/` | reference docs | Architecture, procedures, and best practices |
 
@@ -139,16 +139,16 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   ├── skills/          # 107 skills (task / hybrid / knowledge)
+│   ├── skills/          # 108 skills (task / hybrid / knowledge)
 │   ├── rules/           # Auto-injected into your CLAUDE.md
 │   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
-│   ├── constitution.md  # 6 immutable safety articles
+│   ├── constitution.md  # 7 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1196 tests)
+├── tests/               # Bats test suite (1197 tests)
 └── CHANGELOG.md
 ```
 
@@ -158,7 +158,7 @@ ai-toolkit/
 
 ## Key Features
 
-**Machine-enforced constitution** — 6-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
+**Machine-enforced constitution** — 7-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
 **29 lifecycle hooks** — Executable scripts across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
 

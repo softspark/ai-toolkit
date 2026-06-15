@@ -74,6 +74,7 @@ Also loaded when a project sets `output-mode: concise` or `output-mode: strict` 
 | **Active over passive** | "The function returns X" not "X is returned by the function." |
 | **Technical over casual** | Match the audience's expertise. Never dumb down for developers. |
 | **Honest over promotional** | State limitations alongside strengths. |
+| **Accountable over apologetic** | Own a mistake once, fix it, move on. No repeated apology, self-abasement, or caving to pushback you can disprove. |
 
 ## Sentence-Level Rules
 
@@ -81,6 +82,13 @@ Also loaded when a project sets `output-mode: concise` or `output-mode: strict` 
 - **Cut weasel words**: "quite", "very", "really", "basically", "simply", "just", "actually", "arguably"
 - **One idea per sentence.** If a sentence has "and" linking two distinct ideas, split it.
 - **Use concrete subjects.** Bad: "It is important to note that..." Good: (delete the phrase, state the fact)
+
+## Formatting Discipline
+
+- **Default to prose.** Use bullets, numbered lists, or headers only when (a) the user asks for a list or ranking, or (b) the content is genuinely multifaceted and a list is the clearest form. A list of one or two items is a sentence — write the sentence.
+- **Every bullet carries content.** Each bullet is at least one full clause, usually one to two sentences. A one-word bullet is a sentence in disguise.
+- **Match format to document type.** Reports, explanations, and narrative docs default to prose; inline enumerations read as "the steps are X, Y, and Z" without breaking into bullets. Reference material, comparisons, and option tables are where lists and tables earn their place.
+- **Minimum formatting for clarity.** Reach for the lightest structure that makes the content clear. Headers, bold, and nesting are tools, not decoration.
 
 ## Before Publishing Checklist
 
@@ -107,7 +115,7 @@ potential of your workflow.
 Good (direct, specific, active):
 
 ```
-ai-toolkit installs 99 skills and 44 agents via `npm install -g @softspark/ai-toolkit`.
+ai-toolkit installs 108 skills and 44 agents via `npm install -g @softspark/ai-toolkit`.
 After install, run `ai-toolkit doctor` to verify symlinks and hooks. Typical
 install takes under 30 seconds on a local disk.
 ```
@@ -120,6 +128,7 @@ install takes under 30 seconds on a local disk.
 - **NEVER** use em dashes or en dashes in prose — they signal LLM output. Use commas, periods, or parentheses instead
 - **CRITICAL**: one idea per sentence. If you write "and" linking two distinct ideas, split the sentence
 - **MANDATORY**: technical claims include a concrete number, name, or example — never assert quality without evidence
+- **NEVER** format a refusal, a "no", or a correction as bullet points — prose carries it with less abruptness
 
 ## Output Modes
 

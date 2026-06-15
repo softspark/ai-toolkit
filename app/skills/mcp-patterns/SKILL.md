@@ -66,6 +66,64 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 ---
 
+## How to Write a Tool Description
+
+The `description` is the only signal the model uses to route a request. The schema constrains the *call*; the description decides *whether the call happens at all*. Treat it as a routing contract, not API prose. A good one has five parts, in this order:
+
+1. **One-line purpose** — what the tool does, in plain terms. Lead with a verb. `Search indexed knowledge-base documents and return ranked passages.` Skip the HTTP verb and endpoint; `calls GET /v2/search` tells the model nothing about intent.
+2. **WHEN TO USE** — concrete trigger phrasings the user might say, not abstract categories. List the actual shapes: *"find docs about X", "what does the KB say about Y", "look up the runbook for Z"*. Models match on surface form, so give them surface forms.
+3. **WHEN NOT TO USE** — the section that does most of the disambiguation work. Name the near-miss tools and the boundary that separates them. This is where you prevent the model from firing the wrong tool on a request that *looks* similar. Empty WHEN NOT TO USE = the tool is under-specified.
+4. **CRITICAL** — one line for the single non-obvious failure mode. The constraint a reader would not guess from the schema: a required ordering, an ID that must come from another call, a cost/irreversibility warning. One line, not a checklist.
+5. **Self-test** — close with a question the model can apply to itself to decide fit. `Ask: is the user looking up existing content, or asking me to create new content? This tool is read-only — if they want to create, stop.`
+
+### Why negative examples outweigh positive ones
+
+Positive triggers tell the model when a tool *could* apply; negative ones are what stop it firing on overlapping requests. When two tools have similar purposes (`search_kb` vs `search_code`, `get_document` vs `list_documents`), the only thing keeping the model off the wrong one is each description naming the other and drawing the line. Budget more words for the boundary than the bullseye.
+
+### Disambiguating near-miss tools
+
+When tools overlap, make each WHEN NOT TO USE point at its neighbour and state the discriminator explicitly:
+
+```text
+search_kb
+  WHEN NOT TO USE: do not use to fetch a document you already have the id for —
+    that is get_document. Use search_kb only when you need to discover *which*
+    document, by meaning or keyword.
+
+get_document
+  WHEN NOT TO USE: do not use to find a document by topic or keyword — you must
+    already hold an exact id (from search_kb results). For discovery, use search_kb.
+```
+
+### Worked example
+
+```text
+name: cancel_workflow
+description: |
+  Stop a running agent workflow and discard its in-flight results.
+
+  WHEN TO USE: the user says "cancel the workflow", "stop run abc123",
+    "kill that job", or asks to halt a workflow that get_workflow_status
+    reports as RUNNING.
+
+  WHEN NOT TO USE:
+    - To inspect progress without stopping — use get_workflow_status.
+    - To start a fresh run — use start_workflow.
+    - On a workflow already in a terminal state (COMPLETED/FAILED) — the call
+      is a no-op and signals the model misread the status.
+
+  CRITICAL: cancellation is irreversible and drops partial output. Confirm the
+    workflowId came from list_workflows or get_workflow_status — never type one
+    from memory.
+
+  Self-test: am I stopping work that is genuinely still RUNNING, or did I confuse
+  "check status" with "cancel"? If I have not seen a RUNNING status, do not call this.
+```
+
+A description that survives this rubric routes correctly without the model reading your source. One that skips WHEN NOT TO USE will misfire the moment a second, similar tool exists in the same server.
+
+---
+
 ## Transport Patterns
 
 ### 1. stdio (Default)

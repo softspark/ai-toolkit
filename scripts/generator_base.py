@@ -26,6 +26,7 @@ Usage::
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -159,8 +160,10 @@ def render_generator(config: dict) -> None:
     print()
     print("<!-- TOOLKIT:output-mode END -->")
 
-    # Registered custom rules from ~/.softspark/ai-toolkit/rules/
-    if RULES_DIR.is_dir():
+    # Registered custom rules from ~/.softspark/ai-toolkit/rules/.
+    # Skipped when AI_TOOLKIT_NO_CUSTOM_RULES=1 so a maintainer's personal
+    # registered rules never leak into the toolkit's own canonical files.
+    if RULES_DIR.is_dir() and os.environ.get("AI_TOOLKIT_NO_CUSTOM_RULES") != "1":
         for rule_file in sorted(RULES_DIR.glob("*.md")):
             rule_name = rule_file.stem
             print()

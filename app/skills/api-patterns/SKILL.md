@@ -121,6 +121,73 @@ async def search(request: SearchRequest):
 
 ---
 
+## Parameter Documentation Conventions
+
+The same rules apply to OpenAPI `description` fields, Pydantic `Field(description=...)`, and MCP tool parameters: the description should encode the *workflow*, not just restate the type. A consumer (human or LLM) reads it to know how to supply a valid value, not what language primitive it is.
+
+### Prefer enums with per-value descriptions for closed sets
+
+A free-form `string` for `status` forces the caller to guess valid values. Constrain it and document each one:
+
+```python
+class ListReposRequest(BaseModel):
+    visibility: Literal["PUBLIC", "PRIVATE", "INTERNAL"] = Field(
+        "PUBLIC",
+        description=(
+            "Repository visibility filter. "
+            "PUBLIC = visible to anyone; "
+            "PRIVATE = only members with explicit access; "
+            "INTERNAL = visible to all org members (Enterprise only)."
+        ),
+    )
+```
+
+In OpenAPI, pair `enum` with the value meanings in the description (or `x-enum-descriptions` if your tooling renders it). Avoid documenting a closed set as plain `string` — the caller cannot tell `INTERNAL` is valid but `internal` is not.
+
+### Encode cross-field dependencies in the description
+
+If a field is only valid given another, say so where the dependent field is defined — schemas cannot express "required when":
+
+```python
+cursor: str | None = Field(
+    None,
+    description=(
+        "Pagination cursor. Requires a `next_cursor` value obtained from a prior "
+        "GET /api/v1/documents response. Omit on the first page; do not synthesize."
+    ),
+)
+```
+
+State the source call by name (`next_cursor` from the previous list response), not just "an opaque token".
+
+### Add provenance and exactness constraints for opaque IDs
+
+Opaque identifiers (resource IDs, idempotency keys, cursors) are the most common source of bad calls because they look like something the caller can invent. Pin them down:
+
+```python
+document_id: str = Field(
+    ...,
+    description=(
+        "Exact document id, e.g. `doc_9f3a21`. Copy it verbatim from a search or "
+        "list response — case-sensitive, do not type from memory or guess the format. "
+        "Obtain it from GET /api/v1/documents or the search results."
+    ),
+)
+```
+
+The two load-bearing phrases: **where it comes from** (`from a search or list response`) and **how to handle it** (`copy verbatim, case-sensitive, do not type from memory`). Both belong in the description, not a separate doc.
+
+### Descriptions encode workflow, not type
+
+| Weak | Strong |
+|------|--------|
+| `id: The document id` | `id: Exact document id (e.g. doc_9f3a21), copied verbatim from a list/search response — case-sensitive` |
+| `status: The status string` | `status: One of OPEN, MERGED, CLOSED (see per-value meanings); filters the result set` |
+| `cursor: Pagination cursor` | `cursor: next_cursor from the previous page response; omit on first request` |
+| `since: A timestamp` | `since: RFC 3339 UTC timestamp; returns records created strictly after it` |
+
+---
+
 ## JSON-RPC 2.0 (MCP Pattern)
 
 ### Request

@@ -77,10 +77,13 @@ Example eval questions for a `github-mcp`:
 2. "Create an issue titled Y in repo Z"
 3. "Who has the most commits this month in repo X?"
 
+When a tool fails an eval, the cause is almost always the description, not the schema. Score each tool against the description rubric in `mcp-patterns` (one-line purpose, WHEN TO USE, WHEN NOT TO USE, CRITICAL, self-test). A tool with an empty **WHEN NOT TO USE** is under-specified — it will misfire the moment a second tool in the same server overlaps with it, so add the boundary before re-running the eval. See `mcp-patterns` → "How to Write a Tool Description" for the full rubric and worked example.
+
 ## Tool Design Checklist
 
 - [ ] Name has service prefix and is verb-led
 - [ ] Description mentions when to use it and includes trigger keywords
+- [ ] Description carries a non-empty **WHEN NOT TO USE** that names overlapping tools (see `mcp-patterns` rubric)
 - [ ] Input schema is strict, no free-form `object` with `additionalProperties: true`
 - [ ] Output is focused — essential fields only, with pagination cursor if applicable
 - [ ] Error responses are actionable ("API returned 403 — check `GITHUB_TOKEN` env var")
