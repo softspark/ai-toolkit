@@ -184,14 +184,21 @@ actual_test_count() {
     [ "$unique" = "$total" ]
 }
 
-@test "canonical generated files contain no leaked custom rules" {
-    # AGENTS.md / GEMINI.md / copilot-instructions.md are the toolkit's own
-    # committed files. They must NOT embed a maintainer's personal registered
-    # rules from ~/.softspark/ai-toolkit/rules/ — regression guard for the
-    # AI_TOOLKIT_NO_CUSTOM_RULES gate. Only toolkit-owned markers are allowed.
-    for f in AGENTS.md GEMINI.md .github/copilot-instructions.md; do
-        bad=$(grep -oE 'TOOLKIT:[a-z0-9._-]+' "$TOOLKIT_DIR/$f" 2>/dev/null \
-            | sort -u | grep -vE '^TOOLKIT:(ai-toolkit|output-mode)$' || true)
-        [ -z "$bad" ] || { echo "$f leaks custom rules: $bad"; false; }
+@test "AI_TOOLKIT_NO_CUSTOM_RULES gate keeps canonical generators free of custom rules" {
+    # Regression guard for the custom-rule leak fix. The canonical generators
+    # (AGENTS.md / GEMINI.md / copilot-instructions.md) must emit ONLY
+    # toolkit-owned TOOLKIT markers when the gate is on — never a maintainer's
+    # personal registered rules from ~/.softspark/ai-toolkit/rules/.
+    #
+    # Tests the gate's behavior on freshly-generated stdout, NOT the committed
+    # file on disk: other test files run in parallel (`bats --jobs 4`) and can
+    # transiently regenerate the shared AGENTS.md, so reading the live file here
+    # would be racy. Generating into a variable is deterministic on any machine,
+    # with or without registered custom rules.
+    for gen in generate_agents_md.py generate_gemini.py generate_copilot.py; do
+        out=$(AI_TOOLKIT_NO_CUSTOM_RULES=1 python3 "$TOOLKIT_DIR/scripts/$gen" 2>/dev/null)
+        bad=$(printf '%s' "$out" | grep -oE 'TOOLKIT:[a-z0-9._-]+' | sort -u \
+            | grep -vE '^TOOLKIT:(ai-toolkit|output-mode)$' || true)
+        [ -z "$bad" ] || { echo "$gen leaked custom rules with gate on: $bad"; false; }
     done
 }
