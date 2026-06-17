@@ -47,13 +47,21 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 **Actions:**
 1. Injects MANDATORY reminder to follow CLAUDE.md rules
 2. Injects REMINDER about tests and documentation
-3. Loads session context from `.claude/session-context.md` (if exists)
+3. Loads session context from the per-repo session store (if exists)
 4. Loads active instincts from `.claude/instincts/*.md` (if any)
 
 By default the hook performs session-state reset, stale search-flag cleanup, and
 update notification side effects without printing informational stdout. Set
-`AI_TOOLKIT_HOOK_VERBOSE=1` to print the startup reminders and loaded context
-for debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
+`AI_TOOLKIT_HOOK_VERBOSE=1` to print the startup reminders and loaded context for
+debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
+
+> **Session storage:** auto-generated session artifacts (context, handoff note,
+> checkpoints, decisions) are stored **outside the project repo** under
+> `~/.softspark/ai-toolkit/sessions/<repo-key>/`, where `<repo-key>` is the git
+> work-tree root path (fallback: cwd) with `/` replaced by `-` (mirrors Claude
+> Code's own `~/.claude/projects/` convention). This keeps generated files from
+> piling up in every project's `.claude/` directory. Path resolution lives in the
+> shared helper `app/hooks/_session-paths.sh`.
 
 ### Notification — `notify-waiting.sh`
 
@@ -192,10 +200,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/save-session.sh` |
 | Fires | After every Claude response |
 
-**Action:** Writes enriched session context to `.claude/session-context.md` for cross-session persistence. Captures:
+**Action:** Writes enriched session context to the per-repo session store (`~/.softspark/ai-toolkit/sessions/<repo-key>/session-context.md`) for cross-session persistence. Captures:
 - Session ID and last assistant message (first 5 lines)
 - Git branch, uncommitted change count, and diff stat (last 5 lines)
-- Agent-written checkpoints from `.claude/session-context.md.checkpoints` (if present — written by proactive checkpointing per Constitution Art. I §5)
+- Agent-written checkpoints from `session-context.md.checkpoints` in the same store (if present — written by proactive checkpointing per Constitution Art. I §5)
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -263,9 +271,9 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 **Actions (prioritized — higher priority items survive tighter token budgets):**
 1. **Mandatory reload reminder** — always emitted, instructs Claude to re-read CLAUDE.md and active tasks
 2. **Active instincts** — lists each instinct with confidence score and pattern name from `.claude/instincts/*.md`
-3. **Session context** — preserves task state from `.claude/session-context.md` (if exists)
+3. **Session context** — preserves task state from the per-repo session store (if exists)
 4. **Git working state** — branch name, uncommitted change count, last commit (if inside a git repo)
-5. **Key decisions** — last 10 lines from `.claude/decisions.md` (if exists)
+5. **Key decisions** — last 10 lines from `decisions.md` in the per-repo session store (if exists)
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -278,7 +286,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/session-end.sh` |
 | Fires | When a Claude session ends |
 
-**Action:** Writes `.claude/session-end.md` with a lightweight handoff note for the next session and reminds the next session to review preserved context.
+**Action:** Writes `session-end.md` to the per-repo session store (`~/.softspark/ai-toolkit/sessions/<repo-key>/`) with a lightweight handoff note for the next session and reminds the next session to review preserved context.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -350,17 +358,6 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Fires | Before any Bash command |
 
 **Action:** Non-blocking (always exits 0). Inspects Bash commands containing `git commit`. Extracts the commit message from the `-m` flag and checks it against Conventional Commits format (`type: description`, where type is one of feat/fix/docs/refactor/test/chore/ci/perf/style/revert). Emits an advisory warning if the message does not match — the commit is not blocked, only nudged. Commands without `git commit` or without a `-m` message (e.g. interactive commits) are ignored.
-
-### SessionStart — `session-context.sh`
-
-| Field | Value |
-|-------|-------|
-| Event | `SessionStart` |
-| Matcher | *(all)* |
-| Script | `~/.softspark/ai-toolkit/hooks/session-context.sh` |
-| Fires | Session start |
-
-**Action:** Captures an environment snapshot to `~/.softspark/ai-toolkit/sessions/current-context.json`. Records working directory, git branch, git status summary, Node.js version, Python version, and timestamp. Used by other hooks and tools to access session metadata without re-running discovery commands. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 ---
 
@@ -520,8 +517,8 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     ├── _locate-toolkit.sh        # NEW: shared $TOOLKIT_DIR locator
     ├── _hook-io.sh               # NEW: shared multi-editor payload/output adapter
     ├── _search-capability.sh     # NEW: capability-aware search-first enforcement
+    ├── _session-paths.sh         # NEW: per-repo session storage path resolver
     ├── session-start.sh
-    ├── session-context.sh
     ├── guard-destructive.sh
     ├── guard-path.sh
     ├── guard-config.sh
@@ -549,7 +546,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
 
 ~/.claude/settings.json
 └── hooks:          # Hook definitions referencing ~/.softspark/ai-toolkit/hooks/
-    ├── SessionStart       → session-start.sh, mcp-health.sh, session-context.sh
+    ├── SessionStart       → session-start.sh, mcp-health.sh
     ├── Notification       → notify-waiting.sh
     ├── PreToolUse         → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh, revert-guard.sh
     ├── UserPromptSubmit   → user-prompt-submit.sh, track-usage.sh
@@ -590,7 +587,7 @@ Windsurf rebranded to Devin Desktop (2026-06-02); the Cascade agent — and its 
 Devin CLI uses a **Claude-compatible** hook format (docs.devin.ai/cli/extensibility/hooks). Key facts driving the generator:
 
 - **Standalone file shape:** in `.devin/hooks.v1.json` the entire file IS the hooks object — no top-level `"hooks"` wrapper key (unlike `.claude/settings.json`).
-- **Events:** Claude-style PascalCase — `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `SessionStart`. `post_setup_worktree` has no Devin equivalent (`session-context.sh` moves to `SessionStart`); `post_cascade_response` maps to `Stop` (which carries no response text on stdin).
+- **Events:** Claude-style PascalCase — `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`. `post_cascade_response` maps to `Stop` (which carries no response text on stdin).
 - **Matchers:** regex against the Devin **tool name** (`read`, `edit`, `exec`, `grep`, `glob`, `mcp__<server>__<tool>`) — NOT Claude's `Bash`/`Edit`, so the shared guards reliably fire.
 - **Block contract:** the guard scripts emit `{"decision":"block","reason":...}` on stdout (plain mode) AND exit 2 — Devin honors both. Hooks run **without** `AI_TOOLKIT_HOOK_FORMAT=json` because Devin expects the flat `{"decision","reason"}` shape, not Claude's `hookSpecificOutput` envelope.
 - **Stdin payload:** flat `{ "hook_event_name", "tool_name", "tool_input" }` — already handled by `_hook-io.sh` via its `.tool_name` / `.tool_input.*` branches, so no normalizer change was needed.

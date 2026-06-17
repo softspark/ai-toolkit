@@ -11,7 +11,7 @@ opencode lifecycle events. Coverage map:
 
   opencode event              -> ai-toolkit Bash hook(s)
   ---------------------------------------------------------------
-  session.created             -> session-start.sh + session-context.sh + mcp-health.sh
+  session.created             -> session-start.sh + mcp-health.sh
   session.compacted           -> pre-compact.sh + pre-compact-save.sh
   session.deleted             -> session-end.sh + save-session.sh
   message.updated             -> user-prompt-submit.sh + track-usage.sh
@@ -79,7 +79,6 @@ export const AiToolkitHooks = async ({ $, project, directory, worktree }) => ({
     switch (event.type) {
       case "session.created":
         await runHook($, "session-start.sh", payload);
-        await runHook($, "session-context.sh", payload);
         await runHook($, "mcp-health.sh", payload);
         break;
       case "session.compacted":

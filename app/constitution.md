@@ -21,7 +21,7 @@ status: IMMUTABLE
 - Exceeding limits requires explicit user override
 
 ### Section 5: Proactive Context Checkpointing
-- During multi-step tasks (>5 tool calls), update `.claude/session-context.md` after each major milestone
+- During multi-step tasks (>5 tool calls), append milestones to the per-repo session-context store after each major milestone. Auto-generated session files live under `~/.softspark/ai-toolkit/sessions/<repo-root-with-/-as->/` (the repo work-tree root path with `/` replaced by `-`), NOT inside the project repo. Append agent checkpoints to `session-context.md.checkpoints` in that directory; the Stop hook folds them into the session summary
 - Checkpoint MUST include: current objective, completed steps, pending steps, files modified, key decisions
 - Minimum frequency: after every completed task phase, workflow stage, or subagent handoff
 - Agent SHOULD checkpoint before any risky or destructive operation

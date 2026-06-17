@@ -42,7 +42,6 @@ AUGMENT_HOOKS: dict[str, list[tuple[str, str]]] = {
     "SessionStart": [
         ("", "session-start.sh"),
         ("", "mcp-health.sh"),
-        ("", "session-context.sh"),
     ],
     "PreToolUse": [
         ("launch-process", "guard-destructive.sh"),

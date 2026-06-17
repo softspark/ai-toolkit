@@ -339,37 +339,61 @@ EOF
 # session-start.sh
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Resolve the per-repo session dir the hooks compute for the current cwd.
+# Mirrors _session-paths.sh: git work-tree root (fallback cwd) with "/" -> "-".
+session_dir_for_cwd() {
+    printf '%s' "$HOME/.softspark/ai-toolkit/sessions/${PWD//\//-}"
+}
+
 @test "session-start: outputs mandatory rules reminder" {
+    cd "$TEST_TMP"
     AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "MANDATORY"
 }
 
 @test "session-start: outputs test/docs reminder" {
+    cd "$TEST_TMP"
     AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "REMINDER"
 }
 
 @test "session-start: suppresses startup context by default" {
+    cd "$TEST_TMP"
     run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
 
 @test "session-start: quiet mode suppresses startup context" {
+    cd "$TEST_TMP"
     AI_TOOLKIT_HOOK_QUIET=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
 
-@test "session-start: includes session context when file exists" {
-    mkdir -p "$TEST_TMP/project/.claude"
-    echo "Working on feature X" > "$TEST_TMP/project/.claude/session-context.md"
-    cd "$TEST_TMP/project"
+@test "session-start: includes session context from per-repo store" {
+    cd "$TEST_TMP/project" 2>/dev/null || { mkdir -p "$TEST_TMP/project"; cd "$TEST_TMP/project"; }
+    sdir="$(session_dir_for_cwd)"
+    mkdir -p "$sdir"
+    echo "Working on feature X" > "$sdir/session-context.md"
     AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Session Context"
+}
+
+@test "save-session: two repos get isolated session stores" {
+    mkdir -p "$TEST_TMP/repo-a" "$TEST_TMP/repo-b"
+    cd "$TEST_TMP/repo-a"
+    run_hook_with_input "save-session.sh" '{"session_id":"sid-a","last_assistant_message":"work A"}'
+    dir_a="$(session_dir_for_cwd)"
+    cd "$TEST_TMP/repo-b"
+    run_hook_with_input "save-session.sh" '{"session_id":"sid-b","last_assistant_message":"work B"}'
+    dir_b="$(session_dir_for_cwd)"
+    [ "$dir_a" != "$dir_b" ]
+    grep -q "sid-a" "$dir_a/session-context.md"
+    grep -q "sid-b" "$dir_b/session-context.md"
 }
 
 @test "session-start: loads active instincts by default (no verbose needed)" {
@@ -409,19 +433,18 @@ EOF
     [ "$status" -eq 0 ]
 }
 
-@test "session-end: writes handoff file" {
-    cd "$TEST_TMP"
-    mkdir -p .claude
+@test "session-end: writes handoff file to per-repo store, not repo" {
+    cd "$TEST_TMP/project" 2>/dev/null || { mkdir -p "$TEST_TMP/project"; cd "$TEST_TMP/project"; }
     run_hook "session-end.sh"
     [ "$status" -eq 0 ]
-    [ -f ".claude/session-end.md" ]
+    [ ! -f ".claude/session-end.md" ]
+    [ -f "$(session_dir_for_cwd)/session-end.md" ]
 }
 
 @test "session-end: handoff includes timestamp" {
-    cd "$TEST_TMP"
-    mkdir -p .claude
+    cd "$TEST_TMP/project" 2>/dev/null || { mkdir -p "$TEST_TMP/project"; cd "$TEST_TMP/project"; }
     run_hook "session-end.sh"
-    grep -q "ended_at" .claude/session-end.md
+    grep -q "ended_at" "$(session_dir_for_cwd)/session-end.md"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -601,10 +624,12 @@ EOF
     echo "$output" | grep -q "compacted"
 }
 
-@test "pre-compact: includes session context when file exists" {
-    mkdir -p "$TEST_TMP/project/.claude"
-    echo "Task: implement auth" > "$TEST_TMP/project/.claude/session-context.md"
+@test "pre-compact: includes session context from per-repo store" {
+    mkdir -p "$TEST_TMP/project"
     cd "$TEST_TMP/project"
+    sdir="$(session_dir_for_cwd)"
+    mkdir -p "$sdir"
+    echo "Task: implement auth" > "$sdir/session-context.md"
     run_hook "pre-compact.sh"
     echo "$output" | grep -q "Session Context"
 }
@@ -655,21 +680,21 @@ EOF
     [ "$status" -eq 0 ]
 }
 
-@test "save-session: writes session file when session_id provided" {
-    cd "$TEST_TMP"
-    mkdir -p .claude
+@test "save-session: writes session file to per-repo store, not repo" {
+    cd "$TEST_TMP/project" 2>/dev/null || { mkdir -p "$TEST_TMP/project"; cd "$TEST_TMP/project"; }
     run_hook_with_input "save-session.sh" '{"session_id":"test-session-123","last_assistant_message":"Working on auth module"}'
     [ "$status" -eq 0 ]
-    [ -f ".claude/session-context.md" ]
-    grep -q "test-session-123" ".claude/session-context.md"
+    [ ! -f ".claude/session-context.md" ]
+    [ -f "$(session_dir_for_cwd)/session-context.md" ]
+    grep -q "test-session-123" "$(session_dir_for_cwd)/session-context.md"
 }
 
 @test "save-session: skips writing when no session ID" {
-    cd "$TEST_TMP"
+    cd "$TEST_TMP/project" 2>/dev/null || { mkdir -p "$TEST_TMP/project"; cd "$TEST_TMP/project"; }
     unset CLAUDE_SESSION_ID
     run_hook "save-session.sh"
     [ "$status" -eq 0 ]
-    [ ! -f ".claude/session-context.md" ]
+    [ ! -f "$(session_dir_for_cwd)/session-context.md" ]
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -740,28 +765,6 @@ EOF
     run_hook_with_input "commit-quality.sh" '{"tool_input":{"command":"git commit -m \"feat: add new login flow\""}}'
     [ "$status" -eq 0 ]
     ! echo "$output" | grep -q "conventional commit"
-}
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# session-context.sh
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@test "session-context: creates session JSON file with session_id from stdin" {
-    run_hook_with_input "session-context.sh" '{"session_id":"test-123","source":"startup"}'
-    [ "$status" -eq 0 ]
-    [ -f "$TEST_TMP/.softspark/ai-toolkit/sessions/test-123.json" ]
-}
-
-@test "session-context: JSON contains pwd and git_branch fields" {
-    run_hook_with_input "session-context.sh" '{"session_id":"test-456","source":"startup"}'
-    [ "$status" -eq 0 ]
-    python3 -c "
-import json
-with open('$TEST_TMP/.softspark/ai-toolkit/sessions/test-456.json') as f:
-    d = json.load(f)
-assert 'pwd' in d, 'missing pwd field'
-assert 'git_branch' in d, 'missing git_branch field'
-"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════

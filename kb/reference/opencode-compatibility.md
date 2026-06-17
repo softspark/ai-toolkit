@@ -79,7 +79,7 @@ Each command file carries the prompt in its markdown body (built from the SKILL.
 
 | opencode event             | Bash hook(s)                                                       |
 |----------------------------|--------------------------------------------------------------------|
-| `session.created`          | `session-start.sh` + `session-context.sh` + `mcp-health.sh`        |
+| `session.created`          | `session-start.sh` + `mcp-health.sh`                               |
 | `session.compacted`        | `pre-compact.sh` + `pre-compact-save.sh` (PreCompact equivalent)   |
 | `session.deleted`          | `session-end.sh` + `save-session.sh`                               |
 | `message.updated`          | `user-prompt-submit.sh` + `track-usage.sh`                         |

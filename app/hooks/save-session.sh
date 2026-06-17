@@ -6,16 +6,18 @@
 
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
+# shellcheck source=_session-paths.sh
+source "$(dirname "$0")/_session-paths.sh"
 
 # Read from stdin (Claude Code passes JSON with .session_id, .last_assistant_message)
 INPUT=$(cat)
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // "No summary available"' 2>/dev/null | head -5)
 
-SESSION_FILE=".claude/session-context.md"
+SESSION_FILE="$SESSION_CONTEXT_FILE"
 
 if [ -n "$SESSION_ID" ]; then
-    mkdir -p .claude
+    mkdir -p "$SESSION_DIR"
 
     # Gather git state for richer context
     GIT_BRANCH=""

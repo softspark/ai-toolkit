@@ -6,6 +6,8 @@
 
 # shellcheck source=_locate-toolkit.sh
 source "$(dirname "$0")/_locate-toolkit.sh"
+# shellcheck source=_session-paths.sh
+source "$(dirname "$0")/_session-paths.sh"
 
 emit_context() {
     [ "${AI_TOOLKIT_HOOK_QUIET:-0}" = "1" ] && return 0
@@ -51,7 +53,7 @@ if [ -n "$VERSION_MSG" ]; then
 fi
 
 # 3. Load session context (if available)
-SESSION_FILE=".claude/session-context.md"
+SESSION_FILE="$SESSION_CONTEXT_FILE"
 if [ -f "$SESSION_FILE" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" = "1" ]; then
     printf '%s\n' "=== Session Context ==="
     cat "$SESSION_FILE"

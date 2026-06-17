@@ -40,7 +40,6 @@ GEMINI_HOOKS: dict[str, list[tuple[str, str]]] = {
     "SessionStart": [
         ("", "session-start.sh"),
         ("", "mcp-health.sh"),
-        ("", "session-context.sh"),
     ],
     "BeforeTool": [
         # run_shell_command covers Bash-equivalent destructive patterns
@@ -66,10 +65,6 @@ GEMINI_HOOKS: dict[str, list[tuple[str, str]]] = {
         ("", "quality-check.sh"),
         ("", "save-session.sh"),
         ("", "stop-search-check.sh"),
-    ],
-    "BeforeModel": [
-        # Light-weight observability slot. Reuses the session-context probe.
-        ("", "session-context.sh"),
     ],
     "SessionEnd": [
         ("", "session-end.sh"),

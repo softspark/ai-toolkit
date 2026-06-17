@@ -52,7 +52,7 @@ print('ok')
     run python3 -c "
 import json
 data = json.load(open('$CX_DIR/.codex/hooks.json'))
-for evt in ('PostToolUse','SubagentStart','SubagentStop','PreCompact','PostCompact'):
+for evt in ('PostToolUse','SubagentStart','SubagentStop','PreCompact'):
     assert evt in data['hooks'], f'{evt} missing'
 print('ok')
 "

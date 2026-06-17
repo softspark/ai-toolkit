@@ -38,7 +38,6 @@ CURSOR_HOOKS: dict[str, list[tuple[str, str]]] = {
     "sessionStart": [
         ("", "session-start.sh"),
         ("", "mcp-health.sh"),
-        ("", "session-context.sh"),
     ],
     "beforeShellExecution": [
         ("", "guard-destructive.sh"),

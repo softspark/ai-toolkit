@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.10.0 — Per-repo session storage outside the repo + drop dead session-context hook (2026-06-17)
+
+Minor release. Session lifecycle hooks stop writing auto-generated files into each project's `.claude/` directory and store them per-repo under `~/.softspark/ai-toolkit/`. The dead `session-context.sh` hook (write-only, no consumer) is removed across all editor generators. Test count: 1197 → 1195.
+
+### Changed
+- **Session lifecycle hooks store artifacts outside the repo.** `save-session.sh`, `session-end.sh`, `session-start.sh`, and `pre-compact.sh` now read/write the auto-generated session files (`session-context.md`, `session-end.md`, `session-context.md.checkpoints`, `decisions.md`) under `~/.softspark/ai-toolkit/sessions/<repo-key>/` instead of the project's `.claude/` directory. `<repo-key>` is the git work-tree root path (fallback: cwd) with `/` replaced by `-`, keyed per repo so projects stay isolated. Stops these files from piling up in every repository. New shared helper `app/hooks/_session-paths.sh` is the single source of path resolution. No migration of pre-existing in-repo files: the new store starts fresh, old `.claude/session-*.md` left for the user to delete.
+- **Constitution Art. I §5** updated to point proactive checkpointing at the per-repo session store.
+
+### Removed
+- **Dropped the dead `session-context.sh` hook.** It fired on `SessionStart` and wrote an environment snapshot (`~/.softspark/ai-toolkit/sessions/<id>.json`: pwd, git branch/status, node/python versions) that no hook, script, or tool ever read — pure write-only dead code (Constitution Art. VI.1). Removed the script, its `app/hooks.json` wiring, its entries across all 7 editor hook generators (cursor, windsurf, codex, devin, augment, gemini, opencode), its tests, and its catalog/overview docs. Editors that had it as the sole entry for an event (windsurf `post_setup_worktree`, codex `PostCompact`, gemini `BeforeModel`, devin `SessionStart`) drop that event. Not related to the session-storage change above — it never wrote to the repo.
+
+---
+
 ## v4.9.0 - Epistemic integrity rules + deep-research skill + custom-rule leak fix (2026-06-15)
 
 Minor release. Adds a constitution article on injection resistance and grounding, a new web-research methodology skill, and an anti-sycophancy/formatting pass across the voice layer. Also fixes a leak where a maintainer's personal registered rules were baked into the toolkit's own committed editor files. Skill count: 107 → 108. Constitution: 6 → 7 articles. Test count: 1196 → 1197.

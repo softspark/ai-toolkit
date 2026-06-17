@@ -8,6 +8,8 @@
 
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
+# shellcheck source=_session-paths.sh
+source "$(dirname "$0")/_session-paths.sh"
 
 # ---------------------------------------------------------------------------
 # 1. Mandatory reload reminder (highest priority — always survives)
@@ -32,9 +34,9 @@ fi
 # ---------------------------------------------------------------------------
 # 3. Current task state (medium priority — what we're doing)
 # ---------------------------------------------------------------------------
-if [ -f ".claude/session-context.md" ]; then
+if [ -f "$SESSION_CONTEXT_FILE" ]; then
     echo "=== Session Context ==="
-    cat ".claude/session-context.md"
+    cat "$SESSION_CONTEXT_FILE"
     echo "======================="
 fi
 
@@ -55,10 +57,10 @@ fi
 # ---------------------------------------------------------------------------
 # 5. Key decisions file (if user has been noting decisions this session)
 # ---------------------------------------------------------------------------
-if [ -f ".claude/decisions.md" ]; then
+if [ -f "$SESSION_DECISIONS_FILE" ]; then
     echo "=== Key Decisions This Session ==="
     # Only show last 10 lines to keep token budget tight
-    tail -10 ".claude/decisions.md"
+    tail -10 "$SESSION_DECISIONS_FILE"
     echo "=================================="
 fi
 

@@ -330,16 +330,6 @@ assert not any('Bash' in (m or '') for m in matchers), 'must not use Claude Bash
 "
 }
 
-@test "hooks: devin maps session-context to SessionStart (no worktree event)" {
-    python3 -c "
-import json
-data = json.load(open('$HPE_DIR/.devin/hooks.v1.json'))
-assert 'SessionStart' in data, 'session-context must move to SessionStart'
-blob = json.dumps(data)
-assert 'session-context.sh' in blob
-"
-}
-
 @test "hooks: gemini wires SessionStart (upstream PascalCase event name)" {
     grep -q '"SessionStart"' "$HPE_DIR/.gemini/settings.json"
 }

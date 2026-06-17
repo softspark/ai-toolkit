@@ -20,16 +20,6 @@
                         "command": "\"$HOME/.softspark/ai-toolkit/hooks/mcp-health.sh\""
                     }
                 ]
-            },
-            {
-                "_source": "ai-toolkit",
-                "matcher": "startup|compact",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/session-context.sh\""
-                    }
-                ]
             }
         ],
         "Notification": [

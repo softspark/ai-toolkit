@@ -269,7 +269,6 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 |------|---------|--------|--------|
 | SessionStart | Session start + compact | `session-start.sh` | MANDATORY rules reminder + session context + instincts |
 | SessionStart | Session start | `mcp-health.sh` | Check MCP runtime availability |
-| SessionStart | Session start | `session-context.sh` | Capture environment snapshot |
 | Notification | Claude waiting for input | *(inline)* | macOS desktop notification |
 | PreToolUse | Before Bash | `guard-destructive.sh` | Block destructive commands |
 | PreToolUse | Before file ops (Bash, Read, Edit, Write, MultiEdit, Glob, Grep, NotebookEdit, mcp\_filesystem) | `guard-path.sh` | Block wrong-user path hallucination |

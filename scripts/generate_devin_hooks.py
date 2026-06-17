@@ -61,11 +61,6 @@ DEVIN_HOOKS: dict[str, list[tuple[str, list[str]]]] = {
     "Stop": [
         ("", ["quality-check.sh", "save-session.sh", "stop-search-check.sh"]),
     ],
-    # Cascade's post_setup_worktree has no Devin equivalent; session-context
-    # moves to SessionStart (Devin fires SessionStart when a session begins).
-    "SessionStart": [
-        ("", ["session-context.sh"]),
-    ],
 }
 
 

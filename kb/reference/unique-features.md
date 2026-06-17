@@ -27,7 +27,6 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 |-------|--------|--------|
 | SessionStart | `session-start.sh` | MANDATORY rules reminder + session context + instincts + reset session-edit state |
 | SessionStart | `mcp-health.sh` | Check MCP server command availability (non-blocking warning) |
-| SessionStart | `session-context.sh` | Capture environment snapshot to `~/.softspark/ai-toolkit/sessions/current-context.json` |
 | Notification | `notify-waiting.sh` | Cross-platform desktop notification |
 | PreToolUse | `guard-destructive.sh` | Block `rm -rf`, `DROP TABLE`, etc. |
 | PreToolUse | `guard-path.sh` | Block wrong-user path hallucination |

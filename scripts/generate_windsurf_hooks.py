@@ -72,9 +72,6 @@ WINDSURF_HOOKS: dict[str, list[str]] = {
         "save-session.sh",
         "stop-search-check.sh",
     ],
-    "post_setup_worktree": [
-        "session-context.sh",
-    ],
 }
 
 

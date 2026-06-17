@@ -33,7 +33,6 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     "SessionStart": [
         ("startup|resume", "session-start.sh"),
         ("startup|resume", "mcp-health.sh"),
-        ("startup|resume", "session-context.sh"),
     ],
     "PreToolUse": [
         ("Bash", "guard-destructive.sh"),
@@ -66,10 +65,6 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
         # Capture session memory before Codex compacts the conversation.
         ("", "pre-compact.sh"),
         ("", "pre-compact-save.sh"),
-    ],
-    "PostCompact": [
-        # Re-establish working context after compaction.
-        ("", "session-context.sh"),
     ],
     "Stop": [
         ("", "quality-check.sh"),

@@ -170,7 +170,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Config paths | `AGENTS.md`, `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `.codex/config.toml` (project layers, root→cwd, closest wins, trusted projects only), `~/.codex/config.toml` |
 | Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
 | Rules delivery | Universal coding rules are inlined into `AGENTS.md` (Codex reads instructions only from AGENTS.md, not `.agents/rules/`); language rules ship as `<lang>-rules` skills under `.agents/skills/`. |
-| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We wire all 10 to shared toolkit hook scripts, mirroring the Claude Code mapping in `app/hooks.json`. |
+| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We wire 9 of these to shared toolkit hook scripts, mirroring the Claude Code mapping in `app/hooks.json`. `PostCompact` is not wired (its only hook was the removed environment-snapshot probe). |
 | Tracked handler types | `command` (emitted by default); `prompt` and `agent` available upstream but authored by hand |
 | Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.agents/skills/*/SKILL.md` (native Codex skill discovery path) |
 | Version probe | `codex --version` |

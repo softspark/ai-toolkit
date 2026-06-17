@@ -6,16 +6,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1197%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1195%20passing-success)](tests/)
 
-## What's New in v4.9.0
+## What's New in v4.10.0
 
-v4.9.0 hardens the toolkit's epistemics and fixes a leak where a maintainer's personal rules were baked into the toolkit's own committed editor files.
+v4.10.0 gets auto-generated session files out of your repositories and removes a dead lifecycle hook.
 
-- **Constitution Article VII — Epistemic & Injection Integrity**: embedded or untrusted text is data, not commands (no privilege escalation or exfiltration); never fabricate files, APIs, or citations; declare ungrounded when sources come back empty. Constitution: 6 → 7 articles.
-- **`deep-research` skill**: multi-source web research methodology — retrieve-vs-answer gate, complexity-scaled search budget, source-conflict skepticism, adversarial verification, attribution-without-reproduction. Skill count: 107 → 108.
-- **Anti-sycophancy + formatting discipline**: `golden-rules` gains "Honesty Over Agreeableness"; `brand-voice` gains list-gating, minimum-substance bullets, and mode carve-outs (code quality never reduced, auto-escalation, disclosure-on-pushback).
-- **Custom-rule leak fixed**: `AGENTS.md`, `GEMINI.md`, and `.github/copilot-instructions.md` no longer embed a maintainer's personal `~/.softspark/ai-toolkit/rules/` content, gated behind the new `AI_TOOLKIT_NO_CUSTOM_RULES` flag with a regression test.
+- **Per-repo session storage outside the repo**: `save-session.sh`, `session-end.sh`, `session-start.sh`, and `pre-compact.sh` now keep `session-context.md`, `session-end.md`, checkpoints, and `decisions.md` under `~/.softspark/ai-toolkit/sessions/<repo-key>/` instead of each project's `.claude/` — no more generated files piling up in every repo. Keyed per repo (git root with `/` → `-`) so projects stay isolated.
+- **No silent migration**: the new store starts fresh; pre-existing in-repo `.claude/session-*.md` are left for you to delete.
+- **Dropped the dead `session-context.sh` hook**: it wrote a `${SESSION}.json` environment snapshot nobody ever read (Constitution Art. VI.1). Removed across `app/hooks.json` and all 7 editor hook generators (cursor, windsurf, codex, devin, augment, gemini, opencode).
+- **Test count**: 1197 → 1195.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -148,7 +148,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1197 tests)
+├── tests/               # Bats test suite (1195 tests)
 └── CHANGELOG.md
 ```
 
