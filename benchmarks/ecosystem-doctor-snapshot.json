@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-06-09T22:04:06Z",
+  "last_run": "2026-06-23T06:35:51Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "f4c5995e8333a4d5",
+      "docs_hash": "a0c51061febc16c4",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "e6f6b4d9d4057cb0",
+      "docs_hash": "f4ae0b994cd5c40f",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -122,10 +122,10 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.170 (Claude Code)"
+      "version": "2.1.186 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "806fa530c90e227d",
+      "docs_hash": "858fa542e2aacde5",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -168,7 +168,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "1b4a56a8e918d721",
+      "docs_hash": "eeb0e17a839b09bd",
       "headings": [
         "API",
         "API Reference",
@@ -235,10 +235,10 @@
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.138.0"
+      "version": "codex-cli 0.142.0"
     },
     "cursor": {
-      "docs_hash": "b68e4adf6e21f543",
+      "docs_hash": "86b6d48e8ab40d90",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -254,7 +254,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "a0e9a213229063c8",
+      "docs_hash": "bc124b36e1f54320",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -296,7 +296,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "ead818d74ead1f2e",
+      "docs_hash": "df7c22e121dbb3d1",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -317,6 +317,7 @@
         "Still need help?"
       ],
       "markers": {
+        "AGENTS.md": false,
         "Copilot Chat": true,
         "Copilot Workspace": false,
         "Copilot cloud agent": true,
@@ -329,7 +330,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "5ea5426c4445e746",
+      "docs_hash": "e6c90b9d937dd9f0",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -346,7 +347,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "f546c8b741790cb8",
+      "docs_hash": "302de3ac69940747",
       "headings": [
         "Add features",
         "Ask questions",
@@ -406,8 +407,9 @@
       }
     },
     "windsurf": {
-      "docs_hash": "91034c064d9f8290",
+      "docs_hash": "cdd657d4d684c68a",
       "headings": [
+        "Accounts",
         "Advanced",
         "Agent Command Center",
         "App Deploys",
@@ -420,15 +422,15 @@
         "On this page",
         "Recommended Plugins",
         "Releases",
+        "Security",
         "Terminal",
         "Usage",
         "Welcome to Devin Desktop",
         "Windsurf Plugins",
         "Workflows",
-        "\u200b1. Select setup flow",
-        "\u200b2. Choose editor theme",
-        "\u200b3. Sign up / Log in",
-        "\u200b4. Let\u2019s Surf!",
+        "\u200b1. Select your preferred theme",
+        "\u200b2. Log In / Sign Up",
+        "\u200b3. Start Building with Devin!",
         "\u200bCustom App Icons (beta)",
         "\u200bDevin Desktop Next",
         "\u200bForgot to Import VS Code Configurations?",
@@ -436,8 +438,7 @@
         "\u200bOnboarding",
         "\u200bSet Up",
         "\u200bThings to Try",
-        "\u200bUninstall Devin Desktop",
-        "\u200bUpdate Devin Desktop"
+        "\u200bUninstall Devin Desktop"
       ],
       "markers": {
         "AGENTS.md": true,

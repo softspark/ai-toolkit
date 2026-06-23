@@ -17,6 +17,12 @@ This generator produces three surfaces, all on the OSS/Free/Pro tier
    Invoked manually in VS Code Copilot Chat via ``/name``. Written only
    when ``generate()`` is called with a target directory.
 
+GitHub Copilot code review (generally available 2026-06-18, all tiers) now
+automatically reads the root-level ``AGENTS.md`` when generating review
+feedback. We already emit that file via ``scripts/generate_agents_md.py``, so
+no Copilot-specific emission is added here; ``AGENTS.md`` is tracked in this
+tool's ``capability_markers`` in ``scripts/ecosystem_tools.json``.
+
 Features that live on Pro/Pro+/Business/Enterprise tiers are intentionally
 not generated (classified as class C in the ecosystem-sync SOP):
   * ``.github/agents/*.agent.md`` — custom agent profiles (tier-gated)

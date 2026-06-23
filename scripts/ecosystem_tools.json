@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-06-10",
+  "last_updated": "2026-06-23",
   "tools": [
     {
       "id": "claude-code",
@@ -200,6 +200,7 @@
         "custom agents",
         "prompt files",
         "instructions.md",
+        "AGENTS.md",
         "MCP"
       ],
       "version_probe": null
