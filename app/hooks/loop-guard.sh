@@ -53,7 +53,6 @@ fi
 COUNT=$(grep -cxF "$HASH" "$LOG" 2>/dev/null | tr -d ' ')
 [ -z "$COUNT" ] && COUNT=0
 if [ "$COUNT" -ge "$THRESHOLD" ]; then
-    export AI_TOOLKIT_HOOK_FORMAT=json
     hook_emit_context "PostToolUse" \
         "Loop guard: the same ${TOOL_NAME} action has repeated ${COUNT}x within the last ${WINDOW} steps. If you are not making progress, stop and reassess — try a different approach or ask the user — instead of retrying the identical action."
 fi

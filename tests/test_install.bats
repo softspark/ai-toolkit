@@ -294,6 +294,25 @@ assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"s
     [ "$actual_skills" -eq "$expected_skills" ]
 }
 
+@test "install --local --editors copilot emits AGENTS.md without clobbering existing sections" {
+    cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
+User-authored preface.
+
+<!-- TOOLKIT:ai-toolkit START -->
+Existing Codex section.
+<!-- TOOLKIT:ai-toolkit END -->
+MD
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors copilot) >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/AGENTS.md" ]
+    grep -q '<!-- TOOLKIT:copilot-agents START -->' "$TEST_PROJECT/AGENTS.md"
+    grep -q '^# AGENTS.md' "$TEST_PROJECT/AGENTS.md"
+    grep -q 'GitHub Copilot Instructions' "$TEST_PROJECT/.github/copilot-instructions.md"
+    grep -q 'Existing Codex section.' "$TEST_PROJECT/AGENTS.md"
+    grep -q 'User-authored preface.' "$TEST_PROJECT/AGENTS.md"
+}
+
 @test "install --local syncs .mcp.json into Claude and selected project editors" {
     cat > "$TEST_PROJECT/.mcp.json" <<'JSON'
 {

@@ -352,6 +352,39 @@ def inject_with_rules(
     print(f"  Updated: {target_file}")
 
 
+def _inject_text_section(target_file: Path, section: str, text: str) -> None:
+    """Inject generated text into one marker section without touching others."""
+    target_file.parent.mkdir(parents=True, exist_ok=True)
+    existing = target_file.read_text(encoding="utf-8") if target_file.is_file() else ""
+    existing = _trim_trailing_blanks(_strip_section(existing, section))
+
+    parts: list[str] = []
+    if existing.strip():
+        parts.append(existing)
+        parts.append("")
+    parts.extend([
+        f"<!-- TOOLKIT:{section} START -->",
+        "<!-- Auto-injected by ai-toolkit. Re-run to update. -->",
+        "",
+        text.rstrip("\n"),
+        "",
+        f"<!-- TOOLKIT:{section} END -->",
+    ])
+
+    output = _collapse_blank_runs("\n".join(parts) + "\n").lstrip("\n")
+    target_file.write_text(output, encoding="utf-8")
+
+
+def _install_copilot_agents_md(cwd: Path) -> None:
+    """Emit root AGENTS.md for GitHub Copilot without clobbering other tools."""
+    generated = run_script("generate_agents_md.py", capture=True)
+    if not generated.strip():
+        print("  ERROR: generate_agents_md.py produced no output")
+        return
+    _inject_text_section(cwd / "AGENTS.md", "copilot-agents", generated)
+    print("  Updated: AGENTS.md (Copilot agent instructions)")
+
+
 def run_script(script_name: str, *args: str, capture: bool = False) -> str:
     """Run a script from the scripts/ directory (prefers .py over .sh)."""
     scripts_dir = toolkit_dir / "scripts"
@@ -724,7 +757,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
 
     # Editor-specific dry-run messages
     _EDITOR_DRY_RUN = {
-        "copilot":      "  Would inject: .github/copilot-instructions.md",
+        "copilot":      "  Would inject: .github/copilot-instructions.md + AGENTS.md",
         "cursor":       "  Would generate: .cursorrules + .cursor/rules/*.mdc",
         "windsurf":     "  Would generate: .windsurfrules + .devin/rules/*.md + .windsurf/rules/*.md",
         "cline":        "  Would generate: .clinerules/*.md",
@@ -949,6 +982,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             cwd / ".github" / "copilot-instructions.md",
             rules_dir,
         )
+        _install_copilot_agents_md(cwd)
         # `standard` and above: emit path-specific instructions + prompt files
         # (directory mode). `minimal` stays backwards-compatible with v2.
         if add_copilot_dir:

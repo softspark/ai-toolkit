@@ -116,16 +116,22 @@ by default because Codex currently renders `additionalContext` as visible hook
 context in the TUI. This keeps prompt-submit output quiet while preserving hook
 side effects and blocking decisions such as search-first Stop enforcement.
 
-Codex `UserPromptSubmit` JSON output is event-specific. When emitting context,
-the hook must include the event name alongside the context:
+Codex hooks must not force Claude-only JSON output fields such as
+`suppressOutput`. In particular, advisory `PostToolUse` hooks like
+`loop-guard.sh` run in quiet/plain mode under Codex; they keep side effects but
+do not emit hidden Claude-style context unless a future Codex runtime explicitly
+supports that schema.
+
+If a future Codex runtime enables JSON context output for `UserPromptSubmit`,
+the output must be event-specific and include the event name alongside the
+context:
 
 ```json
 {
   "hookSpecificOutput": {
     "hookEventName": "UserPromptSubmit",
     "additionalContext": "..."
-  },
-  "suppressOutput": true
+  }
 }
 ```
 

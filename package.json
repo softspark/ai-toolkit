@@ -1,6 +1,6 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "4.10.0",
+  "version": "4.10.1",
   "description": "AI coding toolkit: 108 skills, 44 agents, 12-editor write-through (Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo, Aider, Augment, Antigravity, Codex, opencode), machine-enforced safety constitution, SARIF audit, signed npm provenance.",
   "keywords": [
     "claude",
@@ -71,6 +71,8 @@
   "files": [
     "bin/",
     "app/",
+    "!app/**/.claude",
+    "!app/**/.claude/**",
     "!app/**/__pycache__",
     "!app/**/*.pyc",
     "scripts/",

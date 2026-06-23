@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.10.1 — Copilot AGENTS.md install + Claude KB-first rule (2026-06-23)
+
+Patch release. Fixes two governance regressions found in the editor-update audit: Copilot installs now emit the root `AGENTS.md` surface documented in the registry, and Claude Code receives the KB-first rule in `CLAUDE.md`, which it actually reads. Test count: 1195 → 1198.
+
+### Fixed
+- **GitHub Copilot local install now emits root `AGENTS.md`.** `ai-toolkit install --local --editors copilot` writes the generated agent catalog into a `TOOLKIT:copilot-agents` section without clobbering existing Codex/opencode `TOOLKIT:ai-toolkit` sections or user-authored content. Dry-run output and tests now cover the `.github/copilot-instructions.md + AGENTS.md` contract.
+- **Claude Code KB-first rule restored in the right instruction file.** `CLAUDE.md` now explicitly requires `smart_query()` or `hybrid_search_kb()` before technical/project answers; the prior generated `AGENTS.md` placement was not sufficient for Claude Code runtime enforcement.
+- **Codex PostToolUse no longer emits unsupported `suppressOutput`.** `loop-guard.sh` no longer forces `AI_TOOLKIT_HOOK_FORMAT=json`; under Codex it stays quiet/plain unless the generator explicitly opts into a supported JSON schema.
+- **Npm package excludes local Claude session artifacts.** `package.json` now excludes `app/**/.claude/**` so ignored maintainer-local session files cannot leak into `npm pack`.
+
+### Changed
+- **Editor registry/docs aligned with implementation.** README, architecture overview, and the supported-tools registry now describe Copilot's root `AGENTS.md` emission consistently.
+- **Ecosystem doctor baseline refreshed.** Snapshot updated for upstream Claude Code and Gemini CLI documentation content hash drift; no generator changes were required.
+
 ## v4.10.0 — Per-repo session storage outside the repo + drop dead session-context hook (2026-06-17)
 
 Minor release. Session lifecycle hooks stop writing auto-generated files into each project's `.claude/` directory and store them per-repo under `~/.softspark/ai-toolkit/`. The dead `session-context.sh` hook (write-only, no consumer) is removed across all editor generators. Test count: 1197 → 1195.

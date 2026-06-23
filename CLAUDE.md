@@ -6,6 +6,7 @@ Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cli
 ## Claude Code Runtime Rules
 - Claude Code reads `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, settings, and hooks. It does **not** treat `AGENTS.md` as an instruction source.
 - `AGENTS.md` is generated for Codex/OpenCode/Gemini compatibility. Do not move mandatory Claude behavior there.
+- **KB-first is mandatory for technical work:** before answering or acting on a technical/project prompt, call `smart_query()` or `hybrid_search_kb()` and use the result to locate the relevant SOP/reference. Cite the KB path when the result materially informs the answer. If the KB tool is unavailable, state that explicitly and continue from local files.
 - Any rule that must be enforced at a fixed lifecycle point belongs in `app/hooks.json` + `app/hooks/*.sh` with tests. `CLAUDE.md` guidance is context, not enforcement.
 
 ## CRITICAL: Documentation & Count Accuracy

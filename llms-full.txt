@@ -6286,7 +6286,7 @@ ai-toolkit/
     generate_agents_md.py    # Regenerates AGENTS.md
     generate_cursor_rules.py # Generates .cursorrules (sources _common.py)
     generate_windsurf.py     # Generates .windsurfrules (sources _common.py)
-    generate_copilot.py      # Generates .github/copilot-instructions.md (sources _common.py)
+    generate_copilot.py      # Generates Copilot .github/* surfaces; install also injects AGENTS.md
     generate_gemini.py       # Generates GEMINI.md (sources _common.py)
     generate_cline.py        # Generates .clinerules (sources _common.py)
     generate_roo_modes.py    # Generates .roomodes
@@ -6341,7 +6341,7 @@ Machine (global)                              Project (local)
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.devin/rules/*.md` + `.windsurf/rules/*.md` (dual-emit since the Devin Desktop rebrand), `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agents/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md` (universal coding rules inlined — Codex reads only AGENTS.md, not `.agents/rules/`), `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
+Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.devin/rules/*.md` + `.windsurf/rules/*.md` (dual-emit since the Devin Desktop rebrand), `.github/instructions/*.instructions.md` + `.github/prompts/*.prompt.md` + root `AGENTS.md` for Copilot agent instructions, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agents/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md` (universal coding rules inlined — Codex reads only AGENTS.md, not `.agents/rules/`), `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
 
@@ -7181,16 +7181,22 @@ by default because Codex currently renders `additionalContext` as visible hook
 context in the TUI. This keeps prompt-submit output quiet while preserving hook
 side effects and blocking decisions such as search-first Stop enforcement.
 
-Codex `UserPromptSubmit` JSON output is event-specific. When emitting context,
-the hook must include the event name alongside the context:
+Codex hooks must not force Claude-only JSON output fields such as
+`suppressOutput`. In particular, advisory `PostToolUse` hooks like
+`loop-guard.sh` run in quiet/plain mode under Codex; they keep side effects but
+do not emit hidden Claude-style context unless a future Codex runtime explicitly
+supports that schema.
+
+If a future Codex runtime enables JSON context output for `UserPromptSubmit`,
+the output must be event-specific and include the event name alongside the
+context:
 
 ```json
 {
   "hookSpecificOutput": {
     "hookEventName": "UserPromptSubmit",
     "additionalContext": "..."
-  },
-  "suppressOutput": true
+  }
 }
 ```
 
@@ -11891,9 +11897,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.6.0"
+version: "1.7.0"
 created: "2026-04-23"
-last_updated: "2026-06-10"
+last_updated: "2026-06-23"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -11916,7 +11922,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `claude-code` |
 | Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
-| Changelog | https://code.claude.com/docs/en/changelog (lists current 2.1.170) |
+| Changelog | https://code.claude.com/docs/en/changelog (lists current 2.1.186) |
 | Config paths | `~/.claude/settings.json`, `.claude/settings.json` (project, committed), `.claude/settings.local.json`, `CLAUDE.md`, `.claude/rules/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+) |
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
@@ -11967,8 +11973,8 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Release notes | https://github.blog/changelog/label/copilot/ |
 | Config paths | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/prompts/*.prompt.md`, `AGENTS.md` |
 | Our generators | `scripts/generate_copilot.py` |
-| Tracked capabilities | `copilot-instructions.md`, Copilot Chat, Copilot Workspace, Copilot cloud agent, `applyTo`, custom agents, prompt files, `instructions.md`, MCP |
-| Tier notes | Custom agents (`.github/agents/*.agent.md`) and repo-level MCP config are Pro/Pro+/Business/Enterprise only and intentionally not integrated (class C per ecosystem-sync SOP). |
+| Tracked capabilities | `copilot-instructions.md`, Copilot Chat, Copilot Workspace, Copilot cloud agent, `applyTo`, custom agents, prompt files, `instructions.md`, `AGENTS.md`, MCP |
+| Tier notes | Custom agents (`.github/agents/*.agent.md`) and repo-level MCP config are Pro/Pro+/Business/Enterprise only and intentionally not integrated (class C per ecosystem-sync SOP). Copilot code review reads the nearest `AGENTS.md` automatically since the 2026-06-18 GA (all tiers); `ai-toolkit install --local --editors copilot` injects a `TOOLKIT:copilot-agents` section generated from `generate_agents_md.py` without clobbering Codex/opencode sections in the same file. The 4000-char cap on `copilot-instructions.md` / `*.instructions.md` was also removed (2026-06-12). |
 
 ### Gemini CLI
 
@@ -11981,7 +11987,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Our generators | `scripts/generate_gemini.py`, `scripts/generate_gemini_hooks.py` (profile>=standard), `scripts/generate_gemini_commands.py` (profile=full), `scripts/generate_gemini_skills.py` (profile=full) |
 | Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeToolSelection`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `Notification`, `PreCompress`, `SessionStart`, `SessionEnd`, `SKILL.md`, `activate_skill`, custom commands, `gemini-extension.json` (no native `Stop` event — generator maps Stop-equivalent to `AfterAgent`; 11 documented hook events total) |
 | Version probe | `gemini --version` |
-| Latest upstream | v0.45.2 (2026-06-05). NOTE: Gemini CLI drops free/paid tiers 2026-06-18 in favor of Antigravity CLI (we ship `generate_antigravity.py`); enterprise Code Assist keeps Gemini CLI. |
+| Latest upstream | v0.47.0 (2026-06-18). NOTE: Gemini CLI dropped free/paid individual tiers on 2026-06-18 in favor of Antigravity CLI (we ship `generate_antigravity.py`); enterprise Code Assist and paid API keys keep Gemini CLI, so the integration stays. The 11 hook events are unchanged. v0.48 preview migrates the `coreTools` setting to `tools.core` (a tool-allowlist key we do not emit, so no generator change). |
 
 ### Cline
 
@@ -12053,7 +12059,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `codex-cli` |
-| Docs | https://developers.openai.com/codex (live docs site; config pages split into `/codex/config-basic`, `/codex/config-reference`, `/codex/config-advanced` plus `/codex/hooks`, `/codex/skills`; latest stable codex-cli 0.138.0, 2026-06) |
+| Docs | https://developers.openai.com/codex (live docs site; config pages split into `/codex/config-basic`, `/codex/config-reference`, `/codex/config-advanced` plus `/codex/hooks`, `/codex/skills`; latest stable codex-cli 0.142.0, 2026-06) |
 | Release notes | https://github.com/openai/codex/releases |
 | Config paths | `AGENTS.md`, `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `.codex/config.toml` (project layers, root→cwd, closest wins, trusted projects only), `~/.codex/config.toml` |
 | Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
@@ -12075,7 +12081,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Tracked plugin events | `session.created`, `session.compacted`, `session.deleted`, `message.updated`, `tool.execute.before`, `tool.execute.after`, `permission.asked`, `command.executed` |
 | Other capabilities | `opencode.json` config, primary + subagent modes, `@`-mention subagents, `/`-invocation commands, MCP (local + remote), plugin hooks in JS/TS, native `SKILL.md` discovery with Claude-compatible fallback, `permission.skill.*` matrix |
 | Version probe | `opencode --version` |
-| Watch item | v1.16.0 (2026-06-05) ships an experimental v2 skill registry (flat-file skills, `slash` frontmatter key) — undocumented as of 2026-06-09; re-check next sync before touching `generate_opencode*.py`. |
+| Watch item | v1.16.0 (2026-06-05) shipped an experimental v2 skill registry (flat-file skills, `slash` frontmatter key). As of the 2026-06-23 sync (upstream v1.17.9) it is still undocumented and not stabilized: the skills docs show only the nested `SKILL.md` layout with no `slash` key, so `generate_opencode*.py` is unchanged. Re-check next sync. |
 
 ---
 

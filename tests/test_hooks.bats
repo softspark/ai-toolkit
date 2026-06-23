@@ -832,6 +832,15 @@ session_dir_for_cwd() {
     [[ "$output" == *"Loop guard"* ]]
 }
 
+@test "loop-guard: quiet mode does not force JSON output" {
+    P='{"session_id":"loop-quiet","tool_name":"Bash","tool_input":{"command":"git status --short"}}'
+    printf '%s' "$P" | AI_TOOLKIT_HOOK_QUIET=1 bash "$HOOKS_DIR/loop-guard.sh" >/dev/null
+    printf '%s' "$P" | AI_TOOLKIT_HOOK_QUIET=1 bash "$HOOKS_DIR/loop-guard.sh" >/dev/null
+    run bash -c "printf '%s' '$P' | AI_TOOLKIT_HOOK_QUIET=1 bash '$HOOKS_DIR/loop-guard.sh'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
 @test "loop-guard: single command does not warn" {
     run bash -c "printf '%s' '{\"session_id\":\"loop-single\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls -la\"}}' | AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/loop-guard.sh'"
     [ "$status" -eq 0 ]

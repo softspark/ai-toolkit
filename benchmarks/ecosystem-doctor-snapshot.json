@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-06-23T06:35:51Z",
+  "last_run": "2026-06-23T07:06:46Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -66,7 +66,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "f4ae0b994cd5c40f",
+      "docs_hash": "c20e5688ed230a66",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -254,7 +254,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "bc124b36e1f54320",
+      "docs_hash": "c3ba6d09d810f9c3",
       "headings": [
         "Breadcrumbs",
         "Directory actions",

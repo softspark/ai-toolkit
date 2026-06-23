@@ -117,6 +117,19 @@ actual_test_count() {
     echo "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'
 }
 
+@test "package.json excludes local Claude session artifacts from npm pack" {
+    python3 - "$TOOLKIT_DIR/package.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    files = json.load(fh).get("files", [])
+
+assert "!app/**/.claude" in files
+assert "!app/**/.claude/**" in files
+PY
+}
+
 @test "CHANGELOG.md references current package.json version" {
     version=$(python3 -c "import sys,json; d=json.load(open('$TOOLKIT_DIR/package.json')); print(d['version'])")
     grep -q "$version" "$TOOLKIT_DIR/CHANGELOG.md"

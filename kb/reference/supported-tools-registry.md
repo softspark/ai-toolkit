@@ -80,7 +80,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Config paths | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/prompts/*.prompt.md`, `AGENTS.md` |
 | Our generators | `scripts/generate_copilot.py` |
 | Tracked capabilities | `copilot-instructions.md`, Copilot Chat, Copilot Workspace, Copilot cloud agent, `applyTo`, custom agents, prompt files, `instructions.md`, `AGENTS.md`, MCP |
-| Tier notes | Custom agents (`.github/agents/*.agent.md`) and repo-level MCP config are Pro/Pro+/Business/Enterprise only and intentionally not integrated (class C per ecosystem-sync SOP). Copilot code review reads the root `AGENTS.md` automatically since the 2026-06-18 GA (all tiers); we already emit it via `generate_agents_md.py`, so the only change is tracking `AGENTS.md` as a capability marker. The 4000-char cap on `copilot-instructions.md` / `*.instructions.md` was also removed (2026-06-12). |
+| Tier notes | Custom agents (`.github/agents/*.agent.md`) and repo-level MCP config are Pro/Pro+/Business/Enterprise only and intentionally not integrated (class C per ecosystem-sync SOP). Copilot code review reads the nearest `AGENTS.md` automatically since the 2026-06-18 GA (all tiers); `ai-toolkit install --local --editors copilot` injects a `TOOLKIT:copilot-agents` section generated from `generate_agents_md.py` without clobbering Codex/opencode sections in the same file. The 4000-char cap on `copilot-instructions.md` / `*.instructions.md` was also removed (2026-06-12). |
 
 ### Gemini CLI
 

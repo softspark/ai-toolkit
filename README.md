@@ -6,16 +6,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1195%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1198%20passing-success)](tests/)
 
-## What's New in v4.10.0
+## What's New in v4.10.1
 
-v4.10.0 gets auto-generated session files out of your repositories and removes a dead lifecycle hook.
+v4.10.1 fixes editor-governance gaps found in the release audit.
 
-- **Per-repo session storage outside the repo**: `save-session.sh`, `session-end.sh`, `session-start.sh`, and `pre-compact.sh` now keep `session-context.md`, `session-end.md`, checkpoints, and `decisions.md` under `~/.softspark/ai-toolkit/sessions/<repo-key>/` instead of each project's `.claude/` — no more generated files piling up in every repo. Keyed per repo (git root with `/` → `-`) so projects stay isolated.
-- **No silent migration**: the new store starts fresh; pre-existing in-repo `.claude/session-*.md` are left for you to delete.
-- **Dropped the dead `session-context.sh` hook**: it wrote a `${SESSION}.json` environment snapshot nobody ever read (Constitution Art. VI.1). Removed across `app/hooks.json` and all 7 editor hook generators (cursor, windsurf, codex, devin, augment, gemini, opencode).
-- **Test count**: 1197 → 1195.
+- **Copilot local installs now emit root `AGENTS.md`**: `ai-toolkit install --local --editors copilot` writes the generated agent catalog into a `TOOLKIT:copilot-agents` section while preserving existing Codex/opencode sections and user text.
+- **Claude Code KB-first enforcement restored**: `CLAUDE.md` now carries the mandatory `smart_query()` / `hybrid_search_kb()` rule before technical/project answers, instead of relying on generated `AGENTS.md`.
+- **Codex PostToolUse hook output fixed**: `loop-guard.sh` no longer forces Claude-style JSON with `suppressOutput` under quiet Codex hooks.
+- **Release packaging hardened**: local `.claude` session artifacts under `app/` are excluded from `npm pack`, even if they exist in a maintainer checkout.
+- **Docs and ecosystem baseline refreshed**: README, registry, and architecture docs now match the Copilot implementation; ecosystem-doctor snapshot is refreshed for upstream Claude/Gemini docs hash drift.
+- **Test count**: 1195 → 1198.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -104,7 +106,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
 | Windsurf (Devin Desktop) | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.devin/rules/*.md` + `.windsurf/rules/*.md` (legacy) | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | ✅ | global |
-| GitHub Copilot | `.github/copilot-instructions.md` | — | project |
+| GitHub Copilot | `.github/copilot-instructions.md` + `.github/instructions/*` + `.github/prompts/*` + `AGENTS.md` | — | project |
 | Cline | `~/Documents/Cline/Rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
 | Roo Code | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
@@ -148,7 +150,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1195 tests)
+├── tests/               # Bats test suite (1198 tests)
 └── CHANGELOG.md
 ```
 

@@ -54,7 +54,7 @@ ai-toolkit/
     generate_agents_md.py    # Regenerates AGENTS.md
     generate_cursor_rules.py # Generates .cursorrules (sources _common.py)
     generate_windsurf.py     # Generates .windsurfrules (sources _common.py)
-    generate_copilot.py      # Generates .github/copilot-instructions.md (sources _common.py)
+    generate_copilot.py      # Generates Copilot .github/* surfaces; install also injects AGENTS.md
     generate_gemini.py       # Generates GEMINI.md (sources _common.py)
     generate_cline.py        # Generates .clinerules (sources _common.py)
     generate_roo_modes.py    # Generates .roomodes
@@ -109,7 +109,7 @@ Machine (global)                              Project (local)
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.devin/rules/*.md` + `.windsurf/rules/*.md` (dual-emit since the Devin Desktop rebrand), `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agents/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md` (universal coding rules inlined — Codex reads only AGENTS.md, not `.agents/rules/`), `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
+Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.devin/rules/*.md` + `.windsurf/rules/*.md` (dual-emit since the Devin Desktop rebrand), `.github/instructions/*.instructions.md` + `.github/prompts/*.prompt.md` + root `AGENTS.md` for Copilot agent instructions, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agents/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md` (universal coding rules inlined — Codex reads only AGENTS.md, not `.agents/rules/`), `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
 
