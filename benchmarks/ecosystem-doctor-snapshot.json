@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-06-30T16:52:43Z",
+  "last_run": "2026-06-30T20:15:08Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "1140b2d05814d7fd",
+      "docs_hash": "39053760eae00033",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -51,7 +51,7 @@
         "Auggie CLI": true,
         "MCP": true,
         "Next Edit": false,
-        "Notification": true,
+        "Notification": false,
         "PostToolUse": false,
         "PreToolUse": false,
         "SKILL.md": false,
@@ -66,7 +66,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "3101b3cd58375aec",
+      "docs_hash": "9b77a45bf0e7bea9",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -122,10 +122,10 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.196 (Claude Code)"
+      "version": "2.1.197 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "a934200d22b48f17",
+      "docs_hash": "1a2110aaae6a1240",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -243,7 +243,7 @@
       "version": "codex-cli 0.142.0"
     },
     "cursor": {
-      "docs_hash": "d8aed06363805889",
+      "docs_hash": "b964c30bc1d153a7",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -259,7 +259,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "85e8f47e8ef0acda",
+      "docs_hash": "f02461216bcad485",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -302,7 +302,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "df772638c69033d7",
+      "docs_hash": "872a8023bf420409",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -353,7 +353,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "791633f4156abbe8",
+      "docs_hash": "80d1df545a5039b6",
       "headings": [
         "Add features",
         "Ask questions",
@@ -413,7 +413,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "bb6e6119f2c068d6",
+      "docs_hash": "43e82021cba15424",
       "headings": [
         "Accounts",
         "Advanced",
