@@ -54,9 +54,13 @@ teardown() {
     [ ! -L "$TEST_PROJECT/.claude/ARCHITECTURE.md" ]
     grep -q "<!-- TOOLKIT:architecture START -->" "$TEST_PROJECT/.claude/ARCHITECTURE.md"
 
-    # CLAUDE.md with toolkit rules
+    # CLAUDE.md compact global rules index + file-based user rules
     [ -f "$TEST_PROJECT/.claude/CLAUDE.md" ]
-    grep -q "TOOLKIT:" "$TEST_PROJECT/.claude/CLAUDE.md"
+    grep -q "<!-- TOOLKIT:global-rules START -->" "$TEST_PROJECT/.claude/CLAUDE.md"
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-quality-gates.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-claude-toolkit-rules.md" ]
+    grep -q '^# Quality Gates' "$TEST_PROJECT/.claude/rules/ai-toolkit-quality-gates.md"
+    ! grep -q '^# Quality Gates' "$TEST_PROJECT/.claude/CLAUDE.md"
 
     # No legacy commands symlink
     [ ! -L "$TEST_PROJECT/.claude/commands" ]
@@ -129,6 +133,39 @@ SETTINGS
     python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" >/dev/null 2>&1
     grep -q "My custom rules" "$TEST_PROJECT/.claude/constitution.md"
     grep -q "<!-- TOOLKIT:constitution START -->" "$TEST_PROJECT/.claude/constitution.md"
+}
+
+@test "install.py writes registered global rules as Claude user-level rule files" {
+    mkdir -p "$TMP_HOME/.softspark/ai-toolkit/rules" "$TEST_PROJECT/.claude/rules"
+    cat > "$TMP_HOME/.softspark/ai-toolkit/rules/team-standards.md" <<'RULE'
+# Team Standards
+
+Use the team's current release SOP.
+RULE
+    echo "# User Rule" > "$TEST_PROJECT/.claude/rules/team-rule.md"
+    printf '%s\n' \
+        '<!-- TOOLKIT:team-standards START -->' \
+        '# Legacy inline rule' \
+        '<!-- TOOLKIT:team-standards END -->' \
+        > "$TEST_PROJECT/.claude/CLAUDE.md"
+
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-registered-team-standards.md" ]
+    grep -q '^# Team Standards' "$TEST_PROJECT/.claude/rules/ai-toolkit-registered-team-standards.md"
+    [ -f "$TEST_PROJECT/.claude/rules/team-rule.md" ]
+    ! grep -q '<!-- TOOLKIT:team-standards START -->' "$TEST_PROJECT/.claude/CLAUDE.md"
+    grep -q '<!-- TOOLKIT:global-rules START -->' "$TEST_PROJECT/.claude/CLAUDE.md"
+}
+
+@test "install.py --skip rules does not remove existing toolkit rule files" {
+    mkdir -p "$TEST_PROJECT/.claude/rules"
+    printf '# Existing toolkit rule\n' > "$TEST_PROJECT/.claude/rules/ai-toolkit-quality-gates.md"
+
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" --skip rules >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-quality-gates.md" ]
+    [ ! -f "$TEST_PROJECT/.claude/CLAUDE.md" ] || ! grep -q '<!-- TOOLKIT:global-rules START -->' "$TEST_PROJECT/.claude/CLAUDE.md"
 }
 
 @test "install.py upgrades old constitution.md symlink to injection" {

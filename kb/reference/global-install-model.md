@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.0.1"
+version: "3.1.0"
 created: "2026-03-26"
-last_updated: "2026-04-28"
+last_updated: "2026-06-30"
 description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -15,7 +15,7 @@ description: "Reference description of the global install target, project-local 
 
 `ai-toolkit` installs globally into `~/.claude/` by default.
 
-That means one machine-level install provides agents, skills, hooks, and rules to every project without committing toolkit boilerplate into each repository.
+That means one machine-level install provides agents, skills, hooks, constitution, and rule files to every project without committing toolkit boilerplate into each repository.
 
 Other editor targets are opt-in and only use documented file surfaces. Cursor
 rules stay project-local because Cursor's global user rules are managed through
@@ -56,6 +56,19 @@ The `--profile` flag controls how much of each editor's native surface is activa
 `--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full skill catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
 
 ## Global Editor Targets
+
+Claude Code's default global install writes these managed surfaces:
+
+- `~/.claude/agents/*.md` — per-file symlinks to toolkit agents.
+- `~/.claude/skills/*/` — per-directory symlinks to toolkit skills.
+- `~/.claude/settings.json` — merged hook configuration and global settings.
+- `~/.claude/constitution.md` — marker-injected safety constitution.
+- `~/.claude/ARCHITECTURE.md` — marker-injected architecture reference.
+- `~/.claude/rules/ai-toolkit-*.md` — toolkit rules from `app/rules/*.md`.
+- `~/.claude/rules/ai-toolkit-registered-*.md` — rules registered with `ai-toolkit add-rule`.
+- `~/.claude/CLAUDE.md` — compact index pointing at the managed rule files.
+
+The `ai-toolkit-*` prefix in `~/.claude/rules/` is reserved for installer-managed files. User-authored Claude rules should use another filename prefix, or be registered through `ai-toolkit add-rule` so they are emitted as `ai-toolkit-registered-*.md`.
 
 `ai-toolkit install --editors <name>` can write global files only for editors
 with documented, file-based config surfaces:
@@ -102,6 +115,8 @@ These files still stay local to a repository as part of the core install model:
 - `.agents/rules/*.md` and `.agents/workflows/*.md` (Google Antigravity; singular `.agent/` still read as fallback)
 - `.git/hooks/pre-commit` (fallback)
 - project-specific documentation or safety overlays
+
+Project-local Claude Code language rules live in `.claude/rules/ai-toolkit-*.md` with `paths` frontmatter. They are separate from the global user-level `~/.claude/rules/ai-toolkit-*.md` files above.
 
 Hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`.
 

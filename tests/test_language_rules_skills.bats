@@ -2,8 +2,9 @@
 # Tests for the language-rules skills system (Option B).
 #
 # Per-language rules ship as `<lang>-rules` knowledge skills generated from
-# `app/rules/<lang>/*.md`. Common rules are inlined into the project
-# CLAUDE.md by `_inject_language_rules`. This test guards both halves.
+# `app/rules/<lang>/*.md`. Common rules ship as Claude Code path-scoped
+# `.claude/rules/ai-toolkit-*.md` files, with CLAUDE.md kept as a compact
+# index. This test guards both halves.
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 SKILLS_DIR="$TOOLKIT_DIR/app/skills"
@@ -67,7 +68,7 @@ teardown() {
 
 # ── _inject_language_rules behavior ──────────────────────────────────────────
 
-@test "inject_language_rules: inlines common rules content into CLAUDE.md" {
+@test "inject_language_rules: writes common rules as path-scoped Claude rules" {
     cd "$TEST_PROJECT"
     PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
 from pathlib import Path
@@ -75,11 +76,27 @@ from install_steps.ai_tools import _inject_language_rules
 _inject_language_rules(Path('$TEST_PROJECT'), ['rules-common', 'rules-python'])
 "
     [ -f "$TEST_PROJECT/.claude/CLAUDE.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-security.md" ]
     # Marker is the singular language-rules tag (not per-language)
     grep -q '<!-- TOOLKIT:language-rules START -->' "$TEST_PROJECT/.claude/CLAUDE.md"
     grep -q '<!-- TOOLKIT:language-rules END -->' "$TEST_PROJECT/.claude/CLAUDE.md"
-    # Common content is present (sample heading from common/coding-style.md)
-    grep -q '^# Universal Coding Style' "$TEST_PROJECT/.claude/CLAUDE.md"
+    # CLAUDE.md stays a compact index; full common content is in path-scoped rules.
+    ! grep -q '^# Universal Coding Style' "$TEST_PROJECT/.claude/CLAUDE.md"
+    grep -q '^# Universal Coding Style' "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md"
+    grep -q '^paths:$' "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md"
+    grep -q '  - "\*\*/\*"' "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md"
+}
+
+@test "inject_language_rules: keeps CLAUDE.md below Claude Code size guidance" {
+    cd "$TEST_PROJECT"
+    PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import _inject_language_rules
+_inject_language_rules(Path('$TEST_PROJECT'), ['rules-common', 'rules-python', 'rules-typescript'])
+"
+    line_count="$(wc -l < "$TEST_PROJECT/.claude/CLAUDE.md" | tr -d ' ')"
+    [ "$line_count" -lt 200 ]
 }
 
 @test "inject_language_rules: references per-language skills by name, does not inline them" {
@@ -109,4 +126,18 @@ _inject_language_rules(Path('$TEST_PROJECT'), ['rules-common', 'rules-python'])
     done
     count="$(grep -c '<!-- TOOLKIT:language-rules START -->' "$TEST_PROJECT/.claude/CLAUDE.md")"
     [ "$count" -eq 1 ]
+}
+
+@test "inject_language_rules: removes stale managed common rules only" {
+    cd "$TEST_PROJECT"
+    mkdir -p "$TEST_PROJECT/.claude/rules"
+    echo "old" > "$TEST_PROJECT/.claude/rules/ai-toolkit-stale.md"
+    echo "user" > "$TEST_PROJECT/.claude/rules/team-rule.md"
+    PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import _inject_language_rules
+_inject_language_rules(Path('$TEST_PROJECT'), ['rules-common'])
+"
+    [ ! -f "$TEST_PROJECT/.claude/rules/ai-toolkit-stale.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/team-rule.md" ]
 }

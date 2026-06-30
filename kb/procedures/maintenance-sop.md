@@ -87,7 +87,8 @@ What `install` and `update` do (merge-friendly — user content never overwritte
 | `settings.json` hooks | JSON merge via `merge-hooks.py` | User hooks + settings preserved, toolkit entries tagged `_source: ai-toolkit` |
 | `constitution.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
 | `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | Same as above |
-| `CLAUDE.md` | Marker injection of `app/rules/*.md` via `inject_rule_cli.py` | User content outside markers untouched |
+| `CLAUDE.md` | Compact index for managed global rules | User content outside toolkit markers untouched |
+| `rules/ai-toolkit-*.md` | File-based Claude Code user-level rules from `app/rules/*.md` and registered rules | `ai-toolkit-*` prefix reserved for installer-managed files |
 
 Re-running updates only toolkit content. Old whole-directory symlinks are auto-upgraded to per-file on next run.
 
@@ -135,7 +136,7 @@ ai-toolkit add-rule ./my-project-rules.md
 # → copies to ~/.softspark/ai-toolkit/rules/my-project-rules.md
 
 ai-toolkit update
-# → injects the rule into ~/.claude/CLAUDE.md and all global editor configs
+# → syncs the rule into ~/.claude/rules/ai-toolkit-registered-*.md and all global editor configs
 
 ai-toolkit update --local
 # → also propagates as ai-toolkit-custom-<name> to directory-based editors (Cursor, Windsurf, Cline, Roo, Augment, Antigravity)
@@ -430,5 +431,6 @@ What `uninstall` does:
 - Removes per-directory skill symlinks (user skills preserved)
 - Strips toolkit hook entries from `settings.json` (user hooks + settings preserved)
 - Strips toolkit markers from `constitution.md` and `ARCHITECTURE.md` (user content preserved; empty files removed)
-- `~/.claude/CLAUDE.md` preserved (contains your custom rules + toolkit rule markers)
+- `~/.claude/CLAUDE.md` preserved (contains your custom content + compact toolkit index)
+- `~/.claude/rules/` preserved unless explicitly removed
 - Empty `agents/` and `skills/` directories cleaned up

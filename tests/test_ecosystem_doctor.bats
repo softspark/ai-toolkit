@@ -67,6 +67,45 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
+@test "ecosystem_doctor: registry, docs, and generator files stay aligned" {
+    run python3 -c "
+import json, os, pathlib, re
+base = pathlib.Path('$TOOLKIT_DIR')
+data = json.loads((base / 'scripts/ecosystem_tools.json').read_text())
+registry_doc = (base / 'kb/reference/supported-tools-registry.md').read_text()
+meta_generators = {
+    'generate_agents_md.py',
+    'generate_llms_txt.py',
+    'generate_language_rules_skills.py',
+}
+filesystem_generators = {
+    'scripts/' + p.name
+    for p in (base / 'scripts').glob('generate_*.py')
+    if p.name not in meta_generators
+}
+json_generators = {
+    g
+    for tool in data['tools']
+    for g in tool.get('our_generators', [])
+}
+doc_generators = set(re.findall(r'scripts/generate_[a-z_]+\\.py', registry_doc))
+
+assert filesystem_generators == json_generators, (
+    'filesystem/json generator drift: '
+    f'fs_only={sorted(filesystem_generators - json_generators)} '
+    f'json_only={sorted(json_generators - filesystem_generators)}'
+)
+assert doc_generators == json_generators, (
+    'doc/json generator drift: '
+    f'doc_only={sorted(doc_generators - json_generators)} '
+    f'json_only={sorted(json_generators - doc_generators)}'
+)
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
 # ── CLI flags ────────────────────────────────────────────────────────────────
 
 @test "ecosystem_doctor: --tool <unknown> exits 1" {

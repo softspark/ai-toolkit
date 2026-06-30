@@ -10,8 +10,10 @@ This is the proper progressive-disclosure replacement for the v1.3.8 pointer
 block in ``.claude/CLAUDE.md``: instead of nudging Claude to Read absolute
 nvm-pinned paths on demand, the rules ride on the Agent Skills mechanism.
 
-Common rules (``app/rules/common/``) stay inlined in ``CLAUDE.md`` because
-they are language-agnostic and should be visible regardless of context.
+Common rules (``app/rules/common/``) are installed as Claude Code
+path-scoped ``.claude/rules/ai-toolkit-*.md`` files by ``install --local``.
+This keeps ``CLAUDE.md`` below Claude's current size guidance while still
+loading common guidance when project files are opened.
 
 Idempotent: rerunning overwrites generated SKILL.md but leaves any other
 files in the skill directory alone.

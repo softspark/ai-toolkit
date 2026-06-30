@@ -32,7 +32,7 @@ ai-toolkit/
   app/                       # All toolkit components
     agents/                  # Agent definitions (.md + YAML frontmatter)
     skills/                  # skills: task, hybrid, knowledge
-    rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
+    rules/                   # Source rules synced into Claude/editor rule files
     hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
     constitution.md          # Immutable safety rules, 7 articles (marker-injected)
@@ -85,8 +85,9 @@ Machine (global)                              Project (local)
   skills/*/      → per-dir symlinks              hooks/     ← hook scripts (copied)
   settings.json  ← hooks merged here
   constitution.md ← marker injection            my-project/
-  ARCHITECTURE.md ← marker injection              CLAUDE.md            ← project rules
-  CLAUDE.md       ← marker injection (rules)      .claude/
+  ARCHITECTURE.md ← marker injection              CLAUDE.md            ← project index
+  CLAUDE.md       ← compact rule index            .claude/
+  rules/*.md      ← Claude user-level rules
                                                     settings.local.json  ← MCP, perms
                                                     constitution.md     ← marker injection
 ```
@@ -123,7 +124,7 @@ If a project already has `.mcp.json`, local install mirrors its `mcpServers` ent
 | `update --local` | `./` | Re-apply + refresh project-local configs |
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
 | `add-rule <file>` | `~/.softspark/ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
-| `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/CLAUDE.md` | Unregister rule and remove its block |
+| `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/rules/` | Unregister rule and remove generated Claude rule file |
 | `mcp add <name...>` | `./.mcp.json` | Merge canonical MCP template(s) into project config |
 | `mcp install --editor <name...>` | native editor config | Render MCP template(s) into editor-native config files |
 | `validate` | toolkit | Integrity check |

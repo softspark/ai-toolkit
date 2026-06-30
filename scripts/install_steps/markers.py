@@ -1,9 +1,21 @@
-"""Marker file injection and rule injection."""
+"""Marker file injection and rule installation."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
-from _common import app_dir, inject_rule, inject_section, should_install
+from _common import (
+    app_dir,
+    inject_section,
+    remove_rule_section,
+    should_install,
+    _collapse_blank_runs,
+    _strip_section,
+    _trim_trailing_blanks,
+)
+
+
+GLOBAL_RULES_SECTION = "global-rules"
 
 
 def install_marker_files(claude_dir: Path, only: str, skip: str,
@@ -34,7 +46,7 @@ def install_marker_files(claude_dir: Path, only: str, skip: str,
 def inject_rules(claude_dir: Path, target_dir: Path, rules_dir: Path,
                  only: str, skip: str, dry_run: bool,
                  refresh_urls: bool = False) -> None:
-    """Inject rules into CLAUDE.md.
+    """Install Claude Code user-level rules.
 
     When refresh_urls is True, re-fetches URL-sourced rules before injection.
     Only the global install path should set this to True (once per update).
@@ -53,26 +65,131 @@ def inject_rules(claude_dir: Path, target_dir: Path, rules_dir: Path,
         claude_md.touch()
         print("  Created: ~/.claude/CLAUDE.md")
 
-    if not should_install("rules", only, skip):
-        print("  Skipped: rules injection")
+    install_toolkit_rules = should_install("rules", only, skip)
+    if not install_toolkit_rules:
+        print("  Skipped: toolkit rule files")
 
-    rules_injected: list[str] = []
+    expected: set[str] = set()
+    rules_synced: list[str] = []
 
     if rules_dir.is_dir():
         for rule_file in sorted(rules_dir.glob("*.md")):
             rule_name = rule_file.stem
-            inject_rule(rule_file, target_dir)
-            rules_injected.append(rule_name)
+            output_name = f"ai-toolkit-registered-{_safe_rule_name(rule_name)}"
+            _write_claude_rule_file(claude_dir, rule_file, output_name)
+            _remove_legacy_rule_marker(target_dir, rule_name)
+            expected.add(output_name)
+            rules_synced.append(rule_name)
 
-    if should_install("rules", only, skip):
+    if install_toolkit_rules:
         rules_src = app_dir / "rules"
         if rules_src.is_dir():
             for source_file in sorted(rules_src.glob("*.md")):
                 rule_name = source_file.stem
-                inject_rule(source_file, target_dir)
-                rules_injected.append(rule_name)
+                output_name = f"ai-toolkit-{_safe_rule_name(rule_name)}"
+                _write_claude_rule_file(claude_dir, source_file, output_name)
+                _remove_legacy_rule_marker(target_dir, rule_name)
+                expected.add(output_name)
+                rules_synced.append(rule_name)
 
-    print(f"  Rules injected: {' '.join(rules_injected)}")
+    if not install_toolkit_rules and not rules_synced:
+        return
+
+    removed = _cleanup_managed_claude_rules(
+        claude_dir,
+        expected,
+        cleanup_toolkit_rules=install_toolkit_rules,
+    )
+    _inject_global_rules_index(claude_md, sorted(expected), rules_synced)
+
+    print(f"  Rules synced: {' '.join(rules_synced)}")
+    if removed:
+        print(f"  Cleaned: {removed} stale .claude/rules/ai-toolkit-*.md file(s)")
+
+
+def _safe_rule_name(name: str) -> str:
+    """Return a Claude-safe filename/marker stem."""
+    return re.sub(r"[^a-zA-Z0-9_-]", "", name)
+
+
+def _write_claude_rule_file(
+    claude_dir: Path,
+    source_file: Path,
+    output_name: str,
+) -> None:
+    """Write a managed user-level rule under ``~/.claude/rules``."""
+    rules_root = claude_dir / "rules"
+    rules_root.mkdir(parents=True, exist_ok=True)
+    dst = rules_root / f"{output_name}.md"
+    content = source_file.read_text(encoding="utf-8").rstrip() + "\n"
+    dst.write_text(content, encoding="utf-8")
+
+
+def _remove_legacy_rule_marker(target_dir: Path, rule_name: str) -> None:
+    """Remove old CLAUDE.md marker sections for rules now stored as files."""
+    remove_rule_section(_safe_rule_name(rule_name), target_dir)
+
+
+def _cleanup_managed_claude_rules(
+    claude_dir: Path,
+    expected: set[str],
+    *,
+    cleanup_toolkit_rules: bool,
+) -> int:
+    """Remove stale ai-toolkit-managed user-level rule files only."""
+    rules_root = claude_dir / "rules"
+    if not rules_root.is_dir():
+        return 0
+
+    removed = 0
+    for path in sorted(rules_root.glob("ai-toolkit-*.md")):
+        if path.stem in expected:
+            continue
+        if not cleanup_toolkit_rules and not path.stem.startswith("ai-toolkit-registered-"):
+            continue
+        path.unlink()
+        removed += 1
+    return removed
+
+
+def _inject_global_rules_index(
+    claude_md: Path,
+    managed_rule_names: list[str],
+    display_names: list[str],
+) -> None:
+    """Keep CLAUDE.md as a compact pointer to user-level rule files."""
+    existing = claude_md.read_text(encoding="utf-8") if claude_md.is_file() else ""
+    existing = _trim_trailing_blanks(_strip_section(existing, GLOBAL_RULES_SECTION))
+
+    lines = [
+        "# Global ai-toolkit Rules",
+        "",
+        "ai-toolkit rules live in `~/.claude/rules/ai-toolkit-*.md` as Claude Code user-level rules.",
+        "They are intentionally not inlined into this `CLAUDE.md`; use `/memory` to inspect loaded rule files.",
+    ]
+    if display_names:
+        names = ", ".join(f"`{name}`" for name in display_names)
+        lines.extend(["", f"Rules: {names}"])
+    if managed_rule_names:
+        files = ", ".join(f"`~/.claude/rules/{name}.md`" for name in managed_rule_names)
+        lines.extend(["", f"Files: {files}"])
+
+    parts: list[str] = []
+    if existing.strip():
+        parts.append(existing)
+        parts.append("")
+    parts.extend([
+        f"<!-- TOOLKIT:{GLOBAL_RULES_SECTION} START -->",
+        "<!-- Auto-injected by ai-toolkit. Re-run to update. -->",
+        "",
+        "\n".join(lines),
+        "",
+        f"<!-- TOOLKIT:{GLOBAL_RULES_SECTION} END -->",
+    ])
+
+    output = _collapse_blank_runs("\n".join(parts) + "\n").lstrip("\n")
+    claude_md.parent.mkdir(parents=True, exist_ok=True)
+    claude_md.write_text(output, encoding="utf-8")
 
 
 def _refresh_url_rules(rules_dir: Path) -> None:
@@ -186,9 +303,10 @@ def _inject_rules_dry_run(rules_dir: Path) -> None:
     rule_names = " ".join(
         f.stem for f in sorted(rules_src.glob("*.md"))
     ) if rules_src.is_dir() else ""
-    print(f"  Would inject rules: {rule_names}")
+    print(f"  Would generate: ~/.claude/rules/ai-toolkit-*.md ({rule_names})")
     if rules_dir.is_dir():
         registered = list(rules_dir.glob("*.md"))
         if registered:
             reg_names = " ".join(f.stem for f in sorted(registered))
-            print(f"  Would inject registered rules: {reg_names}")
+            print(f"  Would generate: ~/.claude/rules/ai-toolkit-registered-*.md ({reg_names})")
+    print("  Would update: ~/.claude/CLAUDE.md global rules index")

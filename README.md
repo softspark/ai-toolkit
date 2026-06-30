@@ -6,18 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1198%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1203%20passing-success)](tests/)
 
-## What's New in v4.10.1
+## What's New in v4.11.0
 
-v4.10.1 fixes editor-governance gaps found in the release audit.
+v4.11.0 reduces Claude Code startup/global rule pressure and refreshes the editor registry.
 
-- **Copilot local installs now emit root `AGENTS.md`**: `ai-toolkit install --local --editors copilot` writes the generated agent catalog into a `TOOLKIT:copilot-agents` section while preserving existing Codex/opencode sections and user text.
-- **Claude Code KB-first enforcement restored**: `CLAUDE.md` now carries the mandatory `smart_query()` / `hybrid_search_kb()` rule before technical/project answers, instead of relying on generated `AGENTS.md`.
-- **Codex PostToolUse hook output fixed**: `loop-guard.sh` no longer forces Claude-style JSON with `suppressOutput` under quiet Codex hooks.
-- **Release packaging hardened**: local `.claude` session artifacts under `app/` are excluded from `npm pack`, even if they exist in a maintainer checkout.
-- **Docs and ecosystem baseline refreshed**: README, registry, and architecture docs now match the Copilot implementation; ecosystem-doctor snapshot is refreshed for upstream Claude/Gemini docs hash drift.
-- **Test count**: 1195 → 1198.
+- **Claude rules-space fix**: global `ai-toolkit install/update` now writes toolkit and registered rules to `~/.claude/rules/ai-toolkit-*.md`, while `install --local` writes common project rules to `.claude/rules/ai-toolkit-*.md` with Claude Code `paths` frontmatter.
+- **Language/global rules docs refreshed**: the KB now documents the split between Claude global user rules, project rules, language-rule skills, and other editors' native rule files.
+- **Gemini registry parity restored**: `scripts/ecosystem_tools.json` now lists the Gemini hooks, commands, and skills generators already used by installer profiles.
+- **Ecosystem snapshot refreshed**: the doctor baseline is updated after class A/C upstream documentation drift review.
+- **Test count**: 1198 → 1203.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -102,7 +101,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 
 | Platform | Config Files | Hooks | Scope |
 |----------|-------------|:-----:|-------|
-| Claude Code | `~/.claude/` | ✅ | global |
+| Claude Code | `~/.claude/agents`, `~/.claude/skills`, `~/.claude/rules/*.md`, `~/.claude/settings.json` | ✅ | global |
 | Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
 | Windsurf (Devin Desktop) | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.devin/rules/*.md` + `.windsurf/rules/*.md` (legacy) | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | ✅ | global |
@@ -130,7 +129,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `hooks/` | 29 entries / 14 events | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
 | `constitution.md` | 7 articles | Machine-enforced safety rules |
-| `rules/` | auto-injected | Language-specific and custom rules injected into your configs |
+| `rules/` | auto-synced | Global/project rule files for Claude and other editors |
 | `kb/` | reference docs | Architecture, procedures, and best practices |
 
 ---
@@ -142,7 +141,7 @@ ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
 │   ├── skills/          # 108 skills (task / hybrid / knowledge)
-│   ├── rules/           # Auto-injected into your CLAUDE.md
+│   ├── rules/           # Source rules synced into Claude/editor rule files
 │   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
@@ -150,7 +149,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1198 tests)
+├── tests/               # Bats test suite (1203 tests)
 └── CHANGELOG.md
 ```
 

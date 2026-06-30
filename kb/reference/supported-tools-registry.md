@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.7.0"
+version: "1.7.1"
 created: "2026-04-23"
-last_updated: "2026-06-23"
+last_updated: "2026-06-30"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 

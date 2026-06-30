@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.11.0 — Claude rules-space fix + editor registry parity (2026-06-30)
+
+Minor release. Reduces Claude Code startup context pressure by moving ai-toolkit rules out of global/project `CLAUDE.md` inline blocks and into Claude Code rule files. Also finishes the editor registry sync by recording all Gemini generators in the canonical ecosystem registry. Test count: 1198 → 1203.
+
+### Changed
+- **Claude Code global rules now use `~/.claude/rules/ai-toolkit-*.md`.** `ai-toolkit install/update` writes toolkit rules from `app/rules/*.md` and registered rules from `~/.softspark/ai-toolkit/rules/*.md` into Claude Code user-level rule files, keeps `~/.claude/CLAUDE.md` as a compact index, and removes legacy inline rule markers during migration. The `ai-toolkit-*` prefix is installer-managed.
+- **Claude Code common rules now use `.claude/rules/ai-toolkit-*.md`.** `install --local` writes `ai-toolkit-coding-style.md`, `ai-toolkit-git-workflow.md`, `ai-toolkit-performance.md`, `ai-toolkit-security.md`, and `ai-toolkit-testing.md` under `.claude/rules/` with `paths: ["**/*"]` frontmatter, while `.claude/CLAUDE.md` stays a compact index. This follows Claude Code's current guidance to keep `CLAUDE.md` concise and move larger instruction sets into scoped rules.
+- **Language rules reference updated.** `kb/reference/language-rules.md` now documents the Claude-specific split: common rules as project-local Claude rules, per-language rules as knowledge skills, and other editors still receiving native rule files from their generators.
+- **Ecosystem registry reflects Gemini native surfaces.** `scripts/ecosystem_tools.json` now includes `generate_gemini_hooks.py`, `generate_gemini_commands.py`, and `generate_gemini_skills.py` alongside `generate_gemini.py`, matching the installer and supported-tools registry.
+- **Ecosystem doctor baseline refreshed.** Snapshot updated after class A/C upstream documentation drift review; no additional generator contract changes were required.
+
+### Fixed
+- **Claude rules-space regression.** Global Claude installs no longer inline toolkit/registered rules into `~/.claude/CLAUDE.md`, and project-local Claude installs no longer inflate `.claude/CLAUDE.md` with the full common-rule corpus. Regression tests now assert compact CLAUDE.md indexes, generated rule files, legacy marker cleanup, and managed `.claude/rules/ai-toolkit-*.md` refresh behavior.
+
 ## v4.10.1 — Copilot AGENTS.md install + Claude KB-first rule (2026-06-23)
 
 Patch release. Fixes two governance regressions found in the editor-update audit: Copilot installs now emit the root `AGENTS.md` surface documented in the registry, and Claude Code receives the KB-first rule in `CLAUDE.md`, which it actually reads. Test count: 1195 → 1198.

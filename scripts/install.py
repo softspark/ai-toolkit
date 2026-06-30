@@ -9,7 +9,7 @@ Claude Code (~/.claude/):
   - Per-file symlinks: agents/*.md, skills/*/  (merges with user files)
   - Merged JSON: hooks.json (toolkit entries tagged with _source)
   - Marker injection: constitution.md, ARCHITECTURE.md (preserves user content)
-  - Rules injected into ~/.claude/CLAUDE.md
+  - User-level rules: rules/ai-toolkit-*.md plus compact CLAUDE.md index
 
 Other tools (global config locations):
   - Windsurf: ~/.codeium/windsurf/memories/global_rules.md + ~/.codeium/windsurf/skills/
@@ -21,7 +21,7 @@ Other tools (global config locations):
   - Codex:    ~/AGENTS.md, ~/.agents/, ~/.codex/hooks.json
   - opencode: ~/.config/opencode/
 
-Registered rules (~/.softspark/ai-toolkit/rules/*.md) are also injected into
+Registered rules (~/.softspark/ai-toolkit/rules/*.md) are also synced into
 all of the above. Add rules with: ai-toolkit add-rule <rule.md>
 
 Usage:
@@ -412,7 +412,7 @@ def print_summary(local: bool = False) -> None:
     else:
         print()
         print("Next steps:")
-        print("  1. Edit ~/.claude/CLAUDE.md -- add your global rules above the toolkit sections")
+        print("  1. Add hand-written global rules under ~/.claude/rules/ (avoid ai-toolkit-* prefix)")
         print("  2. Per project: ai-toolkit install --local --editors all")
         print("  3. To update: npm install -g @softspark/ai-toolkit@latest && ai-toolkit update")
         print("  4. To register rules from other tools: ai-toolkit add-rule <rule.md>")

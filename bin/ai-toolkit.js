@@ -66,7 +66,7 @@ const COMMANDS = {
   reset: 'Wipe and recreate project-local configs from scratch (requires --local)',
   uninstall: 'Remove ai-toolkit from ~/.claude/',
   'add-rule': 'Register a rule file or URL in ~/.softspark/ai-toolkit/rules/ (URL rules auto-refresh on update)',
-  'remove-rule': 'Unregister a rule from ~/.softspark/ai-toolkit/rules/ and remove its block from CLAUDE.md',
+  'remove-rule': 'Unregister a rule and remove its generated Claude rule file',
   'inject-hook': 'Inject external hooks (file or URL) into ~/.claude/settings.json (URL hooks auto-refresh on update)',
   'remove-hook': 'Remove injected hooks by source name from ~/.claude/settings.json (also unregisters URL source)',
   'inject-mcp': 'Inject external MCP template (file or URL) into ~/.mcp.json + all editor MCP configs (URL templates auto-refresh on update)',

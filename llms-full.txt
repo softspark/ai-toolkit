@@ -4586,7 +4586,8 @@ What `install` and `update` do (merge-friendly — user content never overwritte
 | `settings.json` hooks | JSON merge via `merge-hooks.py` | User hooks + settings preserved, toolkit entries tagged `_source: ai-toolkit` |
 | `constitution.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
 | `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | Same as above |
-| `CLAUDE.md` | Marker injection of `app/rules/*.md` via `inject_rule_cli.py` | User content outside markers untouched |
+| `CLAUDE.md` | Compact index for managed global rules | User content outside toolkit markers untouched |
+| `rules/ai-toolkit-*.md` | File-based Claude Code user-level rules from `app/rules/*.md` and registered rules | `ai-toolkit-*` prefix reserved for installer-managed files |
 
 Re-running updates only toolkit content. Old whole-directory symlinks are auto-upgraded to per-file on next run.
 
@@ -4634,7 +4635,7 @@ ai-toolkit add-rule ./my-project-rules.md
 # → copies to ~/.softspark/ai-toolkit/rules/my-project-rules.md
 
 ai-toolkit update
-# → injects the rule into ~/.claude/CLAUDE.md and all global editor configs
+# → syncs the rule into ~/.claude/rules/ai-toolkit-registered-*.md and all global editor configs
 
 ai-toolkit update --local
 # → also propagates as ai-toolkit-custom-<name> to directory-based editors (Cursor, Windsurf, Cline, Roo, Augment, Antigravity)
@@ -4929,7 +4930,8 @@ What `uninstall` does:
 - Removes per-directory skill symlinks (user skills preserved)
 - Strips toolkit hook entries from `settings.json` (user hooks + settings preserved)
 - Strips toolkit markers from `constitution.md` and `ARCHITECTURE.md` (user content preserved; empty files removed)
-- `~/.claude/CLAUDE.md` preserved (contains your custom rules + toolkit rule markers)
+- `~/.claude/CLAUDE.md` preserved (contains your custom content + compact toolkit index)
+- `~/.claude/rules/` preserved unless explicitly removed
 - Empty `agents/` and `skills/` directories cleaned up
 
 ---
@@ -6264,7 +6266,7 @@ ai-toolkit/
   app/                       # All toolkit components
     agents/                  # Agent definitions (.md + YAML frontmatter)
     skills/                  # skills: task, hybrid, knowledge
-    rules/                   # Rules auto-injected into ~/.claude/CLAUDE.md
+    rules/                   # Source rules synced into Claude/editor rule files
     hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
     constitution.md          # Immutable safety rules, 7 articles (marker-injected)
@@ -6317,8 +6319,9 @@ Machine (global)                              Project (local)
   skills/*/      → per-dir symlinks              hooks/     ← hook scripts (copied)
   settings.json  ← hooks merged here
   constitution.md ← marker injection            my-project/
-  ARCHITECTURE.md ← marker injection              CLAUDE.md            ← project rules
-  CLAUDE.md       ← marker injection (rules)      .claude/
+  ARCHITECTURE.md ← marker injection              CLAUDE.md            ← project index
+  CLAUDE.md       ← compact rule index            .claude/
+  rules/*.md      ← Claude user-level rules
                                                     settings.local.json  ← MCP, perms
                                                     constitution.md     ← marker injection
 ```
@@ -6355,7 +6358,7 @@ If a project already has `.mcp.json`, local install mirrors its `mcpServers` ent
 | `update --local` | `./` | Re-apply + refresh project-local configs |
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
 | `add-rule <file>` | `~/.softspark/ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
-| `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/CLAUDE.md` | Unregister rule and remove its block |
+| `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/rules/` | Unregister rule and remove generated Claude rule file |
 | `mcp add <name...>` | `./.mcp.json` | Merge canonical MCP template(s) into project config |
 | `mcp install --editor <name...>` | native editor config | Render MCP template(s) into editor-native config files |
 | `validate` | toolkit | Integrity check |
@@ -8385,19 +8388,19 @@ This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP serv
 
 | Command | Target File | Mechanism | Idempotent |
 |---------|-------------|-----------|------------|
-| `inject-rule <file.md>` | `~/.claude/CLAUDE.md` | HTML comment markers (`<!-- TOOLKIT:name -->`) | Yes |
-| `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers by block name | Yes |
+| `inject-rule <file.md>` | `~/.claude/CLAUDE.md` | Legacy HTML comment markers (`<!-- TOOLKIT:name -->`) | Yes |
+| `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/rules/` | Unregister and remove generated Claude rule file | Yes |
 | `inject-hook <file.json\|url> [name]` | `~/.claude/settings.json` | JSON `_source` tag per entry, URL cached + registered | Yes |
 | `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source`, unregister URL source | Yes |
 | `inject-mcp <file.json\|url> [name] [--force]` | `~/.mcp.json` + every editor with `global_path` | JSON `_source` tag per server, URL cached + registered, full editor propagation | Yes |
 | `remove-mcp <name>` | `~/.mcp.json` + every editor with `global_path` | Strip all servers with matching `_source`, clean editor configs, unregister URL | Yes |
-| `add-rule <file.md\|url>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
+| `add-rule <file.md\|url>` | `~/.softspark/ai-toolkit/rules/` | File copy + sync to `~/.claude/rules/ai-toolkit-registered-*.md` on next `update` | Yes |
 | `mcp add <name...>` | `.mcp.json` | Merge `mcpServers` block from built-in template | Yes |
 | `mcp install --editor <name...>` | Native editor MCP config | Render canonical template into editor format | Yes |
 
 ## inject-rule
 
-Injects a Markdown rules file into `~/.claude/CLAUDE.md` between named HTML comment markers.
+Legacy direct injection: injects a Markdown rules file into `~/.claude/CLAUDE.md` between named HTML comment markers. Prefer `add-rule` for persistent global rules; `ai-toolkit update` syncs those into Claude Code user-level rule files under `~/.claude/rules/`.
 
 ```bash
 npx @softspark/ai-toolkit inject-rule ./my-tool-rules.md
@@ -8416,7 +8419,7 @@ The block name is derived from the file stem (`my-tool-rules.md` → `my-tool-ru
 
 ## remove-rule
 
-Strips a previously injected rule block from `~/.claude/CLAUDE.md`.
+Unregisters a persistent rule, removes `~/.claude/rules/ai-toolkit-registered-<name>.md`, and strips any legacy injected rule block from `~/.claude/CLAUDE.md`.
 
 ```bash
 npx @softspark/ai-toolkit remove-rule my-tool-rules
@@ -8641,9 +8644,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.0.1"
+version: "3.1.0"
 created: "2026-03-26"
-last_updated: "2026-04-28"
+last_updated: "2026-06-30"
 description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -8653,7 +8656,7 @@ description: "Reference description of the global install target, project-local 
 
 `ai-toolkit` installs globally into `~/.claude/` by default.
 
-That means one machine-level install provides agents, skills, hooks, and rules to every project without committing toolkit boilerplate into each repository.
+That means one machine-level install provides agents, skills, hooks, constitution, and rule files to every project without committing toolkit boilerplate into each repository.
 
 Other editor targets are opt-in and only use documented file surfaces. Cursor
 rules stay project-local because Cursor's global user rules are managed through
@@ -8694,6 +8697,19 @@ The `--profile` flag controls how much of each editor's native surface is activa
 `--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full skill catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
 
 ## Global Editor Targets
+
+Claude Code's default global install writes these managed surfaces:
+
+- `~/.claude/agents/*.md` — per-file symlinks to toolkit agents.
+- `~/.claude/skills/*/` — per-directory symlinks to toolkit skills.
+- `~/.claude/settings.json` — merged hook configuration and global settings.
+- `~/.claude/constitution.md` — marker-injected safety constitution.
+- `~/.claude/ARCHITECTURE.md` — marker-injected architecture reference.
+- `~/.claude/rules/ai-toolkit-*.md` — toolkit rules from `app/rules/*.md`.
+- `~/.claude/rules/ai-toolkit-registered-*.md` — rules registered with `ai-toolkit add-rule`.
+- `~/.claude/CLAUDE.md` — compact index pointing at the managed rule files.
+
+The `ai-toolkit-*` prefix in `~/.claude/rules/` is reserved for installer-managed files. User-authored Claude rules should use another filename prefix, or be registered through `ai-toolkit add-rule` so they are emitted as `ai-toolkit-registered-*.md`.
 
 `ai-toolkit install --editors <name>` can write global files only for editors
 with documented, file-based config surfaces:
@@ -8740,6 +8756,8 @@ These files still stay local to a repository as part of the core install model:
 - `.agents/rules/*.md` and `.agents/workflows/*.md` (Google Antigravity; singular `.agent/` still read as fallback)
 - `.git/hooks/pre-commit` (fallback)
 - project-specific documentation or safety overlays
+
+Project-local Claude Code language rules live in `.claude/rules/ai-toolkit-*.md` with `paths` frontmatter. They are separate from the global user-level `~/.claude/rules/ai-toolkit-*.md` files above.
 
 Hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`.
 
@@ -9622,15 +9640,15 @@ title: "AI Toolkit - External Integrations"
 category: reference
 service: ai-toolkit
 tags: [integrations, rules, add-rule]
-version: "1.0.5"
+version: "1.1.0"
 created: "2026-03-26"
-last_updated: "2026-03-26"
-description: "How external repos inject rules into ~/.claude/CLAUDE.md via ai-toolkit"
+last_updated: "2026-06-30"
+description: "How external repos register rules that ai-toolkit syncs into Claude Code user-level rules and other editor configs."
 ---
 
 # External Integrations
 
-Repos that register rules with ai-toolkit so they are automatically injected into `~/.claude/CLAUDE.md` on every `update`.
+Repos that register rules with ai-toolkit so they are automatically synced into Claude Code user-level rules and other editor configs on every `update`.
 
 ---
 
@@ -9644,9 +9662,11 @@ ai-toolkit add-rule ./jira-rules.md
 ai-toolkit update   # inject now
 ```
 
-After registration, `ai-toolkit update` will always re-inject the rule. Registry location: `~/.softspark/ai-toolkit/rules/`.
+After registration, `ai-toolkit update` will always re-sync the rule. Registry location: `~/.softspark/ai-toolkit/rules/`.
 
-To unregister a rule (removes from `~/.softspark/ai-toolkit/rules/` and strips the block from `CLAUDE.md`):
+For Claude Code, registered rules are written to `~/.claude/rules/ai-toolkit-registered-<name>.md`. The `ai-toolkit-*` prefix in `~/.claude/rules/` is installer-managed; use another prefix for hand-written Claude rules.
+
+To unregister a rule (removes from `~/.softspark/ai-toolkit/rules/`, deletes the generated Claude rule file, and strips any legacy block from `CLAUDE.md`):
 
 ```bash
 ai-toolkit remove-rule jira-rules
@@ -9656,17 +9676,13 @@ ai-toolkit remove-rule jira-rules
 
 ## How It Works
 
-Both mechanisms use marker-based idempotent injection. Rule name = filename without `.md`.
+Claude Code uses file-based user-level rules:
 
 ```
-<!-- TOOLKIT:jira-rules START -->
-
-...rule content...
-
-<!-- TOOLKIT:jira-rules END -->
+~/.claude/rules/ai-toolkit-registered-jira-rules.md
 ```
 
-Content outside markers is never touched. Re-running updates only the marked block.
+Other editors receive the same registered rule through their native generated rule surfaces. Legacy `CLAUDE.md` marker sections are removed during migration, but content outside toolkit-managed markers is never touched.
 
 ---
 
@@ -9675,8 +9691,9 @@ Content outside markers is never touched. Re-running updates only the marked blo
 1. Create `<name>-rules.md` in your repo with Claude-relevant conventions
 2. Register it: `ai-toolkit add-rule ./<name>-rules.md`
 3. Verify it appears in: `~/.softspark/ai-toolkit/rules/<name>-rules.md`
-4. On next `install` it will be listed in: `Rules injected: ... <name>-rules`
-5. Add an entry below documenting the integration
+4. On next `install` it will be listed in: `Rules synced: ... <name>-rules`
+5. Verify Claude receives it at: `~/.claude/rules/ai-toolkit-registered-<name>-rules.md`
+6. Add an entry below documenting the integration
 
 ---
 
@@ -9685,7 +9702,7 @@ Content outside markers is never touched. Re-running updates only the marked blo
 ### rag-mcp
 
 **Rule file:** `rag-mcp.md`
-**Marker:** `TOOLKIT:rag-mcp`
+**Claude rule file:** `~/.claude/rules/ai-toolkit-registered-rag-mcp.md`
 
 Teaches Claude Code the RAG-MCP search protocol: always call `smart_query()` before answering, `kb_id` vs `file_path` distinction, available MCP tools.
 
@@ -9697,7 +9714,7 @@ ai-toolkit add-rule ./rag-mcp-rules.md
 ### jira-mcp
 
 **Rule file:** `jira-rules.md`
-**Marker:** `TOOLKIT:jira-rules`
+**Claude rule file:** `~/.claude/rules/ai-toolkit-registered-jira-rules.md`
 
 Teaches Claude Code the Jira MCP tool set: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `log_task_time`, and key rules (sync first, hours only, check transitions).
 
@@ -9772,10 +9789,10 @@ title: "Language Rules System"
 category: reference
 service: ai-toolkit
 tags: [rules, languages, coding-style, testing, patterns, security]
-version: "2.0.0"
+version: "2.1.0"
 created: "2026-04-07"
-last_updated: "2026-04-28"
-description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus a common set inlined into CLAUDE.md."
+last_updated: "2026-06-30"
+description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus common rules installed as Claude Code path-scoped project rules."
 ---
 
 # Language Rules System
@@ -9784,7 +9801,7 @@ description: "Reference for the language-specific rules system: 13 per-language 
 
 ai-toolkit ships rule content for 13 languages/platforms plus a language-agnostic common set. Source files live under `app/rules/` and are split into two delivery channels by `ai-toolkit install --local`:
 
-- **Common rules** (`app/rules/common/*.md`): full content is inlined into the project's `.claude/CLAUDE.md` under a single `<!-- TOOLKIT:language-rules START -->` marker. They cover coding-style, git-workflow, performance, security, and testing — concerns that apply regardless of language, so they stay always visible.
+- **Common rules** (`app/rules/common/*.md`): full content is written to `.claude/rules/ai-toolkit-*.md` with Claude Code `paths` frontmatter. The project's `.claude/CLAUDE.md` keeps only a compact `<!-- TOOLKIT:language-rules START -->` index. This follows Claude Code's current guidance to keep `CLAUDE.md` concise and move larger instruction sets into scoped rules.
 - **Per-language rules** (`app/rules/<lang>/*.md`): emitted at build time as `<lang>-rules` knowledge skills under `app/skills/`. Each skill is `user-invocable: false`, so Claude loads it via the Agent Skills progressive-disclosure mechanism only when its description triggers match (file extensions, framework names, or matching keywords in the prompt).
 
 The skills are generated from the rule files via `python3 scripts/generate_language_rules_skills.py`, which is idempotent and rerun-safe. Other editors (Cursor, Windsurf, Cline, Roo, Augment, Codex, Copilot, Antigravity, Gemini, opencode) still receive the full per-language rule content via their own generators in `scripts/dir_rules_shared.py::build_language_rules()` — Claude is the only target where the per-language content is now skill-delivered rather than inlined.
@@ -9824,7 +9841,7 @@ app/rules/
 └── medplum/
 ```
 
-**Total: 13 per-language directories × 5 files + 1 common directory × 5 files + 3 standalone files** (see README.md for canonical count). Per-language directories ship as `<lang>-rules` knowledge skills; the common directory is inlined into CLAUDE.md.
+**Total: 13 per-language directories × 5 files + 1 common directory × 5 files + 3 standalone files** (see README.md for canonical count). Per-language directories ship as `<lang>-rules` knowledge skills; the common directory is installed as Claude Code `.claude/rules/ai-toolkit-*.md` files.
 
 ## Supported Languages
 
@@ -9909,26 +9926,47 @@ ai-toolkit install --local --modules core,agents
 
 The `--lang` flag accepts comma-separated language names and converts them to `rules-<lang>` modules. Common aliases are supported: `go` → `golang`, `c++` → `cpp`, `c#`/`cs` → `csharp`. Using `--lang` implies `--local` and disables auto-detection.
 
-Common rules are injected into the project `CLAUDE.md` between a single named marker (the per-language markers from v1.x are no longer used):
+Common rules are installed as path-scoped Claude Code rule files:
+
+```
+.claude/rules/
+├── ai-toolkit-coding-style.md
+├── ai-toolkit-git-workflow.md
+├── ai-toolkit-performance.md
+├── ai-toolkit-security.md
+└── ai-toolkit-testing.md
+```
+
+Each file starts with:
+
+```yaml
+---
+paths:
+  - "**/*"
+---
+```
+
+The project `CLAUDE.md` receives only a compact index between a single named marker (the per-language markers from v1.x are no longer used):
 
 ```
 <!-- TOOLKIT:language-rules START -->
 # Language Rules
 
-Common (language-agnostic) rules apply to every change in this project.
+Common ai-toolkit rules live in `.claude/rules/ai-toolkit-*.md`
+with Claude Code `paths` frontmatter so they load when project files
+are opened instead of expanding this CLAUDE.md at session startup.
+
+Common rule files: `.claude/rules/ai-toolkit-coding-style.md`, ...
+
 Language-specific rules live in `<lang>-rules` knowledge skills (e.g.
 `python-rules`, `typescript-rules`) and load automatically when their
 triggers match.
 
 Detected languages: `python-rules`, `typescript-rules`.
-
----
-
-... full content of app/rules/common/*.md inlined here ...
 <!-- TOOLKIT:language-rules END -->
 ```
 
-Re-running `install --local` is idempotent — the existing block is replaced, not duplicated. Per-language rules are not injected into `CLAUDE.md` for Claude — they are loaded contextually via their respective `<lang>-rules` knowledge skills.
+Re-running `install --local` is idempotent — the existing block is replaced, not duplicated, and only managed `.claude/rules/ai-toolkit-*.md` files are refreshed. User-authored `.claude/rules/*.md` files are preserved. Per-language rules are not injected into `CLAUDE.md` for Claude — they are loaded contextually via their respective `<lang>-rules` knowledge skills.
 
 ### Generating language-rules skills
 
@@ -9975,8 +10013,8 @@ Language rules are tracked as modules in `manifest.json`:
 | | Common rules | Per-language rules | Other skills |
 |---|---|---|---|
 | Source | `app/rules/common/` | `app/rules/<lang>/` | `app/skills/<name>/SKILL.md` |
-| Delivery to Claude | Inlined into project `CLAUDE.md` (`--local`) | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
-| Visibility | Always in context | Loaded when triggers match (file extensions, framework names) | Loaded when triggers match |
+| Delivery to Claude | Path-scoped `.claude/rules/ai-toolkit-*.md` files (`--local`) + compact `CLAUDE.md` index | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
+| Visibility | Loaded when project files are opened | Loaded when triggers match (file extensions, framework names) | Loaded when triggers match |
 | Scope | Language-agnostic standards (security, git, testing, perf, style) | Per-language coding-style, frameworks, patterns, security, testing | Domain skills (testing, debugging, RAG, etc.) |
 | Install | `ai-toolkit install --local` | Global install (skills directory is symlinked) | Global install |
 | Other editors | Inlined into editor-specific rule files | Inlined into editor-specific rule files (still full content, not skills) | N/A |
@@ -11897,9 +11935,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.7.0"
+version: "1.7.1"
 created: "2026-04-23"
-last_updated: "2026-06-23"
+last_updated: "2026-06-30"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 

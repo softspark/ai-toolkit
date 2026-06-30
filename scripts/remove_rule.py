@@ -2,8 +2,9 @@
 """remove-rule -- Unregister a rule (opposite of add-rule).
 
 Removes the rule file from ~/.softspark/ai-toolkit/rules/ (so it is no longer
-re-applied on future 'ai-toolkit install' runs) AND strips its injected
-block from the target CLAUDE.md.
+re-applied on future 'ai-toolkit install' runs), removes the generated Claude
+Code user-level rule file, and strips the legacy injected block from
+CLAUDE.md.
 
 Usage:
   remove_rule.py <rule-name> [target-dir]
@@ -16,13 +17,14 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import re
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import remove_rule_section
 
 
 def main() -> None:
-    """Unregister a rule and strip its injected block."""
+    """Unregister a rule and remove generated Claude rule artifacts."""
     if len(sys.argv) < 2:
         print("Usage: remove_rule.py <rule-name> [target-dir]", file=sys.stderr)
         sys.exit(1)
@@ -48,7 +50,16 @@ def main() -> None:
     if unregister_source(rules_dir, rule_name):
         print(f"Removed URL source for '{rule_name}'")
 
-    # 2. Strip injected block from .claude/CLAUDE.md
+    safe_rule_name = re.sub(r"[^a-zA-Z0-9_-]", "", rule_name)
+
+    # 2. Remove generated Claude Code user-level rule file
+    generated_rule = target_dir / ".claude" / "rules" / f"ai-toolkit-registered-{safe_rule_name}.md"
+    if generated_rule.is_file():
+        generated_rule.unlink()
+        print(f"Removed generated Claude rule: {generated_rule}")
+        removed += 1
+
+    # 3. Strip legacy injected block from .claude/CLAUDE.md
     found = remove_rule_section(rule_name, target_dir)
     if found:
         print(f"Removed rule '{rule_name}' from {target_dir / '.claude' / 'CLAUDE.md'}")

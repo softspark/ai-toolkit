@@ -661,17 +661,16 @@ def _apply_extends_config(cwd: Path, merged: dict) -> None:
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
-    """Inject ``app/rules/common/*.md`` content into project's ``.claude/CLAUDE.md``.
+    """Install Claude language-rule entrypoints for a project.
 
     Per-language rules (``app/rules/<lang>/``) are NOT injected here -- they
     ship as ``<lang>-rules`` knowledge skills under ``app/skills/`` and load
-    contextually via the Agent Skills progressive-disclosure mechanism. This
-    keeps ``CLAUDE.md`` small while ensuring language-specific guidance still
-    reaches Claude when relevant.
+    contextually via the Agent Skills progressive-disclosure mechanism.
 
-    Common rules are language-agnostic (security, git workflow, testing,
-    coding-style, performance) and stay inlined so they remain in scope for
-    every prompt.
+    Common rules are written as Claude Code path-scoped rules under
+    ``.claude/rules/``. Current Claude Code guidance targets under 200 lines
+    per ``CLAUDE.md`` file; path-scoped rules keep startup context smaller
+    while still loading the rule bodies when project files are opened.
     """
     if not language_modules:
         return
@@ -680,6 +679,8 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
     common_dir = rules_src / "common"
     if not common_dir.is_dir():
         return
+
+    rule_files = _sync_claude_common_rules(cwd, common_dir)
 
     # Detect requested per-language modules so we can name the linked skills
     # in the marker block. The modules themselves are not inlined.
@@ -690,38 +691,30 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
             if name != "common":
                 langs.append(name)
 
-    # Inline full content of every common rule file, stripping YAML
-    # frontmatter so the resulting block reads as plain Markdown.
-    inlined: list[str] = []
-    for f in sorted(common_dir.glob("*.md")):
-        body = f.read_text(encoding="utf-8")
-        if body.startswith("---"):
-            end = body.find("\n---", 3)
-            if end != -1:
-                body = body[end + 4:].lstrip("\n")
-        inlined.append(body.rstrip())
-
     lines: list[str] = ["# Language Rules", ""]
     lines.append(
-        "Common (language-agnostic) rules apply to every change in this "
-        "project. Language-specific rules live in `<lang>-rules` knowledge "
-        "skills (e.g. `python-rules`, `typescript-rules`) and load "
-        "automatically when their triggers match -- you do not need to "
-        "Read them manually."
+        "Common ai-toolkit rules live in `.claude/rules/ai-toolkit-*.md` "
+        "with Claude Code `paths` frontmatter so they load when project files "
+        "are opened instead of expanding this CLAUDE.md at session startup."
+    )
+    if rule_files:
+        lines.append("")
+        lines.append("Common rule files: " + ", ".join(f"`{p}`" for p in rule_files) + ".")
+    lines.append("")
+    lines.append(
+        "Language-specific rules live in `<lang>-rules` knowledge skills "
+        "(e.g. `python-rules`, `typescript-rules`) and load automatically "
+        "when their triggers match -- you do not need to Read them manually."
     )
     if langs:
         skill_names = ", ".join(f"`{l}-rules`" for l in langs)
         lines.append("")
         lines.append(f"Detected languages: {skill_names}.")
-    lines.append("")
-    lines.append("---")
-    lines.append("")
-    lines.extend(inlined)
 
     # Write to temp file, then inject as a single named section so reruns are
     # idempotent (existing block is replaced, not duplicated).
     import tempfile
-    combined = "\n\n".join(lines).rstrip() + "\n"
+    combined = "\n".join(lines).rstrip() + "\n"
     with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False,
                                      encoding="utf-8") as tmp:
         tmp.write(combined)
@@ -738,6 +731,51 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
         tmp_path.unlink(missing_ok=True)
 
 
+def _strip_rule_frontmatter(text: str) -> str:
+    if text.startswith("---"):
+        end = text.find("\n---", 3)
+        if end != -1:
+            return text[end + 4:].lstrip("\n")
+    return text
+
+
+def _sync_claude_common_rules(cwd: Path, common_dir: Path) -> list[str]:
+    """Write common ai-toolkit rules as Claude Code path-scoped rules.
+
+    Only ``ai-toolkit-*.md`` files are managed. User-authored files in
+    ``.claude/rules/`` are preserved.
+    """
+    rules_dir = cwd / ".claude" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+
+    source_files = sorted(common_dir.glob("*.md"))
+    expected = {f"ai-toolkit-{src.stem}.md" for src in source_files}
+    for stale in sorted(rules_dir.glob("ai-toolkit-*.md")):
+        if stale.name not in expected:
+            stale.unlink()
+
+    written: list[str] = []
+    for src in source_files:
+        body = _strip_rule_frontmatter(src.read_text(encoding="utf-8")).rstrip()
+        rel = Path(".claude") / "rules" / f"ai-toolkit-{src.stem}.md"
+        target = cwd / rel
+        target.write_text(
+            "\n".join([
+                "---",
+                "paths:",
+                '  - "**/*"',
+                "---",
+                "",
+                body,
+                "",
+            ]),
+            encoding="utf-8",
+        )
+        written.append(rel.as_posix())
+
+    return written
+
+
 def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
                             profile: str = "standard",
                             codex_skills: bool = False) -> None:
@@ -750,6 +788,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         print("  Would create: CLAUDE.md (if missing)")
         print("  Would create: .claude/settings.local.json (if missing)")
         print("  Would inject: .claude/constitution.md")
+        print("  Would generate: .claude/rules/ai-toolkit-*.md")
 
     add_copilot_dir = profile in {"standard", "strict", "full"}
     add_gemini_hooks = profile in {"standard", "strict", "full"}

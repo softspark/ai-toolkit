@@ -372,13 +372,16 @@ print('OK: cached rule preserved after failed refresh')
 
 @test "cli: remove-rule unregisters rule from ~/.softspark/ai-toolkit/rules/" {
     export HOME="$TEST_TMP"
+    mkdir -p "$TEST_TMP/.claude/rules"
     printf '# Test rule\n' > "$TEST_TMP/rm-test.md"
     run $CLI add-rule "$TEST_TMP/rm-test.md"
     [ -f "$TEST_TMP/.softspark/ai-toolkit/rules/rm-test.md" ]
+    printf '# Generated rule\n' > "$TEST_TMP/.claude/rules/ai-toolkit-registered-rm-test.md"
 
     run $CLI remove-rule rm-test
     [ "$status" -eq 0 ]
     [ ! -f "$TEST_TMP/.softspark/ai-toolkit/rules/rm-test.md" ]
+    [ ! -f "$TEST_TMP/.claude/rules/ai-toolkit-registered-rm-test.md" ]
 }
 
 @test "cli: remove-rule also strips injected block from CLAUDE.md" {

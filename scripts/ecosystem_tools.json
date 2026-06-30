@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-06-23",
+  "last_updated": "2026-06-30",
   "tools": [
     {
       "id": "claude-code",
@@ -226,7 +226,10 @@
         ".gemini/extensions/gemini-extension.json"
       ],
       "our_generators": [
-        "scripts/generate_gemini.py"
+        "scripts/generate_gemini.py",
+        "scripts/generate_gemini_hooks.py",
+        "scripts/generate_gemini_commands.py",
+        "scripts/generate_gemini_skills.py"
       ],
       "capability_markers": [
         "GEMINI.md",

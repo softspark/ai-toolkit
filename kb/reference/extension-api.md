@@ -21,19 +21,19 @@ This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP serv
 
 | Command | Target File | Mechanism | Idempotent |
 |---------|-------------|-----------|------------|
-| `inject-rule <file.md>` | `~/.claude/CLAUDE.md` | HTML comment markers (`<!-- TOOLKIT:name -->`) | Yes |
-| `remove-rule <name>` | `~/.claude/CLAUDE.md` | Strip markers by block name | Yes |
+| `inject-rule <file.md>` | `~/.claude/CLAUDE.md` | Legacy HTML comment markers (`<!-- TOOLKIT:name -->`) | Yes |
+| `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/rules/` | Unregister and remove generated Claude rule file | Yes |
 | `inject-hook <file.json\|url> [name]` | `~/.claude/settings.json` | JSON `_source` tag per entry, URL cached + registered | Yes |
 | `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source`, unregister URL source | Yes |
 | `inject-mcp <file.json\|url> [name] [--force]` | `~/.mcp.json` + every editor with `global_path` | JSON `_source` tag per server, URL cached + registered, full editor propagation | Yes |
 | `remove-mcp <name>` | `~/.mcp.json` + every editor with `global_path` | Strip all servers with matching `_source`, clean editor configs, unregister URL | Yes |
-| `add-rule <file.md\|url>` | `~/.softspark/ai-toolkit/rules/` | File copy + re-inject all rules on next `update` | Yes |
+| `add-rule <file.md\|url>` | `~/.softspark/ai-toolkit/rules/` | File copy + sync to `~/.claude/rules/ai-toolkit-registered-*.md` on next `update` | Yes |
 | `mcp add <name...>` | `.mcp.json` | Merge `mcpServers` block from built-in template | Yes |
 | `mcp install --editor <name...>` | Native editor MCP config | Render canonical template into editor format | Yes |
 
 ## inject-rule
 
-Injects a Markdown rules file into `~/.claude/CLAUDE.md` between named HTML comment markers.
+Legacy direct injection: injects a Markdown rules file into `~/.claude/CLAUDE.md` between named HTML comment markers. Prefer `add-rule` for persistent global rules; `ai-toolkit update` syncs those into Claude Code user-level rule files under `~/.claude/rules/`.
 
 ```bash
 npx @softspark/ai-toolkit inject-rule ./my-tool-rules.md
@@ -52,7 +52,7 @@ The block name is derived from the file stem (`my-tool-rules.md` → `my-tool-ru
 
 ## remove-rule
 
-Strips a previously injected rule block from `~/.claude/CLAUDE.md`.
+Unregisters a persistent rule, removes `~/.claude/rules/ai-toolkit-registered-<name>.md`, and strips any legacy injected rule block from `~/.claude/CLAUDE.md`.
 
 ```bash
 npx @softspark/ai-toolkit remove-rule my-tool-rules
