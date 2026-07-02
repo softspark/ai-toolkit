@@ -3,10 +3,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.4.3"
+version: "1.5.0"
 created: "2026-04-08"
-last_updated: "2026-05-19"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing. v1.4.3 tightens the Phase 8.4 URL pin check so the success-message count includes only entries with a `url:` field, not local `path:` entries, and documents the `sources.json` envelope shape."
+last_updated: "2026-07-02"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing. v1.4.3 tightens the Phase 8.4 URL pin check so the success-message count includes only entries with a `url:` field, not local `path:` entries, and documents the `sources.json` envelope shape. v1.5.0 updates Phase 2's global-target list for the v4.12.0 expansion — cursor, copilot, and antigravity are now global-capable (hooks / instructions / skills respectively; cursor + antigravity rules stay --local)."
 ---
 
 # SOP: Release Verification
@@ -122,7 +122,7 @@ ai-toolkit status
 - [ ] Agents >= 44
 - [ ] Skills >= 99
 - [ ] Hooks merged into settings.json
-- [ ] "Other AI Tools" section lists documented global targets only: aider, augment, cline, codex, gemini, opencode, roo, windsurf (Cursor, Copilot, Antigravity via --local for rules)
+- [ ] "Other AI Tools" section lists documented global targets (with `--editors`): aider, antigravity, augment, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf. Scope varies (v4.12.0+): cursor = `~/.cursor/hooks.json` only, copilot = `~/.copilot/` instructions, antigravity = `~/.gemini/*/skills` pointer; Cursor and Antigravity RULES still install only via `--local` (no mergeable global rules file)
 
 **Verify `status`:**
 - [ ] Version matches expected
