@@ -908,10 +908,12 @@ import sys
 sys.path.insert(0, f"{sys.argv[1]}/scripts")
 from install_steps.install_state import GLOBAL_CAPABLE_EDITORS
 
-expected = {"aider", "augment", "cline", "codex", "gemini", "opencode", "roo", "windsurf"}
+expected = {"aider", "antigravity", "augment", "cline", "codex", "copilot",
+            "cursor", "gemini", "opencode", "roo", "windsurf"}
 actual = set(GLOBAL_CAPABLE_EDITORS)
 assert actual == expected, actual
-assert "cursor" not in actual
+# cursor/copilot/antigravity are global-capable for hooks/instructions/skills
+# only; their RULES surfaces remain project-local (asserted elsewhere).
 PYEOF
 }
 

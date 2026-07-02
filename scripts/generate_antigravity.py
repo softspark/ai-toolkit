@@ -99,6 +99,21 @@ def _write_skill_pointer(target_dir: Path) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+def generate_global(target_dir: Path) -> None:
+    """Write the skill pointer to Antigravity's documented HOME-scoped skill
+    dirs. ``~/.gemini/config/skills/`` is shared across all Antigravity products
+    (IDE, editor, CLI); ``~/.gemini/antigravity-cli/skills/`` is CLI-private.
+    Antigravity RULES have no documented global file surface, so only the skill
+    pointer is emitted globally (rules stay project-local).
+    """
+    content = _pointer_skill_md()
+    for rel in (".gemini/config/skills", ".gemini/antigravity-cli/skills"):
+        skill_dir = target_dir / rel / POINTER_SKILL_NAME
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text(content, encoding="utf-8")
+        print(f"  Generated: {rel}/{POINTER_SKILL_NAME}/SKILL.md")
+
+
 def generate(target_dir: Path, *,
              language_modules: list[str] | None = None,
              rules_dir: Path | None = None,

@@ -131,13 +131,20 @@ DEFAULT_GLOBAL_EDITORS: list[str] = []
 
 # All editors that support global install (opt-in via --editors).
 #
-# Cursor intentionally stays out of this list: its documented global rules
-# surface is the Settings UI, not a stable file path we can merge safely.
+# Scope varies by editor's documented global file surfaces:
+#   - cursor: HOOKS only (~/.cursor/hooks.json). Cursor RULES stay project-local
+#     — their only global surface is the Settings UI, not a mergeable file.
+#   - copilot: user-level instructions (~/.copilot/, read by Copilot CLI).
+#   - antigravity: global skill pointer (~/.gemini/config/skills,
+#     ~/.gemini/antigravity-cli/skills). Rules stay project-local.
 GLOBAL_CAPABLE_EDITORS = [
     "aider",
+    "antigravity",
     "augment",
     "cline",
     "codex",
+    "copilot",
+    "cursor",
     "gemini",
     "opencode",
     "roo",

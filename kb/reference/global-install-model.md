@@ -73,16 +73,22 @@ The `ai-toolkit-*` prefix in `~/.claude/rules/` is reserved for installer-manage
 `ai-toolkit install --editors <name>` can write global files only for editors
 with documented, file-based config surfaces:
 
-- `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md`
-- `gemini`: `~/.gemini/GEMINI.md`
-- `augment`: `~/.augment/rules/ai-toolkit.md`
+- `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md` plus `~/.config/devin/AGENTS.md` (Devin CLI global rules — the Desktop `global_rules.md` path is not imported by `read_config_from.windsurf`)
+- `gemini`: `~/.gemini/GEMINI.md`; hooks at `~/.gemini/settings.json` (profile ≥ standard); `~/.gemini/commands/` and `~/.gemini/skills/` pointer (profile full)
+- `augment`: `~/.augment/rules/ai-toolkit.md`; `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` (profile full)
 - `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
-- `roo`: `~/.roo/rules/ai-toolkit-*.md`
+- `roo`: `~/.roo/rules/ai-toolkit-*.md` plus `~/.agents/skills/*` (Roo/Zoo native skill discovery; skipped when `codex` is also selected, which fills the same dir)
 - `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
-- `codex`: `~/AGENTS.md` (coding rules inlined), `~/.agents/skills/*`, `~/.codex/hooks.json`
+- `codex`: `~/.codex/AGENTS.md` (coding rules inlined; the documented global instruction file — NOT `~/AGENTS.md`, which Codex never loads as global instructions), `~/.agents/skills/*`, `~/.codex/hooks.json`
 - `opencode`: `~/.config/opencode/*`
 
-Cursor, GitHub Copilot, and Google Antigravity rule installs stay project-local.
+Cursor, GitHub Copilot, and Google Antigravity now have partial global support,
+scoped to whatever documented HOME file surface each exposes:
+
+- `cursor`: `~/.cursor/hooks.json` (safety/quality hooks; profile ≥ standard). Cursor RULES stay project-local — their only global surface is the Settings UI.
+- `copilot`: `~/.copilot/copilot-instructions.md` plus `~/.copilot/instructions/ai-toolkit-*.instructions.md` (read by Copilot CLI; VS Code and GitHub.com still use repo `.github/` files, which the local install emits).
+- `antigravity`: skill pointer at `~/.gemini/config/skills/` and `~/.gemini/antigravity-cli/skills/`. Antigravity RULES stay project-local.
+
 Their global MCP support, where available, is handled by `ai-toolkit mcp
 install`, not by the rule installer.
 
@@ -141,8 +147,7 @@ Codex wrappers so the project still receives the full skill catalog.
 
 `ai-toolkit plugin install --editor codex <pack>` additionally targets:
 
-- `~/AGENTS.md`
-- `~/.agents/rules/*.md`
+- `~/.codex/AGENTS.md` (base instructions; pack rules are marker-injected here, not written as unread `~/.agents/rules/` files)
 - `~/.agents/skills/*`
 - `~/.codex/hooks.json`
 

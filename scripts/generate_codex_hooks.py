@@ -8,11 +8,14 @@ Codex exposes 10 lifecycle events (PascalCase in config.toml / hooks.json):
 ``PreToolUse``, ``PostToolUse``, ``PermissionRequest``, ``PreCompact``,
 ``PostCompact``, ``SessionStart``, ``UserPromptSubmit``, ``SubagentStart``,
 ``SubagentStop``, ``Stop``. PreToolUse/PostToolUse only support the ``Bash``
-matcher. We wire all 10 events in ``CODEX_HOOKS`` below to the shared toolkit
-hook scripts, mirroring the Claude Code mapping in ``app/hooks.json``.
+matcher. We wire 9 of the 10 events in ``CODEX_HOOKS`` below to the shared
+toolkit hook scripts, mirroring the Claude Code mapping in ``app/hooks.json``.
+``PostCompact`` is intentionally unwired (its only hook was the removed
+environment-snapshot probe).
 
-Handler types in Codex: ``command`` (what we emit), ``prompt``, and ``agent``.
-Reference: codex-rs/config/src/hook_config.rs.
+Handler types in Codex: ``command`` (what we emit). ``prompt`` and ``agent``
+are parsed by Codex but not yet executed, so hand-authored handlers of those
+types are inert. Reference: codex-rs/config/src/hook_config.rs.
 
 Usage:
   python3 scripts/generate_codex_hooks.py [target-dir]

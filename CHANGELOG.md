@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.12.0 — Global-first editor installs + Codex path fix (2026-07-02)
+
+Minor release. Expands global (HOME-scoped) installs to every editor with a documented, merge-safe file surface, and fixes a Codex global-install bug where instructions landed in a file Codex never reads. Test count: 1203 → 1208.
+
+### Fixed
+- **Codex global instructions path** — `ai-toolkit install --editors codex` and `ai-toolkit plugin install --editor codex` wrote to `~/AGENTS.md`, which Codex never loads as global instructions, so global installs delivered zero instructions. Now write `~/.codex/AGENTS.md` (the documented `$CODEX_HOME/AGENTS.md`), strip the stale `~/AGENTS.md` toolkit section on upgrade, and warn when `~/.codex/AGENTS.override.md` would mask it.
+- **Codex plugin-pack rules** — pack rules were copied to `~/.agents/rules/`, a directory Codex never reads; now marker-injected into `~/.codex/AGENTS.md`, with legacy dead files cleaned on install/remove (`scripts/plugin.py`).
+- **`inject-hook` Codex event parity** — `CODEX_EVENTS` propagated only 5 of the 9 events `scripts/generate_codex_hooks.py` wires; added `PermissionRequest`, `SubagentStart`, `SubagentStop`, `PreCompact`.
+
+### Added
+- **Global native surfaces for 7 editors** — `install_ai_tools` now threads `--profile` and installs each editor's documented HOME surfaces (gated like the local install): **Gemini** (hooks `~/.gemini/settings.json`, `~/.gemini/commands/`, skills pointer), **Augment** (`~/.augment/agents/`, `~/.augment/commands/`, hooks), **Roo/Zoo** (skills via `~/.agents/skills`), **Windsurf** (`~/.config/devin/AGENTS.md` for Devin CLI), **Cursor** (`~/.cursor/hooks.json`), **GitHub Copilot** (`~/.copilot/` instructions), **Google Antigravity** (skill pointer to `~/.gemini/config/skills` and `~/.gemini/antigravity-cli/skills`).
+
+### Changed
+- **`GLOBAL_CAPABLE_EDITORS`** — added `cursor`, `copilot`, and `antigravity` (scoped: cursor = hooks, copilot = instructions, antigravity = skills; RULES stay project-local where no mergeable global file surface exists).
+- **`generate_copilot.py`** and **`generate_antigravity.py`** gained global layouts (`config_root=~/.copilot`; `generate_global()`).
+
+### Ecosystem
+- **Roo → Zoo Code** (class D) — `RooCodeInc/Roo-Code` archived (frozen v3.54.0, dead release feed); retargeted the feed to the successor `Zoo-Code-Org/Zoo-Code` and added skills/commands config paths. (class F) Global skill install via `~/.agents/skills`.
+- **Cursor** (class F) global `~/.cursor/hooks.json`; (class D) `.cursorrules` demoted to legacy (dropped from official rules docs).
+- **GitHub Copilot** (class F) documented `~/.copilot/` user-level surface adopted.
+- **Google Antigravity** (class F) global skill dirs adopted; `~/.gemini/config/mcp_config.json` global MCP path resolved and recorded (adapter is backlog).
+- **Gemini / Augment** (class F) hooks/commands/agents made global.
+- Version refresh: Gemini v0.49.0, Codex 0.142.5, Auggie 0.31.0, Antigravity CLI 1.0.14, Claude Code 2.1.198; Devin `read_config_from` 7-key matrix. Snapshot re-baselined via `scripts/ecosystem_doctor.py --update`.
+
 ## v4.11.0 — Claude rules-space fix + editor registry parity (2026-06-30)
 
 Minor release. Reduces Claude Code startup context pressure by moving ai-toolkit rules out of global/project `CLAUDE.md` inline blocks and into Claude Code rule files. Also finishes the editor registry sync by recording all Gemini generators in the canonical ecosystem registry. Test count: 1198 → 1203.

@@ -331,6 +331,87 @@ assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"s
     [ "$actual_skills" -eq "$expected_skills" ]
 }
 
+@test "install --editors codex (global) writes ~/.codex/AGENTS.md, not ~/AGENTS.md" {
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --editors codex >/dev/null 2>&1
+
+    # Global instructions must land in the documented ~/.codex/AGENTS.md path.
+    [ -f "$TMP_HOME/.codex/AGENTS.md" ]
+    grep -q 'Codex CLI Configuration' "$TMP_HOME/.codex/AGENTS.md"
+    grep -q '<!-- TOOLKIT:' "$TMP_HOME/.codex/AGENTS.md"
+    # ~/AGENTS.md is NOT a global-instruction surface — it must not be written.
+    [ ! -f "$TMP_HOME/AGENTS.md" ]
+    [ -f "$TMP_HOME/.codex/hooks.json" ]
+}
+
+@test "install --editors codex (global) migrates a stale ~/AGENTS.md toolkit section" {
+    cat > "$TMP_HOME/AGENTS.md" <<'MD'
+User-authored home instructions.
+
+<!-- TOOLKIT:ai-toolkit START -->
+Stale global codex section from an old install.
+<!-- TOOLKIT:ai-toolkit END -->
+MD
+
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --editors codex >/dev/null 2>&1
+
+    # Stale toolkit section is stripped; user content is preserved.
+    [ -f "$TMP_HOME/AGENTS.md" ]
+    ! grep -q 'Stale global codex section' "$TMP_HOME/AGENTS.md"
+    grep -q 'User-authored home instructions.' "$TMP_HOME/AGENTS.md"
+    grep -q 'Codex CLI Configuration' "$TMP_HOME/.codex/AGENTS.md"
+}
+
+@test "install --editors ... --profile full wires documented global native surfaces" {
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors gemini,augment,roo,windsurf --profile full >/dev/null 2>&1
+
+    # Gemini: hooks + commands + skills pointer at the ~/.gemini user tier
+    [ -f "$TMP_HOME/.gemini/GEMINI.md" ]
+    [ -f "$TMP_HOME/.gemini/settings.json" ]
+    [ -d "$TMP_HOME/.gemini/commands" ]
+    [ -d "$TMP_HOME/.gemini/skills" ]
+
+    # Augment: hooks + sub-agents + commands under ~/.augment
+    [ -f "$TMP_HOME/.augment/settings.json" ]
+    [ -d "$TMP_HOME/.augment/agents" ]
+    [ -d "$TMP_HOME/.augment/commands" ]
+
+    # Roo/Zoo: skills via the shared ~/.agents/skills discovery dir
+    [ -d "$TMP_HOME/.agents/skills" ]
+    [ -f "$TMP_HOME/.agents/skills/orchestrate/SKILL.md" ]
+
+    # Devin CLI global rules (windsurf editor)
+    [ -f "$TMP_HOME/.config/devin/AGENTS.md" ]
+}
+
+@test "install --editors cursor,copilot,antigravity (global) writes documented HOME surfaces, keeps rules local" {
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors cursor,copilot,antigravity --profile full >/dev/null 2>&1
+
+    # Cursor: global hooks only; RULES must NOT be written globally.
+    [ -f "$TMP_HOME/.cursor/hooks.json" ]
+    [ ! -f "$TMP_HOME/.cursorrules" ]
+
+    # Copilot CLI: user-level instructions.
+    [ -f "$TMP_HOME/.copilot/copilot-instructions.md" ]
+    [ -d "$TMP_HOME/.copilot/instructions" ]
+
+    # Antigravity: skill pointer in both documented global skill dirs.
+    [ -f "$TMP_HOME/.gemini/config/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ -f "$TMP_HOME/.gemini/antigravity-cli/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    # Antigravity RULES stay project-local.
+    [ ! -d "$TMP_HOME/.agents/rules" ]
+}
+
+@test "install --editors gemini (global, default profile) writes hooks but not full surfaces" {
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --editors gemini >/dev/null 2>&1
+
+    [ -f "$TMP_HOME/.gemini/GEMINI.md" ]
+    [ -f "$TMP_HOME/.gemini/settings.json" ]
+    # commands/skills are full-profile only
+    [ ! -d "$TMP_HOME/.gemini/commands" ]
+}
+
 @test "install --local --editors copilot emits AGENTS.md without clobbering existing sections" {
     cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
 User-authored preface.

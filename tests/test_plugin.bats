@@ -17,7 +17,9 @@ teardown() {
     run $CLI plugin install --editor codex memory-pack
     [ "$status" -eq 0 ]
 
-    [ -f "$TEST_TMP/AGENTS.md" ]
+    # Global Codex instructions live at ~/.codex/AGENTS.md, not ~/AGENTS.md.
+    [ -f "$TEST_TMP/.codex/AGENTS.md" ]
+    [ ! -f "$TEST_TMP/AGENTS.md" ]
     [ -f "$TEST_TMP/.codex/hooks.json" ]
     [ -e "$TEST_TMP/.agents/skills/mem-search" ]
     [ -f "$TEST_TMP/.softspark/ai-toolkit/hooks/plugin-memory-pack-observation-capture.sh" ]
@@ -51,7 +53,10 @@ PY
     run $CLI plugin install --editor codex security-pack
     [ "$status" -eq 0 ]
 
-    [ -f "$TEST_TMP/.agents/rules/plugin-security-pack-quality-gates.md" ]
+    # Codex reads instructions only from AGENTS.md, so pack rules are marker-
+    # injected into ~/.codex/AGENTS.md, not written as unread ~/.agents/rules/ files.
+    grep -q '<!-- TOOLKIT:plugin-security-pack-quality-gates START -->' "$TEST_TMP/.codex/AGENTS.md"
+    [ ! -f "$TEST_TMP/.agents/rules/plugin-security-pack-quality-gates.md" ]
 
     run python3 - <<PY
 import json

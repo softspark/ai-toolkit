@@ -23,6 +23,7 @@ Actions:
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sqlite3 as sqlite
 import subprocess
@@ -31,6 +32,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import app_dir, inject_section, inject_rule, remove_rule_section
+from injection import strip_section, trim_trailing_blanks
 from codex_skill_adapter import cleanup_codex_skills, sync_codex_skill
 from generate_codex_hooks import generate as generate_codex_hooks
 from install_steps.ai_tools import inject_with_rules
@@ -536,8 +538,9 @@ def _install_codex_extra_skills(pack: dict, pack_dir: Path) -> None:
 def _install_codex_base() -> None:
     _ensure_core_hook_scripts()
     # Universal coding rules are inlined into AGENTS.md by generate_codex.py;
-    # Codex does not read a .agents/rules/ directory.
-    inject_with_rules("generate_codex.py", CODEX_ROOT / "AGENTS.md", RULES_DIR)
+    # Codex does not read a .agents/rules/ directory. Global instructions must
+    # live at $CODEX_HOME/AGENTS.md (default ~/.codex/AGENTS.md), not ~/AGENTS.md.
+    inject_with_rules("generate_codex.py", CODEX_ROOT / ".codex" / "AGENTS.md", RULES_DIR)
     hooks_path = CODEX_ROOT / ".codex" / "hooks.json"
     existing = _load_json(hooks_path, {"hooks": {}})
     plugin_entries: dict[str, list[dict]] = {}
@@ -632,21 +635,41 @@ def _strip_codex_hooks(name: str) -> None:
 
 
 def _install_codex_rules(name: str, rule_specs: list[dict]) -> None:
-    rules_dir = CODEX_ROOT / ".agents" / "rules"
-    rules_dir.mkdir(parents=True, exist_ok=True)
+    # Codex reads instructions only from AGENTS.md, never from a .agents/rules/
+    # directory, so pack rules are marker-injected into ~/.codex/AGENTS.md (the
+    # documented global instruction file) instead of written as dead files.
+    agents_md = CODEX_ROOT / ".codex" / "AGENTS.md"
     for spec in rule_specs:
-        dest = rules_dir / f"plugin-{name}-{spec['name']}.md"
-        shutil.copy2(spec["source"], dest)
-        print(f"    Installed Codex rule: {dest.name}")
+        section = f"plugin-{name}-{spec['name']}"
+        inject_section(spec["source"], agents_md, section)
+        print(f"    Injected Codex rule: {spec['name']} -> ~/.codex/AGENTS.md")
+    _clean_legacy_codex_rule_files(name)
 
 
 def _remove_codex_rules(name: str) -> None:
+    agents_md = CODEX_ROOT / ".codex" / "AGENTS.md"
+    if agents_md.is_file():
+        content = agents_md.read_text(encoding="utf-8")
+        changed = False
+        for match in re.findall(r"<!-- TOOLKIT:(plugin-" + re.escape(name) + r"-[^ ]+) START -->", content):
+            content = strip_section(content, match)
+            changed = True
+        if changed:
+            agents_md.write_text(trim_trailing_blanks(content) + "\n", encoding="utf-8")
+            print(f"    Removed Codex rules for {name} from ~/.codex/AGENTS.md")
+    _clean_legacy_codex_rule_files(name)
+
+
+def _clean_legacy_codex_rule_files(name: str) -> None:
+    """Remove dead ~/.agents/rules/plugin-<name>-*.md files written by earlier
+    versions. Codex never read them; Antigravity's .agents/rules/ is a separate,
+    project-local surface, so this only touches our own plugin-prefixed files."""
     rules_dir = CODEX_ROOT / ".agents" / "rules"
     if not rules_dir.is_dir():
         return
     for rule_file in sorted(rules_dir.glob(f"plugin-{name}-*.md")):
         rule_file.unlink()
-        print(f"    Removed Codex rule: {rule_file.name}")
+        print(f"    Removed legacy Codex rule file: {rule_file.name}")
 
 
 def install_pack_codex(name: str, pack: dict, pack_dir: Path) -> bool:

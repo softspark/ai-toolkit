@@ -49,8 +49,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # Protected source tag -- this CLI must never touch ai-toolkit's own entries.
 PROTECTED_SOURCE = "ai-toolkit"
 
-# Codex CLI supports only these 5 hook events.
-CODEX_EVENTS = {"SessionStart", "PreToolUse", "PostToolUse", "UserPromptSubmit", "Stop"}
+# Codex CLI's HookEventName enum defines 10 events; we propagate the 9 that
+# generate_codex_hooks.py also wires (all except PostCompact, whose only hook
+# was the removed environment-snapshot probe). Keeping this in sync with the
+# generator prevents injected custom hooks from silently losing events Codex
+# supports.
+CODEX_EVENTS = {
+    "SessionStart",
+    "PreToolUse",
+    "PostToolUse",
+    "PermissionRequest",
+    "UserPromptSubmit",
+    "SubagentStart",
+    "SubagentStop",
+    "PreCompact",
+    "Stop",
+}
 
 
 # ---------------------------------------------------------------------------

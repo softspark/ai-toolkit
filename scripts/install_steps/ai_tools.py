@@ -20,12 +20,16 @@ from injection import (
 
 def install_ai_tools(target_dir: Path, rules_dir: Path,
                      dry_run: bool,
-                     editors: list[str] | None = None) -> list[str]:
+                     editors: list[str] | None = None,
+                     profile: str = "standard") -> list[str]:
     """Install global editor configs.
 
     Args:
         editors: Explicit list of editors to install globally. If None,
                  uses DEFAULT_GLOBAL_EDITORS (empty = Claude only).
+        profile: Install profile. Gates each editor's optional native surfaces
+                 the same way the local install does — hooks at
+                 standard/strict/full, sub-agents/commands/skills at full.
 
     Returns:
         List of editors that were actually installed (for state tracking).
@@ -43,6 +47,10 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
     if not eds:
         return []
 
+    _profile = profile if profile in {"minimal", "standard", "strict", "full"} else "standard"
+    add_hooks = _profile in {"standard", "strict", "full"}
+    add_native_surfaces = _profile == "full"
+
     print()
     print("## Other AI Tools (global)")
     print()
@@ -57,6 +65,7 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         if dry_run:
             print("  Would inject: ~/.codeium/windsurf/memories/global_rules.md")
             print("  Would generate: ~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md")
+            print("  Would inject: ~/.config/devin/AGENTS.md (Devin CLI global rules)")
         else:
             _install_windsurf_global(target_dir, rules_dir)
         installed.append("windsurf")
@@ -65,16 +74,37 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         gemini_file = target_dir / ".gemini" / "GEMINI.md"
         if dry_run:
             print("  Would inject: ~/.gemini/GEMINI.md")
+            if add_hooks:
+                print("  Would generate: ~/.gemini/settings.json (hooks)")
+            if add_native_surfaces:
+                print("  Would generate: ~/.gemini/commands/, ~/.gemini/skills/")
         else:
             inject_with_rules("generate-gemini.sh", gemini_file, rules_dir)
+            # Hooks (~/.gemini/settings.json), commands (~/.gemini/commands/),
+            # and the skills pointer (~/.gemini/skills/) are documented user-tier
+            # surfaces — install them globally, gated like the local install.
+            if add_hooks:
+                _try_generator("generate_gemini_hooks", target_dir)
+            if add_native_surfaces:
+                _try_generator("generate_gemini_commands", target_dir)
+                _try_generator("generate_gemini_skills", target_dir)
         installed.append("gemini")
 
     if "augment" in eds:
         augment_file = target_dir / ".augment" / "rules" / "ai-toolkit.md"
         if dry_run:
             print("  Would inject: ~/.augment/rules/ai-toolkit.md")
+            if add_native_surfaces:
+                print("  Would generate: ~/.augment/agents/, ~/.augment/commands/, ~/.augment/settings.json (hooks)")
         else:
             inject_with_rules("generate-augment.sh", augment_file, rules_dir)
+            # Sub-agents, commands, and hooks all have documented user-tier
+            # surfaces under ~/.augment — a global-only Augment user otherwise
+            # gets no hooks/agents/commands. Gate them like the local install.
+            if add_native_surfaces:
+                _try_generator("generate_augment_agents", target_dir)
+                _try_generator("generate_augment_commands", target_dir)
+                _try_generator("generate_augment_hooks", target_dir)
         installed.append("augment")
 
     if "cline" in eds:
@@ -88,8 +118,15 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
     if "roo" in eds:
         if dry_run:
             print("  Would generate: ~/.roo/rules/ai-toolkit-*.md")
+            if "codex" not in eds:
+                print("  Would generate: ~/.agents/skills/* (Roo native skill discovery)")
         else:
             _install_roo_global(target_dir, rules_dir)
+            # Roo/Zoo Code natively discover skills from ~/.agents/skills. Reuse
+            # the shared installer, but skip when codex is also selected — its
+            # branch populates the same directory — to avoid a duplicate pass.
+            if "codex" not in eds:
+                _install_codex_skills(target_dir)
         installed.append("roo")
 
     if "aider" in eds:
@@ -101,7 +138,7 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
 
     if "codex" in eds:
         if dry_run:
-            print("  Would inject: ~/AGENTS.md, ~/.agents/, ~/.codex/hooks.json")
+            print("  Would inject: ~/.codex/AGENTS.md, ~/.agents/skills/, ~/.codex/hooks.json")
         else:
             _install_codex_global(target_dir, rules_dir)
         installed.append("codex")
@@ -114,27 +151,84 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
             _install_opencode_global(target_dir, rules_dir)
         installed.append("opencode")
 
+    if "cursor" in eds:
+        # Cursor RULES have no mergeable global file surface (Settings UI only),
+        # but ~/.cursor/hooks.json is a documented user-level hooks scope — so a
+        # global Cursor install activates the safety/quality hooks everywhere.
+        if dry_run:
+            if add_hooks:
+                print("  Would generate: ~/.cursor/hooks.json (global hooks)")
+        elif add_hooks:
+            _try_generator("generate_cursor_hooks", target_dir)
+        installed.append("cursor")
+
+    if "copilot" in eds:
+        # Copilot CLI reads user-level instructions from ~/.copilot/. RULES have
+        # a documented global surface here even though .github/ stays repo-only.
+        copilot_root = target_dir / ".copilot"
+        if dry_run:
+            print("  Would inject: ~/.copilot/copilot-instructions.md")
+            print("  Would generate: ~/.copilot/instructions/ai-toolkit-*.instructions.md")
+        else:
+            inject_with_rules(
+                "generate_copilot.py",
+                copilot_root / "copilot-instructions.md",
+                rules_dir,
+            )
+            _try_generator("generate_copilot", target_dir,
+                           rules_dir=rules_dir, config_root=copilot_root,
+                           emit_prompts=False)
+        installed.append("copilot")
+
+    if "antigravity" in eds:
+        # Antigravity RULES stay project-local, but the skill pointer has a
+        # documented global surface: ~/.gemini/config/skills (all Antigravity
+        # products) and ~/.gemini/antigravity-cli/skills (CLI-private).
+        if dry_run:
+            print("  Would generate: ~/.gemini/config/skills/, ~/.gemini/antigravity-cli/skills/ (skill pointer)")
+        else:
+            from generate_antigravity import generate_global as gen_antigravity_global
+            gen_antigravity_global(target_dir)
+        installed.append("antigravity")
+
     print()
     print(f"  Available: {', '.join(GLOBAL_CAPABLE_EDITORS)}")
-    print("  Note: Cursor, Copilot, and Antigravity rule installs are project-local; use 'ai-toolkit install --local' for those.")
+    print("  Note: Cursor and Antigravity RULES stay project-local (no mergeable "
+          "global file surface); their global installs cover hooks/skills only. "
+          "Use 'ai-toolkit install --local' for full per-project setup.")
 
     return installed
 
 
 def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
-    """Install Codex at the global level (~/ layer).
+    """Install Codex at the global level (~/.codex layer).
 
     Creates:
-      - ~/AGENTS.md (marker injection; universal coding rules inlined here —
-        Codex reads instructions only from AGENTS.md, not .agents/rules/)
-      - ~/.agents/skills/* (skill symlinks)
+      - ~/.codex/AGENTS.md (marker injection; universal coding rules inlined
+        here). Codex reads GLOBAL instructions from ``$CODEX_HOME/AGENTS.md``
+        (default ~/.codex/AGENTS.md), NOT ~/AGENTS.md — a home-root AGENTS.md
+        is only loaded in the degenerate case where a session's cwd is $HOME.
+      - ~/.agents/skills/* (skill symlinks; a documented Codex skill dir)
       - ~/.codex/hooks.json (lifecycle hooks)
     """
     inject_with_rules(
         "generate_codex.py",
-        target_dir / "AGENTS.md",
+        target_dir / ".codex" / "AGENTS.md",
         rules_dir,
     )
+
+    # Migration: earlier versions wrote global instructions to ~/AGENTS.md,
+    # which Codex never loads as global instructions. Strip that stale toolkit
+    # section so upgraders are not left with dead, unread content.
+    if _strip_toolkit_sections(target_dir / "AGENTS.md"):
+        print("  Migrated: removed stale ai-toolkit section from ~/AGENTS.md")
+
+    override = target_dir / ".codex" / "AGENTS.override.md"
+    if override.is_file() and override.read_text(encoding="utf-8").strip():
+        print(
+            "  Warning: ~/.codex/AGENTS.override.md exists and takes precedence "
+            "over ~/.codex/AGENTS.md — toolkit rules will be masked."
+        )
 
     from generate_codex_hooks import generate as gen_codex_hooks
     gen_codex_hooks(target_dir)
@@ -165,6 +259,13 @@ def _install_windsurf_global(target_dir: Path, rules_dir: Path) -> None:
     """Install Windsurf global rules plus an Agent Skills catalogue pointer."""
     windsurf_file = target_dir / ".codeium" / "windsurf" / "memories" / "global_rules.md"
     inject_with_rules("generate-windsurf.sh", windsurf_file, rules_dir)
+
+    # Devin CLI reads global rules from ~/.config/devin/AGENTS.md, NOT the
+    # Desktop ~/.codeium/windsurf/memories/global_rules.md (that path is absent
+    # from read_config_from.windsurf). Cover editor-only Devin CLI installs
+    # where no global Claude install (~/.claude/CLAUDE.md compat read) exists.
+    devin_agents = target_dir / ".config" / "devin" / "AGENTS.md"
+    inject_with_rules("generate-windsurf.sh", devin_agents, rules_dir)
 
     from generate_windsurf_skills import generate as gen_windsurf_skills
     # Windsurf is excluded from the .claude/skills conditional: its native scan
@@ -350,6 +451,35 @@ def inject_with_rules(
     output = output.lstrip("\n")
     target_file.write_text(output, encoding="utf-8")
     print(f"  Updated: {target_file}")
+
+
+def _strip_toolkit_sections(target_file: Path) -> bool:
+    """Remove ai-toolkit ``<!-- TOOLKIT:* -->`` marker sections from an existing
+    file, preserving any non-toolkit content. Returns True if the file changed.
+
+    Used to clean a stale ~/AGENTS.md after Codex global instructions moved to
+    ~/.codex/AGENTS.md. If stripping leaves the file empty (it only ever held
+    toolkit content), the file is removed.
+    """
+    if not target_file.is_file():
+        return False
+    import re
+
+    original = target_file.read_text(encoding="utf-8")
+    stripped = re.sub(
+        r"<!-- TOOLKIT:[^ ]+ START -->.*?<!-- TOOLKIT:[^ ]+ END -->\n?",
+        "",
+        original,
+        flags=re.DOTALL,
+    )
+    if stripped == original:
+        return False
+    stripped = stripped.lstrip("\n")
+    if stripped.strip():
+        target_file.write_text(stripped, encoding="utf-8")
+    else:
+        target_file.unlink()
+    return True
 
 
 def _inject_text_section(target_file: Path, section: str, text: str) -> None:

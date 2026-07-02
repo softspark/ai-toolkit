@@ -313,18 +313,23 @@
       "kind": "editor",
       "urls": {
         "docs": "https://roocodeinc.github.io/Roo-Code",
-        "release_notes": "https://github.com/RooCodeInc/Roo-Code/releases",
+        "release_notes": "https://github.com/Zoo-Code-Org/Zoo-Code/releases",
         "changelog": null
       },
-      "status": "archived",
-      "status_note": "Upstream RooCodeInc/Roo-Code repo archived/read-only as of 2026-05-15, frozen at v3.54.0; docs.roocode.com 301-redirects to roocodeinc.github.io/Roo-Code. A community fork reportedly continues maintenance. JSON .roomodes is NOT deprecated; both generators remain valid.",
+      "status": "succeeded-by-fork",
+      "status_note": "Upstream RooCodeInc/Roo-Code archived/read-only 2026-05-15, frozen at v3.54.0; its releases feed is dead. Successor project by former Roo contributors: Zoo-Code-Org/Zoo-Code (marketplace ZooCodeOrganization.zoo-code, docs.zoocode.dev), active through v3.64.0 (2026-06-26) continuing Roo's version line. Config compat is total: same .roomodes (JSON 'still fully supported and won't be deprecated'), .roo/rules/, .roo/rules-{slug}/, .roo/skills/, .roo/commands/, ~/.roo/* paths — both generators remain valid. Watch Zoo GitHub releases as the authoritative feed (docs.zoocode.dev/update-notes is stale at v3.50.0). Skills (~/.roo/skills, ~/.agents/skills) shipped in v3.46.0/v3.47.2; ai-toolkit now installs them globally via ~/.agents/skills. Roo team pivoted to roomote.dev and recommended Cline.",
       "config_paths": [
         ".roomodes",
         ".roo/rules/*.md",
         ".roo/rules-{slug}/*.md",
+        ".roo/skills/*/SKILL.md",
+        "~/.roo/skills/*/SKILL.md",
+        ".agents/skills/*/SKILL.md",
+        "~/.agents/skills/*",
+        ".roo/commands/*.md",
+        "~/.roo/commands/*.md",
         ".roo/mcp.json",
         "~/.roo/rules/",
-        "~/.roo/custom_modes.yaml",
         "mcp_settings.json"
       ],
       "our_generators": [
@@ -489,8 +494,11 @@
       },
       "config_paths": [
         "AGENTS.md",
+        "~/.codex/AGENTS.md",
+        "~/.codex/AGENTS.override.md",
         ".agents/skills/*/SKILL.md",
         ".codex/hooks.json",
+        "~/.codex/hooks.json",
         ".codex/config.toml",
         "~/.codex/config.toml"
       ],

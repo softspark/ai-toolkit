@@ -228,17 +228,24 @@ def generate(target_dir: Path, *,
              language_modules: list[str] | None = None,
              rules_dir: Path | None = None,
              emit_prompts: bool = True,
-             emit_instructions: bool = True) -> None:
+             emit_instructions: bool = True,
+             config_root: Path | None = None) -> None:
     """Write Copilot path-specific instructions and prompt files.
+
+    By default writes to ``<target_dir>/.github/`` (project-local). Pass
+    ``config_root=~/.copilot`` for the Copilot CLI user-level global layout,
+    where instructions land in ``~/.copilot/instructions/*.instructions.md``.
 
     ``.github/copilot-instructions.md`` is intentionally not written here —
     the legacy ``main()`` entry point still emits it to stdout so existing
     scripts (including ``ai-toolkit install``) keep working unchanged.
     """
     github_dir = target_dir / ".github"
+    instr_root = config_root if config_root is not None else github_dir
+    instr_label = "~/.copilot/instructions" if config_root is not None else ".github/instructions"
 
     if emit_instructions:
-        instr_dir = github_dir / "instructions"
+        instr_dir = instr_root / "instructions"
         instr_dir.mkdir(parents=True, exist_ok=True)
 
         instruction_files: dict[str, callable] = dict(_make_instruction_files())
@@ -269,7 +276,7 @@ def generate(target_dir: Path, *,
 
         for name, content_fn in instruction_files.items():
             (instr_dir / name).write_text(content_fn(), encoding="utf-8")
-            print(f"  Generated: .github/instructions/{name}")
+            print(f"  Generated: {instr_label}/{name}")
 
     if emit_prompts:
         prompt_dir = github_dir / "prompts"

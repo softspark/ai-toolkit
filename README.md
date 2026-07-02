@@ -6,17 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1203%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1208%20passing-success)](tests/)
 
-## What's New in v4.11.0
+## What's New in v4.12.0
 
-v4.11.0 reduces Claude Code startup/global rule pressure and refreshes the editor registry.
+v4.12.0 makes global (HOME-scoped) installs first-class for every editor with a documented file surface, and fixes a Codex global-install bug.
 
-- **Claude rules-space fix**: global `ai-toolkit install/update` now writes toolkit and registered rules to `~/.claude/rules/ai-toolkit-*.md`, while `install --local` writes common project rules to `.claude/rules/ai-toolkit-*.md` with Claude Code `paths` frontmatter.
-- **Language/global rules docs refreshed**: the KB now documents the split between Claude global user rules, project rules, language-rule skills, and other editors' native rule files.
-- **Gemini registry parity restored**: `scripts/ecosystem_tools.json` now lists the Gemini hooks, commands, and skills generators already used by installer profiles.
-- **Ecosystem snapshot refreshed**: the doctor baseline is updated after class A/C upstream documentation drift review.
-- **Test count**: 1198 → 1203.
+- **Codex global path fix**: `install --editors codex` now writes `~/.codex/AGENTS.md` (the file Codex actually reads) instead of the never-loaded `~/AGENTS.md`; upgrades strip the stale section.
+- **Global installs for 7 editors**: Gemini (hooks/commands/skills), Augment (agents/commands/hooks), Roo/Zoo (skills), Windsurf (`~/.config/devin/AGENTS.md`), plus new global support for Cursor (`~/.cursor/hooks.json`), GitHub Copilot (`~/.copilot/`), and Antigravity (skill pointer).
+- **Roo → Zoo Code**: retargeted the dead `RooCodeInc/Roo-Code` release feed to the active successor `Zoo-Code-Org/Zoo-Code`.
+- **Ecosystem refresh**: Gemini v0.49.0, Codex 0.142.5, Auggie 0.31.0, Antigravity CLI 1.0.14, Claude Code 2.1.198; snapshot re-baselined.
+- **Test count**: 1203 → 1208.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -149,7 +149,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1203 tests)
+├── tests/               # Bats test suite (1208 tests)
 └── CHANGELOG.md
 ```
 

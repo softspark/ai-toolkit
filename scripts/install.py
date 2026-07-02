@@ -18,7 +18,7 @@ Other tools (global config locations):
   - Roo Code: ~/.roo/rules/
   - Aider:    ~/.aider.conf.yml (created only if absent)
   - Augment:  ~/.augment/rules/ai-toolkit.md
-  - Codex:    ~/AGENTS.md, ~/.agents/, ~/.codex/hooks.json
+  - Codex:    ~/.codex/AGENTS.md, ~/.agents/skills/, ~/.codex/hooks.json
   - opencode: ~/.config/opencode/
 
 Registered rules (~/.softspark/ai-toolkit/rules/*.md) are also synced into
@@ -750,7 +750,7 @@ def main() -> None:
             global_eds = get_global_editors() or None
 
         installed_eds = install_ai_tools(target_dir, rules_dir, dry_run,
-                                         editors=global_eds)
+                                         editors=global_eds, profile=profile)
         install_persona(target_dir, persona, dry_run)
         install_strict_git_hooks(profile, local, dry_run)
 

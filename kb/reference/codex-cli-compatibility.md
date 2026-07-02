@@ -29,8 +29,7 @@ model.
 
 `ai-toolkit install --local --editors codex` generates:
 
-- `AGENTS.md`
-- `.agents/rules/*.md`
+- `AGENTS.md` (project root; universal coding rules inlined — Codex reads instructions only from AGENTS.md, not `.agents/rules/`)
 - `.agents/skills/*`
 - `.codex/hooks.json`
 
@@ -38,8 +37,7 @@ model.
 
 `ai-toolkit plugin install --editor codex <pack>` bootstraps or reuses:
 
-- `~/AGENTS.md`
-- `~/.agents/rules/*.md`
+- `~/.codex/AGENTS.md` (the documented global instruction file; pack rules are marker-injected here, not written as unread `~/.agents/rules/` files)
 - `~/.agents/skills/*`
 - `~/.codex/hooks.json`
 
@@ -93,20 +91,27 @@ The adapter also covers skills that previously depended only on Claude's
 
 ## Hook Compatibility
 
-Codex does not expose the full Claude hook event surface. The Codex hook
-generator emits only the events supported by Codex runtime integration:
+Codex does not expose the full Claude hook event surface. Codex's
+`HookEventName` enum defines 10 events; the Codex hook generator wires 9 of
+them:
 
 - `SessionStart`
 - `PreToolUse`
 - `PostToolUse`
+- `PermissionRequest`
 - `UserPromptSubmit`
+- `SubagentStart`
+- `SubagentStop`
+- `PreCompact`
 - `Stop`
 
-This means Claude-only events such as `TaskCompleted`, `TeammateIdle`,
-`SubagentStart`, `SubagentStop`, `PreCompact`, `SessionEnd`, and
-`Notification` are not available in `.codex/hooks.json`.
+`PostCompact` is the one enum event left unwired (its only hook was the removed
+environment-snapshot probe). Claude-only events such as `TaskCompleted`,
+`TeammateIdle`, `SessionEnd`, and `Notification` have no Codex equivalent and
+are not available in `.codex/hooks.json`. Handler types: only `command` runs;
+`prompt` and `agent` are parsed by Codex but not yet executed.
 
-`inject-hook` automatically propagates Codex-compatible events to
+`inject-hook` automatically propagates these 9 Codex-compatible events to
 `~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
 `remove-hook` cleans both Claude and Codex targets.
 
