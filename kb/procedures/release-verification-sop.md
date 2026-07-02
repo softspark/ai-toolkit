@@ -80,7 +80,10 @@ python3 scripts/audit_skills.py --ci
 npm test
 
 # 5. Stage and commit
-git add AGENTS.md llms.txt llms-full.txt
+# AGENTS.md, GEMINI.md, and .github/copilot-instructions.md are generated and
+# gitignored — do NOT commit them (regenerated at prepublishOnly). Only the
+# doc artifacts llms.txt / llms-full.txt are committed.
+git add llms.txt llms-full.txt
 git add -p  # stage your other changes
 git commit -m "feat: your change description"
 ```

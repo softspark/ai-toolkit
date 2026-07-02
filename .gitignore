@@ -54,6 +54,8 @@ dist/
 /app/agents/.claude/
 /.github/prompts/
 /.github/instructions/
+/.github/copilot-instructions.md
 /.gemini/
 /audit.sarif
 /AGENTS.md
+/GEMINI.md

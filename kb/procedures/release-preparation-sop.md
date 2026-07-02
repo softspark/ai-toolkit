@@ -371,7 +371,11 @@ Stage all release files:
 git add package.json manifest.json app/.claude-plugin/plugin.json
 git add package-lock.json
 git add CHANGELOG.md
-git add AGENTS.md llms.txt llms-full.txt
+git add llms.txt llms-full.txt
+# NOTE: AGENTS.md, GEMINI.md, and .github/copilot-instructions.md are generated
+# editor configs and are gitignored — do NOT commit them. `prepublishOnly` runs
+# `npm run generate:all`, so the shipped package (which lists AGENTS.md in
+# package.json `files`) gets a fresh copy at publish time.
 git add -p  # review and stage any other changes
 ```
 
