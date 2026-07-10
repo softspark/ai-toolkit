@@ -55,7 +55,7 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 - A skill MAY trigger an agent (`agent: <name>` frontmatter) — that's Layer 2 calling Layer 4.
 - A hook MUST NOT call a skill — hooks are deterministic shell, skills are LLM-driven.
 - A plugin MAY bundle skills + agents + hooks, but never the inverse.
-- Claude Code reads CLAUDE.md across layers. Claude Chat/Cowork uses app-global/folder instructions and plugin skills instead; `claude_app.py` renders core rules into `ai-toolkit-rules` for that runtime.
+- Claude Code reads CLAUDE.md across layers. Claude Chat/Cowork uses app-global/folder instructions and plugin skills instead; `ai-toolkit claude-app export` (backed by `claude_app.py`) builds the uploadable plugin ZIP + Cowork global-instructions and renders core rules into `ai-toolkit-rules` for that runtime.
 
 ---
 
