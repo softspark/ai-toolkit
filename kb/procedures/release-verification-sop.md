@@ -3,10 +3,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-04-08"
 last_updated: "2026-07-02"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing. v1.4.3 tightens the Phase 8.4 URL pin check so the success-message count includes only entries with a `url:` field, not local `path:` entries, and documents the `sources.json` envelope shape. v1.5.0 updates Phase 2's global-target list for the v4.12.0 expansion — cursor, copilot, and antigravity are now global-capable (hooks / instructions / skills respectively; cursor + antigravity rules stay --local)."
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, installs, Claude app plugin export, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. v1.6.0 adds the Claude Chat/Cowork plugin validation and replaces the retired Cascade hook surface with Devin hooks."
 ---
 
 # SOP: Release Verification
@@ -51,10 +51,11 @@ python3 scripts/audit_skills.py --ci                        # 10. Security audit
 python3 scripts/audit_skills.py --sarif | python3 -c "import json,sys; assert json.load(sys.stdin)['version']=='2.1.0'; print('SARIF OK')"   # 11. SARIF 2.1.0 well-formed?
 python3 scripts/audit_skills.py --permissions | head -30    # 12. Broad-access skills reviewed?
 npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"   # 13. Provenance attested on npm?
+python3 scripts/claude_app.py verify                         # 14. Claude Chat/Cowork plugin contract valid?
 
 # Deep-coverage verification (Phase 9, v3.0.0+)
 META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
-diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 14. Registry <-> generators drift?
+diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 15. Registry <-> generators drift?
 ```
 
 ---
@@ -341,12 +342,12 @@ These verify the native-surface generators shipped in v3.0.0 actually emit the r
 D=/tmp/aitk-profile-full-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
   --profile full --codex-skills --dry-run 2>&1 \
-  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.windsurf/hooks\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.agents/skills"
+  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.devin/hooks\\.v1\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.agents/skills"
 ```
 
 **Verify** — at least the following lines appear:
 - [ ] `.cursor/hooks.json` and `.cursor/agents/`
-- [ ] `.windsurf/hooks.json`
+- [ ] `.devin/hooks.v1.json`
 - [ ] `.gemini/settings.json` hooks AND `.gemini/commands/`
 - [ ] `.augment/agents/` + `.augment/commands/` + `$HOME/.augment/settings.json`
 - [ ] `.agents/skills/` (Codex native discovery path; refreshed by `--codex-skills`)
@@ -404,7 +405,7 @@ The bats suite validates JSON shape at generation time. This re-checks that what
 ```bash
 D=/tmp/aitk-json-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors cursor,windsurf,gemini,augment --profile full >/dev/null 2>&1
-for f in .cursor/hooks.json .windsurf/hooks.json .gemini/settings.json $HOME/.augment/settings.json; do
+for f in .cursor/hooks.json .devin/hooks.v1.json .gemini/settings.json $HOME/.augment/settings.json; do
   [ -f "$f" ] && python3 -c "import json; json.load(open('$f'))" && echo "OK: $f"
 done
 ```
@@ -423,6 +424,18 @@ diff <(echo "$REG") <(echo "$FS") && echo "OK: registry matches filesystem" || e
 ```
 
 **Verify:** prints `OK: registry matches filesystem`. If not, add the missing rows to the registry before tagging the next release.
+
+### 9.7 Claude Chat / Cowork plugin validates and exports
+
+```bash
+python3 scripts/claude_app.py verify
+D=/tmp/aitk-claude-app-${RANDOM}
+python3 scripts/claude_app.py export --output "$D.zip" --no-custom-rules
+python3 -c "import zipfile; z=zipfile.ZipFile('$D.zip'); assert '.claude-plugin/plugin.json' in z.namelist(); assert 'claude-app/skills/ai-toolkit-rules/SKILL.md' in z.namelist(); print('OK: Claude app archive')"
+```
+
+**Verify:** the official validator exits 0; the archive contains the manifest,
+app-native rules skill, bundled agents/skills, and plugin-relative Cowork hooks.
 
 ---
 

@@ -10,15 +10,17 @@ tags:
   - deprecation
   - cleanup
 doc_type: plan
-status: scheduled
+status: completed
 created: "2026-06-10"
-last_updated: "2026-06-10"
-completion: "0%"
+last_updated: "2026-07-10"
+completion: "100%"
 trigger_date: "2026-07-01"
-description: "Scheduled cleanup: remove the deprecated Windsurf Cascade hooks generator (.windsurf/hooks.json) in the first ai-toolkit release after the 2026-07-01 Cascade sunset. The Devin CLI replacement (.devin/hooks.v1.json) shipped in v4.8.0; this plan removes the dead Cascade half once it can no longer run."
+description: "Completed cleanup of the deprecated Windsurf Cascade hooks generator after the 2026-07-01 sunset; Devin CLI .devin/hooks.v1.json is now the sole live hook surface."
 ---
 
 # Plan: Drop Cascade hooks after 2026-07-01 sunset
+
+**Completed in v4.13.0 (2026-07-10).** The deprecated generator and install/test wiring were removed; the Devin hook generator remains.
 
 ## Why this exists
 
@@ -72,10 +74,13 @@ removing it before the sunset breaks Cascade users who are still on the old agen
 - `python3 scripts/validate.py --strict` — 0/0 (editor-hooks-honesty must still
   report windsurf as hook-enabled via the `devin` generator alias).
 - `python3 scripts/ecosystem_doctor.py --offline --check` — exit 0.
-- `npm test` — 0 `not ok`; confirm no test still references
-  `generate_windsurf_hooks.py` or `.windsurf/hooks.json`.
-- `grep -rn "generate_windsurf_hooks\|windsurf/hooks.json" scripts/ tests/ kb/ README.md`
-  returns nothing (Art. VI.1 orphan check).
+- `npm test` — 0 `not ok`; no test recreates the deleted
+  `generate_windsurf_hooks.py` generator.
+- `grep -rn "generate_windsurf_hooks" scripts/ tests/` returns nothing
+  (Art. VI.1 orphan check — the deleted generator is fully unwired).
+  `.windsurf/hooks.json` intentionally remains referenced by the one-time
+  migration/strip cleanup (`scripts/install_steps/ai_tools.py`) and its test,
+  and in narrative docs (CHANGELOG, README, `kb/`, docstrings).
 
 ## Do NOT touch
 

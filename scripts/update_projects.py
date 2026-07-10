@@ -28,8 +28,19 @@ def _update_project(project: dict[str, Any], install_script: str, extra_args: li
     # Pass saved editors from registry so update re-installs the same editors
     cmd_args = ["python3", install_script, "--local"] + extra_args
     project_editors = project.get("editors", [])
-    if project_editors:
+    has_editor_override = any(
+        arg == "--editors" or arg.startswith("--editors=")
+        for arg in extra_args
+    )
+    if project_editors and not has_editor_override:
         cmd_args.extend(["--editors", ",".join(project_editors)])
+    has_profile_override = any(
+        arg == "--profile" or arg.startswith("--profile=")
+        for arg in extra_args
+    )
+    project_profile = project.get("profile", "")
+    if project_profile and not has_profile_override:
+        cmd_args.extend(["--profile", project_profile])
 
     try:
         proc = subprocess.run(

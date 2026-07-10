@@ -120,6 +120,30 @@ teardown() {
     [ "$install_out" = "$update_out" ]
 }
 
+@test "cli: update --dry-run does not update registered projects or create a lock" {
+    project="$TEST_TMP/registered-project"
+    mkdir -p "$project" "$HOME/.softspark/ai-toolkit"
+    printf '{"projects":[{"path":"%s"}]}' "$project" \
+        > "$HOME/.softspark/ai-toolkit/projects.json"
+
+    run $CLI update --dry-run
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Updating registered projects"* ]]
+    [ ! -e "$HOME/.softspark/ai-toolkit/projects.lock" ]
+}
+
+@test "cli: update passes explicit editor override to registered projects" {
+    project="$TEST_TMP/registered-project"
+    mkdir -p "$project" "$HOME/.softspark/ai-toolkit"
+    printf '{"projects":[{"path":"%s","profile":"full","editors":["codex"]}]}' \
+        "$project" > "$HOME/.softspark/ai-toolkit/projects.json"
+
+    run $CLI update --editors windsurf --profile minimal
+    [ "$status" -eq 0 ]
+    [ -f "$project/.windsurfrules" ]
+    [ ! -f "$project/.devin/hooks.v1.json" ]
+}
+
 # ── agents-md (merged: exits 0 + non-empty) ─────────────────────────────────
 
 @test "cli: agents-md generates non-empty AGENTS.md" {

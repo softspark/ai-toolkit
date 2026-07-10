@@ -3,10 +3,9 @@
 
 Devin CLI uses a hook format **compatible with Claude Code hooks**
 (docs.devin.ai/cli/extensibility/hooks/overview). This generator is the
-replacement for the deprecated Cascade ``.windsurf/hooks.json`` surface,
-which stops working when Cascade sunsets on 2026-07-01. Devin Local / Devin
-CLI do NOT read ``.windsurf/hooks.json`` as a fallback, so the hooks must be
-regenerated onto this new file.
+replacement for the removed Cascade ``.windsurf/hooks.json`` surface, which
+stopped working on 2026-07-01. Devin Local and the standalone Devin CLI do not
+read that legacy file as a fallback, so hooks are emitted here.
 
 Output file: ``<target>/.devin/hooks.v1.json``. Per the Devin docs the
 standalone ``hooks.v1.json`` file's entire contents ARE the hooks object —

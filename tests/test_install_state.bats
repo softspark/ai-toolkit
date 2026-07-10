@@ -181,6 +181,52 @@ print('OK')
     echo "$output" | grep -q 'OK'
 }
 
+@test "install_state: explicit non-auto install clears stale detected languages" {
+    run python3 -c "
+import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from install_steps.install_state import record_install, load_state
+record_install(
+    version='2.0.0',
+    modules=['core', 'rules-cpp'],
+    profile='standard',
+    auto_detected=['rules-cpp'],
+)
+record_install(
+    version='2.0.0',
+    modules=['core', 'rules-cpp', 'rules-python'],
+    profile='standard',
+)
+state = load_state()
+assert 'auto_detected_languages' not in state, state
+"
+    [ "$status" -eq 0 ]
+}
+
+@test "install --local preserves global install profile and modules" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit" "$TEST_TMP/project"
+    cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'
+{
+  "installed_version": "4.13.0",
+  "installed_at": "2026-01-01T00:00:00Z",
+  "last_updated": "2026-01-02T00:00:00Z",
+  "profile": "full",
+  "installed_modules": ["core", "agents", "skills", "rules-python"]
+}
+EOF
+
+    run bash -c "cd '$TEST_TMP/project' && python3 '$TOOLKIT_DIR/scripts/install.py' --local --profile minimal --skip-register"
+    [ "$status" -eq 0 ]
+    python3 - "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'PY'
+import json
+import sys
+
+state = json.load(open(sys.argv[1]))
+assert state["profile"] == "full", state
+assert state["installed_modules"] == ["core", "agents", "skills", "rules-python"], state
+assert state["last_updated"] == "2026-01-02T00:00:00Z", state
+PY
+}
+
 # ── version_check.py ───────────────────────────────────────────────────────
 
 @test "version_check: exits 0 when up to date (offline)" {

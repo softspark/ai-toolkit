@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-07-01T22:55:24Z",
+  "last_run": "2026-07-10T06:43:18Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "04b55a2b2d496b45",
+      "docs_hash": "880db45231fef284",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -65,8 +65,50 @@
         "subagents": true
       }
     },
+    "claude-app": {
+      "docs_hash": "bd1483491a8a64e2",
+      "headings": [
+        "Add global and folder instructions",
+        "Availability",
+        "Claude Cowork plugins",
+        "Claude stopped working on my task",
+        "Current limitations",
+        "Data and analysis",
+        "Document creation",
+        "Example use cases",
+        "File and document management",
+        "Files aren&#x27;t appearing where expected",
+        "Folder instructions",
+        "Get started",
+        "Get started with Claude Cowork",
+        "Global instructions",
+        "How Claude Cowork runs your tasks",
+        "I don&#x27;t see Cowork on web or mobile",
+        "I&#x27;m hitting usage limits quickly",
+        "I&#x27;m seeing &quot;Setting up Claude&#x27;s workspace&quot; when I start Cowork; what does this mean?",
+        "Key capabilities",
+        "Permission modes",
+        "Permissions",
+        "Permissions and security",
+        "Requirements",
+        "Research and analysis",
+        "Schedule recurring tasks",
+        "Start a Cowork session",
+        "Troubleshooting",
+        "Usage limits",
+        "What is Claude Cowork?",
+        "What to expect during a task"
+      ],
+      "markers": {
+        "Folder instructions": true,
+        "Global instructions": true,
+        "plugins": true,
+        "skills": true,
+        "sub-agents": true
+      }
+    },
     "claude-code": {
-      "docs_hash": "338d55540b385861",
+      "docs_hash": "50b46c4f57d16b9e",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -122,10 +164,10 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.198 (Claude Code)"
+      "version": "2.1.206 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "80209baf691558e2",
+      "docs_hash": "1726cf1ff3f402b6",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -172,52 +214,77 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "ad6bbf5e29c7155f",
+      "docs_hash": "46073353f24772e6",
       "headings": [
         "API",
         "API Reference",
-        "Administration",
         "Advertiser API",
+        "Agent configuration",
         "Agents SDK",
-        "Automation",
+        "Available on",
+        "Blog",
         "Build",
+        "Build with Codex",
+        "Capabilities",
         "Categories",
-        "Codex",
-        "Codex for Open Source",
+        "Chats",
+        "Choose the right GPT-5.6 model",
+        "Codex Security",
         "Community",
-        "Configuration",
+        "Config file",
+        "Continue a task on another host",
         "Contribute",
         "Conversion apps",
         "Core Concepts",
         "Core concepts",
+        "Customization",
         "Deploy",
+        "Deployment and model providers",
+        "Development workflows",
         "Docs agent",
+        "Environments",
         "Evaluation",
         "Events",
-        "Explore use cases",
+        "Explore",
+        "Extend ChatGPT and Codex",
+        "Extend and automate",
         "File Upload",
+        "Foundations",
         "Get started",
-        "Getting Started",
+        "Getting started",
         "Going live",
         "Guides",
-        "Learn",
+        "Identity and authentication",
         "Legacy APIs",
         "Measurement",
+        "Overview",
+        "Permissions",
         "Plan",
+        "Plugin and connector controls",
         "Programs",
-        "Quickstart",
+        "Projects",
         "Realtime and audio",
         "Recent",
+        "Reference",
         "Releases",
         "Resources",
         "Run and scale",
-        "Search the Codex docs",
+        "Safety",
+        "Search the docs",
         "Spaces",
         "Specialized models",
         "Suggested",
+        "Take on ambitious work with ChatGPT Work",
+        "Third-party integrations",
         "Tools",
         "Topics",
-        "Using Codex"
+        "Turn demonstrated workflows into reusable skills",
+        "Usage, governance, and compliance",
+        "What should we get done?",
+        "What\u2019s new",
+        "Windows",
+        "Workflows",
+        "Workspace access, policy, and models"
       ],
       "markers": {
         ".agents/skills": false,
@@ -240,10 +307,10 @@
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.142.0"
+      "version": "codex-cli 0.144.1"
     },
     "cursor": {
-      "docs_hash": "080c1289cb353e6c",
+      "docs_hash": "63246f9f6c354976",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -259,7 +326,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "a0ff94dabdb6cd8a",
+      "docs_hash": "7a28426194187480",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -302,7 +369,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "1f9817b3477c576b",
+      "docs_hash": "788efbd31f39bd11",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -336,11 +403,10 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "4d2e384b2c2add18",
+      "docs_hash": "e484097e498581f4",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
-        "Antigravity": false,
         "GEMINI.md": false,
         "MCP": false,
         "agent manager": false,
@@ -353,7 +419,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "28dcd5b88aeb84e0",
+      "docs_hash": "8713591669c1683f",
       "headings": [
         "Add features",
         "Ask questions",
@@ -413,7 +479,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "b457c990c531efc4",
+      "docs_hash": "93e7f46747f42e11",
       "headings": [
         "Accounts",
         "Advanced",

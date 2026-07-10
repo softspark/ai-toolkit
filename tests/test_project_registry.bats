@@ -151,6 +151,19 @@ assert data['projects'][0]['path'].endswith('proj-b')
     [[ "$output" == *"Updated: 2/2"* ]]
 }
 
+@test "update_projects: explicit editors override saved project subset" {
+    mkdir -p "$TEST_DIR/proj-override"
+    register="$AI_TOOLKIT_HOME/projects.json"
+    printf '{"projects":[{"path":"%s","profile":"full","editors":["codex"]}]}' \
+        "$TEST_DIR/proj-override" > "$register"
+
+    run python3 "$TOOLKIT_DIR/scripts/update_projects.py" \
+        --editors windsurf --skip agents,skills,hooks
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_DIR/proj-override/.windsurfrules" ]
+    [ -f "$TEST_DIR/proj-override/.devin/hooks.v1.json" ]
+}
+
 @test "update_projects: skips stale projects" {
     mkdir -p "$TEST_DIR/proj-ok" "$TEST_DIR/proj-gone"
     cd "$TEST_DIR/proj-ok"

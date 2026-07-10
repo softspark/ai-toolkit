@@ -756,34 +756,36 @@ def main() -> None:
 
     # Record install state (skip for dry-run)
     if not dry_run:
-        auto_detected = None
-        if auto_detect:
-            auto_detected = detect_languages(project_dir, toolkit_dir)
-
-        # Determine what modules to record
-        if resolved_modules is not None:
-            record_modules = resolved_modules
-        else:
-            # Legacy mode: infer modules from profile/only
-            record_modules = _infer_modules_from_legacy(profile, only)
-
         # Extract extends metadata if available
         extends_info = None
         merged = cfg.get("_merged_config")
         if merged and merged.get("_extends_meta"):
             extends_info = merged["_extends_meta"]
 
-        record_install(
-            version=_get_toolkit_version(),
-            modules=record_modules,
-            profile=profile or "standard",
-            auto_detected=auto_detected,
-            extends_info=extends_info,
-        )
+        # state.json describes the global install and drives future `update`
+        # invocations. Project-local installs belong in projects.json and must
+        # never replace the global profile/modules with the last project's
+        # auto-detected language set.
+        if not local:
+            auto_detected = None
+            if auto_detect:
+                auto_detected = detect_languages(project_dir, toolkit_dir)
 
-        # Record global editors (only for global install, not --local)
-        if not local and installed_eds:
-            record_global_editors(installed_eds)
+            if resolved_modules is not None:
+                record_modules = resolved_modules
+            else:
+                record_modules = _infer_modules_from_legacy(profile, only)
+
+            record_install(
+                version=_get_toolkit_version(),
+                modules=record_modules,
+                profile=profile or "standard",
+                auto_detected=auto_detected,
+                extends_info=extends_info,
+            )
+
+            if installed_eds:
+                record_global_editors(installed_eds)
 
         # Register project in global registry (for `ai-toolkit update` propagation)
         # Skipped when called from update_projects.py (--skip-register) to avoid

@@ -190,7 +190,7 @@ EOF
 # State recording
 # ---------------------------------------------------------------------------
 
-@test "install --local: records extends info in state.json" {
+@test "install --local: records extends info in projects.json" {
     cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config"
@@ -202,11 +202,10 @@ EOF
 
     python3 -c "
 import json
-with open('$TMP_HOME/.softspark/ai-toolkit/state.json') as f:
-    state = json.load(f)
-assert 'extends' in state, f'no extends in state: {list(state.keys())}'
-assert state['extends']['source'] == '../base-config'
-assert len(state['extends']['configs']) == 1
+with open('$TMP_HOME/.softspark/ai-toolkit/projects.json') as f:
+    registry = json.load(f)
+project = registry['projects'][0]
+assert project['extends'] == '../base-config', project
 "
 }
 

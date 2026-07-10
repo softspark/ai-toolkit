@@ -124,6 +124,10 @@ LANGUAGE_RULE_CATEGORIES = frozenset({
 
 PLANNED_ASSETS = [
     "app/.claude-plugin/plugin.json",
+    "app/claude-app/hooks/hooks.json",
+    "app/claude-app/skills/ai-toolkit-rules/SKILL.md",
+    "app/claude-app/global-instructions.md",
+    "scripts/claude_app.py",
     "scripts/doctor.py",
     "scripts/benchmark_ecosystem.py",
     "scripts/harvest_ecosystem.py",
@@ -561,9 +565,37 @@ def validate_planned_assets(tk_dir: Path, vr: ValidationResult) -> None:
             assert d["name"]
             assert d["version"]
             assert d["description"]
-            print("  OK: plugin manifest JSON is valid")
+            assert isinstance(d.get("repository"), str)
+            ignored = {"npm", "install", "marketplace", "claude-code"} & set(d)
+            assert not ignored
+            for path_field in ("hooks", "skills"):
+                relative = str(d[path_field]).removeprefix("./")
+                assert (tk_dir / "app" / relative).exists()
+            print("  OK: plugin manifest matches the official schema surface")
         except (json.JSONDecodeError, KeyError, AssertionError):
-            vr.error("Invalid plugin manifest JSON or missing required fields")
+            vr.error("Invalid plugin manifest JSON, official fields, or component paths")
+
+    try:
+        from claude_app import (
+            GLOBAL_INSTRUCTIONS_PATH,
+            PLUGIN_HOOKS_PATH,
+            PLUGIN_RULES_SKILL_PATH,
+            render_global_instructions,
+            render_plugin_hooks,
+            render_rules_skill,
+        )
+        generated = (
+            (PLUGIN_HOOKS_PATH, render_plugin_hooks()),
+            (PLUGIN_RULES_SKILL_PATH, render_rules_skill()),
+            (GLOBAL_INSTRUCTIONS_PATH, render_global_instructions()),
+        )
+        stale = [path for path, expected in generated if path.read_text(encoding="utf-8") != expected]
+        if stale:
+            vr.error("Stale Claude app assets; run: python3 scripts/claude_app.py sync")
+        else:
+            print("  OK: Claude app plugin assets match canonical rules/hooks")
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        vr.error(f"Invalid Claude app generated assets: {exc}")
 
     # Validate benchmark dashboard JSON
     benchmark_dashboard = tk_dir / "benchmarks" / "ecosystem-dashboard.json"

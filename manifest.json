@@ -1,5 +1,5 @@
 {
-  "version": "4.12.0",
+  "version": "4.13.0",
   "components": {
     "agents": {
       "description": "44 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
@@ -9,14 +9,14 @@
       "tags": ["core", "agents"]
     },
     "skills": {
-      "description": "107 skills (32 task + 30 hybrid + 45 knowledge)",
+      "description": "108 skills (32 task + 30 hybrid + 46 knowledge)",
       "path": "app/skills",
       "target": ".claude/skills",
       "type": "symlink",
       "tags": ["core", "skills", "commands"]
     },
     "hooks": {
-      "description": "28 hook entries across 14 lifecycle events",
+      "description": "28 hook entries across 14 lifecycle events plus statusLine",
       "path": "app/hooks.json + app/hooks/*.sh",
       "target": "~/.claude/settings.json (merge) + ~/.softspark/ai-toolkit/hooks/ (copy)",
       "type": "merge+copy",
@@ -30,7 +30,7 @@
       "tags": ["plugins", "packs", "experimental"]
     },
     "constitution": {
-      "description": "6-article machine-enforced safety constitution",
+      "description": "7-article machine-enforced safety constitution",
       "path": "app/constitution.md",
       "target": ".claude/constitution.md",
       "type": "symlink",
@@ -51,10 +51,10 @@
       "tags": ["core", "output-styles"]
     },
     "rules": {
-      "description": "Auto-injected rules for CLAUDE.md (jira, quality-gates, etc.)",
+      "description": "Rules synced to Claude Code rule files and exported as a Claude app plugin skill",
       "path": "app/rules",
-      "target": "CLAUDE.md (injected)",
-      "type": "injection",
+      "target": "~/.claude/rules + .claude/rules + Claude app plugin skill",
+      "type": "sync+plugin",
       "tags": ["core", "rules"]
     }
   },
@@ -90,7 +90,7 @@
       "default": true
     },
     "skills": {
-      "description": "107 skills (task, hybrid, knowledge)",
+      "description": "108 skills (task, hybrid, knowledge)",
       "default": true
     },
     "rules-common": {

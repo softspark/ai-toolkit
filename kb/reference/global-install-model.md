@@ -3,10 +3,10 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.1.0"
+version: "3.2.0"
 created: "2026-03-26"
-last_updated: "2026-06-30"
-description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
+last_updated: "2026-07-10"
+description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
 # Global Install Model
@@ -24,6 +24,10 @@ the core toolkit install, but experimental plugin packs can layer a global
 Codex target in `HOME` when explicitly installed with
 `ai-toolkit plugin install --editor codex`.
 
+Claude Chat/Desktop/Cowork is a separate runtime. It does not read the
+filesystem surfaces under `~/.claude`; it receives ai-toolkit through an
+uploaded plugin plus app-managed global/folder instructions.
+
 ## Command Responsibilities
 
 | Command | Target | Purpose |
@@ -34,6 +38,7 @@ Codex target in `HOME` when explicitly installed with
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
 | `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
+| `ai-toolkit claude-app export` | ZIP + Markdown output | build the uploadable Claude Chat/Cowork plugin and Cowork global instructions; registered rules are included unless `--no-custom-rules` is set |
 | `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |
 | `ai-toolkit mcp add <name...>` | current project | merge MCP templates into `.mcp.json` |
@@ -69,6 +74,22 @@ Claude Code's default global install writes these managed surfaces:
 - `~/.claude/CLAUDE.md` — compact index pointing at the managed rule files.
 
 The `ai-toolkit-*` prefix in `~/.claude/rules/` is reserved for installer-managed files. User-authored Claude rules should use another filename prefix, or be registered through `ai-toolkit add-rule` so they are emitted as `ai-toolkit-registered-*.md`.
+
+## Claude App Target
+
+`~/.claude/` is a Claude Code surface, not a Claude Chat/Cowork surface. Run:
+
+```bash
+ai-toolkit claude-app export --verify
+```
+
+Upload the ZIP from `Customize > Plugins`, then paste the sibling
+`*-global-instructions.md` file into `Settings > Cowork > Global instructions`.
+The plugin contains the normal skills and agents, app-relative Cowork hooks,
+and an `ai-toolkit-rules` skill generated from common/standalone rules.
+Registered rules are embedded in a separate skill by default. Skills work in
+Chat and Cowork; hooks and sub-agents are Cowork-only. The app owns its plugin
+store, so toolkit updates require re-export and re-upload.
 
 `ai-toolkit install --editors <name>` can write global files only for editors
 with documented, file-based config surfaces:

@@ -52,6 +52,7 @@ const SCRIPT_COMMANDS = {
   'stats':                { script: 'stats.py' },
   'compile-slm':          { script: 'compile_slm.py' },
   'pack-codebase':        { script: 'pack_codebase.py' },
+  'claude-app':           { script: 'claude_app.py',          toolkitCwd: true },
 };
 
 // ---------------------------------------------------------------------------
@@ -109,6 +110,7 @@ const COMMANDS = {
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
   'compile-slm': 'Compile toolkit into a minimal SLM system prompt (--budget, --model-size, --dry-run)',
   'pack-codebase': 'Pack the current codebase into a single AI-friendly markdown file (--budget, --include, --exclude, --dry-run)',
+  'claude-app': 'Export or verify the uploadable Claude Chat/Desktop/Cowork plugin',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
   'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, opencode, llms)',
   help: 'Show this help message',
@@ -280,6 +282,10 @@ function showHelp() {
   console.log('  list            Show available plugin packs with install status');
   console.log('  status          Show currently installed plugins with data stats');
   console.log('  --editor <list> Runtime target: claude, codex, or all (default: claude)');
+  console.log('\nOptions for claude-app:');
+  console.log('  export [--output FILE] [--no-custom-rules] [--verify]');
+  console.log('                  Build a ZIP for Customize > Plugins and Cowork instructions');
+  console.log('  verify          Run structural checks and the official Claude plugin validator');
   console.log('\nOptions for mcp:');
   console.log('  list                          List available MCP templates');
   console.log('  editors                       List editors with native MCP config adapters');
@@ -539,6 +545,7 @@ function handleStatus(_args) {
  */
 function handleUpdate(args) {
   const isLocal = args.includes('--local');
+  const isDryRun = args.includes('--dry-run') || args.includes('--list');
   let statePath = path.join(process.env.HOME, '.softspark', 'ai-toolkit', 'state.json');
   // Fallback to legacy path for first run after upgrade (before migration runs)
   if (!fs.existsSync(statePath)) {
@@ -568,7 +575,7 @@ function handleUpdate(args) {
   run(scriptPath('install.py'), [...stateArgs, ...args]);
 
   // After global update (not --local), propagate to all registered projects
-  if (!isLocal) {
+  if (!isLocal && !isDryRun) {
     const registryPath = path.join(process.env.HOME, '.softspark', 'ai-toolkit', 'projects.json');
     if (fs.existsSync(registryPath)) {
       try {
@@ -578,8 +585,19 @@ function handleUpdate(args) {
           console.log('');
           console.log('## Updating registered projects');
           console.log('');
-          // Pass through --skip, --refresh-base flags to project updates
-          const passthrough = args.filter(a => a.startsWith('--skip') || a === '--refresh-base');
+          // Pass project-relevant overrides through. In particular, an
+          // explicit `--editors all` must override each project's saved editor
+          // subset during this propagation run.
+          const passthrough = [];
+          for (let i = 0; i < args.length; i += 1) {
+            const arg = args[i];
+            if (arg.startsWith('--skip') || arg === '--refresh-base' || arg.startsWith('--editors=') || arg.startsWith('--profile=')) {
+              passthrough.push(arg);
+            } else if ((arg === '--editors' || arg === '--profile') && args[i + 1]) {
+              passthrough.push(arg, args[i + 1]);
+              i += 1;
+            }
+          }
           run(scriptPath('update_projects.py'), passthrough);
         }
       } catch (_err) {

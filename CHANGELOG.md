@@ -7,6 +7,36 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.13.0 — Claude app delivery + Devin sunset cleanup (2026-07-10)
+
+Minor release. Adds a validated distribution path for Claude Chat/Desktop/Cowork, fixes the core plugin contract, and removes the retired Cascade hook surface. Test count: 1208 → 1216 (seven deprecated Cascade assertions removed; six Claude app contract tests, three editor migration/propagation tests, two state-isolation/cleanup tests, two untagged-hook diagnostics, and two dry-run regressions added).
+
+### Added
+- **Claude app plugin export** — `ai-toolkit claude-app export [--output FILE] [--no-custom-rules] [--verify]` creates a deterministic plugin ZIP for `Customize > Plugins` and a sibling Cowork global-instructions file. The archive bundles skills, agents, app-relative hooks, required helper scripts, core rules, and registered user rules (opt-out for shareable bundles).
+- **App-native rules delivery** — common and standalone rule sources are rendered into the `ai-toolkit-rules` skill because Claude Chat/Cowork does not read Claude Code's `CLAUDE.md` or `~/.claude/rules/` surfaces.
+- **Claude app ecosystem target** — registry/tooling now tracks 13 targets: Claude Code, Claude Chat/Cowork, and 11 editor integrations.
+
+### Fixed
+- **Official plugin manifest** — changed `repository` from an invalid object to the required URL string, removed four ignored non-schema fields, and declared the generated app skill/hook component paths. `claude plugin validate` now passes on a clean staged plugin.
+- **Cowork hook portability** — generated plugin hooks use `${CLAUDE_PLUGIN_ROOT}` and bundle their Python helpers instead of assuming a separate `~/.softspark/ai-toolkit/hooks` install.
+- **Untagged hook diagnostics** — `doctor` and `config-desync-guard.sh` now recognize canonical hook behavior when Claude rewrites settings without preserving ai-toolkit's private `_source` marker, eliminating false "hooks missing" warnings.
+- **Update dry-run safety** — `ai-toolkit update --dry-run` and `--list` no longer invoke registered-project updates or create `projects.lock` after the read-only preview.
+- **Cline dry-run accuracy** — global preview now reports reuse of Cline-compatible `~/.claude/skills` instead of claiming it will create a redundant `~/.cline/skills` pointer.
+- **Global/local state isolation** — project-local installs and registered-project propagation no longer overwrite global `state.json` modules/profile with the last project's detected languages; project metadata remains in `projects.json`.
+- **Detected-language state cleanup** — explicit module installs now clear stale `auto_detected_languages` metadata instead of reporting an obsolete last-detected language in `status`.
+- **Registered-project editor/profile propagation** — explicit `ai-toolkit update --editors/--profile ...` overrides now reach registered projects; without an override, each project's saved editor set and profile are preserved.
+- **Devin skill discovery** — emit a single canonical pointer under `.windsurf/skills` instead of also writing `.devin/skills`. Both are in Devin's documented eight-path discovery list (all scanned in every repo), so one pointer keeps skills discoverable while avoiding duplicate registration.
+
+### Removed
+- **Cascade hook generator** — removed `generate_windsurf_hooks.py`, `.windsurf/hooks.json` install wiring, tests, and docs after Cascade's 2026-07-01 sunset. `generate_devin_hooks.py` / `.devin/hooks.v1.json` is the sole Windsurf-family hook surface.
+- **Retired path migration** — local Windsurf/Devin updates strip only ai-toolkit-owned entries from legacy `.windsurf/hooks.json` and remove the managed `.devin/skills/ai-toolkit-skill-catalogue` pointer while preserving user content.
+
+### Ecosystem
+- **Class B/F — Claude app plugins**: adopted the official plugin surface shared by Chat/Desktop/Cowork; skills work across Chat and Cowork while hooks/sub-agents are Cowork-only.
+- **Class D — Devin/Cascade**: completed the scheduled removal and refreshed current skill paths. Devin Desktop v3.4.27 and its v3.4.22 skill-permission change were reviewed; no permission field is needed for ai-toolkit's non-executing pointer skill.
+- **Class A — editor docs**: reviewed content-only drift for Cursor, Copilot, Gemini, Cline, Augment, and opencode; no generator contract changes were found.
+- **Class A — versions/docs**: refreshed Claude Code 2.1.206 and Codex CLI 0.144.1 after reviewing their official releases/current config surfaces.
+
 ## v4.12.0 — Global-first editor installs + Codex path fix (2026-07-02)
 
 Minor release. Expands global (HOME-scoped) installs to every editor with a documented, merge-safe file surface, and fixes a Codex global-install bug where instructions landed in a file Codex never reads. Test count: 1203 → 1208.

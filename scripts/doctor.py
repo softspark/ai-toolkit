@@ -79,6 +79,10 @@ EXPECTED_HOOKS = [
 
 PLANNED_ASSETS = [
     toolkit_dir / "app" / ".claude-plugin" / "plugin.json",
+    toolkit_dir / "app" / "claude-app" / "hooks" / "hooks.json",
+    toolkit_dir / "app" / "claude-app" / "skills" / "ai-toolkit-rules" / "SKILL.md",
+    toolkit_dir / "app" / "claude-app" / "global-instructions.md",
+    toolkit_dir / "scripts" / "claude_app.py",
     toolkit_dir / "scripts" / "benchmark_ecosystem.py",
     toolkit_dir / "scripts" / "harvest_ecosystem.py",
     toolkit_dir / "kb" / "reference" / "claude-ecosystem-benchmark-snapshot.md",
@@ -218,14 +222,91 @@ def _check_symlinks(dr: DiagResult, fix_mode: bool, directory: Path,
         dr.fail(f"{label}: no symlinks found")
 
 
+def _without_source_tags(value: object) -> object:
+    """Return a JSON-compatible hook value without private source markers."""
+    if isinstance(value, dict):
+        return {
+            key: _without_source_tags(item)
+            for key, item in value.items()
+            if key != "_source"
+        }
+    if isinstance(value, list):
+        return [_without_source_tags(item) for item in value]
+    return value
+
+
+def _hook_signature(entry: dict) -> str:
+    """Build a stable behavior signature for tagged or legacy hook entries."""
+    return json.dumps(
+        _without_source_tags(entry),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _has_toolkit_source(entry: dict) -> bool:
+    if entry.get("_source") == "ai-toolkit":
+        return True
+    return any(
+        isinstance(handler, dict) and handler.get("_source") == "ai-toolkit"
+        for handler in entry.get("hooks", [])
+    )
+
+
+def _installed_toolkit_hook_count(settings: dict) -> tuple[int, int]:
+    """Count canonical hooks even if Claude removed private `_source` tags."""
+    source_path = toolkit_dir / "app" / "hooks.json"
+    try:
+        source_hooks = json.loads(source_path.read_text(encoding="utf-8")).get(
+            "hooks", {}
+        )
+    except (OSError, json.JSONDecodeError):
+        return 0, 0
+
+    expected = sum(
+        len(entries) for entries in source_hooks.values() if isinstance(entries, list)
+    )
+    signatures = {
+        event: {
+            _hook_signature(entry)
+            for entry in entries
+            if isinstance(entry, dict)
+        }
+        for event, entries in source_hooks.items()
+        if isinstance(entries, list)
+    }
+    installed = 0
+    for event, entries in settings.get("hooks", {}).items():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            if _has_toolkit_source(entry) or _hook_signature(entry) in signatures.get(
+                event, set()
+            ):
+                installed += 1
+    return installed, expected
+
+
 def _check_settings_json(dr: DiagResult) -> None:
     """Check settings.json hooks and legacy hooks.json."""
     settings_json = CLAUDE_DIR / "settings.json"
     if settings_json.is_file():
-        content = settings_json.read_text(encoding="utf-8")
-        if '"_source"' in content and '"ai-toolkit"' in content:
-            hook_count = content.count('"ai-toolkit"')
-            dr.ok(f"settings.json: {hook_count} toolkit hook entries")
+        try:
+            settings = json.loads(settings_json.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            dr.fail("settings.json is not valid JSON")
+            settings = {}
+        hook_count, expected_count = _installed_toolkit_hook_count(settings)
+        if expected_count and hook_count == expected_count:
+            dr.ok(f"settings.json: {hook_count}/{expected_count} toolkit hook entries")
+        elif hook_count:
+            dr.warn(
+                f"settings.json has {hook_count}/{expected_count} toolkit hook entries "
+                "(run: ai-toolkit update --only hooks)"
+            )
         else:
             dr.warn("settings.json exists but has no toolkit hooks")
     else:

@@ -110,7 +110,10 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
     if "cline" in eds:
         if dry_run:
             print("  Would generate: ~/Documents/Cline/Rules/ai-toolkit-*.md")
-            print("  Would generate: ~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")
+            if _claude_skills_discoverable(target_dir):
+                print("  Would reuse: ~/.claude/skills/ (Cline-compatible discovery)")
+            else:
+                print("  Would generate: ~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")
         else:
             _install_cline_global(target_dir, rules_dir)
         installed.append("cline")
@@ -275,6 +278,80 @@ def _install_windsurf_global(target_dir: Path, rules_dir: Path) -> None:
         target_dir,
         skill_root=".codeium/windsurf/skills",
     )
+
+
+def _cleanup_retired_windsurf_surfaces(cwd: Path) -> None:
+    """Remove only ai-toolkit content from retired/undocumented Devin paths."""
+    import json
+
+    legacy_hooks = cwd / ".windsurf" / "hooks.json"
+    if legacy_hooks.is_file():
+        try:
+            document = json.loads(legacy_hooks.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            print("  Warning: kept invalid .windsurf/hooks.json for manual review")
+        else:
+            hooks = document.get("hooks") if isinstance(document, dict) else None
+            changed = False
+            if isinstance(hooks, dict):
+                kept_hooks: dict = {}
+                for event, entries in hooks.items():
+                    if not isinstance(entries, list):
+                        kept_hooks[event] = entries
+                        continue
+                    survivors = [
+                        entry
+                        for entry in entries
+                        if not (
+                            isinstance(entry, dict)
+                            and (
+                                entry.get("_source") == "ai-toolkit"
+                                or any(
+                                    isinstance(handler, dict)
+                                    and handler.get("_source") == "ai-toolkit"
+                                    for handler in entry.get("hooks", [])
+                                )
+                            )
+                        )
+                    ]
+                    if len(survivors) != len(entries):
+                        changed = True
+                    if survivors:
+                        kept_hooks[event] = survivors
+                if changed:
+                    if kept_hooks:
+                        document["hooks"] = kept_hooks
+                    else:
+                        document.pop("hooks", None)
+                    if document:
+                        legacy_hooks.write_text(
+                            json.dumps(
+                                document,
+                                indent=4,
+                                ensure_ascii=False,
+                                sort_keys=True,
+                            ) + "\n",
+                            encoding="utf-8",
+                        )
+                    else:
+                        legacy_hooks.unlink()
+                    print("  Migrated: removed retired ai-toolkit Cascade hooks")
+
+    retired_pointer = (
+        cwd / ".devin" / "skills" / "ai-toolkit-skill-catalogue"
+    )
+    skill_file = retired_pointer / "SKILL.md"
+    if skill_file.is_file() and "name: ai-toolkit-skill-catalogue" in (
+        skill_file.read_text(encoding="utf-8")
+    ):
+        if retired_pointer.is_symlink():
+            retired_pointer.unlink()
+        else:
+            shutil.rmtree(retired_pointer)
+        for parent in (retired_pointer.parent, retired_pointer.parent.parent):
+            if parent.is_dir() and not any(parent.iterdir()):
+                parent.rmdir()
+        print("  Migrated: removed undocumented .devin/skills toolkit pointer")
 
 
 def _install_cline_global(target_dir: Path, rules_dir: Path) -> None:
@@ -941,6 +1018,18 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         if ed in eds:
             print(msg)
 
+    if "windsurf" in eds:
+        if (Path.cwd() / ".windsurf" / "hooks.json").is_file():
+            print("  Would migrate: remove retired ai-toolkit Cascade hooks")
+        if (
+            Path.cwd()
+            / ".devin"
+            / "skills"
+            / "ai-toolkit-skill-catalogue"
+            / "SKILL.md"
+        ).is_file():
+            print("  Would migrate: remove undocumented .devin/skills toolkit pointer")
+
     # Profile-driven extras (matrix in kb/reference/global-install-model.md)
     if "copilot" in eds and add_copilot_dir:
         print("  Would generate: .github/instructions/ + .github/prompts/ (profile >= standard)")
@@ -950,7 +1039,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         if "cursor" in eds:
             print("  Would generate: .cursor/hooks.json + .cursor/agents/ + .cursor/skills/ (profile=full)")
         if "windsurf" in eds:
-            print("  Would generate: .devin/hooks.v1.json + .windsurf/hooks.json (Cascade, deprecated) + .devin/skills/ + .windsurf/skills/ (profile=full)")
+            print("  Would generate: .devin/hooks.v1.json + .windsurf/skills/ (profile=full)")
         if "cline" in eds:
             print("  Would generate: .cline/skills/ (profile=full)")
         if "augment" in eds:
@@ -1174,6 +1263,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             _try_generator("generate_cursor_skills", cwd, emit_skill_pointer=emit_pointer)
 
     if "windsurf" in eds:
+        _cleanup_retired_windsurf_surfaces(cwd)
         inject_with_rules(
             "generate-windsurf.sh",
             cwd / ".windsurfrules",
@@ -1183,11 +1273,11 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         gen_windsurf_rules(cwd, language_modules=language_modules,
                            rules_dir=rules_dir)
         if add_native_surfaces:
-            # .windsurf/hooks.json is Cascade-scoped and dies 2026-07-01;
-            # .devin/hooks.v1.json is the Devin CLI replacement (Claude format).
-            _try_generator("generate_windsurf_hooks", cwd)
+            # Cascade's .windsurf/hooks.json surface ended on 2026-07-01.
+            # Devin CLI uses the Claude-compatible .devin/hooks.v1.json format.
             _try_generator("generate_devin_hooks", cwd)
-            # Windsurf pointer stays unconditional (its .claude scan is gated).
+            # Current Devin docs list .windsurf/skills as a supported path;
+            # .devin/skills is not documented.
             _try_generator("generate_windsurf_skills", cwd)
 
     if "cline" in eds:

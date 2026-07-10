@@ -1,22 +1,23 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 108 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode, ready in 60 seconds.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 108 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude Code, Claude Chat/Cowork, Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1208%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1216%20passing-success)](tests/)
 
-## What's New in v4.12.0
+## What's New in v4.13.0
 
-v4.12.0 makes global (HOME-scoped) installs first-class for every editor with a documented file surface, and fixes a Codex global-install bug.
+v4.13.0 makes the Claude app a first-class distribution target and completes the Devin/Cascade migration.
 
-- **Codex global path fix**: `install --editors codex` now writes `~/.codex/AGENTS.md` (the file Codex actually reads) instead of the never-loaded `~/AGENTS.md`; upgrades strip the stale section.
-- **Global installs for 7 editors**: Gemini (hooks/commands/skills), Augment (agents/commands/hooks), Roo/Zoo (skills), Windsurf (`~/.config/devin/AGENTS.md`), plus new global support for Cursor (`~/.cursor/hooks.json`), GitHub Copilot (`~/.copilot/`), and Antigravity (skill pointer).
-- **Roo → Zoo Code**: retargeted the dead `RooCodeInc/Roo-Code` release feed to the active successor `Zoo-Code-Org/Zoo-Code`.
-- **Ecosystem refresh**: Gemini v0.49.0, Codex 0.142.5, Auggie 0.31.0, Antigravity CLI 1.0.14, Claude Code 2.1.198; snapshot re-baselined.
-- **Test count**: 1203 → 1208.
+- **Claude Chat/Desktop/Cowork export**: `ai-toolkit claude-app export --verify` creates an uploadable plugin ZIP and Cowork global-instructions file. Core and registered rules are packaged as app-native skills.
+- **Plugin contract repaired**: the official validator now accepts the manifest; app hooks use `${CLAUDE_PLUGIN_ROOT}` instead of depending on a Claude Code install.
+- **Cascade cleanup**: removed the dead `.windsurf/hooks.json` generator after the 2026-07-01 sunset; `.devin/hooks.v1.json` is the live Devin hook surface.
+- **Devin skill-path correction**: stopped emitting undocumented `.devin/skills`; the pointer remains under the currently documented `.windsurf/skills` compatibility path.
+- **Ecosystem refresh**: registry expanded to 13 targets and snapshots refreshed against current official documentation.
+- **Test count**: 1208 → 1216 (Claude app export, editor migration/propagation, state isolation, diagnostics, and dry-run accuracy covered).
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -74,9 +75,24 @@ ai-toolkit update --local                         # auto-detects editors
 
 ```bash
 ai-toolkit plugin list                            # show available packs
-ai-toolkit plugin install --editor all --all      # install all for Claude + Codex
+ai-toolkit plugin install --editor all --all      # install all for Claude Code + Codex
 ai-toolkit plugin status --editor all             # show what's installed
 ```
+
+### Claude Chat / Desktop / Cowork
+
+The Claude app does not read Claude Code's `~/.claude/rules/` or `CLAUDE.md`.
+Export and upload the app-native plugin instead:
+
+```bash
+ai-toolkit claude-app export --verify
+# Claude > Customize > Plugins > + > Upload plugin
+# Paste the generated *-global-instructions.md into:
+# Settings > Cowork > Global instructions
+```
+
+Re-export and re-upload after toolkit or registered-rule updates. Skills work
+in Chat and Cowork; hooks and sub-agents are active only in Cowork.
 
 ### Install Profiles
 
@@ -102,8 +118,9 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Platform | Config Files | Hooks | Scope |
 |----------|-------------|:-----:|-------|
 | Claude Code | `~/.claude/agents`, `~/.claude/skills`, `~/.claude/rules/*.md`, `~/.claude/settings.json` | ✅ | global |
+| Claude Chat / Cowork | uploaded plugin ZIP + UI global/folder instructions | Cowork only | account/app |
 | Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
-| Windsurf (Devin Desktop) | `~/.codeium/.../global_rules.md` + `~/.codeium/windsurf/skills/*` + `.devin/rules/*.md` + `.windsurf/rules/*.md` (legacy) | ✅ | global + project |
+| Windsurf (Devin Desktop) | `~/.config/devin/AGENTS.md` + `.devin/rules/*.md` + `.devin/hooks.v1.json` + `.windsurf/skills/*` | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | ✅ | global |
 | GitHub Copilot | `.github/copilot-instructions.md` + `.github/instructions/*` + `.github/prompts/*` + `AGENTS.md` | — | project |
 | Cline | `~/Documents/Cline/Rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
@@ -114,7 +131,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Codex CLI | `AGENTS.md` (coding rules inlined) + `.agents/skills/*` + `.codex/hooks.json` | ✅ | project + global plugin |
 | opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | ✅ | project + global (`~/.config/opencode/`) |
 
-> Claude Code is always installed (primary platform). Other editors on demand with `--editors`. Every platform receives the agent/skill catalog, guidelines, and registered custom rules as text. The **Hooks** column marks platforms that also get lifecycle hook enforcement — the machine-enforced constitution (guard-destructive, quality gates, search-first discipline). Platforms marked — receive those rules as guidance only, without blocking hooks.
+> Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
 
 ---
 
@@ -126,7 +143,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
-| `hooks/` | 29 entries / 14 events | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
+| `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
 | `constitution.md` | 7 articles | Machine-enforced safety rules |
 | `rules/` | auto-synced | Global/project rule files for Claude and other editors |
@@ -142,14 +159,15 @@ ai-toolkit/
 │   ├── agents/          # 44 agent definitions
 │   ├── skills/          # 108 skills (task / hybrid / knowledge)
 │   ├── rules/           # Source rules synced into Claude/editor rule files
-│   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
+│   ├── hooks/           # Hook scripts (28 entries, 14 lifecycle events)
+│   ├── claude-app/      # Generated Chat/Cowork plugin rules, hooks, instructions
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
 │   ├── constitution.md  # 7 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1208 tests)
+├── tests/               # Bats test suite (1216 tests)
 └── CHANGELOG.md
 ```
 

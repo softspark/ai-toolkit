@@ -254,6 +254,8 @@ Step 0 interview before setup — 5 targeted questions to capture undocumented p
 
 Codex CLI receives the full skill catalog during `ai-toolkit install --local --editors codex`.
 
+Claude Chat/Desktop/Cowork receives this same catalog through `ai-toolkit claude-app export`. The export also adds an app-only `ai-toolkit-rules` skill because the Claude app does not read Claude Code's `CLAUDE.md` or `.claude/rules/` surfaces.
+
 - Native Codex-compatible skills are symlinked directly into `.agents/skills/`
 - Claude-oriented orchestration skills are generated as Codex wrappers
 - Adapted wrappers translate `Agent`, `Team*`, and `Task*` guidance to `spawn_agent`, `send_input`, `wait_agent`, `close_agent`, and `update_plan`

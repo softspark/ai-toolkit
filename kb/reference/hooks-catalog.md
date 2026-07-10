@@ -13,7 +13,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Supported Surface
 
@@ -575,14 +575,13 @@ Beyond the global Claude Code hooks above, full-profile project installs emit na
 | Editor | File | Generator | Format |
 |--------|------|-----------|--------|
 | Cursor | `.cursor/hooks.json` | `generate_cursor_hooks.py` | Cursor hooks schema |
-| Windsurf (Cascade) | `.windsurf/hooks.json` | `generate_windsurf_hooks.py` | Cascade `agent_action_name`/`tool_info` — **deprecated, dies 2026-07-01** |
 | Devin CLI | `.devin/hooks.v1.json` | `generate_devin_hooks.py` | Claude-compatible (the replacement for Cascade) |
 | Gemini CLI | `.gemini/settings.json` (hooks block) | `generate_gemini_hooks.py` | Gemini `BeforeTool`/`AfterTool` events |
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
 
 ### Devin CLI hooks (`.devin/hooks.v1.json`)
 
-Windsurf rebranded to Devin Desktop (2026-06-02); the Cascade agent — and its `.windsurf/hooks.json` surface — is available only through **2026-07-01**. Devin Local / Devin CLI do **not** read `.windsurf/hooks.json` as a fallback, so hooks must be regenerated onto the Devin CLI format.
+Windsurf rebranded to Devin Desktop (2026-06-02). The Cascade hook surface ended on 2026-07-01; ai-toolkit now emits only the live Devin CLI format.
 
 Devin CLI uses a **Claude-compatible** hook format (docs.devin.ai/cli/extensibility/hooks). Key facts driving the generator:
 

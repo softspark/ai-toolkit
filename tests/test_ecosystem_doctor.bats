@@ -87,6 +87,7 @@ json_generators = {
     g
     for tool in data['tools']
     for g in tool.get('our_generators', [])
+    if pathlib.Path(g).name.startswith('generate_')
 }
 doc_generators = set(re.findall(r'scripts/generate_[a-z_]+\\.py', registry_doc))
 

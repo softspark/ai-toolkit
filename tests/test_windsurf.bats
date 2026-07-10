@@ -106,11 +106,11 @@ teardown_file() {
     diff -r "$WS_TMP/.devin/workflows" "$WS_TMP/.windsurf/workflows"
 }
 
-@test "windsurf: skill pointer is dual-emitted to .devin and .windsurf" {
+@test "windsurf: skill pointer uses the documented .windsurf/skills path" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_windsurf_skills.py" "$tmp" >/dev/null
-    [ -f "$tmp/.devin/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
     [ -f "$tmp/.windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ ! -d "$tmp/.devin/skills" ]
     rm -rf "$tmp"
 }
 

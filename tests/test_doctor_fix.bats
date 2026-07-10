@@ -75,6 +75,28 @@ teardown() {
     ! echo "$output" | grep -q "FIXED"
 }
 
+@test "doctor recognizes canonical toolkit hooks without private source tags" {
+    python3 - "$TEST_TMP/.claude/settings.json" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path) as f:
+    data = json.load(f)
+for entries in data.get("hooks", {}).values():
+    for entry in entries:
+        entry.pop("_source", None)
+        for hook in entry.get("hooks", []):
+            hook.pop("_source", None)
+with open(path, "w") as f:
+    json.dump(data, f)
+PY
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "settings.json: 28/28 toolkit hook entries"
+    ! echo "$output" | grep -q "no toolkit hooks"
+}
+
 @test "doctor --fix shows fix mode in summary" {
     run python3 "$TOOLKIT_DIR/scripts/doctor.py" --fix
     echo "$output" | grep -q "auto-repair"

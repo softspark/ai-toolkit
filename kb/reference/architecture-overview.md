@@ -6,14 +6,14 @@ tags: [architecture, overview, design, structure]
 version: "1.4.6"
 created: "2026-03-23"
 last_updated: "2026-06-10"
-description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
+description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
 # AI Toolkit Architecture
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, and Google Antigravity). Provides specialized agents, skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
+Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, and compatible assistants such as Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, and Google Antigravity. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
 
 ## Design Principles
 
@@ -33,6 +33,7 @@ ai-toolkit/
     agents/                  # Agent definitions (.md + YAML frontmatter)
     skills/                  # skills: task, hybrid, knowledge
     rules/                   # Source rules synced into Claude/editor rule files
+    claude-app/              # Generated app-only rules skill, hooks, instructions
     hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
     constitution.md          # Immutable safety rules, 7 articles (marker-injected)
@@ -62,6 +63,7 @@ ai-toolkit/
     generate_llms_txt.py     # Generates llms.txt
     install_git_hooks.py     # Installs fallback pre-commit hook
     plugin.py                # Plugin pack management (install, remove, list, status)
+    claude_app.py            # Claude Chat/Desktop/Cowork plugin export + validation
     benchmark_ecosystem.py   # Generates ecosystem benchmark snapshot
     harvest_ecosystem.py     # Writes machine-readable ecosystem harvest JSON
     compile_slm.py           # Compiles toolkit into minimal SLM system prompt (2K-16K tokens)
@@ -112,6 +114,8 @@ Machine (global)                              Project (local)
 
 Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.devin/rules/*.md` + `.windsurf/rules/*.md` (dual-emit since the Devin Desktop rebrand), `.github/instructions/*.instructions.md` + `.github/prompts/*.prompt.md` + root `AGENTS.md` for Copilot agent instructions, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agents/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md` (universal coding rules inlined — Codex reads only AGENTS.md, not `.agents/rules/`), `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
 
+Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
+
 If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
 
 ## CLI Commands
@@ -120,6 +124,7 @@ If a project already has `.mcp.json`, local install mirrors its `mcpServers` ent
 |---------|--------|-------------|
 | `install` | `~/.claude/` | First-time: per-file symlinks + JSON merge + marker injection + rules |
 | `install --local` | `./` | Claude Code configs + editors via `--editors` (auto-detect or explicit) |
+| `claude-app export` | output ZIP + Markdown | Uploadable Claude Chat/Cowork plugin and global instructions |
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |

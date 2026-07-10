@@ -1,10 +1,11 @@
 # ai-toolkit
 
 ## Overview
-Shared AI development toolkit for Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, Google Antigravity, and Codex CLI — skills, agents, lifecycle hooks, persona presets, experimental opt-in plugin packs, and safety constitution, distributed as a global npm package.
+Shared AI development toolkit for Claude Code, Claude Chat/Cowork, Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, Google Antigravity, and Codex CLI — skills, agents, lifecycle hooks, persona presets, plugin packaging, and safety constitution, distributed as a global npm package.
 
 ## Claude Code Runtime Rules
 - Claude Code reads `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, settings, and hooks. It does **not** treat `AGENTS.md` as an instruction source.
+- Claude Chat/Desktop/Cowork does **not** scan Claude Code's `~/.claude/` files. Use `ai-toolkit claude-app export`, upload the ZIP in Customize > Plugins, and apply the generated Cowork global instructions. Skills work in Chat/Cowork; hooks and sub-agents are Cowork-only.
 - `AGENTS.md` is generated for Codex/OpenCode/Gemini compatibility. Do not move mandatory Claude behavior there.
 - **KB-first is mandatory for technical work:** before answering or acting on a technical/project prompt, call `smart_query()` or `hybrid_search_kb()` and use the result to locate the relevant SOP/reference. Cite the KB path when the result materially informs the answer. If the KB tool is unavailable, state that explicitly and continue from local files.
 - Any rule that must be enforced at a fixed lifecycle point belongs in `app/hooks.json` + `app/hooks/*.sh` with tests. `CLAUDE.md` guidance is context, not enforcement.
@@ -39,6 +40,7 @@ Stale counts = broken user trust. This is non-negotiable.
 # Init:     ai-toolkit install --local --editors all  (+ all editors: cursor, windsurf, cline, roo, aider, augment, copilot, antigravity, codex)
 # Init:     ai-toolkit install --local --editors cursor,aider  (+ specific editors)
 # Doctor:   ai-toolkit doctor --fix       (auto-repair broken symlinks, hooks, artifacts)
+# Claude app: ai-toolkit claude-app export --verify  (uploadable Chat/Cowork plugin + global instructions)
 # Eject:    ai-toolkit eject              (standalone copy, no toolkit dependency)
 # Compile:  ai-toolkit compile-slm       (compile toolkit for SLMs: --budget, --model-size, --persona, --dry-run)
 # Config:   ai-toolkit config validate|diff|init|create-base|check  (config inheritance)

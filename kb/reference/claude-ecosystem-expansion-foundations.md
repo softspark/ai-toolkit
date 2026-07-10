@@ -3,9 +3,9 @@ title: "Claude Ecosystem Expansion Foundations"
 category: reference
 service: ai-toolkit
 tags: [benchmark, claude-code, ecosystem, hooks, plugins, architecture]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-27"
-last_updated: "2026-04-13"
+last_updated: "2026-07-10"
 description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit, including runtime-aware plugin packaging."
 ---
 
@@ -25,13 +25,21 @@ The outcome is a toolkit that is now positioned as a more modular, Claude-first,
 
 ### 1. Plugin-oriented structure
 
-`ai-toolkit` now treats plugin packaging as a first-class capability, with runtime-aware install surfaces for Claude and optional global Codex layering.
+`ai-toolkit` now treats plugin packaging as a first-class capability, with separate runtime-aware surfaces for Claude Code, the Claude Chat/Desktop/Cowork app, and optional global Codex layering.
 
 Implemented artifacts:
 - `app/.claude-plugin/plugin.json`
+- `app/claude-app/`
 - `app/plugins/`
 - `app/skills/plugin-creator/SKILL.md`
+- `scripts/claude_app.py`
 - `kb/reference/plugin-pack-conventions.md`
+
+Claude Code reads filesystem configuration such as `~/.claude/rules` and
+`CLAUDE.md`. The Claude app does not scan those locations. For the app,
+`ai-toolkit claude-app export --verify` creates an uploadable plugin ZIP and a
+separate Cowork global-instructions file. Plugin skills work in Chat and Cowork;
+hooks and sub-agents are Cowork-only.
 
 ### 2. Broader lifecycle coverage
 
@@ -85,6 +93,7 @@ The reference benchmark set is intentionally curated:
 | Area | Adopted in ai-toolkit |
 |------|------------------------|
 | Plugin manifests | Yes |
+| Claude Chat/Cowork uploadable plugin export | Yes |
 | Domain plugin packs | Yes (experimental) |
 | Hook creator workflow | Yes |
 | Command creator workflow | Yes |

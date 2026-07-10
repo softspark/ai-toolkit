@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-06-30",
+  "last_updated": "2026-07-10",
   "tools": [
     {
       "id": "claude-code",
@@ -71,6 +71,37 @@
       }
     },
     {
+      "id": "claude-app",
+      "display_name": "Claude Chat / Cowork",
+      "kind": "app",
+      "urls": {
+        "docs": "https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork",
+        "release_notes": "https://support.claude.com/en/articles/13837440-use-plugins-in-claude",
+        "changelog": null
+      },
+      "config_paths": [
+        "UI: Settings > Cowork > Global instructions",
+        "UI: Cowork folder instructions",
+        "UI: Customize > Skills",
+        "UI: Customize > Plugins",
+        ".claude-plugin/plugin.json",
+        "claude-app/hooks/hooks.json",
+        "claude-app/skills/*/SKILL.md"
+      ],
+      "our_generators": [
+        "scripts/claude_app.py"
+      ],
+      "status_note": "Claude Chat/Desktop/Cowork does not scan ~/.claude/rules, CLAUDE.md, or Claude Code's user settings. ai-toolkit exports an uploadable plugin ZIP plus Cowork global instructions. Skills work in Chat and Cowork; plugin hooks and sub-agents run only in Cowork.",
+      "capability_markers": [
+        "Global instructions",
+        "Folder instructions",
+        "plugins",
+        "skills",
+        "sub-agents"
+      ],
+      "version_probe": null
+    },
+    {
       "id": "cursor",
       "display_name": "Cursor",
       "kind": "editor",
@@ -134,7 +165,6 @@
       "config_paths": [
         ".devin/rules/*.md",
         ".devin/workflows/*.md",
-        ".devin/skills/*/SKILL.md",
         ".devin/hooks.v1.json",
         ".devin/config.json",
         ".devin/config.local.json",
@@ -153,10 +183,9 @@
         "scripts/generate_windsurf.py",
         "scripts/generate_windsurf_rules.py",
         "scripts/generate_windsurf_skills.py",
-        "scripts/generate_windsurf_hooks.py",
         "scripts/generate_devin_hooks.py"
       ],
-      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary read+write workspace tree; .windsurfrules, .windsurf/* and ~/.codeium/windsurf/* are legacy read-only fallbacks. Our generators dual-emit .devin/* + .windsurf/*. HOOKS MIGRATION (done): Cascade agent is available only through 2026-07-01 (Devin Local default since 2026-06-02), and the Cascade-scoped .windsurf/hooks.json (generate_windsurf_hooks.py, agent_action_name/tool_info format) dies with it — Devin CLI/Local do NOT read it as a fallback. generate_devin_hooks.py now emits .devin/hooks.v1.json in the Claude-compatible hook format Devin CLI uses (docs.devin.ai/cli/extensibility/hooks): Claude-style events (PreToolUse/PostToolUse/UserPromptSubmit/Stop/SessionStart) with matchers on Devin tool names (read/edit/exec/mcp__*), flat {decision,reason} block contract + exit 2. Globally-installed users ALSO inherit ~/.claude/settings.json hooks automatically (Devin read_config_from.claude defaults on). Both hook generators run at profile=full; drop generate_windsurf_hooks.py in the first release after 2026-07-01. Devin CLI ('Devin for Terminal', launched 2026-04-29) shares the Devin Local harness, reads AGENTS.md and the same SKILL.md standard; not yet tracked as a separate registry entry.",
+      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary rules/workflows/hooks tree; legacy .windsurf rules remain a read fallback. Cascade and its .windsurf/hooks.json format ended on 2026-07-01, so ai-toolkit now emits only .devin/hooks.v1.json. Current Devin skill docs list eight scanned paths (.agents/skills recommended, plus .devin/skills, .github/skills, .claude/skills, .cursor/skills, .codex/skills, .cognition/skills, .windsurf/skills); ai-toolkit emits a single canonical pointer under .windsurf/skills and no longer also writes .devin/skills. Devin CLI also imports ~/.claude/settings.json hooks when read_config_from.claude is enabled.",
       "capability_markers": [
         "Cascade",
         "windsurfrules",
@@ -469,7 +498,6 @@
       ],
       "status_note": "Antigravity CLI (GA 2026-05-19) reads workspace skills from .agents/skills/ (plural); the IDE still uses .agent/skills/ (singular) — our generator dual-emits the skill pointer to both. CLI hooks live in .agents/hooks.json with Claude-style event names (PreToolUse, not BeforeTool) and a JSON stdin/stdout decision contract. CLI MCP config is .agents/mcp_config.json with a required serverUrl field (url/httpUrl rejected silently); the GLOBAL MCP config path is reported inconsistently across sources (~/.gemini/antigravity-cli/ vs ~/.gemini/config/), so only the workspace path is registered until verified via agy inspect. Official docs are fully JS-rendered — the doctor is blind to them; verify changes manually each sync.",
       "capability_markers": [
-        "Antigravity",
         "agent manager",
         "artifacts",
         "MCP",

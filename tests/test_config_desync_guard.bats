@@ -46,6 +46,18 @@ EOF
     [ -z "$output" ]
 }
 
+@test "config-desync: canonical untagged settings are in sync" {
+    write_source <<'EOF'
+{"hooks":{"Stop":[{"_source":"ai-toolkit","matcher":"","hooks":[{"type":"command","command":"echo s"}]}]}}
+EOF
+    write_settings <<'EOF'
+{"hooks":{"Stop":[{"matcher":"","hooks":[{"type":"command","command":"echo s"}]}]}}
+EOF
+    run bash "$HOOK"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
 @test "config-desync: missing toolkit entry → advisory, exit 0" {
     write_source <<'EOF'
 {"hooks":{"Stop":[{"_source":"ai-toolkit","matcher":"","hooks":[{"type":"command","command":"echo new-hook"}]}]}}

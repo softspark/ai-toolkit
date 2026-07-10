@@ -3990,15 +3990,17 @@ tags:
   - deprecation
   - cleanup
 doc_type: plan
-status: scheduled
+status: completed
 created: "2026-06-10"
-last_updated: "2026-06-10"
-completion: "0%"
+last_updated: "2026-07-10"
+completion: "100%"
 trigger_date: "2026-07-01"
-description: "Scheduled cleanup: remove the deprecated Windsurf Cascade hooks generator (.windsurf/hooks.json) in the first ai-toolkit release after the 2026-07-01 Cascade sunset. The Devin CLI replacement (.devin/hooks.v1.json) shipped in v4.8.0; this plan removes the dead Cascade half once it can no longer run."
+description: "Completed cleanup of the deprecated Windsurf Cascade hooks generator after the 2026-07-01 sunset; Devin CLI .devin/hooks.v1.json is now the sole live hook surface."
 ---
 
 # Plan: Drop Cascade hooks after 2026-07-01 sunset
+
+**Completed in v4.13.0 (2026-07-10).** The deprecated generator and install/test wiring were removed; the Devin hook generator remains.
 
 ## Why this exists
 
@@ -4052,10 +4054,13 @@ removing it before the sunset breaks Cascade users who are still on the old agen
 - `python3 scripts/validate.py --strict` — 0/0 (editor-hooks-honesty must still
   report windsurf as hook-enabled via the `devin` generator alias).
 - `python3 scripts/ecosystem_doctor.py --offline --check` — exit 0.
-- `npm test` — 0 `not ok`; confirm no test still references
-  `generate_windsurf_hooks.py` or `.windsurf/hooks.json`.
-- `grep -rn "generate_windsurf_hooks\|windsurf/hooks.json" scripts/ tests/ kb/ README.md`
-  returns nothing (Art. VI.1 orphan check).
+- `npm test` — 0 `not ok`; no test recreates the deleted
+  `generate_windsurf_hooks.py` generator.
+- `grep -rn "generate_windsurf_hooks" scripts/ tests/` returns nothing
+  (Art. VI.1 orphan check — the deleted generator is fully unwired).
+  `.windsurf/hooks.json` intentionally remains referenced by the one-time
+  migration/strip cleanup (`scripts/install_steps/ai_tools.py`) and its test,
+  and in narrative docs (CHANGELOG, README, `kb/`, docstrings).
 
 ## Do NOT touch
 
@@ -4242,10 +4247,10 @@ title: "SOP: Ecosystem Sync"
 category: procedures
 service: ai-toolkit
 tags: [sop, ecosystem, editors, generators, drift-detection, sync]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-04-23"
-last_updated: "2026-04-23"
-description: "Quarterly (or event-triggered) sync procedure that detects documentation and capability drift in supported tools (Claude Code + 11 editors), analyses our generators and skills for missing features, and walks through the migration + generator-update workflow."
+last_updated: "2026-07-10"
+description: "Quarterly (or event-triggered) sync procedure that detects documentation and capability drift in supported tools (Claude Code, Claude app, and 11 editors), analyses our generators and skills for missing features, and walks through the migration + generator-update workflow."
 ---
 
 # SOP: Ecosystem Sync
@@ -4265,7 +4270,7 @@ Keeps ai-toolkit aligned with the tools it integrates with. When an editor adds 
 ## Quick Reference
 
 ```bash
-# Full check (all 12 tools, online)
+# Full check (all 13 tools, online)
 python3 scripts/ecosystem_doctor.py --format text
 
 # Single tool
@@ -4287,7 +4292,7 @@ python3 scripts/ecosystem_doctor.py --offline --format text
 
 | File | Purpose |
 |------|---------|
-| `scripts/ecosystem_tools.json` | Authoritative registry: 12 tools with doc URLs, config paths, our generators, capability markers |
+| `scripts/ecosystem_tools.json` | Authoritative registry: 13 tools with doc URLs, config paths, our generators, capability markers |
 | `benchmarks/ecosystem-doctor-snapshot.json` | Last-seen state (headings, content hash, markers, version) — updated via `--update` |
 | `scripts/ecosystem_doctor.py` | Drift detector |
 | `kb/reference/supported-tools-registry.md` | Human-readable view of the registry |
@@ -4502,9 +4507,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.1.0"
+version: "3.2.0"
 created: "2026-03-23"
-last_updated: "2026-06-10"
+last_updated: "2026-07-10"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -4591,6 +4596,24 @@ What `install` and `update` do (merge-friendly — user content never overwritte
 
 Re-running updates only toolkit content. Old whole-directory symlinks are auto-upgraded to per-file on next run.
 
+### Install in Claude Chat / Desktop / Cowork
+
+The Claude app does not read Claude Code's `~/.claude/rules/`, `CLAUDE.md`,
+agents, skills, or settings. Build the separate app-native plugin:
+
+```bash
+ai-toolkit claude-app export --verify
+```
+
+1. Open Claude and choose `Customize > Plugins > + > Upload plugin`.
+2. Select `ai-toolkit-claude-app.zip`.
+3. Paste `ai-toolkit-claude-app-global-instructions.md` into
+   `Settings > Cowork > Global instructions`.
+
+The export includes registered rules by default; use `--no-custom-rules` for a
+shareable clean bundle. Re-export and re-upload after toolkit or registered-rule
+updates. Skills work in Chat and Cowork. Hooks and sub-agents run only in Cowork.
+
 ### Install Profiles (v3.0.0)
 
 | Profile | Claude Code core | Editor rules | Gemini hooks | Copilot dir layout | Per-editor hooks / sub-agents / commands | Git hooks |
@@ -4648,6 +4671,9 @@ ai-toolkit remove-rule my-project-rules
 ```
 
 Rule names derive from the filename (`my-project-rules.md` → marker `TOOLKIT:my-project-rules`).
+
+After adding or removing a registered rule, re-export the Claude app plugin if
+that runtime should receive the change.
 
 ---
 
@@ -4730,6 +4756,21 @@ Use this when Claude appears to ignore `CLAUDE.md`, `.claude/rules/*.md`, output
    scripts/validate.py
    ```
 
+## Troubleshooting Rule Enforcement in Claude Chat / Cowork
+
+Do not use `/memory` or inspect `~/.claude/rules/` for the app runtime; those
+checks apply only to Claude Code.
+
+1. Run `ai-toolkit claude-app verify` and fix any manifest/component error.
+2. Re-export the ZIP and upload it from `Customize > Plugins`.
+3. Confirm `ai-toolkit-rules` appears in the `/` or `+` skill picker.
+4. Confirm the generated standing instructions are saved under
+   `Settings > Cowork > Global instructions`.
+5. In regular Chat, expect skills only. Hooks and sub-agents are intentionally
+   unavailable there; test those in Cowork.
+6. Start a new chat/task after updating the plugin so the new component catalog
+   is loaded.
+
 ## Verification
 
 After changing rule-enforcement behavior, run at minimum:
@@ -4737,6 +4778,8 @@ After changing rule-enforcement behavior, run at minimum:
 ```bash
 bats tests/test_hooks.bats tests/test_search_first_flow.bats
 bats tests/test_install.bats tests/test_codex.bats
+bats tests/test_claude_app.bats tests/test_hooks_per_editor.bats
+python3 scripts/claude_app.py verify
 python3 scripts/validate.py --strict
 ```
 
@@ -4744,7 +4787,7 @@ python3 scripts/validate.py --strict
 
 ```bash
 ai-toolkit plugin list                             # show available packs
-ai-toolkit plugin install --editor claude <name>  # install for Claude global target
+ai-toolkit plugin install --editor claude <name>  # install for Claude Code global target
 ai-toolkit plugin install --editor codex <name>   # install for Codex global target
 ai-toolkit plugin install --editor all --all      # install all 11 packs for both runtimes
 ai-toolkit plugin update --editor all --all       # re-apply all installed packs after toolkit updates
@@ -4782,7 +4825,7 @@ Follow the `documentation-standards` knowledge skill (`app/skills/documentation-
 
 **Every addition — skill, hook, MCP template, agent, rule — MUST be verified against all supported editors before merge.**
 
-This toolkit targets 10 platforms. Each has its own config format, file path conventions, and runtime capabilities. A feature that works in Claude Code may silently break in Cursor, Codex, or Copilot if the editor's official spec diverges.
+The ecosystem registry tracks 13 targets: Claude Code, the Claude Chat/Cowork app, and 11 editor integrations. Each has its own config format, file path conventions, and runtime capabilities. A feature that works in Claude Code may silently break in Cursor, Codex, or Copilot if the editor's official spec diverges.
 
 ### Verification checklist
 
@@ -5311,7 +5354,11 @@ Stage all release files:
 git add package.json manifest.json app/.claude-plugin/plugin.json
 git add package-lock.json
 git add CHANGELOG.md
-git add AGENTS.md llms.txt llms-full.txt
+git add llms.txt llms-full.txt
+# NOTE: AGENTS.md, GEMINI.md, and .github/copilot-instructions.md are generated
+# editor configs and are gitignored — do NOT commit them. `prepublishOnly` runs
+# `npm run generate:all`, so the shipped package (which lists AGENTS.md in
+# package.json `files`) gets a fresh copy at publish time.
 git add -p  # review and stage any other changes
 ```
 
@@ -5396,10 +5443,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.4.3"
+version: "1.6.0"
 created: "2026-04-08"
-last_updated: "2026-05-19"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, install, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. Reflects the v2.8.0 supply-chain standard. v1.3.0 added the single-run npm test discipline; v1.4.0 adds v3.0.0 deep-coverage checks (--profile full, --codex-skills, breaking-change surfaces, idempotence, registry drift, live-JSON parse) and refreshes stale thresholds. v1.4.2 makes the Phase 9.4 idempotence check deterministic by sorting file paths before hashing. v1.4.3 tightens the Phase 8.4 URL pin check so the success-message count includes only entries with a `url:` field, not local `path:` entries, and documents the `sources.json` envelope shape."
+last_updated: "2026-07-02"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, installs, Claude app plugin export, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. v1.6.0 adds the Claude Chat/Cowork plugin validation and replaces the retired Cascade hook surface with Devin hooks."
 ---
 
 # SOP: Release Verification
@@ -5444,10 +5491,11 @@ python3 scripts/audit_skills.py --ci                        # 10. Security audit
 python3 scripts/audit_skills.py --sarif | python3 -c "import json,sys; assert json.load(sys.stdin)['version']=='2.1.0'; print('SARIF OK')"   # 11. SARIF 2.1.0 well-formed?
 python3 scripts/audit_skills.py --permissions | head -30    # 12. Broad-access skills reviewed?
 npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"   # 13. Provenance attested on npm?
+python3 scripts/claude_app.py verify                         # 14. Claude Chat/Cowork plugin contract valid?
 
 # Deep-coverage verification (Phase 9, v3.0.0+)
 META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
-diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 14. Registry <-> generators drift?
+diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 15. Registry <-> generators drift?
 ```
 
 ---
@@ -5473,7 +5521,10 @@ python3 scripts/audit_skills.py --ci
 npm test
 
 # 5. Stage and commit
-git add AGENTS.md llms.txt llms-full.txt
+# AGENTS.md, GEMINI.md, and .github/copilot-instructions.md are generated and
+# gitignored — do NOT commit them (regenerated at prepublishOnly). Only the
+# doc artifacts llms.txt / llms-full.txt are committed.
+git add llms.txt llms-full.txt
 git add -p  # stage your other changes
 git commit -m "feat: your change description"
 ```
@@ -5515,7 +5566,7 @@ ai-toolkit status
 - [ ] Agents >= 44
 - [ ] Skills >= 99
 - [ ] Hooks merged into settings.json
-- [ ] "Other AI Tools" section lists documented global targets only: aider, augment, cline, codex, gemini, opencode, roo, windsurf (Cursor, Copilot, Antigravity via --local for rules)
+- [ ] "Other AI Tools" section lists documented global targets (with `--editors`): aider, antigravity, augment, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf. Scope varies (v4.12.0+): cursor = `~/.cursor/hooks.json` only, copilot = `~/.copilot/` instructions, antigravity = `~/.gemini/*/skills` pointer; Cursor and Antigravity RULES still install only via `--local` (no mergeable global rules file)
 
 **Verify `status`:**
 - [ ] Version matches expected
@@ -5731,12 +5782,12 @@ These verify the native-surface generators shipped in v3.0.0 actually emit the r
 D=/tmp/aitk-profile-full-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
   --profile full --codex-skills --dry-run 2>&1 \
-  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.windsurf/hooks\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.agents/skills"
+  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.devin/hooks\\.v1\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.agents/skills"
 ```
 
 **Verify** — at least the following lines appear:
 - [ ] `.cursor/hooks.json` and `.cursor/agents/`
-- [ ] `.windsurf/hooks.json`
+- [ ] `.devin/hooks.v1.json`
 - [ ] `.gemini/settings.json` hooks AND `.gemini/commands/`
 - [ ] `.augment/agents/` + `.augment/commands/` + `$HOME/.augment/settings.json`
 - [ ] `.agents/skills/` (Codex native discovery path; refreshed by `--codex-skills`)
@@ -5794,7 +5845,7 @@ The bats suite validates JSON shape at generation time. This re-checks that what
 ```bash
 D=/tmp/aitk-json-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors cursor,windsurf,gemini,augment --profile full >/dev/null 2>&1
-for f in .cursor/hooks.json .windsurf/hooks.json .gemini/settings.json $HOME/.augment/settings.json; do
+for f in .cursor/hooks.json .devin/hooks.v1.json .gemini/settings.json $HOME/.augment/settings.json; do
   [ -f "$f" ] && python3 -c "import json; json.load(open('$f'))" && echo "OK: $f"
 done
 ```
@@ -5813,6 +5864,18 @@ diff <(echo "$REG") <(echo "$FS") && echo "OK: registry matches filesystem" || e
 ```
 
 **Verify:** prints `OK: registry matches filesystem`. If not, add the missing rows to the registry before tagging the next release.
+
+### 9.7 Claude Chat / Cowork plugin validates and exports
+
+```bash
+python3 scripts/claude_app.py verify
+D=/tmp/aitk-claude-app-${RANDOM}
+python3 scripts/claude_app.py export --output "$D.zip" --no-custom-rules
+python3 -c "import zipfile; z=zipfile.ZipFile('$D.zip'); assert '.claude-plugin/plugin.json' in z.namelist(); assert 'claude-app/skills/ai-toolkit-rules/SKILL.md' in z.namelist(); print('OK: Claude app archive')"
+```
+
+**Verify:** the official validator exits 0; the archive contains the manifest,
+app-native rules skill, bundled agents/skills, and plugin-relative Cowork hooks.
 
 ---
 
@@ -6240,14 +6303,14 @@ tags: [architecture, overview, design, structure]
 version: "1.4.6"
 created: "2026-03-23"
 last_updated: "2026-06-10"
-description: "Architecture of ai-toolkit: directory layout, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
+description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
 # AI Toolkit Architecture
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code (and compatible assistants like Cursor, Windsurf, Copilot, Gemini, Cline, Roo Code, Aider, Augment, and Google Antigravity). Provides specialized agents, skills (slash commands + knowledge), expanded lifecycle hooks, persona presets, and experimental opt-in plugin packs that teams can adopt separately from the default global install.
+Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, and compatible assistants such as Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, and Google Antigravity. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
 
 ## Design Principles
 
@@ -6267,6 +6330,7 @@ ai-toolkit/
     agents/                  # Agent definitions (.md + YAML frontmatter)
     skills/                  # skills: task, hybrid, knowledge
     rules/                   # Source rules synced into Claude/editor rule files
+    claude-app/              # Generated app-only rules skill, hooks, instructions
     hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
     constitution.md          # Immutable safety rules, 7 articles (marker-injected)
@@ -6296,6 +6360,7 @@ ai-toolkit/
     generate_llms_txt.py     # Generates llms.txt
     install_git_hooks.py     # Installs fallback pre-commit hook
     plugin.py                # Plugin pack management (install, remove, list, status)
+    claude_app.py            # Claude Chat/Desktop/Cowork plugin export + validation
     benchmark_ecosystem.py   # Generates ecosystem benchmark snapshot
     harvest_ecosystem.py     # Writes machine-readable ecosystem harvest JSON
     compile_slm.py           # Compiles toolkit into minimal SLM system prompt (2K-16K tokens)
@@ -6346,6 +6411,8 @@ Machine (global)                              Project (local)
 
 Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.devin/rules/*.md` + `.windsurf/rules/*.md` (dual-emit since the Devin Desktop rebrand), `.github/instructions/*.instructions.md` + `.github/prompts/*.prompt.md` + root `AGENTS.md` for Copilot agent instructions, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agents/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md` (universal coding rules inlined — Codex reads only AGENTS.md, not `.agents/rules/`), `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
 
+Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
+
 If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
 
 ## CLI Commands
@@ -6354,6 +6421,7 @@ If a project already has `.mcp.json`, local install mirrors its `mcpServers` ent
 |---------|--------|-------------|
 | `install` | `~/.claude/` | First-time: per-file symlinks + JSON merge + marker injection + rules |
 | `install --local` | `./` | Claude Code configs + editors via `--editors` (auto-detect or explicit) |
+| `claude-app export` | output ZIP + Markdown | Uploadable Claude Chat/Cowork plugin and global instructions |
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
 | `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
@@ -6814,9 +6882,9 @@ title: "Claude Ecosystem Expansion Foundations"
 category: reference
 service: ai-toolkit
 tags: [benchmark, claude-code, ecosystem, hooks, plugins, architecture]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-27"
-last_updated: "2026-04-13"
+last_updated: "2026-07-10"
 description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit, including runtime-aware plugin packaging."
 ---
 
@@ -6836,13 +6904,21 @@ The outcome is a toolkit that is now positioned as a more modular, Claude-first,
 
 ### 1. Plugin-oriented structure
 
-`ai-toolkit` now treats plugin packaging as a first-class capability, with runtime-aware install surfaces for Claude and optional global Codex layering.
+`ai-toolkit` now treats plugin packaging as a first-class capability, with separate runtime-aware surfaces for Claude Code, the Claude Chat/Desktop/Cowork app, and optional global Codex layering.
 
 Implemented artifacts:
 - `app/.claude-plugin/plugin.json`
+- `app/claude-app/`
 - `app/plugins/`
 - `app/skills/plugin-creator/SKILL.md`
+- `scripts/claude_app.py`
 - `kb/reference/plugin-pack-conventions.md`
+
+Claude Code reads filesystem configuration such as `~/.claude/rules` and
+`CLAUDE.md`. The Claude app does not scan those locations. For the app,
+`ai-toolkit claude-app export --verify` creates an uploadable plugin ZIP and a
+separate Cowork global-instructions file. Plugin skills work in Chat and Cowork;
+hooks and sub-agents are Cowork-only.
 
 ### 2. Broader lifecycle coverage
 
@@ -6896,6 +6972,7 @@ The reference benchmark set is intentionally curated:
 | Area | Adopted in ai-toolkit |
 |------|------------------------|
 | Plugin manifests | Yes |
+| Claude Chat/Cowork uploadable plugin export | Yes |
 | Domain plugin packs | Yes (experimental) |
 | Hook creator workflow | Yes |
 | Command creator workflow | Yes |
@@ -6922,7 +6999,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-04-24"
+last_updated: "2026-07-10"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -6947,6 +7024,8 @@ Usage: ai-toolkit <command> [options]
 | `doctor` | Diagnose install health, hooks, quick-win assets, and artifact drift |
 | `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |
 | `eject [dir]` | Export standalone config (no symlinks, no toolkit dependency) |
+| `claude-app export [--output FILE] [--no-custom-rules] [--verify]` | Build an uploadable Claude Chat/Desktop/Cowork plugin ZIP and global-instructions file |
+| `claude-app verify` | Validate a clean staged plugin with structural checks and the official Claude plugin validator |
 
 ## Rule & Hook Injection
 
@@ -6973,7 +7052,7 @@ Usage: ai-toolkit <command> [options]
 | Command | Description |
 |---------|-------------|
 | `plugin list` | Show available plugin packs with install status |
-| `plugin install <name> [--editor claude\|codex\|all]` | Install a plugin pack for selected runtime(s) |
+| `plugin install <name> [--editor claude\|codex\|all]` | Install a plugin pack for Claude Code and/or Codex (`claude` means Claude Code, not the Claude app) |
 | `plugin install --all [--editor claude\|codex\|all]` | Install all 11 plugin packs |
 | `plugin update <name> [--editor claude\|codex\|all]` | Update a plugin pack (remove + reinstall, preserves data) |
 | `plugin update --all [--editor claude\|codex\|all]` | Update all installed plugin packs |
@@ -8649,10 +8728,10 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.1.0"
+version: "3.2.0"
 created: "2026-03-26"
-last_updated: "2026-06-30"
-description: "Reference description of the global install target, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
+last_updated: "2026-07-10"
+description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
 # Global Install Model
@@ -8670,6 +8749,10 @@ the core toolkit install, but experimental plugin packs can layer a global
 Codex target in `HOME` when explicitly installed with
 `ai-toolkit plugin install --editor codex`.
 
+Claude Chat/Desktop/Cowork is a separate runtime. It does not read the
+filesystem surfaces under `~/.claude`; it receives ai-toolkit through an
+uploaded plugin plus app-managed global/folder instructions.
+
 ## Command Responsibilities
 
 | Command | Target | Purpose |
@@ -8680,6 +8763,7 @@ Codex target in `HOME` when explicitly installed with
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
 | `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
+| `ai-toolkit claude-app export` | ZIP + Markdown output | build the uploadable Claude Chat/Cowork plugin and Cowork global instructions; registered rules are included unless `--no-custom-rules` is set |
 | `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |
 | `ai-toolkit mcp add <name...>` | current project | merge MCP templates into `.mcp.json` |
@@ -8715,6 +8799,22 @@ Claude Code's default global install writes these managed surfaces:
 - `~/.claude/CLAUDE.md` — compact index pointing at the managed rule files.
 
 The `ai-toolkit-*` prefix in `~/.claude/rules/` is reserved for installer-managed files. User-authored Claude rules should use another filename prefix, or be registered through `ai-toolkit add-rule` so they are emitted as `ai-toolkit-registered-*.md`.
+
+## Claude App Target
+
+`~/.claude/` is a Claude Code surface, not a Claude Chat/Cowork surface. Run:
+
+```bash
+ai-toolkit claude-app export --verify
+```
+
+Upload the ZIP from `Customize > Plugins`, then paste the sibling
+`*-global-instructions.md` file into `Settings > Cowork > Global instructions`.
+The plugin contains the normal skills and agents, app-relative Cowork hooks,
+and an `ai-toolkit-rules` skill generated from common/standalone rules.
+Registered rules are embedded in a separate skill by default. Skills work in
+Chat and Cowork; hooks and sub-agents are Cowork-only. The app owns its plugin
+store, so toolkit updates require re-export and re-upload.
 
 `ai-toolkit install --editors <name>` can write global files only for editors
 with documented, file-based config surfaces:
@@ -9042,7 +9142,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Supported Surface
 
@@ -9604,14 +9704,13 @@ Beyond the global Claude Code hooks above, full-profile project installs emit na
 | Editor | File | Generator | Format |
 |--------|------|-----------|--------|
 | Cursor | `.cursor/hooks.json` | `generate_cursor_hooks.py` | Cursor hooks schema |
-| Windsurf (Cascade) | `.windsurf/hooks.json` | `generate_windsurf_hooks.py` | Cascade `agent_action_name`/`tool_info` — **deprecated, dies 2026-07-01** |
 | Devin CLI | `.devin/hooks.v1.json` | `generate_devin_hooks.py` | Claude-compatible (the replacement for Cascade) |
 | Gemini CLI | `.gemini/settings.json` (hooks block) | `generate_gemini_hooks.py` | Gemini `BeforeTool`/`AfterTool` events |
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
 
 ### Devin CLI hooks (`.devin/hooks.v1.json`)
 
-Windsurf rebranded to Devin Desktop (2026-06-02); the Cascade agent — and its `.windsurf/hooks.json` surface — is available only through **2026-07-01**. Devin Local / Devin CLI do **not** read `.windsurf/hooks.json` as a fallback, so hooks must be regenerated onto the Devin CLI format.
+Windsurf rebranded to Devin Desktop (2026-06-02). The Cascade hook surface ended on 2026-07-01; ai-toolkit now emits only the live Devin CLI format.
 
 Devin CLI uses a **Claude-compatible** hook format (docs.devin.ai/cli/extensibility/hooks). Key facts driving the generator:
 
@@ -11200,14 +11299,14 @@ tags: [plugins, plugin-packs, conventions, manifests, hooks, policy-packs]
 version: "1.0.0"
 created: "2026-03-28"
 last_updated: "2026-04-13"
-description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across Claude and Codex runtimes."
+description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across Claude Code and Codex runtimes."
 ---
 
 # Plugin Pack Conventions
 
 ## Purpose
 
-`ai-toolkit` now includes experimental plugin packs under `app/plugins/` to formalize a runtime-aware plugin direction for Claude and optional global Codex layering without changing the default core install surface.
+`ai-toolkit` includes experimental plugin packs under `app/plugins/` for Claude Code and optional global Codex layering. These internal pack manifests are distinct from the official uploadable Claude app plugin built by `ai-toolkit claude-app export`.
 
 ## Pack Types
 
@@ -11267,7 +11366,7 @@ Required keys:
 
 ```bash
 ai-toolkit plugin list               # show all 11 packs with install status
-ai-toolkit plugin install --editor claude <name>   # Claude global target
+ai-toolkit plugin install --editor claude <name>   # Claude Code global target
 ai-toolkit plugin install --editor codex <name>    # Codex global target
 ai-toolkit plugin install --editor all --all       # install all 11 packs for both runtimes
 ai-toolkit plugin update --editor all --all        # update all installed packs
@@ -11284,7 +11383,7 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 2. **Copies** plugin-specific hooks to `~/.softspark/ai-toolkit/hooks/plugin-<pack>-<hook>.sh`
 3. **Copies** plugin-specific scripts to `~/.softspark/ai-toolkit/plugin-scripts/<pack>/`
 4. **Runs** init scripts if present (e.g. `init_db.py` for memory-pack — safe to re-run, preserves data)
-5. **Claude target**: links missing agents/skills into `~/.claude/`, injects plugin-local rules into `~/.claude/CLAUDE.md`, and merges plugin hook entries into `~/.claude/settings.json`
+5. **Claude Code target**: links missing agents/skills into `~/.claude/`, injects plugin-local rules into `~/.claude/CLAUDE.md`, and merges plugin hook entries into `~/.claude/settings.json`
 6. **Codex target**: bootstraps global Codex assets in `HOME` (`~/AGENTS.md`, `~/.agents/skills`, `~/.agents/rules`, `~/.codex/hooks.json`) and then layers plugin-specific rules/hooks on top
 7. **Records** installed state per runtime in `~/.softspark/ai-toolkit/plugins.json`
 
@@ -11304,7 +11403,7 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 
 ### What `plugin remove` Does
 
-1. **Claude target**: strips plugin hook entries from `~/.claude/settings.json` and removes plugin-local rule sections from `~/.claude/CLAUDE.md`
+1. **Claude Code target**: strips plugin hook entries from `~/.claude/settings.json` and removes plugin-local rule sections from `~/.claude/CLAUDE.md`
 2. **Codex target**: strips plugin hook entries from `~/.codex/hooks.json` and removes `~/.agents/rules/plugin-<pack>-*.md`
 3. **Shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
 4. **Updates** `plugins.json` state per runtime
@@ -11735,6 +11834,8 @@ Step 0 interview before setup — 5 targeted questions to capture undocumented p
 
 Codex CLI receives the full skill catalog during `ai-toolkit install --local --editors codex`.
 
+Claude Chat/Desktop/Cowork receives this same catalog through `ai-toolkit claude-app export`. The export also adds an app-only `ai-toolkit-rules` skill because the Claude app does not read Claude Code's `CLAUDE.md` or `.claude/rules/` surfaces.
+
 - Native Codex-compatible skills are symlinked directly into `.agents/skills/`
 - Claude-oriented orchestration skills are generated as Codex wrappers
 - Adapted wrappers translate `Agent`, `Team*`, and `Task*` guidance to `spawn_agent`, `send_input`, `wait_agent`, `close_agent`, and `update_plan`
@@ -11945,19 +12046,19 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.7.1"
+version: "1.8.0"
 created: "2026-04-23"
-last_updated: "2026-06-30"
-description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
+last_updated: "2026-07-10"
+description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code, Claude Chat/Cowork, and 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
 # Supported Tools Registry
 
 The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view — when the JSON changes, update this table too.
 
-## Tool Count: 12
+## Tool Count: 13
 
-1 primary runtime (Claude Code) + 11 editor integrations.
+1 primary runtime (Claude Code) + 1 Claude app target + 11 editor integrations.
 
 ---
 
@@ -11970,7 +12071,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `claude-code` |
 | Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
-| Changelog | https://code.claude.com/docs/en/changelog (lists current 2.1.186) |
+| Changelog | https://code.claude.com/docs/en/changelog; GitHub release feed is authoritative when the generated page lags (current local/release: 2.1.206, 2026-07-10) |
 | Config paths | `~/.claude/settings.json`, `.claude/settings.json` (project, committed), `.claude/settings.local.json`, `CLAUDE.md`, `.claude/rules/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+) |
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
@@ -11978,6 +12079,23 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Other capabilities | slash commands, MCP server/client, sub-agent, output style, `SKILL.md` (≥500 lines warn) |
 | Version probe | `claude --version` |
 | Notes | v2.1.169 added `disableBundledSkills` setting + `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` env var (hides bundled skills/built-in slash commands from the model; toolkit skills in `.claude/skills/` are unaffected — useful when toolkit skills overlap built-ins) and `claude --safe-mode` / `CLAUDE_CODE_SAFE_MODE` (starts with hooks, skills, agents, and CLAUDE.md disabled — first isolation step when debugging toolkit rule enforcement). `fallbackModel` settings key (v2.1.166) noted as not-adopted (class C, no toolkit surface writes model settings). |
+
+---
+
+## Claude App Target
+
+### Claude Chat / Cowork
+
+| Field | Value |
+|-------|-------|
+| ID | `claude-app` |
+| Docs | https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork |
+| Plugin docs | https://support.claude.com/en/articles/13837440-use-plugins-in-claude |
+| Config surfaces | `Settings > Cowork > Global instructions`, Cowork folder instructions, `Customize > Skills`, and `Customize > Plugins` |
+| Plugin layout | `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`; ai-toolkit uses manifest paths under `claude-app/` for its generated app-only rules and hooks |
+| Our generator | `scripts/claude_app.py` (`ai-toolkit claude-app export`) |
+| Runtime split | Skills work in Chat (web/Desktop) and Cowork. Hooks and sub-agents run only in Cowork. Claude app does **not** scan Claude Code's `~/.claude/rules/`, `CLAUDE.md`, or `~/.claude/settings.json`. |
+| Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. |
 
 ---
 
@@ -12004,15 +12122,15 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `windsurf` |
 | Docs | https://docs.devin.ai/desktop (Windsurf rebranded to Devin Desktop ~2026-06-02; docs.windsurf.com resolves here) |
 | Changelog | https://docs.devin.ai/desktop/changelog (windsurf.com/changelog 308-permanent-redirects here) |
-| Stable docs mirror | https://docs.devin.ai/desktop/... per-page .md twins; legacy `.windsurf/`, `.windsurfrules`, `~/.codeium/windsurf/` paths still read as fallback (new canonical: `.devin/`) |
-| Config paths | **Primary (Devin Desktop):** `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/skills/*/SKILL.md`, `.devin/hooks.v1.json` (Devin CLI hooks, Claude format), `.devin/config.json`, `.devin/config.local.json`, `~/.config/devin/config.json` (Devin Local MCP/permissions). **Legacy fallback:** `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json`. Plus `AGENTS.md`. |
-| Compat read paths | skills: `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/`. **Hooks: Devin CLI reads `.claude/settings.json` + `~/.claude/settings.json` hooks directly (`read_config_from.claude` default on), so globally-installed toolkit hooks work under Devin with no project-local file.** `read_config_from` now has **7 keys** (all default true): `agents_standard`, `cursor`, `windsurf`, `claude`, `opencode`, `vscode`, `zed` — so Devin CLI also imports MCP from `~/.config/opencode/opencode.json` (our opencode global install), `~/.config/zed/settings.json`, and `.vscode/mcp.json`. |
-| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py` (dual-emits `.devin/` + `.windsurf/`), `scripts/generate_windsurf_hooks.py` (profile=full; **Cascade-scoped, drop in the first release after 2026-07-01**), `scripts/generate_devin_hooks.py` (profile=full; `.devin/hooks.v1.json`, Claude-format Devin CLI hooks), `scripts/generate_windsurf_skills.py` (global + profile=full pointer, dual-emits) |
+| Stable docs mirror | https://docs.devin.ai/desktop/... per-page .md twins; legacy `.windsurf/`, `.windsurfrules`, `~/.codeium/windsurf/` rule paths still read as fallback (new canonical rules/hooks tree: `.devin/`) |
+| Config paths | **Primary (Devin Desktop):** `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/hooks.v1.json` (Devin CLI hooks, Claude format), `.devin/config.json`, `.devin/config.local.json`, `~/.config/devin/config.json` (Devin Local MCP/permissions). **Skills:** eight documented paths, all scanned in every repo — `.agents/skills/*/SKILL.md` (recommended), `.devin/skills`, `.github/skills`, `.claude/skills`, `.cursor/skills`, `.codex/skills`, `.cognition/skills`, and `.windsurf/skills`. ai-toolkit emits a single canonical pointer under `.windsurf/skills` to avoid duplicate registration. **Legacy fallback:** `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json`. Plus `AGENTS.md`. |
+| Compat read paths | Current skill docs explicitly scan all eight paths — `.agents/skills/`, `.devin/skills/`, `.github/skills/`, `.claude/skills/`, `.cursor/skills/`, `.codex/skills/`, `.cognition/skills/`, and `.windsurf/skills/`. **Hooks:** Devin CLI reads `.claude/settings.json` + `~/.claude/settings.json` hooks when `read_config_from.claude` is enabled, so globally-installed toolkit hooks also work under Devin. |
+| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py` (dual-emits `.devin/` + `.windsurf/` rules/workflows), `scripts/generate_devin_hooks.py` (profile=full; `.devin/hooks.v1.json`), `scripts/generate_windsurf_skills.py` (`.windsurf/skills` pointer) |
 | Global install | `ai-toolkit install --editors windsurf` writes `~/.codeium/windsurf/memories/global_rules.md` + skills pointer **and** `~/.config/devin/AGENTS.md` (Devin CLI global rules — the Desktop `global_rules.md` path is absent from `read_config_from.windsurf`, so editor-only Devin CLI installs need this). |
 | Tracked capabilities | Cascade, `windsurfrules`, `AGENTS.md`, activation triggers (`always_on`/`glob`/`model_decision`), workflows, skills, MCP, memories, hooks |
 | Activation modes emitted | always_on (agents/security/quality), glob (testing + language rules), model_decision (code-style/workflow) |
-| Hooks migration | **Done.** Cascade `.windsurf/hooks.json` (`agent_action_name`/`tool_info` format) dies 2026-07-01 with no Devin fallback. `generate_devin_hooks.py` emits `.devin/hooks.v1.json` in the Claude-compatible format Devin CLI uses: Claude-style events (PreToolUse/PostToolUse/UserPromptSubmit/Stop/SessionStart), matchers on Devin tool names (`read`/`edit`/`exec`/`mcp__*`), blocking via flat `{"decision":"block","reason":...}` + exit 2 (no `AI_TOOLKIT_HOOK_FORMAT=json` — Devin does not use Claude's `hookSpecificOutput` envelope). `post_setup_worktree`→`SessionStart`; `post_cascade_response`→`Stop` (no response text on stdin). Both hook generators run at profile=full during the transition; drop `generate_windsurf_hooks.py` in the first release after 2026-07-01. |
-| Sunset notes | Cascade agent is available only through **2026-07-01**; Devin Local is the default agent since 2026-06-02. Devin CLI ("Devin for Terminal") shares the Devin Local harness, reads `AGENTS.md`, the standard `SKILL.md` format, and Claude-format hooks; not yet a separate registry entry. |
+| Hooks migration | **Complete.** Cascade and `.windsurf/hooks.json` ended on 2026-07-01. `generate_devin_hooks.py` is now the only Windsurf-family hook generator and emits `.devin/hooks.v1.json` with Claude-style events, Devin tool-name matchers, and the flat Devin block contract. |
+| Latest upstream | Devin Desktop v3.4.27 (2026-07-07). v3.4.22 made skill `permissions:` frontmatter affect auto-approvals; ai-toolkit does not emit permissions because its pointer skill executes no privileged workflow. |
 
 ### GitHub Copilot
 
@@ -12116,7 +12234,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `codex-cli` |
-| Docs | https://developers.openai.com/codex (live docs site; config pages split into `/codex/config-basic`, `/codex/config-reference`, `/codex/config-advanced` plus `/codex/hooks`, `/codex/skills`, `/codex/guides/agents-md`; latest stable codex-cli 0.142.5, 2026-07-01; 0.143.0 alpha) |
+| Docs | https://developers.openai.com/codex (live docs site; config pages split into `/codex/config-basic`, `/codex/config-reference`, `/codex/config-advanced` plus `/codex/hooks`, `/codex/skills`, `/codex/guides/agents-md`; latest verified local/release: codex-cli 0.144.1, 2026-07-10) |
 | Release notes | https://github.com/openai/codex/releases |
 | Config paths | **Instructions:** project `AGENTS.md` (root→cwd chain, closest wins) and global `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md`; `~/.codex/AGENTS.override.md` takes precedence). NOTE: `~/AGENTS.md` is NOT a global-instruction surface — Codex only reads it if a session's cwd is exactly `$HOME`. Plus `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `~/.codex/hooks.json`, `.codex/config.toml` (project layers, root→cwd, closest wins, trusted projects only), `~/.codex/config.toml`. |
 | Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
@@ -12280,7 +12398,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-05-12"
+last_updated: "2026-07-10"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -12288,7 +12406,7 @@ description: "Detailed description of ai-toolkit's unique features: constitution
 
 ## 1. Machine-Enforced Constitution
 
-Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 6-article constitution via hooks. The hooks actually **block** execution of:
+Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 7-article constitution via hooks. The hooks actually **block** execution of:
 - Mass deletion (`rm -rf`, `DROP TABLE`)
 - Blind overwrites of uncommitted work
 - Any action that could cause irreversible data loss
@@ -12313,6 +12431,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | UserPromptSubmit | `track-usage.sh` | Record skill invocations to local stats |
 | PostToolUse | `post-tool-use.sh` | Lightweight validation reminders + append edit to session state |
 | PostToolUse | `governance-capture.sh` | Log security-sensitive operations to JSONL |
+| PostToolUse | `loop-guard.sh` | Detect repeated successful actions and inject a reassessment advisory |
 | PostToolUse | `test-cohesion.sh` | Run cohesion-mapped tests after edits; block on failure (Art. VI.3) |
 | PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
 | Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |

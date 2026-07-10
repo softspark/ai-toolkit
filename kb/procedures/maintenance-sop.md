@@ -3,9 +3,9 @@ title: "SOP: Claude Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.1.0"
+version: "3.2.0"
 created: "2026-03-23"
-last_updated: "2026-06-10"
+last_updated: "2026-07-10"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -92,6 +92,24 @@ What `install` and `update` do (merge-friendly — user content never overwritte
 
 Re-running updates only toolkit content. Old whole-directory symlinks are auto-upgraded to per-file on next run.
 
+### Install in Claude Chat / Desktop / Cowork
+
+The Claude app does not read Claude Code's `~/.claude/rules/`, `CLAUDE.md`,
+agents, skills, or settings. Build the separate app-native plugin:
+
+```bash
+ai-toolkit claude-app export --verify
+```
+
+1. Open Claude and choose `Customize > Plugins > + > Upload plugin`.
+2. Select `ai-toolkit-claude-app.zip`.
+3. Paste `ai-toolkit-claude-app-global-instructions.md` into
+   `Settings > Cowork > Global instructions`.
+
+The export includes registered rules by default; use `--no-custom-rules` for a
+shareable clean bundle. Re-export and re-upload after toolkit or registered-rule
+updates. Skills work in Chat and Cowork. Hooks and sub-agents run only in Cowork.
+
 ### Install Profiles (v3.0.0)
 
 | Profile | Claude Code core | Editor rules | Gemini hooks | Copilot dir layout | Per-editor hooks / sub-agents / commands | Git hooks |
@@ -149,6 +167,9 @@ ai-toolkit remove-rule my-project-rules
 ```
 
 Rule names derive from the filename (`my-project-rules.md` → marker `TOOLKIT:my-project-rules`).
+
+After adding or removing a registered rule, re-export the Claude app plugin if
+that runtime should receive the change.
 
 ---
 
@@ -231,6 +252,21 @@ Use this when Claude appears to ignore `CLAUDE.md`, `.claude/rules/*.md`, output
    scripts/validate.py
    ```
 
+## Troubleshooting Rule Enforcement in Claude Chat / Cowork
+
+Do not use `/memory` or inspect `~/.claude/rules/` for the app runtime; those
+checks apply only to Claude Code.
+
+1. Run `ai-toolkit claude-app verify` and fix any manifest/component error.
+2. Re-export the ZIP and upload it from `Customize > Plugins`.
+3. Confirm `ai-toolkit-rules` appears in the `/` or `+` skill picker.
+4. Confirm the generated standing instructions are saved under
+   `Settings > Cowork > Global instructions`.
+5. In regular Chat, expect skills only. Hooks and sub-agents are intentionally
+   unavailable there; test those in Cowork.
+6. Start a new chat/task after updating the plugin so the new component catalog
+   is loaded.
+
 ## Verification
 
 After changing rule-enforcement behavior, run at minimum:
@@ -238,6 +274,8 @@ After changing rule-enforcement behavior, run at minimum:
 ```bash
 bats tests/test_hooks.bats tests/test_search_first_flow.bats
 bats tests/test_install.bats tests/test_codex.bats
+bats tests/test_claude_app.bats tests/test_hooks_per_editor.bats
+python3 scripts/claude_app.py verify
 python3 scripts/validate.py --strict
 ```
 
@@ -245,7 +283,7 @@ python3 scripts/validate.py --strict
 
 ```bash
 ai-toolkit plugin list                             # show available packs
-ai-toolkit plugin install --editor claude <name>  # install for Claude global target
+ai-toolkit plugin install --editor claude <name>  # install for Claude Code global target
 ai-toolkit plugin install --editor codex <name>   # install for Codex global target
 ai-toolkit plugin install --editor all --all      # install all 11 packs for both runtimes
 ai-toolkit plugin update --editor all --all       # re-apply all installed packs after toolkit updates
@@ -283,7 +321,7 @@ Follow the `documentation-standards` knowledge skill (`app/skills/documentation-
 
 **Every addition — skill, hook, MCP template, agent, rule — MUST be verified against all supported editors before merge.**
 
-This toolkit targets 10 platforms. Each has its own config format, file path conventions, and runtime capabilities. A feature that works in Claude Code may silently break in Cursor, Codex, or Copilot if the editor's official spec diverges.
+The ecosystem registry tracks 13 targets: Claude Code, the Claude Chat/Cowork app, and 11 editor integrations. Each has its own config format, file path conventions, and runtime capabilities. A feature that works in Claude Code may silently break in Cursor, Codex, or Copilot if the editor's official spec diverges.
 
 ### Verification checklist
 

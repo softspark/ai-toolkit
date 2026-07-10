@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-05-12"
+last_updated: "2026-07-10"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -12,7 +12,7 @@ description: "Detailed description of ai-toolkit's unique features: constitution
 
 ## 1. Machine-Enforced Constitution
 
-Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 6-article constitution via hooks. The hooks actually **block** execution of:
+Unlike other toolkits that put safety rules in documentation only, ai-toolkit enforces a 7-article constitution via hooks. The hooks actually **block** execution of:
 - Mass deletion (`rm -rf`, `DROP TABLE`)
 - Blind overwrites of uncommitted work
 - Any action that could cause irreversible data loss
@@ -37,6 +37,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | UserPromptSubmit | `track-usage.sh` | Record skill invocations to local stats |
 | PostToolUse | `post-tool-use.sh` | Lightweight validation reminders + append edit to session state |
 | PostToolUse | `governance-capture.sh` | Log security-sensitive operations to JSONL |
+| PostToolUse | `loop-guard.sh` | Detect repeated successful actions and inject a reassessment advisory |
 | PostToolUse | `test-cohesion.sh` | Run cohesion-mapped tests after edits; block on failure (Art. VI.3) |
 | PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
 | Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |

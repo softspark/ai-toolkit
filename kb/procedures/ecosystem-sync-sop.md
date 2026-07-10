@@ -3,10 +3,10 @@ title: "SOP: Ecosystem Sync"
 category: procedures
 service: ai-toolkit
 tags: [sop, ecosystem, editors, generators, drift-detection, sync]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-04-23"
-last_updated: "2026-04-23"
-description: "Quarterly (or event-triggered) sync procedure that detects documentation and capability drift in supported tools (Claude Code + 11 editors), analyses our generators and skills for missing features, and walks through the migration + generator-update workflow."
+last_updated: "2026-07-10"
+description: "Quarterly (or event-triggered) sync procedure that detects documentation and capability drift in supported tools (Claude Code, Claude app, and 11 editors), analyses our generators and skills for missing features, and walks through the migration + generator-update workflow."
 ---
 
 # SOP: Ecosystem Sync
@@ -26,7 +26,7 @@ Keeps ai-toolkit aligned with the tools it integrates with. When an editor adds 
 ## Quick Reference
 
 ```bash
-# Full check (all 12 tools, online)
+# Full check (all 13 tools, online)
 python3 scripts/ecosystem_doctor.py --format text
 
 # Single tool
@@ -48,7 +48,7 @@ python3 scripts/ecosystem_doctor.py --offline --format text
 
 | File | Purpose |
 |------|---------|
-| `scripts/ecosystem_tools.json` | Authoritative registry: 12 tools with doc URLs, config paths, our generators, capability markers |
+| `scripts/ecosystem_tools.json` | Authoritative registry: 13 tools with doc URLs, config paths, our generators, capability markers |
 | `benchmarks/ecosystem-doctor-snapshot.json` | Last-seen state (headings, content hash, markers, version) — updated via `--update` |
 | `scripts/ecosystem_doctor.py` | Drift detector |
 | `kb/reference/supported-tools-registry.md` | Human-readable view of the registry |

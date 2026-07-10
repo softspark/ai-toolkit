@@ -1,9 +1,8 @@
 #!/usr/bin/env bats
 # Per-editor hook generator contract tests (v3.0.0 Bucket A).
 #
-# Covers the four native-hooks generators shipped in v3.0.0:
+# Covers the native-hooks generators shipped by ai-toolkit:
 #   scripts/generate_cursor_hooks.py    -> .cursor/hooks.json
-#   scripts/generate_windsurf_hooks.py  -> .windsurf/hooks.json (Cascade, deprecated)
 #   scripts/generate_devin_hooks.py     -> .devin/hooks.v1.json (Devin CLI, Claude format)
 #   scripts/generate_gemini_hooks.py    -> .gemini/settings.json (hooks block)
 #   scripts/generate_augment_hooks.py   -> .augment/settings.json (hooks block)
@@ -25,7 +24,6 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 setup_file() {
     export HPE_DIR; HPE_DIR="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py"   "$HPE_DIR" >/dev/null
-    python3 "$TOOLKIT_DIR/scripts/generate_windsurf_hooks.py" "$HPE_DIR" >/dev/null
     python3 "$TOOLKIT_DIR/scripts/generate_devin_hooks.py"    "$HPE_DIR" >/dev/null
     python3 "$TOOLKIT_DIR/scripts/generate_gemini_hooks.py"   "$HPE_DIR" >/dev/null
     python3 "$TOOLKIT_DIR/scripts/generate_augment_hooks.py"  "$HPE_DIR" >/dev/null
@@ -39,10 +37,6 @@ teardown_file() {
 
 @test "hooks: cursor writes .cursor/hooks.json" {
     [ -f "$HPE_DIR/.cursor/hooks.json" ]
-}
-
-@test "hooks: windsurf writes .windsurf/hooks.json" {
-    [ -f "$HPE_DIR/.windsurf/hooks.json" ]
 }
 
 @test "hooks: devin writes .devin/hooks.v1.json" {
@@ -61,10 +55,6 @@ teardown_file() {
 
 @test "hooks: cursor/hooks.json is valid JSON" {
     python3 -c "import json; json.load(open('$HPE_DIR/.cursor/hooks.json'))"
-}
-
-@test "hooks: windsurf/hooks.json is valid JSON" {
-    python3 -c "import json; json.load(open('$HPE_DIR/.windsurf/hooks.json'))"
 }
 
 @test "hooks: devin/hooks.v1.json is valid JSON" {
@@ -94,10 +84,6 @@ assert 'PreToolUse' in data, 'events live at the top level'
     grep -q '"_source": "ai-toolkit"' "$HPE_DIR/.cursor/hooks.json"
 }
 
-@test "hooks: windsurf entries carry _source: ai-toolkit" {
-    grep -q '"_source": "ai-toolkit"' "$HPE_DIR/.windsurf/hooks.json"
-}
-
 @test "hooks: devin entries carry _source: ai-toolkit" {
     grep -q '"_source": "ai-toolkit"' "$HPE_DIR/.devin/hooks.v1.json"
 }
@@ -115,11 +101,6 @@ assert 'PreToolUse' in data, 'events live at the top level'
 @test "hooks: cursor commands use \$HOME prefix (not absolute /Users)" {
     ! grep -qE '"/Users/|"/home/' "$HPE_DIR/.cursor/hooks.json"
     grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.cursor/hooks.json"
-}
-
-@test "hooks: windsurf commands use \$HOME prefix (not absolute /Users)" {
-    ! grep -qE '"/Users/|"/home/' "$HPE_DIR/.windsurf/hooks.json"
-    grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.windsurf/hooks.json"
 }
 
 @test "hooks: devin commands use \$HOME prefix (not absolute /Users)" {
@@ -157,16 +138,6 @@ assert 'PreToolUse' in data, 'events live at the top level'
     first_sha=$(shasum "$tmp/.cursor/hooks.json" | awk '{print $1}')
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$tmp" >/dev/null
     second_sha=$(shasum "$tmp/.cursor/hooks.json" | awk '{print $1}')
-    rm -rf "$tmp"
-    [ "$first_sha" = "$second_sha" ]
-}
-
-@test "hooks: windsurf is idempotent (second run produces identical bytes)" {
-    tmp="$(mktemp -d)"
-    python3 "$TOOLKIT_DIR/scripts/generate_windsurf_hooks.py" "$tmp" >/dev/null
-    first_sha=$(shasum "$tmp/.windsurf/hooks.json" | awk '{print $1}')
-    python3 "$TOOLKIT_DIR/scripts/generate_windsurf_hooks.py" "$tmp" >/dev/null
-    second_sha=$(shasum "$tmp/.windsurf/hooks.json" | awk '{print $1}')
     rm -rf "$tmp"
     [ "$first_sha" = "$second_sha" ]
 }
@@ -252,22 +223,6 @@ EOF
     rm -rf "$tmp"
 }
 
-@test "hooks: windsurf preserves user-authored entries" {
-    tmp="$(mktemp -d)"
-    mkdir -p "$tmp/.windsurf"
-    cat > "$tmp/.windsurf/hooks.json" <<'EOF'
-{
-  "pre_read_code": [
-    {"_source": "user", "command": "echo user-hook"}
-  ]
-}
-EOF
-    python3 "$TOOLKIT_DIR/scripts/generate_windsurf_hooks.py" "$tmp" >/dev/null
-    grep -q '"_source": "user"' "$tmp/.windsurf/hooks.json"
-    grep -q '"_source": "ai-toolkit"' "$tmp/.windsurf/hooks.json"
-    rm -rf "$tmp"
-}
-
 @test "hooks: devin preserves user-authored entries" {
     tmp="$(mktemp -d)"
     mkdir -p "$tmp/.devin"
@@ -312,10 +267,6 @@ EOF
 
 @test "hooks: cursor wires sessionStart" {
     grep -q '"sessionStart"' "$HPE_DIR/.cursor/hooks.json"
-}
-
-@test "hooks: windsurf wires pre_write_code" {
-    grep -q '"pre_write_code"' "$HPE_DIR/.windsurf/hooks.json"
 }
 
 @test "hooks: devin wires Claude-style PreToolUse with a Devin exec matcher" {

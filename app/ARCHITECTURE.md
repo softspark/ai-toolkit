@@ -8,7 +8,7 @@ Universal multi-agent system for software development. Works across all reposito
 |-----------|-------|
 | Agents | See agents catalog |
 | Skills | See skills catalog |
-| Hooks | 14 events / 29 entries (SessionStart ×3, Notification ×1, PreToolUse ×5, UserPromptSubmit ×2, PostToolUse ×5, Stop ×4, TaskCompleted ×1, TeammateIdle ×1, SubagentStart ×1, SubagentStop ×1, PreCompact ×2, SessionEnd ×1, InstructionsLoaded ×1, ConfigChange ×1) |
+| Hooks | 14 events / 28 entries (SessionStart ×2, Notification ×1, PreToolUse ×5, UserPromptSubmit ×2, PostToolUse ×5, Stop ×4, TaskCompleted ×1, TeammateIdle ×1, SubagentStart ×1, SubagentStop ×1, PreCompact ×2, SessionEnd ×1, InstructionsLoaded ×1, ConfigChange ×1) plus statusLine |
 
 ---
 
@@ -19,8 +19,8 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 5 — Plugins (distribution)                           │
-│  Bundles for npm / marketplace / ai-toolkit eject           │
-│  Files: app/plugins/, plugin.json, package.json             │
+│  Bundles for npm / Claude app / marketplace / eject         │
+│  Files: app/claude-app/, app/plugins/, plugin.json          │
 ├─────────────────────────────────────────────────────────────┤
 │  Layer 4 — Subagents (delegation)                           │
 │  Specialised personas spawned via Agent / Teams             │
@@ -48,14 +48,14 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 | A reusable workflow / domain knowledge | Layer 2 (Skills) | `/debug`, `/review`, `python-rules` |
 | Behavior the harness must enforce automatically | Layer 3 (Hooks) | block destructive `rm -rf`, run lint on Stop |
 | A specialised role for delegation | Layer 4 (Subagents) | `security-auditor`, `database-architect` |
-| A shippable bundle for other repos | Layer 5 (Plugins) | `app/plugins/python-stack/` |
+| A shippable bundle for other repos or Claude app | Layer 5 (Plugins) | `app/plugins/`, `app/claude-app/` |
 
 ### Cross-cutting rules
 
 - A skill MAY trigger an agent (`agent: <name>` frontmatter) — that's Layer 2 calling Layer 4.
 - A hook MUST NOT call a skill — hooks are deterministic shell, skills are LLM-driven.
 - A plugin MAY bundle skills + agents + hooks, but never the inverse.
-- CLAUDE.md is read by every layer; it is the only layer everyone reads.
+- Claude Code reads CLAUDE.md across layers. Claude Chat/Cowork uses app-global/folder instructions and plugin skills instead; `claude_app.py` renders core rules into `ai-toolkit-rules` for that runtime.
 
 ---
 
@@ -353,7 +353,7 @@ Lead Session (You)
 ### Language Rules (68 files, 13 languages)
 `app/rules/` contains per-language coding rules. Supported languages: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, and common (shared). Auto-detected from project files via `--auto-detect` or selected with `--modules rules-<lang>`.
 
-Language rules are propagated to **all configured editors** — not just Claude. `dir_rules_shared.build_language_rules()` reads `app/rules/<lang>/*.md`, strips frontmatter, and returns combined content per language. Each directory-based generator (Cursor, Windsurf, Cline, Roo, Augment, Antigravity, Codex) emits `ai-toolkit-lang-<lang>` files in its native format. Registered custom rules (`~/.softspark/ai-toolkit/rules/`) are similarly propagated as `ai-toolkit-custom-<name>` files via `build_registered_rules()`.
+Language rules are propagated to **all configured editors** — not just Claude Code. `dir_rules_shared.build_language_rules()` reads `app/rules/<lang>/*.md`, strips frontmatter, and returns combined content per language. Each directory-based generator (Cursor, Devin/Windsurf, Cline, Roo, Augment, Antigravity, Codex) emits `ai-toolkit-lang-<lang>` files in its native format. Claude Chat/Cowork receives the existing language skills plus an app-only `ai-toolkit-rules` skill through `claude_app.py`. Registered custom rules are embedded in the local app bundle and propagated to directory-based editors.
 
 ### Codex Integration
 Codex receives `AGENTS.md`, `.agents/rules/*.md`, optional `.agents/skills/*`, and `.codex/hooks.json`. `generate_codex_hooks.py` emits only Codex-supported lifecycle events and prefixes commands with `AI_TOOLKIT_HOOK_QUIET=1`, so informational hook output is not shown at session start or prompt submit while side effects and blocking Stop decisions still run. The `UserPromptSubmit` governance hook also sets `AI_TOOLKIT_HOOK_FORMAT=json` so proactive `additionalContext` reaches the model quietly. Claude's bundled `UserPromptSubmit` hook uses the same quiet JSON context path.

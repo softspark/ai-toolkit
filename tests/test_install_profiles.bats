@@ -130,17 +130,53 @@ run_install() {
     grep -q '"_source": "ai-toolkit"' "$TMP_HOME/.augment/settings.json"
 }
 
-# ── Windsurf hooks: full only ──────────────────────────────────────────────
+# ── Devin hooks: full only ─────────────────────────────────────────────────
 
-@test "profiles: windsurf + standard does NOT emit .windsurf/hooks.json" {
+@test "profiles: windsurf + standard does NOT emit .devin/hooks.v1.json" {
     run_install --editors windsurf --profile standard >/dev/null 2>&1
-    [ ! -f "$TEST_PROJECT/.windsurf/hooks.json" ]
+    [ ! -f "$TEST_PROJECT/.devin/hooks.v1.json" ]
 }
 
-@test "profiles: windsurf + full emits .windsurf/hooks.json" {
+@test "profiles: windsurf + full emits .devin/hooks.v1.json only" {
     run_install --editors windsurf --profile full >/dev/null 2>&1
+    [ -f "$TEST_PROJECT/.devin/hooks.v1.json" ]
+    [ ! -f "$TEST_PROJECT/.windsurf/hooks.json" ]
+    grep -q '"_source": "ai-toolkit"' "$TEST_PROJECT/.devin/hooks.v1.json"
+}
+
+@test "profiles: windsurf migration removes retired toolkit surfaces and preserves user hooks" {
+    mkdir -p "$TEST_PROJECT/.windsurf" \
+        "$TEST_PROJECT/.devin/skills/ai-toolkit-skill-catalogue"
+    cat > "$TEST_PROJECT/.windsurf/hooks.json" <<'JSON'
+{
+  "hooks": {
+    "pre_write_code": [
+      {"_source":"ai-toolkit","command":"old-toolkit-hook"},
+      {"_source":"user","command":"keep-user-hook"}
+    ]
+  }
+}
+JSON
+    cat > "$TEST_PROJECT/.devin/skills/ai-toolkit-skill-catalogue/SKILL.md" <<'MD'
+---
+name: ai-toolkit-skill-catalogue
+---
+# Retired pointer
+MD
+
+    run bash -c "cd '$TEST_PROJECT' && python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors windsurf --profile standard --dry-run"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Would migrate: remove retired ai-toolkit Cascade hooks"* ]]
+    [[ "$output" == *"Would migrate: remove undocumented .devin/skills toolkit pointer"* ]]
+    grep -q 'old-toolkit-hook' "$TEST_PROJECT/.windsurf/hooks.json"
+    [ -d "$TEST_PROJECT/.devin/skills/ai-toolkit-skill-catalogue" ]
+
+    run_install --editors windsurf --profile standard >/dev/null 2>&1
+
     [ -f "$TEST_PROJECT/.windsurf/hooks.json" ]
-    grep -q '"_source": "ai-toolkit"' "$TEST_PROJECT/.windsurf/hooks.json"
+    grep -q 'keep-user-hook' "$TEST_PROJECT/.windsurf/hooks.json"
+    ! grep -q 'old-toolkit-hook' "$TEST_PROJECT/.windsurf/hooks.json"
+    [ ! -d "$TEST_PROJECT/.devin/skills/ai-toolkit-skill-catalogue" ]
 }
 
 # ── Codex skills use upstream .agents/skills discovery path ────────────────

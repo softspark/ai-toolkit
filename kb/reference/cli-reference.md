@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-04-24"
+last_updated: "2026-07-10"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -29,6 +29,8 @@ Usage: ai-toolkit <command> [options]
 | `doctor` | Diagnose install health, hooks, quick-win assets, and artifact drift |
 | `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |
 | `eject [dir]` | Export standalone config (no symlinks, no toolkit dependency) |
+| `claude-app export [--output FILE] [--no-custom-rules] [--verify]` | Build an uploadable Claude Chat/Desktop/Cowork plugin ZIP and global-instructions file |
+| `claude-app verify` | Validate a clean staged plugin with structural checks and the official Claude plugin validator |
 
 ## Rule & Hook Injection
 
@@ -55,7 +57,7 @@ Usage: ai-toolkit <command> [options]
 | Command | Description |
 |---------|-------------|
 | `plugin list` | Show available plugin packs with install status |
-| `plugin install <name> [--editor claude\|codex\|all]` | Install a plugin pack for selected runtime(s) |
+| `plugin install <name> [--editor claude\|codex\|all]` | Install a plugin pack for Claude Code and/or Codex (`claude` means Claude Code, not the Claude app) |
 | `plugin install --all [--editor claude\|codex\|all]` | Install all 11 plugin packs |
 | `plugin update <name> [--editor claude\|codex\|all]` | Update a plugin pack (remove + reinstall, preserves data) |
 | `plugin update --all [--editor claude\|codex\|all]` | Update all installed plugin packs |

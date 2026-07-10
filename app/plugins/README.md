@@ -10,9 +10,12 @@ They serve three purposes:
 3. give `plugin-creator` a concrete scaffold to follow.
 
 Plugin packs can target:
-- Claude global runtime via `ai-toolkit plugin install --editor claude <name>`
+- Claude Code global runtime via `ai-toolkit plugin install --editor claude <name>`
 - Codex global plugin layer via `ai-toolkit plugin install --editor codex <name>`
 - both runtimes via `ai-toolkit plugin install --editor all <name>`
+
+These packs are not directly uploadable Claude app plugins. For Claude Chat,
+Desktop, and Cowork use `ai-toolkit claude-app export`.
 
 Current packs:
 - `security-pack`

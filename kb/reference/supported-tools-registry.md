@@ -3,19 +3,19 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.7.1"
+version: "1.8.0"
 created: "2026-04-23"
-last_updated: "2026-06-30"
-description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code + 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
+last_updated: "2026-07-10"
+description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code, Claude Chat/Cowork, and 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
 # Supported Tools Registry
 
 The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view — when the JSON changes, update this table too.
 
-## Tool Count: 12
+## Tool Count: 13
 
-1 primary runtime (Claude Code) + 11 editor integrations.
+1 primary runtime (Claude Code) + 1 Claude app target + 11 editor integrations.
 
 ---
 
@@ -28,7 +28,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `claude-code` |
 | Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
-| Changelog | https://code.claude.com/docs/en/changelog (lists current 2.1.186) |
+| Changelog | https://code.claude.com/docs/en/changelog; GitHub release feed is authoritative when the generated page lags (current local/release: 2.1.206, 2026-07-10) |
 | Config paths | `~/.claude/settings.json`, `.claude/settings.json` (project, committed), `.claude/settings.local.json`, `CLAUDE.md`, `.claude/rules/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+) |
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
@@ -36,6 +36,23 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Other capabilities | slash commands, MCP server/client, sub-agent, output style, `SKILL.md` (≥500 lines warn) |
 | Version probe | `claude --version` |
 | Notes | v2.1.169 added `disableBundledSkills` setting + `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` env var (hides bundled skills/built-in slash commands from the model; toolkit skills in `.claude/skills/` are unaffected — useful when toolkit skills overlap built-ins) and `claude --safe-mode` / `CLAUDE_CODE_SAFE_MODE` (starts with hooks, skills, agents, and CLAUDE.md disabled — first isolation step when debugging toolkit rule enforcement). `fallbackModel` settings key (v2.1.166) noted as not-adopted (class C, no toolkit surface writes model settings). |
+
+---
+
+## Claude App Target
+
+### Claude Chat / Cowork
+
+| Field | Value |
+|-------|-------|
+| ID | `claude-app` |
+| Docs | https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork |
+| Plugin docs | https://support.claude.com/en/articles/13837440-use-plugins-in-claude |
+| Config surfaces | `Settings > Cowork > Global instructions`, Cowork folder instructions, `Customize > Skills`, and `Customize > Plugins` |
+| Plugin layout | `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`; ai-toolkit uses manifest paths under `claude-app/` for its generated app-only rules and hooks |
+| Our generator | `scripts/claude_app.py` (`ai-toolkit claude-app export`) |
+| Runtime split | Skills work in Chat (web/Desktop) and Cowork. Hooks and sub-agents run only in Cowork. Claude app does **not** scan Claude Code's `~/.claude/rules/`, `CLAUDE.md`, or `~/.claude/settings.json`. |
+| Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. |
 
 ---
 
@@ -62,15 +79,15 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `windsurf` |
 | Docs | https://docs.devin.ai/desktop (Windsurf rebranded to Devin Desktop ~2026-06-02; docs.windsurf.com resolves here) |
 | Changelog | https://docs.devin.ai/desktop/changelog (windsurf.com/changelog 308-permanent-redirects here) |
-| Stable docs mirror | https://docs.devin.ai/desktop/... per-page .md twins; legacy `.windsurf/`, `.windsurfrules`, `~/.codeium/windsurf/` paths still read as fallback (new canonical: `.devin/`) |
-| Config paths | **Primary (Devin Desktop):** `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/skills/*/SKILL.md`, `.devin/hooks.v1.json` (Devin CLI hooks, Claude format), `.devin/config.json`, `.devin/config.local.json`, `~/.config/devin/config.json` (Devin Local MCP/permissions). **Legacy fallback:** `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json`. Plus `AGENTS.md`. |
-| Compat read paths | skills: `.agents/skills/`, `~/.agents/skills/`, (with Claude Code config-reading) `.claude/skills/`, `~/.claude/skills/`. **Hooks: Devin CLI reads `.claude/settings.json` + `~/.claude/settings.json` hooks directly (`read_config_from.claude` default on), so globally-installed toolkit hooks work under Devin with no project-local file.** `read_config_from` now has **7 keys** (all default true): `agents_standard`, `cursor`, `windsurf`, `claude`, `opencode`, `vscode`, `zed` — so Devin CLI also imports MCP from `~/.config/opencode/opencode.json` (our opencode global install), `~/.config/zed/settings.json`, and `.vscode/mcp.json`. |
-| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py` (dual-emits `.devin/` + `.windsurf/`), `scripts/generate_windsurf_hooks.py` (profile=full; **Cascade-scoped, drop in the first release after 2026-07-01**), `scripts/generate_devin_hooks.py` (profile=full; `.devin/hooks.v1.json`, Claude-format Devin CLI hooks), `scripts/generate_windsurf_skills.py` (global + profile=full pointer, dual-emits) |
+| Stable docs mirror | https://docs.devin.ai/desktop/... per-page .md twins; legacy `.windsurf/`, `.windsurfrules`, `~/.codeium/windsurf/` rule paths still read as fallback (new canonical rules/hooks tree: `.devin/`) |
+| Config paths | **Primary (Devin Desktop):** `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/hooks.v1.json` (Devin CLI hooks, Claude format), `.devin/config.json`, `.devin/config.local.json`, `~/.config/devin/config.json` (Devin Local MCP/permissions). **Skills:** eight documented paths, all scanned in every repo — `.agents/skills/*/SKILL.md` (recommended), `.devin/skills`, `.github/skills`, `.claude/skills`, `.cursor/skills`, `.codex/skills`, `.cognition/skills`, and `.windsurf/skills`. ai-toolkit emits a single canonical pointer under `.windsurf/skills` to avoid duplicate registration. **Legacy fallback:** `.windsurfrules`, `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/skills/*/SKILL.md`, `~/.codeium/windsurf/mcp_config.json`. Plus `AGENTS.md`. |
+| Compat read paths | Current skill docs explicitly scan all eight paths — `.agents/skills/`, `.devin/skills/`, `.github/skills/`, `.claude/skills/`, `.cursor/skills/`, `.codex/skills/`, `.cognition/skills/`, and `.windsurf/skills/`. **Hooks:** Devin CLI reads `.claude/settings.json` + `~/.claude/settings.json` hooks when `read_config_from.claude` is enabled, so globally-installed toolkit hooks also work under Devin. |
+| Our generators | `scripts/generate_windsurf.py`, `scripts/generate_windsurf_rules.py` (dual-emits `.devin/` + `.windsurf/` rules/workflows), `scripts/generate_devin_hooks.py` (profile=full; `.devin/hooks.v1.json`), `scripts/generate_windsurf_skills.py` (`.windsurf/skills` pointer) |
 | Global install | `ai-toolkit install --editors windsurf` writes `~/.codeium/windsurf/memories/global_rules.md` + skills pointer **and** `~/.config/devin/AGENTS.md` (Devin CLI global rules — the Desktop `global_rules.md` path is absent from `read_config_from.windsurf`, so editor-only Devin CLI installs need this). |
 | Tracked capabilities | Cascade, `windsurfrules`, `AGENTS.md`, activation triggers (`always_on`/`glob`/`model_decision`), workflows, skills, MCP, memories, hooks |
 | Activation modes emitted | always_on (agents/security/quality), glob (testing + language rules), model_decision (code-style/workflow) |
-| Hooks migration | **Done.** Cascade `.windsurf/hooks.json` (`agent_action_name`/`tool_info` format) dies 2026-07-01 with no Devin fallback. `generate_devin_hooks.py` emits `.devin/hooks.v1.json` in the Claude-compatible format Devin CLI uses: Claude-style events (PreToolUse/PostToolUse/UserPromptSubmit/Stop/SessionStart), matchers on Devin tool names (`read`/`edit`/`exec`/`mcp__*`), blocking via flat `{"decision":"block","reason":...}` + exit 2 (no `AI_TOOLKIT_HOOK_FORMAT=json` — Devin does not use Claude's `hookSpecificOutput` envelope). `post_setup_worktree`→`SessionStart`; `post_cascade_response`→`Stop` (no response text on stdin). Both hook generators run at profile=full during the transition; drop `generate_windsurf_hooks.py` in the first release after 2026-07-01. |
-| Sunset notes | Cascade agent is available only through **2026-07-01**; Devin Local is the default agent since 2026-06-02. Devin CLI ("Devin for Terminal") shares the Devin Local harness, reads `AGENTS.md`, the standard `SKILL.md` format, and Claude-format hooks; not yet a separate registry entry. |
+| Hooks migration | **Complete.** Cascade and `.windsurf/hooks.json` ended on 2026-07-01. `generate_devin_hooks.py` is now the only Windsurf-family hook generator and emits `.devin/hooks.v1.json` with Claude-style events, Devin tool-name matchers, and the flat Devin block contract. |
+| Latest upstream | Devin Desktop v3.4.27 (2026-07-07). v3.4.22 made skill `permissions:` frontmatter affect auto-approvals; ai-toolkit does not emit permissions because its pointer skill executes no privileged workflow. |
 
 ### GitHub Copilot
 
@@ -174,7 +191,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Field | Value |
 |-------|-------|
 | ID | `codex-cli` |
-| Docs | https://developers.openai.com/codex (live docs site; config pages split into `/codex/config-basic`, `/codex/config-reference`, `/codex/config-advanced` plus `/codex/hooks`, `/codex/skills`, `/codex/guides/agents-md`; latest stable codex-cli 0.142.5, 2026-07-01; 0.143.0 alpha) |
+| Docs | https://developers.openai.com/codex (live docs site; config pages split into `/codex/config-basic`, `/codex/config-reference`, `/codex/config-advanced` plus `/codex/hooks`, `/codex/skills`, `/codex/guides/agents-md`; latest verified local/release: codex-cli 0.144.1, 2026-07-10) |
 | Release notes | https://github.com/openai/codex/releases |
 | Config paths | **Instructions:** project `AGENTS.md` (root→cwd chain, closest wins) and global `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md`; `~/.codex/AGENTS.override.md` takes precedence). NOTE: `~/AGENTS.md` is NOT a global-instruction surface — Codex only reads it if a session's cwd is exactly `$HOME`. Plus `.agents/skills/*/SKILL.md`, `.codex/hooks.json`, `~/.codex/hooks.json`, `.codex/config.toml` (project layers, root→cwd, closest wins, trusted projects only), `~/.codex/config.toml`. |
 | Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |

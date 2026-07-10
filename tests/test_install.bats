@@ -412,6 +412,17 @@ MD
     [ ! -d "$TMP_HOME/.gemini/commands" ]
 }
 
+@test "install --editors cline dry-run reports Claude skill reuse when available" {
+    mkdir -p "$TMP_HOME/.claude/skills/example"
+    printf '%s\n' '# Example skill' > "$TMP_HOME/.claude/skills/example/SKILL.md"
+
+    run env HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors cline --dry-run
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'Would reuse: ~/.claude/skills/'
+    ! echo "$output" | grep -q 'Would generate: ~/.cline/skills/'
+}
+
 @test "install --local --editors copilot emits AGENTS.md without clobbering existing sections" {
     cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
 User-authored preface.

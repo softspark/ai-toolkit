@@ -197,6 +197,8 @@ def record_install(
     state["profile"] = profile
     if auto_detected is not None:
         state["auto_detected_languages"] = sorted(auto_detected)
+    else:
+        state.pop("auto_detected_languages", None)
 
     if extends_info is not None:
         state["extends"] = {
