@@ -223,6 +223,69 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "codex-skills: balanced Agent calls preserve surrounding semantic content" {
+    run python3 - "$TOOLKIT_DIR" <<'PY'
+import sys
+import tempfile
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+sys.path.insert(0, str(toolkit / "scripts"))
+from codex_skill_adapter import build_codex_skill_text, build_opencode_skill_text
+
+frontmatter = """---
+name: nested-agent-fixture
+description: Nested call fixture.
+allowed-tools: Agent
+---
+"""
+body = r'''Before exact.
+Agent(
+  subagent_type="qa",
+  prompt="Check (MANDATORY), helper(inner(1)), and escaped quote \"keep\".",
+  description='single \' quote and (nested)'
+)
+TRAILING EXACT: keep (this) untouched.
+'''
+
+with tempfile.TemporaryDirectory() as directory:
+    skill = Path(directory) / "SKILL.md"
+    skill.write_text(frontmatter + body, encoding="utf-8")
+    rendered = build_codex_skill_text(skill)
+    assert "Before exact.\nDelegate this independent work" in rendered
+    assert "\nTRAILING EXACT: keep (this) untouched.\n" in rendered
+    assert "MANDATORY" not in rendered
+    assert "helper(inner(1))" not in rendered
+    assert "description=" not in rendered
+
+    placeholders = Path(directory) / "PLACEHOLDERS.md"
+    placeholders.write_text(
+        frontmatter
+        + "$ARGUMENTS\nfirst=$1 ninth=$9\n"
+        + "${CLAUDE_SKILL_DIR}/scripts/run.py\n",
+        encoding="utf-8",
+    )
+    codex = build_codex_skill_text(placeholders)
+    assert "$ARGUMENTS" not in codex
+    assert "$1" not in codex and "$9" not in codex
+    assert "CLAUDE_SKILL_DIR" not in codex
+    opencode = build_opencode_skill_text(placeholders)
+    assert "$ARGUMENTS" in opencode
+    assert "$1" in opencode and "$9" in opencode
+    assert "CLAUDE_SKILL_DIR" not in opencode
+
+    malformed = Path(directory) / "MALFORMED.md"
+    malformed.write_text(frontmatter + 'Before. Agent(prompt="unterminated"\nAfter.\n')
+    try:
+        build_codex_skill_text(malformed)
+    except ValueError as error:
+        assert "Unbalanced Agent call" in str(error)
+    else:
+        raise AssertionError("malformed Agent call must fail without corrupting text")
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "codex-skills: preserves user path and logical-name collisions" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null
@@ -271,7 +334,21 @@ MD
     shasum "$skills_external/sentinel.txt" > "$skills_external.after"
     cmp "$skills_external.before" "$skills_external.after"
     [ "$(find "$skills_external" -type f | wc -l | xargs)" -eq 1 ]
-    rm -rf "$agents_target" "$agents_external" "$skills_target" "$skills_external"
+
+    project_parent="$(mktemp -d)"
+    project_external="$(mktemp -d)"
+    printf '%s\n' 'project sentinel' > "$project_external/sentinel.txt"
+    shasum "$project_external/sentinel.txt" > "$project_external.before"
+    ln -s "$project_external" "$project_parent/project-link"
+
+    run python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" \
+        "$project_parent/project-link" --enable
+    [ "$status" -ne 0 ]
+    shasum "$project_external/sentinel.txt" > "$project_external.after"
+    cmp "$project_external.before" "$project_external.after"
+    [ ! -e "$project_external/.agents" ]
+    rm -rf "$agents_target" "$agents_external" "$skills_target" "$skills_external" \
+        "$project_parent" "$project_external"
 }
 
 @test "codex-skills: preserves user and dangling destination symlinks" {
@@ -396,6 +473,45 @@ assert not list(orchestrate_target.glob(".*.tmp"))
 PY
     [ "$status" -eq 0 ]
     rm -rf "$tmp"
+}
+
+@test "codex-skills: directory fsync is portable and narrows ignored errors" {
+    run python3 - "$TOOLKIT_DIR" <<'PY'
+import errno
+import sys
+from pathlib import Path
+from unittest import mock
+
+toolkit = Path(sys.argv[1])
+sys.path.insert(0, str(toolkit / "scripts"))
+import codex_skill_adapter as module
+
+with mock.patch.object(module.os, "name", "nt"), mock.patch.object(
+    module.os, "open", side_effect=AssertionError("must not open directories on Windows")
+):
+    module._fsync_directory(toolkit)
+
+with mock.patch.object(module.os, "open", side_effect=OSError(errno.EINVAL, "unsupported")):
+    module._fsync_directory(toolkit)
+
+with mock.patch.object(module.os, "open", return_value=42), mock.patch.object(
+    module.os, "fsync", side_effect=OSError(errno.EINVAL, "unsupported")
+), mock.patch.object(module.os, "close") as close:
+    module._fsync_directory(toolkit)
+    close.assert_called_once_with(42)
+
+with mock.patch.object(module.os, "open", return_value=43), mock.patch.object(
+    module.os, "fsync", side_effect=OSError(errno.EIO, "unexpected")
+), mock.patch.object(module.os, "close") as close:
+    try:
+        module._fsync_directory(toolkit)
+    except OSError as error:
+        assert error.errno == errno.EIO
+        close.assert_called_once_with(43)
+    else:
+        raise AssertionError("unexpected POSIX fsync errors must propagate")
+PY
+    [ "$status" -eq 0 ]
 }
 
 @test "codex-skills: compatibility docs contain semantic guidance only" {

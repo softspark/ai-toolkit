@@ -7,6 +7,7 @@ Codex subagents and plan tracking.
 """
 from __future__ import annotations
 
+import errno
 import json
 import os
 import re
@@ -30,9 +31,16 @@ CLAUDE_ONLY_TOOLS = frozenset({
 ADAPTED_MARKER = ".ai-toolkit-codex-adapted"
 
 _FRONTMATTER_RE = re.compile(r"\A---\n(?P<frontmatter>.*?)\n---\n?(?P<body>.*)\Z", re.S)
-_AGENT_CALL_RE = re.compile(r"\bAgent\s*\([^)]*\)", re.S)
+_AGENT_START_RE = re.compile(r"\bAgent\s*\(")
 _TASK_API_RE = re.compile(r"\bTask(?:Create|List|Update|Get|Output|Stop)\b")
+_POSITIONAL_ARGUMENT_RE = re.compile(r"\$([1-9])\b")
 _PLATFORM_LABELS = {"codex": "Codex", "opencode": "OpenCode"}
+_UNSUPPORTED_DIRECTORY_FSYNC_ERRNOS = frozenset({
+    errno.EBADF,
+    errno.EINVAL,
+    getattr(errno, "ENOTSUP", errno.EINVAL),
+    getattr(errno, "EOPNOTSUPP", errno.EINVAL),
+})
 _ADAPTATION_BODY_TOKENS = frozenset({
     "$ARGUMENTS",
     "CLAUDE_SKILL_DIR",
@@ -77,12 +85,11 @@ client-independent guidance:
 def _semantic_replacements(platform: str) -> dict[str, str]:
     label = _PLATFORM_LABELS[platform]
     native_subagent = f"{label}-native subagent"
-    return {
+    replacements = {
         "${CLAUDE_SKILL_DIR}/": "./",
         "$CLAUDE_SKILL_DIR/": "./",
         "${CLAUDE_SKILL_DIR}": "the installed skill directory",
         "CLAUDE_SKILL_DIR": "the installed skill directory",
-        "$ARGUMENTS": "the user-supplied task details",
         "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": f"{label} subagent support",
         "spawn_agent": f"delegate independent work to a {native_subagent}",
         "send_input": "steer a running subagent",
@@ -101,6 +108,9 @@ def _semantic_replacements(platform: str) -> dict[str, str]:
         "TaskOutput": "collect delegated results",
         "TaskStop": "stop delegated work",
     }
+    if platform == "codex":
+        replacements["$ARGUMENTS"] = "the user-supplied task details"
+    return replacements
 
 
 def skill_tools(skill_file: Path) -> list[str]:
@@ -116,7 +126,10 @@ def is_codex_adapted_skill(skill_file: Path) -> bool:
     text = skill_file.read_text(encoding="utf-8")
     if any(token in text for token in _ADAPTATION_BODY_TOKENS):
         return True
-    return bool(_AGENT_CALL_RE.search(text) or _TASK_API_RE.search(text))
+    if _AGENT_START_RE.search(text) or _TASK_API_RE.search(text):
+        return True
+    is_user_invocable = frontmatter_field(skill_file, "user-invocable") != "false"
+    return is_user_invocable and bool(_POSITIONAL_ARGUMENT_RE.search(text))
 
 
 def codex_skill_description(skill_file: Path) -> str:
@@ -184,6 +197,8 @@ def sync_codex_skill(skill_dir: Path, skills_dst: Path) -> str:
 
 def prepare_codex_skills_dir(target_dir: Path) -> Path:
     """Create the documented Codex skill root without following symlinks."""
+    if target_dir.is_symlink():
+        raise RuntimeError(f"Refusing symlinked Codex target directory: {target_dir}")
     agents_dir = target_dir / ".agents"
     skills_dst = agents_dir / "skills"
     _assert_safe_skill_roots(agents_dir, skills_dst)
@@ -366,10 +381,21 @@ def _write_text_fsync(destination: Path, content: str) -> None:
 
 
 def _fsync_directory(path: Path) -> None:
+    if os.name == "nt":
+        return
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-    fd = os.open(path, flags)
     try:
-        os.fsync(fd)
+        fd = os.open(path, flags)
+    except OSError as error:
+        if error.errno in _UNSUPPORTED_DIRECTORY_FSYNC_ERRNOS:
+            return
+        raise
+    try:
+        try:
+            os.fsync(fd)
+        except OSError as error:
+            if error.errno not in _UNSUPPORTED_DIRECTORY_FSYNC_ERRNOS:
+                raise
     finally:
         os.close(fd)
 
@@ -475,14 +501,56 @@ def _render_frontmatter(entries: list[tuple[str, str]]) -> str:
 
 def _adapt_body(body: str, platform: str) -> str:
     label = _PLATFORM_LABELS[platform]
-    body = _AGENT_CALL_RE.sub(
-        f"Delegate this independent work to a suitable {label}-native subagent.",
-        body,
-    )
+    body = _replace_agent_calls(body, label)
     body = body.replace("Agent Teams", f"coordinated {label}-native subagents")
     body = body.replace("`Agent` tool", f"{label}-native subagents")
     body = body.replace("the `Agent` tool", f"{label}-native subagents")
     body = body.replace("Agent tool", f"{label}-native subagents")
     for token, replacement in _semantic_replacements(platform).items():
         body = body.replace(token, replacement)
+    if platform == "codex":
+        body = _POSITIONAL_ARGUMENT_RE.sub(
+            lambda match: f"the user-supplied positional task detail {match.group(1)}",
+            body,
+        )
     return f"{_translation_note(platform).strip()}\n\n{body.strip()}\n"
+
+
+def _replace_agent_calls(body: str, label: str) -> str:
+    """Replace balanced Agent calls without consuming surrounding markdown."""
+    rendered: list[str] = []
+    cursor = 0
+    while match := _AGENT_START_RE.search(body, cursor):
+        rendered.append(body[cursor:match.start()])
+        end = _balanced_call_end(body, match.end() - 1)
+        rendered.append(
+            f"Delegate this independent work to a suitable {label}-native subagent."
+        )
+        cursor = end
+    rendered.append(body[cursor:])
+    return "".join(rendered)
+
+
+def _balanced_call_end(text: str, opening_parenthesis: int) -> int:
+    depth = 1
+    quote: str | None = None
+    is_escaped = False
+    for index in range(opening_parenthesis + 1, len(text)):
+        character = text[index]
+        if quote is not None:
+            if is_escaped:
+                is_escaped = False
+            elif character == "\\":
+                is_escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {"'", '"'}:
+            quote = character
+        elif character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    raise ValueError(f"Unbalanced Agent call at character {opening_parenthesis}")

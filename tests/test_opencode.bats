@@ -83,8 +83,9 @@ teardown_file() {
 @test "opencode: adapted commands use portable OpenCode-native guidance" {
     commands="$OC_DIR/.opencode/commands"
     grep -q 'OpenCode-native subagents' "$commands/ai-toolkit-orchestrate.md"
+    grep -q '\$ARGUMENTS' "$commands/ai-toolkit-orchestrate.md"
     ! grep -qrE 'Codex Translation Layer|Codex-native' "$commands"
-    ! grep -qrE '\$ARGUMENTS|CLAUDE_SKILL_DIR|spawn_agent|send_input|wait_agent|close_agent|update_plan|fork_context' "$commands"
+    ! grep -qrE 'CLAUDE_SKILL_DIR|spawn_agent|send_input|wait_agent|close_agent|update_plan|fork_context' "$commands"
 }
 
 # ── .opencode/plugins/ (generate_opencode_plugin.py) ────────────────────────

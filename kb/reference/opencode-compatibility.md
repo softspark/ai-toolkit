@@ -3,9 +3,9 @@ title: "AI Toolkit - opencode Compatibility"
 category: reference
 service: ai-toolkit
 tags: [opencode, compatibility, install, skills, hooks, mcp, plugins]
-version: "1.0.0"
+version: "1.0.1"
 created: "2026-04-16"
-last_updated: "2026-04-16"
+last_updated: "2026-07-14"
 description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, subagents, slash commands, JS plugin hook bridge, and MCP merge into opencode.json."
 ---
 
@@ -53,7 +53,7 @@ Files land directly under `~/.config/opencode/` (no `.opencode/` nesting) becaus
 
 ## Shared AGENTS.md
 
-opencode and Codex CLI both read `AGENTS.md`. The toolkit emits two distinct marker-bounded sections in a single file, so installing both editors does not clobber either. The Codex section is produced by `generate_codex.py`; the opencode section is produced by `generate_opencode.py`. Both sections reuse `codex_skill_adapter.py` because both editors lack Claude-only orchestration primitives (`Agent`, `TeamCreate`, `TaskCreate`).
+opencode and Codex CLI both read `AGENTS.md`. The toolkit emits two distinct marker-bounded sections in a single file, so installing both editors does not clobber either. The Codex section is produced by `generate_codex.py`; the opencode section is produced by `generate_opencode.py`. OpenCode commands use a platform-specific portable renderer for Claude-only orchestration primitives, so generated content uses OpenCode-native wording.
 
 ## Subagent Translation Model
 
@@ -72,6 +72,12 @@ Opencode treats these files as auto-completable with `@` and can delegate to the
 Only user-invocable skills (`user-invocable: true` or no `disable-model-invocation`) emit to `.opencode/commands/`. Knowledge skills (`user-invocable: false`) are intentionally skipped — they are not intended as commands.
 
 Each command file carries the prompt in its markdown body (built from the SKILL.md body). opencode reads the body as the prompt; the `template` field is JSON-config-only and is ignored in `.md` command files.
+
+OpenCode natively interpolates `$ARGUMENTS` and positional placeholders `$1`
+through `$9` in command bodies. The renderer preserves those placeholders for
+OpenCode while translating Claude-only skill-directory variables and runtime
+APIs. Codex output uses a separate renderer and converts prompt placeholders to
+durable user-input prose.
 
 ## Hook Bridge (JS Plugin)
 
@@ -129,7 +135,7 @@ User-authored opencode files and user-authored `opencode.json` keys are never de
 ## Behavioral Limits
 
 - opencode does not expose the full Claude hook event surface; only the events in the mapping table above are bridged. Claude-only events (`TaskCompleted`, `TeammateIdle`, `SubagentStart`, `SubagentStop`, `PreCompact`) are silently skipped.
-- Multi-agent orchestration skills (`/orchestrate`, `/workflow`, `/swarm`, `/subagent-development`) run through the Codex adaptation layer — they use opencode subagents and explicit file ownership instead of Claude's `Agent`/`TaskCreate` primitives.
+- Multi-agent orchestration skills (`/orchestrate`, `/workflow`, `/swarm`, `/subagent-development`) run through the OpenCode renderer and use OpenCode-native subagents with explicit file ownership.
 
 ## Verification
 
