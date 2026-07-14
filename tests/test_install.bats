@@ -555,6 +555,68 @@ MD
     fi
 }
 
+@test "Codex install preserves user content around crossed toolkit markers" {
+    cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
+User instructions before crossed markers.
+
+<!-- TOOLKIT:section-a START -->
+Ambiguous managed text A.
+<!-- TOOLKIT:section-b START -->
+Ambiguous managed text B.
+<!-- TOOLKIT:section-a END -->
+
+User instructions between crossed marker ends.
+
+<!-- TOOLKIT:section-b END -->
+
+User instructions after crossed markers.
+MD
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+
+    grep -q '^User instructions before crossed markers\.$' "$TEST_PROJECT/AGENTS.md"
+    grep -q '^User instructions between crossed marker ends\.$' "$TEST_PROJECT/AGENTS.md"
+    grep -q '^User instructions after crossed markers\.$' "$TEST_PROJECT/AGENTS.md"
+    if grep -q '<!-- TOOLKIT:section-[ab] ' "$TEST_PROJECT/AGENTS.md"; then
+        echo "crossed marker remains"
+        return 1
+    fi
+}
+
+@test "registered rule with Unicode marker name survives cross-editor reruns" {
+    python3 - "$TOOLKIT_DIR/scripts" <<'PY'
+import sys
+
+sys.path.insert(0, sys.argv[1])
+from injection import markers_end, markers_start, strip_all_sections
+
+name = "zażółć-gęślą"
+marked = "User before.\n" + markers_start(name) + "Managed.\n" + markers_end(name) + "\nUser after.\n"
+assert strip_all_sections(marked) == "User before.\nUser after.\n"
+PY
+
+    mkdir -p "$TMP_HOME/.softspark/ai-toolkit/rules"
+    cat > "$TMP_HOME/.softspark/ai-toolkit/rules/zażółć-gęślą.md" <<'MD'
+# Reguła zespołu
+
+Treść reguły Unicode pozostaje aktywna.
+MD
+    printf '%s\n' 'User-authored instructions.' > "$TEST_PROJECT/AGENTS.md"
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors copilot) >/dev/null 2>&1
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+
+    grep -q '^User-authored instructions\.$' "$TEST_PROJECT/AGENTS.md"
+    [ "$(grep -c '<!-- TOOLKIT:zażółć-gęślą START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:zażółć-gęślą END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    [ "$(grep -c '^Treść reguły Unicode pozostaje aktywna\.$' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+}
+
 @test "Codex install removes an orphan START marker from AGENTS.md" {
     cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
 User instructions before the orphan.

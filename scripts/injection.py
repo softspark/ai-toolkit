@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 _MARKER_RE = re.compile(
-    r"^<!-- TOOLKIT:([a-zA-Z0-9._-]+) (START|END) -->$"
+    r"^<!-- TOOLKIT:(?P<section>.+) (?P<kind>START|END) -->$"
 )
 
 
@@ -24,8 +24,16 @@ _MARKER_RE = re.compile(
 # Markers
 # ---------------------------------------------------------------------------
 
+def _validate_section_name(section: str) -> str:
+    """Validate a section name that can be represented by one marker line."""
+    if not section or "\n" in section or "\r" in section:
+        raise ValueError("section name must be non-empty and single-line")
+    return section
+
+
 def markers_start(section: str = "ai-toolkit") -> str:
     """Return the TOOLKIT start marker block."""
+    section = _validate_section_name(section)
     return (
         f"<!-- TOOLKIT:{section} START -->\n"
         f"<!-- Auto-injected by ai-toolkit. Re-run to update. -->\n"
@@ -34,6 +42,7 @@ def markers_start(section: str = "ai-toolkit") -> str:
 
 def markers_end(section: str = "ai-toolkit") -> str:
     """Return the TOOLKIT end marker."""
+    section = _validate_section_name(section)
     return f"\n<!-- TOOLKIT:{section} END -->"
 
 
@@ -43,7 +52,7 @@ def markers_end(section: str = "ai-toolkit") -> str:
 
 def strip_section(content: str, section: str) -> str:
     """Remove a TOOLKIT marker section from content."""
-    return _strip_sections(content, {section})
+    return _strip_sections(content, {_validate_section_name(section)})
 
 
 def strip_all_sections(content: str) -> str:
@@ -58,32 +67,44 @@ def strip_all_sections(content: str) -> str:
 
 def _strip_sections(content: str, sections: set[str] | None) -> str:
     lines = content.splitlines(keepends=True)
-    stacks: dict[str, list[int]] = {}
-    marker_lines: set[int] = set()
-    intervals: list[tuple[int, int]] = []
+    stack: list[tuple[str, int]] = []
+    marker_names: dict[int, str] = {}
+    intervals: list[tuple[int, int, str]] = []
 
     for index, line in enumerate(lines):
         match = _MARKER_RE.fullmatch(line.rstrip("\r\n"))
         if not match:
             continue
-        name, kind = match.groups()
-        if sections is not None and name not in sections:
-            continue
-        marker_lines.add(index)
-        stack = stacks.setdefault(name, [])
+        name = _validate_section_name(match.group("section"))
+        kind = match.group("kind")
+        marker_names[index] = name
         if kind == "START":
-            stack.append(index)
+            stack.append((name, index))
+        elif stack and stack[-1][0] == name:
+            _, start = stack.pop()
+            intervals.append((start, index, name))
         elif stack:
-            intervals.append((stack.pop(), index))
+            # Crossed or otherwise mismatched markers make every open span
+            # ambiguous. Keep their non-marker content instead of guessing.
+            stack.clear()
 
-    def is_managed(index: int) -> bool:
-        if index in marker_lines:
-            return True
-        return any(start < index < end for start, end in intervals)
+    coverage_delta = [0] * (len(lines) + 1)
+    for start, end, name in intervals:
+        if sections is None or name in sections:
+            coverage_delta[start] += 1
+            coverage_delta[end + 1] -= 1
 
-    return "".join(
-        line for index, line in enumerate(lines) if not is_managed(index)
-    )
+    result: list[str] = []
+    coverage = 0
+    for index, line in enumerate(lines):
+        coverage += coverage_delta[index]
+        marker_name = marker_names.get(index)
+        remove_marker = marker_name is not None and (
+            sections is None or marker_name in sections
+        )
+        if coverage == 0 and not remove_marker:
+            result.append(line)
+    return "".join(result)
 
 
 def trim_trailing_blanks(text: str) -> str:
@@ -129,8 +150,7 @@ def inject_section(
     content_file = Path(content_file)
     target_file = Path(target_file)
 
-    # Sanitize section name
-    section = re.sub(r"[^a-zA-Z0-9_-]", "", section)
+    section = _validate_section_name(section)
 
     # Create parent dir and target if missing
     target_file.parent.mkdir(parents=True, exist_ok=True)
@@ -156,12 +176,11 @@ def inject_section(
         parts.append(existing)
         parts.append("")
 
-    parts.append(f"<!-- TOOLKIT:{section} START -->")
-    parts.append("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
+    parts.append(markers_start(section).rstrip("\n"))
     parts.append("")
     parts.append(new_content.rstrip("\n"))
     parts.append("")
-    parts.append(f"<!-- TOOLKIT:{section} END -->")
+    parts.append(markers_end(section).lstrip("\n"))
 
     output = "\n".join(parts) + "\n"
     output = collapse_blank_runs(output)
@@ -182,7 +201,7 @@ def inject_rule(rule_file: str | Path, target_dir: str | Path) -> str:
     if not rule_file.is_file():
         raise FileNotFoundError(f"Rule file not found: {rule_file}")
 
-    rule_name = re.sub(r"[^a-zA-Z0-9_-]", "", rule_file.stem)
+    rule_name = _validate_section_name(rule_file.stem)
     claude_md = target_dir / ".claude" / "CLAUDE.md"
     claude_md.parent.mkdir(parents=True, exist_ok=True)
 
@@ -201,7 +220,8 @@ def remove_rule_section(rule_name: str, target_dir: str | Path) -> bool:
         return False
 
     content = claude_md.read_text(encoding="utf-8")
-    start_marker = f"<!-- TOOLKIT:{rule_name} START -->"
+    rule_name = _validate_section_name(rule_name)
+    start_marker = markers_start(rule_name).splitlines()[0]
 
     if start_marker not in content:
         return False
