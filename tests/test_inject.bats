@@ -62,6 +62,45 @@ MD
     grep -q '^User content after the rule\.$' "$TEST_DIR/.claude/CLAUDE.md"
 }
 
+@test "inject_rule_cli.py migrates empty legacy marker names" {
+    cat > "$TEST_DIR/.claude/CLAUDE.md" <<'MD'
+User content before the rule.
+
+<!-- TOOLKIT: START -->
+Legacy managed content with an empty marker name.
+<!-- TOOLKIT: END -->
+
+User content after the rule.
+MD
+    python3 - "$TOOLKIT_DIR/scripts" "$TEST_DIR/.claude/CLAUDE.md" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, sys.argv[1])
+from injection import strip_all_sections
+
+legacy = Path(sys.argv[2]).read_text(encoding="utf-8")
+assert strip_all_sections(legacy) == legacy
+PY
+    cat > "$TEST_DIR/żółć.md" <<'MD'
+# Aktualna reguła
+
+Aktualna treść zarządzana.
+MD
+
+    run python3 "$TOOLKIT_DIR/scripts/inject_rule_cli.py" "$TEST_DIR/żółć.md" "$TEST_DIR"
+
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '<!-- TOOLKIT:żółć START -->' "$TEST_DIR/.claude/CLAUDE.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:żółć END -->' "$TEST_DIR/.claude/CLAUDE.md")" -eq 1 ]
+    ! grep -q '<!-- TOOLKIT: START -->' "$TEST_DIR/.claude/CLAUDE.md"
+    ! grep -q '<!-- TOOLKIT: END -->' "$TEST_DIR/.claude/CLAUDE.md"
+    ! grep -q '^Legacy managed content with an empty marker name\.$' "$TEST_DIR/.claude/CLAUDE.md"
+    grep -q '^Aktualna treść zarządzana\.$' "$TEST_DIR/.claude/CLAUDE.md"
+    grep -q '^User content before the rule\.$' "$TEST_DIR/.claude/CLAUDE.md"
+    grep -q '^User content after the rule\.$' "$TEST_DIR/.claude/CLAUDE.md"
+}
+
 @test "inject_rule_cli.py fails on missing source file" {
     run python3 "$TOOLKIT_DIR/scripts/inject_rule_cli.py" "$TEST_DIR/nonexistent.md" "$TEST_DIR"
     [ "$status" -ne 0 ]

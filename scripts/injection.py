@@ -18,6 +18,9 @@ from pathlib import Path
 _MARKER_RE = re.compile(
     r"^<!-- TOOLKIT:(?P<section>.+) (?P<kind>START|END) -->$"
 )
+_EMPTY_LEGACY_MARKER_RE = re.compile(
+    r"^<!-- TOOLKIT: (?P<kind>START|END) -->$"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -35,7 +38,7 @@ def _section_names_for_update(section: str) -> set[str]:
     """Return current and pre-Unicode marker names for update migration."""
     section = _validate_section_name(section)
     legacy_section = re.sub(r"[^a-zA-Z0-9_-]", "", section)
-    return {name for name in (section, legacy_section) if name}
+    return {section, legacy_section}
 
 
 def markers_start(section: str = "ai-toolkit") -> str:
@@ -72,18 +75,31 @@ def strip_all_sections(content: str) -> str:
     return _strip_sections(content, None)
 
 
-def _strip_sections(content: str, sections: set[str] | None) -> str:
+def _strip_sections(
+    content: str,
+    sections: set[str] | None,
+    *,
+    migrate_empty_legacy: bool = False,
+) -> str:
     lines = content.splitlines(keepends=True)
     stack: list[tuple[str, int]] = []
     marker_names: dict[int, str] = {}
     intervals: list[tuple[int, int, str]] = []
 
     for index, line in enumerate(lines):
-        match = _MARKER_RE.fullmatch(line.rstrip("\r\n"))
-        if not match:
+        marker_line = line.rstrip("\r\n")
+        match = _MARKER_RE.fullmatch(marker_line)
+        if match:
+            name = _validate_section_name(match.group("section"))
+            kind = match.group("kind")
+        elif migrate_empty_legacy:
+            empty_match = _EMPTY_LEGACY_MARKER_RE.fullmatch(marker_line)
+            if not empty_match:
+                continue
+            name = ""
+            kind = empty_match.group("kind")
+        else:
             continue
-        name = _validate_section_name(match.group("section"))
-        kind = match.group("kind")
         marker_names[index] = name
         if kind == "START":
             stack.append((name, index))
@@ -171,7 +187,12 @@ def inject_section(
     existing = target_file.read_text(encoding="utf-8")
 
     # Strip both the current marker and the legacy ASCII-sanitized marker.
-    existing = _strip_sections(existing, _section_names_for_update(section))
+    section_names = _section_names_for_update(section)
+    existing = _strip_sections(
+        existing,
+        section_names,
+        migrate_empty_legacy="" in section_names,
+    )
     existing = trim_trailing_blanks(existing)
 
     # Read content to inject
