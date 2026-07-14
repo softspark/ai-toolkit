@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.14.1 — Keep fact-checker on Sonnet (2026-07-14)
+
+Patch release. Reverts one of the two agent model reassignments from v4.14.0: `fact-checker` goes back to `model: sonnet`. Claim verification is accuracy-sensitive and Haiku's recall on subtle claims did not justify the cost saving. `explorer-agent` (pure read/search) stays on `model: haiku`. No count change (44 agents, 108 skills, 1216 tests).
+
+### Changed
+- **`fact-checker` reverted to Sonnet** — `model: haiku → model: sonnet`. Quality over cost for claim verification / RAG-accuracy checks.
+
 ## v4.14.0 — Model refresh + effort-aware routing (2026-07-14)
 
 Minor release. Refreshes Claude model IDs to the current generation across the toolkit, teaches the routing skill to route on `effort` (not just model tier), and moves two pure-retrieval agents to Haiku. No skill/agent/hook count change (44 agents, 108 skills, 1216 tests).

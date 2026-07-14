@@ -8,14 +8,14 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1216%20passing-success)](tests/)
 
-## What's New in v4.14.0
+## What's New in v4.14.1
 
-v4.14.0 refreshes Claude model IDs to the current generation and makes model routing effort-aware.
+v4.14.1 refreshes Claude model IDs to the current generation, makes model routing effort-aware, and tunes agent model tiers.
 
 - **Current model IDs**: `scripts/_common.py` now resolves `opus → claude-opus-4-8` and `sonnet → claude-sonnet-5` (the single source of truth generators emit); stale `claude-opus-4-7` samples across skills refreshed.
 - **Effort-aware routing**: `model-routing-patterns` gains an Effort section — tuning `output_config.effort` is the cheaper lever before swapping models, and it does not invalidate the prompt cache the way a mid-session model swap does.
 - **Fable 5 tier documented**: added to the routing table with pricing and a "not the default best model" caveat — for "strongest model", the target stays `claude-opus-4-8`.
-- **Cheaper retrieval agents**: `explorer-agent` and `fact-checker` (pure read/search) moved to `model: haiku`, closing the gap where the skill recommended Haiku workers but no agent used the tier.
+- **Agent tiers tuned**: `explorer-agent` (pure read/search) runs on `model: haiku`; `fact-checker` stays on `model: sonnet` — accuracy over cost for claim verification.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
