@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -14,13 +16,19 @@ from frontmatter import frontmatter_field
 
 AGENT_PREFIX = "ai-toolkit-"
 MANAGED_MARKER = "# ai-toolkit-managed: codex-agent"
+REQUIRED_FIELDS = {"name", "description", "developer_instructions"}
 
 
 def _agent_body(agent_file: Path) -> str:
     text = agent_file.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
-    body = parts[2] if len(parts) == 3 else text
-    return body.lstrip("\n").rstrip() + "\n"
+    lines = text.splitlines(keepends=True)
+    body = text
+    if lines and lines[0].rstrip("\r\n") == "---":
+        for index, line in enumerate(lines[1:], start=1):
+            if line.rstrip("\r\n") == "---":
+                body = "".join(lines[index + 1:])
+                break
+    return body.lstrip("\r\n").rstrip() + "\n"
 
 
 def _toml_string(value: str) -> str:
@@ -44,7 +52,7 @@ def _render_agent(agent_file: Path) -> str:
 
 
 def _is_managed(path: Path) -> bool:
-    if not path.is_file():
+    if path.is_symlink() or not path.is_file():
         return False
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -53,14 +61,25 @@ def _is_managed(path: Path) -> bool:
     return MANAGED_MARKER in lines[:3]
 
 
+def _warn_preserved(path: Path, reason: str) -> None:
+    print(
+        f"Warning: preserving user Codex agent '{path}': {reason}",
+        file=sys.stderr,
+    )
+
+
 def _unmanaged_agent_names(output_dir: Path) -> set[str]:
     names: set[str] = set()
     for path in sorted(output_dir.glob("*.toml")):
+        if path.is_symlink():
+            _warn_preserved(path, "path is a symlink")
+            continue
         if _is_managed(path):
             continue
         try:
             data = tomllib.loads(path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, tomllib.TOMLDecodeError):
+        except (OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
+            _warn_preserved(path, f"cannot parse TOML ({error})")
             continue
         name = data.get("name")
         if isinstance(name, str) and name.strip():
@@ -71,6 +90,8 @@ def _unmanaged_agent_names(output_dir: Path) -> set[str]:
 def _cleanup_stale(output_dir: Path, expected: set[str]) -> int:
     removed = 0
     for output in sorted(output_dir.glob(f"{AGENT_PREFIX}*.toml")):
+        if output.is_symlink():
+            continue
         if output.name in expected or not _is_managed(output):
             continue
         output.unlink()
@@ -78,14 +99,36 @@ def _cleanup_stale(output_dir: Path, expected: set[str]) -> int:
     return removed
 
 
-def generate(target_dir: Path, config_root: Path | None = None) -> tuple[int, int]:
-    base = config_root if config_root is not None else target_dir / ".codex"
-    output_dir = base / "agents"
-    output_dir.mkdir(parents=True, exist_ok=True)
+def _assert_safe_output_paths(base: Path, output_dir: Path) -> None:
+    if base.is_symlink():
+        raise RuntimeError(f"Refusing symlinked Codex config directory: {base}")
+    if output_dir.is_symlink():
+        raise RuntimeError(f"Refusing symlinked Codex agents directory: {output_dir}")
 
-    written = 0
+
+def _prepare_output_dir(base: Path) -> Path:
+    output_dir = base / "agents"
+    _assert_safe_output_paths(base, output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _assert_safe_output_paths(base, output_dir)
+    return output_dir
+
+
+def _validate_agent_toml(rendered: str, source: Path) -> None:
+    data = tomllib.loads(rendered)
+    if set(data) != REQUIRED_FIELDS:
+        raise ValueError(f"Invalid Codex agent fields rendered from {source}")
+    if any(not isinstance(data[field], str) or not data[field] for field in REQUIRED_FIELDS):
+        raise ValueError(f"Empty Codex agent field rendered from {source}")
+
+
+def _build_write_plan(
+    output_dir: Path,
+    unmanaged_names: set[str],
+) -> tuple[list[tuple[Path, str]], set[str]]:
+    plan: list[tuple[Path, str]] = []
     expected: set[str] = set()
-    unmanaged_names = _unmanaged_agent_names(output_dir)
+
     for agent_file in sorted(agents_dir.glob("*.md")):
         name = frontmatter_field(agent_file, "name")
         description = frontmatter_field(agent_file, "description")
@@ -96,11 +139,97 @@ def generate(target_dir: Path, config_root: Path | None = None) -> tuple[int, in
         filename = f"{AGENT_PREFIX}{name}.toml"
         expected.add(filename)
         output = output_dir / filename
+        if output.is_symlink():
+            _warn_preserved(output, "destination is a symlink")
+            continue
         if output.exists() and not _is_managed(output):
             continue
-        output.write_text(_render_agent(agent_file), encoding="utf-8")
+        rendered = _render_agent(agent_file)
+        _validate_agent_toml(rendered, agent_file)
+        plan.append((output, rendered))
+    return plan, expected
+
+
+def _discard_temp(path: Path, output_dir: Path) -> None:
+    if path.parent != output_dir:
+        return
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def _stage_agent(output_dir: Path, output: Path, rendered: str) -> Path:
+    fd, temp_name = tempfile.mkstemp(
+        dir=output_dir,
+        prefix=f".{output.name}.",
+        suffix=".tmp",
+    )
+    temp_path = Path(temp_name)
+    try:
+        handle = os.fdopen(fd, "w", encoding="utf-8")
+        fd = -1
+        with handle:
+            handle.write(rendered)
+            handle.flush()
+            os.fsync(handle.fileno())
+        _validate_agent_toml(temp_path.read_text(encoding="utf-8"), output)
+        return temp_path
+    except Exception:
+        if fd >= 0:
+            os.close(fd)
+        _discard_temp(temp_path, output_dir)
+        raise
+
+
+def _stage_all(
+    output_dir: Path,
+    plan: list[tuple[Path, str]],
+) -> list[tuple[Path, Path]]:
+    staged: list[tuple[Path, Path]] = []
+    try:
+        for output, rendered in plan:
+            staged.append((_stage_agent(output_dir, output, rendered), output))
+        return staged
+    except Exception:
+        for temp_path, _ in staged:
+            _discard_temp(temp_path, output_dir)
+        raise
+
+
+def _replace_all(
+    base: Path,
+    output_dir: Path,
+    staged: list[tuple[Path, Path]],
+) -> int:
+    written = 0
+    _assert_safe_output_paths(base, output_dir)
+    for temp_path, output in staged:
+        if output.is_symlink():
+            _warn_preserved(output, "destination became a symlink during generation")
+            continue
+        if output.exists() and not _is_managed(output):
+            _warn_preserved(output, "destination became user-owned during generation")
+            continue
+        os.replace(temp_path, output)
         written += 1
-    return written, _cleanup_stale(output_dir, expected)
+    return written
+
+
+def generate(target_dir: Path, config_root: Path | None = None) -> tuple[int, int]:
+    base = config_root if config_root is not None else target_dir / ".codex"
+    output_dir = _prepare_output_dir(base)
+    unmanaged_names = _unmanaged_agent_names(output_dir)
+    plan, expected = _build_write_plan(output_dir, unmanaged_names)
+    staged = _stage_all(output_dir, plan)
+    try:
+        written = _replace_all(base, output_dir, staged)
+        _assert_safe_output_paths(base, output_dir)
+    finally:
+        for temp_path, _ in staged:
+            _discard_temp(temp_path, output_dir)
+    removed = _cleanup_stale(output_dir, expected)
+    return written, removed
 
 
 def main() -> None:
