@@ -34,6 +34,34 @@ teardown() {
     grep -q "Version 2" "$TEST_DIR/.claude/CLAUDE.md"
 }
 
+@test "inject_rule_cli.py migrates legacy sanitized marker names" {
+    cat > "$TEST_DIR/.claude/CLAUDE.md" <<'MD'
+User content before the rule.
+
+<!-- TOOLKIT:teamrule START -->
+Legacy managed content.
+<!-- TOOLKIT:teamrule END -->
+
+User content after the rule.
+MD
+    cat > "$TEST_DIR/team.rule.md" <<'MD'
+# Current team rule
+
+Current managed content.
+MD
+
+    run python3 "$TOOLKIT_DIR/scripts/inject_rule_cli.py" "$TEST_DIR/team.rule.md" "$TEST_DIR"
+
+    [ "$status" -eq 0 ]
+    [ "$(grep -c '<!-- TOOLKIT:team\.rule START -->' "$TEST_DIR/.claude/CLAUDE.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:team\.rule END -->' "$TEST_DIR/.claude/CLAUDE.md")" -eq 1 ]
+    ! grep -q '<!-- TOOLKIT:teamrule ' "$TEST_DIR/.claude/CLAUDE.md"
+    ! grep -q '^Legacy managed content\.$' "$TEST_DIR/.claude/CLAUDE.md"
+    grep -q '^Current managed content\.$' "$TEST_DIR/.claude/CLAUDE.md"
+    grep -q '^User content before the rule\.$' "$TEST_DIR/.claude/CLAUDE.md"
+    grep -q '^User content after the rule\.$' "$TEST_DIR/.claude/CLAUDE.md"
+}
+
 @test "inject_rule_cli.py fails on missing source file" {
     run python3 "$TOOLKIT_DIR/scripts/inject_rule_cli.py" "$TEST_DIR/nonexistent.md" "$TEST_DIR"
     [ "$status" -ne 0 ]

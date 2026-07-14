@@ -31,6 +31,13 @@ def _validate_section_name(section: str) -> str:
     return section
 
 
+def _section_names_for_update(section: str) -> set[str]:
+    """Return current and pre-Unicode marker names for update migration."""
+    section = _validate_section_name(section)
+    legacy_section = re.sub(r"[^a-zA-Z0-9_-]", "", section)
+    return {name for name in (section, legacy_section) if name}
+
+
 def markers_start(section: str = "ai-toolkit") -> str:
     """Return the TOOLKIT start marker block."""
     section = _validate_section_name(section)
@@ -163,8 +170,8 @@ def inject_section(
     # Read existing content
     existing = target_file.read_text(encoding="utf-8")
 
-    # Strip existing section
-    existing = strip_section(existing, section)
+    # Strip both the current marker and the legacy ASCII-sanitized marker.
+    existing = _strip_sections(existing, _section_names_for_update(section))
     existing = trim_trailing_blanks(existing)
 
     # Read content to inject
