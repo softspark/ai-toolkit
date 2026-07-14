@@ -141,7 +141,8 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
 
     if "codex" in eds:
         if dry_run:
-            print("  Would inject: ~/.codex/AGENTS.md, ~/.agents/skills/, ~/.codex/hooks.json")
+            print("  Would inject: ~/.codex/AGENTS.md, ~/.codex/agents/, "
+                  "~/.agents/skills/, ~/.codex/hooks.json")
         else:
             _install_codex_global(target_dir, rules_dir)
         installed.append("codex")
@@ -237,6 +238,7 @@ def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
     gen_codex_hooks(target_dir)
     print("  Created: ~/.codex/hooks.json")
 
+    _install_codex_agents(target_dir)
     _install_codex_skills(target_dir)
 
 
@@ -1013,6 +1015,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         if "gemini" in eds:
             print("  Would generate: .gemini/commands/ + .gemini/skills/ (profile=full)")
     if "codex" in eds:
+        print("  Would generate: .codex/agents/ native agents")
         print("  Would generate: .agents/skills/ Codex skills")
         if codex_skills:
             print("  Would refresh: .agents/skills/ via --codex-skills")
@@ -1150,6 +1153,17 @@ def _install_codex_skills(cwd: Path) -> None:
         f"  Installed: {linked + adapted} skills to .agents/skills/"
         f" ({linked} linked, {adapted} adapted, {skipped} skipped)"
     )
+
+
+def _install_codex_agents(cwd: Path) -> None:
+    """Generate native Codex custom-agent TOML files."""
+    from generate_codex_agents import generate as gen_codex_agents
+
+    written, removed = gen_codex_agents(cwd)
+    message = f"  Created: .codex/agents/ ({written} agents"
+    if removed:
+        message += f", {removed} stale removed"
+    print(message + ")")
 
 
 def _try_generator(module_name: str, *args, **kwargs) -> bool:
@@ -1305,6 +1319,8 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         from generate_codex_hooks import generate as gen_codex_hooks
         gen_codex_hooks(cwd)
         print("  Created: .codex/hooks.json")
+        # .codex/agents/ -- native Codex custom-agent definitions
+        _install_codex_agents(cwd)
         # .agents/skills/ — Codex discovery path for repo-local skills
         _install_codex_skills(cwd)
         # --codex-skills explicitly re-runs the same Codex skill sync path.

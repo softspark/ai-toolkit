@@ -332,6 +332,33 @@ assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"s
     [ "$actual_skills" -eq "$expected_skills" ]
 }
 
+@test "Codex installs native custom agents at local and global scopes" {
+    local expected_agents
+    expected_agents=$(find "$TOOLKIT_DIR/app/agents" -maxdepth 1 -type f -name '*.md' | wc -l | xargs)
+
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"
+    [ "$status" -eq 0 ]
+    [ "$(find "$TEST_PROJECT/.codex/agents" -type f -name 'ai-toolkit-*.toml' | wc -l | xargs)" -eq "$expected_agents" ]
+
+    run env HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --editors codex
+    [ "$status" -eq 0 ]
+    [ "$(find "$TMP_HOME/.codex/agents" -type f -name 'ai-toolkit-*.toml' | wc -l | xargs)" -eq "$expected_agents" ]
+
+    run python3 - "$TEST_PROJECT/.codex/agents" "$TMP_HOME/.codex/agents" <<'PY'
+import sys
+import tomllib
+from pathlib import Path
+
+required = {"name", "description", "developer_instructions"}
+for root_arg in sys.argv[1:]:
+    for path in Path(root_arg).glob("ai-toolkit-*.toml"):
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        assert set(data) == required, (path, data.keys())
+        assert all(data[key] for key in required), path
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "install --editors codex (global) writes ~/.codex/AGENTS.md, not ~/AGENTS.md" {
     HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --editors codex >/dev/null 2>&1
 
