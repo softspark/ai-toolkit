@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tomllib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,7 +46,26 @@ def _render_agent(agent_file: Path) -> str:
 def _is_managed(path: Path) -> bool:
     if not path.is_file():
         return False
-    return MANAGED_MARKER in path.read_text(encoding="utf-8").splitlines()[:3]
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError):
+        return False
+    return MANAGED_MARKER in lines[:3]
+
+
+def _unmanaged_agent_names(output_dir: Path) -> set[str]:
+    names: set[str] = set()
+    for path in sorted(output_dir.glob("*.toml")):
+        if _is_managed(path):
+            continue
+        try:
+            data = tomllib.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, tomllib.TOMLDecodeError):
+            continue
+        name = data.get("name")
+        if isinstance(name, str) and name.strip():
+            names.add(name)
+    return names
 
 
 def _cleanup_stale(output_dir: Path, expected: set[str]) -> int:
@@ -65,10 +85,13 @@ def generate(target_dir: Path, config_root: Path | None = None) -> tuple[int, in
 
     written = 0
     expected: set[str] = set()
+    unmanaged_names = _unmanaged_agent_names(output_dir)
     for agent_file in sorted(agents_dir.glob("*.md")):
         name = frontmatter_field(agent_file, "name")
         description = frontmatter_field(agent_file, "description")
         if not name or not description:
+            continue
+        if name in unmanaged_names:
             continue
         filename = f"{AGENT_PREFIX}{name}.toml"
         expected.add(filename)

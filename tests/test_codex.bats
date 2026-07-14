@@ -88,6 +88,49 @@ TOML
     cmp "$CX_LOG_DIR/agents.first" "$CX_LOG_DIR/agents.second"
 }
 
+@test "codex: unmanaged logical name collision wins over managed toolkit agent" {
+    local target_dir="$CX_DIR/logical-name-collision"
+    local agents_dir="$target_dir/.codex/agents"
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_agents.py" "$target_dir" >/dev/null
+
+    cat > "$agents_dir/custom.toml" <<'TOML'
+name = "backend-specialist"
+description = "User-owned backend agent."
+developer_instructions = "Keep this file unchanged."
+TOML
+    printf '%s\n' 'name = "invalid-user-agent' > "$agents_dir/invalid-user.toml"
+    cp "$agents_dir/custom.toml" "$CX_LOG_DIR/custom-agent.toml"
+    cp "$agents_dir/invalid-user.toml" "$CX_LOG_DIR/invalid-user.toml"
+
+    run python3 "$TOOLKIT_DIR/scripts/generate_codex_agents.py" "$target_dir"
+    [ "$status" -eq 0 ]
+    cmp "$CX_LOG_DIR/custom-agent.toml" "$agents_dir/custom.toml"
+    cmp "$CX_LOG_DIR/invalid-user.toml" "$agents_dir/invalid-user.toml"
+    [ ! -e "$agents_dir/ai-toolkit-backend-specialist.toml" ]
+
+    run python3 - "$agents_dir" <<'PY'
+import sys
+import tomllib
+from pathlib import Path
+
+matching = []
+for path in Path(sys.argv[1]).glob("*.toml"):
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError:
+        continue
+    if data.get("name") == "backend-specialist":
+        matching.append(path.name)
+assert matching == ["custom.toml"], matching
+PY
+    [ "$status" -eq 0 ]
+
+    find "$agents_dir" -type f -exec shasum {} \; | sort > "$CX_LOG_DIR/logical.first"
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_agents.py" "$target_dir" >/dev/null
+    find "$agents_dir" -type f -exec shasum {} \; | sort > "$CX_LOG_DIR/logical.second"
+    cmp "$CX_LOG_DIR/logical.first" "$CX_LOG_DIR/logical.second"
+}
+
 # ── generate_codex_hooks.py ─────────────────────────────────────────────────
 
 @test "codex: hooks generator exits 0" {

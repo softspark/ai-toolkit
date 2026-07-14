@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1232%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1233%20passing-success)](tests/)
 
 ## What's New in v4.14.1
 
@@ -165,7 +165,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1232 tests)
+├── tests/               # Bats test suite (1233 tests)
 └── CHANGELOG.md
 ```
 
