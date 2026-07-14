@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 _MARKER_RE = re.compile(
-    r"^<!-- TOOLKIT:([a-zA-Z0-9_-]+) (START|END) -->$"
+    r"^<!-- TOOLKIT:([a-zA-Z0-9._-]+) (START|END) -->$"
 )
 
 

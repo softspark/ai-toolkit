@@ -438,10 +438,15 @@ MD
     [ -f "$TEST_PROJECT/AGENTS.md" ]
     grep -q '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md"
     grep -q '^# AI Toolkit Instructions' "$TEST_PROJECT/AGENTS.md"
-    ! grep -q '^## Available Agents' "$TEST_PROJECT/AGENTS.md"
-    ! grep -q '^## Available Skills' "$TEST_PROJECT/AGENTS.md"
+    if grep -qE '^## Available (Agents|Skills)' "$TEST_PROJECT/AGENTS.md"; then
+        echo "discovery catalog duplicated in AGENTS.md"
+        return 1
+    fi
     grep -q 'GitHub Copilot Instructions' "$TEST_PROJECT/.github/copilot-instructions.md"
-    ! grep -q 'Existing Codex section.' "$TEST_PROJECT/AGENTS.md"
+    if grep -q 'Existing Codex section.' "$TEST_PROJECT/AGENTS.md"; then
+        echo "stale managed content remains"
+        return 1
+    fi
     grep -q 'User-authored preface.' "$TEST_PROJECT/AGENTS.md"
 }
 
@@ -456,7 +461,10 @@ MD
     cmp "$TEST_PROJECT/AGENTS.md.first" "$TEST_PROJECT/AGENTS.md"
     [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
     [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    ! grep -q '<!-- TOOLKIT:copilot-agents ' "$TEST_PROJECT/AGENTS.md"
+    if grep -q '<!-- TOOLKIT:copilot-agents ' "$TEST_PROJECT/AGENTS.md"; then
+        echo "legacy Copilot marker remains"
+        return 1
+    fi
 }
 
 @test "sequential Codex and Copilot installs converge on the same AGENTS.md" {
@@ -480,7 +488,42 @@ MD
     grep -q '^User-authored instructions\.$' "$copilot_first/AGENTS.md"
     [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$copilot_first/AGENTS.md")" -eq 1 ]
     [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$copilot_first/AGENTS.md")" -eq 1 ]
-    ! grep -q '<!-- TOOLKIT:copilot-agents ' "$copilot_first/AGENTS.md"
+    if grep -q '<!-- TOOLKIT:copilot-agents ' "$copilot_first/AGENTS.md"; then
+        echo "legacy Copilot marker remains"
+        return 1
+    fi
+
+    rm -rf "$copilot_first" "$codex_first"
+}
+
+@test "sequential Codex and Copilot installs preserve registered rules in both orders" {
+    local copilot_first codex_first
+    copilot_first="$(mktemp -d)"
+    codex_first="$(mktemp -d)"
+    mkdir -p "$TMP_HOME/.softspark/ai-toolkit/rules"
+    cat > "$TMP_HOME/.softspark/ai-toolkit/rules/team-standard.md" <<'MD'
+# Team Standard
+
+Keep the registered rule effective.
+MD
+    printf '%s\n' 'User-authored instructions.' > "$copilot_first/AGENTS.md"
+    printf '%s\n' 'User-authored instructions.' > "$codex_first/AGENTS.md"
+
+    (cd "$copilot_first" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors copilot) >/dev/null 2>&1
+    (cd "$copilot_first" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+
+    (cd "$codex_first" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+    (cd "$codex_first" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors copilot) >/dev/null 2>&1
+
+    cmp "$copilot_first/AGENTS.md" "$codex_first/AGENTS.md"
+    grep -q '^User-authored instructions\.$' "$codex_first/AGENTS.md"
+    grep -q '^Keep the registered rule effective\.$' "$codex_first/AGENTS.md"
+    [ "$(grep -c '<!-- TOOLKIT:team-standard START -->' "$codex_first/AGENTS.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:team-standard END -->' "$codex_first/AGENTS.md")" -eq 1 ]
 
     rm -rf "$copilot_first" "$codex_first"
 }
@@ -506,7 +549,49 @@ MD
     grep -q '^User instructions after the managed block\.$' "$TEST_PROJECT/AGENTS.md"
     [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
     [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    ! grep -q '<!-- TOOLKIT:copilot-agents ' "$TEST_PROJECT/AGENTS.md"
+    if grep -q '<!-- TOOLKIT:copilot-agents ' "$TEST_PROJECT/AGENTS.md"; then
+        echo "legacy Copilot marker remains after nested repair"
+        return 1
+    fi
+}
+
+@test "Codex install removes an orphan START marker from AGENTS.md" {
+    cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
+User instructions before the orphan.
+
+<!-- TOOLKIT:legacy.rule START -->
+Legacy managed text from an interrupted write.
+MD
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+
+    grep -q '^User instructions before the orphan\.$' "$TEST_PROJECT/AGENTS.md"
+    if grep -q '<!-- TOOLKIT:legacy\.rule START -->' "$TEST_PROJECT/AGENTS.md"; then
+        echo "orphan START marker remains"
+        return 1
+    fi
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+}
+
+@test "Codex install removes an orphan END marker from AGENTS.md" {
+    cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
+<!-- TOOLKIT:legacy.rule END -->
+
+User instructions after the orphan.
+MD
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+
+    grep -q '^User instructions after the orphan\.$' "$TEST_PROJECT/AGENTS.md"
+    if grep -q '<!-- TOOLKIT:legacy\.rule END -->' "$TEST_PROJECT/AGENTS.md"; then
+        echo "orphan END marker remains"
+        return 1
+    fi
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
 }
 
 @test "install --local syncs .mcp.json into Claude and selected project editors" {

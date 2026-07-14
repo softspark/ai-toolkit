@@ -55,22 +55,28 @@ teardown_file() {
     grep -qE '^# ' "$GEN_DIR/agents-md"
 }
 
-@test "generate_agents_md.py output contains all agent names" {
-    missing=0
-    for f in "$TOOLKIT_DIR"/app/agents/*.md; do
-        agent_name="${f##*/}"; agent_name="${agent_name%.md}"
-        grep -q "$agent_name" "$GEN_DIR/agents-md" || missing=$((missing + 1))
-    done
-    [ "$missing" -eq 0 ]
+@test "generate_agents_md.py output omits discovery catalogs" {
+    if grep -q '^## Available Agents' "$GEN_DIR/agents-md"; then
+        echo "agent catalog duplicated in effective AGENTS.md"
+        return 1
+    fi
+    if grep -q '^## Available Skills' "$GEN_DIR/agents-md"; then
+        echo "skill catalog duplicated in effective AGENTS.md"
+        return 1
+    fi
 }
 
-@test "generate_agents_md.py output has at least 200 lines" {
+@test "generate_agents_md.py output stays below the Codex instruction limit" {
+    byte_count=$(wc -c < "$GEN_DIR/agents-md" | xargs)
     line_count=$(wc -l < "$GEN_DIR/agents-md" | xargs)
-    [ "$line_count" -ge 200 ]
+    [ "$byte_count" -lt 32768 ]
+    [ "$line_count" -lt 200 ]
 }
 
-@test "generate_agents_md.py output mentions subagent_type" {
-    grep -q 'subagent_type' "$GEN_DIR/agents-md"
+@test "generate_agents_md.py output contains shared policy" {
+    grep -q '^# AI Toolkit Instructions' "$GEN_DIR/agents-md"
+    grep -q '^## Constitution' "$GEN_DIR/agents-md"
+    grep -q '^## Coding Rules' "$GEN_DIR/agents-md"
 }
 
 # ── generate_codex.py ───────────────────────────────────────────────────────
@@ -79,14 +85,16 @@ teardown_file() {
     [ "$(cat "$GEN_DIR/codex-md.status")" = "0" ]
 }
 
-@test "generate_codex.py output includes adapted orchestration skills" {
-    grep -q '\*\*orchestrate\*\*' "$GEN_DIR/codex-md"
-    grep -q '\*\*workflow\*\*' "$GEN_DIR/codex-md"
-    grep -q '\*\*swarm\*\*' "$GEN_DIR/codex-md"
+@test "generate_codex.py output omits adapted skill catalog" {
+    if grep -q '^## Available Skills' "$GEN_DIR/codex-md"; then
+        echo "skill catalog duplicated in Codex AGENTS.md"
+        return 1
+    fi
+    [ "$(wc -c < "$GEN_DIR/codex-md" | xargs)" -lt 32768 ]
 }
 
-@test "generate_codex.py output mentions Codex-adapted delegation" {
-    grep -q 'Codex-adapted' "$GEN_DIR/codex-md"
+@test "generate_codex.py delegates discovery to native directories" {
+    grep -q 'native directories' "$GEN_DIR/codex-md"
 }
 
 # ── generate_llms_txt.py ────────────────────────────────────────────────────

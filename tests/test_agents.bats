@@ -48,15 +48,15 @@ AGENTS_DIR="$TOOLKIT_DIR/app/agents"
     [ -n "$output" ]
 }
 
-@test "generated AGENTS.md contains all agent names" {
+@test "generated AGENTS.md keeps the agent catalog out of always-on context" {
     agents_content=$(cd "$TOOLKIT_DIR" && AI_TOOLKIT_NO_CUSTOM_RULES=1 python3 scripts/generate_agents_md.py)
-    missing=0
-    for f in "$AGENTS_DIR"/*.md; do
-        name=$(basename "$f" .md)
-        if ! echo "$agents_content" | grep -q "$name"; then
-            echo "NOT IN AGENTS.md: $name"
-            missing=$((missing+1))
-        fi
-    done
-    [ "$missing" -eq 0 ]
+    if echo "$agents_content" | grep -q '^## Available Agents'; then
+        echo "agent catalog duplicated in effective AGENTS.md"
+        return 1
+    fi
+    if echo "$agents_content" | grep -q '^## Available Skills'; then
+        echo "skill catalog duplicated in effective AGENTS.md"
+        return 1
+    fi
+    [ "$(printf '%s' "$agents_content" | wc -c | xargs)" -lt 32768 ]
 }
