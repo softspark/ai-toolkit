@@ -78,7 +78,7 @@ _STDOUT_CONFIG: dict = {
     "skills_intro": "The following skills are available as slash commands or knowledge sources:",
     "skills_format": "headings",
     "skills_level": "###",
-    "guidelines": ["quality"],
+    "guidelines": ["quality_standards"],
 }
 
 

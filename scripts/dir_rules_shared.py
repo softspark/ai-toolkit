@@ -18,6 +18,7 @@ from emission import (
     generate_quality_standards,
     generate_workflow_guidelines,
 )
+from instruction_core import render_constitution_policy
 
 PREFIX = "ai-toolkit-"
 LANG_PREFIX = f"{PREFIX}lang-"
@@ -92,17 +93,7 @@ def rule_workflow() -> str:
 
 
 def rule_quality_standards() -> str:
-    return """\
-# Quality Standards
-
-* "Green tests" is the only definition of Done — forced merges on red tests are unacceptable
-* All public APIs must have type annotations/signatures
-* No data loss: never delete files without backup verification or using reversible operations
-* No blind execution: never run generated code without review
-* No infinite loops: all autonomous loops must have a maximum iteration count
-* Commands like `rm -rf`, `DROP TABLE`, `FORMAT` require explicit user confirmation
-* Never delete audit logs or archives without explicit approval and backup
-"""
+    return render_constitution_policy(heading_level=1) + "\n"
 
 
 def rule_output_mode() -> str:

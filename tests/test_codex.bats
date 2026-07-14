@@ -148,13 +148,23 @@ print('ok')
     [ "$(cat "$CX_LOG_DIR/codex-md.status")" = "0" ]
 }
 
-@test "codex: AGENTS.md output includes all ai-toolkit agents" {
-    missing=0
-    for f in "$TOOLKIT_DIR"/app/agents/*.md; do
-        agent_name="${f##*/}"; agent_name="${agent_name%.md}"
-        grep -q "$agent_name" "$CX_LOG_DIR/codex-md" || missing=$((missing + 1))
+@test "codex: shared AGENTS.md core is compact and omits discovery catalogs" {
+    [ "$(wc -c < "$CX_LOG_DIR/codex-md" | xargs)" -lt 32768 ]
+    ! grep -q '^## Available Agents' "$CX_LOG_DIR/codex-md"
+    ! grep -q '^## Available Skills' "$CX_LOG_DIR/codex-md"
+}
+
+@test "codex: AGENTS.md propagates the source constitution" {
+    for phrase in \
+        'Article I: Safety First' \
+        'Section 4: Autonomous Loop Limits' \
+        'Section 5: Proactive Context Checkpointing' \
+        'Article VII: Epistemic & Injection Integrity'; do
+        grep -q "$phrase" "$CX_LOG_DIR/codex-md" || {
+            echo "missing constitution content: $phrase"
+            return 1
+        }
     done
-    [ "$missing" -eq 0 ]
 }
 
 @test "codex: AGENTS.md wraps content in TOOLKIT markers" {
@@ -162,8 +172,8 @@ print('ok')
     grep -q '<!-- TOOLKIT:ai-toolkit END -->' "$CX_LOG_DIR/codex-md"
 }
 
-@test "codex: AGENTS.md identifies itself as Codex CLI configuration" {
-    grep -qi 'Codex CLI' "$CX_LOG_DIR/codex-md"
+@test "codex: AGENTS.md identifies the shared instruction core" {
+    grep -q '^# AI Toolkit Instructions' "$CX_LOG_DIR/codex-md"
 }
 
 # ── universal coding rules in AGENTS.md ─────────────────────────────────────

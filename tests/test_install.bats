@@ -289,6 +289,7 @@ assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"s
     [ ! -f "$TEST_PROJECT/.claude/hooks.json" ]
     [ -f "$TEST_PROJECT/.claude/constitution.md" ]
     grep -q "<!-- TOOLKIT:constitution START -->" "$TEST_PROJECT/.claude/constitution.md"
+    grep -q '^@\.claude/constitution\.md$' "$TEST_PROJECT/CLAUDE.md"
 }
 
 @test "install --local removes legacy hooks.json if present" {
@@ -336,7 +337,7 @@ assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"s
 
     # Global instructions must land in the documented ~/.codex/AGENTS.md path.
     [ -f "$TMP_HOME/.codex/AGENTS.md" ]
-    grep -q 'Codex CLI Configuration' "$TMP_HOME/.codex/AGENTS.md"
+    grep -q 'AI Toolkit Instructions' "$TMP_HOME/.codex/AGENTS.md"
     grep -q '<!-- TOOLKIT:' "$TMP_HOME/.codex/AGENTS.md"
     # ~/AGENTS.md is NOT a global-instruction surface — it must not be written.
     [ ! -f "$TMP_HOME/AGENTS.md" ]
@@ -358,7 +359,7 @@ MD
     [ -f "$TMP_HOME/AGENTS.md" ]
     ! grep -q 'Stale global codex section' "$TMP_HOME/AGENTS.md"
     grep -q 'User-authored home instructions.' "$TMP_HOME/AGENTS.md"
-    grep -q 'Codex CLI Configuration' "$TMP_HOME/.codex/AGENTS.md"
+    grep -q 'AI Toolkit Instructions' "$TMP_HOME/.codex/AGENTS.md"
 }
 
 @test "install --editors ... --profile full wires documented global native surfaces" {
@@ -423,7 +424,7 @@ MD
     ! echo "$output" | grep -q 'Would generate: ~/.cline/skills/'
 }
 
-@test "install --local --editors copilot emits AGENTS.md without clobbering existing sections" {
+@test "install --local --editors copilot updates the shared AGENTS.md section" {
     cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
 User-authored preface.
 
@@ -435,11 +436,77 @@ MD
     (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors copilot) >/dev/null 2>&1
 
     [ -f "$TEST_PROJECT/AGENTS.md" ]
-    grep -q '<!-- TOOLKIT:copilot-agents START -->' "$TEST_PROJECT/AGENTS.md"
-    grep -q '^# AGENTS.md' "$TEST_PROJECT/AGENTS.md"
+    grep -q '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md"
+    grep -q '^# AI Toolkit Instructions' "$TEST_PROJECT/AGENTS.md"
+    ! grep -q '^## Available Agents' "$TEST_PROJECT/AGENTS.md"
+    ! grep -q '^## Available Skills' "$TEST_PROJECT/AGENTS.md"
     grep -q 'GitHub Copilot Instructions' "$TEST_PROJECT/.github/copilot-instructions.md"
-    grep -q 'Existing Codex section.' "$TEST_PROJECT/AGENTS.md"
+    ! grep -q 'Existing Codex section.' "$TEST_PROJECT/AGENTS.md"
     grep -q 'User-authored preface.' "$TEST_PROJECT/AGENTS.md"
+}
+
+@test "install --local --editors copilot,codex emits one shared AGENTS.md section" {
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors copilot,codex) >/dev/null 2>&1
+
+    cp "$TEST_PROJECT/AGENTS.md" "$TEST_PROJECT/AGENTS.md.first"
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors copilot,codex) >/dev/null 2>&1
+
+    cmp "$TEST_PROJECT/AGENTS.md.first" "$TEST_PROJECT/AGENTS.md"
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    ! grep -q '<!-- TOOLKIT:copilot-agents ' "$TEST_PROJECT/AGENTS.md"
+}
+
+@test "sequential Codex and Copilot installs converge on the same AGENTS.md" {
+    local copilot_first codex_first
+    copilot_first="$(mktemp -d)"
+    codex_first="$(mktemp -d)"
+    printf '%s\n' 'User-authored instructions.' > "$copilot_first/AGENTS.md"
+    printf '%s\n' 'User-authored instructions.' > "$codex_first/AGENTS.md"
+
+    (cd "$copilot_first" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors copilot) >/dev/null 2>&1
+    (cd "$copilot_first" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+
+    (cd "$codex_first" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+    (cd "$codex_first" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors copilot) >/dev/null 2>&1
+
+    cmp "$copilot_first/AGENTS.md" "$codex_first/AGENTS.md"
+    grep -q '^User-authored instructions\.$' "$copilot_first/AGENTS.md"
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$copilot_first/AGENTS.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$copilot_first/AGENTS.md")" -eq 1 ]
+    ! grep -q '<!-- TOOLKIT:copilot-agents ' "$copilot_first/AGENTS.md"
+
+    rm -rf "$copilot_first" "$codex_first"
+}
+
+@test "Codex install repairs nested legacy toolkit markers in AGENTS.md" {
+    cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
+User instructions before the managed block.
+
+<!-- TOOLKIT:copilot-agents START -->
+Legacy Copilot wrapper.
+<!-- TOOLKIT:ai-toolkit START -->
+Legacy nested Codex content.
+<!-- TOOLKIT:ai-toolkit END -->
+<!-- TOOLKIT:copilot-agents END -->
+
+User instructions after the managed block.
+MD
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+
+    grep -q '^User instructions before the managed block\.$' "$TEST_PROJECT/AGENTS.md"
+    grep -q '^User instructions after the managed block\.$' "$TEST_PROJECT/AGENTS.md"
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    ! grep -q '<!-- TOOLKIT:copilot-agents ' "$TEST_PROJECT/AGENTS.md"
 }
 
 @test "install --local syncs .mcp.json into Claude and selected project editors" {

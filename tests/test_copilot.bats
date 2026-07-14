@@ -41,6 +41,13 @@ teardown_file() {
     grep -q 'TOOLKIT:ai-toolkit END' "$COPILOT_STDOUT"
 }
 
+@test "generate_copilot.py stdout propagates the source constitution" {
+    grep -q 'Article I: Safety First' "$COPILOT_STDOUT"
+    grep -q 'Section 4: Autonomous Loop Limits' "$COPILOT_STDOUT"
+    grep -q 'Section 5: Proactive Context Checkpointing' "$COPILOT_STDOUT"
+    grep -q 'Article VII: Epistemic & Injection Integrity' "$COPILOT_STDOUT"
+}
+
 # ── Path-specific .instructions.md files ───────────────────────────────────
 
 @test "generate_copilot.py creates .github/instructions/ directory" {
@@ -70,6 +77,13 @@ teardown_file() {
     f="$COPILOT_TMP/.github/instructions/ai-toolkit-security.instructions.md"
     [ -f "$f" ]
     grep -q 'applyTo: "\*\*"' "$f"
+}
+
+@test "generate_copilot.py quality instructions use the source constitution" {
+    f="$COPILOT_TMP/.github/instructions/ai-toolkit-quality-standards.instructions.md"
+    grep -q 'Section 4: Autonomous Loop Limits' "$f"
+    grep -q 'Section 5: Proactive Context Checkpointing' "$f"
+    grep -q 'Article VII: Epistemic & Injection Integrity' "$f"
 }
 
 # ── Prompt files (slash commands for VS Code Copilot) ──────────────────────

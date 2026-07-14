@@ -15,6 +15,11 @@ import re
 from pathlib import Path
 
 
+_MARKER_RE = re.compile(
+    r"^<!-- TOOLKIT:([a-zA-Z0-9_-]+) (START|END) -->$"
+)
+
+
 # ---------------------------------------------------------------------------
 # Markers
 # ---------------------------------------------------------------------------
@@ -38,21 +43,47 @@ def markers_end(section: str = "ai-toolkit") -> str:
 
 def strip_section(content: str, section: str) -> str:
     """Remove a TOOLKIT marker section from content."""
-    start = f"<!-- TOOLKIT:{section} START -->"
-    end = f"<!-- TOOLKIT:{section} END -->"
-    lines: list[str] = []
-    skip = False
-    for line in content.splitlines(keepends=True):
-        stripped = line.rstrip("\n")
-        if stripped == start:
-            skip = True
+    return _strip_sections(content, {section})
+
+
+def strip_all_sections(content: str) -> str:
+    """Remove every balanced TOOLKIT section and any orphan marker lines.
+
+    Balanced spans are discovered before content is removed, so nested legacy
+    sections are handled without leaving an outer END marker behind. An
+    unmatched START marker does not consume unrelated user content after it.
+    """
+    return _strip_sections(content, None)
+
+
+def _strip_sections(content: str, sections: set[str] | None) -> str:
+    lines = content.splitlines(keepends=True)
+    stacks: dict[str, list[int]] = {}
+    marker_lines: set[int] = set()
+    intervals: list[tuple[int, int]] = []
+
+    for index, line in enumerate(lines):
+        match = _MARKER_RE.fullmatch(line.rstrip("\r\n"))
+        if not match:
             continue
-        if stripped == end:
-            skip = False
+        name, kind = match.groups()
+        if sections is not None and name not in sections:
             continue
-        if not skip:
-            lines.append(line)
-    return "".join(lines)
+        marker_lines.add(index)
+        stack = stacks.setdefault(name, [])
+        if kind == "START":
+            stack.append(index)
+        elif stack:
+            intervals.append((stack.pop(), index))
+
+    def is_managed(index: int) -> bool:
+        if index in marker_lines:
+            return True
+        return any(start < index < end for start, end in intervals)
+
+    return "".join(
+        line for index, line in enumerate(lines) if not is_managed(index)
+    )
 
 
 def trim_trailing_blanks(text: str) -> str:
