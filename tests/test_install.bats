@@ -323,9 +323,14 @@ assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"s
     [ -L "$TEST_PROJECT/.agents/skills/tdd/reference" ]
 
     grep -q 'Codex Translation Layer' "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
-    grep -q 'spawn_agent' "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
-    grep -q 'update_plan' "$TEST_PROJECT/.agents/skills/workflow/SKILL.md"
+    grep -q 'Codex-native subagents' "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
+    grep -q 'planning mechanism available in the current client' \
+        "$TEST_PROJECT/.agents/skills/workflow/SKILL.md"
     ! grep -q 'allowed-tools:.*Agent' "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
+
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --editors codex >/dev/null 2>&1
+    [ -f "$TMP_HOME/.agents/skills/orchestrate/SKILL.md" ]
+    grep -q 'Codex-native subagents' "$TMP_HOME/.agents/skills/orchestrate/SKILL.md"
 
     expected_skills=$(find "$TOOLKIT_DIR/app/skills" -mindepth 1 -maxdepth 1 -type d ! -name '_*' | wc -l | xargs)
     actual_skills=$(find "$TEST_PROJECT/.agents/skills" -mindepth 1 -maxdepth 1 | wc -l | xargs)

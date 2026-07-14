@@ -5,10 +5,12 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from _common import app_dir, inject_section, should_install, toolkit_dir
+from _common import app_dir, inject_section, toolkit_dir
 from codex_skill_adapter import (
     cleanup_codex_skills,
+    prepare_codex_skills_dir,
     sync_codex_skill,
+    unmanaged_codex_skill_names,
 )
 from mcp_editors import sync_project_mcp_to_editors
 from injection import (
@@ -707,7 +709,7 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
         if language_modules:
             print(f"  Would inject language rules: {', '.join(language_modules)}")
         if merged_config:
-            print(f"  Would apply merged config from extends")
+            print("  Would apply merged config from extends")
         return
 
     (cwd / ".claude").mkdir(parents=True, exist_ok=True)
@@ -831,7 +833,7 @@ def _apply_extends_config(cwd: Path, merged: dict) -> None:
     if meta:
         state_file = cwd / ".softspark-toolkit-extends.json"
         state_file.write_text(_json.dumps(meta, indent=2) + "\n", encoding="utf-8")
-        print(f"  Saved: .softspark-toolkit-extends.json (resolution metadata)")
+        print("  Saved: .softspark-toolkit-extends.json (resolution metadata)")
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
@@ -881,7 +883,7 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
         "when their triggers match -- you do not need to Read them manually."
     )
     if langs:
-        skill_names = ", ".join(f"`{l}-rules`" for l in langs)
+        skill_names = ", ".join(f"`{language}-rules`" for language in langs)
         lines.append("")
         lines.append(f"Detected languages: {skill_names}.")
 
@@ -1126,8 +1128,8 @@ def _install_codex_skills(cwd: Path) -> None:
     if not skills_src.is_dir():
         return
 
-    skills_dst = cwd / ".agents" / "skills"
-    skills_dst.mkdir(parents=True, exist_ok=True)
+    skills_dst = prepare_codex_skills_dir(cwd)
+    user_names = unmanaged_codex_skill_names(skills_dst, skills_src)
 
     linked = 0
     adapted = 0
@@ -1138,6 +1140,9 @@ def _install_codex_skills(cwd: Path) -> None:
         skill_md = skill_dir / "SKILL.md"
         if not skill_md.is_file():
             continue
+        if skill_dir.name in user_names:
+            skipped += 1
+            continue
 
         mode = sync_codex_skill(skill_dir, skills_dst)
         if mode == "linked":
@@ -1147,7 +1152,7 @@ def _install_codex_skills(cwd: Path) -> None:
         else:
             skipped += 1
 
-    cleanup_codex_skills(skills_dst, skills_src)
+    cleanup_codex_skills(skills_dst, skills_src, user_names)
 
     print(
         f"  Installed: {linked + adapted} skills to .agents/skills/"

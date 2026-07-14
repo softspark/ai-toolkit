@@ -7,8 +7,9 @@ and Gemini pointer pattern, Codex benefits from having the full skill catalog
 on disk, so this generator syncs every skill in ``app/skills/`` into
 ``<target-dir>/.agents/skills/<name>/``.
 
-The mirror is **opt-in**: ``enable_codex_skills=False`` is the default.
-Bucket 4 wires a ``--codex-skills`` CLI flag that toggles this on.
+The standalone generator keeps ``enable_codex_skills=False`` as a compatibility
+default. Selecting Codex in the main installer installs this catalog
+automatically; ``--codex-skills`` remains an explicit refresh option.
 
 Implementation:
   * Native Codex-compatible skills are symlinked to canonical ``app/skills``.
@@ -33,7 +34,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from codex_skill_adapter import cleanup_codex_skills, sync_codex_skill
+from codex_skill_adapter import (
+    cleanup_codex_skills,
+    prepare_codex_skills_dir,
+    sync_codex_skill,
+    unmanaged_codex_skill_names,
+)
 from emission import skills_dir
 
 
@@ -94,15 +100,18 @@ def generate(target_dir: Path, enable_codex_skills: bool = False) -> None:
     if not enable_codex_skills:
         return
 
-    codex_skills_dir = target_dir / ".agents" / "skills"
-    codex_skills_dir.mkdir(parents=True, exist_ok=True)
+    codex_skills_dir = prepare_codex_skills_dir(target_dir)
 
     sources = _iter_source_skills()
+    user_names = unmanaged_codex_skill_names(codex_skills_dir, skills_dir)
 
     linked = 0
     adapted = 0
     skipped = 0
     for skill in sources:
+        if skill.name in user_names:
+            skipped += 1
+            continue
         mode = sync_codex_skill(skill, codex_skills_dir)
         if mode == "linked":
             linked += 1
@@ -111,7 +120,7 @@ def generate(target_dir: Path, enable_codex_skills: bool = False) -> None:
         else:
             skipped += 1
 
-    cleanup_codex_skills(codex_skills_dir, skills_dir)
+    cleanup_codex_skills(codex_skills_dir, skills_dir, user_names)
 
     print(
         f"  Codex skill mirror: {_count_entries(codex_skills_dir)} skills "
