@@ -12,13 +12,30 @@ Three Claude tiers. Using Opus for everything is 10-40x more expensive than it n
 
 ## Model Characteristics (2026)
 
-| Model | Latency | Cost (rel.) | Strengths | When |
-|-------|---------|-------------|-----------|------|
-| Haiku 4.5 | Fastest | 1x | Classification, extraction, simple tools, moderation | Bulk processing, triage, labels |
-| Sonnet 4.6 | Medium | 3-5x | General coding, reasoning, most agent tasks | Default workhorse |
-| Opus 4.7 | Slowest | 15-30x | Complex reasoning, orchestration, architecture, large context | Hard, rare, high-stakes |
+| Model | $/1M in·out | Cost (rel.) | Strengths | When |
+|-------|-------------|-------------|-----------|------|
+| Haiku 4.5 | $1 / $5 | 1x | Classification, extraction, simple tools, moderation | Bulk processing, triage, labels |
+| Sonnet 5 | $3 / $15 | ~3x | General coding, reasoning, most agent tasks | Default workhorse |
+| Opus 4.8 | $5 / $25 | ~5x | Complex reasoning, orchestration, architecture, large context | Hard, rare, high-stakes |
+| Fable 5 | $10 / $50 | ~10x | Most demanding long-horizon agentic work | Only when explicitly chosen |
 
-Ratios are approximate and shift between releases. Re-check pricing before committing a production path.
+Prices are per 1M tokens; ratios are approximate and shift between releases. Re-check pricing before committing a production path.
+
+> **Fable 5 is not the default "best model".** Its price sits above Opus-tier, and Opus 4.8 is state-of-the-art on planning/orchestration at half the input and output cost. Reach for Fable 5 only when the user explicitly asks for it or a benchmarked task genuinely needs it — for "use the strongest model", the target is `claude-opus-4-8`.
+
+## Effort — the cheaper lever before swapping models
+
+On Fable 5 / Opus 4.8 / Sonnet 5, `output_config.effort` (`low` | `medium` | `high` | `xhigh` | `max`) controls thinking depth and token spend **without changing the model** — so it does not invalidate the prompt cache the way a mid-session model swap does. Tune effort first; drop to a cheaper model only when effort alone can't hit the cost target.
+
+| Effort | Use for |
+|--------|---------|
+| `low` | Latency-sensitive, non-intelligence-sensitive: chat, simple lookups, cheap subagents |
+| `medium` | Cost-conscious step-down from the default |
+| `high` | Default for most intelligence-sensitive work (a good quality/cost balance) |
+| `xhigh` | Hardest coding and agentic tasks (Claude Code's default) |
+| `max` | Correctness matters more than cost; test for diminishing returns |
+
+In our agents, effort is set per skill/agent frontmatter (`effort:`), not swapped at runtime. Combine effort routing with model routing: e.g. `sonnet` at `high` often beats `opus` at `low` for cost-equal quality — benchmark before committing.
 
 ## Pattern 1 — Complexity Router (pre-classify)
 
@@ -69,7 +86,7 @@ When primary is rate-limited or errors, degrade gracefully:
 
 ```python
 def call_with_fallback(messages):
-    for model in ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"]:
+    for model in ["claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"]:
         try:
             return client.messages.create(model=model, messages=messages, ...)
         except (RateLimitError, OverloadedError):

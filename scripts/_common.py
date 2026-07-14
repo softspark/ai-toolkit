@@ -79,8 +79,8 @@ skills_dir: Path = app_dir / "skills"
 # the client at runtime and do NOT need updating here.
 # ---------------------------------------------------------------------------
 DEFAULT_CLAUDE_MODELS: dict[str, str] = {
-    "opus": "claude-opus-4-7",
-    "sonnet": "claude-sonnet-4-6",
+    "opus": "claude-opus-4-8",
+    "sonnet": "claude-sonnet-5",
     "haiku": "claude-haiku-4-5",
 }
 

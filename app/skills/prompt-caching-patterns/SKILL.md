@@ -24,7 +24,7 @@ from anthropic import Anthropic
 
 client = Anthropic()
 response = client.messages.create(
-    model="claude-opus-4-7",
+    model="claude-opus-4-8",
     max_tokens=1024,
     system=[
         {
@@ -90,7 +90,7 @@ Target ratio for a well-tuned loop: `cache_read / (cache_read + input) > 0.7`. B
 
 ```typescript
 const response = await anthropic.messages.create({
-  model: "claude-opus-4-7",
+  model: "claude-opus-4-8",
   max_tokens: 1024,
   system: [
     { type: "text", text: LONG_SYSTEM, cache_control: { type: "ephemeral" } }

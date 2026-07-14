@@ -1,7 +1,7 @@
 ---
 name: fact-checker
 description: "Claim verification expert. Use for verifying facts, source validation, RAG result accuracy checking. Triggers: fact check, verify, accuracy, claim, source validation."
-model: sonnet
+model: haiku
 color: cyan
 tools: Read
 skills: clean-code

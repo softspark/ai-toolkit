@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.14.0 — Model refresh + effort-aware routing (2026-07-14)
+
+Minor release. Refreshes Claude model IDs to the current generation across the toolkit, teaches the routing skill to route on `effort` (not just model tier), and moves two pure-retrieval agents to Haiku. No skill/agent/hook count change (44 agents, 108 skills, 1216 tests).
+
+### Changed
+- **Canonical model IDs bumped** — `scripts/_common.py` `DEFAULT_CLAUDE_MODELS` now resolves `opus → claude-opus-4-8` and `sonnet → claude-sonnet-5` (`haiku → claude-haiku-4-5` unchanged). This is the single source of truth generators emit.
+- **`model-routing-patterns` skill refreshed** — tier table updated to Haiku 4.5 / Sonnet 5 / Opus 4.8 with per-1M pricing, added a **Fable 5** row plus a "not the default best model" caveat (target for "strongest model" stays `claude-opus-4-8`), and a new **Effort routing** section (effort is the cheaper lever before swapping models — it does not invalidate the prompt cache). Fallback-chain example IDs updated.
+- **Stale example model IDs refreshed** — `json-mode-patterns`, `prompt-caching-patterns`, and `skill-creator` code samples now reference `claude-opus-4-8`.
+- **Pure-retrieval agents routed to Haiku** — `explorer-agent` (Read/Grep/Glob only) and `fact-checker` (Read only) changed from `model: sonnet` to `model: haiku`, closing the gap where the routing skill recommended Haiku workers but no agent used the tier.
+
 ## v4.13.0 — Claude app delivery + Devin sunset cleanup (2026-07-10)
 
 Minor release. Adds a validated distribution path for Claude Chat/Desktop/Cowork, fixes the core plugin contract, and removes the retired Cascade hook surface. Test count: 1208 → 1216 (seven deprecated Cascade assertions removed; six Claude app contract tests, three editor migration/propagation tests, two state-isolation/cleanup tests, two untagged-hook diagnostics, and two dry-run regressions added).

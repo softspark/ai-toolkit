@@ -2,7 +2,7 @@
 name: explorer-agent
 description: "Codebase exploration and discovery agent. Use for mapping project structure, finding dependencies, understanding architecture, and research. Does NOT write code - only reads and analyzes."
 tools: Read, Grep, Glob
-model: sonnet
+model: haiku
 color: cyan
 skills: clean-code
 ---

@@ -30,7 +30,7 @@ tools = [{
 }]
 
 response = client.messages.create(
-    model="claude-opus-4-7",
+    model="claude-opus-4-8",
     max_tokens=1024,
     tools=tools,
     tool_choice={"type": "tool", "name": "record_analysis"},
@@ -55,7 +55,7 @@ When tool use is unavailable (some SDKs/proxies strip it):
 
 ```python
 response = client.messages.create(
-    model="claude-opus-4-7",
+    model="claude-opus-4-8",
     max_tokens=1024,
     system="You return ONLY valid JSON. No prose, no markdown fences.",
     messages=[{

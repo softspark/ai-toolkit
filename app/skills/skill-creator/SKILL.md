@@ -33,7 +33,7 @@ Create a new skill following the Agent Skills standard.
 | `user-invocable` | bool | no | `false` = knowledge skill, Claude auto-loads |
 | `allowed-tools` | csv or YAML list | no | Restrict tool access for safety; YAML-style lists accepted |
 | `disallowedTools` | csv or YAML list | no | Block specific tools (plugin-shipped agents) |
-| `model` | string | no | Override default model (accepts full IDs like `claude-opus-4-7`) |
+| `model` | string | no | Override default model (accepts full IDs like `claude-opus-4-8`) |
 | `context` | string | no | `fork` to run in isolated subagent |
 | `agent` | string | no | Agent type to use when `context: fork` |
 | `skills` | csv | no | Auto-load skills for the invoked subagent |
