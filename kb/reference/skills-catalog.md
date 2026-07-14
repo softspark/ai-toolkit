@@ -77,7 +77,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **cve-scan** | `/cve-scan` | medium | Scan project dependencies for known CVEs using native audit tools (npm, pip, composer, cargo, go, ruby, dart) |
 | **docs** | `/docs` | high | Generate/update docs: README, API docs, architecture notes, changelogs (Tier 1 — single agent) |
 | **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |
-| **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, native in Claude, Codex-adapted to `spawn_agent` workflows |
+| **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, native in Claude, Codex-adapted with semantic subagent guidance |
 | **swarm** | `/swarm` | max | Massive parallelism: map-reduce, consensus, relay — Tier 3 |
 | **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2, Codex-adapted to native subagent orchestration |
 | **instinct-review** | `/instinct-review` | low | Review, curate, and manage learned instincts from past sessions |
@@ -257,8 +257,8 @@ Codex CLI receives the full skill catalog during `ai-toolkit install --local --e
 Claude Chat/Desktop/Cowork receives this same catalog through `ai-toolkit claude-app export`. The export also adds an app-only `ai-toolkit-rules` skill because the Claude app does not read Claude Code's `CLAUDE.md` or `.claude/rules/` surfaces.
 
 - Native Codex-compatible skills are symlinked directly into `.agents/skills/`
-- Claude-oriented orchestration skills are generated as Codex wrappers
-- Adapted wrappers translate `Agent`, `Team*`, and `Task*` guidance to `spawn_agent`, `send_input`, `wait_agent`, `close_agent`, and `update_plan`
+- Skills with Claude-only tools, placeholders, path variables, or orchestration APIs are generated as Codex wrappers
+- Adapted wrappers describe subagent control, waiting, and planning as durable current-client semantics without embedding guessed tool signatures
 
 Common adapted skills:
 

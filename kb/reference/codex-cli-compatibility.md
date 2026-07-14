@@ -3,9 +3,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.3"
+version: "1.0.4"
 created: "2026-04-12"
-last_updated: "2026-05-25"
+last_updated: "2026-07-14"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -15,10 +15,11 @@ description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, a
 
 Codex CLI now receives the full `ai-toolkit` skill catalog during local install.
 
-Native Codex-compatible skills are linked directly into `.agents/skills/`. Skills
-that depend on Claude-only orchestration primitives are generated as Codex
-wrappers that preserve the original workflow intent while translating execution
-to Codex subagents and plan tracking.
+Native Codex-compatible skills are linked directly into `.agents/skills/`.
+Skills that contain Claude-only tools, prompt placeholders, or skill-directory
+variables are generated as Codex wrappers. The wrappers preserve workflow intent
+using semantic subagent and planning guidance instead of version-specific tool
+signatures.
 
 Experimental plugin packs can also target a global Codex surface with
 `ai-toolkit plugin install --editor codex`, which layers plugin-specific skills,
@@ -51,43 +52,46 @@ Two delivery modes are used for Codex:
 
 | Mode | How it is installed | Use case |
 |------|----------------------|----------|
-| Native | Symlink to `app/skills/<name>/` | Skills whose `allowed-tools` are already supported in Codex |
-| Adapted | Generated wrapper directory in `.agents/skills/<name>/` | Skills that rely on Claude-only `Agent`, `Team*`, or `Task*` primitives |
+| Native | Symlink to `app/skills/<name>/` | Skills with portable tools, prompts, and paths |
+| Adapted | Generated wrapper directory in `.agents/skills/<name>/` | Skills with Claude-only tools, prompt placeholders, path variables, or orchestration APIs |
 
 Adapted skills keep the same support assets (`reference/`, `scripts/`, `assets/`)
 via symlinks, but rewrite `SKILL.md` to Codex-native guidance.
 
-## Claude-to-Codex Tool Mapping
+## Claude-to-Codex Semantic Mapping
 
-The adapter rewrites Claude-specific delegation guidance to the closest Codex
-runtime primitives:
+The adapter deliberately avoids embedding runtime function names or guessed
+signatures. Generated guidance describes stable intent:
 
-| Claude-oriented primitive | Codex replacement |
-|---------------------------|------------------|
-| `Agent(...)` | `spawn_agent(..., fork_context=True, ...)` |
-| `SendMessage` | `send_input` |
-| `TaskCreate` / `TaskList` / `TaskUpdate` | `update_plan` or explicit checklist tracking |
-| `TaskGet` / `TaskOutput` | `wait_agent` |
-| `TaskStop` / `TeamDelete` | `close_agent` |
-| Agent teams | Multiple spawned subagents with explicit file ownership |
+| Claude-oriented concept | Codex guidance |
+|-------------------------|----------------|
+| Delegated agent call | Delegate a narrow task to a suitable Codex-native subagent |
+| Agent redirection | Use the subagent controls available in the current client |
+| Task bookkeeping | Use the planning mechanism available in the current client or an explicit checklist |
+| Waiting for a task | Wait only when the next critical-path step depends on the delegated result |
+| Agent teams | Coordinate subagents with explicit, non-overlapping ownership |
+| Prompt input placeholder | Use the task details supplied by the user |
+| Claude skill-directory variable | Use the installed skill directory containing `SKILL.md` |
 
 ## Adapted Skill Classes
 
-The main adapted group is multi-agent orchestration:
+The adapted group includes multi-agent orchestration:
 
 - `/orchestrate`
 - `/workflow`
 - `/swarm`
 - `/subagent-development`
 
-The adapter also covers skills that previously depended only on Claude's
-`Agent` primitive, such as:
+It also includes any skill that contains Claude-only prompt or path variables,
+even when its tool list is otherwise portable. Examples include:
 
 - `/tdd`
 - `/write-a-prd`
 - `/qa-session`
 - `/triage-issue`
 - `/architecture-audit`
+- `/build`
+- `/cve-scan`
 
 ## Hook Compatibility
 

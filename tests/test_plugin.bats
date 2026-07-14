@@ -77,6 +77,37 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "plugin Codex install preserves user logical skill collisions" {
+    mkdir -p "$TEST_TMP/.agents/skills/custom-memory"
+    cat > "$TEST_TMP/.agents/skills/custom-memory/SKILL.md" <<'MD'
+---
+name: mem-search
+description: User-owned memory search.
+---
+Keep this plugin collision unchanged.
+MD
+
+    run $CLI plugin install --editor codex memory-pack
+    [ "$status" -eq 0 ]
+    [ ! -e "$TEST_TMP/.agents/skills/mem-search" ]
+    grep -q 'Keep this plugin collision unchanged' \
+        "$TEST_TMP/.agents/skills/custom-memory/SKILL.md"
+}
+
+@test "plugin Codex install rejects symlinked skill roots without external writes" {
+    external="$(mktemp -d)"
+    printf '%s\n' 'external plugin sentinel' > "$external/sentinel.txt"
+    shasum "$external/sentinel.txt" > "$external.before"
+    ln -s "$external" "$TEST_TMP/.agents"
+
+    run $CLI plugin install --editor codex memory-pack
+    [ "$status" -ne 0 ]
+    shasum "$external/sentinel.txt" > "$external.after"
+    cmp "$external.before" "$external.after"
+    [ ! -e "$external/skills" ]
+    rm -rf "$external"
+}
+
 @test "plugin remove --editor codex strips plugin hook entries and files" {
     run $CLI plugin install --editor codex memory-pack
     [ "$status" -eq 0 ]

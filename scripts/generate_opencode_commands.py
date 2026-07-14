@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from codex_skill_adapter import build_codex_skill_text, is_codex_adapted_skill
+from codex_skill_adapter import build_opencode_skill_text, is_codex_adapted_skill
 from emission import skills_dir
 from frontmatter import frontmatter_field
 
@@ -29,13 +29,11 @@ def _skill_body(skill_file: Path) -> str:
     """Return the markdown body of a skill (content after frontmatter).
 
     For skills that rely on Claude-only orchestration primitives, route
-    through the Codex adapter so `Agent`/`TeamCreate`/`TaskCreate` get
-    rewritten to opencode-compatible delegation guidance. The adapter's
-    output is compatible with opencode's subagent model (``spawn_agent``
-    conventions, plan tracking) because both lack Claude primitives.
+    through the portable adapter so Claude-only placeholders and APIs become
+    OpenCode-native, signature-free guidance.
     """
     if is_codex_adapted_skill(skill_file):
-        adapted = build_codex_skill_text(skill_file)
+        adapted = build_opencode_skill_text(skill_file)
         # Strip the adapted frontmatter — we emit our own below
         parts = adapted.split("---", 2)
         return parts[2].lstrip("\n") if len(parts) >= 3 else adapted

@@ -31,14 +31,34 @@ ADAPTED_MARKER = ".ai-toolkit-codex-adapted"
 
 _FRONTMATTER_RE = re.compile(r"\A---\n(?P<frontmatter>.*?)\n---\n?(?P<body>.*)\Z", re.S)
 _AGENT_CALL_RE = re.compile(r"\bAgent\s*\([^)]*\)", re.S)
+_TASK_API_RE = re.compile(r"\bTask(?:Create|List|Update|Get|Output|Stop)\b")
+_PLATFORM_LABELS = {"codex": "Codex", "opencode": "OpenCode"}
+_ADAPTATION_BODY_TOKENS = frozenset({
+    "$ARGUMENTS",
+    "CLAUDE_SKILL_DIR",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+    "spawn_agent",
+    "send_input",
+    "wait_agent",
+    "close_agent",
+    "update_plan",
+    "fork_context",
+    "agent_type=",
+    "TeamCreate",
+    "TeamDelete",
+    "SendMessage",
+})
 
-_CODEX_NOTE = """
-## Codex Translation Layer
 
-This generated Codex variant preserves the workflow intent using durable,
+def _translation_note(platform: str) -> str:
+    label = _PLATFORM_LABELS[platform]
+    return f"""
+## {label} Translation Layer
+
+This generated {label} variant preserves the workflow intent using durable,
 client-independent guidance:
 
-- Use Codex-native subagents to delegate independent work when parallelism
+- Use {label}-native subagents to delegate independent work when parallelism
   materially improves speed or quality.
 - Give each delegated task a narrow objective, relevant context, explicit file
   ownership, and a clear expected result.
@@ -48,27 +68,39 @@ client-independent guidance:
   them, then integrate the results in the parent task.
 - Track progress using the planning mechanism available in the current client
   or an explicit local checklist.
-- Treat a team as coordinated Codex-native subagents with non-overlapping work.
+- Treat a team as coordinated {label}-native subagents with non-overlapping work.
+- Resolve `./` paths in command examples from the installed skill directory
+  that contains this `SKILL.md` file.
 """
 
-_SEMANTIC_REPLACEMENTS = {
-    "$ARGUMENTS": "the task details supplied by the user",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "Codex subagent support",
-    "spawn_agent": "delegate independent work to a Codex-native subagent",
-    "send_input": "steer a running subagent",
-    "wait_agent": "wait for delegated results",
-    "close_agent": "stop or finish delegated work",
-    "update_plan": "the planning mechanism available in the current client",
-    "TeamCreate": "coordinate Codex-native subagents",
-    "TeamDelete": "finish coordinated subagent work",
-    "SendMessage": "steer a running subagent",
-    "TaskCreate": "the available planning mechanism",
-    "TaskList": "the available planning mechanism",
-    "TaskUpdate": "the available planning mechanism",
-    "TaskGet": "review delegated progress",
-    "TaskOutput": "collect delegated results",
-    "TaskStop": "stop delegated work",
-}
+
+def _semantic_replacements(platform: str) -> dict[str, str]:
+    label = _PLATFORM_LABELS[platform]
+    native_subagent = f"{label}-native subagent"
+    return {
+        "${CLAUDE_SKILL_DIR}/": "./",
+        "$CLAUDE_SKILL_DIR/": "./",
+        "${CLAUDE_SKILL_DIR}": "the installed skill directory",
+        "CLAUDE_SKILL_DIR": "the installed skill directory",
+        "$ARGUMENTS": "the user-supplied task details",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": f"{label} subagent support",
+        "spawn_agent": f"delegate independent work to a {native_subagent}",
+        "send_input": "steer a running subagent",
+        "wait_agent": "wait for delegated results",
+        "close_agent": "stop or finish delegated work",
+        "update_plan": "the planning mechanism available in the current client",
+        "fork_context": "appropriate inherited task context",
+        "agent_type=": "a suitable subagent role",
+        "TeamCreate": f"coordinate {label}-native subagents",
+        "TeamDelete": "finish coordinated subagent work",
+        "SendMessage": "steer a running subagent",
+        "TaskCreate": "the available planning mechanism",
+        "TaskList": "the available planning mechanism",
+        "TaskUpdate": "the available planning mechanism",
+        "TaskGet": "review delegated progress",
+        "TaskOutput": "collect delegated results",
+        "TaskStop": "stop delegated work",
+    }
 
 
 def skill_tools(skill_file: Path) -> list[str]:
@@ -78,8 +110,13 @@ def skill_tools(skill_file: Path) -> list[str]:
 
 
 def is_codex_adapted_skill(skill_file: Path) -> bool:
-    """Return True if a skill needs Claude→Codex delegation adaptation."""
-    return bool(set(skill_tools(skill_file)) & CLAUDE_ONLY_TOOLS)
+    """Return True when a source skill needs portable client adaptation."""
+    if set(skill_tools(skill_file)) & CLAUDE_ONLY_TOOLS:
+        return True
+    text = skill_file.read_text(encoding="utf-8")
+    if any(token in text for token in _ADAPTATION_BODY_TOKENS):
+        return True
+    return bool(_AGENT_CALL_RE.search(text) or _TASK_API_RE.search(text))
 
 
 def codex_skill_description(skill_file: Path) -> str:
@@ -97,18 +134,34 @@ def codex_skill_description(skill_file: Path) -> str:
 
 def build_codex_skill_text(skill_file: Path) -> str:
     """Render the Codex-facing SKILL.md contents for a source skill."""
+    return _build_portable_skill_text(skill_file, "codex")
+
+
+def build_opencode_skill_text(skill_file: Path) -> str:
+    """Render an OpenCode-facing skill without leaking Codex branding."""
+    return _build_portable_skill_text(skill_file, "opencode")
+
+
+def _build_portable_skill_text(skill_file: Path, platform: str) -> str:
+    """Render a client-specific skill using semantic, signature-free guidance."""
+    if platform not in _PLATFORM_LABELS:
+        raise ValueError(f"Unsupported skill adaptation platform: {platform}")
     text = skill_file.read_text(encoding="utf-8")
     match = _FRONTMATTER_RE.match(text)
     if not match:
-        return text
+        return _adapt_body(text, platform) if is_codex_adapted_skill(skill_file) else text
 
     body = match.group("body")
     adapted = is_codex_adapted_skill(skill_file)
 
     if adapted:
-        body = _adapt_body(body)
+        body = _adapt_body(body, platform)
         name = frontmatter_field(skill_file, "name")
-        description = codex_skill_description(skill_file)
+        description = (
+            codex_skill_description(skill_file)
+            if platform == "codex"
+            else frontmatter_field(skill_file, "description")
+        )
         rendered_frontmatter = "\n".join(
             (f"name: {name}", f"description: {json.dumps(description, ensure_ascii=False)}")
         )
@@ -234,33 +287,103 @@ def _sync_adapted_skill(skill_dir: Path, skills_dst: Path) -> str:
     if target.is_symlink():
         if not _points_to(target, skill_dir):
             return "skipped"
-        target.unlink()
-    elif target.exists() and not _is_adapted_wrapper(target):
+        return _create_adapted_wrapper(skill_dir, target, replace_managed_link=True)
+    if target.exists() and not _is_adapted_wrapper(target):
         return "skipped"
+    if not target.exists():
+        return _create_adapted_wrapper(skill_dir, target)
 
-    created = not target.exists()
-    target.mkdir(parents=False, exist_ok=True)
+    return _update_adapted_wrapper(skill_dir, target)
+
+
+def _create_adapted_wrapper(
+    skill_dir: Path,
+    target: Path,
+    *,
+    replace_managed_link: bool = False,
+) -> str:
+    """Build a complete sibling wrapper and expose it with one atomic rename."""
+    staging = Path(tempfile.mkdtemp(
+        dir=target.parent,
+        prefix=f".{target.name}.",
+        suffix=".tmp",
+    ))
+    removed_link = False
+    try:
+        _write_text_fsync(
+            staging / "SKILL.md",
+            build_codex_skill_text(skill_dir / "SKILL.md"),
+        )
+        _write_text_fsync(
+            staging / ADAPTED_MARKER,
+            "generated by ai-toolkit for Codex\n",
+        )
+        _sync_auxiliaries(skill_dir, staging)
+        _fsync_directory(staging)
+
+        if replace_managed_link:
+            if not _points_to(target, skill_dir):
+                raise RuntimeError(f"Codex skill target changed during sync: {target}")
+            target.unlink()
+            removed_link = True
+        elif target.exists() or target.is_symlink():
+            raise RuntimeError(f"Codex skill target appeared during sync: {target}")
+
+        os.replace(staging, target)
+        _fsync_directory(target.parent)
+        return "adapted"
+    except Exception:
+        _remove_staged_wrapper(staging)
+        if removed_link and not target.exists() and not target.is_symlink():
+            target.symlink_to(skill_dir)
+        raise
+
+
+def _update_adapted_wrapper(skill_dir: Path, target: Path) -> str:
+    """Atomically refresh SKILL.md while leaving the managed marker stable."""
     skill_output = target / "SKILL.md"
     marker = target / ADAPTED_MARKER
     if skill_output.is_symlink() or marker.is_symlink():
         return "skipped"
+    temp_path = _stage_text(
+        skill_output,
+        build_codex_skill_text(skill_dir / "SKILL.md"),
+    )
     try:
-        _atomic_write_wrapper(
-            target,
-            {
-                skill_output: build_codex_skill_text(skill_dir / "SKILL.md"),
-                marker: "generated by ai-toolkit for Codex\n",
-            },
-        )
-    except Exception:
-        if created:
-            try:
-                target.rmdir()
-            except OSError:
-                pass
-        raise
+        os.replace(temp_path, skill_output)
+        _fsync_directory(target)
+    finally:
+        temp_path.unlink(missing_ok=True)
     _sync_auxiliaries(skill_dir, target)
     return "adapted"
+
+
+def _write_text_fsync(destination: Path, content: str) -> None:
+    with destination.open("x", encoding="utf-8") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _fsync_directory(path: Path) -> None:
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    fd = os.open(path, flags)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _remove_staged_wrapper(staging: Path) -> None:
+    if staging.is_symlink() or not staging.is_dir():
+        return
+    for child in staging.iterdir():
+        if child.is_symlink() or child.is_file():
+            child.unlink()
+    try:
+        staging.rmdir()
+    except OSError:
+        pass
 
 
 def _stage_text(destination: Path, content: str) -> Path:
@@ -283,20 +406,6 @@ def _stage_text(destination: Path, content: str) -> Path:
             os.close(fd)
         temp_path.unlink(missing_ok=True)
         raise
-
-
-def _atomic_write_wrapper(target: Path, files: dict[Path, str]) -> None:
-    staged: list[tuple[Path, Path]] = []
-    try:
-        for destination, content in files.items():
-            staged.append((_stage_text(destination, content), destination))
-        for temp_path, destination in staged:
-            if destination.is_symlink():
-                raise RuntimeError(f"Refusing symlinked Codex skill file: {destination}")
-            os.replace(temp_path, destination)
-    finally:
-        for temp_path, _ in staged:
-            temp_path.unlink(missing_ok=True)
 
 
 def _sync_auxiliaries(skill_dir: Path, target: Path) -> None:
@@ -364,15 +473,16 @@ def _render_frontmatter(entries: list[tuple[str, str]]) -> str:
     return "\n".join(f"{key}: {value}" for key, value in entries)
 
 
-def _adapt_body(body: str) -> str:
+def _adapt_body(body: str, platform: str) -> str:
+    label = _PLATFORM_LABELS[platform]
     body = _AGENT_CALL_RE.sub(
-        "Delegate this independent work to a suitable Codex-native subagent.",
+        f"Delegate this independent work to a suitable {label}-native subagent.",
         body,
     )
-    body = body.replace("Agent Teams", "coordinated Codex-native subagents")
-    body = body.replace("`Agent` tool", "Codex-native subagents")
-    body = body.replace("the `Agent` tool", "Codex-native subagents")
-    body = body.replace("Agent tool", "Codex-native subagents")
-    for token, replacement in _SEMANTIC_REPLACEMENTS.items():
+    body = body.replace("Agent Teams", f"coordinated {label}-native subagents")
+    body = body.replace("`Agent` tool", f"{label}-native subagents")
+    body = body.replace("the `Agent` tool", f"{label}-native subagents")
+    body = body.replace("Agent tool", f"{label}-native subagents")
+    for token, replacement in _semantic_replacements(platform).items():
         body = body.replace(token, replacement)
-    return f"{_CODEX_NOTE.strip()}\n\n{body.strip()}\n"
+    return f"{_translation_note(platform).strip()}\n\n{body.strip()}\n"

@@ -188,29 +188,37 @@ import sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
+for skill_file in root.glob("*/SKILL.md"):
+    text = skill_file.read_text(encoding="utf-8")
+    body = text.split("---", 2)[-1]
+    forbidden = (
+        "fork_context", "agent_type=", "send_input", "close_agent",
+        "spawn_agent", "wait_agent", "update_plan", "Agent(",
+        "TeamCreate", "TeamDelete", "SendMessage", "$ARGUMENTS",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "CLAUDE_SKILL_DIR",
+    )
+    assert not any(token in body for token in forbidden), skill_file
+    assert not re.search(r"\bTask(?:Create|List|Update|Get|Output|Stop)\b", body), skill_file
+
 for marker in root.glob("*/.ai-toolkit-codex-adapted"):
     skill_file = marker.parent / "SKILL.md"
-    text = skill_file.read_text(encoding="utf-8")
-    frontmatter, body = text.split("---", 2)[1:]
+    frontmatter = skill_file.read_text(encoding="utf-8").split("---", 2)[1]
     keys = {
         line.split(":", 1)[0]
         for line in frontmatter.splitlines()
         if ":" in line
     }
     assert keys == {"name", "description"}, (skill_file, keys)
-    forbidden = (
-        "fork_context", "agent_type=", "send_input", "close_agent",
-        "spawn_agent", "wait_agent", "update_plan", "Agent(",
-        "TeamCreate", "TeamDelete", "SendMessage", "$ARGUMENTS",
-        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
-    )
-    assert not any(token in body for token in forbidden), skill_file
-    assert not re.search(r"\bTask(?:Create|List|Update|Get|Output|Stop)\b", body), skill_file
 
 orchestrate = (root / "orchestrate" / "SKILL.md").read_text(encoding="utf-8")
 assert "Codex-native subagents" in orchestrate
 assert "planning mechanism available in the current client" in orchestrate
 assert "subagent controls available in the current client" in orchestrate
+build = root / "build"
+assert (build / ".ai-toolkit-codex-adapted").is_file()
+assert (build / "scripts").is_symlink()
+assert "user-supplied task details" in (build / "SKILL.md").read_text(encoding="utf-8")
+assert "installed skill directory" in (build / "SKILL.md").read_text(encoding="utf-8")
 PY
     [ "$status" -eq 0 ]
 }
@@ -320,9 +328,9 @@ PY
     rm -rf "$tmp"
 }
 
-@test "codex-skills: adapted writes are atomic and clean failed staging" {
+@test "codex-skills: adapted writes are transactional for create and update" {
     tmp="$(mktemp -d)"
-    python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null
+    mkdir -p "$tmp/.agents/skills"
 
     run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
 import importlib.util
@@ -341,29 +349,61 @@ module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(module)
 
-source = toolkit / "app" / "skills" / "orchestrate"
 skills_dst = target / ".agents" / "skills"
-skill_file = skills_dst / "orchestrate" / "SKILL.md"
-before = skill_file.read_bytes()
-real_fsync = os.fsync
+orchestrate = toolkit / "app" / "skills" / "orchestrate"
+workflow = toolkit / "app" / "skills" / "workflow"
+real_replace = os.replace
+replace_calls = 0
 
-def fail_fsync(fd):
-    real_fsync(fd)
-    raise OSError("injected adapted staging failure")
+def fail_second_replace(source, destination):
+    global replace_calls
+    replace_calls += 1
+    if replace_calls == 2:
+        raise OSError("injected new-wrapper rename failure")
+    return real_replace(source, destination)
 
 try:
-    with mock.patch("os.fsync", side_effect=fail_fsync):
-        module.sync_codex_skill(source, skills_dst)
+    with mock.patch("os.replace", side_effect=fail_second_replace):
+        module.sync_codex_skill(orchestrate, skills_dst)
+        module.sync_codex_skill(workflow, skills_dst)
 except OSError as error:
-    assert "injected adapted staging failure" in str(error)
+    assert "injected new-wrapper rename failure" in str(error)
 else:
-    raise AssertionError("expected injected adapted staging failure")
+    raise AssertionError("expected injected new-wrapper rename failure")
 
-assert skill_file.read_bytes() == before
-assert not list((skills_dst / "orchestrate").glob(".*.tmp"))
+orchestrate_target = skills_dst / "orchestrate"
+workflow_target = skills_dst / "workflow"
+assert (orchestrate_target / module.ADAPTED_MARKER).is_file()
+assert (orchestrate_target / "SKILL.md").is_file()
+assert not workflow_target.exists()
+assert not list(skills_dst.glob(".workflow.*.tmp"))
+
+skill_file = orchestrate_target / "SKILL.md"
+marker_file = orchestrate_target / module.ADAPTED_MARKER
+before_skill = skill_file.read_bytes()
+before_marker = marker_file.read_bytes()
+with mock.patch("os.replace", side_effect=OSError("injected update failure")):
+    try:
+        module.sync_codex_skill(orchestrate, skills_dst)
+    except OSError as error:
+        assert "injected update failure" in str(error)
+    else:
+        raise AssertionError("expected injected update failure")
+
+assert skill_file.read_bytes() == before_skill
+assert marker_file.read_bytes() == before_marker
+assert not list(orchestrate_target.glob(".*.tmp"))
 PY
     [ "$status" -eq 0 ]
     rm -rf "$tmp"
+}
+
+@test "codex-skills: compatibility docs contain semantic guidance only" {
+    for doc in \
+        "$TOOLKIT_DIR/kb/reference/codex-cli-compatibility.md" \
+        "$TOOLKIT_DIR/kb/reference/skills-catalog.md"; do
+        ! grep -Eq 'spawn_agent|send_input|wait_agent|close_agent|update_plan|fork_context' "$doc"
+    done
 }
 
 @test "codex-skills: skips _lib internal directory" {

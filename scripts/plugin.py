@@ -31,14 +31,19 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import app_dir, inject_section, inject_rule, remove_rule_section
+from _common import app_dir, inject_section, remove_rule_section
 from injection import strip_section, trim_trailing_blanks
-from codex_skill_adapter import cleanup_codex_skills, sync_codex_skill
+from codex_skill_adapter import (
+    cleanup_codex_skills,
+    prepare_codex_skills_dir,
+    sync_codex_skill,
+    unmanaged_codex_skill_names,
+)
 from generate_codex_hooks import generate as generate_codex_hooks
 from install_steps.ai_tools import inject_with_rules
 from paths import HOOKS_DIR as _HOOKS_DIR
 from paths import RULES_DIR, TOOLKIT_DATA_DIR
-from plugin_schema import resolve_hook_event, validate_manifest, validate_references
+from plugin_schema import resolve_hook_event
 
 
 PLUGINS_DIR = app_dir / "plugins"
@@ -511,28 +516,35 @@ def remove_pack_claude(name: str, pack: dict, pack_dir: Path, *, keep_shared_ass
 
 def _install_all_codex_skills(target_root: Path) -> None:
     skills_src = app_dir / "skills"
-    skills_dst = target_root / ".agents" / "skills"
-    skills_dst.mkdir(parents=True, exist_ok=True)
+    skills_dst = prepare_codex_skills_dir(target_root)
+    user_names = unmanaged_codex_skill_names(skills_dst, skills_src)
     for skill_dir in sorted(skills_src.iterdir()):
         if not skill_dir.is_dir() or skill_dir.name.startswith("_"):
             continue
         skill_md = skill_dir / "SKILL.md"
         if not skill_md.is_file():
             continue
+        if skill_dir.name in user_names:
+            continue
         sync_codex_skill(skill_dir, skills_dst)
-    cleanup_codex_skills(skills_dst, skills_src)
+    cleanup_codex_skills(skills_dst, skills_src, user_names)
 
 
 def _install_codex_extra_skills(pack: dict, pack_dir: Path) -> None:
-    skills_dst = CODEX_ROOT / ".agents" / "skills"
-    skills_dst.mkdir(parents=True, exist_ok=True)
+    skills_src = app_dir / "skills"
+    skills_dst = prepare_codex_skills_dir(CODEX_ROOT)
+    user_names = unmanaged_codex_skill_names(skills_dst, skills_src)
     for skill in pack.get("includes", {}).get("skills", []):
         source_dir = _resolve_skill_source(pack_dir, skill)
         if not source_dir:
             print(f"    WARN skill not found: {skill}")
             continue
+        if source_dir.name in user_names:
+            print(f"    Preserved user Codex skill: {skill}")
+            continue
         sync_codex_skill(source_dir, skills_dst)
         print(f"    Ensured Codex skill: {skill}")
+    cleanup_codex_skills(skills_dst, skills_src, user_names)
 
 
 def _install_codex_base() -> None:
@@ -717,8 +729,6 @@ def install_pack(name: str, editor: str) -> bool:
         return False
 
     pack_dir = Path(pack["_dir"])
-    installed_items: list[str] = []
-
     print(f"  Installing: {name} for {editor} ({pack.get('description', '')})")
 
     ok = install_pack_claude(name, pack, pack_dir) if editor == "claude" else install_pack_codex(name, pack, pack_dir)
