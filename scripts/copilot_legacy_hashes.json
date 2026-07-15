@@ -1,0 +1,338 @@
+{
+  "ai-toolkit-a11y-validate.prompt.md": [
+    "566e15c00b670d4f8ca20b670a58238c64fba0dda990de729459c0256a398fa3",
+    "6726a11d036bf019146ce64b548d8192c8dd69ef40ea09b71ea362e41acb9da1",
+    "bce092fbf4555e1a0e3c876106e8bc398f402fb66c68ba5fffd934a0cb9efc00"
+  ],
+  "ai-toolkit-agent-creator.prompt.md": [
+    "ce20eaa2c4f13d685a481eb652f80b82f40641d311e42049216a2dfa98d10c3e",
+    "e6d9d97682b3db446c264365a0ddaccf6d0ecab7019aba46abc9bbe0e8ee8b7b"
+  ],
+  "ai-toolkit-analyze.prompt.md": [
+    "4a18e4c2d5ee9b232cc4fa1aa0601e8d54b1a26af126aa34d9c7ec516d85baad",
+    "6b41e64688985e77889480b50c66d8f5cf0d1bbce1f669dbfb707628e7e7102d"
+  ],
+  "ai-toolkit-architecture-audit.prompt.md": [
+    "2874b5f9e71de409898384b074f767d3d9018c0b1d999bd29bd07ae82f53e654",
+    "42dde069b76238487670ba3c689e984fe7b4397a781bd4e58c2ba9a8a4aa1e96",
+    "64d2b6bd2d3369f91e2a476545ec5aaec144e2f0cbcab89ff49e984424aeb0ae"
+  ],
+  "ai-toolkit-biz-scan.prompt.md": [
+    "4ece1b6d5160646ed37aa8afea5c1406a7cfb0a50a7070649f118898a80021ab",
+    "54b23c98710fdd388794ae36534a42806683a98397a473ea190fe47ca29bd2b9",
+    "e3c96df8e021a9b4e396a3821b7ac507077c64fae4a9ed3b077c5d38a828d6da"
+  ],
+  "ai-toolkit-brand-voice.prompt.md": [
+    "8cb1128beb6cb58894937a11038dca36f2b15b8607c1d56c8ae72aa6e43ccf48",
+    "b12e97c38462b999258ee0c55ac5e83d8e2d4afb139b2b29cfc9960b20083284",
+    "bab43af2236dc82d1d09862b23c2dc201f13d376e72e7adf7ca6c2d00c8e1b31"
+  ],
+  "ai-toolkit-briefing.prompt.md": [
+    "3d7cf8a7c28260e70b45539f35c90ba356459b467b3302dfa6dc8f22cba5ed1d",
+    "bccdf879326851295d5bd305152b9d6cf4ff8ed3a7edd945551a0570d29263a4",
+    "f89d411740eeb50c8a3ac5530af173f605e429e84599add7f443e29d7da70ad4"
+  ],
+  "ai-toolkit-build.prompt.md": [
+    "2993db3e6c4f3fda244f5e2b65f9c42e21d63a95f1bc107ef4b003aa6af76f44",
+    "bdaae67527e66711db9ae9184926ceddfea0004865e38223e32b27b0313e94ca"
+  ],
+  "ai-toolkit-chaos.prompt.md": [
+    "46cc59963cc565373a8acecb03f5a6729bca97bec611b5aaf8dba52c82e1857d",
+    "bbd073af82a83db4c47d37f011b935df08040a69569a898c7354a93e1c0fe662"
+  ],
+  "ai-toolkit-ci.prompt.md": [
+    "1e2a6ee6da06d14be99934335685e830c809c52a9e2be6664c757ec29735841d",
+    "b1d1b88ba8d3baac4b18f086edb55dc2ef1ea597e913bcab4ab0dd619fb3ec1c",
+    "da5d2ecd8e259132c2ec9ec6e945d45bce09e4d04d6074943dfd549666c40fc1"
+  ],
+  "ai-toolkit-code-style.instructions.md": [
+    "189988466006dbd3cd1c1bf6948fb6375cec80b93282b70f26be97e3de81b666"
+  ],
+  "ai-toolkit-command-creator.prompt.md": [
+    "26a8b0f3ccb9ab7cfc113434429fcb6e07e1dee619921a6a0e02ef56e82e8db9",
+    "60154935686cfa32842d1f851d934f9cc7a27e935bb4f232b7bf3b2dfe43bc3d"
+  ],
+  "ai-toolkit-commit.prompt.md": [
+    "5073cf04ae3eabd4a6a897f96716c1b9e0a8787505bcf1df2b690c72db84a75d",
+    "99ad0f3e57d5a933fc8d964f4c5944000537cd84e0f0a4b8639dfc7401244c61"
+  ],
+  "ai-toolkit-council.prompt.md": [
+    "32bc42936f4292305fad09f3a7b4f597ff630285c61c4b948e97424304c9f19d",
+    "df1aaa15d1c8ecaa89effc434acab66847a3a9f52e834a0402a72409c90d1be8"
+  ],
+  "ai-toolkit-cve-scan.prompt.md": [
+    "2af62ab6790537c75f2efade700ce846645620dca19b5a1336e20595b847b008",
+    "ca273532235875233c1613f5b27b4a7f03ad0bfee09132c7514def29defd5025"
+  ],
+  "ai-toolkit-debug.prompt.md": [
+    "388ec117ffec22db469b4fa0c1cbff678bcb92448bb74eab8f4d451e583fc1fd",
+    "59b882ea2c4918ef78511cba62fcfd7cb553f9b431edbf16632fc7ced2895192",
+    "754d55d2781590090955b59efddc4826bffb63e846fe89ba16f3f4f2d460abd2"
+  ],
+  "ai-toolkit-deploy.prompt.md": [
+    "4a3220031c08767659f3a476c62889154ba226a90e13e7a686801bea4666c8da",
+    "8563f3d055e16f3bcf410bfa471c229eeb5f1e3cbe7fda7981530eb6fb42eed2"
+  ],
+  "ai-toolkit-design-an-interface.prompt.md": [
+    "094dc89017ecd2b9f58256ded5b24b9c980695e0ffd8f32753a4d285b3ce777f",
+    "1f02de0b1975dc3cb59f2bcf1bdf51f46f47b6c460b46f6b6248108aa5473feb",
+    "3a07fb13896b8fe4ad917796d35a0b2e6e976028ba526bcb4cfcb92080688cd9"
+  ],
+  "ai-toolkit-docs.prompt.md": [
+    "0b099c3b7a0671aea62185d1ca25f8de5bf33dfaa25566d035a67d1f9700658a",
+    "4c4544789690b5031089464206d99210b4b3e8686cfe463a47491edaf4d4d0e8"
+  ],
+  "ai-toolkit-evaluate.prompt.md": [
+    "86b722260cc2d08cc14a78453d1e5587e4ce5834438656eae112f540194701f0",
+    "b0846843ec06025608b93f5ee21b6447fae49a4dbd8d047a91a58ac642586704"
+  ],
+  "ai-toolkit-evolve.prompt.md": [
+    "63847acfa094c88cc50fe43ddd5ccb963961693bd367710fbbf04a6bd33cf6d9",
+    "a4c5da4e58743feae975d96f2f75876265a64fe883253c94dd3b3bde3d94dfa0",
+    "fc7ed63dcbdbbf9ed2ef4e9456ded4b8ed569ef3bf123f08d4ac19eb64411470"
+  ],
+  "ai-toolkit-explain.prompt.md": [
+    "08093dd1f92ce416fdf7990102053f5e3386e9d04d3f51ad834f3a1b0166a13d",
+    "7891a934d0ae07c094f05b4faa3288aa39a04f36b84c65e404543673ecbaaa79",
+    "f5db9924417e553eb43bfb4499c477ae083ba76ffaefc5efca8323e2ed5af97d"
+  ],
+  "ai-toolkit-explore.prompt.md": [
+    "402b9a8293625bc89ffb90d0d81c4e2eba19fca1f99d33969c1b4a0659d478ce",
+    "78ccbc874126f9e288e0ef6f5370b2717d494c499abab9fddf3f796c9e3a3d18",
+    "c81347cd901d5c03921bd4f0b85fe8b7beb596399eeb14b31fe30d85576e05c1"
+  ],
+  "ai-toolkit-fix.prompt.md": [
+    "6c53e3aab964cc590fa715be415f1d80cfb92358989367ce2e6d0102993c0df9",
+    "7a40099611a5336ae9ed7f019930bf517327d3ef68487cc98da1bd3e6b573ad2"
+  ],
+  "ai-toolkit-grill-me.prompt.md": [
+    "09b4ce3f93131069ba33d7ae2768557227fd46d492c8512d85846670ba8cab5a",
+    "0b0a0ac0255821b0b06f165f4560e605fb46e3e61309b5f492a8a7a57a31da61"
+  ],
+  "ai-toolkit-health.prompt.md": [
+    "90dd49fc58a7745cd75b0506ab585efdef4edfb35eae340dc0d0d8a39096bb0f",
+    "d3349eec77b648e6a9a42c81402d9ddc2d2a44ee0c02c27c172e5141e0f926b6"
+  ],
+  "ai-toolkit-hipaa-validate.prompt.md": [
+    "1fe37ea0a68125cf01e6ae90f5b51e7eb830f1daf5870ad6d164c5f17b196caa",
+    "cf32c5dcfbb3788e450cac65ced426d91cd332b090c035b67406240051f6c948"
+  ],
+  "ai-toolkit-hook-creator.prompt.md": [
+    "112a4bd5caea694781bee5b325ee16a1e3f08c82074123fa674d2482ee17d99c",
+    "22b863bc2b380523aed4d419679b7bdb0c050d496ee33537f0ee65050ebb605b",
+    "2a660a2f211356026daff2dee37199cb3f228ad09e70fca445d059639d5c1240",
+    "f54a7c0b9e9f64642719782d0996cdf2925341544ff6513442209d77f3d407c9"
+  ],
+  "ai-toolkit-index.prompt.md": [
+    "00db72aa1680725f230b7cb965f58317b371f1720eb0c03262ebf3ec9f5305b8",
+    "0e86c87cda6963c09b7d6d469b7d79759ea354672a8230e8cb411adf18a2e973",
+    "762615724c87e5bb674ba50da68b122f30487a28433f31d5b1aafc1cccefb054"
+  ],
+  "ai-toolkit-instinct-review.prompt.md": [
+    "3e8781a30833474abe49e64bcc0644ce0e6e03c28ae66aff7510fcddccb21b57",
+    "57e28a3d106ae315002a9cdf1f266a08db71bb500d1a3b39cb389ab0393c3fa4",
+    "73369e5d507d5bf6b6274844f9075358e956430833f99a99624cb74179481e96"
+  ],
+  "ai-toolkit-introspect.prompt.md": [
+    "7f91e28e79109525f23df92587102d4a42a94f605b6cb10dcb65b9e350be2e7e",
+    "f9186176cfdcb83af3a0069d84b38404648cae11d13db28d576950f5800faab7"
+  ],
+  "ai-toolkit-lang-common.instructions.md": [
+    "d4f51502d1ef5ae39027aceb8ac7bb7ef65f0d2219c4315171d14bc7f2e75e67"
+  ],
+  "ai-toolkit-lang-cpp.instructions.md": [
+    "55f8a767f9d365e03fc47ad4606a6e9299a5504f63a6779c78fdf6117d15259a"
+  ],
+  "ai-toolkit-lang-csharp.instructions.md": [
+    "f60e8d358badfe9c13b2e76e0eca222bec473fe92f4969f2c94b21fc4e612aff"
+  ],
+  "ai-toolkit-lang-dart.instructions.md": [
+    "8bcb8c3de3826c9accd5f63ca2df8198851febbf25028b04960f8fec501c94e9"
+  ],
+  "ai-toolkit-lang-golang.instructions.md": [
+    "b631cb4ed9f64fb2231216b1f6c4058d81a07362561462282eab450d03bcd19a"
+  ],
+  "ai-toolkit-lang-java.instructions.md": [
+    "98aae16c45c5eef1a2d43d2c779ca46d26446509fb6c0e717aa5086233bdc724"
+  ],
+  "ai-toolkit-lang-kotlin.instructions.md": [
+    "cd6126505da66f69998e958f4719e0a45d3bc774dea24b3e73e69849163d5799"
+  ],
+  "ai-toolkit-lang-php.instructions.md": [
+    "6ec598931fe2c6ee2cd7d141f68f0412ecbfd264c94ae8b7a476e9b86c15cc6e"
+  ],
+  "ai-toolkit-lang-python.instructions.md": [
+    "1c721dcd0a35c463d74c2423a89f4ef9c69074f110bc1ad2fb2b9707f25e3f71"
+  ],
+  "ai-toolkit-lang-ruby.instructions.md": [
+    "d2aa9a4bf25c8e144a1a425345ad3f21082fda3460447f9db4176dad8bc09e5f"
+  ],
+  "ai-toolkit-lang-rust.instructions.md": [
+    "0b5279d6fab9214dd98472b74eaeafc63af78e1b86740e4ba96da4109f5eabeb"
+  ],
+  "ai-toolkit-lang-swift.instructions.md": [
+    "824965cc9c6a6189ee57892587c97562792869adb6de6247c8b868fa6cf51110"
+  ],
+  "ai-toolkit-lang-typescript.instructions.md": [
+    "2a8003741219522fab87e6b9b6c7388bc0852bdcb6c58be45551267788665d5f"
+  ],
+  "ai-toolkit-lint.prompt.md": [
+    "211edebad5038f39671c8bca70c67d04aa404d4f6bedc47acac8c7804ffe5c9f",
+    "f4235470b8f47fe540fdfa7378f126c9fffc3e0644bba7590bca7cc5c2bc100d"
+  ],
+  "ai-toolkit-mcp-builder.prompt.md": [
+    "7c07ac15826bf938022b02baed9bf61b26fc73ab06663f0923f24b8374cd3cf4",
+    "8073e7c857c2351f815f8d7e703558a7cba12126a62a3634f4048ad0a79ebdd0",
+    "a8800f4493f0bbdef8d7a8cd56ec5a4dd6109979f28c70efbfa11d4700d86702"
+  ],
+  "ai-toolkit-mem-search.prompt.md": [
+    "36f68d50de09d34fe60c17e1fd37583d26bb46ae84002cd9ada8401d480f906b",
+    "68c214ff6ba483e2ff07e598e0d5c55278defc2ff7242b1f1982fded8e006ef0",
+    "fef1fad1855531929d1499b62d3c34d97a669957985c305ccaf6252b4ea34f0c"
+  ],
+  "ai-toolkit-migrate.prompt.md": [
+    "49663a91baba093268e1da3530d2a40717cb4f422ab4fea1c79c3ee23fa70023",
+    "558b85dace223a8dd40f74d9f4249bd44a6b0721b1baafe269418a6fb43ca8e0",
+    "7f1e4f6906e24aace5255ecc8255f8a43a77c739e2d5adb6f1249c78273460e4"
+  ],
+  "ai-toolkit-night-watch.prompt.md": [
+    "622f424406d0a920de7d0ec2d634bc4580acdf2af7bcf0c44e61fd4ba462c41d",
+    "6c14717a10a676ecc0e91ef66ec3d897013d1ed2d9b2a54ceaac56e51388fbc9"
+  ],
+  "ai-toolkit-onboard.prompt.md": [
+    "7526b34e93f6060ae02882974d6645eebf7e6fe7d85290cba65d1f6d3a045ece",
+    "7993cd8f47950c2012a5ea45d8817bee923889acb53c4a2ed65b29d553348cab"
+  ],
+  "ai-toolkit-orchestrate.prompt.md": [
+    "1e8b9ac89ad23d3e1c1ea5854838a671f770017e765bbcc901f87eb561087992",
+    "703103b5c5cdef0a50416349d1c54b86177e5ef6f532a19799fc4dd5f74c9d85"
+  ],
+  "ai-toolkit-panic.prompt.md": [
+    "da4717dfb043ddf790b56e58191318e8a92df87342b47a8cdc1a8e6912509a04",
+    "e065424d3de6d32968ef776c6cf43200f19c7d903280c7dc75eba0258a5429a5"
+  ],
+  "ai-toolkit-persona.prompt.md": [
+    "58d17bcdaa9f4c0470ef79a85a3e4370f23b351f1003af5d15d842eb170f95a5",
+    "9657d373772236f809bc4f28dea78bc2b56ab9c2be7b07f80d3e8795c647551a",
+    "a9568b00740ff81c1e78e00802e613830bb20d6c09e216a6556a7c3945435d78"
+  ],
+  "ai-toolkit-plan.prompt.md": [
+    "56716d1051331ddbba2222f5af48f2d8e70558b0b2204214075abd8c7a11d6d8",
+    "6515f9c2502986c8c233d69cda31ac52a649c167ac494f5b7509f40a491509b5",
+    "7641b815b253015c9ede8552f2d5b2736f73d024ea81222e3d5930a8e3d723b3"
+  ],
+  "ai-toolkit-plugin-creator.prompt.md": [
+    "4128d9a588409f736ea72e548bf03a3ce442a9aef4222ae356e7c3ecfa0e4b96",
+    "abadd07979c50cbdf0fb948d9a4319d84a131e6d6e5d421da2f406eb47f3410e"
+  ],
+  "ai-toolkit-pr.prompt.md": [
+    "476812678e4015d6b422cbe0f69b0c6e478415c3a72fa45a299749cf12ecf0b5",
+    "ab10f65360badd5334e935c31852be0cfdc4961fe84f28f34a4592285d5dc2a8"
+  ],
+  "ai-toolkit-prd-to-issues.prompt.md": [
+    "568d73d89ab9582735de245b3090ef1bd1410afdad24b058c83f1bd656e99ef6",
+    "6369dc3e5de848c1cb6f99d63ddf7d19f0082019ac1a4dae7d61b65696093675"
+  ],
+  "ai-toolkit-prd-to-plan.prompt.md": [
+    "11530d152b63971349f377e4b72a531e9ff3d052ac5f8b826dee91cb1562145b",
+    "fdb95c5eb348932091b75c83c765dda7c57e5efca1cdf0d1223154ad8ecf4182"
+  ],
+  "ai-toolkit-predict.prompt.md": [
+    "d20314c213022f2796dba62b93273498f961c17a0ca5a7c2bb42124d8b3f21e4",
+    "fffcf0a502322ba06e618f6c82303c99bc0d67a38253bbb913a8f3cdac1e231c"
+  ],
+  "ai-toolkit-qa-session.prompt.md": [
+    "682eb0e936a69bf18fc337ade0e516292364ba9678093fe7d2b587f8e18cc188",
+    "7a064568c125c406617c750a01156b7acc0ade2323d42139da6c7f52282b9ce4"
+  ],
+  "ai-toolkit-quality-standards.instructions.md": [
+    "9d51b249db64a1256c689e961ac2aec7c6a698a3811ff765002c3a418f0cabb7"
+  ],
+  "ai-toolkit-refactor-plan.prompt.md": [
+    "aa5af67ddc315158138df2eed68121bc0fdc8451b5045a7381b999b246214376",
+    "c1fc8f8c1d6d8f840683f50734011d4ddd9b7fa013dfac87424b79124ddedeb9",
+    "c4750fc5697704f43ef621a5a3495a1ab9224f9f237e49d4c510a86762c4f438"
+  ],
+  "ai-toolkit-refactor.prompt.md": [
+    "2082eb985389e17a04a71b5bf8f53f5df8849e3bf0c01a4d3143088dc801daaf",
+    "90228b6d003641bc8c5c5b6831d1b43cf11db9e523bc2278d3ca69c1e5febf85"
+  ],
+  "ai-toolkit-repeat.prompt.md": [
+    "46e651523166606f305de23440d6e46d3087ba7610d0b9226ca02700a409c3e6",
+    "d4ee34183a68999cf435cb3b3d9c50c06565e0c74649e25f8aeba5dd431eb13c"
+  ],
+  "ai-toolkit-review.prompt.md": [
+    "866746da510176f505804feb9040f7ddb9fed5203be10370b4273f416ecd7ac6",
+    "d17f1275cce3e5d0d6a4145458227584aea2f5486ae8b825315ae79b5c15a137"
+  ],
+  "ai-toolkit-rollback.prompt.md": [
+    "879fa1fc98cdd87d9e9b584de39b0f4d59a8e88bf20af1ef58565975c57a12e0",
+    "b12ee98a5153694a1bcb07fa04a1c4191d576e4a5eb911ff4cef3bd6c6c739bd"
+  ],
+  "ai-toolkit-search.prompt.md": [
+    "72f38ce77929e40962aedc3fde7300000d1595e1a479ddb9093ff021d36dfa34",
+    "c4be3d460ca73c5bc68e9aa33434139a23c18a72c763e74d497c42a6b8921353"
+  ],
+  "ai-toolkit-security.instructions.md": [
+    "bdcae47a556c8e859b876f4a79991162b0eca3c2f4e0f57d00565f741dfb5061"
+  ],
+  "ai-toolkit-seo-validate.prompt.md": [
+    "0ebaf0491ecf4e6a85ab85ca447c10a73b276b563a011bada696b38446262fd4",
+    "147b5d8255cd530cec26591256945d978ff7b9162cb2b6946a9e1eee81dfe34b",
+    "49ea4c60e4f406238c59111fd4362685950907c85e26d3a062dffa7ca0b63ed2"
+  ],
+  "ai-toolkit-skill-audit.prompt.md": [
+    "251d997e185d06c1c216ead134f448f4873b2039c2ddb3419f68bfe4abfb878c",
+    "2777d8758a53874936ccda0a53833bed94f127310d87236548d7de10d33e01ce",
+    "fcda94c162810ca490c69b0c1db0d584333382d08fed9b7406dca4165a930ca4"
+  ],
+  "ai-toolkit-skill-creator.prompt.md": [
+    "6482c1c40560629c87cb189ad61453608b5d089ad8075d58e8b29394f8b55dcd",
+    "772a9ead171814c6566778faee11c298fbbca85d5910940fa868d4323f2ffbf3",
+    "7da49db5849c0870be13acb39e7a581fe50add99240b5b1d819916ccb24c0700"
+  ],
+  "ai-toolkit-subagent-development.prompt.md": [
+    "8811e086737f997e519c0cd517e1516c702de3e2ffbc553ce72ff6bfdf744ad5",
+    "b33b0c94722c0542080c0ae04a59c1117d14c5514efb9d101b837eba9fbecfb4"
+  ],
+  "ai-toolkit-swarm.prompt.md": [
+    "2fc03717c3ac41eb2cd2436d582d5c709608b544bafb438dad1f8c1ed8c45877",
+    "7c03647e1731a2e75bf3b6162990c4ccba7a33e32434f26b775c289dbb5103ff",
+    "ba4aab3b7d7b4522278f2299290962ce0a4667b2876865d26eaedc9daf3c50e9",
+    "e85fcc264989677800a20d66904f694e339ee2375efa98fcd0e8ed47d309c328"
+  ],
+  "ai-toolkit-tdd.prompt.md": [
+    "605a095c3a9f4d57f4c50b30561f8fcd97929c923a918e3094b89676871b64f0",
+    "8bb44eb6a5c0cac203087aab2a9b2fe04c3a5456a484c2b783d9222890dc0b02"
+  ],
+  "ai-toolkit-teams.prompt.md": [
+    "4d390f775489f8bae4aabfe0673b3feff861ed65acdfd553ee8fcebeaebbf44e",
+    "fb51269e3900c87ce33e57abaad7c16b57f4d4953b338050c68de679cce180af"
+  ],
+  "ai-toolkit-test.prompt.md": [
+    "902c09df8c4203e0b10a15d46c57d309378f92612e2feb5f4f98929216fcfb94",
+    "d114faed0020f380134fd658b60a639ce79f4415dd0e0c13c9408a2dc865195c"
+  ],
+  "ai-toolkit-testing.instructions.md": [
+    "58ab672adb877d8877121422d4fb498ddcdd7617c2dfa06ad9a73a1915f61d23"
+  ],
+  "ai-toolkit-triage-issue.prompt.md": [
+    "260659138f9ccf5d307271cb68aa4697a40a3f0334b2a81918a6e562b11e99ab",
+    "c09821f197221ba895f9409acb998173a3d42f67a049595ffe72da3c4294dc40"
+  ],
+  "ai-toolkit-ubiquitous-language.prompt.md": [
+    "6beeada96590b2c7ba406ca358169821f5427357455cf209d23485579fef0006",
+    "9a2062c16efe747b5fbbf069b7cc0927f4abac6cf3a3376b10e261e1fdc44d10"
+  ],
+  "ai-toolkit-workflow.instructions.md": [
+    "7e83f39be1f9376dde91c3dd37e650740196eb6ce2e46b0343bf0deb0926bdf9"
+  ],
+  "ai-toolkit-workflow.prompt.md": [
+    "4fd94f09e6bd7f8d71330f8c58ef163d00b83f0c048b65948d5c1d41ea764a58",
+    "dc66038cd865ee07cd92dd04017dd8aea98cf4348da24f46ba9dc7def8bad177"
+  ],
+  "ai-toolkit-write-a-prd.prompt.md": [
+    "2bcd3889b8df7be6fde99da8f8ed35c0ed352a9403ce2a9e4d04b6b3ef97822d",
+    "f6877c2acd894ef7124b95cb7d4696cdf7f0503c1edbe87d52be8056b525b365"
+  ]
+}

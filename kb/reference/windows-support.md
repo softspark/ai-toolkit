@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [windows, wsl, install, uninstall, dependencies, hooks, security]
 created: "2026-04-24"
-last_updated: "2026-07-14"
+last_updated: "2026-07-15"
 description: "Windows support model for ai-toolkit: WSL, Git Bash, dependency detection, hooks, and fail-closed managed mutations."
 ---
 
@@ -41,8 +41,9 @@ Cross-platform hooks should keep the Bash entrypoint small and delegate complex 
 
 ## Managed Mutation Safety
 
-Managed cleanup by `ai-toolkit uninstall`, external hook injection/removal, and
-native Codex hook generation require POSIX `dir_fd` and `O_NOFOLLOW` support.
+Managed cleanup by `ai-toolkit uninstall`, Copilot profile downgrade cleanup,
+external hook injection/removal, and native Codex hook generation require POSIX
+`dir_fd` and `O_NOFOLLOW` support.
 These primitives are the platform prerequisite for pinning directories between
 a trusted configuration root and the file being changed, so a symlink swap
 cannot redirect a mutation outside that root. Absolute trusted roots are opened

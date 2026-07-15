@@ -374,6 +374,22 @@ old_instruction = (
 )
 instruction_path = instructions / "ai-toolkit-security.instructions.md"
 instruction_path.write_text(old_instruction, encoding="utf-8")
+quality_path = instructions / "ai-toolkit-quality-standards.instructions.md"
+quality_path.write_text('''---
+applyTo: "**"
+description: Quality standards — tests, safety, operational integrity
+---
+
+# Quality Standards
+
+* "Green tests" is the only definition of Done — forced merges on red tests are unacceptable
+* All public APIs must have type annotations/signatures
+* No data loss: never delete files without backup verification or using reversible operations
+* No blind execution: never run generated code without review
+* No infinite loops: all autonomous loops must have a maximum iteration count
+* Commands like `rm -rf`, `DROP TABLE`, `FORMAT` require explicit user confirmation
+* Never delete audit logs or archives without explicit approval and backup
+''', encoding="utf-8")
 
 skill_file = toolkit / "app" / "skills" / "fix" / "SKILL.md"
 description = module.frontmatter_field(skill_file, "description")
@@ -394,8 +410,10 @@ prompt_path.write_text(old_prompt, encoding="utf-8")
 
 module.generate(target, emit_agents=False)
 instruction = instruction_path.read_text(encoding="utf-8")
+quality = quality_path.read_text(encoding="utf-8")
 prompt = prompt_path.read_text(encoding="utf-8")
 assert module.MANAGED_MARKER in instruction
+assert module.MANAGED_MARKER in quality
 assert module.MANAGED_MARKER in prompt
 assert instruction != old_instruction
 assert prompt != old_prompt
@@ -403,6 +421,159 @@ assert prompt.count("\n---\n") >= 2
 assert "$ARGUMENTS" not in prompt
 PY
     [ "$status" -eq 0 ]
+    rm -rf "$tmp"
+}
+
+@test "disabled Copilot surfaces remove exact v4.14 legacy output only" {
+    local tmp; tmp="$(mktemp -d)"
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import importlib.util
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+spec = importlib.util.spec_from_file_location(
+    "generate_copilot", toolkit / "scripts" / "generate_copilot.py"
+)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(module)
+
+instructions = target / ".github" / "instructions"
+prompts = target / ".github" / "prompts"
+instructions.mkdir(parents=True)
+prompts.mkdir(parents=True)
+quality_v414 = '''---
+applyTo: "**"
+description: Quality standards — tests, safety, operational integrity
+---
+
+# Quality Standards
+
+* "Green tests" is the only definition of Done — forced merges on red tests are unacceptable
+* All public APIs must have type annotations/signatures
+* No data loss: never delete files without backup verification or using reversible operations
+* No blind execution: never run generated code without review
+* No infinite loops: all autonomous loops must have a maximum iteration count
+* Commands like `rm -rf`, `DROP TABLE`, `FORMAT` require explicit user confirmation
+* Never delete audit logs or archives without explicit approval and backup
+'''
+(instructions / "ai-toolkit-quality-standards.instructions.md").write_text(
+    quality_v414,
+    encoding="utf-8",
+)
+debug = next(item for item in module._user_invocable_skills() if item[0] == "debug")
+(prompts / "ai-toolkit-debug.prompt.md").write_text(
+    module._legacy_prompt_file(debug[1], debug[3]),
+    encoding="utf-8",
+)
+(instructions / "ai-toolkit-user.instructions.md").write_text(
+    "user instruction\n",
+    encoding="utf-8",
+)
+(prompts / "team.prompt.md").write_text("user prompt\n", encoding="utf-8")
+
+module.generate(
+    target,
+    emit_agents=False,
+    emit_skills=False,
+    emit_instructions=False,
+    emit_prompts=False,
+    cleanup_disabled=True,
+)
+
+assert not (instructions / "ai-toolkit-quality-standards.instructions.md").exists()
+assert not (prompts / "ai-toolkit-debug.prompt.md").exists()
+assert (instructions / "ai-toolkit-user.instructions.md").read_text() == "user instruction\n"
+assert (prompts / "team.prompt.md").read_text() == "user prompt\n"
+PY
+    [ "$status" -eq 0 ]
+    rm -rf "$tmp"
+}
+
+@test "disabled Copilot surfaces remove exact v3 legacy catalog" {
+    local tmp; tmp="$(mktemp -d)"
+    mkdir -p "$tmp/source" "$tmp/project" "$tmp/home"
+    git -C "$TOOLKIT_DIR" archive v3.0.0 | tar -x -C "$tmp/source"
+    (cd "$tmp/source" && HOME="$tmp/home" AI_TOOLKIT_NO_CUSTOM_RULES=1 \
+        PYTHONPATH="$tmp/source/scripts" python3 -c \
+        'import sys; from pathlib import Path; from generate_copilot import generate, LANG_GLOBS; generate(Path(sys.argv[1]), language_modules=[f"rules-{name}" for name in LANG_GLOBS])' \
+        "$tmp/project") >/dev/null 2>&1
+    [ "$(find "$tmp/project/.github" -type f -name 'ai-toolkit-*' | wc -l)" -gt 0 ]
+    printf '%s\n' 'user instruction' > \
+        "$tmp/project/.github/instructions/team.instructions.md"
+    printf '%s\n' 'user prompt' > "$tmp/project/.github/prompts/team.prompt.md"
+    cp -R "$tmp/project" "$tmp/project-standard"
+
+    python3 - "$TOOLKIT_DIR" "$tmp/project" "$tmp/project-standard" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import generate_copilot as module
+
+module.generate(
+    Path(sys.argv[2]),
+    emit_agents=False,
+    emit_skills=False,
+    emit_instructions=False,
+    emit_prompts=False,
+    cleanup_disabled=True,
+)
+standard = Path(sys.argv[3])
+module.generate(
+    standard,
+    language_modules=["rules-python", "rules-typescript"],
+    emit_agents=False,
+    emit_skills=False,
+)
+for directory in (
+    standard / ".github" / "instructions",
+    standard / ".github" / "prompts",
+):
+    for path in directory.glob("ai-toolkit-*"):
+        assert module.MANAGED_MARKER in path.read_text(encoding="utf-8"), path
+PY
+
+    [ -z "$(find "$tmp/project/.github/instructions" \
+        "$tmp/project/.github/prompts" -type f -name 'ai-toolkit-*')" ]
+    grep -q '^user instruction$' \
+        "$tmp/project/.github/instructions/team.instructions.md"
+    grep -q '^user prompt$' "$tmp/project/.github/prompts/team.prompt.md"
+    grep -q '^user instruction$' \
+        "$tmp/project-standard/.github/instructions/team.instructions.md"
+    grep -q '^user prompt$' "$tmp/project-standard/.github/prompts/team.prompt.md"
+    rm -rf "$tmp"
+}
+
+@test "emit false keeps its public skip-only behavior without cleanup flag" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_copilot.py" "$tmp" >/dev/null 2>&1
+    python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+from unittest import mock
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import generate_copilot as module
+
+with mock.patch.object(
+    module,
+    "_desired_instruction_files",
+    side_effect=AssertionError("disabled instructions were rendered"),
+):
+    module.generate(
+        Path(sys.argv[2]),
+        emit_agents=False,
+        emit_skills=False,
+        emit_instructions=False,
+        emit_prompts=False,
+    )
+PY
+    [ -f "$tmp/.github/instructions/ai-toolkit-security.instructions.md" ]
+    [ -f "$tmp/.github/prompts/ai-toolkit-debug.prompt.md" ]
     rm -rf "$tmp"
 }
 
@@ -574,6 +745,48 @@ else:
 after = {path.name: path.read_bytes() for path in root.glob("*") if path.is_file()}
 assert after == before
 assert not list(root.glob(".*.tmp"))
+PY
+    [ "$status" -eq 0 ]
+    rm -rf "$tmp"
+}
+
+@test "generate_copilot.py cleanup fails before writes without secure dir_fd" {
+    local tmp; tmp="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_copilot.py" "$tmp" >/dev/null 2>&1
+    printf '%s\n' '<!-- ai-toolkit-managed: github-copilot -->' changed > \
+        "$tmp/.github/instructions/ai-toolkit-security.instructions.md"
+    printf '%s\n' '<!-- ai-toolkit-managed: github-copilot -->' stale > \
+        "$tmp/.github/prompts/ai-toolkit-retired.prompt.md"
+
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import generate_copilot as module
+
+
+def snapshot(path):
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in sorted(path.rglob("*"))
+        if item.is_file()
+    }
+
+
+before = snapshot(target)
+module.secure_fs.SECURE_DIR_FD = False
+try:
+    module.generate(target, emit_agents=False)
+except RuntimeError as error:
+    assert "No files were changed" in str(error), str(error)
+else:
+    raise AssertionError("expected secure cleanup failure")
+
+assert snapshot(target) == before
+assert not list(target.rglob("*.tmp"))
 PY
     [ "$status" -eq 0 ]
     rm -rf "$tmp"

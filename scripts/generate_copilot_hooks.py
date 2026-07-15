@@ -18,6 +18,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import secure_fs
+from secure_fs import SecureDestination, run_secure_transaction
+
 
 OWNER_KEY = "AI_TOOLKIT_HOOK_OWNER"
 OWNER_VALUE = "ai-toolkit"
@@ -433,13 +436,11 @@ def _validate_entry(event: str, entry: Any) -> None:
             raise ValueError(f"Copilot {event} {key} must be positive")
 
 
-def _is_managed_config(path: Path) -> bool:
-    if path.is_symlink() or not path.is_file():
-        return False
+def _is_managed_config_content(content: bytes) -> bool:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(content.decode("utf-8"))
         _validate_document(data)
-    except (OSError, json.JSONDecodeError, ValueError):
+    except (UnicodeError, json.JSONDecodeError, ValueError):
         return False
     entries = [entry for values in data["hooks"].values() for entry in values]
     return bool(entries) and all(
@@ -448,12 +449,28 @@ def _is_managed_config(path: Path) -> bool:
     )
 
 
+def _is_managed_config(path: Path) -> bool:
+    if path.is_symlink() or not path.is_file():
+        return False
+    try:
+        return _is_managed_config_content(path.read_bytes())
+    except OSError:
+        return False
+
+
+def _is_managed_script_content(content: bytes) -> bool:
+    try:
+        return SCRIPT_MARKER in content[:256].decode("utf-8")
+    except UnicodeError:
+        return False
+
+
 def _is_managed_script(path: Path) -> bool:
     if path.is_symlink() or not path.is_file():
         return False
     try:
-        return SCRIPT_MARKER in path.read_text(encoding="utf-8")[:256]
-    except (OSError, UnicodeError):
+        return _is_managed_script_content(path.read_bytes())
+    except OSError:
         return False
 
 
@@ -551,6 +568,106 @@ def copilot_home(home: Path | None = None) -> Path:
         return Path(configured).expanduser().absolute()
     base = Path.home() if home is None else Path(home).expanduser().absolute()
     return base / ".copilot"
+
+
+def _cleanup_targets(
+    target_dir: Path,
+    config_root: Path | None,
+) -> tuple[Path, Path, Path, list[SecureDestination]]:
+    """Resolve and validate every hook-cleanup destination without mutation."""
+    target_dir = Path(target_dir).expanduser().absolute()
+    project_install = config_root is None
+    customization_root = (
+        target_dir / ".github"
+        if project_install
+        else Path(config_root).expanduser().absolute()
+    )
+    hooks_dir = customization_root / "hooks"
+    assets_dir = hooks_dir / "ai-toolkit"
+    config_path = hooks_dir / CONFIG_NAME
+    script_path = assets_dir / SCRIPT_NAME
+    _assert_safe_paths([
+        (customization_root, "customization root"),
+        (hooks_dir, "hooks directory"),
+        (assets_dir, "hook assets directory"),
+        (config_path, "hook config"),
+        (script_path, "hook runtime"),
+    ])
+    existing_paths: list[tuple[Path, str]] = []
+    if config_path.exists():
+        existing_paths.append((config_path, "hook config"))
+    if script_path.exists():
+        existing_paths.append((script_path, "hook runtime"))
+    trusted_root = target_dir if project_install else customization_root
+    destinations = [
+        SecureDestination(path, trusted_root, f"Copilot {label}")
+        for path, label in existing_paths
+    ]
+    return hooks_dir, config_path, script_path, destinations
+
+
+def _require_secure_cleanup() -> None:
+    if secure_fs.SECURE_DIR_FD:
+        return
+    raise RuntimeError(
+        "Copilot hook cleanup requires POSIX dir_fd and O_NOFOLLOW; "
+        "No files were changed"
+    )
+
+
+def preflight_cleanup(
+    target_dir: Path,
+    *,
+    config_root: Path | None = None,
+) -> None:
+    """Fail before installer mutations when hook cleanup cannot run safely."""
+    _, _, _, destinations = _cleanup_targets(target_dir, config_root)
+    if not destinations:
+        return
+    _require_secure_cleanup()
+    run_secure_transaction(destinations, lambda _transaction: None)
+
+
+def cleanup(target_dir: Path, *, config_root: Path | None = None) -> None:
+    """Remove only the managed Copilot hook bundle for a profile downgrade."""
+    hooks_dir, config_path, script_path, destinations = _cleanup_targets(
+        target_dir,
+        config_root,
+    )
+    if not destinations:
+        return
+    _require_secure_cleanup()
+
+    def remove_managed(transaction) -> bool:
+        contents = {
+            destination.path: transaction.initial_content(destination)
+            for destination in destinations
+        }
+        config_content = contents.get(config_path)
+        script_content = contents.get(script_path)
+        config_owned = (
+            config_content is None or _is_managed_config_content(config_content)
+        )
+        script_owned = (
+            script_content is None or _is_managed_script_content(script_content)
+        )
+        if not config_owned or not script_owned:
+            print(
+                f"Warning: preserving user-owned Copilot hook bundle at '{hooks_dir}'",
+                file=sys.stderr,
+            )
+            return False
+        for destination in destinations:
+            transaction.unlink(destination)
+        return True
+
+    if run_secure_transaction(destinations, remove_managed):
+        label = (
+            ".github/hooks"
+            if config_root is None
+            else str(hooks_dir)
+        )
+        print(f"  Removed managed: {label}/{CONFIG_NAME}")
 
 
 def generate(target_dir: Path, *, config_root: Path | None = None) -> None:

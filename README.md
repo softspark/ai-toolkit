@@ -6,17 +6,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1367%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1377%20passing-success)](tests/)
 
-## What's New in v4.15.0
+## What's New in v4.15.1
 
-v4.15.0 brings the Codex CLI and GitHub Copilot integrations onto their current native customization surfaces and closes the gaps that caused rules, agents, skills, or hooks to be ignored.
+v4.15.1 fixes Copilot project upgrades and profile downgrades that could leave obsolete toolkit instructions, prompts, and hooks active.
 
-- **Native Codex bundle**: emits the shared constitution-backed `AGENTS.md`, 44 custom-agent TOML files, all 108 skills, self-contained lifecycle hooks, and project/user MCP configuration.
-- **Native Copilot bundle**: project installs emit 44 `.agent.md` agents, all 108 portable skills, 62 `.prompt.md` commands, scoped instructions, version-1 hooks, and MCP configuration; personal instructions, agents, skills, hooks, and MCP live below `$COPILOT_HOME` (default `~/.copilot`).
-- **One policy source**: Codex and Copilot instructions now derive from `app/constitution.md`; agent and skill catalogs stay in native discovery directories instead of bloating always-on context.
-- **Safer managed updates**: user-owned collisions and symlinks are preserved or rejected, while canonical `.mcp.json` and editor configs use preflighted multi-file updates with rollback on late failures.
-- **Native config roots**: Codex hooks and MCP honor `$CODEX_HOME`; Copilot user instructions, agents, skills, and hooks consistently honor `$COPILOT_HOME`. Symlinked configuration roots are rejected.
+- **Complete legacy cleanup**: byte-exact generated files from v3.0.0 through v4.14.1 are recognized and removed when switching a project to `minimal`.
+- **No user-file deletion**: unmarked prompts and instructions that do not match a historical toolkit artifact remain untouched.
+- **Race-safe removal**: managed cleanup uses pinned directory descriptors and transactional rollback instead of path-based deletion.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -166,7 +164,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1367 tests)
+├── tests/               # Bats test suite (1377 tests)
 └── CHANGELOG.md
 ```
 

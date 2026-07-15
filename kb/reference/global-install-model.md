@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.3.0"
+version: "3.3.1"
 created: "2026-03-26"
-last_updated: "2026-07-14"
+last_updated: "2026-07-15"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -165,6 +165,9 @@ Claude Code hooks do **not** live in project-local settings. They are merged onl
 self-contained `.github/skills`. Profiles `standard`, `strict`, and `full`
 add scoped `.github/instructions`, `.github/prompts`, and native version-1
 `.github/hooks`. Profile `minimal` omits those three additional directories.
+When an existing project moves from `standard`, `strict`, or `full` to
+`minimal`, the installer removes only marked or byte-exact historical ai-toolkit
+instructions, prompts, and hooks. Unmanaged project files remain in place.
 
 Global install emits personal instructions, scoped instructions, agents, and
 skills under the active Copilot config root; profile `standard` and above adds

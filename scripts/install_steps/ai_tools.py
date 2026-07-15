@@ -1267,6 +1267,16 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
     emit_pointer = not _claude_skills_discoverable(cwd)
 
     if "copilot" in eds:
+        from generate_copilot import (
+            generate as gen_copilot_dir,
+            preflight_cleanup as preflight_copilot_cleanup,
+        )
+        if not add_copilot_dir:
+            from generate_copilot_hooks import (
+                preflight_cleanup as preflight_copilot_hook_cleanup,
+            )
+            preflight_copilot_cleanup(cwd)
+            preflight_copilot_hook_cleanup(cwd)
         inject_with_rules(
             "generate-copilot.sh",
             cwd / ".github" / "copilot-instructions.md",
@@ -1275,16 +1285,19 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         _install_copilot_agents_md(cwd, rules_dir)
         # Agents and skills are the minimal Copilot surface. Standard and above
         # add path instructions, prompts, and native lifecycle hooks.
-        from generate_copilot import generate as gen_copilot_dir
         gen_copilot_dir(
             cwd,
             language_modules=language_modules,
             rules_dir=rules_dir,
             emit_prompts=add_copilot_dir,
             emit_instructions=add_copilot_dir,
+            cleanup_disabled=not add_copilot_dir,
         )
         if add_copilot_dir:
             _try_generator("generate_copilot_hooks", cwd)
+        else:
+            from generate_copilot_hooks import cleanup as cleanup_copilot_hooks
+            cleanup_copilot_hooks(cwd)
 
     if "cursor" in eds:
         inject_with_rules(

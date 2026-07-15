@@ -44,6 +44,7 @@ Usage:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -70,6 +71,8 @@ from emission import (
 )
 from frontmatter import frontmatter_field
 from generator_base import render_generator
+import secure_fs
+from secure_fs import SecureDestination, run_secure_transaction
 
 
 MANAGED_MARKER = "<!-- ai-toolkit-managed: github-copilot -->"
@@ -88,6 +91,38 @@ _FORBIDDEN_COPILOT_BODY_RE = re.compile(
     r"\b(?:spawn_agent|send_input|wait_agent|close_agent|update_plan|fork_context)\b|"
     r"\bview_skill\s*\(|\b(?:subagent_type|agent_type)\s*="
 )
+
+
+def _load_legacy_managed_hashes() -> dict[str, frozenset[str]]:
+    """Load exact pre-marker output hashes shipped by releases v3.0-v4.14."""
+    manifest = Path(__file__).with_name("copilot_legacy_hashes.json")
+    value = json.loads(manifest.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"Invalid Copilot legacy hash manifest: {manifest}")
+    result: dict[str, frozenset[str]] = {}
+    for name, hashes in value.items():
+        valid_name = (
+            isinstance(name, str)
+            and Path(name).name == name
+            and name.startswith(PREFIX)
+            and name.endswith((".instructions.md", ".prompt.md"))
+        )
+        valid_hashes = (
+            isinstance(hashes, list)
+            and bool(hashes)
+            and all(
+                isinstance(digest, str)
+                and re.fullmatch(r"[0-9a-f]{64}", digest)
+                for digest in hashes
+            )
+        )
+        if not valid_name or not valid_hashes:
+            raise ValueError(f"Invalid Copilot legacy hash entry: {name!r}")
+        result[name] = frozenset(hashes)
+    return result
+
+
+_LEGACY_MANAGED_SHA256 = _load_legacy_managed_hashes()
 
 # ---------------------------------------------------------------------------
 # Shared configuration for the legacy stdout output
@@ -490,6 +525,28 @@ def _user_agent_names(directory: Path) -> set[str]:
     return names
 
 
+def _desired_agent_files(
+    directory: Path,
+) -> dict[str, tuple[str, str | None]]:
+    """Render managed agents while honoring user-owned logical names."""
+    user_names = _user_agent_names(directory)
+    desired: dict[str, tuple[str, str | None]] = {}
+    source_names: set[str] = set()
+    for agent_file in sorted(agents_dir.glob("*.md")):
+        name, _, content = _render_agent(agent_file)
+        if name in source_names:
+            raise ValueError(f"Duplicate Copilot agent name: {name}")
+        source_names.add(name)
+        if name in user_names:
+            _warn_preserved(
+                directory / f"{PREFIX}{name}.agent.md",
+                f"logical name '{name}' belongs to a user agent",
+            )
+            continue
+        desired[f"{PREFIX}{name}.agent.md"] = (content, None)
+    return desired
+
+
 def _prepare_output_dir(base: Path, child_name: str) -> Path:
     """Create a customization directory without following managed-root symlinks."""
     output_dir = base / child_name
@@ -503,12 +560,20 @@ def _prepare_output_dir(base: Path, child_name: str) -> Path:
     return output_dir
 
 
+def _is_managed_content(content: bytes) -> bool:
+    try:
+        lines = content.decode("utf-8").splitlines()[:12]
+    except UnicodeError:
+        return False
+    return MANAGED_MARKER in lines
+
+
 def _is_managed(path: Path) -> bool:
     if path.is_symlink() or not path.is_file():
         return False
     try:
-        return MANAGED_MARKER in path.read_text(encoding="utf-8").splitlines()[:12]
-    except (OSError, UnicodeError):
+        return _is_managed_content(path.read_bytes())
+    except OSError:
         return False
 
 
@@ -527,6 +592,18 @@ def _legacy_instructions_content(content: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _matches_legacy_managed(
+    filename: str,
+    content: bytes,
+    legacy_content: str | None,
+) -> bool:
+    """Recognize exact pre-marker output without trusting the filename alone."""
+    if legacy_content is not None and content == legacy_content.encode("utf-8"):
+        return True
+    expected = _LEGACY_MANAGED_SHA256.get(filename, frozenset())
+    return hashlib.sha256(content).hexdigest() in expected
+
+
 def _may_replace(path: Path, legacy_content: str | None) -> bool:
     if path.is_symlink():
         return False
@@ -535,8 +612,12 @@ def _may_replace(path: Path, legacy_content: str | None) -> bool:
     if legacy_content is None or not path.is_file():
         return False
     try:
-        return path.read_text(encoding="utf-8") == legacy_content
-    except (OSError, UnicodeError):
+        return _matches_legacy_managed(
+            path.name,
+            path.read_bytes(),
+            legacy_content,
+        )
+    except OSError:
         return False
 
 
@@ -584,8 +665,27 @@ def _sync_managed_files(
     *,
     suffix: str,
     label: str,
+    trusted_root: Path,
 ) -> None:
     """Write desired files first, then remove only stale managed files."""
+    stale_candidates = _managed_cleanup_candidates(
+        directory,
+        set(desired),
+        {},
+        suffix=suffix,
+        label=label,
+        trusted_root=trusted_root,
+    )
+    if stale_candidates:
+        _sync_managed_files_with_cleanup(
+            directory,
+            desired,
+            stale_candidates,
+            label=label,
+            trusted_root=trusted_root,
+        )
+        return
+
     staged: list[tuple[Path, Path, str | None, str]] = []
     try:
         for name, (content, legacy_content) in sorted(desired.items()):
@@ -607,11 +707,189 @@ def _sync_managed_files(
         for temp_path, _, _, _ in staged:
             temp_path.unlink(missing_ok=True)
 
+
+
+def _require_secure_cleanup() -> None:
+    if secure_fs.SECURE_DIR_FD:
+        return
+    raise RuntimeError(
+        "Copilot managed cleanup requires POSIX dir_fd and O_NOFOLLOW; "
+        "No files were changed"
+    )
+
+
+def _cleanup_is_required(
+    directory: Path,
+    keep: set[str],
+    *,
+    suffix: str,
+) -> bool:
+    """Detect cleanup work before any Copilot surface is mutated."""
+    if not directory.exists():
+        return False
+    if directory.is_symlink() or not directory.is_dir():
+        raise RuntimeError(f"Refusing unsafe Copilot output directory: {directory}")
+    return any(
+        path.name not in keep and not path.is_symlink() and path.is_file()
+        for path in directory.glob(f"{PREFIX}*{suffix}")
+    )
+
+
+def _managed_cleanup_candidates(
+    directory: Path,
+    keep: set[str],
+    legacy_files: dict[str, str],
+    *,
+    suffix: str,
+    label: str,
+    trusted_root: Path,
+) -> list[tuple[SecureDestination, str | None]]:
+    """Pin regular stale candidates without following user symlinks."""
+    if not directory.exists():
+        return []
+    if directory.is_symlink() or not directory.is_dir():
+        raise RuntimeError(f"Refusing unsafe Copilot output directory: {directory}")
+    candidates: list[tuple[SecureDestination, str | None]] = []
     for path in sorted(directory.glob(f"{PREFIX}*{suffix}")):
-        if path.name in desired or path.is_symlink() or not _is_managed(path):
+        if path.name in keep:
             continue
-        path.unlink()
-        print(f"  Removed stale: {label}/{path.name}")
+        if path.is_symlink() or not path.is_file():
+            _warn_preserved(path, "stale file is not provably managed")
+            continue
+        candidates.append((
+            SecureDestination(
+                path=path,
+                trusted_root=trusted_root,
+                label=f"Copilot {label}/{path.name}",
+            ),
+            legacy_files.get(path.name),
+        ))
+    return candidates
+
+
+def _sync_managed_files_with_cleanup(
+    directory: Path,
+    desired: dict[str, tuple[str, str | None]],
+    stale_candidates: list[tuple[SecureDestination, str | None]],
+    *,
+    label: str,
+    trusted_root: Path,
+) -> None:
+    """Atomically update desired files and remove stale managed output."""
+    _require_secure_cleanup()
+    write_candidates: list[
+        tuple[SecureDestination, bytes, str | None]
+    ] = []
+    for name, (content, legacy_content) in sorted(desired.items()):
+        path = directory / name
+        if path.is_symlink() or (path.exists() and not path.is_file()):
+            _warn_preserved(path, "destination is user-owned or a symlink")
+            continue
+        write_candidates.append((
+            SecureDestination(
+                path=path,
+                trusted_root=trusted_root,
+                label=f"Copilot {label}/{name}",
+            ),
+            content.encode("utf-8"),
+            legacy_content,
+        ))
+
+    destinations = [item[0] for item in write_candidates]
+    destinations.extend(item[0] for item in stale_candidates)
+    messages: list[str] = []
+
+    def update_and_remove(transaction) -> None:
+        for destination, content, legacy_content in write_candidates:
+            initial = transaction.initial_content(destination)
+            if initial is not None and not (
+                _is_managed_content(initial)
+                or _matches_legacy_managed(
+                    destination.path.name,
+                    initial,
+                    legacy_content,
+                )
+            ):
+                _warn_preserved(
+                    destination.path,
+                    "destination is user-owned or a symlink",
+                )
+                continue
+            transaction.atomic_write(destination, content)
+            messages.append(f"  Generated: {label}/{destination.path.name}")
+
+        for destination, legacy_content in stale_candidates:
+            initial = transaction.initial_content(destination)
+            if initial is None:
+                continue
+            if not (
+                _is_managed_content(initial)
+                or _matches_legacy_managed(
+                    destination.path.name,
+                    initial,
+                    legacy_content,
+                )
+            ):
+                _warn_preserved(
+                    destination.path,
+                    "stale file is not provably managed",
+                )
+                continue
+            transaction.unlink(destination)
+            messages.append(f"  Removed stale: {label}/{destination.path.name}")
+
+    run_secure_transaction(destinations, update_and_remove)
+    for message in messages:
+        print(message)
+
+
+def _cleanup_managed_files(
+    directory: Path,
+    keep: set[str],
+    legacy_files: dict[str, str],
+    *,
+    suffix: str,
+    label: str,
+    trusted_root: Path,
+) -> None:
+    """Remove stale managed or exact legacy files, preserving user content."""
+    candidates = _managed_cleanup_candidates(
+        directory,
+        keep,
+        legacy_files,
+        suffix=suffix,
+        label=label,
+        trusted_root=trusted_root,
+    )
+    if not candidates:
+        return
+    _require_secure_cleanup()
+
+    def remove_stale(transaction) -> None:
+        for destination, legacy_content in candidates:
+            content = transaction.initial_content(destination)
+            if content is None:
+                continue
+            if not (
+                _is_managed_content(content)
+                or _matches_legacy_managed(
+                    destination.path.name,
+                    content,
+                    legacy_content,
+                )
+            ):
+                _warn_preserved(
+                    destination.path,
+                    "stale file is not provably managed",
+                )
+                continue
+            transaction.unlink(destination)
+            print(f"  Removed stale: {label}/{destination.path.name}")
+
+    run_secure_transaction(
+        [destination for destination, _ in candidates],
+        remove_stale,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -870,6 +1148,109 @@ def _sync_copilot_skills(customization_root: Path, *, label: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _desired_instruction_files(
+    language_modules: list[str] | None,
+    rules_dir: Path | None,
+) -> dict[str, tuple[str, str]]:
+    instruction_files: dict[str, callable] = dict(_make_instruction_files())
+    for filename, content_fn in build_language_rules(language_modules).items():
+        language = filename.removeprefix(f"{PREFIX}lang-").removesuffix(".md")
+        apply_to = ",".join(LANG_GLOBS.get(language, ())) or "**"
+        new_name = f"{PREFIX}lang-{language}.instructions.md"
+        instruction_files[new_name] = (
+            lambda fn, name, pattern: lambda: _instructions_file(
+                fn(),
+                apply_to=pattern,
+                description=f"{name.title()} language rules",
+            )
+        )(content_fn, language, apply_to)
+    for filename, content_fn in build_registered_rules(rules_dir).items():
+        stem = filename.removeprefix(f"{PREFIX}custom-").removesuffix(".md")
+        new_name = f"{PREFIX}custom-{stem}.instructions.md"
+        instruction_files[new_name] = (
+            lambda fn, name: lambda: _instructions_file(
+                fn(),
+                apply_to="**",
+                description=f"Custom rule: {name}",
+            )
+        )(content_fn, stem)
+    desired: dict[str, tuple[str, str]] = {}
+    for name, content_fn in instruction_files.items():
+        content = content_fn()
+        desired[name] = (content, _legacy_instructions_content(content))
+    return desired
+
+
+def _desired_prompt_files() -> dict[str, tuple[str, str]]:
+    desired: dict[str, tuple[str, str]] = {}
+    for name, description, body, legacy_body in _user_invocable_skills():
+        if not _SAFE_NAME_RE.fullmatch(name):
+            raise ValueError(f"Invalid Copilot prompt name: {name}")
+        portable_body = _portable_copilot_body(body, include_execution_note=True)
+        desired[f"{PREFIX}{name}.prompt.md"] = (
+            _prompt_file(description, portable_body),
+            _legacy_prompt_file(description, legacy_body),
+        )
+    return desired
+
+
+def preflight_cleanup(
+    target_dir: Path,
+    *,
+    config_root: Path | None = None,
+) -> None:
+    """Validate profile-cleanup paths before an installer mutates any surface."""
+    target_dir = Path(target_dir).expanduser().absolute()
+    github_dir = target_dir / ".github"
+    customization_root = (
+        github_dir
+        if config_root is None
+        else Path(config_root).expanduser().absolute()
+    )
+    trusted_root = target_dir if config_root is None else customization_root
+    desired_agents = _desired_agent_files(customization_root / "agents")
+    candidates = _managed_cleanup_candidates(
+        customization_root / "agents",
+        set(desired_agents),
+        {},
+        suffix=".agent.md",
+        label=(
+            ".github/agents"
+            if config_root is None
+            else "$COPILOT_HOME/agents"
+        ),
+        trusted_root=trusted_root,
+    )
+    candidates.extend(_managed_cleanup_candidates(
+        customization_root / "instructions",
+        set(),
+        {},
+        suffix=".instructions.md",
+        label=(
+            ".github/instructions"
+            if config_root is None
+            else "$COPILOT_HOME/instructions"
+        ),
+        trusted_root=trusted_root,
+    ))
+    if config_root is None:
+        candidates.extend(_managed_cleanup_candidates(
+            github_dir / "prompts",
+            set(),
+            {},
+            suffix=".prompt.md",
+            label=".github/prompts",
+            trusted_root=target_dir,
+        ))
+    if not candidates:
+        return
+    _require_secure_cleanup()
+    run_secure_transaction(
+        [destination for destination, _ in candidates],
+        lambda _transaction: None,
+    )
+
+
 def generate(target_dir: Path, *,
              language_modules: list[str] | None = None,
              rules_dir: Path | None = None,
@@ -877,6 +1258,7 @@ def generate(target_dir: Path, *,
              emit_prompts: bool = True,
              emit_instructions: bool = True,
              emit_skills: bool = True,
+             cleanup_disabled: bool = False,
              config_root: Path | None = None) -> None:
     """Write Copilot instructions, custom agents, skills, and prompt files.
 
@@ -887,78 +1269,95 @@ def generate(target_dir: Path, *,
     ``.github/copilot-instructions.md`` is intentionally not written here —
     the legacy ``main()`` entry point still emits it to stdout so existing
     scripts (including ``ai-toolkit install``) keep working unchanged.
+
+    ``cleanup_disabled=True`` is the installer-only profile-transition mode:
+    disabled instruction and prompt surfaces are removed only when their
+    ownership marker or exact historical output hash proves toolkit ownership.
     """
     github_dir = target_dir / ".github"
     customization_root = config_root if config_root is not None else github_dir
+    customization_trusted_root = (
+        target_dir if config_root is None else customization_root.parent
+    )
     instr_root = customization_root
     instr_label = "$COPILOT_HOME/instructions" if config_root is not None else ".github/instructions"
     agent_label = "$COPILOT_HOME/agents" if config_root is not None else ".github/agents"
     skill_label = "$COPILOT_HOME/skills" if config_root is not None else ".github/skills"
 
+    desired_instructions = (
+        _desired_instruction_files(language_modules, rules_dir)
+        if emit_instructions or cleanup_disabled
+        else {}
+    )
+    agent_dir_path = customization_root / "agents"
+    if emit_agents and (
+        customization_root.is_symlink() or agent_dir_path.is_symlink()
+    ):
+        raise RuntimeError(
+            f"Refusing symlinked Copilot output directory: {agent_dir_path}"
+        )
+    desired_agents = (
+        _desired_agent_files(agent_dir_path) if emit_agents else {}
+    )
+    needs_project_prompt_state = (
+        emit_prompts or (cleanup_disabled and config_root is None)
+    )
+    desired_prompts = (
+        _desired_prompt_files() if needs_project_prompt_state else {}
+    )
+
+    cleanup_checks: list[tuple[Path, set[str], str]] = []
+    if emit_instructions or cleanup_disabled:
+        cleanup_checks.append((
+            instr_root / "instructions",
+            set(desired_instructions) if emit_instructions else set(),
+            ".instructions.md",
+        ))
+    if emit_agents:
+        cleanup_checks.append((
+            agent_dir_path,
+            set(desired_agents),
+            ".agent.md",
+        ))
+    if needs_project_prompt_state:
+        cleanup_checks.append((
+            github_dir / "prompts",
+            set(desired_prompts) if emit_prompts else set(),
+            ".prompt.md",
+        ))
+    if any(
+        _cleanup_is_required(directory, keep, suffix=suffix)
+        for directory, keep, suffix in cleanup_checks
+    ):
+        _require_secure_cleanup()
+
     if emit_instructions:
         instr_dir = _prepare_output_dir(instr_root, "instructions")
-
-        instruction_files: dict[str, callable] = dict(_make_instruction_files())
-
-        # Language-specific instructions (auto-applied by file glob)
-        for filename, content_fn in build_language_rules(language_modules).items():
-            lang = filename.removeprefix(f"{PREFIX}lang-").removesuffix(".md")
-            globs = LANG_GLOBS.get(lang)
-            apply_to = ",".join(globs) if globs else "**"
-            new_name = f"{PREFIX}lang-{lang}.instructions.md"
-            instruction_files[new_name] = (lambda fn, language_name, a: lambda: _instructions_file(
-                fn(),
-                apply_to=a,
-                description=f"{language_name.title()} language rules",
-            ))(content_fn, lang, apply_to)
-
-        # User-registered custom rules (always-on)
-        for filename, content_fn in build_registered_rules(rules_dir).items():
-            stem = filename.removeprefix(f"{PREFIX}custom-").removesuffix(".md")
-            new_name = f"{PREFIX}custom-{stem}.instructions.md"
-            instruction_files[new_name] = (lambda fn, n: lambda: _instructions_file(
-                fn(),
-                apply_to="**",
-                description=f"Custom rule: {n}",
-            ))(content_fn, stem)
-
-        desired_instructions: dict[str, tuple[str, str | None]] = {}
-        for name, content_fn in instruction_files.items():
-            content = content_fn()
-            desired_instructions[name] = (
-                content,
-                _legacy_instructions_content(content),
-            )
         _sync_managed_files(
             instr_dir,
             desired_instructions,
             suffix=".instructions.md",
             label=instr_label,
+            trusted_root=customization_trusted_root,
+        )
+    elif cleanup_disabled:
+        _cleanup_managed_files(
+            instr_root / "instructions",
+            set(),
+            {name: legacy for name, (_, legacy) in desired_instructions.items()},
+            suffix=".instructions.md",
+            label=instr_label,
+            trusted_root=customization_trusted_root,
         )
 
     if emit_agents:
         agent_dir = _prepare_output_dir(customization_root, "agents")
-        user_names = _user_agent_names(agent_dir)
-        desired_agents: dict[str, tuple[str, str | None]] = {}
-        source_names: set[str] = set()
-        for agent_file in sorted(agents_dir.glob("*.md")):
-            name, _, content = _render_agent(agent_file)
-            if name in source_names:
-                raise ValueError(f"Duplicate Copilot agent name: {name}")
-            source_names.add(name)
-            if name in user_names:
-                _warn_preserved(
-                    agent_dir / f"{PREFIX}{name}.agent.md",
-                    f"logical name '{name}' belongs to a user agent",
-                )
-                continue
-            filename = f"{PREFIX}{name}.agent.md"
-            desired_agents[filename] = (content, None)
         _sync_managed_files(
             agent_dir,
             desired_agents,
             suffix=".agent.md",
             label=agent_label,
+            trusted_root=customization_trusted_root,
         )
 
     if emit_skills:
@@ -966,27 +1365,21 @@ def generate(target_dir: Path, *,
 
     if emit_prompts:
         prompt_dir = _prepare_output_dir(github_dir, "prompts")
-
-        skills = _user_invocable_skills()
-        desired_prompts: dict[str, tuple[str, str | None]] = {}
-        for name, description, body, legacy_body in skills:
-            if not _SAFE_NAME_RE.fullmatch(name):
-                raise ValueError(f"Invalid Copilot prompt name: {name}")
-            filename = f"{PREFIX}{name}.prompt.md"
-            portable_body = _portable_copilot_body(
-                body,
-                include_execution_note=True,
-            )
-            content = _prompt_file(description, portable_body)
-            desired_prompts[filename] = (
-                content,
-                _legacy_prompt_file(description, legacy_body),
-            )
         _sync_managed_files(
             prompt_dir,
             desired_prompts,
             suffix=".prompt.md",
             label=".github/prompts",
+            trusted_root=target_dir,
+        )
+    elif cleanup_disabled and config_root is None:
+        _cleanup_managed_files(
+            github_dir / "prompts",
+            set(),
+            {name: legacy for name, (_, legacy) in desired_prompts.items()},
+            suffix=".prompt.md",
+            label=".github/prompts",
+            trusted_root=target_dir,
         )
 
 

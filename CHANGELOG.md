@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.15.1 — Copilot profile cleanup (2026-07-15)
+
+### Fixed
+- **Copilot profile downgrade cleanup** — switching a project from `standard`, `strict`, or `full` to `minimal` now removes managed instructions, prompts, and hooks, including byte-exact pre-marker output from v3.0.0 through v4.14.1, while preserving user-owned files.
+- **Atomic downgrade preflight** — hook-only cleanup is validated before any Copilot file changes, so unsupported native Windows mutations fail without leaving a partial profile transition.
+- **Release gate enforcement** — tag publishing now regenerates package assets and runs ecosystem, validation, audit, ShellCheck, and test gates before the provenance-signed npm publish; SARIF is uploaded to GitHub code scanning.
+
+Test count: 1367 → 1377.
+
 ## v4.15.0 — Native Codex and Copilot parity (2026-07-14)
 
 Minor release. Rebuilds the Codex CLI and GitHub Copilot integrations around their current native instruction, agent, skill, hook, and MCP surfaces. It also hardens managed-file migration and multi-file configuration updates so toolkit refreshes preserve user-owned content and fail without leaving partial state. No source catalog count change (44 agents, 108 skills).

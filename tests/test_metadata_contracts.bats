@@ -216,6 +216,30 @@ PY
     grep -q "$version" "$TOOLKIT_DIR/CHANGELOG.md"
 }
 
+@test "publish workflow gates and generates the package before npm publish" {
+    python3 - "$TOOLKIT_DIR/.github/workflows/publish.yml" <<'PY'
+import sys
+from pathlib import Path
+
+workflow = Path(sys.argv[1]).read_text(encoding="utf-8")
+required_in_order = [
+    "npm ci",
+    "npm run generate:all",
+    "python3 scripts/validate.py --strict",
+    "python3 scripts/audit_skills.py --ci",
+    "python3 scripts/audit_skills.py --sarif > audit.sarif",
+    "shellcheck --severity=warning app/hooks/*.sh",
+    "npm test",
+    "npm publish --access public --ignore-scripts --provenance",
+]
+positions = [workflow.index(command) for command in required_in_order]
+assert positions == sorted(positions), positions
+assert "github/codeql-action/upload-sarif@" in workflow
+assert "sarif_file: audit.sarif" in workflow
+assert "id-token: write" in workflow
+PY
+}
+
 @test "architecture-overview.md does not contain hardcoded agent count in description" {
     # Secondary docs must not contain hardcoded counts like "44 specialized agents"
     ! grep -qE '[0-9]+ specialized agents' "$TOOLKIT_DIR/kb/reference/architecture-overview.md"

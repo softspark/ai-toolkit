@@ -85,6 +85,37 @@ PY
     cmp "$TEST_ROOT/all.before" "$TEST_ROOT/all.after"
 }
 
+@test "copilot-hooks: profile cleanup preserves a user-modified reserved bundle" {
+    project="$TEST_ROOT/project"
+    python3 "$TOOLKIT_DIR/scripts/generate_copilot_hooks.py" "$project" >/dev/null
+    config="$project/.github/hooks/ai-toolkit.json"
+    runtime="$project/.github/hooks/ai-toolkit/copilot_hook.py"
+    python3 - "$config" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["hooks"]["sessionEnd"] = [{"type": "command", "bash": "echo user"}]
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+
+    run python3 - "$TOOLKIT_DIR" "$project" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_copilot_hooks import cleanup
+
+cleanup(Path(sys.argv[2]))
+PY
+    [ "$status" -eq 0 ]
+    [ -f "$config" ]
+    [ -f "$runtime" ]
+    grep -q 'echo user' "$config"
+}
+
 @test "copilot-hooks: refuses user-owned reserved files without overwriting" {
     hooks="$TEST_ROOT/project/.github/hooks"
     mkdir -p "$hooks"

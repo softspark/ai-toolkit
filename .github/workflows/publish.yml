@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      security-events: write
     steps:
       - uses: actions/checkout@v6
 
@@ -20,6 +21,31 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           scope: '@softspark'
+
+      - name: Install release dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bats parallel shellcheck
+          npm ci
+
+      - name: Generate package assets
+        run: |
+          npm run generate:all
+          test -s AGENTS.md
+
+      - name: Gate release
+        run: |
+          python3 scripts/ecosystem_doctor.py --offline --check
+          python3 scripts/validate.py --strict
+          python3 scripts/audit_skills.py --ci
+          python3 scripts/audit_skills.py --sarif > audit.sarif
+          shellcheck --severity=warning app/hooks/*.sh
+          npm test
+
+      - name: Upload security audit
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: audit.sarif
 
       - name: Publish to npm
         run: npm publish --access public --ignore-scripts --provenance

@@ -578,6 +578,172 @@ MD
     [ ! -d "$TEST_PROJECT/.github/hooks" ]
 }
 
+@test "Copilot profile downgrade removes managed standard surfaces only" {
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        --editors copilot --profile standard) >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/.github/instructions/ai-toolkit-security.instructions.md" ]
+    [ -f "$TEST_PROJECT/.github/prompts/ai-toolkit-debug.prompt.md" ]
+    [ -f "$TEST_PROJECT/.github/hooks/ai-toolkit.json" ]
+
+    printf '%s\n' 'user instruction' > \
+        "$TEST_PROJECT/.github/instructions/team.instructions.md"
+    printf '%s\n' 'user prompt' > \
+        "$TEST_PROJECT/.github/prompts/team.prompt.md"
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        --editors copilot --profile minimal) >/dev/null 2>&1
+
+    [ ! -f "$TEST_PROJECT/.github/instructions/ai-toolkit-security.instructions.md" ]
+    [ ! -f "$TEST_PROJECT/.github/prompts/ai-toolkit-debug.prompt.md" ]
+    [ ! -f "$TEST_PROJECT/.github/hooks/ai-toolkit.json" ]
+    [ ! -f "$TEST_PROJECT/.github/hooks/ai-toolkit/copilot_hook.py" ]
+    grep -q '^user instruction$' \
+        "$TEST_PROJECT/.github/instructions/team.instructions.md"
+    grep -q '^user prompt$' "$TEST_PROJECT/.github/prompts/team.prompt.md"
+}
+
+@test "Copilot minimal preflights hook-only cleanup before any mutation" {
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        --editors copilot --profile standard) >/dev/null 2>&1
+    rm -rf "$TEST_PROJECT/.github/instructions" \
+        "$TEST_PROJECT/.github/prompts"
+    printf '%s\n' '<!-- ai-toolkit-managed: github-copilot -->' changed > \
+        "$TEST_PROJECT/.github/agents/ai-toolkit-debugger.agent.md"
+
+    run python3 - "$TOOLKIT_DIR" "$TEST_PROJECT" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import secure_fs
+import install_steps.ai_tools as ai_tools
+
+
+def snapshot(path):
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in sorted(path.rglob("*"))
+        if item.is_file()
+    }
+
+
+before = snapshot(target)
+secure_fs.SECURE_DIR_FD = False
+ai_tools.inject_with_rules = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+    AssertionError("Copilot mutation started before cleanup preflight")
+)
+try:
+    ai_tools._create_local_ai_tool_configs(
+        target,
+        toolkit / "app" / "rules",
+        ["copilot"],
+        profile="minimal",
+    )
+except RuntimeError as error:
+    assert "No files were changed" in str(error), str(error)
+else:
+    raise AssertionError("expected secure hook cleanup failure")
+
+assert snapshot(target) == before
+assert not list(target.rglob("*.tmp"))
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "Copilot minimal preflights pre-hook surfaces before any mutation" {
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        --editors copilot --profile standard) >/dev/null 2>&1
+    rm -rf "$TEST_PROJECT/.github/hooks"
+    printf '%s\n' '<!-- ai-toolkit-managed: github-copilot -->' changed > \
+        "$TEST_PROJECT/.github/agents/ai-toolkit-debugger.agent.md"
+
+    run python3 - "$TOOLKIT_DIR" "$TEST_PROJECT" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import secure_fs
+import install_steps.ai_tools as ai_tools
+
+
+def snapshot(path):
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in sorted(path.rglob("*"))
+        if item.is_file()
+    }
+
+
+before = snapshot(target)
+secure_fs.SECURE_DIR_FD = False
+ai_tools.inject_with_rules = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+    AssertionError("Copilot mutation started before surface cleanup preflight")
+)
+try:
+    ai_tools._create_local_ai_tool_configs(
+        target,
+        toolkit / "app" / "rules",
+        ["copilot"],
+        profile="minimal",
+    )
+except RuntimeError as error:
+    assert "No files were changed" in str(error), str(error)
+else:
+    raise AssertionError("expected secure surface cleanup failure")
+
+assert snapshot(target) == before
+assert not list(target.rglob("*.tmp"))
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "Copilot minimal preflights stale agents before any mutation" {
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        --editors copilot --profile standard) >/dev/null 2>&1
+    rm -rf "$TEST_PROJECT/.github/instructions" \
+        "$TEST_PROJECT/.github/prompts" "$TEST_PROJECT/.github/hooks"
+    printf '%s\n' '<!-- ai-toolkit-managed: github-copilot -->' stale > \
+        "$TEST_PROJECT/.github/agents/ai-toolkit-retired.agent.md"
+
+    run python3 - "$TOOLKIT_DIR" "$TEST_PROJECT" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import secure_fs
+import install_steps.ai_tools as ai_tools
+
+secure_fs.SECURE_DIR_FD = False
+ai_tools.inject_with_rules = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+    AssertionError("Copilot mutation started before agent cleanup preflight")
+)
+try:
+    ai_tools._create_local_ai_tool_configs(
+        target,
+        toolkit / "app" / "rules",
+        ["copilot"],
+        profile="minimal",
+    )
+except RuntimeError as error:
+    assert "No files were changed" in str(error), str(error)
+else:
+    raise AssertionError("expected secure agent cleanup failure")
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "install --local --editors copilot,codex emits one shared AGENTS.md section" {
     (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
         --local --editors copilot,codex) >/dev/null 2>&1
