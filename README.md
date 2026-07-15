@@ -291,6 +291,7 @@ Need multi-agent coordination?
 | Ecosystem Comparison | [kb/reference/comparison.md](kb/reference/comparison.md) |
 | Codex CLI Compatibility | [kb/reference/codex-cli-compatibility.md](kb/reference/codex-cli-compatibility.md) |
 | opencode Compatibility | [kb/reference/opencode-compatibility.md](kb/reference/opencode-compatibility.md) |
+| GitHub Copilot Compatibility | [kb/reference/copilot-compatibility.md](kb/reference/copilot-compatibility.md) |
 | Maintenance SOP | [kb/procedures/maintenance-sop.md](kb/procedures/maintenance-sop.md) |
 
 ---

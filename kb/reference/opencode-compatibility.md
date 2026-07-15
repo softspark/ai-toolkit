@@ -162,6 +162,7 @@ The opencode integration is verified by:
 - `kb/reference/skills-catalog.md`
 - `kb/reference/agents-catalog.md`
 - `kb/reference/codex-cli-compatibility.md`
+- `kb/reference/copilot-compatibility.md`
 - `kb/reference/architecture-overview.md`
 - `kb/reference/global-install-model.md`
 - `kb/reference/mcp-editor-compatibility.md`

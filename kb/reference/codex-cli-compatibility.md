@@ -240,3 +240,4 @@ The Codex compatibility path is verified by:
 - `kb/reference/skills-catalog.md`
 - `kb/reference/architecture-overview.md`
 - `kb/reference/global-install-model.md`
+- `kb/reference/copilot-compatibility.md`

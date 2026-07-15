@@ -226,4 +226,5 @@ Global-only editor MCP configs are not written during `install --local`. Use `ai
 - `kb/reference/distribution-model.md`
 - `kb/reference/merge-friendly-install-model.md`
 - `kb/reference/codex-cli-compatibility.md`
+- `kb/reference/copilot-compatibility.md`
 - `kb/reference/mcp-editor-compatibility.md`

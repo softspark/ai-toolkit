@@ -38,6 +38,7 @@
 - [AI Toolkit - Codex CLI Compatibility](kb/reference/codex-cli-compatibility.md)
 - [Ecosystem Comparison](kb/reference/comparison.md)
 - [Plan: Competitive Features — ai-toolkit](kb/reference/competitive-features-implementation.md)
+- [AI Toolkit - GitHub Copilot Compatibility](kb/reference/copilot-compatibility.md)
 - [Distribution Model](kb/reference/distribution-model.md)
 - [Enterprise Config Inheritance Guide](kb/reference/enterprise-config-guide.md)
 - [Extension API Reference](kb/reference/extension-api.md)
