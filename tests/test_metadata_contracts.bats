@@ -217,11 +217,13 @@ PY
 }
 
 @test "publish workflow gates and generates the package before npm publish" {
-    python3 - "$TOOLKIT_DIR/.github/workflows/publish.yml" <<'PY'
+    python3 - "$TOOLKIT_DIR/.github/workflows/publish.yml" \
+        "$TOOLKIT_DIR/.github/workflows/ci.yml" <<'PY'
 import sys
 from pathlib import Path
 
 workflow = Path(sys.argv[1]).read_text(encoding="utf-8")
+ci_workflow = Path(sys.argv[2]).read_text(encoding="utf-8")
 required_in_order = [
     "npm ci",
     "npm run generate:all",
@@ -237,6 +239,8 @@ assert positions == sorted(positions), positions
 assert "github/codeql-action/upload-sarif@" in workflow
 assert "sarif_file: audit.sarif" in workflow
 assert "id-token: write" in workflow
+assert "fetch-depth: 0" in workflow
+assert "fetch-depth: 0" in ci_workflow
 PY
 }
 
