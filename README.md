@@ -6,16 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1249%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1367%20passing-success)](tests/)
 
-## What's New in v4.14.1
+## What's New in v4.15.0
 
-v4.14.1 refreshes Claude model IDs to the current generation, makes model routing effort-aware, and tunes agent model tiers.
+v4.15.0 brings the Codex CLI and GitHub Copilot integrations onto their current native customization surfaces and closes the gaps that caused rules, agents, skills, or hooks to be ignored.
 
-- **Current model IDs**: `scripts/_common.py` now resolves `opus → claude-opus-4-8` and `sonnet → claude-sonnet-5` (the single source of truth generators emit); stale `claude-opus-4-7` samples across skills refreshed.
-- **Effort-aware routing**: `model-routing-patterns` gains an Effort section — tuning `output_config.effort` is the cheaper lever before swapping models, and it does not invalidate the prompt cache the way a mid-session model swap does.
-- **Fable 5 tier documented**: added to the routing table with pricing and a "not the default best model" caveat — for "strongest model", the target stays `claude-opus-4-8`.
-- **Agent tiers tuned**: `explorer-agent` (pure read/search) runs on `model: haiku`; `fact-checker` stays on `model: sonnet` — accuracy over cost for claim verification.
+- **Native Codex bundle**: emits the shared constitution-backed `AGENTS.md`, 44 custom-agent TOML files, all 108 skills, self-contained lifecycle hooks, and project/user MCP configuration.
+- **Native Copilot bundle**: project installs emit 44 `.agent.md` agents, all 108 portable skills, 62 `.prompt.md` commands, scoped instructions, version-1 hooks, and MCP configuration; personal instructions, agents, skills, hooks, and MCP live below `$COPILOT_HOME` (default `~/.copilot`).
+- **One policy source**: Codex and Copilot instructions now derive from `app/constitution.md`; agent and skill catalogs stay in native discovery directories instead of bloating always-on context.
+- **Safer managed updates**: user-owned collisions and symlinks are preserved or rejected, while canonical `.mcp.json` and editor configs use preflighted multi-file updates with rollback on late failures.
+- **Native config roots**: Codex hooks and MCP honor `$CODEX_HOME`; Copilot user instructions, agents, skills, and hooks consistently honor `$COPILOT_HOME`. Symlinked configuration roots are rejected.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -120,13 +121,13 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
 | Windsurf (Devin Desktop) | `~/.config/devin/AGENTS.md` + `.devin/rules/*.md` + `.devin/hooks.v1.json` + `.windsurf/skills/*` | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | ✅ | global |
-| GitHub Copilot | `.github/copilot-instructions.md` + `.github/instructions/*` + `.github/prompts/*` + `AGENTS.md` | — | project |
+| GitHub Copilot | Project: `AGENTS.md` + `.github/copilot-instructions.md` + `.github/{instructions,prompts,agents,skills,hooks}/` + `.github/mcp.json`; user: `$COPILOT_HOME/copilot-instructions.md` + `$COPILOT_HOME/{instructions,agents,skills,hooks}/` + `$COPILOT_HOME/mcp-config.json` | ✅ | project + user |
 | Cline | `~/Documents/Cline/Rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
 | Roo Code | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
 | Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | ✅ | global + project |
 | Google Antigravity | `.agents/rules/*.md` + `.agents/workflows/*.md` + skill pointer in `.agent/skills/*` (IDE) and `.agents/skills/*` (CLI) | — | project |
-| Codex CLI | `AGENTS.md` (coding rules inlined) + `.agents/skills/*` + `.codex/hooks.json` | ✅ | project + global plugin |
+| Codex CLI | Project: `AGENTS.md` + `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
 | opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | ✅ | project + global (`~/.config/opencode/`) |
 
 > Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
@@ -165,7 +166,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1249 tests)
+├── tests/               # Bats test suite (1367 tests)
 └── CHANGELOG.md
 ```
 

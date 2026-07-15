@@ -3,9 +3,9 @@ title: "Plugin Pack Conventions"
 category: reference
 service: ai-toolkit
 tags: [plugins, plugin-packs, conventions, manifests, hooks, policy-packs]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-28"
-last_updated: "2026-04-13"
+last_updated: "2026-07-14"
 description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across Claude Code and Codex runtimes."
 ---
 
@@ -87,11 +87,11 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 ### What `plugin install` Does
 
 1. **Parses** `--editor claude|codex|all` (default: `claude`)
-2. **Copies** plugin-specific hooks to `~/.softspark/ai-toolkit/hooks/plugin-<pack>-<hook>.sh`
-3. **Copies** plugin-specific scripts to `~/.softspark/ai-toolkit/plugin-scripts/<pack>/`
+2. **Copies** plugin-specific hooks to runtime-owned storage: Claude uses `~/.softspark/ai-toolkit/hooks/plugin-<pack>-<hook>.sh`; Codex uses `$CODEX_HOME/ai-toolkit-hooks/plugin-<pack>-<hook>.sh`
+3. **Copies** shared plugin scripts to `~/.softspark/ai-toolkit/plugin-scripts/<pack>/`
 4. **Runs** init scripts if present (e.g. `init_db.py` for memory-pack — safe to re-run, preserves data)
 5. **Claude Code target**: links missing agents/skills into `~/.claude/`, injects plugin-local rules into `~/.claude/CLAUDE.md`, and merges plugin hook entries into `~/.claude/settings.json`
-6. **Codex target**: bootstraps global Codex assets in `HOME` (`~/AGENTS.md`, `~/.agents/skills`, `~/.agents/rules`, `~/.codex/hooks.json`) and then layers plugin-specific rules/hooks on top
+6. **Codex target**: bootstraps `$CODEX_HOME/AGENTS.md`, `$HOME/.agents/skills`, `$CODEX_HOME/hooks.json`, and self-contained `$CODEX_HOME/ai-toolkit-hooks`, then layers plugin-specific rules and hooks on top; it does not write `~/AGENTS.md` or `.agents/rules/`
 7. **Records** installed state per runtime in `~/.softspark/ai-toolkit/plugins.json`
 
 ### What `plugin update` Does
@@ -111,8 +111,8 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 ### What `plugin remove` Does
 
 1. **Claude Code target**: strips plugin hook entries from `~/.claude/settings.json` and removes plugin-local rule sections from `~/.claude/CLAUDE.md`
-2. **Codex target**: strips plugin hook entries from `~/.codex/hooks.json` and removes `~/.agents/rules/plugin-<pack>-*.md`
-3. **Shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
+2. **Codex target**: strips only command handlers carrying the exact `AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-<pack>` marker from `$CODEX_HOME/hooks.json`, removes owned `$CODEX_HOME/ai-toolkit-hooks/plugin-<pack>-*` assets, and removes the pack's marker-bounded sections from `$CODEX_HOME/AGENTS.md`
+3. **Claude/shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
 4. **Updates** `plugins.json` state per runtime
 5. **Leaves** core agents/skills untouched (they belong to the base install)
 6. **Leaves** plugin data intact (e.g. `memory.db` — use `clean` to prune)

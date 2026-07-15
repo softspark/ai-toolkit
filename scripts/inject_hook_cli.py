@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Inject external hooks into ~/.claude/settings.json.
+"""Inject external hooks into Claude settings and native Codex hooks.
 
 Allows external tools (MCP servers, plugins, etc.) to register their own
 hooks alongside ai-toolkit's hooks.  Each injected file is tagged with a
 ``_source`` derived from the filename stem so that re-running is idempotent
-and removal is safe.
+and removal is safe in Claude settings. Command handlers for native Codex
+events are translated without ``_source`` and carry exact command ownership
+markers under the active ``CODEX_HOME``.
 
 Usage:
     inject_hook_cli.py <hooks-file-or-url> [hook-name] [target-dir]
@@ -35,30 +37,43 @@ Exit codes:
     1  usage / argument error
     2  JSON parse error
 """
+
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import sys
 import urllib.parse
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from secure_fs import (
+    SECURE_DIR_FD,
+    SecureDestination,
+    SecureTransaction,
+    lexical_absolute,
+    nearest_existing_root,
+    run_secure_transaction,
+)
 
 # Protected source tag -- this CLI must never touch ai-toolkit's own entries.
 PROTECTED_SOURCE = "ai-toolkit"
 
-# Codex CLI's HookEventName enum defines 10 events; we propagate the 9 that
-# generate_codex_hooks.py also wires (all except PostCompact, whose only hook
-# was the removed environment-snapshot probe). Keeping this in sync with the
-# generator prevents injected custom hooks from silently losing events Codex
-# supports.
+# Codex CLI's native HookEventName enum defines these 10 events. External
+# command hooks can target all of them even though ai-toolkit's base bundle does
+# not currently ship a PostCompact handler.
 CODEX_EVENTS = {
     "SessionStart",
     "PreToolUse",
     "PostToolUse",
     "PermissionRequest",
+    "PostCompact",
     "UserPromptSubmit",
     "SubagentStart",
     "SubagentStop",
@@ -66,39 +81,128 @@ CODEX_EVENTS = {
     "Stop",
 }
 
+CODEX_OWNER_PREFIX = "ai-toolkit-external"
+CODEX_NATIVE_GROUP_KEYS = frozenset({"matcher", "hooks"})
+CODEX_NATIVE_HANDLER_KEYS = frozenset(
+    {
+        "type",
+        "command",
+        "commandWindows",
+        "timeout",
+        "statusMessage",
+        "async",
+    }
+)
+CODEX_OWNER_PATTERN = re.compile(
+    r"(?:^|\s)AI_TOOLKIT_HOOK_OWNER=(?P<owner>[a-z0-9][a-z0-9-]*)(?=\s|$)"
+)
+SOURCE_NAME_PATTERN = re.compile(r"[a-zA-Z0-9_-]+")
+_SECURE_DIR_FD = SECURE_DIR_FD
+_UNSAFE_MUTATION_PLATFORM_ERROR = (
+    "Safe hook mutations require POSIX dir_fd and O_NOFOLLOW support, "
+    "which this Python runtime does not provide. No files were changed. "
+    "On Windows, run ai-toolkit inject-hook or remove-hook from WSL."
+)
 
-# ---------------------------------------------------------------------------
-# JSON helpers (same style as merge-hooks.py)
-# ---------------------------------------------------------------------------
 
-def load_json(path: str) -> dict:
-    """Load and parse a JSON file.
-
-    Args:
-        path: Filesystem path to the JSON file.
-
-    Returns:
-        Parsed JSON content as a dictionary.
-    """
-    with open(path) as f:
-        return json.load(f)
+def _require_secure_mutation_support() -> None:
+    if not _SECURE_DIR_FD:
+        raise RuntimeError(_UNSAFE_MUTATION_PLATFORM_ERROR)
 
 
-def save_json(path: str, data: dict) -> None:
-    """Write a dictionary to a JSON file with 4-space indent and trailing newline.
+_Destination = SecureDestination
 
-    Args:
-        path: Filesystem path for the output JSON file.
-        data: Dictionary to serialize.
-    """
-    with open(path, "w") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-        f.write("\n")
+
+def _absolute_path(path: str | os.PathLike[str]) -> Path:
+    """Return an absolute lexical path without resolving symlinks."""
+    return lexical_absolute(path)
+
+
+def _trusted_target_root(target_dir: str) -> Path:
+    """Validate the caller-selected root before inspecting child configs."""
+    root = _absolute_path(target_dir)
+    if root.is_symlink():
+        raise RuntimeError(f"Refusing symlinked target directory: {root}")
+    if not root.is_dir():
+        raise RuntimeError(f"Target directory must already exist: {root}")
+    return root
+
+
+def _nearest_existing_root(path: Path) -> Path:
+    """Find a real existing ancestor that can anchor symlink checks."""
+    return nearest_existing_root(path)
+
+
+def _assert_safe_destination(destination: _Destination) -> None:
+    """Reject symlinks or non-directory ancestors below a trusted root."""
+    root = _absolute_path(destination.trusted_root)
+    path = _absolute_path(destination.path)
+    try:
+        relative = path.relative_to(root)
+    except ValueError as error:
+        raise RuntimeError(
+            f"{destination.label} escapes trusted root {root}: {path}"
+        ) from error
+
+    candidates = [root]
+    current = root
+    for part in relative.parts:
+        current /= part
+        candidates.append(current)
+
+    for candidate in candidates:
+        if candidate.is_symlink():
+            raise RuntimeError(
+                f"Refusing symlinked {destination.label} path: {candidate}"
+            )
+        if not candidate.exists():
+            continue
+        if candidate == path:
+            if not candidate.is_file():
+                raise RuntimeError(
+                    f"{destination.label} destination is not a file: {candidate}"
+                )
+        elif not candidate.is_dir():
+            raise RuntimeError(
+                f"{destination.label} ancestor is not a directory: {candidate}"
+            )
+
+
+def _json_bytes(data: dict, indent: int = 4) -> bytes:
+    return (json.dumps(data, indent=indent, ensure_ascii=False) + "\n").encode()
+
+
+class _MalformedDestinationJson(ValueError):
+    def __init__(self, path: Path, error: Exception | str) -> None:
+        super().__init__(f"malformed JSON in {path}: {error}")
+
+
+def _load_destination_json(content: bytes | None, path: Path) -> dict:
+    """Parse configuration bytes captured by the active transaction."""
+    if content is None:
+        return {}
+    try:
+        data = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise _MalformedDestinationJson(path, error) from error
+    if not isinstance(data, dict):
+        raise _MalformedDestinationJson(path, "top-level value must be an object")
+    return data
+
+
+def _run_transaction(
+    destinations: list[_Destination],
+    mutation: Callable[[SecureTransaction], None],
+) -> None:
+    """Apply through pinned parent fds with byte-for-byte rollback."""
+    _require_secure_mutation_support()
+    run_secure_transaction(destinations, mutation)
 
 
 # ---------------------------------------------------------------------------
 # URL helpers
 # ---------------------------------------------------------------------------
+
 
 def _is_url(source: str) -> bool:
     """Check if source looks like an HTTP(S) URL."""
@@ -116,6 +220,7 @@ def _name_from_url(url: str) -> str:
 # ---------------------------------------------------------------------------
 # Core logic
 # ---------------------------------------------------------------------------
+
 
 def _entry_source(entry: dict) -> str | None:
     """Return the ``_source`` tag of a hook entry, checking nested hooks too.
@@ -141,15 +246,17 @@ def _entry_signature(entry: dict) -> tuple:
         if not isinstance(hook, dict):
             handlers.append(hook)
             continue
-        handlers.append(tuple(sorted(
-            (key, value)
-            for key, value in hook.items()
-            if key != "_source"
-        )))
+        handlers.append(
+            tuple(
+                sorted((key, value) for key, value in hook.items() if key != "_source")
+            )
+        )
     return (entry.get("matcher", ""), tuple(handlers))
 
 
-def strip_source(hooks: dict, source: str, replacement_hooks: dict | None = None) -> dict:
+def strip_source(
+    hooks: dict, source: str, replacement_hooks: dict | None = None
+) -> dict:
     """Remove all entries whose ``_source`` matches *source*.
 
     Args:
@@ -167,16 +274,15 @@ def strip_source(hooks: dict, source: str, replacement_hooks: dict | None = None
     if replacement_hooks:
         for event, entries in replacement_hooks.items():
             legacy_signatures[event] = {
-                _entry_signature(entry)
-                for entry in entries
-                if isinstance(entry, dict)
+                _entry_signature(entry) for entry in entries if isinstance(entry, dict)
             }
 
     result: dict = {}
     for event, entries in hooks.items():
         signatures = legacy_signatures.get(event, set())
         filtered = [
-            e for e in entries
+            e
+            for e in entries
             if _entry_source(e) != source
             and not (
                 isinstance(e, dict)
@@ -236,85 +342,449 @@ def merge_hooks(new_hooks: dict, existing_hooks: dict, source: str) -> dict:
 # Codex propagation
 # ---------------------------------------------------------------------------
 
+
 def _codex_hooks_path(target_dir: str) -> Path:
-    """Return the global Codex hooks.json path."""
-    return Path(target_dir) / ".codex" / "hooks.json"
+    """Return the active user-level Codex hooks path.
 
-
-def _filter_codex_events(hooks: dict) -> dict:
-    """Keep only events supported by Codex CLI."""
-    return {event: entries for event, entries in hooks.items()
-            if event in CODEX_EVENTS}
-
-
-def _inject_codex(tagged_hooks: dict, source: str, target_dir: str) -> None:
-    """Propagate hook entries to ~/.codex/hooks.json (Codex global layer).
-
-    Only events in CODEX_EVENTS are propagated. Non-Codex events are silently
-    skipped.
+    ``CODEX_HOME`` replaces the default ``~/.codex`` root. The configured path
+    must follow Codex's documented contract: absolute, existing, and a real
+    directory. The public Codex writer performs the final per-path symlink
+    checks before replacing any bytes.
     """
-    codex_hooks = _filter_codex_events(tagged_hooks)
-    if not codex_hooks:
-        return
+    configured = os.environ.get("CODEX_HOME", "").strip()
+    if not configured:
+        return _absolute_path(target_dir) / ".codex" / "hooks.json"
 
-    codex_path = _codex_hooks_path(target_dir)
-    codex_path.parent.mkdir(parents=True, exist_ok=True)
-
-    existing: dict = {}
-    if codex_path.is_file():
-        try:
-            data = load_json(str(codex_path))
-            existing = data.get("hooks", {})
-        except (json.JSONDecodeError, OSError):
-            existing = {}
-
-    merged = merge_hooks(codex_hooks, existing, source)
-    save_json(str(codex_path), {"hooks": merged})
-    events = ", ".join(sorted(codex_hooks.keys()))
-    print(f"Propagated to Codex: {codex_path} (events: {events})")
+    codex_home = Path(configured).expanduser()
+    if not codex_home.is_absolute():
+        raise RuntimeError("CODEX_HOME must be an absolute path")
+    if not codex_home.exists():
+        raise RuntimeError(f"Configured CODEX_HOME does not exist: {codex_home}")
+    if not codex_home.is_dir():
+        raise RuntimeError(f"Configured CODEX_HOME is not a directory: {codex_home}")
+    if codex_home.is_symlink():
+        raise RuntimeError(f"Refusing symlinked CODEX_HOME: {codex_home}")
+    return _absolute_path(codex_home) / "hooks.json"
 
 
-def _remove_codex(source_name: str, target_dir: str) -> None:
-    """Remove hook entries from ~/.codex/hooks.json."""
-    codex_path = _codex_hooks_path(target_dir)
-    if not codex_path.is_file():
-        return
+def _codex_destination(target_root: Path) -> _Destination:
+    """Resolve and preflight the active Codex hooks destination."""
+    hooks_path = _codex_hooks_path(str(target_root))
+    configured = os.environ.get("CODEX_HOME", "").strip()
+    trusted_root = hooks_path.parent if configured else target_root
+    destination = _Destination(hooks_path, trusted_root, "Codex hooks")
+    _assert_safe_destination(destination)
+    return destination
+
+
+def _codex_owner(source: str) -> str:
+    """Build a collision-resistant, shell-safe owner marker for a source."""
+    slug = re.sub(r"[^a-z0-9]+", "-", source.lower()).strip("-") or "source"
+    slug = slug[:48].rstrip("-") or "source"
+    digest = hashlib.sha256(source.encode("utf-8")).hexdigest()[:12]
+    return f"{CODEX_OWNER_PREFIX}-{slug}-{digest}"
+
+
+def _has_codex_owner(command: str, owner: str) -> bool:
+    match = CODEX_OWNER_PATTERN.search(command)
+    return match is not None and match.group("owner") == owner
+
+
+def _owned_codex_command(command: str, owner: str) -> str:
+    """Attach native ownership without allowing an injected owner conflict."""
+    match = CODEX_OWNER_PATTERN.search(command)
+    if match is not None:
+        raise ValueError(
+            "External Codex hook commands must not set AI_TOOLKIT_HOOK_OWNER"
+        )
+    return f"AI_TOOLKIT_HOOK_OWNER={owner} {command}"
+
+
+def _translate_codex_hooks(hooks: dict, source: str) -> tuple[dict, list[str]]:
+    """Translate the unambiguous command-only subset to native Codex groups."""
+    if not isinstance(hooks, dict):
+        raise ValueError("hooks must be an object")
+
+    owner = _codex_owner(source)
+    translated: dict[str, list[dict]] = {}
+    skipped: list[str] = []
+    for event, groups in hooks.items():
+        if event not in CODEX_EVENTS:
+            skipped.append(f"event {event!r} is not supported by Codex")
+            continue
+        if not isinstance(groups, list):
+            raise ValueError(f"Hook event {event} must contain a list")
+
+        translated_groups: list[dict] = []
+        for index, group in enumerate(groups):
+            if not isinstance(group, dict):
+                raise ValueError(f"Hook event {event} group {index} must be an object")
+            unknown_group_keys = set(group) - CODEX_NATIVE_GROUP_KEYS - {"_source"}
+            if unknown_group_keys:
+                skipped.append(
+                    f"{event} group {index} uses unsupported fields "
+                    f"{sorted(unknown_group_keys)}"
+                )
+                continue
+
+            handlers = group.get("hooks")
+            if not isinstance(handlers, list) or not handlers:
+                raise ValueError(f"Hook event {event} group {index} needs handlers")
+            native_handlers: list[dict] = []
+            for handler_index, handler in enumerate(handlers):
+                if not isinstance(handler, dict):
+                    raise ValueError(
+                        f"Hook event {event} handler {handler_index} must be an object"
+                    )
+                unknown_handler_keys = (
+                    set(handler) - CODEX_NATIVE_HANDLER_KEYS - {"_source"}
+                )
+                if unknown_handler_keys:
+                    skipped.append(
+                        f"{event} handler {handler_index} uses unsupported fields "
+                        f"{sorted(unknown_handler_keys)}"
+                    )
+                    continue
+                if handler.get("type") != "command":
+                    skipped.append(
+                        f"{event} handler {handler_index} is not a command handler"
+                    )
+                    continue
+                command = handler.get("command")
+                if not isinstance(command, str) or not command.strip():
+                    raise ValueError(
+                        f"Hook event {event} handler {handler_index} needs a command"
+                    )
+                native_handler = {
+                    key: value
+                    for key, value in handler.items()
+                    if key in CODEX_NATIVE_HANDLER_KEYS
+                }
+                native_handler["command"] = _owned_codex_command(command, owner)
+                native_handlers.append(native_handler)
+
+            if not native_handlers:
+                continue
+            native_group: dict = {"hooks": native_handlers}
+            matcher = group.get("matcher")
+            if matcher not in (None, ""):
+                if event in {"UserPromptSubmit", "Stop"}:
+                    skipped.append(f"{event} does not support a matcher in Codex")
+                    continue
+                native_group["matcher"] = matcher
+            translated_groups.append(native_group)
+
+        if translated_groups:
+            translated[event] = translated_groups
+    return translated, skipped
+
+
+def _migrate_legacy_codex_sources(data: dict) -> dict:
+    """Convert the invalid ``_source`` ownership emitted by older releases."""
+    if not isinstance(data, dict) or not isinstance(data.get("hooks", {}), dict):
+        return data
+
+    for event, groups in data.get("hooks", {}).items():
+        if not isinstance(groups, list):
+            continue
+        for group in groups:
+            if not isinstance(group, dict) or "_source" not in group:
+                continue
+            source = group.get("_source")
+            if not isinstance(source, str) or not source:
+                continue
+            if source == PROTECTED_SOURCE:
+                owner = PROTECTED_SOURCE
+            elif re.fullmatch(r"ai-toolkit-plugin-[a-z0-9][a-z0-9-]*", source):
+                owner = source
+            else:
+                owner = _codex_owner(source)
+            handlers = group.get("hooks", [])
+            if not isinstance(handlers, list):
+                continue
+            for handler in handlers:
+                if not isinstance(handler, dict) or handler.get("type") != "command":
+                    continue
+                command = handler.get("command")
+                if not isinstance(command, str) or not command.strip():
+                    continue
+                match = CODEX_OWNER_PATTERN.search(command)
+                if match is not None and match.group("owner") != owner:
+                    raise ValueError(
+                        f"Legacy Codex {event} owner conflicts with its command marker"
+                    )
+                if match is None:
+                    handler["command"] = f"AI_TOOLKIT_HOOK_OWNER={owner} {command}"
+            matcher = group.get("matcher")
+            if matcher == "":
+                group.pop("matcher", None)
+            elif event in {"UserPromptSubmit", "Stop"} and matcher is not None:
+                raise ValueError(
+                    f"Legacy Codex {event} hook has an unsupported matcher"
+                )
+            del group["_source"]
+    return data
+
+
+def _has_legacy_source(data: object) -> bool:
+    if isinstance(data, dict):
+        return "_source" in data or any(
+            _has_legacy_source(value) for value in data.values()
+        )
+    if isinstance(data, list):
+        return any(_has_legacy_source(value) for value in data)
+    return False
+
+
+def _load_codex_hooks_bytes(content: bytes | None, path: Path) -> dict:
+    """Parse a pinned snapshot and migrate only the known legacy shape."""
+    from generate_codex_hooks import (
+        parse_hooks_json_bytes,
+        validate_hooks_document,
+    )
 
     try:
-        data = load_json(str(codex_path))
-    except (json.JSONDecodeError, OSError):
+        return parse_hooks_json_bytes(content, path)
+    except ValueError as validation_error:
+        if content is None:
+            raise
+        try:
+            data = json.loads(content.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise validation_error
+        if not _has_legacy_source(data):
+            raise validation_error
+        migrated = _migrate_legacy_codex_sources(data)
+        validate_hooks_document(migrated)
+        return migrated
+
+
+def _strip_codex_owner(data: dict, owner: str) -> bool:
+    """Remove only handlers carrying the exact external-source owner marker."""
+    changed = False
+    hooks = data.get("hooks", {})
+    for event in list(hooks):
+        retained_groups: list[dict] = []
+        for group in hooks[event]:
+            handlers = group.get("hooks", [])
+            retained = [
+                handler
+                for handler in handlers
+                if not _has_codex_owner(handler.get("command", ""), owner)
+            ]
+            if len(retained) != len(handlers):
+                changed = True
+            if retained:
+                retained_group = dict(group)
+                retained_group["hooks"] = retained
+                retained_groups.append(retained_group)
+        if retained_groups:
+            hooks[event] = retained_groups
+        else:
+            del hooks[event]
+    return changed
+
+
+@dataclass(frozen=True)
+class _CodexUpdate:
+    destination: _Destination
+    data: dict
+    message: str
+
+
+def _prepare_codex_injection(
+    codex_hooks: dict,
+    source: str,
+    target_root: Path,
+    content: bytes | None,
+) -> _CodexUpdate | None:
+    """Merge native Codex hooks from a transaction-pinned snapshot."""
+    destination = _codex_destination(target_root)
+    if not codex_hooks and content is None:
         return
 
-    existing = data.get("hooks", {})
-    cleaned = strip_source(existing, source_name)
+    data = _load_codex_hooks_bytes(content, destination.path)
+    changed = _strip_codex_owner(data, _codex_owner(source))
+    for event, groups in codex_hooks.items():
+        data.setdefault("hooks", {}).setdefault(event, []).extend(groups)
+        changed = True
+    if not changed:
+        return
 
-    if cleaned:
-        save_json(str(codex_path), {"hooks": cleaned})
-    else:
-        save_json(str(codex_path), {"hooks": {}})
+    from generate_codex_hooks import validate_hooks_document
 
-    print(f"Removed '{source_name}' from Codex: {codex_path}")
+    validate_hooks_document(data)
+    events = ", ".join(sorted(codex_hooks.keys()))
+    action = f"events: {events}" if events else "removed stale source handlers"
+    return _CodexUpdate(
+        destination,
+        data,
+        f"Propagated to Codex: {destination.path} ({action})",
+    )
+
+
+def _prepare_codex_removal(
+    source_name: str,
+    target_root: Path,
+    content: bytes | None,
+) -> _CodexUpdate | None:
+    """Prepare an exact removal from a transaction-pinned snapshot."""
+    destination = _codex_destination(target_root)
+    if content is None:
+        return None
+    data = _load_codex_hooks_bytes(content, destination.path)
+    if not _strip_codex_owner(data, _codex_owner(source_name)):
+        return None
+    from generate_codex_hooks import validate_hooks_document
+
+    validate_hooks_document(data)
+    return _CodexUpdate(
+        destination,
+        data,
+        f"Removed '{source_name}' from Codex: {destination.path}",
+    )
+
+
+def _write_codex_update(
+    update: _CodexUpdate,
+    transaction: SecureTransaction | None = None,
+) -> None:
+    _require_secure_mutation_support()
+    from generate_codex_hooks import write_hooks_json
+
+    _assert_safe_destination(update.destination)
+    write_hooks_json(
+        update.destination.path,
+        update.data,
+        transaction=transaction,
+        trusted_root=update.destination.trusted_root,
+    )
 
 
 # ---------------------------------------------------------------------------
 # CLI actions
 # ---------------------------------------------------------------------------
 
-def _fetch_and_cache(url: str, source: str) -> str:
-    """Fetch hooks JSON from URL, cache locally, register source.
 
-    Args:
-        url: HTTPS URL to fetch.
-        source: Source name for caching and registry.
+def _validate_source_name(source: str) -> str:
+    """Reject reserved or path-like source names before building destinations."""
+    if source == PROTECTED_SOURCE:
+        raise ValueError(f"source name '{PROTECTED_SOURCE}' is reserved")
+    if SOURCE_NAME_PATTERN.fullmatch(source) is None:
+        raise ValueError(
+            "hook source names may contain only letters, numbers, '_' and '-'"
+        )
+    return source
 
-    Returns:
-        Path to the cached hooks JSON file.
-    """
+
+@dataclass(frozen=True)
+class _RegistryUpdate:
+    destination: _Destination
+    data: dict
+
+
+def _registry_destinations(source: str) -> tuple[_Destination, _Destination]:
+    """Return safe source-registry and URL-cache destinations."""
+    from paths import EXTERNAL_HOOKS_DIR, TOOLKIT_DATA_DIR
+
+    toolkit_root = _absolute_path(TOOLKIT_DATA_DIR)
+    trusted_root = _nearest_existing_root(toolkit_root)
+    registry = _Destination(
+        _absolute_path(EXTERNAL_HOOKS_DIR / "sources.json"),
+        trusted_root,
+        "hook source registry",
+    )
+    cache = _Destination(
+        _absolute_path(EXTERNAL_HOOKS_DIR / f"{source}.json"),
+        trusted_root,
+        "hook URL cache",
+    )
+    _assert_safe_destination(registry)
+    _assert_safe_destination(cache)
+    return registry, cache
+
+
+def _load_sources_bytes(content: bytes | None) -> dict[str, dict]:
+    """Mirror hook_sources.load_sources using transaction-pinned bytes."""
+    if content is None:
+        return {}
+    try:
+        data = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict) or not isinstance(data.get("hooks", {}), dict):
+        return {}
+    return dict(data.get("hooks", {}))
+
+
+def _prepare_registry_update(
+    source: str,
+    content: bytes,
+    registry_content: bytes | None,
+    *,
+    source_path: Path | None = None,
+    url: str | None = None,
+) -> tuple[_RegistryUpdate | None, _Destination]:
+    """Build source metadata without mutating the registry or cache."""
+    registry, cache = _registry_destinations(source)
+    sources = _load_sources_bytes(registry_content)
+    existing = sources.get(source) or {}
+    if url is None and "url" in existing:
+        return None, cache
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    digest = hashlib.sha256(content).hexdigest()
+    if url is not None:
+        previous_digest = existing.get("sha256")
+        if previous_digest and previous_digest != digest:
+            print(
+                f"  CHECKSUM CHANGED: hook '{source}' sha256 "
+                f"{previous_digest[:12]}... -> {digest[:12]}..."
+            )
+            if os.environ.get("AI_TOOLKIT_STRICT_PIN") == "1":
+                raise SystemExit(
+                    f"Refusing to update '{source}' under AI_TOOLKIT_STRICT_PIN=1."
+                )
+        entry = {"url": url, "fetched_at": timestamp, "sha256": digest}
+    else:
+        assert source_path is not None
+        entry = {
+            "path": str(source_path.resolve()),
+            "fetched_at": timestamp,
+            "sha256": digest,
+        }
+    sources[source] = entry
+    return _RegistryUpdate(
+        registry,
+        {"schema_version": 1, "hooks": sources},
+    ), cache
+
+
+def _prepare_registry_removal(
+    source: str,
+    registry_content: bytes | None,
+) -> tuple[_RegistryUpdate | None, _Destination, bool]:
+    """Prepare registry removal and report whether the entry owns a URL cache."""
+    registry, cache = _registry_destinations(source)
+    sources = _load_sources_bytes(registry_content)
+    existing = sources.get(source)
+    if existing is None:
+        return None, cache, False
+    was_url = isinstance(existing, dict) and "url" in existing
+    del sources[source]
+    return (
+        _RegistryUpdate(
+            registry,
+            {"schema_version": 1, "hooks": sources},
+        ),
+        cache,
+        was_url,
+    )
+
+
+def _fetch_url(url: str) -> bytes:
+    """Fetch and validate a remote hooks document without changing local state."""
     from url_fetch import fetch_url
-    from hook_sources import register_url_source
-    from paths import EXTERNAL_HOOKS_DIR
-
-    EXTERNAL_HOOKS_DIR.mkdir(parents=True, exist_ok=True)
 
     try:
         data = fetch_url(url)
@@ -331,12 +801,7 @@ def _fetch_and_cache(url: str, source: str) -> str:
 
     if "hooks" not in parsed:
         print("Warning: no 'hooks' key found in URL response", file=sys.stderr)
-
-    cached_path = EXTERNAL_HOOKS_DIR / f"{source}.json"
-    cached_path.write_bytes(data)
-    register_url_source(None, source, url, content=data)
-
-    return str(cached_path)
+    return data
 
 
 def inject(hooks_file: str, target_dir: str, source_override: str = "") -> None:
@@ -347,7 +812,10 @@ def inject(hooks_file: str, target_dir: str, source_override: str = "") -> None:
         target_dir: Directory containing ``.claude/settings.json``.
         source_override: Explicit source name (overrides filename-derived name).
     """
+    _require_secure_mutation_support()
     is_url = _is_url(hooks_file)
+    source_url: str | None = hooks_file if is_url else None
+    source_path: Path | None = None
 
     if is_url:
         if hooks_file.startswith("http://"):
@@ -361,41 +829,38 @@ def inject(hooks_file: str, target_dir: str, source_override: str = "") -> None:
         source = re.sub(r"[^a-zA-Z0-9_-]", "", source)
         if not source:
             print(
-                "Error: could not derive hook name from URL. "
-                "Provide one explicitly.",
+                "Error: could not derive hook name from URL. Provide one explicitly.",
                 file=sys.stderr,
             )
             sys.exit(1)
 
-        if source == PROTECTED_SOURCE:
-            print(
-                f"Error: source name '{PROTECTED_SOURCE}' is reserved.",
-                file=sys.stderr,
-            )
+        try:
+            _validate_source_name(source)
+        except ValueError as error:
+            print(f"Error: {error}", file=sys.stderr)
             sys.exit(1)
-
-        hooks_file = _fetch_and_cache(hooks_file, source)
-        print(f"Fetched hooks from URL (source: '{source}')")
+        hooks_content = _fetch_url(hooks_file)
     else:
         # Derive source name from filename stem
         source = source_override or Path(hooks_file).stem
-        if source == PROTECTED_SOURCE:
-            print(
-                f"Error: source name '{PROTECTED_SOURCE}' is reserved. "
-                "Rename your hooks file.",
-                file=sys.stderr,
-            )
+        try:
+            _validate_source_name(source)
+        except ValueError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            sys.exit(1)
+        source_path = _absolute_path(hooks_file)
+        try:
+            hooks_content = source_path.read_bytes()
+        except OSError as error:
+            print(f"Error reading hooks file: {error}", file=sys.stderr)
             sys.exit(1)
 
     # Load the hooks file
     try:
-        hooks_data = load_json(hooks_file)
+        hooks_data = json.loads(hooks_content)
     except json.JSONDecodeError as exc:
         print(f"Error: malformed JSON in {hooks_file}: {exc}", file=sys.stderr)
         sys.exit(2)
-    except OSError as exc:
-        print(f"Error reading hooks file: {exc}", file=sys.stderr)
-        sys.exit(1)
 
     new_hooks = hooks_data.get("hooks", {})
     if not new_hooks:
@@ -405,42 +870,80 @@ def inject(hooks_file: str, target_dir: str, source_override: str = "") -> None:
     # Tag entries with source
     tagged = tag_entries(new_hooks, source)
 
-    # Load existing settings
-    settings_dir = Path(target_dir) / ".claude"
-    settings_path = settings_dir / "settings.json"
+    # Prepare every destination before changing any file. The root is trusted;
+    # all descendants are checked component-by-component for symlinks.
+    target_root = _trusted_target_root(target_dir)
+    settings_path = target_root / ".claude" / "settings.json"
+    settings_destination = _Destination(
+        settings_path,
+        target_root,
+        "Claude settings",
+    )
+    _assert_safe_destination(settings_destination)
 
-    settings: dict = {}
-    if settings_path.is_file():
-        try:
-            settings = load_json(str(settings_path))
-        except json.JSONDecodeError as exc:
-            print(
-                f"Error: malformed JSON in {settings_path}: {exc}",
-                file=sys.stderr,
+    codex_hooks, skipped = _translate_codex_hooks(new_hooks, source)
+    for reason in skipped:
+        print(f"Skipped Codex hook: {reason}", file=sys.stderr)
+    codex_destination = _codex_destination(target_root)
+    include_codex = bool(codex_hooks) or codex_destination.path.exists()
+    registry_destination, cache_destination = _registry_destinations(source)
+
+    destinations = [settings_destination, registry_destination]
+    if is_url:
+        destinations.append(cache_destination)
+    if include_codex:
+        destinations.append(codex_destination)
+
+    result: dict[str, _CodexUpdate | None] = {"codex": None}
+
+    def apply_injection(transaction: SecureTransaction) -> None:
+        settings = _load_destination_json(
+            transaction.initial_content(settings_destination),
+            settings_path,
+        )
+        existing_hooks = settings.get("hooks", {})
+        settings["hooks"] = merge_hooks(tagged, existing_hooks, source)
+        registry_update, _ = _prepare_registry_update(
+            source,
+            hooks_content,
+            transaction.initial_content(registry_destination),
+            source_path=source_path,
+            url=source_url,
+        )
+        codex_update = (
+            _prepare_codex_injection(
+                codex_hooks,
+                source,
+                target_root,
+                transaction.initial_content(codex_destination),
             )
-            sys.exit(2)
-    else:
-        settings_dir.mkdir(parents=True, exist_ok=True)
+            if include_codex
+            else None
+        )
+        result["codex"] = codex_update
 
-    existing_hooks = settings.get("hooks", {})
-    settings["hooks"] = merge_hooks(tagged, existing_hooks, source)
-    save_json(str(settings_path), settings)
+        if is_url:
+            transaction.atomic_write(cache_destination, hooks_content)
+        if registry_update is not None:
+            transaction.atomic_write(
+                registry_update.destination,
+                _json_bytes(registry_update.data, indent=2),
+            )
+        transaction.atomic_write(settings_destination, _json_bytes(settings))
+        if codex_update is not None:
+            _write_codex_update(codex_update, transaction)
+
+    try:
+        _run_transaction(destinations, apply_injection)
+    except _MalformedDestinationJson as error:
+        print(f"Error: {error}", file=sys.stderr)
+        sys.exit(2)
+    if is_url:
+        print(f"Fetched hooks from URL (source: '{source}')")
     print(f"Injected hooks from '{source}' into {settings_path}")
-
-    # Register local-file source so `status` and future updates can see it.
-    # URL sources are already registered earlier inside _fetch_and_cache().
-    if not is_url:
-        try:
-            from hook_sources import register_path_source
-            register_path_source(
-                None, source, Path(hooks_file),
-                content=Path(hooks_file).read_bytes(),
-            )
-        except Exception as exc:  # registration failure must not block injection
-            print(f"Warning: could not register local source: {exc}", file=sys.stderr)
-
-    # Propagate Codex-compatible events to ~/.codex/hooks.json
-    _inject_codex(tagged, source, target_dir)
+    codex_update = result["codex"]
+    if isinstance(codex_update, _CodexUpdate):
+        print(codex_update.message)
 
 
 def remove(source_name: str, target_dir: str) -> None:
@@ -452,62 +955,116 @@ def remove(source_name: str, target_dir: str) -> None:
         source_name: The ``_source`` tag to remove.
         target_dir: Directory containing ``.claude/settings.json``.
     """
-    if source_name == PROTECTED_SOURCE:
-        print(
-            f"Error: cannot remove '{PROTECTED_SOURCE}' entries. "
-            "Use 'ai-toolkit uninstall' instead.",
-            file=sys.stderr,
+    _require_secure_mutation_support()
+    try:
+        _validate_source_name(source_name)
+    except ValueError as error:
+        suffix = (
+            " Use 'ai-toolkit uninstall' instead."
+            if source_name == PROTECTED_SOURCE
+            else ""
         )
+        print(f"Error: {error}.{suffix}", file=sys.stderr)
         sys.exit(1)
 
-    settings_path = Path(target_dir) / ".claude" / "settings.json"
+    target_root = _trusted_target_root(target_dir)
+    settings_path = target_root / ".claude" / "settings.json"
+    settings_destination = _Destination(
+        settings_path,
+        target_root,
+        "Claude settings",
+    )
+    _assert_safe_destination(settings_destination)
+    codex_destination = _codex_destination(target_root)
+    registry_destination, cache_destination = _registry_destinations(source_name)
+    include_settings = settings_path.is_file()
+    include_codex = codex_destination.path.is_file()
+    include_registry = registry_destination.path.is_file()
+    destinations: list[_Destination] = []
+    if include_settings:
+        destinations.append(settings_destination)
+    if include_codex:
+        destinations.append(codex_destination)
+    if include_registry:
+        destinations.append(registry_destination)
+        destinations.append(cache_destination)
 
-    if not settings_path.is_file():
-        print(f"No settings.json found at {settings_path}")
-        return
+    result: dict[str, object] = {
+        "settings": None,
+        "codex": None,
+        "registry": None,
+    }
 
-    try:
-        settings = load_json(str(settings_path))
-    except json.JSONDecodeError as exc:
-        print(
-            f"Error: malformed JSON in {settings_path}: {exc}",
-            file=sys.stderr,
+    def apply_removal(transaction: SecureTransaction) -> None:
+        settings_update: dict | None = None
+        if include_settings:
+            settings_content = transaction.initial_content(settings_destination)
+            if settings_content is not None:
+                settings = _load_destination_json(settings_content, settings_path)
+                existing_hooks = settings.get("hooks", {})
+                cleaned = strip_source(existing_hooks, source_name)
+                if cleaned:
+                    settings["hooks"] = cleaned
+                else:
+                    settings.pop("hooks", None)
+                settings_update = settings
+        codex_update = (
+            _prepare_codex_removal(
+                source_name,
+                target_root,
+                transaction.initial_content(codex_destination),
+            )
+            if include_codex
+            else None
         )
-        sys.exit(2)
+        registry_update, _, remove_cache = (
+            _prepare_registry_removal(
+                source_name,
+                transaction.initial_content(registry_destination),
+            )
+            if include_registry
+            else (None, cache_destination, False)
+        )
+        result["settings"] = settings_update
+        result["codex"] = codex_update
+        result["registry"] = registry_update
 
-    existing_hooks = settings.get("hooks", {})
-    cleaned = strip_source(existing_hooks, source_name)
+        if settings_update is not None:
+            transaction.atomic_write(
+                settings_destination,
+                _json_bytes(settings_update),
+            )
+        if codex_update is not None:
+            _write_codex_update(codex_update, transaction)
+        if registry_update is not None:
+            transaction.atomic_write(
+                registry_update.destination,
+                _json_bytes(registry_update.data, indent=2),
+            )
+        if remove_cache:
+            transaction.unlink(cache_destination)
 
-    if cleaned:
-        settings["hooks"] = cleaned
-    else:
-        settings.pop("hooks", None)
-
-    save_json(str(settings_path), settings)
-    print(f"Removed hooks with source '{source_name}' from {settings_path}")
-
-    # Remove from Codex global hooks
-    _remove_codex(source_name, target_dir)
-
-    # Unregister URL source if present
     try:
-        from hook_sources import unregister_source
-        from paths import EXTERNAL_HOOKS_DIR
-
-        if unregister_source(None, source_name):
-            print(f"Unregistered URL source '{source_name}'")
-
-        # Remove cached file if exists
-        cached = EXTERNAL_HOOKS_DIR / f"{source_name}.json"
-        if cached.is_file():
-            cached.unlink()
-    except ImportError:
-        pass
+        _run_transaction(destinations, apply_removal)
+    except _MalformedDestinationJson as error:
+        print(f"Error: {error}", file=sys.stderr)
+        sys.exit(2)
+    settings_update = result["settings"]
+    if settings_update is not None:
+        print(f"Removed hooks with source '{source_name}' from {settings_path}")
+    else:
+        print(f"No settings.json found at {settings_path}")
+    codex_update = result["codex"]
+    if isinstance(codex_update, _CodexUpdate):
+        print(codex_update.message)
+    if isinstance(result["registry"], _RegistryUpdate):
+        print(f"Unregistered hook source '{source_name}'")
 
 
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
+
 
 def _parse_args(argv: list[str]) -> dict:
     """Parse CLI arguments.
@@ -545,15 +1102,23 @@ def _parse_args(argv: list[str]) -> dict:
                 else:
                     result["target_dir"] = arg
             elif positional == 1:
-                if _is_url(result["source_file"]):
-                    # Second positional after URL could be hook-name or target-dir
-                    # If it looks like a path (starts with / or ~ or .), it's target-dir
-                    if arg.startswith(("/", "~", ".")):
-                        result["target_dir"] = arg
-                    else:
-                        result["hook_name"] = arg
-                else:
+                # Preserve the historical two-positional form
+                # ``<source> <target-dir>`` while honoring the documented
+                # ``<source> <hook-name> [target-dir]`` form. Valid hook names
+                # cannot begin with path sigils.
+                looks_like_path = (
+                    arg.startswith(("/", "~", "."))
+                    or os.sep in arg
+                    or (os.altsep is not None and os.altsep in arg)
+                    or (
+                        not _is_url(result["source_file"])
+                        and Path(arg).expanduser().is_dir()
+                    )
+                )
+                if looks_like_path:
                     result["target_dir"] = arg
+                else:
+                    result["hook_name"] = arg
             elif positional == 2:
                 result["target_dir"] = arg
             positional += 1
@@ -563,7 +1128,7 @@ def _parse_args(argv: list[str]) -> dict:
 
 
 def main() -> None:
-    """Inject or remove external hooks in settings.json."""
+    """Inject or remove external hooks in Claude and Codex configs."""
     args = _parse_args(sys.argv[1:])
 
     # -- remove mode ---------------------------------------------------------

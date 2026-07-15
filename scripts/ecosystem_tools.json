@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-07-10",
+  "last_updated": "2026-07-14",
   "tools": [
     {
       "id": "claude-code",
@@ -130,7 +130,8 @@
         "~/.claude/agents/*.md",
         ".codex/agents/*.md",
         "~/.codex/agents/*.md",
-        ".cursor/hooks.json"
+        ".cursor/hooks.json",
+        ".cursor/hooks/ai-toolkit/cursor_hook.py"
       ],
       "our_generators": [
         "scripts/generate_cursor_rules.py",
@@ -139,6 +140,7 @@
         "scripts/generate_cursor_agents.py",
         "scripts/generate_cursor_skills.py"
       ],
+      "status_note": "Cursor 3.11 adds cloud-agent conversation hooks. ai-toolkit emits the complete documented version-1 event set and a self-contained repository runtime under .cursor/hooks/ai-toolkit/; project hook commands do not depend on user-level ~/.cursor or ~/.softspark paths. User entries are preserved and legacy _source-tagged toolkit entries are migrated to schema-valid command ownership markers.",
       "capability_markers": [
         "cursorrules",
         ".cursor/rules",
@@ -215,10 +217,21 @@
         ".github/copilot-instructions.md",
         ".github/instructions/*.instructions.md",
         ".github/prompts/*.prompt.md",
-        "AGENTS.md"
+        ".github/agents/*.agent.md",
+        ".github/skills/*/SKILL.md",
+        ".github/hooks/*.json",
+        "AGENTS.md",
+        "~/.copilot/copilot-instructions.md",
+        "~/.copilot/instructions/*.instructions.md",
+        "~/.copilot/agents/*.agent.md",
+        "~/.copilot/skills/*/SKILL.md",
+        "~/.copilot/hooks/*.json",
+        "~/.copilot/settings.json",
+        "~/.copilot/mcp-config.json"
       ],
       "our_generators": [
-        "scripts/generate_copilot.py"
+        "scripts/generate_copilot.py",
+        "scripts/generate_copilot_hooks.py"
       ],
       "capability_markers": [
         "copilot-instructions.md",
@@ -230,7 +243,10 @@
         "prompt files",
         "instructions.md",
         "AGENTS.md",
-        "MCP"
+        "MCP",
+        "skills",
+        "CLI hooks",
+        "~/.copilot/"
       ],
       "version_probe": null
     },
@@ -487,6 +503,7 @@
         ".agents/skills/*/SKILL.md",
         ".agents/hooks.json",
         ".agents/mcp_config.json",
+        "~/.gemini/config/mcp_config.json",
         ".agent/rules/*.md",
         ".agent/workflows/*.md",
         ".agent/skills/*/SKILL.md",
@@ -496,7 +513,7 @@
       "our_generators": [
         "scripts/generate_antigravity.py"
       ],
-      "status_note": "Antigravity CLI (GA 2026-05-19) reads workspace skills from .agents/skills/ (plural); the IDE still uses .agent/skills/ (singular) — our generator dual-emits the skill pointer to both. CLI hooks live in .agents/hooks.json with Claude-style event names (PreToolUse, not BeforeTool) and a JSON stdin/stdout decision contract. CLI MCP config is .agents/mcp_config.json with a required serverUrl field (url/httpUrl rejected silently); the GLOBAL MCP config path is reported inconsistently across sources (~/.gemini/antigravity-cli/ vs ~/.gemini/config/), so only the workspace path is registered until verified via agy inspect. Official docs are fully JS-rendered — the doctor is blind to them; verify changes manually each sync.",
+      "status_note": "Antigravity CLI (GA 2026-05-19) reads workspace skills from .agents/skills/ (plural); the IDE still uses .agent/skills/ (singular) — our generator dual-emits the skill pointer to both. CLI hooks live in .agents/hooks.json with Claude-style event names (PreToolUse, not BeforeTool) and a JSON stdin/stdout decision contract. Native MCP configs are .agents/mcp_config.json (workspace) and ~/.gemini/config/mcp_config.json (global). The 2.1.4 changelog confirms that url is accepted alongside serverUrl; httpUrl remains unsupported. scripts/mcp_editors.py ships project and global Antigravity adapters with transactional JSON merge/remove.",
       "capability_markers": [
         "agent manager",
         "artifacts",
@@ -516,7 +533,7 @@
       "display_name": "Codex CLI",
       "kind": "editor",
       "urls": {
-        "docs": "https://developers.openai.com/codex",
+        "docs": "https://learn.chatgpt.com/docs/codex/cli",
         "release_notes": "https://github.com/openai/codex/releases",
         "changelog": null
       },
@@ -525,6 +542,8 @@
         "~/.codex/AGENTS.md",
         "~/.codex/AGENTS.override.md",
         ".agents/skills/*/SKILL.md",
+        ".codex/agents/*.toml",
+        "~/.codex/agents/*.toml",
         ".codex/hooks.json",
         "~/.codex/hooks.json",
         ".codex/config.toml",
@@ -532,6 +551,7 @@
       ],
       "our_generators": [
         "scripts/generate_codex.py",
+        "scripts/generate_codex_agents.py",
         "scripts/generate_codex_hooks.py",
         "scripts/generate_codex_skills.py"
       ],
@@ -554,7 +574,8 @@
         "hook handler: command",
         "hook handler: prompt",
         "hook handler: agent",
-        ".agents/skills"
+        ".agents/skills",
+        ".codex/agents"
       ],
       "version_probe": {
         "kind": "command",

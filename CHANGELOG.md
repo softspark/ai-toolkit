@@ -7,6 +7,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.15.0 — Native Codex and Copilot parity (2026-07-14)
+
+Minor release. Rebuilds the Codex CLI and GitHub Copilot integrations around their current native instruction, agent, skill, hook, and MCP surfaces. It also hardens managed-file migration and multi-file configuration updates so toolkit refreshes preserve user-owned content and fail without leaving partial state. No source catalog count change (44 agents, 108 skills).
+
+### Added
+- **Codex native custom agents** — `scripts/generate_codex_agents.py` materializes all 44 source agents as validated `.codex/agents/ai-toolkit-*.toml` files with native `name`, `description`, and `developer_instructions` fields. Logical-name collisions, unmanaged files, stale symlinks, and staging failures preserve user content.
+- **Complete Codex skill delivery** — project installs expose all 108 skills under `.agents/skills/`: 51 portable skills link to their canonical source and 57 Claude-specific skills receive self-contained, signature-free Codex adaptations with required assets retained.
+- **Self-contained Codex hooks** — project and user installs emit schema-validated `.codex/hooks.json` plus native runtime assets under `.codex/hooks/` or `$CODEX_HOME/ai-toolkit-hooks/`. Managed handlers merge idempotently with user hooks and keep Codex trust review explicit.
+- **Copilot native customization bundle** — project installs now generate all 44 native `.agent.md` agents, all 108 materialized portable skills, 62 slash-command `.prompt.md` files, and scoped instruction files under `.github/`. User installs provide instructions, agents, and skills under `$COPILOT_HOME`; prompt files remain repository-scoped.
+- **Copilot native lifecycle hooks** — `scripts/generate_copilot_hooks.py` writes GitHub version-1 hook configuration and a self-contained runtime with native camelCase events, event-specific decisions, destructive-command/path guards, quality gates, and a bounded stop-loop circuit breaker.
+- **Codex project and user MCP** — MCP templates now render validated STDIO or Streamable HTTP `[mcp_servers.*]` tables into project `.codex/config.toml` and user `$CODEX_HOME/config.toml`, while preserving unrelated TOML text and comments.
+
+### Changed
+- **One shared instruction and constitution core** — Codex and Copilot `AGENTS.md` output now comes from `scripts/instruction_core.py` and the canonical `app/constitution.md`. Agent and skill catalogs are discovered from native directories instead of being duplicated into always-on instructions.
+- **Portable skill translation** — Codex, Copilot, and opencode adapters replace Claude-only tools, prompt placeholders, and skill-directory variables with runtime-neutral workflow intent instead of guessed client function signatures. opencode commands retain native `$ARGUMENTS` and positional argument behavior.
+- **Profile-aware Copilot install model** — project `minimal` installs agents and skills; `standard`, `strict`, and `full` additionally install instructions, prompts, and native hooks. User installs always provide instructions, agents, and skills, with hooks enabled from `standard` upward. `COPILOT_HOME` replaces the default user root consistently.
+- **Release workflow runtime** — pinned `softprops/action-gh-release` to the reviewed v3.0.2 commit for the Node 24 action runtime.
+
+### Fixed
+- **Rules and constitution enforcement gaps** — current Codex and Copilot instruction files now receive the same always-on policy derived from the canonical constitution, eliminating stale or unread duplicated rule catalogs.
+- **Managed marker migration** — instruction injection handles nested, crossed, orphaned, empty legacy, and Unicode section markers without consuming adjacent user-authored content.
+- **Transactional MCP updates** — canonical `.mcp.json` and all requested native editor configs are preflighted and applied as one atomic transaction. Invalid JSON/TOML, symlinked destinations, concurrent changes, or a late replace failure leave prior files byte-identical or trigger an explicit rollback failure.
+- **Managed output safety** — native generators stage and validate replacements, reject symlinked roots, preserve reserved user collisions and unmanaged files, and remove only files carrying ai-toolkit ownership markers.
+
+### Ecosystem
+- **Class B/F — Codex CLI**: adopted native custom-agent TOML, current skill discovery, the documented hook schema and trust model, project/user configuration layers, `$CODEX_HOME`, and project-scoped MCP from the current OpenAI documentation.
+- **Class B/F — GitHub Copilot**: adopted repository and user custom agents, prompt files, instruction files, portable skills, version-1 hooks, `$COPILOT_HOME`, and `.github/mcp.json` from the current GitHub documentation.
+
 ## v4.14.1 — Keep fact-checker on Sonnet (2026-07-14)
 
 Patch release. Reverts one of the two agent model reassignments from v4.14.0: `fact-checker` goes back to `model: sonnet`. Claim verification is accuracy-sensitive and Haiku's recall on subtle claims did not justify the cost saving. `explorer-agent` (pure read/search) stays on `model: haiku`. No count change (44 agents, 108 skills, 1216 tests).

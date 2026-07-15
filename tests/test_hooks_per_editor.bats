@@ -11,11 +11,13 @@
 #   1. Generators exit 0 on a clean target dir.
 #   2. Output paths match the per-editor convention.
 #   3. Idempotence: running the generator twice produces byte-identical output.
-#   4. Source-tag marker (_source: ai-toolkit) is present on every managed entry
-#      so that regeneration can rewrite only our block.
+#   4. Each generator has an ownership marker so regeneration rewrites only its
+#      managed block. Cursor uses its documented command field rather than an
+#      unsupported custom entry key.
 #   5. Prefix preservation: unrelated user keys / hook entries survive.
-#   6. Shell command prefix is "$HOME/.softspark/ai-toolkit/hooks/" — not an
-#      absolute /Users/... path (portability).
+#   6. Commands use portable paths. Cursor project hooks use a repo-vendored
+#      runtime for cloud-agent compatibility; other editors use the installed
+#      "$HOME/.softspark/ai-toolkit/hooks/" runtime.
 #
 # Run with: bats tests/test_hooks_per_editor.bats
 
@@ -80,8 +82,9 @@ assert 'PreToolUse' in data, 'events live at the top level'
 
 # ── Source tag presence ────────────────────────────────────────────────────
 
-@test "hooks: cursor entries carry _source: ai-toolkit" {
-    grep -q '"_source": "ai-toolkit"' "$HPE_DIR/.cursor/hooks.json"
+@test "hooks: cursor entries carry the managed runtime command marker" {
+    grep -q 'cursor_hook.py' "$HPE_DIR/.cursor/hooks.json"
+    ! grep -q '"_source": "ai-toolkit"' "$HPE_DIR/.cursor/hooks.json"
 }
 
 @test "hooks: devin entries carry _source: ai-toolkit" {
@@ -98,9 +101,11 @@ assert 'PreToolUse' in data, 'events live at the top level'
 
 # ── HOME-relative shell paths ──────────────────────────────────────────────
 
-@test "hooks: cursor commands use \$HOME prefix (not absolute /Users)" {
+@test "hooks: cursor commands use the repo-vendored runtime (not host HOME)" {
     ! grep -qE '"/Users/|"/home/' "$HPE_DIR/.cursor/hooks.json"
-    grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.cursor/hooks.json"
+    ! grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.cursor/hooks.json"
+    grep -q '\.cursor/hooks/ai-toolkit/cursor_hook.py' "$HPE_DIR/.cursor/hooks.json"
+    [ -x "$HPE_DIR/.cursor/hooks/ai-toolkit/cursor_hook.py" ]
 }
 
 @test "hooks: devin commands use \$HOME prefix (not absolute /Users)" {
@@ -219,7 +224,7 @@ assert 'hooks' in data, 'hooks block missing'
 EOF
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$tmp" >/dev/null
     grep -q '"_source": "user"' "$tmp/.cursor/hooks.json"
-    grep -q '"_source": "ai-toolkit"' "$tmp/.cursor/hooks.json"
+    grep -q 'cursor_hook.py' "$tmp/.cursor/hooks.json"
     rm -rf "$tmp"
 }
 
@@ -244,9 +249,9 @@ EOF
 @test "hooks: cursor regeneration does not duplicate ai-toolkit entries" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$tmp" >/dev/null
-    first=$(grep -c '"_source": "ai-toolkit"' "$tmp/.cursor/hooks.json" || echo 0)
+    first=$(grep -c 'cursor_hook.py' "$tmp/.cursor/hooks.json" || echo 0)
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$tmp" >/dev/null
-    second=$(grep -c '"_source": "ai-toolkit"' "$tmp/.cursor/hooks.json" || echo 0)
+    second=$(grep -c 'cursor_hook.py' "$tmp/.cursor/hooks.json" || echo 0)
     rm -rf "$tmp"
     [ "$first" -eq "$second" ]
     [ "$first" -gt 0 ]

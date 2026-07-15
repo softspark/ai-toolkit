@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.6.0"
+version: "1.7.0"
 created: "2026-03-27"
-last_updated: "2026-06-10"
+last_updated: "2026-07-14"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -426,7 +426,7 @@ First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`.
 | Script | `~/.softspark/ai-toolkit/hooks/search-tracker.sh` |
 | Fires | After any search-style tool call |
 
-**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag` (per-session, keyed by `session_id` from the hook stdin payload, falling back to `transcript_path` basename, then `default`). Pairs with `user-prompt-submit.sh` (sets the flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag is still set). Search provider detection parses actual MCP server names from `mcpServers`, `mcp_servers`, or `mcp` config blocks; hook matchers and permission allowlists do not count as providers. Codex Stop enforcement also scans the recent `~/.codex/log/codex-tui.log` window for `ToolCall: mcp__...__smart_query` and `tool.name="smart_query"`-style entries because Codex MCP tool calls may not fire the shared `PostToolUse` tracker. Together the hooks enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs and without cross-session interference when multiple Claude Code windows run in parallel.
+**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag` (per-session, keyed by `session_id` from the hook stdin payload, falling back to `transcript_path` basename, then `default`). Pairs with `user-prompt-submit.sh` (sets the flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag is still set). Search provider detection parses actual MCP server names from `mcpServers`, `mcp_servers`, or `mcp` config blocks; hook matchers and permission allowlists do not count as providers. Codex Stop enforcement also scans the recent `$CODEX_HOME/log/codex-tui.log` window (default `~/.codex/log/codex-tui.log`) for `ToolCall: mcp__...__smart_query` and `tool.name="smart_query"`-style entries because Codex MCP tool calls may not fire the shared `PostToolUse` tracker. Together the hooks enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs and without cross-session interference when multiple Claude Code windows run in parallel.
 
 Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -439,7 +439,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/stop-search-check.sh` |
 | Fires | When Claude finishes a response |
 
-**Action:** If `search-required-<session_id>.flag` for the calling session is still present (no search tool ran during this turn) and a search provider is still detectable, emits `{"decision":"block","reason":"..."}` to continue the conversation with a search-first reminder. If no RAG/Web provider is detected, it clears the stale flag and exits 0, so offline/no-MCP users are not blocked. On Codex, where MCP search tools may not trigger the shared `PostToolUse` tracker, the hook also checks `~/.codex/log/codex-tui.log` for search tool calls after the flag timestamp before blocking. Flags are scoped by `session_id` from the hook stdin payload so a Stop in session B never consumes session A's flag (and vice versa). Stale per-session flags older than 60 minutes are GC'd on the next `SessionStart`.
+**Action:** If `search-required-<session_id>.flag` for the calling session is still present (no search tool ran during this turn) and a search provider is still detectable, emits `{"decision":"block","reason":"..."}` to continue the conversation with a search-first reminder. If no RAG/Web provider is detected, it clears the stale flag and exits 0, so offline/no-MCP users are not blocked. On Codex, where MCP search tools may not trigger the shared `PostToolUse` tracker, the hook also checks `$CODEX_HOME/log/codex-tui.log` (default `~/.codex/log/codex-tui.log`) for search tool calls after the flag timestamp before blocking. Flags are scoped by `session_id` from the hook stdin payload so a Stop in session B never consumes session A's flag (and vice versa). Stale per-session flags older than 60 minutes are GC'd on the next `SessionStart`.
 
 **Overrides:** `CLAUDE_SKIP_SEARCH_FIRST=1`, `AI_TOOLKIT_SEARCH_FIRST=off`, or `AI_TOOLKIT_SEARCH_FIRST=strict` to force enforcement. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -562,15 +562,15 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     └── ConfigChange       → config-desync-guard.sh
 ```
 
-**Key design decisions:**
+**Claude Code design decisions:**
 - Scripts **copied** (not symlinked) — user can customize without breaking git
 - Hooks in `settings.json` (not `hooks.json`) — Claude Code only reads settings files
 - `_source: "ai-toolkit"` tag on every entry — allows idempotent merge/strip
-- Hooks are **global only** — `--local` does not install hooks into project settings
+- Claude hooks are **global only** — `--local` does not install them into project settings
 
-## Per-Editor Native Hooks (profile=full)
+## Per-Editor Native Hooks
 
-Beyond the global Claude Code hooks above, full-profile project installs emit native hook files for editors that support their own hook lifecycle. All reuse the same `~/.softspark/ai-toolkit/hooks/*.sh` scripts and the `_source: ai-toolkit` merge tag.
+Beyond the global Claude Code hooks above, editor profiles emit native hook files for runtimes that support their own lifecycle. The profile threshold and command/output contract are editor-specific; generators must not assume Claude event names or exit semantics.
 
 | Editor | File | Generator | Format |
 |--------|------|-----------|--------|
@@ -578,6 +578,42 @@ Beyond the global Claude Code hooks above, full-profile project installs emit na
 | Devin CLI | `.devin/hooks.v1.json` | `generate_devin_hooks.py` | Claude-compatible (the replacement for Cascade) |
 | Gemini CLI | `.gemini/settings.json` (hooks block) | `generate_gemini_hooks.py` | Gemini `BeforeTool`/`AfterTool` events |
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
+| GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
+| Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
+
+### Cursor hooks (`.cursor/hooks.json`)
+
+Cursor hooks follow the native [version-1 hooks contract](https://cursor.com/docs/hooks):
+
+- **Cloud:** cloud agents load only repository `.cursor/hooks.json`; they cannot read user-level `~/.cursor/hooks.json`. Project commands call the adjacent self-contained `.cursor/hooks/ai-toolkit/cursor_hook.py` runtime and contain no host `~/.softspark` dependency.
+- **Events:** the generator emits the complete documented Agent, Tab, and workspace lifecycle event set, including Cursor 3.11 conversation events `beforeSubmitPrompt`, `afterAgentResponse`, `afterAgentThought`, `subagentStart`, `subagentStop`, `preCompact`, and `stop`.
+- **Schema:** managed entries use only documented `command`, `timeout`, and `loop_limit` fields. Regeneration recognizes the runtime command as its ownership marker and removes legacy `_source: ai-toolkit` entries without emitting that non-standard key again.
+- **Safety:** destructive shell commands return Cursor's native `permission: deny` response and exit 2. A failed detected quality gate returns a bounded `followup_message`; `stop` and `subagentStop` declare `loop_limit: 5`, with an earlier three-failure circuit breaker in the runtime.
+- **Preservation:** unrelated top-level settings and user hook entries survive regeneration. Config and runtime replacement is staged and rejects symlinked destinations or a user-owned runtime collision.
+
+### GitHub Copilot hooks (`.github/hooks/ai-toolkit.json`)
+
+Copilot hooks follow GitHub's native [hooks reference](https://docs.github.com/en/copilot/reference/hooks-reference), not Claude's settings schema:
+
+- **Locations:** repository hooks live in `.github/hooks/*.json`; user hooks live in `hooks/*.json` below `$COPILOT_HOME` or `~/.copilot`.
+- **File shape:** top-level `version: 1` plus a `hooks` object containing camelCase events.
+- **Runtime:** `ai-toolkit.json` calls the adjacent self-contained `ai-toolkit/copilot_hook.py`; local hooks do not depend on a package checkout or `~/.softspark` scripts.
+- **Native decisions:** `preToolUse` returns `permissionDecision`, `permissionDecisionReason`, and optional `modifiedArgs`. `agentStop` returns `decision` plus `reason`. Context events use `additionalContext`.
+- **Failure semantics:** the runtime uses GitHub's event-specific stdout and exit-code contracts. It does not reuse Claude's generic exit-2 blocking behavior.
+- **Loop safety:** a failing `agentStop` quality gate can block twice; the third consecutive failure opens the circuit so the session cannot loop forever.
+- **Ownership:** generated configs carry `AI_TOOLKIT_HOOK_OWNER=ai-toolkit`; unrelated hook files are not edited.
+
+### Codex CLI hooks (`.codex/hooks.json`)
+
+Codex hooks follow the native [Codex hooks contract](https://learn.chatgpt.com/docs/hooks):
+
+- **Locations:** repository hooks live in `.codex/hooks.json`; user hooks live in `$CODEX_HOME/hooks.json` (default `~/.codex/hooks.json`). Project hooks load only for a trusted `.codex` layer.
+- **Assets:** repository commands use self-contained `.codex/hooks/*`; user commands use `$CODEX_HOME/ai-toolkit-hooks/*`. They do not call Claude's `~/.softspark/ai-toolkit/hooks/` paths.
+- **Events:** Codex documents 10 events. ai-toolkit wires 9: `SessionStart`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact` is intentionally unwired.
+- **Compaction:** `PreCompact` runs `codex-pre-compact.sh`, a Codex-native reminder that refers to the active `AGENTS.md` chain, plan, and git state. It does not run Claude's `pre-compact.sh` or `pre-compact-save.sh` payload adapters.
+- **Ownership:** native JSON contains no private `_source` keys. Core handlers carry `AI_TOOLKIT_HOOK_OWNER=ai-toolkit` in their command; plugin and external handlers use exact source-specific command markers.
+- **Preservation:** generation replaces only toolkit-owned handlers and assets. Unrelated user handlers and plugin-owned handlers remain intact.
+- **Trust:** installation never bypasses trust. Review the active definitions with `/hooks` after install or update.
 
 ### Devin CLI hooks (`.devin/hooks.v1.json`)
 

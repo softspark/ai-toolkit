@@ -107,6 +107,36 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
+@test "ecosystem_doctor: reports complete Codex and Copilot generator counts" {
+    run python3 -c "
+import json, sys
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from ecosystem_doctor import check_tool
+
+data = json.load(open('$TOOLKIT_DIR/scripts/ecosystem_tools.json'))
+tools = {tool['id']: tool for tool in data['tools']}
+expected = {
+    'codex-cli': {
+        'scripts/generate_codex.py',
+        'scripts/generate_codex_agents.py',
+        'scripts/generate_codex_hooks.py',
+        'scripts/generate_codex_skills.py',
+    },
+    'github-copilot': {
+        'scripts/generate_copilot.py',
+        'scripts/generate_copilot_hooks.py',
+    },
+}
+for tool_id, generators in expected.items():
+    assert set(tools[tool_id]['our_generators']) == generators
+    report = check_tool(tools[tool_id], {}, offline=True)
+    assert report['current']['generator_count'] == len(generators)
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
 # ── CLI flags ────────────────────────────────────────────────────────────────
 
 @test "ecosystem_doctor: --tool <unknown> exits 1" {

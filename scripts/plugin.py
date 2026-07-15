@@ -23,11 +23,13 @@ Actions:
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import sqlite3 as sqlite
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -39,7 +41,14 @@ from codex_skill_adapter import (
     sync_codex_skill,
     unmanaged_codex_skill_names,
 )
-from generate_codex_hooks import generate as generate_codex_hooks
+from generate_codex_hooks import (
+    SUPPORTED_EVENTS as SUPPORTED_CODEX_HOOK_EVENTS,
+    TOOLKIT_COMMAND_MARKER,
+    generate as generate_codex_hooks,
+    load_hooks_json,
+    validate_hooks_document,
+    write_hooks_json,
+)
 from install_steps.ai_tools import inject_with_rules
 from paths import HOOKS_DIR as _HOOKS_DIR
 from paths import RULES_DIR, TOOLKIT_DATA_DIR
@@ -49,18 +58,15 @@ from plugin_schema import resolve_hook_event
 PLUGINS_DIR = app_dir / "plugins"
 CLAUDE_DIR = Path.home() / ".claude"
 CODEX_ROOT = Path.home()
+CODEX_HOME = Path(os.environ.get("CODEX_HOME", CODEX_ROOT / ".codex")).expanduser()
+CODEX_HOOKS_DIR = CODEX_HOME / "ai-toolkit-hooks"
 HOOKS_DIR = _HOOKS_DIR
 PLUGINS_STATE_FILE = TOOLKIT_DATA_DIR / "plugins.json"
 MEMORY_DB = TOOLKIT_DATA_DIR / "memory.db"
 
 VALID_EDITORS = ("claude", "codex")
-SUPPORTED_CODEX_HOOK_EVENTS = frozenset({
-    "SessionStart",
-    "PreToolUse",
-    "PostToolUse",
-    "UserPromptSubmit",
-    "Stop",
-})
+CODEX_PLUGIN_NAME_PATTERN = re.compile(r"[a-z0-9][a-z0-9-]*")
+CODEX_PLUGIN_ASSET_MARKER = "# ai-toolkit-managed: codex-plugin-hook"
 
 
 # ---------------------------------------------------------------------------
@@ -345,18 +351,6 @@ def _load_core_hook_matchers() -> dict[str, str]:
 CORE_HOOK_MATCHERS = _load_core_hook_matchers()
 
 
-def _hook_already_present(hooks_data: dict, hook_name: str) -> bool:
-    for entries in hooks_data.get("hooks", {}).values():
-        if not isinstance(entries, list):
-            continue
-        for entry in entries:
-            for hook in entry.get("hooks", []):
-                command = hook.get("command", "")
-                if Path(command.replace("\"", "")).name == hook_name:
-                    return True
-    return False
-
-
 # ---------------------------------------------------------------------------
 # Claude runtime
 # ---------------------------------------------------------------------------
@@ -547,119 +541,277 @@ def _install_codex_extra_skills(pack: dict, pack_dir: Path) -> None:
     cleanup_codex_skills(skills_dst, skills_src, user_names)
 
 
+def _codex_plugin_owner(name: str) -> str:
+    if CODEX_PLUGIN_NAME_PATTERN.fullmatch(name) is None:
+        raise ValueError(f"Unsafe Codex plugin name: {name}")
+    return f"ai-toolkit-plugin-{name}"
+
+
+def _codex_command_has_owner(command: str, owner: str) -> bool:
+    pattern = rf"(?:^|\s)AI_TOOLKIT_HOOK_OWNER={re.escape(owner)}(?=\s|$)"
+    return re.search(pattern, command) is not None
+
+
+def _assert_safe_codex_surface() -> None:
+    configured_home = os.environ.get("CODEX_HOME")
+    if not CODEX_HOME.is_absolute():
+        raise RuntimeError("CODEX_HOME must be an absolute path")
+    if configured_home and not CODEX_HOME.is_dir():
+        raise RuntimeError("Configured CODEX_HOME must already exist")
+    paths = (
+        (CODEX_HOME, "home"),
+        (CODEX_HOME / "AGENTS.md", "AGENTS.md"),
+        (CODEX_HOME / "hooks.json", "hooks.json"),
+        (CODEX_HOOKS_DIR, "hook assets"),
+    )
+    for path, label in paths:
+        if path.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Codex {label}: {path}")
+
+
 def _install_codex_base() -> None:
-    _ensure_core_hook_scripts()
+    _assert_safe_codex_surface()
+    generate_codex_hooks(
+        CODEX_ROOT,
+        global_install=True,
+        codex_home=CODEX_HOME,
+    )
     # Universal coding rules are inlined into AGENTS.md by generate_codex.py;
-    # Codex does not read a .agents/rules/ directory. Global instructions must
-    # live at $CODEX_HOME/AGENTS.md (default ~/.codex/AGENTS.md), not ~/AGENTS.md.
-    inject_with_rules("generate_codex.py", CODEX_ROOT / ".codex" / "AGENTS.md", RULES_DIR)
-    hooks_path = CODEX_ROOT / ".codex" / "hooks.json"
-    existing = _load_json(hooks_path, {"hooks": {}})
-    plugin_entries: dict[str, list[dict]] = {}
-    for event, entries in existing.get("hooks", {}).items():
-        kept = [entry for entry in entries if str(entry.get("_source", "")).startswith("ai-toolkit-plugin-")]
-        if kept:
-            plugin_entries[event] = kept
-
-    generate_codex_hooks(CODEX_ROOT)
-
-    if plugin_entries:
-        refreshed = _load_json(hooks_path, {"hooks": {}})
-        bucket = refreshed.setdefault("hooks", {})
-        for event, entries in plugin_entries.items():
-            bucket.setdefault(event, [])
-            bucket[event].extend(entries)
-        _write_json(hooks_path, refreshed)
+    # Codex does not read a .agents/rules/ directory.
+    inject_with_rules("generate_codex.py", CODEX_HOME / "AGENTS.md", RULES_DIR)
     _install_all_codex_skills(CODEX_ROOT)
 
 
-def _ensure_codex_hooks_file() -> Path:
-    hooks_path = CODEX_ROOT / ".codex" / "hooks.json"
-    if not hooks_path.is_file():
-        generate_codex_hooks(CODEX_ROOT)
-    return hooks_path
-
-
 def _codex_matcher(spec: dict) -> str:
-    if spec["event"] in {"PreToolUse", "PostToolUse"}:
+    if spec["event"] in {"PreToolUse", "PostToolUse", "PermissionRequest"}:
         return "Bash"
     if spec["event"] == "SessionStart":
         return "startup|resume"
+    if spec["event"] in {"UserPromptSubmit", "Stop"}:
+        return ""
     return CORE_HOOK_MATCHERS.get(spec["name"], "")
 
 
-def _merge_codex_hooks(name: str, hook_specs: list[dict]) -> None:
-    hooks_path = _ensure_codex_hooks_file()
-    data = _load_json(hooks_path, {"hooks": {}})
-    bucket = data.setdefault("hooks", {})
-    source_tag = f"ai-toolkit-plugin-{name}"
+def _codex_base_hook_present(data: dict, hook_name: str) -> bool:
+    for groups in data.get("hooks", {}).values():
+        for group in groups:
+            for handler in group.get("hooks", []):
+                command = handler.get("command", "")
+                if not _codex_command_has_owner(command, TOOLKIT_COMMAND_MARKER.split("=", 1)[1]):
+                    continue
+                if re.search(rf"/{re.escape(hook_name)}(?=[\"'\s]|$)", command):
+                    return True
+    return False
 
+
+def _select_codex_hook_specs(data: dict, hook_specs: list[dict]) -> list[dict]:
+    selected: list[dict] = []
     for spec in hook_specs:
         if spec["event"] not in SUPPORTED_CODEX_HOOK_EVENTS:
-            print(f"    Skipped Codex hook (unsupported event): {spec['name']} -> {spec['event']}")
+            print(
+                "    Skipped Codex hook (unsupported event): "
+                f"{spec['name']} -> {spec['event']}"
+            )
             continue
-        if spec["is_core"] and _hook_already_present(data, spec["name"]):
+        if spec["is_core"] and _codex_base_hook_present(data, spec["name"]):
             print(f"    OK Codex hook (base install): {spec['name']}")
             continue
-        entry = {
-            "_source": source_tag,
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": _plugin_hook_command(name, spec),
-                }
-            ],
+        selected.append(spec)
+    return selected
+
+
+def _remove_codex_handlers(data: dict, name: str) -> bool:
+    owner = _codex_plugin_owner(name)
+    changed = False
+    bucket = data.get("hooks", {})
+    for event in list(bucket):
+        retained_groups: list[dict] = []
+        for group in bucket[event]:
+            handlers = group.get("hooks", [])
+            retained = [
+                handler
+                for handler in handlers
+                if not _codex_command_has_owner(handler.get("command", ""), owner)
+            ]
+            if len(retained) != len(handlers):
+                changed = True
+            if retained:
+                retained_group = dict(group)
+                retained_group["hooks"] = retained
+                retained_groups.append(retained_group)
+        if retained_groups:
+            bucket[event] = retained_groups
+        else:
+            del bucket[event]
+    return changed
+
+
+def _codex_plugin_asset_name(name: str, spec: dict) -> str:
+    return f"plugin-{name}-{Path(spec['name']).name}"
+
+
+def _codex_plugin_asset_marker(name: str) -> str:
+    return f"{CODEX_PLUGIN_ASSET_MARKER} owner={_codex_plugin_owner(name)}"
+
+
+def _codex_plugin_asset_content(name: str, spec: dict) -> bytes:
+    source = Path(spec["source"])
+    if source.is_symlink() or not source.is_file():
+        raise RuntimeError(f"Refusing unsafe Codex plugin hook source: {source}")
+    text = source.read_text(encoding="utf-8")
+    marker = _codex_plugin_asset_marker(name) + "\n"
+    lines = text.splitlines(keepends=True)
+    if lines and lines[0].startswith("#!"):
+        text = "".join((lines[0], marker, *lines[1:]))
+    else:
+        text = marker + text
+    return text.encode("utf-8")
+
+
+def _is_owned_codex_plugin_asset(path: Path, name: str) -> bool:
+    if path.is_symlink() or not path.is_file():
+        return False
+    try:
+        prefix = path.read_text(encoding="utf-8")[:512]
+    except (OSError, UnicodeError):
+        return False
+    return _codex_plugin_asset_marker(name) in prefix
+
+
+def _stage_codex_plugin_asset(destination: Path, content: bytes, mode: int) -> Path:
+    fd, temp_name = tempfile.mkstemp(
+        dir=destination.parent,
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+    )
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            fd = -1
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temp_path, mode)
+        return temp_path
+    except Exception:
+        if fd >= 0:
+            os.close(fd)
+        temp_path.unlink(missing_ok=True)
+        raise
+
+
+def _write_codex_plugin_asset(destination: Path, content: bytes, mode: int = 0o755) -> None:
+    staged = _stage_codex_plugin_asset(destination, content, mode)
+    try:
+        if destination.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Codex plugin hook: {destination}")
+        os.replace(staged, destination)
+    finally:
+        staged.unlink(missing_ok=True)
+
+
+def _prepare_codex_plugin_assets(name: str, specs: list[dict]) -> dict[Path, bytes]:
+    _assert_safe_codex_surface()
+    CODEX_HOOKS_DIR.mkdir(parents=True, exist_ok=True)
+    _assert_safe_codex_surface()
+    assets: dict[Path, bytes] = {}
+    for spec in specs:
+        destination = CODEX_HOOKS_DIR / _codex_plugin_asset_name(name, spec)
+        if destination.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Codex plugin hook: {destination}")
+        if destination.exists() and not _is_owned_codex_plugin_asset(destination, name):
+            raise RuntimeError(f"Refusing user-owned Codex hook collision: {destination}")
+        assets[destination] = _codex_plugin_asset_content(name, spec)
+    return assets
+
+
+def _restore_codex_plugin_assets(
+    snapshots: dict[Path, tuple[bytes, int] | None],
+) -> None:
+    for destination, snapshot in snapshots.items():
+        if snapshot is None:
+            destination.unlink(missing_ok=True)
+        else:
+            content, mode = snapshot
+            _write_codex_plugin_asset(destination, content, mode)
+
+
+def _codex_plugin_command(name: str, spec: dict) -> str:
+    owner = _codex_plugin_owner(name)
+    asset_name = _codex_plugin_asset_name(name, spec)
+    return (
+        f'AI_TOOLKIT_HOOK_OWNER={owner} '
+        f'"${{CODEX_HOME:-$HOME/.codex}}/ai-toolkit-hooks/{asset_name}"'
+    )
+
+
+def _install_codex_hooks(
+    name: str,
+    hook_specs: list[dict],
+    installed_items: list[str],
+) -> None:
+    hooks_path = CODEX_HOME / "hooks.json"
+    data = load_hooks_json(hooks_path)
+    specs = _select_codex_hook_specs(data, hook_specs)
+    _remove_codex_handlers(data, name)
+    bucket = data.setdefault("hooks", {})
+    for spec in specs:
+        group = {
+            "hooks": [{
+                "type": "command",
+                "command": _codex_plugin_command(name, spec),
+            }]
         }
         matcher = _codex_matcher(spec)
         if matcher:
-            entry["matcher"] = matcher
+            group["matcher"] = matcher
+        bucket.setdefault(spec["event"], []).append(group)
+    validate_hooks_document(data)
 
-        event_hooks = bucket.setdefault(spec["event"], [])
-        event_hooks = [h for h in event_hooks if h.get("_source") != source_tag]
-        event_hooks.append(entry)
-        bucket[spec["event"]] = event_hooks
+    assets = _prepare_codex_plugin_assets(name, specs)
+    snapshots = {
+        path: (path.read_bytes(), path.stat().st_mode & 0o777)
+        if path.exists()
+        else None
+        for path in assets
+    }
+    try:
+        for path, content in assets.items():
+            _write_codex_plugin_asset(path, content)
+        write_hooks_json(hooks_path, data)
+    except Exception:
+        _restore_codex_plugin_assets(snapshots)
+        raise
 
-    _write_json(hooks_path, data)
-    print("    Merged hooks into ~/.codex/hooks.json")
+    for path in assets:
+        installed_items.append(f"hook:{path.name}")
+        print(f"    Copied Codex hook: {path.name}")
+    print("    Merged hooks into $CODEX_HOME/hooks.json")
 
 
 def _strip_codex_hooks(name: str) -> None:
-    hooks_path = CODEX_ROOT / ".codex" / "hooks.json"
+    hooks_path = CODEX_HOME / "hooks.json"
     if not hooks_path.is_file():
         return
-    data = _load_json(hooks_path, {"hooks": {}})
-    bucket = data.get("hooks", {})
-    source_tag = f"ai-toolkit-plugin-{name}"
-    changed = False
-
-    for event in list(bucket.keys()):
-        original = bucket[event]
-        filtered = [h for h in original if h.get("_source") != source_tag]
-        if len(filtered) != len(original):
-            bucket[event] = filtered
-            changed = True
-        if not bucket[event]:
-            del bucket[event]
-
-    if changed:
-        _write_json(hooks_path, data)
-        print("    Stripped hooks from ~/.codex/hooks.json")
+    data = load_hooks_json(hooks_path)
+    if _remove_codex_handlers(data, name):
+        write_hooks_json(hooks_path, data)
+        print("    Stripped hooks from $CODEX_HOME/hooks.json")
 
 
 def _install_codex_rules(name: str, rule_specs: list[dict]) -> None:
     # Codex reads instructions only from AGENTS.md, never from a .agents/rules/
-    # directory, so pack rules are marker-injected into ~/.codex/AGENTS.md (the
-    # documented global instruction file) instead of written as dead files.
-    agents_md = CODEX_ROOT / ".codex" / "AGENTS.md"
+    # directory, so pack rules are marker-injected into $CODEX_HOME/AGENTS.md.
+    agents_md = CODEX_HOME / "AGENTS.md"
     for spec in rule_specs:
         section = f"plugin-{name}-{spec['name']}"
         inject_section(spec["source"], agents_md, section)
-        print(f"    Injected Codex rule: {spec['name']} -> ~/.codex/AGENTS.md")
+        print(f"    Injected Codex rule: {spec['name']} -> $CODEX_HOME/AGENTS.md")
     _clean_legacy_codex_rule_files(name)
 
 
 def _remove_codex_rules(name: str) -> None:
-    agents_md = CODEX_ROOT / ".codex" / "AGENTS.md"
+    agents_md = CODEX_HOME / "AGENTS.md"
     if agents_md.is_file():
         content = agents_md.read_text(encoding="utf-8")
         changed = False
@@ -668,7 +820,7 @@ def _remove_codex_rules(name: str) -> None:
             changed = True
         if changed:
             agents_md.write_text(trim_trailing_blanks(content) + "\n", encoding="utf-8")
-            print(f"    Removed Codex rules for {name} from ~/.codex/AGENTS.md")
+            print(f"    Removed Codex rules for {name} from $CODEX_HOME/AGENTS.md")
     _clean_legacy_codex_rule_files(name)
 
 
@@ -676,7 +828,10 @@ def _clean_legacy_codex_rule_files(name: str) -> None:
     """Remove dead ~/.agents/rules/plugin-<name>-*.md files written by earlier
     versions. Codex never read them; Antigravity's .agents/rules/ is a separate,
     project-local surface, so this only touches our own plugin-prefixed files."""
-    rules_dir = CODEX_ROOT / ".agents" / "rules"
+    agents_dir = CODEX_ROOT / ".agents"
+    rules_dir = agents_dir / "rules"
+    if agents_dir.is_symlink() or rules_dir.is_symlink():
+        raise RuntimeError(f"Refusing symlinked legacy Codex rules path: {rules_dir}")
     if not rules_dir.is_dir():
         return
     for rule_file in sorted(rules_dir.glob(f"plugin-{name}-*.md")):
@@ -691,17 +846,31 @@ def install_pack_codex(name: str, pack: dict, pack_dir: Path) -> bool:
 
     _install_codex_base()
     _install_codex_extra_skills(pack, pack_dir)
-    _copy_plugin_hook_scripts(name, hook_specs, installed_items)
+    _install_codex_hooks(name, hook_specs, installed_items)
     _copy_plugin_scripts(name, pack_dir, installed_items)
     _install_codex_rules(name, rule_specs)
-    _merge_codex_hooks(name, hook_specs)
 
     print(f"  Done: {name} for codex ({len(installed_items)} file items)")
     return True
 
 
 def remove_pack_codex(name: str, pack: dict, pack_dir: Path, *, keep_shared_assets: bool) -> bool:
+    _assert_safe_codex_surface()
+    _strip_codex_hooks(name)
+
+    if CODEX_HOOKS_DIR.is_dir():
+        for hook in CODEX_HOOKS_DIR.glob(f"plugin-{name}-*.sh"):
+            if hook.is_symlink():
+                raise RuntimeError(f"Refusing symlinked Codex plugin hook: {hook}")
+            if _is_owned_codex_plugin_asset(hook, name):
+                hook.unlink()
+                print(f"    Removed Codex hook: {hook.name}")
+            else:
+                print(f"    WARN preserved user-owned Codex hook: {hook.name}")
+
     if not keep_shared_assets:
+        # Clean paths used by releases before native Codex plugin assets moved
+        # under $CODEX_HOME. Claude still owns these when installed for both.
         for hook in HOOKS_DIR.glob(f"plugin-{name}-*.sh"):
             hook.unlink()
             print(f"    Removed hook: {hook.name}")
@@ -711,7 +880,6 @@ def remove_pack_codex(name: str, pack: dict, pack_dir: Path, *, keep_shared_asse
             shutil.rmtree(scripts_dir)
             print(f"    Removed scripts: {scripts_dir}")
 
-    _strip_codex_hooks(name)
     _remove_codex_rules(name)
     print(f"  Done: removed {name} from codex")
     return True
@@ -944,10 +1112,9 @@ def cmd_status(editors: list[str]) -> None:
                 if hooks:
                     print(f"    Hooks: {', '.join(h.name for h in hooks)}")
             elif editor == "codex":
-                rules_dir = CODEX_ROOT / ".agents" / "rules"
-                rule_files = sorted(rules_dir.glob(f"plugin-{name}-*.md")) if rules_dir.is_dir() else []
-                if rule_files:
-                    print(f"    Rules: {', '.join(f.name for f in rule_files)}")
+                hooks = sorted(CODEX_HOOKS_DIR.glob(f"plugin-{name}-*.sh"))
+                if hooks:
+                    print(f"    Hooks: {', '.join(h.name for h in hooks)}")
             if name == "memory-pack":
                 _show_memory_stats()
         print()

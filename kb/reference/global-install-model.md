@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.2.0"
+version: "3.3.0"
 created: "2026-03-26"
-last_updated: "2026-07-10"
+last_updated: "2026-07-14"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -19,10 +19,11 @@ That means one machine-level install provides agents, skills, hooks, constitutio
 
 Other editor targets are opt-in and only use documented file surfaces. Cursor
 rules stay project-local because Cursor's global user rules are managed through
-the settings UI, not a stable merge-safe file. Codex remains project-local for
-the core toolkit install, but experimental plugin packs can layer a global
-Codex target in `HOME` when explicitly installed with
-`ai-toolkit plugin install --editor codex`.
+the settings UI, not a stable merge-safe file. Codex supports both project and
+user installs: project files stay in the repository, while user files use the
+active `CODEX_HOME` (default `~/.codex`) and shared user skills use
+`$HOME/.agents/skills/`. Experimental plugin packs can add a layer to the same
+Codex user surface.
 
 Claude Chat/Desktop/Cowork is a separate runtime. It does not read the
 filesystem surfaces under `~/.claude`; it receives ai-toolkit through an
@@ -53,12 +54,14 @@ The `--profile` flag controls how much of each editor's native surface is activa
 
 | Profile | What runs | Use when |
 |---------|-----------|----------|
-| `minimal` | Agents and skills only. No editor generators beyond pointer skills for editors that require them. | You want the smallest possible footprint, or you manage editor configs by hand. |
-| `standard` (default) | Claude Code + editor rule files. Includes **Gemini hooks** and the **Copilot directory layout** (v3.0.0 change from prior `standard`). | Day-to-day installs. Most users. |
+| `minimal` | Smallest editor surface. Copilot still receives its root instructions, native agents, and self-contained skills; Codex still receives instructions, agents, skills, and native safety hooks. | You want the smallest supported footprint. |
+| `standard` (default) | Claude Code + editor rule files. Includes Gemini hooks and native Copilot instructions, agents, portable skills, and hooks. | Day-to-day installs. Most users. |
 | `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks. | Solo dev or tight team with zero tolerance for drift. |
 | `full` | Every native surface across every editor: hooks, sub-agents, custom commands, skill pointers for Cursor / Windsurf / Gemini / Augment / Antigravity. | You want maximum coverage and understand that each editor will carry generated files under its own layout. |
 
-`--codex-skills` is an independent opt-in flag (not part of profile) that materializes the full skill catalog under `.agents/skills/` for Codex. Other editors stay on compat-read or the per-editor pointer skill.
+Codex installs materialize the full skill catalog under `.agents/skills/`
+regardless of profile. The legacy `--codex-skills` flag only requests an
+explicit second refresh of that same mirror and is no longer required.
 
 ## Global Editor Targets
 
@@ -100,14 +103,14 @@ with documented, file-based config surfaces:
 - `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `roo`: `~/.roo/rules/ai-toolkit-*.md` plus `~/.agents/skills/*` (Roo/Zoo native skill discovery; skipped when `codex` is also selected, which fills the same dir)
 - `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
-- `codex`: `~/.codex/AGENTS.md` (coding rules inlined; the documented global instruction file — NOT `~/AGENTS.md`, which Codex never loads as global instructions), `~/.agents/skills/*`, `~/.codex/hooks.json`
+- `codex`: `$CODEX_HOME/AGENTS.md`, `$CODEX_HOME/agents/*.toml`, `$CODEX_HOME/hooks.json`, `$CODEX_HOME/ai-toolkit-hooks/*`, plus `$HOME/.agents/skills/*`; `CODEX_HOME` defaults to `~/.codex`, and `~/AGENTS.md` is not Codex's user-instruction file
 - `opencode`: `~/.config/opencode/*`
 
 Cursor, GitHub Copilot, and Google Antigravity now have partial global support,
 scoped to whatever documented HOME file surface each exposes:
 
 - `cursor`: `~/.cursor/hooks.json` (safety/quality hooks; profile ≥ standard). Cursor RULES stay project-local — their only global surface is the Settings UI.
-- `copilot`: `~/.copilot/copilot-instructions.md` plus `~/.copilot/instructions/ai-toolkit-*.instructions.md` (read by Copilot CLI; VS Code and GitHub.com still use repo `.github/` files, which the local install emits).
+- `copilot`: instructions, native agents, portable skills, and native hooks under `$COPILOT_HOME` when set or `~/.copilot` otherwise. The hook config is `hooks/ai-toolkit.json`; its self-contained runtime is `hooks/ai-toolkit/copilot_hook.py`. VS Code and GitHub.com still use repo `.github/` files, which local install emits.
 - `antigravity`: skill pointer at `~/.gemini/config/skills/` and `~/.gemini/antigravity-cli/skills/`. Antigravity RULES stay project-local.
 
 Their global MCP support, where available, is handled by `ai-toolkit mcp
@@ -134,7 +137,15 @@ These files still stay local to a repository as part of the core install model:
 - project `.agents/rules/*.md`
 - project `.agents/skills/*`
 - project `.codex/hooks.json`
+- project `.codex/hooks/*`
+- project `.codex/agents/*.toml`
+- project `.codex/config.toml` when Codex MCP servers are selected
 - `.github/copilot-instructions.md`
+- `.github/instructions/ai-toolkit-*.instructions.md`
+- `.github/prompts/ai-toolkit-*.prompt.md`
+- `.github/agents/ai-toolkit-*.agent.md`
+- `.github/skills/ai-toolkit-*/SKILL.md` plus required assets and helper scripts
+- `.github/hooks/ai-toolkit.json` plus `.github/hooks/ai-toolkit/copilot_hook.py` (profile ≥ `standard`)
 - `.clinerules`
 - `.roomodes`
 - `.aider.conf.yml`
@@ -145,20 +156,39 @@ These files still stay local to a repository as part of the core install model:
 
 Project-local Claude Code language rules live in `.claude/rules/ai-toolkit-*.md` with `paths` frontmatter. They are separate from the global user-level `~/.claude/rules/ai-toolkit-*.md` files above.
 
-Hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`.
+Claude Code hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`. Editor-native generators may emit project-local hook files when that editor documents them; Copilot uses `.github/hooks/*.json` and Codex uses `.codex/hooks.json`.
 
-Codex is the exception in terms of file location, not hook ownership: its local
-`.codex/hooks.json` points to hook scripts already installed globally in
-`~/.softspark/ai-toolkit/hooks/`.
+## Copilot Install Behavior
+
+`ai-toolkit install --local --editors copilot` always emits root `AGENTS.md`,
+`.github/copilot-instructions.md`, native `.github/agents`, and portable,
+self-contained `.github/skills`. Profiles `standard`, `strict`, and `full`
+add scoped `.github/instructions`, `.github/prompts`, and native version-1
+`.github/hooks`. Profile `minimal` omits those three additional directories.
+
+Global install emits personal instructions, scoped instructions, agents, and
+skills under the active Copilot config root; profile `standard` and above adds
+hooks. Personal prompt files are not a documented Copilot CLI user surface and
+are not generated. `COPILOT_HOME` replaces `~/.copilot` for every generated
+Copilot surface, including `mcp-config.json`. Existing user files and user-added
+skill assets are preserved; reserved managed-path collisions and symlinked
+config roots are rejected instead of overwritten.
+
+Codex hook bundles are self-contained. Project `.codex/hooks.json` commands
+reference executable assets in `.codex/hooks/`; user `$CODEX_HOME/hooks.json`
+commands reference `$CODEX_HOME/ai-toolkit-hooks/`. Neither bundle depends on
+Claude's shared `~/.softspark/ai-toolkit/hooks/` installation.
 
 ## Codex Local Install Behavior
 
 `ai-toolkit install --local --editors codex` creates:
 
 - `AGENTS.md`
-- `.agents/rules/*.md`
 - `.agents/skills/*`
 - `.codex/hooks.json`
+- `.codex/hooks/*`
+- `.codex/agents/*.toml`
+- `.codex/config.toml` when project MCP servers are selected
 
 Native Codex-compatible skills are linked directly. Claude-oriented skills that
 depend on `Agent`, `Team*`, or `Task*` primitives are translated into generated
@@ -168,12 +198,13 @@ Codex wrappers so the project still receives the full skill catalog.
 
 `ai-toolkit plugin install --editor codex <pack>` additionally targets:
 
-- `~/.codex/AGENTS.md` (base instructions; pack rules are marker-injected here, not written as unread `~/.agents/rules/` files)
-- `~/.agents/skills/*`
-- `~/.codex/hooks.json`
+- `$CODEX_HOME/AGENTS.md` (pack rules are marker-injected here)
+- `$HOME/.agents/skills/*`
+- `$CODEX_HOME/hooks.json`
+- `$CODEX_HOME/ai-toolkit-hooks/plugin-<pack>-*`
 
-This is not the default core install path. It is an explicit, opt-in plugin
-layer used only for plugin packs. Runtime state is tracked in
+This is an explicit, opt-in layer on top of the normal Codex user install.
+Runtime state is tracked in
 `~/.softspark/ai-toolkit/plugins.json` per target (`claude`, `codex`).
 
 ## MCP Local Sync Behavior
@@ -183,6 +214,7 @@ If `.mcp.json` exists in the current project, `ai-toolkit install --local` mirro
 - `.cursor/mcp.json` when `--editors cursor` is selected
 - `.github/mcp.json` when `--editors copilot` is selected
 - `.roo/mcp.json` when `--editors roo` is selected
+- `.codex/config.toml` when `--editors codex` is selected
 
 Global-only editor MCP configs are not written during `install --local`. Use `ai-toolkit mcp install --editor <name...>` for those targets.
 

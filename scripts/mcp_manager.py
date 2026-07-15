@@ -9,6 +9,7 @@ Usage:
   mcp_manager.py install --editor <name[,..]> [--scope project|global] [--target <path>] [name..]
   mcp_manager.py remove <name>                  Remove from .mcp.json
 """
+
 from __future__ import annotations
 
 import json
@@ -18,9 +19,11 @@ from pathlib import Path
 from mcp_editors import (
     editor_rows,
     install_servers,
+    load_json_config,
     load_project_mcp_servers,
     remove_servers,
     supported_editors,
+    write_json_config,
 )
 
 TOOLKIT_DIR = Path(__file__).resolve().parent.parent
@@ -32,12 +35,13 @@ MCP_CONFIG_NAME = ".mcp.json"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def load_template(name: str) -> dict:
     """Load a template JSON by name. Exits on error."""
     template_path = TEMPLATES_DIR / f"{name}.json"
     if not template_path.is_file():
         print(f"Error: template '{name}' not found at {template_path}", file=sys.stderr)
-        print(f"Run 'ai-toolkit mcp list' to see available templates.", file=sys.stderr)
+        print("Run 'ai-toolkit mcp list' to see available templates.", file=sys.stderr)
         sys.exit(1)
     with open(template_path, encoding="utf-8") as f:
         return json.load(f)
@@ -49,35 +53,36 @@ def available_templates() -> list[dict]:
     for p in sorted(TEMPLATES_DIR.glob("*.json")):
         with open(p, encoding="utf-8") as f:
             data = json.load(f)
-        templates.append({
-            "name": data.get("name", p.stem),
-            "description": data.get("description", ""),
-            "file": p.name,
-        })
+        templates.append(
+            {
+                "name": data.get("name", p.stem),
+                "description": data.get("description", ""),
+                "file": p.name,
+            }
+        )
     return templates
 
 
 def load_mcp_config(target_dir: Path) -> dict:
     """Load existing .mcp.json or return empty structure."""
     config_path = target_dir / MCP_CONFIG_NAME
-    if config_path.is_file():
-        with open(config_path, encoding="utf-8") as f:
-            return json.load(f)
+    data = load_json_config(config_path)
+    if config_path.exists():
+        return data
     return {"mcpServers": {}}
 
 
 def write_mcp_config(target_dir: Path, config: dict) -> None:
     """Write .mcp.json with pretty formatting."""
     config_path = target_dir / MCP_CONFIG_NAME
-    with open(config_path, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2)
-        f.write("\n")
+    write_json_config(config_path, config)
     print(f"Updated: {config_path}")
 
 
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
+
 
 def cmd_list() -> None:
     """List all available MCP templates."""
@@ -92,7 +97,7 @@ def cmd_list() -> None:
         print(f"{t['name']:<25} {t['description']}")
     print()
     print(f"{len(templates)} templates available")
-    print(f"Add with: ai-toolkit mcp add <name>")
+    print("Add with: ai-toolkit mcp add <name>")
 
 
 def cmd_editors() -> None:
@@ -184,18 +189,24 @@ def cmd_install(
         )
         sys.exit(1)
 
-    eff_scope = scope or ("project" if target_dir is not None or not names else "global")
+    eff_scope = scope or (
+        "project" if target_dir is not None or not names else "global"
+    )
     if eff_scope == "project":
         project_dir = target_dir or Path.cwd()
         if names:
-            cmd_add(names, project_dir)
             servers = {}
             for name in names:
                 servers.update(load_template(name).get("mcpServers", {}))
+            # `.mcp.json` is the canonical Claude project config. Include it
+            # in the same transaction as every requested native editor so a
+            # preflight or late write failure cannot leave partial state.
+            transaction_editors = list(dict.fromkeys(["claude", *editors]))
         else:
             servers = load_project_mcp_servers(project_dir)
+            transaction_editors = editors
         updated = install_servers(
-            editors,
+            transaction_editors,
             servers,
             scope="project",
             project_dir=project_dir,
@@ -218,6 +229,7 @@ def cmd_install(
     # Track globally installed templates in state.json
     if eff_scope == "global" and names:
         from install_steps.install_state import record_mcp_template
+
         for name in names:
             record_mcp_template(name)
 
@@ -230,19 +242,17 @@ def cmd_install(
                 print(f"\n  Note ({name}): {post_install}")
 
 
-def cmd_remove(name: str, target_dir: Path | None, *, editors: list[str], scope: str | None) -> None:
+def cmd_remove(
+    name: str, target_dir: Path | None, *, editors: list[str], scope: str | None
+) -> None:
     """Remove an MCP server from .mcp.json."""
     if editors:
         eff_scope = scope or ("project" if target_dir else "global")
         if eff_scope == "project":
             project_dir = target_dir or Path.cwd()
-            config_path = project_dir / MCP_CONFIG_NAME
-            if config_path.is_file():
-                config = load_mcp_config(project_dir)
-                config.get("mcpServers", {}).pop(name, None)
-                write_mcp_config(project_dir, config)
+            transaction_editors = list(dict.fromkeys(["claude", *editors]))
             updated = remove_servers(
-                editors,
+                transaction_editors,
                 [name],
                 scope="project",
                 project_dir=project_dir,
@@ -251,6 +261,7 @@ def cmd_remove(name: str, target_dir: Path | None, *, editors: list[str], scope:
             updated = remove_servers(editors, [name], scope="global")
             # Untrack globally removed template from state.json
             from install_steps.install_state import remove_mcp_template
+
             remove_mcp_template(name)
         for path in updated:
             print(f"Updated: {path}")
@@ -267,7 +278,10 @@ def cmd_remove(name: str, target_dir: Path | None, *, editors: list[str], scope:
 
     if name not in servers:
         print(f"Error: server '{name}' not found in {config_path}.", file=sys.stderr)
-        print(f"Available servers: {', '.join(servers.keys()) or '(none)'}", file=sys.stderr)
+        print(
+            f"Available servers: {', '.join(servers.keys()) or '(none)'}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     del servers[name]
@@ -279,7 +293,10 @@ def cmd_remove(name: str, target_dir: Path | None, *, editors: list[str], scope:
 # Argument parsing
 # ---------------------------------------------------------------------------
 
-def parse_options(args: list[str]) -> tuple[list[str], Path | None, list[str], str | None]:
+
+def parse_options(
+    args: list[str],
+) -> tuple[list[str], Path | None, list[str], str | None]:
     """Extract common MCP CLI options."""
     target_dir: Path | None = None
     editors: list[str] = []
@@ -288,7 +305,10 @@ def parse_options(args: list[str]) -> tuple[list[str], Path | None, list[str], s
     i = 0
     while i < len(args):
         if args[i] == "--target" and i + 1 < len(args):
-            target_dir = Path(args[i + 1]).resolve()
+            # Keep symlink provenance so native writers can reject redirected
+            # project roots instead of silently resolving and writing through
+            # them. `absolute()` normalizes the cwd without dereferencing.
+            target_dir = Path(args[i + 1]).expanduser().absolute()
             i += 2
         elif args[i] == "--editor" and i + 1 < len(args):
             editors = [e.strip() for e in args[i + 1].split(",") if e.strip()]

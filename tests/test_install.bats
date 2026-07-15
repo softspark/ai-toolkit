@@ -376,6 +376,61 @@ PY
     [ -f "$TMP_HOME/.codex/hooks.json" ]
 }
 
+@test "install --editors codex honors CODEX_HOME and preserves user files" {
+    custom_home="$TMP_HOME/custom-codex-home"
+    mkdir -p "$custom_home/agents"
+    cat > "$custom_home/AGENTS.md" <<'MD'
+User-authored global Codex guidance.
+MD
+    cat > "$custom_home/agents/user-reviewer.toml" <<'TOML'
+name = "user_reviewer"
+description = "User-owned reviewer"
+developer_instructions = "Preserve this agent."
+TOML
+    cat > "$custom_home/hooks.json" <<'JSON'
+{
+  "hooks": {
+    "Stop": [
+      {"hooks": [{"type": "command", "command": "echo user-stop"}]}
+    ]
+  }
+}
+JSON
+
+    HOME="$TMP_HOME" CODEX_HOME="$custom_home" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --editors codex >/dev/null 2>&1
+
+    grep -q 'User-authored global Codex guidance.' "$custom_home/AGENTS.md"
+    grep -q 'AI Toolkit Instructions' "$custom_home/AGENTS.md"
+    grep -q 'echo user-stop' "$custom_home/hooks.json"
+    [ -f "$custom_home/agents/user-reviewer.toml" ]
+    [ -f "$custom_home/agents/ai-toolkit-debugger.toml" ]
+    [ -x "$custom_home/ai-toolkit-hooks/guard-destructive.sh" ]
+
+    # User skills are intentionally shared through the documented HOME path.
+    [ -f "$TMP_HOME/.agents/skills/orchestrate/SKILL.md" ]
+    [ ! -e "$custom_home/skills/orchestrate/SKILL.md" ]
+    [ ! -e "$TMP_HOME/.codex/AGENTS.md" ]
+    [ ! -e "$TMP_HOME/.codex/hooks.json" ]
+}
+
+@test "install --local --editors codex keeps project surfaces local with CODEX_HOME" {
+    custom_home="$TMP_HOME/custom-codex-home"
+    mkdir -p "$custom_home"
+    printf '%s\n' 'User-owned CODEX_HOME sentinel.' > "$custom_home/AGENTS.md"
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" CODEX_HOME="$custom_home" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        --editors codex) >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/.codex/hooks.json" ]
+    [ -f "$TEST_PROJECT/.codex/agents/ai-toolkit-debugger.toml" ]
+    [ -f "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md" ]
+    grep -q '^User-owned CODEX_HOME sentinel\.$' "$custom_home/AGENTS.md"
+    [ ! -e "$custom_home/hooks.json" ]
+    [ ! -e "$custom_home/agents" ]
+}
+
 @test "install --editors codex (global) migrates a stale ~/AGENTS.md toolkit section" {
     cat > "$TMP_HOME/AGENTS.md" <<'MD'
 User-authored home instructions.
@@ -425,15 +480,37 @@ MD
     [ -f "$TMP_HOME/.cursor/hooks.json" ]
     [ ! -f "$TMP_HOME/.cursorrules" ]
 
-    # Copilot CLI: user-level instructions.
+    # Copilot CLI: complete user-level native customization surface.
     [ -f "$TMP_HOME/.copilot/copilot-instructions.md" ]
     [ -d "$TMP_HOME/.copilot/instructions" ]
+    [ -f "$TMP_HOME/.copilot/agents/ai-toolkit-debugger.agent.md" ]
+    [ -f "$TMP_HOME/.copilot/skills/ai-toolkit-debug/SKILL.md" ]
+    [ -f "$TMP_HOME/.copilot/skills/ai-toolkit-debug/scripts/error-parser.py" ]
+    [ -f "$TMP_HOME/.copilot/hooks/ai-toolkit.json" ]
+    [ -x "$TMP_HOME/.copilot/hooks/ai-toolkit/copilot_hook.py" ]
+    grep -q '"AI_TOOLKIT_HOOK_OWNER": "ai-toolkit"' \
+        "$TMP_HOME/.copilot/hooks/ai-toolkit.json"
 
     # Antigravity: skill pointer in both documented global skill dirs.
     [ -f "$TMP_HOME/.gemini/config/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
     [ -f "$TMP_HOME/.gemini/antigravity-cli/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
     # Antigravity RULES stay project-local.
     [ ! -d "$TMP_HOME/.agents/rules" ]
+}
+
+@test "install --editors copilot honors COPILOT_HOME for every user customization" {
+    custom_home="$TMP_HOME/custom-copilot-home"
+    HOME="$TMP_HOME" COPILOT_HOME="$custom_home" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors copilot --profile standard >/dev/null 2>&1
+
+    [ -f "$custom_home/copilot-instructions.md" ]
+    [ -f "$custom_home/instructions/ai-toolkit-security.instructions.md" ]
+    [ -f "$custom_home/agents/ai-toolkit-debugger.agent.md" ]
+    [ -f "$custom_home/skills/ai-toolkit-debug/SKILL.md" ]
+    [ -f "$custom_home/hooks/ai-toolkit.json" ]
+    [ -x "$custom_home/hooks/ai-toolkit/copilot_hook.py" ]
+    [ ! -e "$TMP_HOME/.copilot/copilot-instructions.md" ]
 }
 
 @test "install --editors gemini (global, default profile) writes hooks but not full surfaces" {
@@ -475,11 +552,30 @@ MD
         return 1
     fi
     grep -q 'GitHub Copilot Instructions' "$TEST_PROJECT/.github/copilot-instructions.md"
+    [ -f "$TEST_PROJECT/.github/agents/ai-toolkit-debugger.agent.md" ]
+    [ -f "$TEST_PROJECT/.github/skills/ai-toolkit-debug/SKILL.md" ]
+    [ -f "$TEST_PROJECT/.github/skills/ai-toolkit-debug/scripts/error-parser.py" ]
+    [ -f "$TEST_PROJECT/.github/hooks/ai-toolkit.json" ]
+    [ -x "$TEST_PROJECT/.github/hooks/ai-toolkit/copilot_hook.py" ]
+    grep -q '"postToolUseFailure"' \
+        "$TEST_PROJECT/.github/hooks/ai-toolkit.json"
     if grep -q 'Existing Codex section.' "$TEST_PROJECT/AGENTS.md"; then
         echo "stale managed content remains"
         return 1
     fi
     grep -q 'User-authored preface.' "$TEST_PROJECT/AGENTS.md"
+}
+
+@test "install --local --editors copilot --profile minimal emits agents and skills only" {
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        --editors copilot --profile minimal) >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/.github/agents/ai-toolkit-debugger.agent.md" ]
+    [ -f "$TEST_PROJECT/.github/skills/ai-toolkit-debug/SKILL.md" ]
+    [ ! -d "$TEST_PROJECT/.github/instructions" ]
+    [ ! -d "$TEST_PROJECT/.github/prompts" ]
+    [ ! -d "$TEST_PROJECT/.github/hooks" ]
 }
 
 @test "install --local --editors copilot,codex emits one shared AGENTS.md section" {

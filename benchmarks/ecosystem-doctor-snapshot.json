@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-07-10T06:43:18Z",
+  "last_run": "2026-07-15T05:28:09Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "880db45231fef284",
+      "docs_hash": "480f89501d47f5ec",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,10 +66,11 @@
       }
     },
     "claude-app": {
-      "docs_hash": "bd1483491a8a64e2",
+      "docs_hash": "01981c240e67db02",
       "headings": [
         "Add global and folder instructions",
         "Availability",
+        "Choose how Claude checks with you",
         "Claude Cowork plugins",
         "Claude stopped working on my task",
         "Current limitations",
@@ -87,8 +88,6 @@
         "I&#x27;m hitting usage limits quickly",
         "I&#x27;m seeing &quot;Setting up Claude&#x27;s workspace&quot; when I start Cowork; what does this mean?",
         "Key capabilities",
-        "Permission modes",
-        "Permissions",
         "Permissions and security",
         "Requirements",
         "Research and analysis",
@@ -108,7 +107,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "50b46c4f57d16b9e",
+      "docs_hash": "517ae09f5f1feba9",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -164,10 +163,10 @@
         "slash command": true,
         "sub-agent": true
       },
-      "version": "2.1.206 (Claude Code)"
+      "version": "2.1.210 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "1726cf1ff3f402b6",
+      "docs_hash": "9a024e9356105f48",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -214,80 +213,120 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "46073353f24772e6",
+      "docs_hash": "cc18a01c239497e8",
       "headings": [
         "API",
         "API Reference",
         "Advertiser API",
         "Agent configuration",
         "Agents SDK",
+        "Audio",
         "Available on",
         "Blog",
+        "Bring visual context into the prompt",
         "Build",
+        "Build a terminal workflow around Codex",
+        "Build tool workflows",
         "Build with Codex",
         "Capabilities",
         "Categories",
-        "Chats",
-        "Choose the right GPT-5.6 model",
+        "ChatGPT web",
+        "ChatKit",
+        "Choose a model",
         "Codex Security",
+        "Codex cloud",
         "Community",
+        "Compose with scripts and CI",
+        "Computer and code",
         "Config file",
-        "Continue a task on another host",
+        "Connect external tools with MCP",
+        "Connect tools and data",
+        "Connection methods",
         "Contribute",
         "Conversion apps",
         "Core Concepts",
         "Core concepts",
+        "Cost and throughput",
         "Customization",
         "Deploy",
         "Deployment and model providers",
+        "Desktop app",
         "Development workflows",
         "Docs agent",
         "Environments",
-        "Evaluation",
         "Events",
         "Explore",
         "Extend ChatGPT and Codex",
         "Extend and automate",
         "File Upload",
+        "Fit Codex to your terminal",
         "Foundations",
         "Get started",
+        "Get started with Codex CLI",
         "Getting started",
-        "Going live",
+        "Go live",
         "Guides",
+        "IDE extension",
         "Identity and authentication",
+        "Images and video",
+        "Infrastructure and access",
+        "Inspect, edit, and run code from your terminal",
+        "Install Codex",
+        "Keep the coding loop in your terminal",
         "Legacy APIs",
         "Measurement",
-        "Overview",
+        "Media",
+        "Move work to Codex cloud",
+        "Operations",
+        "Other ChatGPT and Codex surfaces",
+        "Performance and quality",
         "Permissions",
         "Plan",
         "Plugin and connector controls",
         "Programs",
-        "Projects",
+        "Prompting",
         "Realtime and audio",
+        "Reasoning",
         "Recent",
         "Reference",
         "Releases",
         "Resources",
-        "Run and scale",
+        "Return to a saved session",
+        "Review changes before they ship",
+        "Run Codex and sign in",
+        "SDKs and CLI",
         "Safety",
+        "Safety and governance",
+        "Search and retrieval",
+        "Search for current context",
         "Search the docs",
+        "See what Codex CLI can do",
+        "Sessions and operations",
+        "Set the boundaries for each run",
         "Spaces",
         "Specialized models",
+        "Split up a larger investigation",
+        "Start your first task",
+        "Stay in control",
         "Suggested",
-        "Take on ambitious work with ChatGPT Work",
+        "Text and code",
         "Third-party integrations",
-        "Tools",
         "Topics",
-        "Turn demonstrated workflows into reusable skills",
         "Usage, governance, and compliance",
-        "What should we get done?",
-        "What\u2019s new",
+        "Use Codex CLI when\u2026",
+        "Use skills and plugins",
         "Windows",
+        "Work against your local repository",
         "Workflows",
-        "Workspace access, policy, and models"
+        "Workspace access, policy, and models",
+        "You need scripting or CI",
+        "You want a local code review",
+        "You want to hand work to the cloud",
+        "You work from the terminal"
       ],
       "markers": {
         ".agents/skills": false,
+        ".codex/agents": false,
         "AGENTS.md": true,
         "config.toml": false,
         "hook event: PermissionRequest": false,
@@ -307,10 +346,10 @@
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.144.1"
+      "version": "codex-cli 0.144.4"
     },
     "cursor": {
-      "docs_hash": "63246f9f6c354976",
+      "docs_hash": "34efb96589c7f123",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -326,7 +365,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "7a28426194187480",
+      "docs_hash": "c24d346e0c5a1bb9",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -369,7 +408,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "788efbd31f39bd11",
+      "docs_hash": "58d9980c29b7edb8",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -391,6 +430,7 @@
       ],
       "markers": {
         "AGENTS.md": false,
+        "CLI hooks": false,
         "Copilot Chat": true,
         "Copilot Workspace": false,
         "Copilot cloud agent": true,
@@ -399,11 +439,13 @@
         "copilot-instructions.md": false,
         "custom agents": true,
         "instructions.md": false,
-        "prompt files": true
+        "prompt files": true,
+        "skills": true,
+        "~/.copilot/": false
       }
     },
     "google-antigravity": {
-      "docs_hash": "e484097e498581f4",
+      "docs_hash": "9c9b420a22b35ae6",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -419,7 +461,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "8713591669c1683f",
+      "docs_hash": "505b9771a6c768e6",
       "headings": [
         "Add features",
         "Ask questions",
@@ -479,7 +521,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "93e7f46747f42e11",
+      "docs_hash": "2d4eb599c906bf2c",
       "headings": [
         "Accounts",
         "Advanced",

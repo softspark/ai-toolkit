@@ -9,10 +9,21 @@ setup() {
     # Isolate ~/.softspark/ — register_path_source writes to it under HOME
     export HOME="$TEST_DIR"
     export SOFTSPARK_HOME="$TEST_DIR/.softspark"
+    unset CODEX_HOME
 }
 
 teardown() {
     rm -rf "$TEST_DIR"
+}
+
+file_mode() {
+    python3 - "$1" <<'PY'
+import stat
+import sys
+from pathlib import Path
+
+print(format(stat.S_IMODE(Path(sys.argv[1]).stat().st_mode), "o"))
+PY
 }
 
 # ── Helper: create a hooks JSON file ──────────────────────────────────────
@@ -445,110 +456,241 @@ assert unregister_source(None, 'nonexistent') == False
 
 # ── Codex propagation ────────────────────────────────────────────────────
 
-@test "inject_hook_cli.py propagates Codex-compatible events to .codex/hooks.json" {
+@test "inject_hook_cli.py propagates native Codex command hooks without _source" {
     _make_hooks_file "$TEST_DIR/codex-test.json" "PreToolUse" "echo codex"
-    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/codex-test.json" "$TEST_DIR"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/codex-test.json" "$TEST_DIR"
 
-    # Verify Claude settings.json
     python3 -c "
 import json
 with open('$TEST_DIR/.claude/settings.json') as f:
     data = json.load(f)
 assert 'codex-test' in [e.get('_source') for e in data['hooks']['PreToolUse']]
 "
-    # Verify Codex hooks.json
     [ -f "$TEST_DIR/.codex/hooks.json" ]
-    python3 -c "
+    python3 - "$TEST_DIR/.codex/hooks.json" "$TOOLKIT_DIR/scripts" <<'PY'
 import json
-with open('$TEST_DIR/.codex/hooks.json') as f:
-    data = json.load(f)
-assert 'PreToolUse' in data['hooks']
-sources = [e.get('_source') for e in data['hooks']['PreToolUse']]
-assert 'codex-test' in sources, f'Expected codex-test in Codex hooks: {sources}'
-"
+import sys
+
+sys.path.insert(0, sys.argv[2])
+from generate_codex_hooks import validate_hooks_document
+from inject_hook_cli import _codex_owner
+
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+validate_hooks_document(data)
+assert "_source" not in json.dumps(data), data
+commands = [
+    hook["command"]
+    for group in data["hooks"]["PreToolUse"]
+    for hook in group["hooks"]
+]
+owner = _codex_owner("codex-test")
+assert commands == [f"AI_TOOLKIT_HOOK_OWNER={owner} echo codex"], commands
+PY
 }
 
-@test "inject_hook_cli.py skips non-Codex events in .codex/hooks.json" {
-    # SessionEnd is not a Codex-supported event
+@test "inject_hook_cli.py skips unsupported Codex events without modifying hooks.json" {
     _make_hooks_file "$TEST_DIR/non-codex.json" "SessionEnd" "echo bye"
-    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/non-codex.json" "$TEST_DIR"
-
-    # Claude should have it
-    python3 -c "
-import json
-with open('$TEST_DIR/.claude/settings.json') as f:
-    data = json.load(f)
-assert 'SessionEnd' in data['hooks']
-"
-    # Codex should NOT have it (file may not exist or have empty hooks)
-    if [ -f "$TEST_DIR/.codex/hooks.json" ]; then
-        python3 -c "
-import json
-with open('$TEST_DIR/.codex/hooks.json') as f:
-    data = json.load(f)
-assert 'SessionEnd' not in data.get('hooks', {}), 'SessionEnd should not be in Codex'
-"
-    fi
-}
-
-@test "inject_hook_cli.py Codex is idempotent" {
-    _make_hooks_file "$TEST_DIR/idempotent-codex.json" "Stop" "echo once"
-    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/idempotent-codex.json" "$TEST_DIR"
-    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/idempotent-codex.json" "$TEST_DIR"
-
-    count=$(python3 -c "
-import json
-with open('$TEST_DIR/.codex/hooks.json') as f:
-    data = json.load(f)
-print(len([e for e in data['hooks']['Stop'] if e.get('_source') == 'idempotent-codex']))
-")
-    [ "$count" -eq 1 ]
-}
-
-@test "remove-hook also removes from .codex/hooks.json" {
-    _make_hooks_file "$TEST_DIR/rm-codex.json" "PreToolUse" "echo rm"
-    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/rm-codex.json" "$TEST_DIR"
-    [ -f "$TEST_DIR/.codex/hooks.json" ]
-
-    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" --remove rm-codex "$TEST_DIR"
-
-    python3 -c "
-import json
-with open('$TEST_DIR/.codex/hooks.json') as f:
-    data = json.load(f)
-entries = data.get('hooks', {}).get('PreToolUse', [])
-sources = [e.get('_source') for e in entries]
-assert 'rm-codex' not in sources, f'rm-codex still in Codex: {sources}'
-"
-}
-
-@test "inject_hook_cli.py preserves ai-toolkit entries in .codex/hooks.json" {
-    # Pre-populate Codex with ai-toolkit entry
     mkdir -p "$TEST_DIR/.codex"
     cat > "$TEST_DIR/.codex/hooks.json" <<'JSON'
 {
-    "hooks": {
-        "PreToolUse": [
-            {
-                "_source": "ai-toolkit",
-                "matcher": "Bash",
-                "hooks": [{ "type": "command", "command": "echo guard" }]
-            }
-        ]
-    }
+  "hooks": {
+    "Stop": [
+      {"hooks": [{"type": "command", "command": "echo user"}]}
+    ]
+  }
+}
+JSON
+    cp "$TEST_DIR/.codex/hooks.json" "$TEST_DIR/codex.before"
+
+    run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/non-codex.json" "$TEST_DIR"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Skipped Codex hook"* ]]
+    grep -q 'SessionEnd' "$TEST_DIR/.claude/settings.json"
+    cmp "$TEST_DIR/codex.before" "$TEST_DIR/.codex/hooks.json"
+}
+
+@test "inject_hook_cli.py Codex propagation is idempotent" {
+    _make_hooks_file "$TEST_DIR/idempotent-codex.json" "Stop" "echo once"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/idempotent-codex.json" "$TEST_DIR"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/idempotent-codex.json" "$TEST_DIR"
+
+    count=$(python3 - "$TEST_DIR/.codex/hooks.json" "$TOOLKIT_DIR/scripts" <<'PY'
+import json
+import sys
+sys.path.insert(0, sys.argv[2])
+from inject_hook_cli import _codex_owner
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+owner = _codex_owner("idempotent-codex")
+print(sum(
+    hook["command"].startswith(f"AI_TOOLKIT_HOOK_OWNER={owner} ")
+    for group in data["hooks"]["Stop"]
+    for hook in group["hooks"]
+))
+PY
+)
+    [ "$count" -eq 1 ]
+}
+
+@test "remove-hook also removes exact owner from Codex hooks.json" {
+    _make_hooks_file "$TEST_DIR/rm-codex.json" "PreToolUse" "echo rm"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/rm-codex.json" "$TEST_DIR"
+    [ -f "$TEST_DIR/.codex/hooks.json" ]
+
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        --remove rm-codex "$TEST_DIR"
+
+    python3 - "$TEST_DIR/.codex/hooks.json" "$TOOLKIT_DIR/scripts" <<'PY'
+import json
+import sys
+sys.path.insert(0, sys.argv[2])
+from inject_hook_cli import _codex_owner
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+owner = _codex_owner("rm-codex")
+commands = [
+    hook["command"]
+    for group in data.get("hooks", {}).get("PreToolUse", [])
+    for hook in group["hooks"]
+]
+assert not any(f"AI_TOOLKIT_HOOK_OWNER={owner} " in command for command in commands)
+PY
+}
+
+@test "inject_hook_cli.py preserves native ai-toolkit entries in Codex hooks.json" {
+    mkdir -p "$TEST_DIR/.codex"
+    cat > "$TEST_DIR/.codex/hooks.json" <<'JSON'
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "AI_TOOLKIT_HOOK_OWNER=ai-toolkit echo guard"
+        }]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [{"type": "command", "command": "echo user"}]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-demo echo plugin"
+        }]
+      }
+    ]
+  }
 }
 JSON
     _make_hooks_file "$TEST_DIR/ext-codex.json" "PreToolUse" "echo ext"
-    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$TEST_DIR/ext-codex.json" "$TEST_DIR"
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/ext-codex.json" "$TEST_DIR"
 
-    python3 -c "
+    python3 - "$TEST_DIR/.codex/hooks.json" "$TOOLKIT_DIR/scripts" <<'PY'
 import json
-with open('$TEST_DIR/.codex/hooks.json') as f:
-    data = json.load(f)
-sources = [e.get('_source') for e in data['hooks']['PreToolUse']]
-assert 'ai-toolkit' in sources, f'ai-toolkit missing: {sources}'
-assert 'ext-codex' in sources, f'ext-codex missing: {sources}'
-"
+import sys
+sys.path.insert(0, sys.argv[2])
+from inject_hook_cli import _codex_owner
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+assert "_source" not in json.dumps(data), data
+commands = [
+    hook["command"]
+    for group in data["hooks"]["PreToolUse"]
+    for hook in group["hooks"]
+]
+assert "AI_TOOLKIT_HOOK_OWNER=ai-toolkit echo guard" in commands, commands
+assert "echo user" in commands, commands
+assert "AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-demo echo plugin" in commands, commands
+owner = _codex_owner("ext-codex")
+assert f"AI_TOOLKIT_HOOK_OWNER={owner} echo ext" in commands, commands
+PY
+}
+
+@test "inject_hook_cli.py honors CODEX_HOME for native hooks" {
+    local custom_home="$TEST_DIR/custom-codex-home"
+    mkdir -p "$custom_home"
+    _make_hooks_file "$TEST_DIR/custom-home.json" "PostCompact" "echo compacted"
+
+    CODEX_HOME="$custom_home" python3 \
+        "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/custom-home.json" "$TEST_DIR"
+
+    [ -f "$custom_home/hooks.json" ]
+    [ ! -e "$TEST_DIR/.codex/hooks.json" ]
+    python3 - "$custom_home/hooks.json" <<'PY'
+import json
+import sys
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+assert "PostCompact" in data["hooks"], data
+assert "_source" not in json.dumps(data), data
+PY
+}
+
+@test "inject_hook_cli.py rejects symlinked CODEX_HOME without writing through it" {
+    local external="$TEST_DIR/external-codex-home"
+    local linked="$TEST_DIR/linked-codex-home"
+    mkdir -p "$external"
+    ln -s "$external" "$linked"
+    _make_hooks_file "$TEST_DIR/symlink-home.json" "Stop" "echo unsafe"
+
+    run env CODEX_HOME="$linked" python3 \
+        "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/symlink-home.json" "$TEST_DIR"
+
+    [ "$status" -ne 0 ]
+    [ ! -e "$external/hooks.json" ]
+}
+
+@test "inject_hook_cli.py migrates legacy Codex _source ownership" {
+    mkdir -p "$TEST_DIR/.codex"
+    cat > "$TEST_DIR/.codex/hooks.json" <<'JSON'
+{
+  "hooks": {
+    "Stop": [
+      {
+        "_source": "legacy-source",
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "echo legacy"}]
+      }
+    ]
+  }
+}
+JSON
+    _make_hooks_file "$TEST_DIR/new-source.json" "Stop" "echo current"
+
+    python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/new-source.json" "$TEST_DIR"
+
+    python3 - "$TEST_DIR/.codex/hooks.json" "$TOOLKIT_DIR/scripts" <<'PY'
+import json
+import sys
+sys.path.insert(0, sys.argv[2])
+from generate_codex_hooks import validate_hooks_document
+from inject_hook_cli import _codex_owner
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+validate_hooks_document(data)
+assert "_source" not in json.dumps(data), data
+commands = [
+    hook["command"]
+    for group in data["hooks"]["Stop"]
+    for hook in group["hooks"]
+]
+assert f"AI_TOOLKIT_HOOK_OWNER={_codex_owner('legacy-source')} echo legacy" in commands
+assert f"AI_TOOLKIT_HOOK_OWNER={_codex_owner('new-source')} echo current" in commands
+PY
 }
 
 @test "inject_hook_cli.py with source_override uses custom name" {
@@ -604,4 +746,265 @@ entry = d['hooks']['local-plugin']
 assert entry['path'] == '$EXPECTED_PATH', f'got path={entry.get(\"path\")}'
 assert 'sha256' in entry, 'sha256 missing'
 "
+}
+
+# ── Reviewer regressions: destination safety and transactions ─────────────
+
+@test "inject_hook_cli.py rejects symlinked Claude settings without write-through" {
+    local external="$TEST_DIR/external-settings.json"
+    printf '%s\n' '{"external":"sentinel"}' > "$external"
+    cp "$external" "$TEST_DIR/external.before"
+    ln -s "$external" "$TEST_DIR/.claude/settings.json"
+    _make_hooks_file "$TEST_DIR/symlink-settings.json" "Stop" "echo unsafe"
+
+    run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/symlink-settings.json" "$TEST_DIR"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"symlinked Claude settings"* ]]
+    cmp "$TEST_DIR/external.before" "$external"
+    [ ! -e "$TEST_DIR/.codex/hooks.json" ]
+    [ ! -e "$SOFTSPARK_HOME/ai-toolkit/hooks/external/sources.json" ]
+}
+
+@test "inject_hook_cli.py rejects symlinked Claude ancestor without write-through" {
+    local external="$TEST_DIR/external-claude"
+    mkdir -p "$external"
+    printf '%s\n' '{"external":"sentinel"}' > "$external/settings.json"
+    cp "$external/settings.json" "$TEST_DIR/external.before"
+    rmdir "$TEST_DIR/.claude"
+    ln -s "$external" "$TEST_DIR/.claude"
+    _make_hooks_file "$TEST_DIR/symlink-ancestor.json" "Stop" "echo unsafe"
+
+    run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/symlink-ancestor.json" "$TEST_DIR"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"symlinked Claude settings"* ]]
+    cmp "$TEST_DIR/external.before" "$external/settings.json"
+    [ ! -e "$TEST_DIR/.codex/hooks.json" ]
+    [ ! -e "$SOFTSPARK_HOME/ai-toolkit/hooks/external/sources.json" ]
+}
+
+@test "inject_hook_cli.py preflights relative CODEX_HOME before any mutation" {
+    cat > "$TEST_DIR/.claude/settings.json" <<'JSON'
+{"permissions":{"allow":["Read"]}}
+JSON
+    mkdir -p "$SOFTSPARK_HOME/ai-toolkit/hooks/external"
+    cat > "$SOFTSPARK_HOME/ai-toolkit/hooks/external/sources.json" <<'JSON'
+{"schema_version":1,"hooks":{"keep":{"path":"/keep","sha256":"sentinel"}}}
+JSON
+    cp "$TEST_DIR/.claude/settings.json" "$TEST_DIR/settings.before"
+    cp "$SOFTSPARK_HOME/ai-toolkit/hooks/external/sources.json" \
+        "$TEST_DIR/sources.before"
+    _make_hooks_file "$TEST_DIR/relative-home.json" "Stop" "echo unsafe"
+
+    run env CODEX_HOME="relative-codex" python3 \
+        "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/relative-home.json" "$TEST_DIR"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"CODEX_HOME must be an absolute path"* ]]
+    cmp "$TEST_DIR/settings.before" "$TEST_DIR/.claude/settings.json"
+    cmp "$TEST_DIR/sources.before" \
+        "$SOFTSPARK_HOME/ai-toolkit/hooks/external/sources.json"
+    [ ! -e "$TEST_DIR/.codex/hooks.json" ]
+}
+
+@test "inject_hook_cli.py rolls back Claude registry and Codex after late failure" {
+    _make_hooks_file "$TEST_DIR/transaction.json" "Stop" "echo transaction"
+    cat > "$TEST_DIR/.claude/settings.json" <<'JSON'
+{"permissions":{"allow":["Read"]}}
+JSON
+    mkdir -p "$TEST_DIR/.codex"
+    cat > "$TEST_DIR/.codex/hooks.json" <<'JSON'
+{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo user"}]}]}}
+JSON
+
+    run python3 - "$TOOLKIT_DIR" "$TEST_DIR" <<'PY'
+import os
+import sys
+from pathlib import Path
+from unittest import mock
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import generate_codex_hooks
+from inject_hook_cli import inject
+
+settings = target / ".claude" / "settings.json"
+codex = target / ".codex" / "hooks.json"
+sources = Path(os.environ["SOFTSPARK_HOME"]) / "ai-toolkit/hooks/external/sources.json"
+before = {settings: settings.read_bytes(), codex: codex.read_bytes()}
+real_write = generate_codex_hooks.write_hooks_json
+
+def write_then_fail(path, data, **kwargs):
+    real_write(path, data, **kwargs)
+    raise OSError("injected late Codex failure")
+
+with mock.patch.object(
+    generate_codex_hooks,
+    "write_hooks_json",
+    side_effect=write_then_fail,
+):
+    try:
+        inject(str(target / "transaction.json"), str(target))
+    except OSError as error:
+        assert "injected late Codex failure" in str(error)
+    else:
+        raise AssertionError("expected injected failure")
+
+assert settings.read_bytes() == before[settings]
+assert codex.read_bytes() == before[codex]
+assert not sources.exists()
+assert not list(target.rglob("*.tmp"))
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "inject_hook_cli.py pins all parents across ancestor swap and rollback" {
+    _make_hooks_file "$TEST_DIR/ancestor-swap.json" "Stop" "echo transaction"
+    cat > "$TEST_DIR/.claude/settings.json" <<'JSON'
+{"permissions":{"allow":["Read"]}}
+JSON
+    mkdir -p "$TEST_DIR/.codex" "$TEST_DIR/external"
+    cat > "$TEST_DIR/.codex/hooks.json" <<'JSON'
+{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo user"}]}]}}
+JSON
+    printf '%s\n' 'external settings sentinel' \
+        > "$TEST_DIR/external/settings.json"
+    printf '%s\n' 'external sibling sentinel' \
+        > "$TEST_DIR/external/sibling.txt"
+
+    run python3 - "$TOOLKIT_DIR" "$TEST_DIR" <<'PY'
+import os
+import sys
+from pathlib import Path
+from unittest import mock
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+from inject_hook_cli import inject
+
+claude_dir = target / ".claude"
+real_claude_dir = target / ".claude-real"
+external = target / "external"
+settings = claude_dir / "settings.json"
+codex = target / ".codex" / "hooks.json"
+sources = Path(os.environ["SOFTSPARK_HOME"]) / "ai-toolkit/hooks/external/sources.json"
+settings_before = settings.read_bytes()
+codex_before = codex.read_bytes()
+external_before = {
+    path.name: path.read_bytes() for path in external.iterdir() if path.is_file()
+}
+real_replace = os.replace
+calls = 0
+
+def swap_second_parent_then_fail(source, destination, **kwargs):
+    global calls
+    calls += 1
+    if calls == 2:
+        real_replace(claude_dir, real_claude_dir)
+        os.symlink(external, claude_dir)
+        real_replace(source, destination, **kwargs)
+        raise OSError("injected ancestor swap failure")
+    return real_replace(source, destination, **kwargs)
+
+with mock.patch("os.replace", side_effect=swap_second_parent_then_fail):
+    try:
+        inject(str(target / "ancestor-swap.json"), str(target))
+    except OSError as error:
+        assert "ancestor swap failure" in str(error)
+    else:
+        raise AssertionError("expected ancestor swap failure")
+
+assert claude_dir.is_symlink()
+assert (real_claude_dir / "settings.json").read_bytes() == settings_before
+assert codex.read_bytes() == codex_before
+assert not sources.exists()
+assert {
+    path.name: path.read_bytes() for path in external.iterdir() if path.is_file()
+} == external_before
+assert not list(real_claude_dir.rglob("*.tmp"))
+assert not list(external.rglob("*.tmp"))
+assert not list(target.rglob("*.tmp"))
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "inject_hook_cli.py preserves concurrent settings change before transaction" {
+    _make_hooks_file "$TEST_DIR/concurrent.json" "Stop" "echo injected"
+    cat > "$TEST_DIR/.claude/settings.json" <<'JSON'
+{"permissions":{"allow":["Read"]}}
+JSON
+
+    run python3 - "$TOOLKIT_DIR" "$TEST_DIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+from unittest import mock
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import inject_hook_cli as module
+
+settings = target / ".claude/settings.json"
+real_run = module._run_transaction
+changed = False
+
+def change_then_start(destinations, mutation):
+    global changed
+    if not changed:
+        changed = True
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        data["concurrent"] = "survives"
+        settings.write_text(json.dumps(data) + "\n", encoding="utf-8")
+    return real_run(destinations, mutation)
+
+with mock.patch.object(module, "_run_transaction", side_effect=change_then_start):
+    module.inject(str(target / "concurrent.json"), str(target))
+
+data = json.loads(settings.read_text(encoding="utf-8"))
+assert data["concurrent"] == "survives", data
+assert data["hooks"]["Stop"][0]["_source"] == "concurrent", data
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "inject_hook_cli.py creates private configs under umask and preserves 0600" {
+    _make_hooks_file "$TEST_DIR/private.json" "Stop" "echo private"
+    cat > "$TEST_DIR/.claude/settings.json" <<'JSON'
+{"permissions":{"allow":["Read"]}}
+JSON
+    chmod 0600 "$TEST_DIR/.claude/settings.json"
+
+    run bash -c "umask 077; python3 '$TOOLKIT_DIR/scripts/inject_hook_cli.py' '$TEST_DIR/private.json' '$TEST_DIR' >/dev/null"
+    [ "$status" -eq 0 ]
+    [ "$(file_mode "$TEST_DIR/.claude/settings.json")" = "600" ]
+    [ "$(file_mode "$TEST_DIR/.codex/hooks.json")" = "600" ]
+    [ "$(file_mode "$SOFTSPARK_HOME/ai-toolkit/hooks/external/sources.json")" = "600" ]
+}
+
+@test "inject_hook_cli.py honors positional local hook-name and target-dir" {
+    local project="$TEST_DIR/project"
+    mkdir -p "$project/.claude"
+    _make_hooks_file "$TEST_DIR/positional.json" "Stop" "echo positional"
+
+    run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/positional.json" "documented-name" "$project"
+
+    [ "$status" -eq 0 ]
+    python3 - "$project/.claude/settings.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+assert [group["_source"] for group in data["hooks"]["Stop"]] == [
+    "documented-name"
+]
+PY
 }

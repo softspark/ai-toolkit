@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.4.6"
+version: "1.4.7"
 created: "2026-03-23"
-last_updated: "2026-06-10"
+last_updated: "2026-07-14"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -55,7 +55,8 @@ ai-toolkit/
     generate_agents_md.py    # Regenerates AGENTS.md
     generate_cursor_rules.py # Generates .cursorrules (sources _common.py)
     generate_windsurf.py     # Generates .windsurfrules (sources _common.py)
-    generate_copilot.py      # Generates Copilot .github/* surfaces; install also injects AGENTS.md
+    generate_copilot.py      # Generates Copilot instructions, agents, and portable skills
+    generate_copilot_hooks.py # Generates native Copilot hooks + self-contained runtime
     generate_gemini.py       # Generates GEMINI.md (sources _common.py)
     generate_cline.py        # Generates .clinerules (sources _common.py)
     generate_roo_modes.py    # Generates .roomodes
@@ -112,11 +113,26 @@ Machine (global)                              Project (local)
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets directory-based format (`.cursor/rules/*.mdc`, `.devin/rules/*.md` + `.windsurf/rules/*.md` (dual-emit since the Devin Desktop rebrand), `.github/instructions/*.instructions.md` + `.github/prompts/*.prompt.md` + root `AGENTS.md` for Copilot agent instructions, `.clinerules/*.md`, `.roo/rules/*.md`, `.augment/rules/ai-toolkit-*.md`, `.agents/rules/*.md`, `CONVENTIONS.md`). Full-profile installs also emit native skill pointer catalogues for Cursor, Windsurf, and Cline. Codex local install additionally generates `AGENTS.md` (universal coding rules inlined — Codex reads only AGENTS.md, not `.agents/rules/`), `.agents/skills/*`, and `.codex/hooks.json`. Hooks are global-only — not merged into project settings except for editor-native local hook files such as Codex `.codex/hooks.json`. Experimental plugin packs can also layer a global Codex target in `HOME` (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`) when installed with `ai-toolkit plugin install --editor codex`.
+Each editor gets its documented directory-based format. Copilot receives root
+`AGENTS.md`, `.github/copilot-instructions.md`, native `.github/agents`, and
+self-contained `.github/skills` in every profile. Profile `standard` and above
+also emits `.github/instructions`, `.github/prompts`, and native
+`.github/hooks`. The user target writes the supported personal surfaces below
+`$COPILOT_HOME` (default `~/.copilot`) and does not generate prompt files there.
+Full-profile installs also emit native skill pointer catalogues for Cursor,
+Windsurf, and Cline. Codex local install generates `AGENTS.md`,
+`.agents/skills/*`, `.codex/agents/*.toml`, `.codex/hooks.json`, and
+self-contained `.codex/hooks/*`. Global Codex install writes its user-owned
+surfaces below `$CODEX_HOME` (default `~/.codex`) while user skills remain in
+the documented shared `$HOME/.agents/skills/` directory. Experimental plugin
+packs can layer their rules, skills, and hooks onto that Codex user target.
 
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
 
-If a project already has `.mcp.json`, local install mirrors its `mcpServers` entries into `.claude/settings.local.json` plus any selected editors with project-scoped native MCP files (`.cursor/mcp.json`, `.github/mcp.json`).
+If a project already has `.mcp.json`, local install mirrors its `mcpServers`
+entries into `.claude/settings.local.json` plus any selected editors with
+project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
+`.roo/mcp.json`, and `.codex/config.toml`.
 
 ## CLI Commands
 
@@ -226,12 +242,12 @@ See `kb/reference/codex-cli-compatibility.md` for the detailed mapping.
 Current native adapters:
 - Claude Code: `.claude/settings.local.json` and `~/.claude/settings.json`
 - Cursor: `.cursor/mcp.json` and `~/.cursor/mcp.json`
-- GitHub Copilot: `.github/mcp.json` and `~/.copilot/mcp-config.json`
+- GitHub Copilot: `.github/mcp.json` and `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`)
 - Gemini CLI: `.gemini/settings.json` and `~/.gemini/settings.json`
 - Windsurf: `~/.codeium/windsurf/mcp_config.json`
 - Cline: `~/.cline/data/settings/cline_mcp_settings.json`
 - Augment: `~/.augment/settings.json`
-- Codex CLI: `~/.codex/config.toml`
+- Codex CLI: `.codex/config.toml` and `$CODEX_HOME/config.toml` (default `~/.codex/config.toml`)
 
 See `kb/reference/mcp-editor-compatibility.md` for the support matrix and scope rules.
 

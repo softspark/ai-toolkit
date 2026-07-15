@@ -95,3 +95,103 @@ PY
     [ "$status" -eq 0 ]
     [ "$output" = "ok" ]
 }
+
+@test "inject-hook mutations fail closed without secure dir_fd primitives" {
+    TMP_ROOT="$(mktemp -d)"
+    mkdir -p "$TMP_ROOT/target/.claude" "$TMP_ROOT/target/.codex"
+    cat > "$TMP_ROOT/target/hooks.json" <<'JSON'
+{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo test"}]}]}}
+JSON
+    printf '%s\n' '{"permissions":{"allow":["Read"]}}' \
+        > "$TMP_ROOT/target/.claude/settings.json"
+    printf '%s\n' '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo user"}]}]}}' \
+        > "$TMP_ROOT/target/.codex/hooks.json"
+
+    run env HOME="$TMP_ROOT" SOFTSPARK_HOME="$TMP_ROOT/.softspark" \
+        python3 - "$TOOLKIT_DIR" "$TMP_ROOT" <<'PY'
+import os
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+root = Path(sys.argv[2])
+target = root / "target"
+sys.path.insert(0, str(toolkit / "scripts"))
+import inject_hook_cli as module
+
+def snapshot(path):
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in sorted(path.rglob("*"))
+        if item.is_file()
+    }
+
+before = snapshot(root)
+module._SECURE_DIR_FD = False
+for action in (
+    lambda: module.inject(str(target / "hooks.json"), str(target)),
+    lambda: module.remove("hooks", str(target)),
+):
+    try:
+        action()
+    except RuntimeError as error:
+        assert "No files were changed" in str(error), str(error)
+    else:
+        raise AssertionError("unsafe mutation helper did not fail closed")
+
+assert module._parse_args([])["source_file"] == ""
+assert snapshot(root) == before
+assert not list(root.rglob("*.tmp"))
+PY
+    rm -rf "$TMP_ROOT"
+    [ "$status" -eq 0 ]
+}
+
+@test "Codex hook writers fail closed without secure dir_fd primitives" {
+    TMP_ROOT="$(mktemp -d)"
+    mkdir -p "$TMP_ROOT/target/.codex"
+    printf '%s\n' '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo user"}]}]}}' \
+        > "$TMP_ROOT/target/.codex/hooks.json"
+
+    run python3 - "$TOOLKIT_DIR" "$TMP_ROOT" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+root = Path(sys.argv[2])
+target = root / "target"
+sys.path.insert(0, str(toolkit / "scripts"))
+import generate_codex_hooks as module
+
+def snapshot(path):
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in sorted(path.rglob("*"))
+        if item.is_file()
+    }
+
+document = {
+    "hooks": {
+        "Stop": [{"hooks": [{"type": "command", "command": "echo safe"}]}]
+    }
+}
+module.validate_hooks_document(document)
+before = snapshot(root)
+module._SECURE_DIR_FD = False
+for action in (
+    lambda: module.write_hooks_json(target / ".codex/hooks.json", document),
+    lambda: module.generate(target),
+):
+    try:
+        action()
+    except RuntimeError as error:
+        assert "No files were changed" in str(error), str(error)
+    else:
+        raise AssertionError("unsafe Codex writer did not fail closed")
+
+assert snapshot(root) == before
+assert not list(root.rglob("*.tmp"))
+PY
+    rm -rf "$TMP_ROOT"
+    [ "$status" -eq 0 ]
+}

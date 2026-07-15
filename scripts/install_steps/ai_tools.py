@@ -1,6 +1,7 @@
 """Install global and project-local AI tool configs."""
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -143,8 +144,9 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
 
     if "codex" in eds:
         if dry_run:
-            print("  Would inject: ~/.codex/AGENTS.md, ~/.codex/agents/, "
-                  "~/.agents/skills/, ~/.codex/hooks.json")
+            print("  Would inject: $CODEX_HOME/AGENTS.md, $CODEX_HOME/agents/, "
+                  "$CODEX_HOME/hooks.json")
+            print("  Would generate: ~/.agents/skills/ (shared Codex skill discovery)")
         else:
             _install_codex_global(target_dir, rules_dir)
         installed.append("codex")
@@ -169,12 +171,20 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         installed.append("cursor")
 
     if "copilot" in eds:
-        # Copilot CLI reads user-level instructions from ~/.copilot/. RULES have
-        # a documented global surface here even though .github/ stays repo-only.
-        copilot_root = target_dir / ".copilot"
+        # Copilot CLI reads every personal customization from its active config
+        # root. COPILOT_HOME replaces ~/.copilot rather than extending it.
+        from generate_copilot_hooks import copilot_home
+
+        copilot_root = copilot_home(target_dir)
+        if copilot_root.is_symlink():
+            raise RuntimeError(
+                f"Refusing symlinked Copilot configuration root: {copilot_root}"
+            )
         if dry_run:
-            print("  Would inject: ~/.copilot/copilot-instructions.md")
-            print("  Would generate: ~/.copilot/instructions/ai-toolkit-*.instructions.md")
+            print("  Would inject: $COPILOT_HOME/copilot-instructions.md")
+            print("  Would generate: $COPILOT_HOME/{instructions,agents,skills}/")
+            if add_hooks:
+                print("  Would generate: $COPILOT_HOME/hooks/ai-toolkit.json")
         else:
             inject_with_rules(
                 "generate_copilot.py",
@@ -184,6 +194,12 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
             _try_generator("generate_copilot", target_dir,
                            rules_dir=rules_dir, config_root=copilot_root,
                            emit_prompts=False)
+            if add_hooks:
+                _try_generator(
+                    "generate_copilot_hooks",
+                    target_dir,
+                    config_root=copilot_root,
+                )
         installed.append("copilot")
 
     if "antigravity" in eds:
@@ -206,20 +222,34 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
     return installed
 
 
+def _resolve_global_codex_home(target_dir: Path) -> Path:
+    """Resolve the active Codex user root without changing project paths."""
+    configured = os.environ.get("CODEX_HOME")
+    if not configured:
+        return target_dir / ".codex"
+
+    codex_home = Path(configured).expanduser()
+    if not codex_home.is_absolute():
+        raise RuntimeError("CODEX_HOME must be an absolute path")
+    if not codex_home.is_dir():
+        raise RuntimeError("Configured CODEX_HOME must already exist")
+    if codex_home.is_symlink():
+        raise RuntimeError(f"Refusing symlinked CODEX_HOME: {codex_home}")
+    return codex_home
+
+
 def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
-    """Install Codex at the global level (~/.codex layer).
+    """Install Codex at the active user-level ``CODEX_HOME`` layer.
 
     Creates:
-      - ~/.codex/AGENTS.md (marker injection; universal coding rules inlined
-        here). Codex reads GLOBAL instructions from ``$CODEX_HOME/AGENTS.md``
-        (default ~/.codex/AGENTS.md), NOT ~/AGENTS.md — a home-root AGENTS.md
-        is only loaded in the degenerate case where a session's cwd is $HOME.
-      - ~/.agents/skills/* (skill symlinks; a documented Codex skill dir)
-      - ~/.codex/hooks.json (lifecycle hooks)
+      - ``$CODEX_HOME/AGENTS.md`` (defaults to ``~/.codex/AGENTS.md``)
+      - ``$CODEX_HOME/agents/*`` and ``$CODEX_HOME/hooks.json``
+      - ``~/.agents/skills/*`` (the documented shared user-skill path)
     """
+    codex_home = _resolve_global_codex_home(target_dir)
     inject_with_rules(
         "generate_codex.py",
-        target_dir / ".codex" / "AGENTS.md",
+        codex_home / "AGENTS.md",
         rules_dir,
     )
 
@@ -229,18 +259,22 @@ def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
     if _strip_toolkit_sections(target_dir / "AGENTS.md"):
         print("  Migrated: removed stale ai-toolkit section from ~/AGENTS.md")
 
-    override = target_dir / ".codex" / "AGENTS.override.md"
+    override = codex_home / "AGENTS.override.md"
     if override.is_file() and override.read_text(encoding="utf-8").strip():
         print(
-            "  Warning: ~/.codex/AGENTS.override.md exists and takes precedence "
-            "over ~/.codex/AGENTS.md — toolkit rules will be masked."
+            f"  Warning: {override} exists and takes precedence over "
+            f"{codex_home / 'AGENTS.md'} — toolkit rules will be masked."
         )
 
     from generate_codex_hooks import generate as gen_codex_hooks
-    gen_codex_hooks(target_dir)
-    print("  Created: ~/.codex/hooks.json")
+    gen_codex_hooks(
+        target_dir,
+        global_install=True,
+        codex_home=codex_home,
+    )
+    print(f"  Created: {codex_home / 'hooks.json'}")
 
-    _install_codex_agents(target_dir)
+    _install_codex_agents(target_dir, config_root=codex_home)
     _install_codex_skills(target_dir)
 
 
@@ -586,6 +620,12 @@ ALL_EDITORS = [
 # Map of project files/dirs → editor names for auto-detection
 _EDITOR_MARKERS: dict[str, str] = {
     ".github/copilot-instructions.md": "copilot",
+    ".github/instructions": "copilot",
+    ".github/prompts": "copilot",
+    ".github/agents": "copilot",
+    ".github/skills": "copilot",
+    ".github/hooks": "copilot",
+    ".github/mcp.json": "copilot",
     ".cursorrules": "cursor",
     ".cursor/rules": "cursor",
     ".windsurfrules": "windsurf",
@@ -1000,8 +1040,11 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
             print("  Would migrate: remove undocumented .devin/skills toolkit pointer")
 
     # Profile-driven extras (matrix in kb/reference/global-install-model.md)
-    if "copilot" in eds and add_copilot_dir:
-        print("  Would generate: .github/instructions/ + .github/prompts/ (profile >= standard)")
+    if "copilot" in eds:
+        print("  Would generate: .github/agents/ + .github/skills/")
+        if add_copilot_dir:
+            print("  Would generate: .github/instructions/ + .github/prompts/ + "
+                  ".github/hooks/ (profile >= standard)")
     if "gemini" in eds and add_gemini_hooks:
         print("  Would generate: .gemini/settings.json hooks (profile >= standard)")
     if add_native_surfaces:
@@ -1160,12 +1203,17 @@ def _install_codex_skills(cwd: Path) -> None:
     )
 
 
-def _install_codex_agents(cwd: Path) -> None:
+def _install_codex_agents(cwd: Path, *, config_root: Path | None = None) -> None:
     """Generate native Codex custom-agent TOML files."""
     from generate_codex_agents import generate as gen_codex_agents
 
-    written, removed = gen_codex_agents(cwd)
-    message = f"  Created: .codex/agents/ ({written} agents"
+    written, removed = gen_codex_agents(cwd, config_root=config_root)
+    agents_dir = (
+        config_root / "agents"
+        if config_root is not None
+        else Path(".codex/agents")
+    )
+    message = f"  Created: {agents_dir}/ ({written} agents"
     if removed:
         message += f", {removed} stale removed"
     print(message + ")")
@@ -1225,12 +1273,18 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             rules_dir,
         )
         _install_copilot_agents_md(cwd, rules_dir)
-        # `standard` and above: emit path-specific instructions + prompt files
-        # (directory mode). `minimal` stays backwards-compatible with v2.
+        # Agents and skills are the minimal Copilot surface. Standard and above
+        # add path instructions, prompts, and native lifecycle hooks.
+        from generate_copilot import generate as gen_copilot_dir
+        gen_copilot_dir(
+            cwd,
+            language_modules=language_modules,
+            rules_dir=rules_dir,
+            emit_prompts=add_copilot_dir,
+            emit_instructions=add_copilot_dir,
+        )
         if add_copilot_dir:
-            from generate_copilot import generate as gen_copilot_dir
-            gen_copilot_dir(cwd, language_modules=language_modules,
-                            rules_dir=rules_dir)
+            _try_generator("generate_copilot_hooks", cwd)
 
     if "cursor" in eds:
         inject_with_rules(
@@ -1322,7 +1376,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         )
         # .codex/hooks.json — Codex lifecycle hooks
         from generate_codex_hooks import generate as gen_codex_hooks
-        gen_codex_hooks(cwd)
+        gen_codex_hooks(cwd, global_install=False)
         print("  Created: .codex/hooks.json")
         # .codex/agents/ -- native Codex custom-agent definitions
         _install_codex_agents(cwd)

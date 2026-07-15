@@ -3,9 +3,9 @@ title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
 tags: [mcp, templates, servers, configuration, editors, inject-mcp, external-templates]
-version: "1.2.0"
+version: "1.4.0"
 created: "2026-04-07"
-last_updated: "2026-05-12"
+last_updated: "2026-07-14"
 description: "Reference for 26 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
 ---
 
@@ -26,6 +26,8 @@ ai-toolkit mcp show <name>        # Print a template's JSON config
 ai-toolkit mcp add <name>         # Merge a template into .mcp.json
 ai-toolkit mcp add <n1> <n2>      # Add multiple templates at once
 ai-toolkit mcp install --editor cursor --scope project github --target .
+ai-toolkit mcp install --editor antigravity --scope project context7 --target .
+ai-toolkit mcp install --editor codex --scope project context7 --target .
 ai-toolkit mcp install --editor codex context7
 ai-toolkit mcp remove <name>      # Remove from .mcp.json or native editor config
 ```
@@ -35,7 +37,7 @@ ai-toolkit mcp remove <name>      # Remove from .mcp.json or native editor confi
 The `add` command merges the `mcpServers` block from the template into `.mcp.json`. If `.mcp.json` does not exist it is created. If the server name already exists in `.mcp.json`, the entry is overwritten with the template version.
 
 The `install` command renders the same canonical template into an editor-native config format:
-- JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Roo Code, Windsurf, Cline, Augment
+- JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Google Antigravity, Roo Code, Windsurf, Cline, Augment
 - JSON clients with additional transport metadata: GitHub Copilot
 - TOML clients: Codex CLI (`[mcp_servers.<name>]`)
 
@@ -47,15 +49,19 @@ When `install` runs with `--scope project`, ai-toolkit also updates the project'
 |--------|-------|--------------------|-------|
 | `claude` | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` | Preserves existing hooks and env keys |
 | `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
-| `copilot` | project + global | `.github/mcp.json`, `~/.copilot/mcp-config.json` | Adds `type` and `tools: ["*"]` automatically |
+| `copilot` | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds `type` and `tools: ["*"]` automatically |
 | `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
+| `antigravity` | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Preserves `url` or `serverUrl` remote transports and Antigravity authentication/tool-control fields |
 | `roo` | project | `.roo/mcp.json` | Mirrors canonical `mcpServers` into Roo's project MCP file |
 | `windsurf` | global | `~/.codeium/windsurf/mcp_config.json` | Global-only official config |
 | `cline` | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only official config |
 | `augment` | global | `~/.augment/settings.json` | Global-only settings file |
-| `codex` | global | `~/.codex/config.toml` | Rendered as TOML `mcp_servers` tables |
+| `codex` | project + global | `.codex/config.toml`, `$CODEX_HOME/config.toml` (default `~/.codex/config.toml`) | Validated TOML `mcp_servers` tables in a marker-bounded managed block; unrelated TOML/comments preserved |
 
-Project-local `ai-toolkit install --local` also mirrors `.mcp.json` into Claude project settings plus selected project editors that have official repository/workspace MCP files (`cursor`, `copilot`, `roo`).
+Project-local `ai-toolkit install --local` also mirrors `.mcp.json` into Claude
+project settings plus selected project editors that have official
+repository/workspace MCP files (`cursor`, `copilot`, `antigravity`, `roo`, `codex`). Codex
+loads `.codex/config.toml` only for trusted project layers.
 
 ## Template List
 

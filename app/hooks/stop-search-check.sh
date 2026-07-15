@@ -33,7 +33,8 @@ fi
 
 ai_toolkit_codex_log_has_search_since() {
     local flag="$1"
-    local log="$HOME/.codex/log/codex-tui.log"
+    local codex_home="${CODEX_HOME:-$HOME/.codex}"
+    local log="$codex_home/log/codex-tui.log"
     [ -f "$log" ] || return 1
 
     python3 - "$flag" "$log" <<'PY' 2>/dev/null

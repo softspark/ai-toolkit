@@ -10,8 +10,9 @@ ai_toolkit_search_first_mode() {
 }
 
 ai_toolkit_has_search_provider() {
-    local mode
+    local mode codex_home
     mode="$(ai_toolkit_search_first_mode)"
+    codex_home="${CODEX_HOME:-$HOME/.codex}"
     case "$mode" in
         off|false|0|disabled|none)
             return 1
@@ -46,7 +47,7 @@ ai_toolkit_has_search_provider() {
     done
 
     local toml_candidates=(
-        "$HOME/.codex/config.toml"
+        "$codex_home/config.toml"
     )
     for path in "${toml_candidates[@]}"; do
         [ -f "$path" ] || continue

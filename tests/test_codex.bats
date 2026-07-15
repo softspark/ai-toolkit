@@ -354,8 +354,10 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
-@test "codex: command paths point at the shared toolkit hooks directory" {
-    grep -q '.softspark/ai-toolkit/hooks' "$CX_DIR/.codex/hooks.json"
+@test "codex: project command paths point at self-contained hook assets" {
+    grep -Fq '$(git rev-parse --show-toplevel 2>/dev/null)/.codex/hooks/' \
+        "$CX_DIR/.codex/hooks.json"
+    ! grep -Fq '.softspark/ai-toolkit/hooks' "$CX_DIR/.codex/hooks.json"
 }
 
 @test "codex: generated hooks run in quiet mode" {
@@ -461,6 +463,7 @@ assert len(entries) == 1
 gens = set(entries[0]['our_generators'])
 expected = {
     'scripts/generate_codex.py',
+    'scripts/generate_codex_agents.py',
     'scripts/generate_codex_hooks.py',
     'scripts/generate_codex_skills.py',
 }

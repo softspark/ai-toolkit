@@ -130,6 +130,87 @@ assert "!app/**/.claude/**" in files
 PY
 }
 
+@test "npm package excludes KB runtime logs while preserving markdown" {
+    local fixture pack_status audit_status audit_output
+    fixture="$(mktemp -d)"
+
+    cp "$TOOLKIT_DIR/package.json" "$fixture/package.json"
+    mkdir -p "$fixture/kb/reference"
+    printf '# Reference\n' > "$fixture/kb/reference/guide.md"
+    printf 'runtime entry\n' > "$fixture/kb/runtime.log"
+
+    run env npm_config_cache="$fixture/.npm-cache" \
+        npm pack --dry-run --json --pack-destination "$fixture" "$fixture"
+    pack_status="$status"
+    printf '%s\n' "$output" > "$fixture/pack.json"
+
+    run python3 - "$fixture/pack.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    package = json.load(fh)[0]
+
+paths = {entry["path"] for entry in package["files"]}
+assert "kb/reference/guide.md" in paths, sorted(paths)
+assert "kb/runtime.log" not in paths, sorted(paths)
+PY
+    audit_status="$status"
+    audit_output="$output"
+    rm -rf "$fixture"
+
+    [ "$pack_status" -eq 0 ]
+    [ "$audit_status" -eq 0 ] || {
+        echo "$audit_output"
+        return "$audit_status"
+    }
+}
+
+@test "npm package KB files match the tracked release set" {
+    local fixture pack_status audit_status audit_output
+    fixture="$(mktemp -d)"
+
+    run env npm_config_cache="$fixture/.npm-cache" \
+        npm pack --dry-run --json --pack-destination "$fixture" "$TOOLKIT_DIR"
+    pack_status="$status"
+    printf '%s\n' "$output" > "$fixture/pack.json"
+
+    run python3 - "$TOOLKIT_DIR" "$fixture/pack.json" <<'PY'
+import json
+import subprocess
+import sys
+
+toolkit_dir, pack_path = sys.argv[1:]
+tracked = {
+    path
+    for path in subprocess.check_output(
+        ["git", "-C", toolkit_dir, "ls-files", "-z", "kb"]
+    ).decode().split("\0")
+    if path
+}
+with open(pack_path, encoding="utf-8") as fh:
+    package = json.load(fh)[0]
+packed = {
+    entry["path"]
+    for entry in package["files"]
+    if entry["path"].startswith("kb/")
+}
+
+missing = sorted(tracked - packed)
+extra = sorted(packed - tracked)
+assert not missing and not extra, {"missing": missing, "extra": extra}
+PY
+    audit_status="$status"
+    audit_output="$output"
+    rm -rf "$fixture"
+
+    [ "$pack_status" -eq 0 ]
+    [ "$audit_status" -eq 0 ] || {
+        echo "$audit_output"
+        return "$audit_status"
+    }
+}
+
 @test "CHANGELOG.md references current package.json version" {
     version=$(python3 -c "import sys,json; d=json.load(open('$TOOLKIT_DIR/package.json')); print(d['version'])")
     grep -q "$version" "$TOOLKIT_DIR/CHANGELOG.md"

@@ -24,7 +24,7 @@
 - [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/planning/drop-cascade-hooks-after-sunset.md)
 - [PRD: MCP Context Trim v4.0](kb/planning/mcp-context-trim-v4-prd.md)
 - [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
-- [SOP: Claude Toolkit Maintenance](kb/procedures/maintenance-sop.md)
+- [SOP: AI Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Release Preparation](kb/procedures/release-preparation-sop.md)
 - [SOP: Release Verification](kb/procedures/release-verification-sop.md)
 - [Agents Catalog](kb/reference/agents-catalog.md)

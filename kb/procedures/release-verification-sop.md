@@ -3,10 +3,10 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.6.0"
+version: "1.7.0"
 created: "2026-04-08"
-last_updated: "2026-07-02"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit — verifies CLI, installs, Claude app plugin export, doctor, validation, tests, eject, npm provenance attestation, SARIF audit, and per-skill permissions. v1.6.0 adds the Claude Chat/Cowork plugin validation and replaces the retired Cascade hook surface with Devin hooks."
+last_updated: "2026-07-14"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
 # SOP: Release Verification
@@ -31,31 +31,31 @@ Verifies all critical paths from the user's perspective.
 
 ## Quick Checklist (TL;DR)
 
-13 commands — if all pass, the release is ready:
+14 commands — if all pass, the release is ready:
 
 ```bash
 # Pre-commit (Phase 0)
 python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGENTS.md
 python3 scripts/generate_llms_txt.py > llms.txt             # 2. Regenerate llms.txt
 python3 scripts/validate.py --strict                        # 3. Validation passed?
-npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 5. All tests passed? (single run, cached)
+npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 4. All tests passed? (single run, cached)
 
 # Post-install verification (Phases 1-7)
-ai-toolkit --version                                        # 6. Version OK?
-ai-toolkit status                                           # 7. Status OK?
-ai-toolkit doctor                                           # 8. Health check passed?
-ai-toolkit install --dry-run                                # 9. Global install OK?
-python3 scripts/audit_skills.py --ci                        # 10. Security audit clean?
+ai-toolkit --version                                        # 5. Version OK?
+ai-toolkit status                                           # 6. Status OK?
+ai-toolkit doctor                                           # 7. Health check passed?
+ai-toolkit install --dry-run                                # 8. Global install OK?
+python3 scripts/audit_skills.py --ci                        # 9. Security audit clean?
 
 # Supply-chain verification (Phase 8, v2.8.0+)
-python3 scripts/audit_skills.py --sarif | python3 -c "import json,sys; assert json.load(sys.stdin)['version']=='2.1.0'; print('SARIF OK')"   # 11. SARIF 2.1.0 well-formed?
-python3 scripts/audit_skills.py --permissions | head -30    # 12. Broad-access skills reviewed?
-npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"   # 13. Provenance attested on npm?
-python3 scripts/claude_app.py verify                         # 14. Claude Chat/Cowork plugin contract valid?
+python3 scripts/audit_skills.py --sarif | python3 -c "import json,sys; assert json.load(sys.stdin)['version']=='2.1.0'; print('SARIF OK')"   # 10. SARIF 2.1.0 well-formed?
+python3 scripts/audit_skills.py --permissions | head -30    # 11. Broad-access skills reviewed?
+npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"   # 12. Provenance attested on npm?
+python3 scripts/claude_app.py verify                         # 13. Claude Chat/Cowork plugin contract valid?
 
 # Deep-coverage verification (Phase 9, v3.0.0+)
 META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
-diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 15. Registry <-> generators drift?
+diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 14. Registry <-> generators drift?
 ```
 
 ---
@@ -123,10 +123,10 @@ ai-toolkit status
 ```
 
 **Verify `--dry-run`:**
-- [ ] Agents >= 44
-- [ ] Skills >= 99
+- [ ] Agents: 44
+- [ ] Skills: 108
 - [ ] Hooks merged into settings.json
-- [ ] "Other AI Tools" section lists documented global targets (with `--editors`): aider, antigravity, augment, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf. Scope varies (v4.12.0+): cursor = `~/.cursor/hooks.json` only, copilot = `~/.copilot/` instructions, antigravity = `~/.gemini/*/skills` pointer; Cursor and Antigravity RULES still install only via `--local` (no mergeable global rules file)
+- [ ] "Other AI Tools" lists documented global targets (with `--editors`): aider, antigravity, augment, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf. Scope varies: Codex uses `$CODEX_HOME` (default `~/.codex`) plus `$HOME/.agents/skills`; Copilot uses `$COPILOT_HOME` (default `~/.copilot`); cursor has only `~/.cursor/hooks.json`; antigravity has the `~/.gemini/*/skills` pointer. Cursor and Antigravity rules remain project-only.
 
 **Verify `status`:**
 - [ ] Version matches expected
@@ -195,7 +195,7 @@ python3 scripts/audit_skills.py --ci
 ```
 
 **Verify validate.py:**
-- [ ] Agents >= 44, Skills >= 99, Tests >= 900
+- [ ] Agents: 44, Skills: 108, Tests: exactly the current README badge count
 - [ ] Hook events: 14, Hook scripts: >= 30
 - [ ] Plugin packs >= 10, KB documents >= 20
 - [ ] `Errors: 0 | Warnings: 0` → `VALIDATION PASSED`
@@ -340,9 +340,9 @@ These verify the native-surface generators shipped in v3.0.0 actually emit the r
 
 ```bash
 D=/tmp/aitk-profile-full-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
-ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
-  --profile full --codex-skills --dry-run 2>&1 \
-  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.devin/hooks\\.v1\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.agents/skills"
+ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex,copilot \
+  --profile full --dry-run 2>&1 \
+  | grep -E "\\.cursor/(hooks\\.json|agents)|\\.devin/hooks\\.v1\\.json|\\.gemini/(settings\\.json|commands)|\\.augment/(agents|commands)|\\.codex/(agents|hooks)|\\.agents/skills|\\.github/(agents|skills|instructions|prompts|hooks)"
 ```
 
 **Verify** — at least the following lines appear:
@@ -350,26 +350,29 @@ ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex \
 - [ ] `.devin/hooks.v1.json`
 - [ ] `.gemini/settings.json` hooks AND `.gemini/commands/`
 - [ ] `.augment/agents/` + `.augment/commands/` + `$HOME/.augment/settings.json`
-- [ ] `.agents/skills/` (Codex native discovery path; refreshed by `--codex-skills`)
+- [ ] `.codex/hooks.json` + `.codex/hooks/` + `.codex/agents/`
+- [ ] `.agents/skills/` (Codex native discovery path)
+- [ ] `.github/agents/` + `.github/skills/` + `.github/instructions/` + `.github/prompts/` + `.github/hooks/`
 
-### 9.2 `--codex-skills` is orthogonal to `--profile`
+### 9.2 Codex skills are profile-independent
 
 ```bash
 D=/tmp/aitk-codex-skills-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
+ai-toolkit install --local --editors codex --profile minimal --dry-run 2>&1 \
+  | grep -q "Would generate: .agents/skills" && echo "OK: Codex skills emit at minimal"
 ai-toolkit install --local --editors codex --profile standard --codex-skills --dry-run 2>&1 \
-  | grep -q "Would refresh: .agents/skills" && echo "OK: --codex-skills refreshes .agents/skills without --profile full"
-ai-toolkit install --local --editors codex --profile full --dry-run 2>&1 \
-  | grep -q "Would generate: .agents/skills" && echo "OK: Codex skills use .agents/skills at profile full"
+  | grep -q "Would refresh: .agents/skills" && echo "OK: legacy flag explicitly refreshes the same catalog"
 ```
 
 **Verify:**
-- [ ] `--codex-skills` refreshes `.agents/skills/` at any profile
-- [ ] `--profile full` never emits `.codex/skills/`; Codex skills use `.agents/skills/`
+- [ ] Selecting Codex emits all skills under `.agents/skills/` at every profile
+- [ ] `--codex-skills` remains an explicit refresh alias; it is not required for installation
+- [ ] No profile emits `.codex/skills/`
 
 ### 9.3 Breaking-change surfaces land on `--profile standard`
 
-v3.0.0 moved two surfaces from opt-in to default:
-- Copilot directory layout (`.github/instructions/`, `.github/prompts/`)
+The standard profile must include:
+- Copilot scoped instructions, prompts, custom agents, portable skills, and hooks
 - Gemini hooks (`.gemini/settings.json`)
 
 ```bash
@@ -377,10 +380,12 @@ D=/tmp/aitk-breaking-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors copilot,gemini --profile standard --dry-run 2>&1 \
   | tee /tmp/aitk-breaking.log
 grep -q "\\.github/instructions/" /tmp/aitk-breaking.log && echo "OK: Copilot dir layout at standard"
+grep -q "\\.github/agents/.*\\.github/skills/" /tmp/aitk-breaking.log && echo "OK: Copilot agents and skills at standard"
+grep -q "\\.github/hooks/" /tmp/aitk-breaking.log && echo "OK: Copilot hooks at standard"
 grep -q "\\.gemini/settings\\.json hooks" /tmp/aitk-breaking.log && echo "OK: Gemini hooks at standard"
 ```
 
-**Verify both lines print `OK:`**. If either is missing, a regression has unwound the v3.0.0 breaking change.
+**Verify all four lines print `OK:`**. If any is missing, native Copilot or Gemini coverage has regressed.
 
 ### 9.4 Install is idempotent
 
@@ -404,8 +409,8 @@ The bats suite validates JSON shape at generation time. This re-checks that what
 
 ```bash
 D=/tmp/aitk-json-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
-ai-toolkit install --local --editors cursor,windsurf,gemini,augment --profile full >/dev/null 2>&1
-for f in .cursor/hooks.json .devin/hooks.v1.json .gemini/settings.json $HOME/.augment/settings.json; do
+ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex,copilot --profile full >/dev/null 2>&1
+for f in .cursor/hooks.json .devin/hooks.v1.json .gemini/settings.json .codex/hooks.json .github/hooks/ai-toolkit.json "$HOME/.augment/settings.json"; do
   [ -f "$f" ] && python3 -c "import json; json.load(open('$f'))" && echo "OK: $f"
 done
 ```
@@ -493,8 +498,8 @@ ai-toolkit eject /tmp/test # retry
 | Tests | `npm test`: N/N passed, 0 failures |
 | Eject | Standalone `.claude/` with real files AND `output-styles/` directory |
 | Guards | Destructive commands blocked |
-| Deep coverage | `--profile full` emits all 9 v3.0.0 native surfaces; `--codex-skills` works orthogonally |
-| Breaking changes | Copilot directory layout + Gemini hooks emit at `--profile standard` (v3.0.0 contract) |
+| Deep coverage | `--profile full` emits every documented native surface, including Codex agents/skills/hooks and Copilot agents/skills/hooks |
+| Profile contract | Codex skills emit at every profile without `--codex-skills`; Copilot standard emits agents, skills, instructions, prompts, and hooks |
 | Idempotence | Second `install` run produces byte-identical output in every managed path |
 | Live JSON | Every generated `.json` file on disk parses as valid JSON |
 | Registry | `supported-tools-registry.md` enumerates every `scripts/generate_*.py` we ship |

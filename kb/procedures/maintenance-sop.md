@@ -1,15 +1,15 @@
 ---
-title: "SOP: Claude Toolkit Maintenance"
+title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.2.0"
+version: "3.3.0"
 created: "2026-03-23"
-last_updated: "2026-07-10"
+last_updated: "2026-07-14"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
-# SOP: Claude Toolkit Maintenance
+# SOP: AI Toolkit Maintenance
 
 ## Init Repository (New Project)
 
@@ -45,7 +45,11 @@ ai-toolkit install --local --lang python --editors all  # language rules propaga
 
 When `--editors` is combined with `--lang` (or auto-detected languages), language rules are propagated to all configured editors as `ai-toolkit-lang-<lang>` files — not just Claude's `CLAUDE.md`. Similarly, registered custom rules (`~/.softspark/ai-toolkit/rules/`) are propagated to directory-based editor configs as `ai-toolkit-custom-<name>` files.
 
-**Note:** Hooks are global-only — merged into `~/.claude/settings.json` by `ai-toolkit install`. Project-local `--local` does not install hooks; any legacy `.claude/hooks.json` is removed automatically.
+**Note:** Claude Code hooks are global-only and merge into
+`~/.claude/settings.json`; any legacy `.claude/hooks.json` is removed. Editors
+with documented repository hook surfaces may receive local native files. Codex
+uses `.codex/hooks.json` plus `.codex/hooks/*`; Copilot profile `standard` and
+above uses `.github/hooks/ai-toolkit.json` plus its adjacent runtime.
 
 **Input validation (v1.4.2):** `--only`, `--skip`, `--editors`, and `--lang` are validated on input; an invalid value exits with a clear error before any changes are made.
 
@@ -112,14 +116,16 @@ updates. Skills work in Chat and Cowork. Hooks and sub-agents run only in Cowork
 
 ### Install Profiles (v3.0.0)
 
-| Profile | Claude Code core | Editor rules | Gemini hooks | Copilot dir layout | Per-editor hooks / sub-agents / commands | Git hooks |
-|---------|:---------------:|:------------:|:------------:|:------------------:|:---------------------------------------:|:---------:|
-| `minimal` | yes | pointer only | no | no | no | no |
-| `standard` (default) | yes | yes | **yes** (new in v3) | **yes** (new in v3) | no | no |
-| `strict` | yes | yes | yes | yes | no | yes |
-| `full` | yes | yes | yes | yes | **yes, all editors** | optional |
+| Profile | Claude Code core | Copilot | Codex | Other editor-native surfaces | Git hooks |
+|---------|:---------------:|---------|-------|------------------------------|:---------:|
+| `minimal` | yes | root instructions + agents + skills | instructions + agents + skills + hooks | pointer-only where required | no |
+| `standard` (default) | yes | minimal + scoped instructions + prompts + hooks | same native bundle | Gemini hooks + editor rules | no |
+| `strict` | yes | same as standard | same native bundle | same as standard | yes |
+| `full` | yes | same as standard | same native bundle | all supported hooks, agents, commands, and skill pointers | optional |
 
-`--codex-skills` is orthogonal to `--profile` and materializes the full skill catalog under `.agents/skills/` for Codex. See `kb/reference/global-install-model.md` for the full semantic breakdown.
+Codex materializes the full skill catalog under `.agents/skills/` in every
+profile. `--codex-skills` remains only as an explicit refresh compatibility
+flag. See `kb/reference/global-install-model.md` for the full breakdown.
 
 ---
 
@@ -293,7 +299,14 @@ ai-toolkit plugin remove --editor codex <name>    # remove from one runtime only
 ai-toolkit plugin status --editor all             # show installed packs with runtime details
 ```
 
-Install copies hooks/scripts, verifies agents+skills are linked, merges hooks into the selected runtime config, and runs init scripts. For Codex, the selected runtime is the global `HOME` layer (`~/AGENTS.md`, `~/.agents/`, `~/.codex/hooks.json`). Update removes and reinstalls from current source while preserving plugin data. Clean prunes old plugin data. Remove reverses install for the selected runtime but leaves plugin data intact. Core agents/skills are never removed.
+Install copies runtime-owned hooks/scripts, ensures the required base skills are
+available, merges native hook configuration, and runs init scripts. Codex uses
+`$CODEX_HOME/AGENTS.md`, `$CODEX_HOME/hooks.json`, self-contained
+`$CODEX_HOME/ai-toolkit-hooks/*`, and shared `$HOME/.agents/skills/*`; it never
+uses `~/AGENTS.md` or `$HOME/.agents/rules/` as user configuration. Update
+removes and reinstalls the selected pack while preserving plugin data. Remove
+strips only exact pack-owned handlers, assets, and marker sections. Core
+agents/skills and user handlers remain untouched.
 
 Memory-pack auto-prunes observations older than 90 days on every session end (configurable via `MEMORY_RETENTION_DAYS`).
 

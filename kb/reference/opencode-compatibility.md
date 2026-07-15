@@ -44,12 +44,12 @@ Files land directly under `~/.config/opencode/` (no `.opencode/` nesting) becaus
 | Feature            | Claude Code | Codex CLI       | opencode                                  |
 |--------------------|-------------|-----------------|-------------------------------------------|
 | Rules file         | `CLAUDE.md` | `AGENTS.md`     | `AGENTS.md` + `CLAUDE.md` fallback        |
-| Subagents          | Yes         | No              | Yes (`mode: subagent`)                    |
+| Subagents          | Yes         | Yes (`.codex/agents/*.toml`) | Yes (`mode: subagent`)          |
 | Slash commands     | Skills      | Adapted skills  | Native commands with frontmatter          |
 | MCP                | Yes         | Yes             | Yes (`opencode.json`)                     |
 | Lifecycle hooks    | JSON config | `.codex/hooks`  | JS/TS plugins (~30+ events)               |
-| Global config dir  | `~/.claude` | `~/.codex`      | `~/.config/opencode`                      |
-| Project config dir | `.claude`   | `.agents`       | `.opencode`                               |
+| Global config dir  | `~/.claude` | `$CODEX_HOME` (default `~/.codex`) | `~/.config/opencode`       |
+| Project config dir | `.claude`   | `.codex` + `.agents/skills` | `.opencode`                    |
 
 ## Shared AGENTS.md
 

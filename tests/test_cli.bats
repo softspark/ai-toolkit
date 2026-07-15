@@ -153,12 +153,15 @@ teardown() {
     [ -s "$TEST_TMP/AGENTS.md" ]
 }
 
-@test "cli: codex-md generates AGENTS.md with orchestration skills" {
+@test "cli: codex-md generates compact AGENTS.md with inlined coding rules" {
     cd "$TEST_TMP"
     run $CLI codex-md
     [ "$status" -eq 0 ]
     [ -f "$TEST_TMP/AGENTS.md" ]
-    grep -q '\*\*orchestrate\*\*' "$TEST_TMP/AGENTS.md"
+    grep -q '^# AI Toolkit Instructions$' "$TEST_TMP/AGENTS.md"
+    grep -q '^## Constitution$' "$TEST_TMP/AGENTS.md"
+    grep -q '^## Coding Rules$' "$TEST_TMP/AGENTS.md"
+    ! grep -q '^## Available Skills$' "$TEST_TMP/AGENTS.md"
 }
 
 @test "cli: codex-hooks generates .codex/hooks.json" {

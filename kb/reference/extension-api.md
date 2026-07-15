@@ -3,9 +3,9 @@ title: "Extension API Reference"
 category: reference
 service: ai-toolkit
 tags: [extension-api, inject-rule, inject-hook, inject-mcp, mcp-templates, integration, editors]
-version: "1.5.0"
+version: "1.8.0"
 created: "2026-04-07"
-last_updated: "2026-05-12"
+last_updated: "2026-07-14"
 description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, inject-mcp, remove-* variants, and editor-aware MCP template management."
 ---
 
@@ -23,8 +23,8 @@ This design is intentional: ai-toolkit is a generic toolkit. Consumers (MCP serv
 |---------|-------------|-----------|------------|
 | `inject-rule <file.md>` | `~/.claude/CLAUDE.md` | Legacy HTML comment markers (`<!-- TOOLKIT:name -->`) | Yes |
 | `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/rules/` | Unregister and remove generated Claude rule file | Yes |
-| `inject-hook <file.json\|url> [name]` | `~/.claude/settings.json` | JSON `_source` tag per entry, URL cached + registered | Yes |
-| `remove-hook <name>` | `~/.claude/settings.json` | Strip all entries with matching `_source`, unregister URL source | Yes |
+| `inject-hook <file.json\|url> [name]` | `~/.claude/settings.json` + `$CODEX_HOME/hooks.json` | Claude `_source` ownership plus native Codex command translation | Yes |
+| `remove-hook <name>` | `~/.claude/settings.json` + `$CODEX_HOME/hooks.json` | Strip exact source ownership in both schemas, unregister URL source | Yes |
 | `inject-mcp <file.json\|url> [name] [--force]` | `~/.mcp.json` + every editor with `global_path` | JSON `_source` tag per server, URL cached + registered, full editor propagation | Yes |
 | `remove-mcp <name>` | `~/.mcp.json` + every editor with `global_path` | Strip all servers with matching `_source`, clean editor configs, unregister URL | Yes |
 | `add-rule <file.md\|url>` | `~/.softspark/ai-toolkit/rules/` | File copy + sync to `~/.claude/rules/ai-toolkit-registered-*.md` on next `update` | Yes |
@@ -73,6 +73,9 @@ npx @softspark/ai-toolkit inject-hook https://example.com/my-tool-hooks.json
 
 # With explicit source name
 npx @softspark/ai-toolkit inject-hook https://example.com/hooks.json my-tool-hooks
+
+# Local source name plus explicit target directory
+npx @softspark/ai-toolkit inject-hook ./hooks.json my-tool-hooks /custom/target
 ```
 
 **Implementation:** `scripts/inject_hook_cli.py`, `scripts/hook_sources.py`, `scripts/url_fetch.py`.
@@ -103,13 +106,45 @@ npx @softspark/ai-toolkit inject-hook https://example.com/hooks.json my-tool-hoo
 
 **Idempotency:** Re-running strips all existing entries with the same source name, then appends the new ones. No duplicates accumulate.
 
-**Safety:** Entries tagged `"_source": "ai-toolkit"` are never modified or removed by this command. External tools cannot affect the toolkit's own hooks. Only HTTPS URLs are accepted.
+**Safety:** Entries tagged `"_source": "ai-toolkit"` are never modified or
+removed by this command. External tools cannot affect the toolkit's own hooks.
+Only HTTPS URLs are accepted. Claude settings, the source registry/cache, and
+Codex hooks are parsed from the byte snapshots captured after their trusted
+roots and parent directories are pinned. Every create, write, replace, unlink,
+and rollback runs relative to those descriptors with `O_NOFOLLOW`; a swapped
+ancestor cannot redirect the transaction, and an inode change after snapshot
+capture aborts instead of overwriting concurrent work. A later failure restores
+every touched file byte-for-byte. Existing file modes are preserved. New JSON
+configuration files are created with a secure `0600` base filtered by the
+current umask. Mutation requires POSIX `dir_fd` support. Native Windows Python
+fails closed before changing any file; use WSL for `inject-hook` and
+`remove-hook`. Read-only parsing and validation remain available.
 
-**Codex propagation:** Codex-compatible events (`SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`) are automatically propagated to `~/.codex/hooks.json`. Non-Codex events are silently skipped. No extra flags needed.
+**Codex propagation:** command handlers for Codex's 10 documented events are
+translated into the native schema and merged into `$CODEX_HOME/hooks.json`
+(default `~/.codex/hooks.json`). The translated document never contains
+Claude's private `_source` key. Each command carries an exact, collision-resistant
+`AI_TOOLKIT_HOOK_OWNER=ai-toolkit-external-<source>-<digest>` marker; update and
+remove operations match only that owner. Existing core, plugin, and user
+handlers are preserved through the same validator and atomic writer used by the
+Codex generator.
+
+Only fields shared unambiguously by native command hooks are propagated:
+`matcher`, `type: command`, `command`, `commandWindows`, `timeout`,
+`statusMessage`, and `async`. Unsupported events, non-command handlers, and
+schema-specific extra fields are reported as skipped instead of being guessed.
+`command` must be non-empty. `timeout`, when present, is a positive integer in
+seconds; Codex defaults it to 600 seconds when omitted.
+`UserPromptSubmit` and `Stop` matchers are omitted only when empty; a non-empty
+matcher is skipped because Codex does not support it. `CODEX_HOME` must be an
+existing absolute non-symlink directory when configured.
 
 ## remove-hook
 
-Strips all hook entries from `~/.claude/settings.json` that carry a given `_source` tag. If the hook was URL-sourced, also unregisters the URL from `sources.json` and removes the cached file.
+Strips all hook entries from `~/.claude/settings.json` that carry a given
+`_source` tag and removes only the matching native command owner from the active
+Codex `hooks.json`. If the hook was URL-sourced, it also unregisters the URL
+from `sources.json` and removes the cached file.
 
 ```bash
 npx @softspark/ai-toolkit remove-hook my-tool-hooks
@@ -160,7 +195,15 @@ npx @softspark/ai-toolkit inject-mcp ./conflict.json --force
 
 **URL support:** When an HTTPS URL is provided, the JSON is fetched, validated, cached in `~/.softspark/ai-toolkit/mcp-templates/external/<name>.json`, and registered in `sources.json`. On every `ai-toolkit update`, URL-sourced templates are re-fetched and re-injected automatically. If the fetch fails during update, the cached version is used.
 
-**Editor propagation:** Every editor with a `global_path` in `EDITOR_SPECS` is updated -- Claude (`~/.claude.json`), Cursor (`~/.cursor/mcp.json`), GitHub Copilot (`~/.copilot/mcp-config.json`), Gemini CLI (`~/.gemini/settings.json`), Windsurf (`~/.codeium/windsurf/mcp_config.json`), Cline (`~/.cline/data/settings/cline_mcp_settings.json`), Augment (`~/.augment/settings.json`), Codex CLI (`~/.codex/config.toml`). Per-editor failures are non-fatal -- the command reports a warning and continues.
+**Editor propagation:** Every editor with a `global_path` in `EDITOR_SPECS` is
+updated: Claude (`~/.claude.json`), Cursor (`~/.cursor/mcp.json`), GitHub
+Copilot (`$COPILOT_HOME/mcp-config.json`, default
+`~/.copilot/mcp-config.json`), Gemini CLI (`~/.gemini/settings.json`), Windsurf
+(`~/.codeium/windsurf/mcp_config.json`), Cline
+(`~/.cline/data/settings/cline_mcp_settings.json`), Augment
+(`~/.augment/settings.json`), and Codex CLI (`$CODEX_HOME/config.toml`, default
+`~/.codex/config.toml`). Per-editor failures are non-fatal; the command reports
+a warning and continues.
 
 **Idempotency:** Re-running with the same source overwrites entries for that source cleanly -- no duplicates accumulate.
 

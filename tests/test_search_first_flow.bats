@@ -11,7 +11,7 @@ setup() {
     export HOME="$TEST_TMP"
     export TOOLKIT_HOOK_PROFILE="standard"
     mkdir -p "$TEST_TMP/.softspark/ai-toolkit/state"
-    unset CLAUDE_SKIP_SEARCH_FIRST AI_TOOLKIT_SEARCH_FIRST AI_TOOLKIT_SEARCH_PROVIDER CLAUDE_SEARCH_PROVIDER
+    unset CODEX_HOME CLAUDE_SKIP_SEARCH_FIRST AI_TOOLKIT_SEARCH_FIRST AI_TOOLKIT_SEARCH_PROVIDER CLAUDE_SEARCH_PROVIDER
 }
 
 teardown() {
@@ -82,6 +82,19 @@ JSON
     [ -f "$(FLAG_PATH)" ]
 }
 
+@test "search-first: custom CODEX_HOME config provider sets flag" {
+    local codex_home="$TEST_TMP/custom-codex-home"
+    mkdir -p "$codex_home"
+    cat > "$codex_home/config.toml" <<'TOML'
+[mcp_servers.rag-mcp]
+command = "rag-mcp"
+TOML
+    cd "$TEST_TMP"
+    CODEX_HOME="$codex_home" run bash -c "echo '{\"prompt\":\"how does the merge-hooks dedup logic work and is it tested?\"}' | bash '$HOOKS/user-prompt-submit.sh'"
+    [ "$status" -eq 0 ]
+    [ -f "$(FLAG_PATH)" ]
+}
+
 @test "search-first: short prompt does NOT set flag" {
     run bash -c "echo '{\"prompt\":\"thanks\"}' | bash '$HOOKS/user-prompt-submit.sh'"
     [ "$status" -eq 0 ]
@@ -126,6 +139,20 @@ JSON
 1970-01-01T00:02:00Z INFO ToolCall: mcp__rag_mcp__smart_query {"query":"hooks"}
 LOG
     AI_TOOLKIT_SEARCH_FIRST=strict run bash "$HOOKS/stop-search-check.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
+@test "search-first: Stop check reads log from custom CODEX_HOME" {
+    local codex_home="$TEST_TMP/custom-codex-home"
+    mkdir -p "$codex_home/log"
+    printf '%s\n%s\n' "100" "what is the merge-hooks dedup logic and tests around it" > "$(FLAG_PATH)"
+    cat > "$codex_home/log/codex-tui.log" <<'LOG'
+1970-01-01T00:02:00Z INFO ToolCall: mcp__rag_mcp__smart_query {"query":"hooks"}
+LOG
+    CODEX_HOME="$codex_home" AI_TOOLKIT_SEARCH_FIRST=strict run \
+        bash "$HOOKS/stop-search-check.sh"
     [ "$status" -eq 0 ]
     [ -z "$output" ]
     [ ! -f "$(FLAG_PATH)" ]

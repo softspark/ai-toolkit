@@ -21,10 +21,10 @@ variables are generated as Codex wrappers. The wrappers preserve workflow intent
 using semantic subagent and planning guidance instead of version-specific tool
 signatures.
 
-Experimental plugin packs can also target a global Codex surface with
+Experimental plugin packs can also target the Codex user surface with
 `ai-toolkit plugin install --editor codex`, which layers plugin-specific skills,
-rules, and hooks into `HOME` without changing the project-local core install
-model.
+rules, and hooks onto the active `CODEX_HOME` without changing project-local
+configuration.
 
 ## Local Install Outputs
 
@@ -33,18 +33,46 @@ model.
 - `AGENTS.md` (project root; universal coding rules inlined — Codex reads instructions only from AGENTS.md, not `.agents/rules/`)
 - `.agents/skills/*`
 - `.codex/hooks.json`
+- `.codex/hooks/*` (self-contained executable hook assets)
+- `.codex/agents/*.toml`
+- `.codex/config.toml` when project MCP servers are selected
+
+Project-local Codex paths never follow `CODEX_HOME`; the variable selects the
+user configuration root only.
+
+## Global Core Install Outputs
+
+`ai-toolkit install --editors codex` writes Codex-owned user files below the
+active `CODEX_HOME` (default `~/.codex`):
+
+- `$CODEX_HOME/AGENTS.md`
+- `$CODEX_HOME/agents/*.toml`
+- `$CODEX_HOME/hooks.json`
+- `$CODEX_HOME/ai-toolkit-hooks/*`
+
+The portable user skill catalog intentionally remains under
+`$HOME/.agents/skills/*`. This is Codex's documented shared user-skill discovery
+path, not a Codex-owned config-root path. A configured `CODEX_HOME` must be an
+existing absolute directory; the installer preserves user guidance, custom
+agents, and unrelated hook handlers inside it.
+
+Sources: [Codex environment variables](https://learn.chatgpt.com/codex/config-file/environment-variables),
+[AGENTS.md discovery](https://learn.chatgpt.com/codex/agent-configuration/agents-md),
+[Codex skills](https://developers.openai.com/codex/skills).
 
 ## Global Plugin Outputs
 
 `ai-toolkit plugin install --editor codex <pack>` bootstraps or reuses:
 
-- `~/.codex/AGENTS.md` (the documented global instruction file; pack rules are marker-injected here, not written as unread `~/.agents/rules/` files)
-- `~/.agents/skills/*`
-- `~/.codex/hooks.json`
+- `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`; pack rules are marker-injected here, not written as unread `.agents/rules/` files)
+- `$HOME/.agents/skills/*`
+- `$CODEX_HOME/hooks.json`
+- `$CODEX_HOME/ai-toolkit-hooks/*`
 
 Plugin packs only add their own runtime-specific layer on top of the generated
-Codex base. Shared hook scripts and plugin scripts still live in
-`~/.softspark/ai-toolkit/`.
+Codex base. Codex hooks no longer depend on executable paths under
+`~/.softspark/ai-toolkit/`; project assets live beside `.codex/hooks.json`, and
+user assets live under `$CODEX_HOME/ai-toolkit-hooks/`.
 
 ## Skill Translation Model
 
@@ -115,11 +143,26 @@ environment-snapshot probe). Claude-only events such as `TaskCompleted`,
 are not available in `.codex/hooks.json`. Handler types: only `command` runs;
 `prompt` and `agent` are parsed by Codex but not yet executed.
 
-`inject-hook` automatically propagates these 9 Codex-compatible events to
-`~/.codex/hooks.json` (global layer). Non-Codex events are silently skipped.
-`remove-hook` cleans both Claude and Codex targets.
+The generator merges these Codex-compatible events into project or user
+`hooks.json`, preserving unrelated user handlers and replacing only commands
+marked as ai-toolkit-owned. Project commands resolve their assets from the git
+root; core user commands use `$CODEX_HOME/ai-toolkit-hooks/`.
 
-Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. The generated
+Hook JSON is parsed from the snapshot held by the same secure transaction that
+writes generated handlers, installs executable assets, and removes stale
+managed assets. A failure in any of those stages rolls back the whole upgrade.
+Existing file permissions are retained; new `hooks.json` files use a secure
+`0600` base filtered by umask, while new executable hook assets are explicitly
+installed as `0755`.
+
+After installation or any hook change, open `/hooks` in Codex and review/trust
+the exact definitions. Project hooks additionally require a trusted `.codex`
+project layer. The installer never bypasses hook trust.
+
+Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. Native
+`SessionStart`, `PreCompact`, and MCP-health adapters use Codex instruction and
+config terminology (`AGENTS.md`, `.codex/config.toml`) instead of Claude-only
+paths. The generated
 `UserPromptSubmit` governance hook does not set `AI_TOOLKIT_HOOK_FORMAT=json`
 by default because Codex currently renders `additionalContext` as visible hook
 context in the TUI. This keeps prompt-submit output quiet while preserving hook
@@ -151,6 +194,18 @@ Plain-text informational hook context is also silent by default in the shared
 hook helper. Set `AI_TOOLKIT_HOOK_VERBOSE=1` only when debugging hook output
 outside the Codex UI.
 
+## MCP Configuration
+
+Codex MCP servers are supported at both documented scopes:
+
+- project: `.codex/config.toml` (trusted project layers only)
+- user: `$CODEX_HOME/config.toml` (default `~/.codex/config.toml`)
+
+The adapter renders `[mcp_servers.<name>]` for STDIO and Streamable HTTP
+transports. It validates documented transport, timeout, tool-filter, and
+approval fields, preserves unrelated TOML bytes/comments, and owns only its
+marker-bounded block. Invalid TOML and symlinked roots are rejected unchanged.
+
 ## Behavioral Limits
 
 Codex wrappers preserve workflow intent, but not every Claude runtime behavior
@@ -162,7 +217,8 @@ Known limits:
 - No separate task object model equivalent to Claude `Task*` APIs
 - Hook event coverage is narrower than Claude Code
 - MCP search tool calls may not fire the shared `PostToolUse` search tracker,
-  so `stop-search-check.sh` also checks `~/.codex/log/codex-tui.log` for
+  so `stop-search-check.sh` also checks `$CODEX_HOME/log/codex-tui.log` (default
+  `~/.codex/log/codex-tui.log`) for
   `smart_query`, `hybrid_search_kb`, `crag_search`, `multi_hop_search`, and
   `verify_answer` calls after the search-first flag timestamp before blocking.
   The scan is bounded to a recent log window, but sized to tolerate noisy Codex
