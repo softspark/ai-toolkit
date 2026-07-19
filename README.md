@@ -121,7 +121,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Gemini CLI | `~/.gemini/GEMINI.md` | ✅ | global |
 | GitHub Copilot | Project: `AGENTS.md` + `.github/copilot-instructions.md` + `.github/{instructions,prompts,agents,skills,hooks}/` + `.github/mcp.json`; user: `$COPILOT_HOME/copilot-instructions.md` + `$COPILOT_HOME/{instructions,agents,skills,hooks}/` + `$COPILOT_HOME/mcp-config.json` | ✅ | project + user |
 | Cline | `~/Documents/Cline/Rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
-| Roo Code | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
+| Roo Code / [Zoo Code](https://zoocode.dev/) | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
 | Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | ✅ | global + project |
 | Google Antigravity | `.agents/rules/*.md` + `.agents/workflows/*.md` + skill pointer in `.agent/skills/*` (IDE) and `.agents/skills/*` (CLI) | — | project |
