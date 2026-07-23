@@ -9,6 +9,16 @@
 source "$(dirname "$0")/_profile-check.sh"
 # shellcheck source=_locate-toolkit.sh
 source "$(dirname "$0")/_locate-toolkit.sh"
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
+
+INPUT=""
+if [ ! -t 0 ]; then
+    # shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
+    INPUT=$(cat)
+fi
+SESSION_ID=$(hook_session_id)
+SESSION_ARGS=(--session-id "$SESSION_ID")
 
 run_required() {
     local label="$1"
@@ -44,7 +54,8 @@ cohesion_for_session_edits() {
     command -v python3 >/dev/null 2>&1 || return 0
 
     local edits
-    edits=$(python3 "$TOOLKIT_DIR/scripts/session_state.py" list 2>/dev/null)
+    edits=$(python3 "$TOOLKIT_DIR/scripts/session_state.py" list \
+        "${SESSION_ARGS[@]}" 2>/dev/null)
     [ -z "$edits" ] && return 0
 
     # shellcheck disable=SC2206  # word-splitting is intentional, paths have no spaces

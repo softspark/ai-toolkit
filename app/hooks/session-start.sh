@@ -8,6 +8,8 @@
 source "$(dirname "$0")/_locate-toolkit.sh"
 # shellcheck source=_session-paths.sh
 source "$(dirname "$0")/_session-paths.sh"
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
 
 emit_context() {
     [ "${AI_TOOLKIT_HOOK_QUIET:-0}" = "1" ] && return 0
@@ -20,14 +22,18 @@ emit_context "MANDATORY: Before answering ANY technical question, apply ALL rule
 emit_context "REMINDER: When writing features or fixing bugs, ensure tests cover the changes. When modifying API, config, or setup, update relevant documentation. Propose these steps to the user — do not silently skip them."
 
 # 1a. Reset per-session edit state (used by revert-guard, test-cohesion, quality-gate)
-SESSION_ID_INPUT=""
+INPUT=""
 if [ ! -t 0 ]; then
-    STDIN_PAYLOAD="$(cat)"
-    SESSION_ID_INPUT="$(printf '%s' "$STDIN_PAYLOAD" | jq -r '.session_id // empty' 2>/dev/null)"
+    # shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
+    INPUT="$(cat)"
 fi
-if [ -n "$TOOLKIT_DIR" ] && command -v python3 >/dev/null 2>&1; then
+SESSION_ID_INPUT=$(hook_session_id)
+SESSION_SOURCE=$(hook_json '.source // empty')
+if [ "$SESSION_SOURCE" != "compact" ] &&
+   [ -n "$TOOLKIT_DIR" ] &&
+   command -v python3 >/dev/null 2>&1; then
     python3 "$TOOLKIT_DIR/scripts/session_state.py" reset \
-        ${SESSION_ID_INPUT:+--session-id "$SESSION_ID_INPUT"} >/dev/null 2>&1 || true
+        --session-id "$SESSION_ID_INPUT" >/dev/null 2>&1 || true
 fi
 
 # 1b. GC stale per-session search-required flags (older than 60 min)

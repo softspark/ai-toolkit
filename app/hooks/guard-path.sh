@@ -14,8 +14,8 @@ REAL_HOME="$HOME"
 
 # Verify jq is available — required for JSON parsing
 if ! command -v jq >/dev/null 2>&1; then
-    echo "WARNING: guard-path.sh requires jq but it is not installed. Path validation skipped." >&2
-    exit 0
+    echo "BLOCKED: guard-path.sh requires jq but it is not installed. Path validation cannot run safely." >&2
+    exit 2
 fi
 
 # Collect ALL path values from tool input into a single list (one per line).

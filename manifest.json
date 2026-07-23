@@ -16,11 +16,11 @@
       "tags": ["core", "skills", "commands"]
     },
     "hooks": {
-      "description": "28 hook entries across 14 lifecycle events plus statusLine",
-      "path": "app/hooks.json + app/hooks/*.sh",
-      "target": "~/.claude/settings.json (merge) + ~/.softspark/ai-toolkit/hooks/ (copy)",
+      "description": "29 hook entries across 14 lifecycle events plus statusLine",
+      "path": "app/hooks.json + app/hooks/*.sh + scripts/tool_output_filter/ + scripts/output_filter_{hook,cli}.py",
+      "target": "~/.claude/settings.json (merge) + ~/.softspark/ai-toolkit/{hooks,scripts}/ (copy)",
       "type": "merge+copy",
-      "tags": ["core", "hooks", "quality"]
+      "tags": ["core", "hooks", "quality", "output-filter"]
     },
     "plugin-packs": {
       "description": "Experimental domain plugin packs and optional hook/policy modules",
@@ -166,7 +166,10 @@
     "project_config": ".softspark-toolkit.json",
     "base_config": "ai-toolkit.config.json",
     "lock_file": ".softspark-toolkit.lock.json",
-    "v1_fields": ["extends", "profile", "agents", "rules", "constitution", "enforce"],
+    "v1_fields": [
+      "extends", "profile", "agents", "plugins", "rules", "constitution",
+      "enforce", "toolOutputFilter"
+    ],
     "max_extends_depth": 5
   }
 }

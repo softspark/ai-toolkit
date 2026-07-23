@@ -8,8 +8,9 @@ and aggregate ratios. Asserts:
     concise <= CONCISE_BUDGET (default 0.60)
     strict  <= STRICT_BUDGET  (default 0.40)
 
-Also asserts fact preservation: every file path, identifier, line:number, and
-fenced code block from default.md must appear in concise.md and strict.md.
+Also asserts fact preservation: every extracted file path, identifier, line
+reference, and number with a unit from default.md must appear in concise.md
+and strict.md. Fenced code bodies are intentionally excluded.
 
 Usage:
     python3 app/skills/brand-voice/scripts/measure.py \\
@@ -36,6 +37,7 @@ LINE_REF_SUFFIX_RE = re.compile(r":\d+$")
 CODE_BLOCK_RE = re.compile(r"```[\w]*\n.*?```", re.DOTALL)
 NUMBER_WITH_UNIT_RE = re.compile(r"\b\d+(?:\.\d+)?(?:ms|s|kb|mb|gb|%)\b", re.IGNORECASE)
 IDENT_BACKTICK_RE = re.compile(r"`([^`\n]+)`")
+IDENTIFIER_RE = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$.-]*(?:\(\))?$")
 
 
 def count_tokens(text: str) -> int:
@@ -65,7 +67,7 @@ def extract_facts(text: str) -> set[str]:
 
     for match in IDENT_BACKTICK_RE.findall(text_no_code):
         cleaned = match.strip()
-        if len(cleaned) >= 3 and not cleaned.startswith("```"):
+        if len(cleaned) >= 3 and IDENTIFIER_RE.fullmatch(cleaned):
             facts.add(normalize_path(cleaned))
 
     for match in NUMBER_WITH_UNIT_RE.findall(text_no_code):
@@ -138,8 +140,8 @@ def evaluate_fixture(
 
     budget_ok_concise = concise_ratio <= concise_budget
     budget_ok_strict = strict_ratio <= strict_budget
-    facts_ok_concise = not concise_required_missing
-    facts_ok_strict = not strict_required_missing
+    facts_ok_concise = not concise_missing and not concise_required_missing
+    facts_ok_strict = not strict_missing and not strict_required_missing
 
     return {
         "fixture": fixture_dir.name,

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -167,6 +166,7 @@ def _resolve_chain(
 
     # Resolve this source
     base_config = _resolve_source(extends_value, project_root, result, refresh=refresh)
+    _validate_resolved_base(base_config)
 
     # Recurse if this base also extends something
     if base_config.extends:
@@ -180,6 +180,19 @@ def _resolve_chain(
 
     # Append after recursion (deepest ancestor first)
     result.configs.append(base_config)
+
+
+def _validate_resolved_base(base_config: BaseConfig) -> None:
+    """Reject an invalid base before consumers merge or inspect it."""
+    from config_validator import validate_base_config
+
+    errors = validate_base_config(base_config.data, base_config.root)
+    if not errors:
+        return
+    details = "\n".join(f"  - {error}" for error in errors)
+    raise ConfigResolverError(
+        f"Invalid base config '{base_config.source}':\n{details}"
+    )
 
 
 def _resolve_source(
@@ -470,11 +483,18 @@ def _load_json(path: Path) -> dict[str, Any]:
     """Load and parse a JSON file."""
     try:
         with open(path, encoding="utf-8") as f:
-            return json.load(f)
+            config = json.load(f)
     except json.JSONDecodeError as e:
         raise ConfigResolverError(f"Invalid JSON in {path}: {e}") from e
+    except UnicodeDecodeError as e:
+        raise ConfigResolverError(
+            f"Cannot decode {path} as UTF-8: {e}"
+        ) from e
     except OSError as e:
         raise ConfigResolverError(f"Cannot read {path}: {e}") from e
+    if not isinstance(config, dict):
+        raise ConfigResolverError(f"{path} must contain a JSON object.")
+    return config
 
 
 def _file_hash(path: Path) -> str:

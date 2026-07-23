@@ -20,9 +20,18 @@ from typing import Any
 
 VALID_PROFILES = {"minimal", "standard", "strict", "full", "offline-slm"}
 VALID_HOOK_PROFILES = {"minimal", "standard", "strict"}
+VALID_OUTPUT_FILTER_MODES = {"off", "observe", "safe"}
+VALID_OUTPUT_FILTER_PROFILES = {"repeat-lines", "tap-success"}
+MAX_OUTPUT_FILTER_INPUT_BYTES = 8_388_608
+DEFAULT_OUTPUT_FILTER_MIN_SAVINGS_BYTES = 1_024
 HOOK_PROFILE_ORDER = {"minimal": 0, "standard": 1, "strict": 2}
-IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5, 6})
+IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5, 6, 7})
 MIN_JUSTIFICATION_LEN = 20
+VALID_CONFIG_FIELDS = frozenset({
+    "$schema", "extends", "name", "version", "description", "profile",
+    "agents", "plugins", "rules", "constitution", "enforce", "overrides",
+    "toolOutputFilter",
+})
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +125,12 @@ def validate_merged_config(
 def _validate_schema(config: dict[str, Any], errors: list[str]) -> None:
     """Validate structural correctness of config."""
 
+    unknown = set(config) - VALID_CONFIG_FIELDS
+    if unknown:
+        errors.append(
+            f"Unknown top-level config keys: {', '.join(sorted(unknown))}."
+        )
+
     # extends: must be string if present
     extends = config.get("extends")
     if extends is not None and not isinstance(extends, str):
@@ -134,6 +149,10 @@ def _validate_schema(config: dict[str, Any], errors: list[str]) -> None:
     agents = config.get("agents")
     if agents is not None:
         _validate_agents_block(agents, errors)
+
+    plugins = config.get("plugins")
+    if plugins is not None:
+        _validate_plugins_block(plugins, errors)
 
     # rules: structural check
     rules = config.get("rules")
@@ -155,6 +174,10 @@ def _validate_schema(config: dict[str, Any], errors: list[str]) -> None:
     if overrides is not None:
         _validate_overrides_block(overrides, errors)
 
+    output_filter = config.get("toolOutputFilter")
+    if output_filter is not None:
+        _validate_output_filter_block(output_filter, errors)
+
 
 def _validate_agents_block(agents: Any, errors: list[str]) -> None:
     """Validate agents section structure."""
@@ -174,6 +197,47 @@ def _validate_agents_block(agents: Any, errors: list[str]) -> None:
                 errors.append(f"'agents.{key}' must be an array.")
             elif not all(isinstance(item, str) for item in val):
                 errors.append(f"'agents.{key}' items must be strings.")
+
+
+def _validate_plugins_block(plugins: Any, errors: list[str]) -> None:
+    """Validate effective plugin enable/disable intent."""
+    if not isinstance(plugins, dict):
+        errors.append("'plugins' must be an object.")
+        return
+
+    valid_keys = {"enabled", "disabled"}
+    unknown = set(plugins) - valid_keys
+    if unknown:
+        errors.append(f"Unknown keys in 'plugins': {', '.join(sorted(unknown))}.")
+
+    for key in ("enabled", "disabled"):
+        value = plugins.get(key)
+        if value is not None:
+            if not isinstance(value, list):
+                errors.append(f"'plugins.{key}' must be an array.")
+            elif not all(
+                isinstance(item, str) and item.strip()
+                for item in value
+            ):
+                errors.append(
+                    f"'plugins.{key}' items must be non-empty strings."
+                )
+            elif len(value) != len(set(value)):
+                errors.append(f"'plugins.{key}' must not contain duplicates.")
+
+    enabled = plugins.get("enabled")
+    disabled = plugins.get("disabled")
+    if (
+        isinstance(enabled, list)
+        and isinstance(disabled, list)
+        and all(isinstance(item, str) for item in enabled + disabled)
+    ):
+        overlap = set(enabled) & set(disabled)
+        if overlap:
+            errors.append(
+                "Plugins cannot be both enabled and disabled: "
+                f"{', '.join(sorted(overlap))}."
+            )
 
 
 def _validate_rules_block(rules: Any, errors: list[str]) -> None:
@@ -220,6 +284,12 @@ def _validate_constitution_block(constitution: Any, errors: list[str]) -> None:
             errors.append(f"'constitution.amendments[{i}].article' must be a positive integer.")
             continue
 
+        if article in IMMUTABLE_ARTICLES:
+            errors.append(
+                f"Constitution Article {article} is reserved by ai-toolkit "
+                "(Articles I-VII); custom amendments must use article 8+."
+            )
+
         if article in seen_articles:
             errors.append(f"Duplicate constitution article number: {article}.")
         seen_articles.add(article)
@@ -253,8 +323,15 @@ def _validate_enforce_block(enforce: Any, errors: list[str]) -> None:
         if val is not None:
             if not isinstance(val, list):
                 errors.append(f"'enforce.{key}' must be an array.")
-            elif not all(isinstance(item, str) for item in val):
-                errors.append(f"'enforce.{key}' items must be strings.")
+            elif not all(
+                isinstance(item, str) and item.strip()
+                for item in val
+            ):
+                errors.append(
+                    f"'enforce.{key}' items must be non-empty strings."
+                )
+            elif len(val) != len(set(val)):
+                errors.append(f"'enforce.{key}' must not contain duplicates.")
 
 
 def _validate_overrides_block(overrides: Any, errors: list[str]) -> None:
@@ -277,6 +354,153 @@ def _validate_overrides_block(overrides: Any, errors: list[str]) -> None:
                 f"'overrides.{key}.justification' too short "
                 f"({len(justification)} chars, min {MIN_JUSTIFICATION_LEN})."
             )
+
+
+def _validate_output_filter_block(output_filter: Any, errors: list[str]) -> None:
+    """Validate native tool-output filter configuration."""
+    if not isinstance(output_filter, dict):
+        errors.append("'toolOutputFilter' must be an object.")
+        return
+
+    valid_keys = {
+        "mode", "profiles", "maxInputBytes", "minSavingsBytes",
+        "minSavingsRatio", "recovery",
+    }
+    unknown = set(output_filter) - valid_keys
+    if unknown:
+        errors.append(
+            f"Unknown keys in 'toolOutputFilter': {', '.join(sorted(unknown))}."
+        )
+
+    mode = output_filter.get("mode")
+    if mode is not None and mode not in VALID_OUTPUT_FILTER_MODES:
+        errors.append(
+            f"Invalid 'toolOutputFilter.mode' '{mode}'. "
+            f"Valid: {', '.join(sorted(VALID_OUTPUT_FILTER_MODES))}."
+        )
+
+    profiles = output_filter.get("profiles")
+    if profiles is not None:
+        if not isinstance(profiles, list) or not all(
+            isinstance(profile, str) for profile in profiles
+        ):
+            errors.append("'toolOutputFilter.profiles' must be an array of strings.")
+        else:
+            invalid = set(profiles) - VALID_OUTPUT_FILTER_PROFILES
+            if invalid:
+                errors.append(
+                    "Invalid 'toolOutputFilter.profiles': "
+                    f"{', '.join(sorted(invalid))}."
+                )
+            if len(profiles) != len(set(profiles)):
+                errors.append(
+                    "'toolOutputFilter.profiles' must not contain duplicate items."
+                )
+
+    _validate_output_filter_limits(output_filter, errors)
+    recovery = output_filter.get("recovery")
+    if recovery is not None:
+        _validate_output_filter_recovery(recovery, errors)
+
+
+def _validate_output_filter_limits(
+    output_filter: dict[str, Any],
+    errors: list[str],
+) -> None:
+    """Validate output-filter byte and ratio bounds."""
+    _validate_bounded_integer(
+        output_filter.get("maxInputBytes"),
+        "toolOutputFilter.maxInputBytes",
+        errors,
+        minimum=1,
+        maximum=MAX_OUTPUT_FILTER_INPUT_BYTES,
+    )
+    _validate_bounded_integer(
+        output_filter.get("minSavingsBytes"),
+        "toolOutputFilter.minSavingsBytes",
+        errors,
+        minimum=0,
+        maximum=MAX_OUTPUT_FILTER_INPUT_BYTES,
+    )
+    _validate_output_filter_savings_relation(output_filter, errors)
+
+    ratio = output_filter.get("minSavingsRatio")
+    if ratio is not None and (
+        isinstance(ratio, bool)
+        or not isinstance(ratio, (int, float))
+        or not 0 <= ratio <= 1
+    ):
+        errors.append("'toolOutputFilter.minSavingsRatio' must be between 0 and 1.")
+
+
+def _validate_output_filter_savings_relation(
+    output_filter: dict[str, Any],
+    errors: list[str],
+) -> None:
+    """Ensure the savings threshold can be reached within the input limit."""
+    max_input = output_filter.get(
+        "maxInputBytes",
+        MAX_OUTPUT_FILTER_INPUT_BYTES,
+    )
+    min_savings = output_filter.get(
+        "minSavingsBytes",
+        DEFAULT_OUTPUT_FILTER_MIN_SAVINGS_BYTES,
+    )
+    values = (max_input, min_savings)
+    if any(
+        not isinstance(value, int) or isinstance(value, bool)
+        for value in values
+    ):
+        return
+    if min_savings > max_input:
+        errors.append(
+            "'toolOutputFilter.minSavingsBytes' must not exceed "
+            "'toolOutputFilter.maxInputBytes'."
+        )
+
+
+def _validate_output_filter_recovery(recovery: Any, errors: list[str]) -> None:
+    """Validate secure ephemeral recovery settings."""
+    if not isinstance(recovery, dict):
+        errors.append("'toolOutputFilter.recovery' must be an object.")
+        return
+
+    valid_keys = {"mode", "ttlMinutes", "maxSessionBytes"}
+    unknown = set(recovery) - valid_keys
+    if unknown:
+        errors.append(
+            "Unknown keys in 'toolOutputFilter.recovery': "
+            f"{', '.join(sorted(unknown))}."
+        )
+
+    if recovery.get("mode") not in (None, "ephemeral"):
+        errors.append("'toolOutputFilter.recovery.mode' must be 'ephemeral'.")
+    for key in ("ttlMinutes", "maxSessionBytes"):
+        _validate_bounded_integer(
+            recovery.get(key),
+            f"toolOutputFilter.recovery.{key}",
+            errors,
+            minimum=1,
+        )
+
+
+def _validate_bounded_integer(
+    value: Any,
+    field: str,
+    errors: list[str],
+    *,
+    minimum: int,
+    maximum: int | None = None,
+) -> None:
+    """Validate an optional integer bound."""
+    if value is None:
+        return
+    is_valid = isinstance(value, int) and not isinstance(value, bool) and value >= minimum
+    if maximum is not None:
+        is_valid = is_valid and value <= maximum
+    if not is_valid:
+        suffix = f" and at most {maximum}" if maximum is not None else ""
+        errors.append(f"'{field}' must be an integer of at least {minimum}{suffix}.")
 
 
 # ---------------------------------------------------------------------------
@@ -316,11 +540,15 @@ def _validate_enforce_constraints(
         if missing:
             errors.append(f"Required agents missing: {', '.join(sorted(missing))}.")
 
-    # requiredPlugins — informational in v1 (plugins field deferred)
-    required_plugins = enforce.get("requiredPlugins", [])
+    required_plugins = set(enforce.get("requiredPlugins", []))
     if required_plugins:
-        # v1: just warn, no plugins field to check against
-        pass
+        enabled_plugins = set(merged.get("plugins", {}).get("enabled", []))
+        missing_plugins = required_plugins - enabled_plugins
+        if missing_plugins:
+            errors.append(
+                "Required plugins missing from enabled intent: "
+                f"{', '.join(sorted(missing_plugins))}."
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -335,16 +563,31 @@ def _validate_file_references(
     """Check that referenced files actually exist."""
 
     # Custom agents
-    for agent_path in config.get("agents", {}).get("custom", []):
-        full = root / agent_path
-        if not full.is_file():
-            errors.append(f"Custom agent file not found: {agent_path} (resolved: {full})")
+    agents = config.get("agents")
+    custom_agents = agents.get("custom") if isinstance(agents, dict) else None
+    if isinstance(custom_agents, list):
+        for agent_path in custom_agents:
+            if not isinstance(agent_path, str):
+                continue
+            full = root / agent_path
+            if not full.is_file():
+                errors.append(
+                    f"Custom agent file not found: {agent_path} "
+                    f"(resolved: {full})"
+                )
 
     # Rule files
-    for rule_path in config.get("rules", {}).get("inject", []):
-        full = root / rule_path
-        if not full.is_file():
-            errors.append(f"Rule file not found: {rule_path} (resolved: {full})")
+    rules = config.get("rules")
+    injected_rules = rules.get("inject") if isinstance(rules, dict) else None
+    if isinstance(injected_rules, list):
+        for rule_path in injected_rules:
+            if not isinstance(rule_path, str):
+                continue
+            full = root / rule_path
+            if not full.is_file():
+                errors.append(
+                    f"Rule file not found: {rule_path} (resolved: {full})"
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -361,10 +604,19 @@ def main() -> None:
     strict = "--strict" in sys.argv
 
     try:
-        with open(config_path) as f:
+        with open(config_path, encoding="utf-8") as f:
             config = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         print(json.dumps({"valid": False, "errors": [str(e)]}))
+        sys.exit(1)
+    except UnicodeDecodeError as e:
+        error = f"Cannot decode {config_path} as UTF-8: {e}"
+        print(json.dumps({"valid": False, "errors": [error]}))
+        sys.exit(1)
+
+    if not isinstance(config, dict):
+        error = f"{config_path} must contain a JSON object."
+        print(json.dumps({"valid": False, "errors": [error]}))
         sys.exit(1)
 
     project_root = config_path.parent

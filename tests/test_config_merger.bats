@@ -23,7 +23,7 @@ setup() {
   },
   "constitution": {
     "amendments": [
-      {"article": 6, "title": "Data Sovereignty", "text": "GDPR compliance required."}
+      {"article": 8, "title": "Data Sovereignty", "text": "GDPR compliance required."}
     ]
   },
   "enforce": {
@@ -132,7 +132,7 @@ assert data['merged']['profile'] == 'standard', f'expected standard, got {data[\
   "extends": "../base-config",
   "constitution": {
     "amendments": [
-      {"article": 8, "title": "API Standards", "text": "All APIs must be RESTful."}
+      {"article": 9, "title": "API Standards", "text": "All APIs must be RESTful."}
     ]
   }
 }
@@ -144,10 +144,10 @@ EOF
 import sys, json
 data = json.load(sys.stdin)
 articles = {a['article']: a for a in data['merged']['constitution']['amendments']}
-assert 6 in articles, 'base article 6 missing'
-assert 8 in articles, 'project article 8 missing'
-assert articles[6]['title'] == 'Data Sovereignty', 'base article 6 modified'
-assert articles[8]['title'] == 'API Standards', 'project article 8 wrong'
+assert 8 in articles, 'base article 8 missing'
+assert 9 in articles, 'project article 9 missing'
+assert articles[8]['title'] == 'Data Sovereignty', 'base article 8 modified'
+assert articles[9]['title'] == 'API Standards', 'project article 9 wrong'
 "
 }
 
@@ -161,7 +161,7 @@ assert articles[8]['title'] == 'API Standards', 'project article 8 wrong'
   "extends": "../base-config",
   "constitution": {
     "amendments": [
-      {"article": 6, "title": "Weakened!", "text": "No GDPR needed."}
+      {"article": 8, "title": "Weakened!", "text": "No GDPR needed."}
     ]
   }
 }
@@ -169,10 +169,10 @@ EOF
     run python3 "$TOOLKIT_DIR/scripts/config_merger.py" \
         "$BASE_DIR/ai-toolkit.config.json" "$PROJECT_DIR/.softspark-toolkit.json"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"Cannot modify Constitution Article 6"* ]]
+    [[ "$output" == *"Cannot modify Constitution Article 8"* ]]
 }
 
-@test "constitution: cannot modify immutable articles I-V" {
+@test "constitution: cannot modify immutable articles I-VII" {
     cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
   "extends": "../base-config",

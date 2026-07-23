@@ -76,6 +76,22 @@ REQUIRED = [
         },
         "reason": "CLI entry point (bin/ai-toolkit.js)",
     },
+    {
+        "name": "jq",
+        "check": "jq",
+        "packages": {
+            "brew": "jq",
+            "apt": "jq",
+            "dnf": "jq",
+            "pacman": "jq",
+            "apk": "jq",
+            "zypper": "jq",
+            "winget": "jqlang.jq",
+            "choco": "jq",
+            "scoop": "jq",
+        },
+        "reason": "JSON parsing in lifecycle hooks — guard-path.sh blocks file tools without it",
+    },
 ]
 
 OPTIONAL = [

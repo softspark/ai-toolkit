@@ -3,6 +3,7 @@ Decision matrix:
 | Check | Yes → add | No → skip |
 |-------|-----------|-----------|
 | Session p95 >5ms | + | — |
+| Current p95 ~1ms | — | + |
 | Redis already deployed | + | — |
 | Invalidation strategy ready (write-through) | + | — |
 

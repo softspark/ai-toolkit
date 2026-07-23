@@ -32,7 +32,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 PLUGIN_BODY = r"""// ai-toolkit opencode plugin — bridges shared Bash hooks to opencode events.
@@ -49,8 +48,9 @@ PLUGIN_BODY = r"""// ai-toolkit opencode plugin — bridges shared Bash hooks to
 const HOOKS_DIR = `${process.env.HOME}/.softspark/ai-toolkit/hooks`;
 
 /** Invoke a Bash hook with a JSON payload on stdin. */
-async function runHook($, script, payload) {
+async function runHook($, script, payload, blockOnExit2 = false) {
   const scriptPath = `${HOOKS_DIR}/${script}`;
+  let result;
   try {
     const input = JSON.stringify(payload ?? {});
     const proc = $`bash ${scriptPath}`.env({
@@ -59,23 +59,34 @@ async function runHook($, script, payload) {
     });
     proc.stdin.write(input);
     proc.stdin.end();
-    const result = await proc.quiet().nothrow();
-    if (result.exitCode !== 0 && result.exitCode !== 2) {
-      // Exit 2 is the toolkit's "block" signal — pass through to opencode as a guard.
-      process.stderr.write(
-        `[ai-toolkit] ${script} exited ${result.exitCode}\n${result.stderr.toString()}`
-      );
-    }
-    return result.exitCode;
+    result = await proc.quiet().nothrow();
   } catch (err) {
     process.stderr.write(`[ai-toolkit] failed to run ${script}: ${err.message}\n`);
     return 0;
   }
+  if (result.exitCode === 2 && blockOnExit2) {
+    const detail = result.stderr.toString().trim();
+    throw new Error(
+      `[ai-toolkit] ${script} blocked tool execution${detail ? `: ${detail}` : ""}`
+    );
+  }
+  if (result.exitCode !== 0 && result.exitCode !== 2) {
+    process.stderr.write(
+      `[ai-toolkit] ${script} exited ${result.exitCode}\n${result.stderr.toString()}`
+    );
+  }
+  return result.exitCode;
 }
 
 export const AiToolkitHooks = async ({ $, project, directory, worktree }) => ({
   event: async ({ event }) => {
-    const payload = { event: event.type, project, directory, worktree };
+    const payload = {
+      event: event.type,
+      session_id: event?.properties?.sessionID,
+      project,
+      directory,
+      worktree,
+    };
     switch (event.type) {
       case "session.created":
         await runHook($, "session-start.sh", payload);
@@ -106,12 +117,15 @@ export const AiToolkitHooks = async ({ $, project, directory, worktree }) => ({
   "tool.execute.before": async (input, output) => {
     const payload = {
       event: "tool.execute.before",
+      session_id: input?.sessionID,
+      tool_name: input?.tool,
+      tool_input: output?.args,
       tool: input?.tool,
       args: output?.args,
       project,
     };
     if (input?.tool === "bash") {
-      await runHook($, "guard-destructive.sh", payload);
+      await runHook($, "guard-destructive.sh", payload, true);
       await runHook($, "commit-quality.sh", payload);
     }
   },
@@ -119,6 +133,8 @@ export const AiToolkitHooks = async ({ $, project, directory, worktree }) => ({
   "tool.execute.after": async (input, output) => {
     const payload = {
       event: "tool.execute.after",
+      session_id: input?.sessionID,
+      tool_name: input?.tool,
       tool: input?.tool,
       result: output,
       project,

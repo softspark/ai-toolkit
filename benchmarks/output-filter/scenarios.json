@@ -1,0 +1,25 @@
+[
+  {
+    "name": "repeat-lines-100k",
+    "profile": "repeat-lines",
+    "kind": "repeat",
+    "targetBytes": 102400,
+    "lineWidth": 96,
+    "maxP95Ms": 20
+  },
+  {
+    "name": "tap-success-2k",
+    "profile": "tap-success",
+    "kind": "tap",
+    "testCount": 2000,
+    "maxP95Ms": 20
+  },
+  {
+    "name": "repeat-lines-8m",
+    "profile": "repeat-lines",
+    "kind": "repeat",
+    "targetBytes": 8388608,
+    "lineWidth": 1024,
+    "maxP95Ms": 150
+  }
+]

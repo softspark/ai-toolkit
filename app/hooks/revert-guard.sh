@@ -25,6 +25,8 @@ source "$(dirname "$0")/_hook-io.sh"
 # shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 COMMAND=$(hook_command)
+SESSION_ID=$(hook_session_id)
+SESSION_ARGS=(--session-id "$SESSION_ID")
 
 [ -z "$COMMAND" ] && exit 0
 [ "${CLAUDE_REVERT_OK:-0}" = "1" ] && exit 0
@@ -54,7 +56,7 @@ EOF
 
 # git reset --hard / git clean -fd: clobber-style, scope = all session edits.
 if printf '%s' "$COMMAND" | grep -Eq 'reset[[:space:]]+(-+[A-Za-z-]+[[:space:]]+)*--hard|clean[[:space:]]+-[A-Za-z]*[df]'; then
-    edited=$(python3 "$TOOLKIT_DIR/scripts/session_state.py" list 2>/dev/null | head -10)
+    edited=$(python3 "$TOOLKIT_DIR/scripts/session_state.py" list "${SESSION_ARGS[@]}" 2>/dev/null | head -10)
     if [ -n "$edited" ]; then
         _block "destructive 'git reset --hard' / 'git clean' with session edits in tree" "$edited"
     fi
@@ -73,7 +75,8 @@ if printf '%s' "$COMMAND" | grep -Eq '(checkout|restore)([[:space:]].*)?[[:space
             /*) abs="$f" ;;
             *)  abs="$PWD/$f" ;;
         esac
-        if python3 "$TOOLKIT_DIR/scripts/session_state.py" was-edited "$abs" >/dev/null 2>&1; then
+        if python3 "$TOOLKIT_DIR/scripts/session_state.py" was-edited "$abs" \
+            "${SESSION_ARGS[@]}" >/dev/null 2>&1; then
             blocked="$blocked $f"
         fi
     done

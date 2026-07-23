@@ -1,0 +1,15 @@
+{
+  "mode": "off",
+  "profiles": [
+    "repeat-lines",
+    "tap-success"
+  ],
+  "maxInputBytes": 8388608,
+  "minSavingsBytes": 1024,
+  "minSavingsRatio": 0.15,
+  "recovery": {
+    "mode": "ephemeral",
+    "ttlMinutes": 60,
+    "maxSessionBytes": 33554432
+  }
+}

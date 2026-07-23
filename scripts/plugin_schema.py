@@ -11,7 +11,14 @@ from pathlib import Path
 
 
 # Required top-level fields
-REQUIRED_FIELDS = ("name", "description", "version", "domain", "type", "status")
+REQUIRED_FIELDS = (
+    "name",
+    "description",
+    "version",
+    "domain",
+    "type",
+    "status",
+)
 
 # Valid status values
 VALID_STATUSES = frozenset({"stable", "experimental", "deprecated"})
@@ -39,6 +46,24 @@ VALID_HOOK_EVENTS = frozenset({
 })
 
 
+def _validate_requires(data: dict) -> list[str]:
+    if "requires" not in data:
+        return ["Missing required field: requires"]
+
+    requires = data["requires"]
+    if not isinstance(requires, dict) or not requires:
+        return ["'requires' must be a non-empty dictionary"]
+
+    errors: list[str] = []
+    for dependency, constraint in requires.items():
+        if not isinstance(dependency, str) or not dependency.strip():
+            errors.append("requires keys must be non-empty strings")
+            continue
+        if not isinstance(constraint, str) or not constraint.strip():
+            errors.append(f"requires.{dependency} must be a non-empty string")
+    return errors
+
+
 def validate_manifest(data: dict, pack_dir: Path | None = None) -> list[str]:
     """Validate a plugin manifest dict.
 
@@ -50,6 +75,7 @@ def validate_manifest(data: dict, pack_dir: Path | None = None) -> list[str]:
     for field in REQUIRED_FIELDS:
         if field not in data or not data[field]:
             errors.append(f"Missing required field: {field}")
+    errors.extend(_validate_requires(data))
 
     # Validate status
     status = data.get("status", "")

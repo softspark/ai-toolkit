@@ -11,12 +11,12 @@ source "$(dirname "$0")/_profile-check.sh"
 LOG_DIR="$HOME/.softspark/ai-toolkit"
 LOG_FILE="$LOG_DIR/governance.log"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-SESSION="${CLAUDE_SESSION_ID:-unknown}"
 
 # shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 # shellcheck source=_hook-io.sh
 source "$(dirname "$0")/_hook-io.sh"
+SESSION=$(hook_session_id)
 TOOL_NAME=$(hook_tool_name)
 
 if [ -z "$TOOL_NAME" ]; then

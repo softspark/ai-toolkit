@@ -26,6 +26,7 @@
 #   AI_TOOLKIT_STATUSLINE_NO_GIT    — "1" hides git segment
 #   AI_TOOLKIT_STATUSLINE_NO_EFFORT — "1" hides effort segment
 #   AI_TOOLKIT_STATUSLINE_SHOW_COST — "1" appends Claude Code's reported cost
+#   AI_TOOLKIT_STATUSLINE_BASELINE  — totals JSON file used for token trend
 #   AI_TOOLKIT_STATUSLINE_DUMP      — "1" writes stdin to /tmp/cc-statusline-input.json
 #
 # Performance: ~50ms (single python3 parse of stdin, one git invocation).
@@ -62,7 +63,7 @@ if [ "${AI_TOOLKIT_STATUSLINE_DUMP:-0}" = "1" ] && [ -n "$INPUT" ]; then
 fi
 
 PARSED="$(printf '%s' "$INPUT" | python3 -c '
-import json, sys
+import json, os, sys
 def get(d, path):
     for k in path.split("."):
         d = d.get(k) if isinstance(d, dict) else None
@@ -77,6 +78,11 @@ def fmt_tokens(n):
     if n >= 1000:
         return f"{n/1000:.1f}k"
     return str(n)
+def as_int(n):
+    try:
+        return int(n)
+    except (TypeError, ValueError):
+        return 0
 try:
     d = json.loads(sys.stdin.read() or "{}")
 except Exception:
@@ -84,18 +90,34 @@ except Exception:
 cwd = get(d, "cwd") or ""
 model = get(d, "model.display_name") or get(d, "model.id") or ""
 ctx_pct = get(d, "context_window.used_percentage")
-in_tok = fmt_tokens(get(d, "context_window.total_input_tokens"))
-out_tok = fmt_tokens(get(d, "context_window.total_output_tokens"))
+in_raw = get(d, "context_window.total_input_tokens")
+out_raw = get(d, "context_window.total_output_tokens")
+in_tok = fmt_tokens(in_raw)
+out_tok = fmt_tokens(out_raw)
 cost = get(d, "cost.total_cost_usd")
 try:
     cost_str = f"{float(cost):.2f}" if cost != "" else ""
 except (TypeError, ValueError):
     cost_str = ""
 effort = get(d, "effort.level") or ""
-print(f"{cwd}\t{model}\t{ctx_pct}\t{in_tok}\t{out_tok}\t{cost_str}\t{effort}")
+trend = ""
+baseline_path = os.environ.get("AI_TOOLKIT_STATUSLINE_BASELINE", "")
+if baseline_path:
+    try:
+        with open(os.path.expanduser(baseline_path), encoding="utf-8") as baseline_file:
+            baseline = json.load(baseline_file)
+        baseline_total = baseline.get("total") if isinstance(baseline, dict) else None
+        if isinstance(baseline_total, (int, float)) and baseline_total > 0:
+            delta = (as_int(in_raw) + as_int(out_raw) - baseline_total) / baseline_total
+            arrow = "↓" if delta < 0 else "↑" if delta > 0 else "·"
+            trend = f"{arrow}{abs(delta) * 100:.0f}%"
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        pass
+fields = (cwd, model, ctx_pct, in_tok, out_tok, cost_str, effort, trend)
+print("\x1f".join(str(field) for field in fields))
 ' 2>/dev/null)"
 
-IFS=$'\t' read -r CWD MODEL_NAME CTX_USED IN_TOK OUT_TOK COST EFFORT <<< "$PARSED"
+IFS=$'\x1f' read -r CWD MODEL_NAME CTX_USED IN_TOK OUT_TOK COST EFFORT TREND <<< "$PARSED"
 [ -z "$CWD" ] && CWD="$PWD"
 
 # ── Segment: prompt + dir ────────────────────────────────────────────────────
@@ -162,6 +184,9 @@ SEG_TOKENS=""
 if [ "${AI_TOOLKIT_STATUSLINE_NO_TOKENS:-0}" != "1" ] && [ -n "$IN_TOK" ] && \
    { [ "$IN_TOK" != "0" ] || [ "$OUT_TOK" != "0" ]; }; then
     SEG_TOKENS="  ${C_BOLD_GREEN}\xe2\x86\x91${IN_TOK}${C_RESET} ${C_RED}\xe2\x86\x93${OUT_TOK}${C_RESET}"
+    if [ -n "$TREND" ]; then
+        SEG_TOKENS+=" ${C_DIM}trend:${C_RESET}${TREND}"
+    fi
     if [ "${AI_TOOLKIT_STATUSLINE_SHOW_COST:-0}" = "1" ] && [ -n "$COST" ]; then
         SEG_TOKENS+=" ${C_BOLD_GREEN}\$${COST}${C_RESET}"
     fi

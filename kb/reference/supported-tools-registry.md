@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.10.0"
+version: "1.11.0"
 created: "2026-04-23"
-last_updated: "2026-07-14"
+last_updated: "2026-07-23"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code, Claude Chat/Cowork, and 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -33,6 +33,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
 | Tracked handler types | `command`, `prompt`, `agent`, `mcp_tool`, `http` (POST event JSON to allowlisted URLs via `allowedHttpHookUrls`) |
+| Tool-output replacement | Native `PostToolUse.updatedToolOutput`; ai-toolkit exposes dependency-free `off`, byte-identical `observe`, and opt-in recoverable `safe` modes for eligible successful Bash text |
 | Other capabilities | slash commands, MCP server/client, sub-agent, output style, `SKILL.md` (≥500 lines warn) |
 | Version probe | `claude --version` |
 | Notes | v2.1.169 added `disableBundledSkills` setting + `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` env var (hides bundled skills/built-in slash commands from the model; toolkit skills in `.claude/skills/` are unaffected — useful when toolkit skills overlap built-ins) and `claude --safe-mode` / `CLAUDE_CODE_SAFE_MODE` (starts with hooks, skills, agents, and CLAUDE.md disabled — first isolation step when debugging toolkit rule enforcement). `fallbackModel` settings key (v2.1.166) noted as not-adopted (class C, no toolkit surface writes model settings). |
@@ -52,6 +53,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Plugin layout | `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`; ai-toolkit uses manifest paths under `claude-app/` for its generated app-only rules and hooks |
 | Our generator | `scripts/claude_app.py` (`ai-toolkit claude-app export`) |
 | Runtime split | Skills work in Chat (web/Desktop) and Cowork. Hooks and sub-agents run only in Cowork. Claude app does **not** scan Claude Code's `~/.claude/rules/`, `CLAUDE.md`, or `~/.claude/settings.json`. |
+| Tool-output replacement | Not shipped. The Claude Code-only filter hook and runtime are excluded from the app archive until Cowork has an independently verified replacement contract. |
 | Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. |
 
 ---
@@ -170,7 +172,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Our generators | `scripts/generate_augment.py`, `scripts/generate_augment_rules.py`, `scripts/generate_augment_agents.py` (profile=full), `scripts/generate_augment_commands.py` (profile=full), `scripts/generate_augment_hooks.py` (profile=full, HOME-scoped), `scripts/generate_augment_skills.py` (profile=full) |
 | Global install | `ai-toolkit install --editors augment` writes `~/.augment/rules/ai-toolkit.md` **plus** (profile=full) `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` — all documented user-tier surfaces. A global-only Augment user previously got no hooks/agents/commands. Skills need no global emission: Auggie natively reads `~/.claude/skills/`. |
 | Tracked capabilities | `.augment`, Agent mode, Next Edit, MCP, context engine, Auggie CLI, `always_apply`, `agent_requested`, subagents, custom commands, `SKILL.md`, `PreToolUse`, `PostToolUse`, `SessionStart`, `SessionEnd`, `Stop`, `Notification`, ACP Mode, plugins/marketplace |
-| Latest / notes | Auggie CLI v0.31.0. Since v0.30.0 (2026-06-25) `PreToolUse`/`PostToolUse` hooks fire during sub-agent sessions, so our wired hook groups now run concurrently from parallel sub-agents — hook payload identifier is `conversation_id` (not `session_id`), a concurrency note to track. `Notification` is enum-only (doctor flipped its marker) — no dedicated handler documented, so class C (do NOT wire). Plugins/marketplace (`auggie plugin marketplace add`, `.augment-plugin`/`.claude-plugin` layouts, `enabledPlugins`/`autoUpdateMarketplaces` in settings) documented but not yet a shipping target. |
+| Latest / notes | Auggie CLI v0.31.0. Since v0.30.0 (2026-06-25) `PreToolUse`/`PostToolUse` hooks fire during sub-agent sessions. The shared hook input adapter normalizes Augment's `conversation_id`, so edit and quality state remains isolated across parallel sub-agents. `Notification` is enum-only (doctor flipped its marker), with no dedicated handler documented, so class C (do NOT wire). Plugins/marketplace (`auggie plugin marketplace add`, `.augment-plugin`/`.claude-plugin` layouts, `enabledPlugins`/`autoUpdateMarketplaces` in settings) are documented but not yet a shipping target. |
 | SPA caveat | Mintlify Next.js SPA; use `https://docs.augmentcode.com/<path>.md` siblings (discoverable via `/llms.txt`) for machine reads |
 
 ### Google Antigravity
@@ -198,7 +200,8 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Config paths | **Instructions:** project `AGENTS.md` (root→cwd chain, closest wins) and global `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md`; `~/.codex/AGENTS.override.md` takes precedence). NOTE: `~/AGENTS.md` is NOT a global-instruction surface — Codex only reads it if a session's cwd is exactly `$HOME`. Plus `.agents/skills/*/SKILL.md`, `.codex/agents/*.toml`, `~/.codex/agents/*.toml`, `.codex/hooks.json`, `~/.codex/hooks.json`, `.codex/config.toml` (project layers, root→cwd, closest wins, trusted projects only), `~/.codex/config.toml`. |
 | Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_agents.py` (native custom-agent TOML), `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
 | Rules delivery | Universal coding rules are inlined into `AGENTS.md` (Codex reads instructions only from AGENTS.md, not `.agents/rules/`); language rules ship as `<lang>-rules` skills under `.agents/skills/`. Global install writes `~/.codex/AGENTS.md` (not `~/AGENTS.md`, which Codex never loads globally); plugin-pack rules are marker-injected into the same file. `project_doc_max_bytes` default is 32 KiB and Codex silently truncates AGENTS.md past that (see codex-cli-compatibility.md). |
-| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We wire 9 of these to shared toolkit hook scripts (via `generate_codex_hooks.py` AND `inject-hook` propagation, kept in sync), mirroring the Claude Code mapping in `app/hooks.json`. `PostCompact` is not wired (its only hook was the removed environment-snapshot probe). |
+| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We wire 9 through an explicit Codex map, including destructive-command and wrong-home path guards on both Bash `PreToolUse` and `PermissionRequest`. `PostCompact` is not wired (its only hook was the removed environment-snapshot probe). |
+| Tool-output replacement | Manual `ai-toolkit output-filter inspect` only. The Claude-specific `updatedToolOutput` adapter is not emitted into Codex hooks. |
 | Tracked handler types | `command` (emitted by default; the only handler Codex actually runs). `prompt` and `agent` are parsed by Codex but NOT yet executed, so hand-authored handlers of those types are inert. |
 | Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.agents/skills/*/SKILL.md` (native Codex skill discovery path), `.codex/agents/*.toml` (native custom agents) |
 | Version probe | `codex --version` |
@@ -212,6 +215,8 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Release notes | https://github.com/sst/opencode/releases (redirects to anomalyco/opencode) |
 | Config paths | `opencode.json`, `.opencode/agents/*.md`, `.opencode/commands/*.md`, `.opencode/plugins/*`, `.opencode/skills/*/SKILL.md` (v1.14+), `AGENTS.md`; skill fallback discovery: `.claude/skills/`, `.agents/skills/`, `~/.config/opencode/skills/`, `~/.claude/skills/`, `~/.agents/skills/` |
 | Our generators | `scripts/generate_opencode.py`, `scripts/generate_opencode_agents.py`, `scripts/generate_opencode_commands.py`, `scripts/generate_opencode_json.py`, `scripts/generate_opencode_plugin.py` |
+| Hook isolation | Tool hooks preserve native `sessionID` as normalized `session_id`; exit code 2 from a blocking pre-tool guard is raised back to OpenCode instead of being ignored. |
+| Tool-output replacement | Manual `ai-toolkit output-filter inspect` only. No active OpenCode output adapter is shipped. |
 | Tracked plugin events | `session.created`, `session.compacted`, `session.deleted`, `message.updated`, `tool.execute.before`, `tool.execute.after`, `permission.asked`, `command.executed` |
 | Other capabilities | `opencode.json` config, primary + subagent modes, `@`-mention subagents, `/`-invocation commands, MCP (local + remote), plugin hooks in JS/TS, native `SKILL.md` discovery with Claude-compatible fallback, `permission.skill.*` matrix |
 | Version probe | `opencode --version` |

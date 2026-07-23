@@ -158,6 +158,16 @@
                         "command": "\"$HOME/.softspark/ai-toolkit/hooks/search-tracker.sh\""
                     }
                 ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/filter-tool-output.sh\""
+                    }
+                ]
             }
         ],
         "Stop": [

@@ -26,8 +26,8 @@ setup() {
   },
   "constitution": {
     "amendments": [
-      {"article": 6, "title": "Data Sovereignty", "text": "GDPR compliance."},
-      {"article": 7, "title": "Audit Compliance", "text": "All changes logged."}
+      {"article": 8, "title": "Data Sovereignty", "text": "GDPR compliance."},
+      {"article": 9, "title": "Audit Compliance", "text": "All changes logged."}
     ]
   },
   "enforce": {
@@ -74,6 +74,24 @@ EOF
     [[ "$output" == *"@test/base"* ]]
 }
 
+@test "install --local: rejects an invalid resolved base config" {
+    cat > "$BASE_DIR/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/base","version":"2.0.0","enforce":[]}
+EOF
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" <<'EOF'
+{"extends":"../base-config"}
+EOF
+
+    cd "$PROJECT_DIR"
+    run python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --skip agents,skills,hooks
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Invalid base config"* ]]
+    [[ "$output" == *"'enforce' must be an object"* ]]
+    [[ "$output" != *"Traceback"* ]]
+}
+
 @test "install --local: generates extends metadata file" {
     cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
@@ -106,7 +124,7 @@ assert meta['configs'][0]['version'] == '2.0.0'
   "extends": "../base-config",
   "constitution": {
     "amendments": [
-      {"article": 8, "title": "API Standards", "text": "RESTful APIs required."}
+      {"article": 10, "title": "API Standards", "text": "RESTful APIs required."}
     ]
   }
 }
@@ -116,11 +134,11 @@ EOF
     [ "$status" -eq 0 ]
     [ -f "$PROJECT_DIR/.claude/constitution.md" ]
 
-    # Check that base articles 6, 7 AND project article 8 are present
-    grep -q "Article 6" "$PROJECT_DIR/.claude/constitution.md"
-    grep -q "Data Sovereignty" "$PROJECT_DIR/.claude/constitution.md"
-    grep -q "Article 7" "$PROJECT_DIR/.claude/constitution.md"
+    # Check that base articles 8, 9 AND project article 10 are present
     grep -q "Article 8" "$PROJECT_DIR/.claude/constitution.md"
+    grep -q "Data Sovereignty" "$PROJECT_DIR/.claude/constitution.md"
+    grep -q "Article 9" "$PROJECT_DIR/.claude/constitution.md"
+    grep -q "Article 10" "$PROJECT_DIR/.claude/constitution.md"
     grep -q "API Standards" "$PROJECT_DIR/.claude/constitution.md"
 }
 
@@ -175,7 +193,7 @@ EOF
   "extends": "../base-config",
   "constitution": {
     "amendments": [
-      {"article": 6, "title": "Weakened!", "text": "No GDPR."}
+      {"article": 8, "title": "Weakened!", "text": "No GDPR."}
     ]
   }
 }
@@ -219,7 +237,7 @@ assert project['extends'] == '../base-config', project
   "extends": "../base-config",
   "constitution": {
     "amendments": [
-      {"article": 8, "title": "API Standards", "text": "RESTful."}
+      {"article": 10, "title": "API Standards", "text": "RESTful."}
     ]
   }
 }
@@ -234,8 +252,8 @@ EOF
     [ "$status" -eq 0 ]
 
     # Constitution should have exactly one of each article (no duplicates)
-    count_art6=$(grep -c "Article 6" "$PROJECT_DIR/.claude/constitution.md" || true)
     count_art8=$(grep -c "Article 8" "$PROJECT_DIR/.claude/constitution.md" || true)
-    [ "$count_art6" -eq 1 ]
+    count_art10=$(grep -c "Article 10" "$PROJECT_DIR/.claude/constitution.md" || true)
     [ "$count_art8" -eq 1 ]
+    [ "$count_art10" -eq 1 ]
 }

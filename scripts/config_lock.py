@@ -8,6 +8,7 @@ Stdlib-only — no external dependencies.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from datetime import datetime, timezone
@@ -41,9 +42,10 @@ def load_lock_file(project_dir: Path) -> dict[str, Any] | None:
             return None
     try:
         with open(lock_path, encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
+            lock = json.load(f)
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return None
+    return lock if isinstance(lock, dict) else None
 
 
 def save_lock_file(
@@ -66,7 +68,7 @@ def save_lock_file(
         "lockfileVersion": LOCK_VERSION,
         "resolved": {},
         "generated_at": _now_iso(),
-        "ai_toolkit_version": ai_toolkit_version,
+        "ai_toolkit_version": ai_toolkit_version or _current_toolkit_version(),
     }
 
     for config in resolved_configs:
@@ -105,16 +107,11 @@ def check_lock_staleness(project_dir: Path) -> str:
     if lock is None:
         return "missing"
 
-    # Check lock version
-    if lock.get("lockfileVersion") != LOCK_VERSION:
-        return f"stale: lock version {lock.get('lockfileVersion')} != {LOCK_VERSION}"
-
-    # Check if resolved entries exist
-    resolved = lock.get("resolved", {})
-    if not resolved:
-        return "stale: no resolved entries"
-
-    return "ok"
+    header_error = _check_lock_header(lock)
+    if header_error:
+        return header_error
+    resolved = lock["resolved"]
+    return _check_resolved_chain(config["extends"], resolved)
 
 
 def get_locked_version(project_dir: Path, config_name: str) -> str | None:
@@ -126,8 +123,13 @@ def get_locked_version(project_dir: Path, config_name: str) -> str | None:
     if lock is None:
         return None
     resolved = lock.get("resolved", {})
+    if not isinstance(resolved, dict):
+        return None
     entry = resolved.get(config_name, {})
-    return entry.get("version") or None
+    if not isinstance(entry, dict):
+        return None
+    version = entry.get("version")
+    return version if isinstance(version, str) and version else None
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +139,110 @@ def get_locked_version(project_dir: Path, config_name: str) -> str | None:
 def _now_iso() -> str:
     """Return current UTC time in ISO 8601 format."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _check_lock_header(lock: dict[str, Any]) -> str:
+    """Validate lock format and toolkit version."""
+    if lock.get("lockfileVersion") != LOCK_VERSION:
+        return f"stale: lock version {lock.get('lockfileVersion')} != {LOCK_VERSION}"
+    locked_version = lock.get("ai_toolkit_version")
+    current_version = _current_toolkit_version()
+    if current_version and (
+        not isinstance(locked_version, str)
+        or not locked_version
+    ):
+        return "stale: ai-toolkit version metadata is missing or invalid"
+    if current_version and locked_version != current_version:
+        return (
+            f"stale: ai-toolkit version '{locked_version}' "
+            f"!= current '{current_version}'"
+        )
+    resolved = lock.get("resolved")
+    if not isinstance(resolved, dict) or not resolved:
+        return "stale: no resolved entries"
+    if not all(isinstance(entry, dict) for entry in resolved.values()):
+        return "stale: invalid resolved entries"
+    return ""
+
+
+def _check_resolved_chain(
+    current_source: str,
+    resolved: dict[str, dict[str, Any]],
+) -> str:
+    """Compare every locked config against its current cached snapshot."""
+    if not isinstance(current_source, str) or not current_source:
+        return "stale: invalid project extends source"
+    for name, entry in reversed(list(resolved.items())):
+        locked_source = entry.get("source", "")
+        if current_source != locked_source:
+            return (
+                f"stale: extends source '{current_source}' "
+                f"!= locked '{locked_source}'"
+            )
+        error, current_config = _check_resolved_entry(name, entry)
+        if error:
+            return error
+        assert current_config is not None
+        current_source = current_config.get("extends", "")
+        if not isinstance(current_source, str):
+            return f"stale: invalid extends source in resolved config {name}"
+    if current_source:
+        return f"stale: unresolved extends source '{current_source}'"
+    return "ok"
+
+
+def _check_resolved_entry(
+    name: str,
+    entry: dict[str, Any],
+) -> tuple[str, dict[str, Any] | None]:
+    """Compare version and integrity for one locked config."""
+    cached = entry.get("cached")
+    locked_source = entry.get("source")
+    locked_version = entry.get("version")
+    locked_integrity = entry.get("integrity")
+    if (
+        not isinstance(cached, str)
+        or not cached
+        or not isinstance(locked_source, str)
+        or not locked_source
+        or not isinstance(locked_version, str)
+        or not isinstance(locked_integrity, str)
+        or not locked_integrity.startswith("sha256:")
+    ):
+        return f"stale: invalid resolved config metadata for {name}", None
+    config_path = Path(cached).expanduser() / "ai-toolkit.config.json"
+    try:
+        raw_config = config_path.read_bytes()
+        current_config = json.loads(raw_config.decode("utf-8"))
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+        return f"stale: cannot read resolved config for {name}", None
+    if not isinstance(current_config, dict):
+        return f"stale: invalid resolved config content for {name}", None
+    current_version = current_config.get("version", "")
+    if current_version != locked_version:
+        return (
+            f"stale: {name} version '{current_version}' "
+            f"!= locked '{locked_version}'"
+        ), None
+    current_integrity = f"sha256:{hashlib.sha256(raw_config).hexdigest()}"
+    if current_integrity != locked_integrity:
+        return (
+            f"stale: {name} integrity '{current_integrity}' "
+            f"!= locked '{locked_integrity}'"
+        ), None
+    return "", current_config
+
+
+def _current_toolkit_version() -> str:
+    """Read the version of the toolkit owning this lock implementation."""
+    package_path = Path(__file__).resolve().parent.parent / "package.json"
+    try:
+        with open(package_path, encoding="utf-8") as handle:
+            package = json.load(handle)
+    except (json.JSONDecodeError, OSError):
+        return ""
+    version = package.get("version", "")
+    return version if isinstance(version, str) else ""
 
 
 # ---------------------------------------------------------------------------

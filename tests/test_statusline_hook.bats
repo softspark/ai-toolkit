@@ -24,6 +24,7 @@ teardown() {
     unset AI_TOOLKIT_STATUSLINE_NO_GIT
     unset AI_TOOLKIT_STATUSLINE_NO_EFFORT
     unset AI_TOOLKIT_STATUSLINE_SHOW_COST
+    unset AI_TOOLKIT_STATUSLINE_BASELINE
 }
 
 # Convenience: full Claude Code-shape stdin matching what 2.1.126 sends.
@@ -99,6 +100,25 @@ EOF
     [ "$status" -eq 0 ]
     echo "$output" | grep -q '↑6.5k'
     echo "$output" | grep -q '↓221.9k'
+}
+
+@test "statusline: shows token trend against configured baseline" {
+    printf '{"total":1000}\n' > "$TEST_TMP/baseline.json"
+    export AI_TOOLKIT_STATUSLINE_BASELINE="$TEST_TMP/baseline.json"
+
+    run bash -c "$(declare -f make_input); make_input '/tmp/p' 'Opus' 50 1500 500 | bash '$HOOK'"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'trend:↑100%'
+}
+
+@test "statusline: preserves trend when optional cost and effort are absent" {
+    printf '{"total":1000}\n' > "$TEST_TMP/baseline.json"
+    export AI_TOOLKIT_STATUSLINE_BASELINE="$TEST_TMP/baseline.json"
+
+    run bash -c \
+        "printf '%s' '{\"cwd\":\"/tmp/p\",\"model\":{\"display_name\":\"Opus\"},\"context_window\":{\"used_percentage\":50,\"total_input_tokens\":1500,\"total_output_tokens\":500}}' | bash '$HOOK'"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'trend:↑100%'
 }
 
 @test "statusline: shows effort level" {

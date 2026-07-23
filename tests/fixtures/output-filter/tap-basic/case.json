@@ -1,0 +1,13 @@
+{
+  "profile": "tap-success",
+  "accepted": true,
+  "input": "TAP version 13\n1..5\nok 1 - alpha\nok 2 - beta\nok 3 - gamma\nok 4 - delta\nok 5 - epsilon\n# tests 5\n# pass 5\n# fail 0\n",
+  "expected": "TAP version 13\n1..5\n[ai-toolkit-output-filter tap-success/v1: 5 successful result lines omitted]\n# tests 5\n# pass 5\n# fail 0\n",
+  "origin": "Synthetic TAP 13 success output authored for ai-toolkit on 2026-07-23.",
+  "mandatoryFacts": [
+    "TAP version 13",
+    "plan 1..5",
+    "five successful cases",
+    "zero failures"
+  ]
+}

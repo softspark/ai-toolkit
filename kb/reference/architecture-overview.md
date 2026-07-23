@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.4.7"
+version: "1.5.0"
 created: "2026-03-23"
-last_updated: "2026-07-14"
+last_updated: "2026-07-23"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -285,7 +285,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
-28 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+29 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
 
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|
@@ -294,12 +294,13 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | Notification | Claude waiting for input | *(inline)* | macOS desktop notification |
 | PreToolUse | Before Bash | `guard-destructive.sh` | Block destructive commands |
 | PreToolUse | Before file ops (Bash, Read, Edit, Write, MultiEdit, Glob, Grep, NotebookEdit, mcp\_filesystem) | `guard-path.sh` | Block wrong-user path hallucination |
-| PreToolUse | Before Edit/Write/MultiEdit | `guard-config.sh` | Block config file edits without explicit acknowledgment |
+| PreToolUse | Before Edit/Write/MultiEdit | `guard-config.sh` | Always block protected config edits; remove the hook deliberately when a change is authorized |
 | PreToolUse | Before Bash (git commit) | `commit-quality.sh` | Advisory Conventional Commits format check |
 | UserPromptSubmit | Before user prompt execution | `user-prompt-submit.sh` | Prompt governance reminder |
 | UserPromptSubmit | Before user prompt execution | `track-usage.sh` | Record skill invocations to stats.json |
 | PostToolUse | After edit/write tools | `post-tool-use.sh` | Lightweight validation reminders |
 | PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
+| PostToolUse | After successful Bash | `filter-tool-output.sh` | Observe eligible text or replace it only after exact recovery succeeds; Claude Code only |
 | Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
 | Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |
@@ -309,7 +310,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | SubagentStop | Subagent completion | `subagent-stop.sh` | Handoff checklist for subagents |
 | PreCompact | Before compaction | `pre-compact.sh` | Save prioritized context: instincts > tasks > git state > decisions |
 | PreCompact | Before compaction | `pre-compact-save.sh` | Timestamped context snapshot to audit trail |
-| SessionEnd | Session end | `session-end.sh` | Persist handoff note for the next session |
+| SessionEnd | Session end | `session-end.sh` | Clean owned output recovery and persist the next-session handoff note |
 
 Scripts at `~/.softspark/ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalog.md) for details.
 

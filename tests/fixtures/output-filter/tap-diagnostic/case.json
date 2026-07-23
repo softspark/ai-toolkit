@@ -1,0 +1,12 @@
+{
+  "profile": "tap-success",
+  "accepted": false,
+  "input": "TAP version 13\n1..2\nok 1 - alpha\n# error: cleanup warning\nok 2 - beta\n",
+  "expected": "TAP version 13\n1..2\nok 1 - alpha\n# error: cleanup warning\nok 2 - beta\n",
+  "origin": "Synthetic TAP diagnostic output authored for ai-toolkit on 2026-07-23.",
+  "mandatoryFacts": [
+    "diagnostic comment",
+    "both case descriptions",
+    "exact passthrough"
+  ]
+}

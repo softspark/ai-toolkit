@@ -84,6 +84,7 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     ],
     "PreToolUse": [
         ("Bash", "guard-destructive.sh"),
+        ("Bash", "guard-path.sh"),
         ("Bash", "commit-quality.sh"),
         ("Bash", "revert-guard.sh"),
     ],
@@ -93,6 +94,7 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     ],
     "PermissionRequest": [
         ("Bash", "guard-destructive.sh"),
+        ("Bash", "guard-path.sh"),
     ],
     "UserPromptSubmit": [
         ("", "user-prompt-submit.sh"),

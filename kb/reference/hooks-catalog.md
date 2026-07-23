@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.7.0"
+version: "1.8.0"
 created: "2026-03-27"
-last_updated: "2026-07-14"
+last_updated: "2026-07-23"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -13,7 +13,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 ## Supported Surface
 
@@ -29,7 +29,11 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 ```
 
 **File locations:**
+
 - Scripts: `~/.softspark/ai-toolkit/hooks/*.sh`
+- Output-filter runtime: `~/.softspark/ai-toolkit/scripts/output_filter_hook.py`, `output_filter_cli.py`, and `tool_output_filter/`
+- Global output-filter policy: `~/.softspark/ai-toolkit/hooks/output-filter-policy.json`
+- Managed project policy: `<project>/.claude/ai-toolkit-output-filter.json`
 - Config: `~/.claude/settings.json` → `hooks` key
 - Source: `ai-toolkit/app/hooks/*.sh` + `app/hooks.json`
 
@@ -50,10 +54,11 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 3. Loads session context from the per-repo session store (if exists)
 4. Loads active instincts from `.claude/instincts/*.md` (if any)
 
-By default the hook performs session-state reset, stale search-flag cleanup, and
-update notification side effects without printing informational stdout. Set
-`AI_TOOLKIT_HOOK_VERBOSE=1` to print the startup reminders and loaded context for
-debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
+By default the hook resets edit state for a new native session, preserves it
+when the source is `compact`, performs stale search-flag cleanup, and checks
+for updates without printing informational stdout. Set
+`AI_TOOLKIT_HOOK_VERBOSE=1` to print the startup reminders and loaded context
+for debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
 
 > **Session storage:** auto-generated session artifacts (context, handoff note,
 > checkpoints, decisions) are stored **outside the project repo** under
@@ -173,6 +178,59 @@ arms the corrective Stop hook.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
+### PostToolUse (native Bash output filter): `filter-tool-output.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PostToolUse` |
+| Matcher | `Bash` |
+| Script | `~/.softspark/ai-toolkit/hooks/filter-tool-output.sh` |
+| Fires | After a successful Claude Code Bash tool call |
+
+The hook is disabled by default and runs last among the installed
+`PostToolUse` handlers. Its modes are:
+
+| Mode | Behavior |
+|------|----------|
+| `off` | Shell fast path exits before Python starts |
+| `observe` | Evaluates eligible output and writes content-free metadata, but emits no replacement |
+| `safe` | Replaces eligible output only after invariants pass and the exact native response is stored for recovery |
+
+Only explicitly allowlisted test, lint, typecheck, and validation command
+shapes are eligible. Failed or interrupted tools, non-empty stderr, image or
+binary results, pipes, redirects, deployment, migrations, audits, security
+scanners, malformed payloads, unavailable recovery, and any uncertain case
+remain unchanged.
+
+The per-project policy `<project>/.claude/ai-toolkit-output-filter.json` is
+honored only when **both** checks pass: the project root is registered in
+`~/.softspark/ai-toolkit/projects.json`, and the sibling regular file
+`<project>/.claude/.ai-toolkit-output-filter.owner` holds the ai-toolkit owner
+marker. `ai-toolkit install --local` writes both. Registration is required
+because the owner marker is a public constant, so a cloned or untrusted
+checkout must never be able to self-enable filtering by shipping its own
+marker. An unregistered project, a missing or foreign marker, or a symlinked
+project root or `.claude` directory falls back to the installed global policy
+at `~/.softspark/ai-toolkit/hooks/output-filter-policy.json`, which ships as
+`off`.
+
+`jq` is a required system dependency (`python3 scripts/check_deps.py`
+verifies it alongside `python3`, `git`, and `node`); without it `guard-path.sh`
+blocks file tools rather than skipping path validation.
+
+Recovery data is private and session-scoped under
+`~/.softspark/ai-toolkit/sessions/<repo-key>/output-filter/`. Telemetry records
+only profile/version, byte and line counts, latency, outcome, and fallback
+reason. Recovery-backed modes require a bounded native session ID containing
+only ASCII letters, digits, underscores, or hyphens. Three consecutive
+profile, invariant, or recovery safety failures open a session circuit
+breaker. Set `AI_TOOLKIT_OUTPUT_FILTER_DISABLE=1` for an immediate bypass.
+
+The replacement adapter is Claude Code-specific. Claude Chat/Cowork exports
+exclude it, and the generated hooks for other editors do not activate it.
+The `minimal` hook profile and `AI_TOOLKIT_DISABLED_HOOKS=filter-tool-output`
+bypass it before the Python runtime starts.
+
 ### Stop (quality check) — `quality-check.sh`
 
 | Field | Value |
@@ -286,9 +344,13 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/session-end.sh` |
 | Fires | When a Claude session ends |
 
-**Action:** Writes `session-end.md` to the per-repo session store (`~/.softspark/ai-toolkit/sessions/<repo-key>/`) with a lightweight handoff note for the next session and reminds the next session to review preserved context.
+**Action:** Removes private output-filter artifacts and isolated edit state for
+the ending native session, then writes `session-end.md` to the per-repo session store
+(`~/.softspark/ai-toolkit/sessions/<repo-key>/`) with a lightweight handoff note
+for the next session.
 
-Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+The handoff note is skipped when `TOOLKIT_HOOK_PROFILE=minimal`; recovery and
+edit-state cleanup still run.
 
 ### TeammateIdle — inline
 
@@ -313,7 +375,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/guard-config.sh` |
 | Fires | Before any file write/edit operation |
 
-**Action:** Blocks (exit 2) edits to linter and formatter config files — `.eslintrc`, `.eslintrc.*`, `eslint.config.*`, `.prettierrc`, `.prettierrc.*`, `prettier.config.*`, `tsconfig.json`, `tsconfig.*.json` — unless the request contains an explicit acknowledgment phrase (e.g. "intentionally editing config"). Returns a human-readable explanation to Claude so it can ask the user for confirmation before retrying.
+**Action:** Always blocks (exit 2) edits to protected linter and formatter configuration: ESLint, Prettier, TypeScript, Stylelint, Biome, `ruff.toml`, and Ruff sections in `pyproject.toml`. Prompt text and acknowledgment phrases do not bypass the guard. A user who explicitly authorizes a protected edit must deliberately remove the guard for that operation.
 
 ### SessionStart — `mcp-health.sh`
 
@@ -335,7 +397,12 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/governance-capture.sh` |
 | Fires | After any tool use |
 
-**Action:** Non-blocking (always exits 0). Logs security-sensitive operations (Bash commands, file writes to sensitive paths, large writes) to `~/.softspark/ai-toolkit/governance.log` with ISO timestamp, session ID, tool name, and a content excerpt. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+**Action:** Non-blocking (always exits 0). Logs recognized
+dangerous-command categories and writes to sensitive filenames to
+`~/.softspark/ai-toolkit/governance.log` with an ISO timestamp, normalized
+session ID, tool name, and a bounded category or path detail. It does not
+store the full command or file content. Skipped when
+`TOOLKIT_HOOK_PROFILE=minimal`.
 
 ### PreCompact — `pre-compact-save.sh`
 
@@ -346,7 +413,11 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/pre-compact-save.sh` |
 | Fires | Before context compaction |
 
-**Action:** Saves a timestamped context snapshot to `~/.softspark/ai-toolkit/compactions/YYYY-MM-DD_HH-MM-SS.txt`. Captures session ID, working directory, git branch and status, and environment metadata. Provides an audit trail of what was in context at each compaction point. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+**Action:** Saves a timestamped context snapshot to
+`~/.softspark/ai-toolkit/compactions/YYYY-MM-DD_HH-MM-SS_<session>.txt`.
+Captures the bounded normalized session ID, working directory, and git branch.
+Provides an audit trail for compaction boundaries. Skipped when
+`TOOLKIT_HOOK_PROFILE=minimal`.
 
 ### PreToolUse (commit quality) — `commit-quality.sh`
 
@@ -426,7 +497,23 @@ First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`.
 | Script | `~/.softspark/ai-toolkit/hooks/search-tracker.sh` |
 | Fires | After any search-style tool call |
 
-**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag` (per-session, keyed by `session_id` from the hook stdin payload, falling back to `transcript_path` basename, then `default`). Pairs with `user-prompt-submit.sh` (sets the flag on long technical prompts only when a search provider is detected or strict mode is enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag is still set). Search provider detection parses actual MCP server names from `mcpServers`, `mcp_servers`, or `mcp` config blocks; hook matchers and permission allowlists do not count as providers. Codex Stop enforcement also scans the recent `$CODEX_HOME/log/codex-tui.log` window (default `~/.codex/log/codex-tui.log`) for `ToolCall: mcp__...__smart_query` and `tool.name="smart_query"`-style entries because Codex MCP tool calls may not fire the shared `PostToolUse` tracker. Together the hooks enforce the global CLAUDE.md GOLDEN RULE without breaking offline/no-RAG installs and without cross-session interference when multiple Claude Code windows run in parallel.
+**Action:** Clears `~/.softspark/ai-toolkit/state/search-required-<session_id>.flag`
+for the bounded normalized native session. Identity lookup accepts
+`session_id`, Augment `conversation_id` / `conversationId`,
+`CLAUDE_SESSION_ID`, or the transcript basename before falling back to
+`default`. It pairs with `user-prompt-submit.sh` (sets the flag on long
+technical prompts only when a search provider is detected or strict mode is
+enabled) and `stop-search-check.sh` (blocks Stop if the calling session's flag
+is still set). Search provider detection parses actual MCP server names from
+`mcpServers`, `mcp_servers`, or `mcp` config blocks; hook matchers and
+permission allowlists do not count as providers. Codex Stop enforcement also
+scans the recent `$CODEX_HOME/log/codex-tui.log` window (default
+`~/.codex/log/codex-tui.log`) for `ToolCall:
+mcp__...__smart_query` and `tool.name="smart_query"`-style entries because
+Codex MCP tool calls may not fire the shared `PostToolUse` tracker. Together
+the hooks enforce the global CLAUDE.md GOLDEN RULE without breaking
+offline/no-RAG installs and without cross-session interference when multiple
+runtime windows run in parallel.
 
 Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -473,7 +560,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 | Component | Purpose |
 |-----------|---------|
-| `scripts/session_state.py` | Append-only edit log keyed by session_id. Cleared on SessionStart. Read by revert-guard, test-cohesion, quality-gate. |
+| `scripts/session_state.py` | Isolated edit state keyed by a hash of the normalized native session ID. Reset on SessionStart and cleaned on SessionEnd. Read by revert-guard and quality-gate. |
 | `scripts/test_cohesion.py` | Resolves changed paths → test commands via cohesion map. First-match-wins. Stdlib-only. |
 | `app/hooks/test-cohesion-map.json` | Toolkit-default path → tests mapping (used when no project map exists). |
 | `app/hooks/_locate-toolkit.sh` | Shared bash helper that exports `$TOOLKIT_DIR` for hooks needing scripts/. |
@@ -507,8 +594,9 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
 ```
 ~/.softspark/ai-toolkit/
 ├── rules/          # Registered rules (add-rule.sh)
-├── state/          # Per-session runtime state (NEW)
-│   ├── session-edits.json         # Append-only edit log per session
+├── state/          # Per-session runtime state
+│   ├── session-edits-<hash>.json  # Isolated edit state, removed at SessionEnd
+│   ├── session-edits.json         # Compatibility alias for the active session
 │   ├── search-required-<sid>.flag # Per-session: set by user-prompt-submit, cleared by search-tracker/stop-search-check, GC'd at SessionStart (>60min)
 │   ├── loaded-instructions.log    # Audit trail of which rules entered context
 │   └── test-cohesion-last.log     # Last cohesion test command output
@@ -580,6 +668,7 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
 | GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
 | Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
+| OpenCode | `.opencode/plugins/ai-toolkit-hooks.js`; user `~/.config/opencode/plugins/ai-toolkit-hooks.js` | `generate_opencode_plugin.py` | Native JavaScript plugin hooks |
 
 ### Cursor hooks (`.cursor/hooks.json`)
 

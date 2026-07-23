@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1377%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1477%20passing-success)](tests/)
 
 ## What's New in v4.15.1
 
@@ -89,7 +89,10 @@ ai-toolkit claude-app export --verify
 ```
 
 Re-export and re-upload after toolkit or registered-rule updates. Skills work
-in Chat and Cowork; hooks and sub-agents are active only in Cowork.
+in Chat and Cowork; hooks and sub-agents are active only in Cowork. The native
+tool-output replacement hook remains Claude Code-only and is excluded from the
+Claude app archive until that runtime has an independently verified replacement
+contract.
 
 ### Install Profiles
 
@@ -140,7 +143,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
-| `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
+| `hooks/` | 29 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, output filtering, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
 | `constitution.md` | 7 articles | Machine-enforced safety rules |
 | `rules/` | auto-synced | Global/project rule files for Claude and other editors |
@@ -156,7 +159,7 @@ ai-toolkit/
 │   ├── agents/          # 44 agent definitions
 │   ├── skills/          # 108 skills (task / hybrid / knowledge)
 │   ├── rules/           # Source rules synced into Claude/editor rule files
-│   ├── hooks/           # Hook scripts (28 entries, 14 lifecycle events)
+│   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
 │   ├── claude-app/      # Generated Chat/Cowork plugin rules, hooks, instructions
 │   ├── plugins/         # 11 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
@@ -164,7 +167,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats test suite (1377 tests)
+├── tests/               # Bats and Python test suite (1477 tests)
 └── CHANGELOG.md
 ```
 
@@ -176,7 +179,9 @@ ai-toolkit/
 
 **Machine-enforced constitution** — 7-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
-**29 lifecycle hooks** — Executable scripts across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
+**29 lifecycle hook entries:** Executable handlers across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, search-first discipline, and opt-in output filtering. See [Hooks Catalog](kb/reference/hooks-catalog.md).
+
+**Native tool-output filtering** — dependency-free, post-execution filtering for successful Claude Code Bash output, shipped **disabled by default** (`off`). Neither `off` nor `observe` ever replaces output; opt-in `safe` mode replaces only validated `repeat-lines` or `tap-success` results after exact ephemeral recovery is available. Failures, diagnostics, unsupported payloads, and unavailable recovery always pass through unchanged. See [Tool Output Filter](kb/reference/tool-output-filter.md).
 
 **Security scanning** — `/skill-audit` for code-level risks, `/cve-scan` for dependency CVEs. Both CI-ready with exit codes.
 

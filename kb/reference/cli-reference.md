@@ -2,9 +2,9 @@
 title: "CLI Reference"
 category: reference
 service: ai-toolkit
-tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
+tags: [cli, commands, reference, install, update, plugin, mcp, telemetry, output-filter]
 created: "2026-04-13"
-last_updated: "2026-07-10"
+last_updated: "2026-07-23"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -74,6 +74,23 @@ Usage: ai-toolkit <command> [options]
 | `config init [flags]` | Create `.softspark-toolkit.json` (`--extends`, `--profile`, `--no-extends`) |
 | `config create-base <name>` | Scaffold base config npm package |
 | `config check [path]` | CI enforcement gate (exit 0=pass, 1=fail, 2=no config; `--json`) |
+
+## Native Tool-Output Filter
+
+| Command | Description |
+|---------|-------------|
+| `output-filter status [--policy PATH]` | Print the effective trusted project/global policy, or inspect an explicit policy |
+| `output-filter inspect --profile repeat-lines\|tap-success` | Read stdin and print content-free candidate metadata without changing or echoing the input |
+| `output-filter recover <handle> [--base-directory PATH] [--session-id ID]` | Print the exact stored native response object for an opaque recovery handle |
+| `output-filter clean [--base-directory PATH] [--session-id ID]` | Remove owned filter artifacts for one session or all sessions in the current repository |
+| `output-filter clean --session-id ID --expired` | Remove expired exact-response artifacts for one native session |
+| `output-filter hook --policy PATH` | **Internal, not for manual use.** `PostToolUse` entry point that reads the native hook payload on stdin and emits any replacement. The installed hook `filter-tool-output.sh` calls the same runtime through the lean `output_filter_hook.py` process instead |
+
+`off` is the default. Configure `toolOutputFilter.mode` in
+`.softspark-toolkit.json`, then run `install --local` or `update --local`.
+`AI_TOOLKIT_OUTPUT_FILTER_DISABLE=1` bypasses active filtering immediately.
+See [Native Tool Output Filter](tool-output-filter.md) for eligibility,
+privacy, recovery, and runtime support.
 
 ## Project Registry
 

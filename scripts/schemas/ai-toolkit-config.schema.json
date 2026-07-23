@@ -39,6 +39,66 @@
       "default": "standard",
       "description": "Installation profile controlling which modules are installed."
     },
+    "toolOutputFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Native post-execution Bash output filtering. Disabled by default.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["off", "observe", "safe"],
+          "default": "off"
+        },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["repeat-lines", "tap-success"]
+          },
+          "uniqueItems": true,
+          "default": ["repeat-lines", "tap-success"]
+        },
+        "maxInputBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8388608,
+          "default": 8388608
+        },
+        "minSavingsBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8388608,
+          "default": 1024
+        },
+        "minSavingsRatio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.15
+        },
+        "recovery": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["ephemeral"],
+              "default": "ephemeral"
+            },
+            "ttlMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 60
+            },
+            "maxSessionBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 33554432
+            }
+          }
+        }
+      }
+    },
     "agents": {
       "type": "object",
       "additionalProperties": false,
@@ -58,6 +118,23 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Paths to custom agent .md files (relative to config root)."
+        }
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Resolved plugin enable/disable intent. Runtime installation remains explicit.",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "disabled": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
         }
       }
     },
@@ -81,7 +158,7 @@
     "constitution": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Constitution amendments. Articles I-VI are immutable. Base articles are immutable. Projects can only ADD new articles (7+).",
+      "description": "Constitution amendments. Articles I-VII are immutable. Base articles are immutable. Projects can only ADD new articles (8+).",
       "properties": {
         "amendments": {
           "type": "array",
@@ -92,8 +169,8 @@
             "properties": {
               "article": {
                 "type": "integer",
-                "minimum": 1,
-                "description": "Article number. 1-5 are reserved (immutable). Base articles are also immutable."
+                "minimum": 8,
+                "description": "Article number. 1-7 are reserved (immutable). Base articles are also immutable."
               },
               "title": {
                 "type": "string",
@@ -120,8 +197,9 @@
         },
         "requiredPlugins": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Plugins that must be installed in all inheriting projects."
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Plugins that must appear in resolved enabled intent. Runtime installation remains explicit."
         },
         "forbidOverride": {
           "type": "array",

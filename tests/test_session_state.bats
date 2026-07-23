@@ -75,8 +75,83 @@ teardown() {
     [[ "$output" == *"/new.py"* ]]
 }
 
+@test "session_state: concurrent session files remain isolated" {
+    $STATE_CMD reset --session-id session-a
+    $STATE_CMD append --tool Edit --path /from-a.py --session-id session-a
+    $STATE_CMD reset --session-id session-b
+    $STATE_CMD append --tool Edit --path /from-b.py --session-id session-b
+
+    run $STATE_CMD list --session-id session-a
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"/from-a.py"* ]]
+    [[ "$output" != *"/from-b.py"* ]]
+
+    run $STATE_CMD list --session-id session-b
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"/from-b.py"* ]]
+    [[ "$output" != *"/from-a.py"* ]]
+}
+
+@test "session_state: clean removes only the selected session file" {
+    $STATE_CMD reset --session-id session-a
+    $STATE_CMD append --tool Edit --path /from-a.py --session-id session-a
+    $STATE_CMD reset --session-id session-b
+    $STATE_CMD append --tool Edit --path /from-b.py --session-id session-b
+
+    run $STATE_CMD clean --session-id session-a
+    [ "$status" -eq 0 ]
+
+    run $STATE_CMD list --session-id session-a
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+
+    run $STATE_CMD list --session-id session-b
+    [ "$status" -eq 0 ]
+    [ "$output" = "/from-b.py" ]
+
+    run $STATE_CMD list
+    [ "$status" -eq 0 ]
+    [ "$output" = "/from-b.py" ]
+}
+
+@test "session_state: clean removes a legacy alias only for the same session" {
+    $STATE_CMD reset --session-id session-a
+    $STATE_CMD append --tool Edit --path /from-a.py --session-id session-a
+
+    run $STATE_CMD clean --session-id session-a
+    [ "$status" -eq 0 ]
+    [ ! -e "$TEST_TMP/.softspark/ai-toolkit/state/session-edits.json" ]
+
+    $STATE_CMD reset --session-id session-b
+    run $STATE_CMD clean --session-id session-a
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/state/session-edits.json" ]
+}
+
 @test "session_state: missing state file returns empty list (exit 0)" {
     run $STATE_CMD list
     [ "$status" -eq 0 ]
     [ -z "$output" ]
+}
+
+@test "session_state: malformed state shape is treated as empty" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/state"
+    printf '[]\n' \
+        > "$TEST_TMP/.softspark/ai-toolkit/state/session-edits.json"
+
+    run $STATE_CMD list
+
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "session_state: invalid UTF-8 alias is preserved during cleanup" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit/state"
+    printf '\377' \
+        > "$TEST_TMP/.softspark/ai-toolkit/state/session-edits.json"
+
+    run $STATE_CMD clean --session-id absent-session
+
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.softspark/ai-toolkit/state/session-edits.json" ]
 }

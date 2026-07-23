@@ -9,6 +9,7 @@ Shared AI development toolkit for Claude Code, Claude Chat/Cowork, Cursor, Devin
 - `AGENTS.md` is generated for Codex/OpenCode/Gemini compatibility. Do not move mandatory Claude behavior there.
 - **KB-first is mandatory for technical work:** before answering or acting on a technical/project prompt, call `smart_query()` or `hybrid_search_kb()` and use the result to locate the relevant SOP/reference. Cite the KB path when the result materially informs the answer. If the KB tool is unavailable, state that explicitly and continue from local files.
 - Any rule that must be enforced at a fixed lifecycle point belongs in `app/hooks.json` + `app/hooks/*.sh` with tests. `CLAUDE.md` guidance is context, not enforcement.
+- Native tool-output filtering is post-execution, Claude Code-only, and disabled by default. `observe` must be output-identical; `safe` may replace only successful eligible Bash text after exact ephemeral recovery succeeds. Never rewrite or execute the original command, filter failures or diagnostics, or export the replacement hook to Claude Chat/Cowork and unverified runtimes.
 
 ## CRITICAL: Documentation & Count Accuracy
 **Every change to skills, agents, hooks, or editors MUST be reflected in ALL docs:**
@@ -44,6 +45,7 @@ Stale counts = broken user trust. This is non-negotiable.
 # Eject:    ai-toolkit eject              (standalone copy, no toolkit dependency)
 # Compile:  ai-toolkit compile-slm       (compile toolkit for SLMs: --budget, --model-size, --persona, --dry-run)
 # Config:   ai-toolkit config validate|diff|init|create-base|check  (config inheritance)
+# Output:   ai-toolkit output-filter status|inspect|recover|clean  (native result filtering)
 # Projects: ai-toolkit projects           (list/prune/remove registered local projects)
 # Codex:   ai-toolkit codex-md            (generate AGENTS.md with marker injection for Codex CLI)
 # Codex:   ai-toolkit codex-rules         (generate .agents/rules/*.md for Codex CLI)

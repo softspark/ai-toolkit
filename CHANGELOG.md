@@ -7,6 +7,37 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+Minor release. Adds a dependency-free, opt-in native tool-output filter for Claude Code and hardens the enterprise configuration, session-isolation, and editor-adapter surfaces around it. The filter ships disabled; `observe` and `safe` are per-project opt-ins. No source catalog count change (44 agents, 108 skills).
+
+### BREAKING
+
+- **Unknown config keys rejected** — `.softspark-toolkit.json` and `ai-toolkit.config.json` are now validated against a closed set of top-level keys. Files carrying typos or unsupported keys that previously validated will fail `config validate` and `config check` until the key is removed.
+- **Constitution Article VII reserved** — reserved articles expand from I-VI to I-VII, so custom amendments must start at article 8 instead of 7. A base config that defines article 7 was valid before and now aborts validation.
+- **Plugin manifests require `requires`** — `plugin.json` must declare a non-empty `requires` map of non-empty string constraints. Existing manifests without the field fail schema validation.
+- **Lock files go stale on every toolkit version bump** — `.softspark-toolkit.lock.json` records the toolkit version and is reported stale when it differs from the running version. This is intentional integrity design: re-run `install --local` or `update --local` after upgrading to refresh the lock.
+
+### Added
+
+- **Native tool-output filter** — added a dependency-free, opt-in Claude Code `PostToolUse` filter with `off`, `observe`, and `safe` modes. The initial version handles only allowlisted successful Bash test and validation output through deterministic `repeat-lines` and `tap-success` profiles.
+- **Exact ephemeral recovery** — every safe replacement is preceded by a private, bounded, session-scoped copy of the exact native response object. Opaque handles support manual recovery and cleanup without storing commands, paths, session IDs, or raw output in telemetry.
+- **Output-filter operations** — added inspect, status, recover, and clean entry points under `ai-toolkit output-filter`, plus a deterministic benchmark script for the built-in profiles.
+- **Project policy inheritance** — `toolOutputFilter` participates in schema validation, inheritance, merge, lock, local install, and managed project-policy cleanup.
+
+### Fixed
+
+- **Hook safety** — `guard-path.sh` now blocks when `jq` is unavailable instead of silently skipping path validation. Codex Bash hooks apply the same path guard during `PreToolUse` and `PermissionRequest`.
+- **Filter eligibility** — allowlisted task names now use exact token boundaries, and recovery-backed filtering rejects unsafe or unbounded native session identifiers instead of creating mismatched cleanup paths.
+- **Session isolation** — edit tracking uses per-session state files, hook adapters preserve native OpenCode and Augment session identifiers, unsafe identifiers receive collision-resistant normalized names, and pre-compact snapshots prefer the payload session identifier.
+- **Editor adapter integrity** — OpenCode propagates guard exit code 2 as a blocked tool execution, Gemini preserves malformed settings, rejects symlinked destinations, and writes valid updates atomically, while Claude app exports omit the Claude Code-only output replacement hook.
+- **Statusline token trend** — the documented baseline file now drives a visible input/output token trend, including payloads without optional cost or effort fields.
+- **Brand-voice fact checks** — missing extracted facts now fail the quality gate, while inline-code extraction is restricted to identifier-shaped values to avoid false positives.
+- **Enterprise configuration** — config and lock readers reject non-object JSON and invalid UTF-8 without traceback, invalid output-filter updates preserve the last valid managed policy, and lock staleness checks cover lock format, toolkit version, source, resolved version, and content integrity. Constitution Articles I through VII remain reserved, `requiredPlugins` materializes enforceable enable intent, and plugin manifests validate non-empty dependency constraints.
+- **Recovery cleanup** — session end and global uninstall remove only validated ai-toolkit recovery artifacts, remain idempotent for foreign-only trees, and abort before other mutations when the recovery namespace is unsafe.
+
+Hook entries: 28 → 29. Test count: 1377 → 1477.
+
 ## v4.15.1 — Copilot profile cleanup (2026-07-15)
 
 ### Fixed

@@ -1,0 +1,366 @@
+#!/usr/bin/env bats
+# Regression tests for config lock source, version, and integrity drift.
+
+TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+
+@test "config lock is stale when the project extends source changes" {
+    project="$BATS_TEST_TMPDIR/project"
+    base="$BATS_TEST_TMPDIR/base"
+    mkdir -p "$project" "$base"
+    cat > "$project/.softspark-toolkit.json" <<'EOF'
+{"extends":"../different-base"}
+EOF
+    cat > "$base/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/base","version":"1.0.0"}
+EOF
+
+    run python3 - "$TOOLKIT_DIR" "$project" "$base" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+base = Path(sys.argv[3])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import check_lock_staleness, save_lock_file
+
+save_lock_file(project, [{
+    "source": "../base",
+    "name": "@test/base",
+    "version": "1.0.0",
+    "integrity": "sha256:locked",
+    "root": str(base),
+}])
+assert check_lock_staleness(project) == (
+    "stale: extends source '../different-base' != locked '../base'"
+)
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock is stale when a resolved config version changes" {
+    project="$BATS_TEST_TMPDIR/version-project"
+    base="$BATS_TEST_TMPDIR/version-base"
+    mkdir -p "$project" "$base"
+    cat > "$project/.softspark-toolkit.json" <<'EOF'
+{"extends":"../version-base"}
+EOF
+    cat > "$base/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/base","version":"2.0.0"}
+EOF
+
+    run python3 - "$TOOLKIT_DIR" "$project" "$base" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+base = Path(sys.argv[3])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import check_lock_staleness, save_lock_file
+from config_resolver import _file_hash
+
+save_lock_file(project, [{
+    "source": "../version-base",
+    "name": "@test/base",
+    "version": "1.0.0",
+    "integrity": _file_hash(base / "ai-toolkit.config.json"),
+    "root": str(base),
+}])
+assert check_lock_staleness(project) == (
+    "stale: @test/base version '2.0.0' != locked '1.0.0'"
+)
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock is stale when resolved config integrity changes" {
+    project="$BATS_TEST_TMPDIR/integrity-project"
+    base="$BATS_TEST_TMPDIR/integrity-base"
+    mkdir -p "$project" "$base"
+    cat > "$project/.softspark-toolkit.json" <<'EOF'
+{"extends":"../integrity-base"}
+EOF
+    cat > "$base/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/base","version":"1.0.0"}
+EOF
+
+    run python3 - "$TOOLKIT_DIR" "$project" "$base" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+base = Path(sys.argv[3])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import check_lock_staleness, save_lock_file
+from config_resolver import _file_hash
+
+config_path = base / "ai-toolkit.config.json"
+locked_integrity = _file_hash(config_path)
+save_lock_file(project, [{
+    "source": "../integrity-base",
+    "name": "@test/base",
+    "version": "1.0.0",
+    "integrity": locked_integrity,
+    "root": str(base),
+}])
+config_path.write_text(
+    '{"name":"@test/base","version":"1.0.0","profile":"strict"}\n',
+    encoding="utf-8",
+)
+actual = check_lock_staleness(project)
+assert actual.startswith("stale: @test/base integrity 'sha256:")
+assert actual.endswith(f"' != locked '{locked_integrity}'")
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock checks every source in a nested extends chain" {
+    project="$BATS_TEST_TMPDIR/chain-project"
+    parent="$BATS_TEST_TMPDIR/chain-parent"
+    grand="$BATS_TEST_TMPDIR/chain-grand"
+    mkdir -p "$project" "$parent" "$grand"
+    cat > "$project/.softspark-toolkit.json" <<'EOF'
+{"extends":"../chain-parent"}
+EOF
+    cat > "$parent/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/parent","version":"2.0.0","extends":"../new-grand"}
+EOF
+    cat > "$grand/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/grand","version":"1.0.0"}
+EOF
+
+    run python3 - "$TOOLKIT_DIR" "$project" "$parent" "$grand" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+parent = Path(sys.argv[3])
+grand = Path(sys.argv[4])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import check_lock_staleness, save_lock_file
+from config_resolver import _file_hash
+
+save_lock_file(project, [
+    {
+        "source": "../old-grand",
+        "name": "@test/grand",
+        "version": "1.0.0",
+        "integrity": _file_hash(grand / "ai-toolkit.config.json"),
+        "root": str(grand),
+    },
+    {
+        "source": "../chain-parent",
+        "name": "@test/parent",
+        "version": "2.0.0",
+        "integrity": _file_hash(parent / "ai-toolkit.config.json"),
+        "root": str(parent),
+    },
+])
+assert check_lock_staleness(project) == (
+    "stale: extends source '../new-grand' != locked '../old-grand'"
+)
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock is stale when generated by another ai-toolkit version" {
+    project="$BATS_TEST_TMPDIR/toolkit-version-project"
+    base="$BATS_TEST_TMPDIR/toolkit-version-base"
+    mkdir -p "$project" "$base"
+    cat > "$project/.softspark-toolkit.json" <<'EOF'
+{"extends":"../toolkit-version-base"}
+EOF
+    cat > "$base/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/base","version":"1.0.0"}
+EOF
+
+    run python3 - "$TOOLKIT_DIR" "$project" "$base" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+base = Path(sys.argv[3])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import check_lock_staleness, save_lock_file
+from config_resolver import _file_hash
+
+with open(root / "package.json", encoding="utf-8") as handle:
+    current_version = json.load(handle)["version"]
+save_lock_file(
+    project,
+    [{
+        "source": "../toolkit-version-base",
+        "name": "@test/base",
+        "version": "1.0.0",
+        "integrity": _file_hash(base / "ai-toolkit.config.json"),
+        "root": str(base),
+    }],
+    ai_toolkit_version="0.0.0",
+)
+assert check_lock_staleness(project) == (
+    f"stale: ai-toolkit version '0.0.0' != current '{current_version}'"
+)
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock is stale when toolkit version metadata is missing" {
+    project="$BATS_TEST_TMPDIR/missing-version-project"
+    base="$BATS_TEST_TMPDIR/missing-version-base"
+    mkdir -p "$project" "$base"
+    printf '{"extends":"../missing-version-base"}\n' \
+        > "$project/.softspark-toolkit.json"
+    printf '{"name":"@test/base","version":"1.0.0"}\n' \
+        > "$base/ai-toolkit.config.json"
+
+    run python3 - "$TOOLKIT_DIR" "$project" "$base" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+base = Path(sys.argv[3])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import LOCK_FILENAME, check_lock_staleness, save_lock_file
+from config_resolver import _file_hash
+
+save_lock_file(project, [{
+    "source": "../missing-version-base",
+    "name": "@test/base",
+    "version": "1.0.0",
+    "integrity": _file_hash(base / "ai-toolkit.config.json"),
+    "root": str(base),
+}])
+lock_path = project / LOCK_FILENAME
+lock = json.loads(lock_path.read_text(encoding="utf-8"))
+lock.pop("ai_toolkit_version")
+lock_path.write_text(json.dumps(lock), encoding="utf-8")
+assert check_lock_staleness(project).startswith(
+    "stale: ai-toolkit version metadata"
+)
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock reports malformed cached entry without crashing" {
+    project="$BATS_TEST_TMPDIR/malformed-entry-project"
+    mkdir -p "$project"
+    printf '{"extends":"../base"}\n' > "$project/.softspark-toolkit.json"
+
+    run python3 - "$TOOLKIT_DIR" "$project" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import LOCK_FILENAME, LOCK_VERSION, check_lock_staleness
+
+version = json.loads((root / "package.json").read_text(encoding="utf-8"))["version"]
+lock = {
+    "lockfileVersion": LOCK_VERSION,
+    "ai_toolkit_version": version,
+    "resolved": {
+        "@test/base": {
+            "source": "../base",
+            "version": "1.0.0",
+            "integrity": "sha256:invalid",
+            "cached": [],
+        }
+    },
+}
+(project / LOCK_FILENAME).write_text(json.dumps(lock), encoding="utf-8")
+assert check_lock_staleness(project) == (
+    "stale: invalid resolved config metadata for @test/base"
+)
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock treats a top-level JSON array as unreadable" {
+    project="$BATS_TEST_TMPDIR/array-lock-project"
+    mkdir -p "$project"
+    printf '{"extends":"../base"}\n' > "$project/.softspark-toolkit.json"
+    printf '[]\n' > "$project/.softspark-toolkit.lock.json"
+
+    run python3 - "$TOOLKIT_DIR" "$project" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import check_lock_staleness
+
+assert check_lock_staleness(project) == "missing"
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock treats invalid UTF-8 as unreadable" {
+    project="$BATS_TEST_TMPDIR/invalid-utf8-lock-project"
+    mkdir -p "$project"
+    printf '{"extends":"../base"}\n' > "$project/.softspark-toolkit.json"
+    printf '\377' > "$project/.softspark-toolkit.lock.json"
+
+    run python3 - "$TOOLKIT_DIR" "$project" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import check_lock_staleness
+
+assert check_lock_staleness(project) == "missing"
+PY
+
+    [ "$status" -eq 0 ]
+}
+
+@test "config lock version lookup tolerates malformed resolved data" {
+    project="$BATS_TEST_TMPDIR/malformed-version-lookup"
+    mkdir -p "$project"
+
+    run python3 - "$TOOLKIT_DIR" "$project" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project = Path(sys.argv[2])
+sys.path.insert(0, str(root / "scripts"))
+from config_lock import LOCK_FILENAME, get_locked_version
+
+lock_path = project / LOCK_FILENAME
+lock_path.write_text(json.dumps({"resolved": []}), encoding="utf-8")
+assert get_locked_version(project, "@test/base") is None
+lock_path.write_text(
+    json.dumps({"resolved": {"@test/base": []}}),
+    encoding="utf-8",
+)
+assert get_locked_version(project, "@test/base") is None
+lock_path.write_text(
+    json.dumps({"resolved": {"@test/base": {"version": 123}}}),
+    encoding="utf-8",
+)
+assert get_locked_version(project, "@test/base") is None
+PY
+
+    [ "$status" -eq 0 ]
+}

@@ -21,7 +21,8 @@ teardown() {
 
 call_hook() {
     local cmd="$1"
-    run bash -c "echo '{\"tool_input\":{\"command\":\"$cmd\"}}' | bash '$HOOK'"
+    run bash -c \
+        "echo '{\"session_id\":\"s1\",\"tool_input\":{\"command\":\"$cmd\"}}' | bash '$HOOK'"
 }
 
 @test "revert-guard: allows non-git commands" {
@@ -95,4 +96,20 @@ call_hook() {
     cd "$TEST_TMP"
     call_hook "git restore -- foo.py"
     [ "$status" -eq 2 ]
+}
+
+@test "revert-guard: checks edits for payload session only" {
+    $STATE_CMD reset --session-id session-a
+    $STATE_CMD append --tool Edit --path "$TEST_TMP/from-a.py" --session-id session-a
+    $STATE_CMD reset --session-id session-b
+    $STATE_CMD append --tool Edit --path "$TEST_TMP/from-b.py" --session-id session-b
+    cd "$TEST_TMP"
+
+    run bash -c \
+        "echo '{\"conversation_id\":\"session-a\",\"tool_input\":{\"command\":\"git checkout -- from-a.py\"}}' | bash '$HOOK'"
+    [ "$status" -eq 2 ]
+
+    run bash -c \
+        "echo '{\"conversationId\":\"session-a\",\"tool_input\":{\"command\":\"git checkout -- from-b.py\"}}' | bash '$HOOK'"
+    [ "$status" -eq 0 ]
 }

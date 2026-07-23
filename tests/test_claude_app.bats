@@ -30,6 +30,26 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "claude-app: output replacement hook stays Claude Code only" {
+    run python3 - <<PY
+import json
+import sys
+
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+import claude_app
+
+rendered = json.loads(claude_app.render_plugin_hooks())
+commands = [
+    hook["command"]
+    for groups in rendered["hooks"].values()
+    for group in groups
+    for hook in group.get("hooks", [])
+]
+assert not any("filter-tool-output.sh" in command for command in commands)
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "claude-app: export contains app-native rules, hooks, agents, and registered rules" {
     archive="$TEST_TMP/ai-toolkit.zip"
     run python3 "$TOOLKIT_DIR/scripts/claude_app.py" export --output "$archive"
@@ -50,6 +70,7 @@ with zipfile.ZipFile("$archive") as z:
     assert "agents/backend-specialist.md" in names
     assert "skills/debug/SKILL.md" in names
     assert "scripts/session_state.py" in names
+    assert "hooks/filter-tool-output.sh" not in names
     assert not any("agents/.claude/" in name for name in names)
 
     manifest = json.loads(z.read(".claude-plugin/plugin.json"))

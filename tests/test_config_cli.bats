@@ -24,7 +24,7 @@ setup() {
   },
   "constitution": {
     "amendments": [
-      {"article": 6, "title": "Data Sovereignty", "text": "GDPR."}
+      {"article": 8, "title": "Data Sovereignty", "text": "GDPR."}
     ]
   },
   "enforce": {
@@ -66,6 +66,71 @@ EOF
     [[ "$output" == *"No .softspark-toolkit.json"* ]]
 }
 
+@test "cli validate: rejects a top-level JSON array without traceback" {
+    printf '[]\n' > "$PROJECT_DIR/.softspark-toolkit.json"
+
+    run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config validate "$PROJECT_DIR"
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"must contain a JSON object"* ]]
+    [[ "$output" != *"Traceback"* ]]
+}
+
+@test "standalone validator: rejects a top-level JSON array without traceback" {
+    config="$PROJECT_DIR/array-config.json"
+    printf '[]\n' > "$config"
+
+    run python3 "$TOOLKIT_DIR/scripts/config_validator.py" "$config" --strict
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"must contain a JSON object"* ]]
+    [[ "$output" != *"Traceback"* ]]
+}
+
+@test "config validators reject invalid UTF-8 without traceback" {
+    config="$PROJECT_DIR/.softspark-toolkit.json"
+    printf '\377' > "$config"
+
+    run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config validate "$PROJECT_DIR"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Cannot decode"* ]]
+    [[ "$output" != *"Traceback"* ]]
+
+    run python3 "$TOOLKIT_DIR/scripts/config_validator.py" "$config" --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Cannot decode"* ]]
+    [[ "$output" != *"Traceback"* ]]
+}
+
+@test "cli validate: reports malformed file-reference blocks without traceback" {
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" <<'EOF'
+{"agents":[],"rules":[]}
+EOF
+
+    run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config validate "$PROJECT_DIR"
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"'agents' must be an object"* ]]
+    [[ "$output" == *"'rules' must be an object"* ]]
+    [[ "$output" != *"Traceback"* ]]
+}
+
+@test "cli validate: rejects an invalid resolved base config" {
+    cat > "$BASE_DIR/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/base","version":"2.0.0","enforce":[]}
+EOF
+    cat > "$PROJECT_DIR/.softspark-toolkit.json" <<'EOF'
+{"extends":"../base-config"}
+EOF
+
+    run node "$TOOLKIT_DIR/bin/ai-toolkit.js" config validate "$PROJECT_DIR"
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Invalid base config"* ]]
+    [[ "$output" == *"'enforce' must be an object"* ]]
+    [[ "$output" != *"Traceback"* ]]
+}
+
 @test "cli validate: blocked required agent returns 1" {
     cat > "$PROJECT_DIR/.softspark-toolkit.json" << 'EOF'
 {
@@ -86,7 +151,7 @@ EOF
   "extends": "../base-config",
   "constitution": {
     "amendments": [
-      {"article": 6, "title": "Weakened", "text": "No GDPR."}
+      {"article": 8, "title": "Weakened", "text": "No GDPR."}
     ]
   }
 }
@@ -162,8 +227,9 @@ EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *"Article 9: Custom Rule"* ]]
     [[ "$output" == *"project adds"* ]]
-    [[ "$output" == *"Article 6: Data Sovereignty"* ]]
+    [[ "$output" == *"Article 8: Data Sovereignty"* ]]
     [[ "$output" == *"inherited"* ]]
+    [[ "$output" == *"Articles I-VII"* ]]
 }
 
 @test "cli diff: no extends shows message" {
@@ -297,7 +363,7 @@ EOF
   "extends": "../base-config",
   "constitution": {
     "amendments": [
-      {"article": 6, "title": "Weakened", "text": "No GDPR."}
+      {"article": 8, "title": "Weakened", "text": "No GDPR."}
     ]
   }
 }

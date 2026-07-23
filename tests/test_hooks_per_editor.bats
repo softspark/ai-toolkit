@@ -49,6 +49,16 @@ teardown_file() {
     [ -f "$HPE_DIR/.gemini/settings.json" ]
 }
 
+@test "hooks: no editor surface exports the Claude-only output filter" {
+    for surface in "$HPE_DIR/.gemini/settings.json" \
+        "$HPE_DIR/.cursor/hooks.json" \
+        "$HPE_DIR/.devin/hooks.v1.json" \
+        "$HPE_DIR/.augment/settings.json"; do
+        [ -f "$surface" ]
+        ! grep -q "filter-tool-output" "$surface"
+    done
+}
+
 @test "hooks: augment writes .augment/settings.json" {
     [ -f "$HPE_DIR/.augment/settings.json" ]
 }
@@ -191,6 +201,66 @@ assert data.get('theme') == 'dark', f'lost theme: {data}'
 assert data.get('telemetry') is False, f'lost telemetry: {data}'
 assert 'hooks' in data, 'hooks block missing'
 "
+    rm -rf "$tmp"
+}
+
+@test "hooks: gemini leaves malformed settings untouched" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/.gemini"
+    printf '{"theme": invalid json\n' > "$tmp/.gemini/settings.json"
+    before_sha=$(shasum "$tmp/.gemini/settings.json" | awk '{print $1}')
+
+    run python3 "$TOOLKIT_DIR/scripts/generate_gemini_hooks.py" "$tmp"
+    [ "$status" -ne 0 ]
+    after_sha=$(shasum "$tmp/.gemini/settings.json" | awk '{print $1}')
+    [ "$before_sha" = "$after_sha" ]
+    rm -rf "$tmp"
+}
+
+@test "hooks: gemini atomic replace failure preserves existing settings" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/.gemini"
+    printf '{"theme":"dark"}\n' > "$tmp/.gemini/settings.json"
+
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+from unittest import mock
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import generate_gemini_hooks
+
+settings = target / ".gemini" / "settings.json"
+original = settings.read_bytes()
+with mock.patch("os.replace", side_effect=OSError("replace failed")):
+    try:
+        generate_gemini_hooks.generate(target)
+    except OSError:
+        pass
+    else:
+        raise AssertionError("generator did not use atomic replacement")
+
+assert settings.read_bytes() == original
+assert not list(settings.parent.glob(".settings.json.*"))
+PY
+    [ "$status" -eq 0 ]
+    rm -rf "$tmp"
+}
+
+@test "hooks: gemini rejects a symlinked settings file" {
+    tmp="$(mktemp -d)"
+    external="$tmp/external-settings.json"
+    mkdir -p "$tmp/.gemini"
+    printf '{"theme":"dark"}\n' > "$external"
+    ln -s "$external" "$tmp/.gemini/settings.json"
+
+    run python3 "$TOOLKIT_DIR/scripts/generate_gemini_hooks.py" "$tmp"
+
+    [ "$status" -ne 0 ]
+    [ -L "$tmp/.gemini/settings.json" ]
+    [ "$(cat "$external")" = '{"theme":"dark"}' ]
     rm -rf "$tmp"
 }
 

@@ -1,0 +1,12 @@
+{
+  "profile": "repeat-lines",
+  "accepted": true,
+  "input": "progress\nprogress\nprogress\nprogress\nprogress\nprogress\nprogress\nprogress\nprogress\nprogress\ncomplete\n",
+  "expected": "progress\n[ai-toolkit-output-filter repeat-lines/v1: 9 adjacent copies omitted]\ncomplete\n",
+  "origin": "Synthetic local progress output authored for ai-toolkit on 2026-07-23.",
+  "mandatoryFacts": [
+    "progress",
+    "10 total progress occurrences",
+    "complete"
+  ]
+}

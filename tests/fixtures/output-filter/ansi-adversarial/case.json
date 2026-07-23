@@ -1,0 +1,12 @@
+{
+  "profile": "repeat-lines",
+  "accepted": true,
+  "input": "\u001b[31mwarning\u001b[0m\n\u001b[31mwarning\u001b[0m\n\u001b[31mwarning\u001b[0m\n",
+  "expected": "\u001b[31mwarning\u001b[0m\n\u001b[31mwarning\u001b[0m\n\u001b[31mwarning\u001b[0m\n",
+  "origin": "Synthetic ANSI control-sequence output authored for ai-toolkit on 2026-07-23.",
+  "mandatoryFacts": [
+    "ANSI controls",
+    "three warning lines",
+    "exact passthrough"
+  ]
+}

@@ -93,7 +93,7 @@ with open(path, "w") as f:
 PY
     run python3 "$TOOLKIT_DIR/scripts/doctor.py"
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q "settings.json: 28/28 toolkit hook entries"
+    echo "$output" | grep -q "settings.json: 29/29 toolkit hook entries"
     ! echo "$output" | grep -q "no toolkit hooks"
 }
 

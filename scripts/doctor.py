@@ -75,6 +75,7 @@ EXPECTED_HOOKS = [
     "subagent-start.sh",
     "subagent-stop.sh",
     "session-end.sh",
+    "filter-tool-output.sh",
 ]
 
 PLANNED_ASSETS = [

@@ -82,6 +82,22 @@ MEASURE="python3 $SKILL_DIR/scripts/measure.py"
     [ "$status" -eq 1 ]
 }
 
+@test "brand-voice: measure.py fails when extracted facts are missing" {
+    local fixtures="$BATS_TEST_TMPDIR/fact-fixtures"
+    local fixture="$fixtures/missing-facts"
+    mkdir -p "$fixture"
+    printf '%s\n' \
+        'The implementation in src/payment.py uses `RetryPolicy` and waits 250ms before retrying a failed request with the same safe transaction identifier.' \
+        > "$fixture/default.md"
+    printf '%s\n' 'Retry logic updated.' > "$fixture/concise.md"
+    printf '%s\n' 'Retry updated.' > "$fixture/strict.md"
+
+    run $MEASURE --fixtures "$fixtures" --json
+    [ "$status" -eq 1 ]
+    echo "$output" | python3 -c \
+        'import json,sys; r=json.load(sys.stdin)["results"][0]; assert "src/payment.py" in r["concise_advisory_missing"]'
+}
+
 @test "brand-voice: measure.py errors with code 2 on missing fixtures dir" {
     run $MEASURE --fixtures /nonexistent/path
     [ "$status" -eq 2 ]

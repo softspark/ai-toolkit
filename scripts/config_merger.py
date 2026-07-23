@@ -2,7 +2,7 @@
 """Config merger for ai-toolkit extends system.
 
 Implements layered deep merge with:
-- Constitution immutability (Articles I-VI absolute, base articles immutable)
+- Constitution immutability (Articles I-VII absolute, base articles immutable)
 - Agent merge with requiredAgents enforcement
 - Override validation (override:true + justification required)
 - enforce block constraints (minHookProfile, requiredPlugins, forbidOverride, requiredAgents)
@@ -22,16 +22,9 @@ from typing import Any
 # Constants
 # ---------------------------------------------------------------------------
 
-IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5, 6})
+IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5, 6, 7})
 
 HOOK_PROFILE_ORDER = {"minimal": 0, "standard": 1, "strict": 2}
-
-# v1 schema fields that participate in merge
-V1_FIELDS = frozenset({
-    "$schema", "extends", "name", "version", "description",
-    "profile", "agents", "rules", "constitution", "enforce", "overrides",
-})
-
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -84,6 +77,13 @@ def merge_config_chain(
     # Merge project over accumulated base
     result.merged = _merge_project_over_base(accumulated_base, project_config, result)
 
+    if "toolOutputFilter" in accumulated_base or "toolOutputFilter" in project_config:
+        configured = result.merged.get("toolOutputFilter", {})
+        result.merged["toolOutputFilter"] = _deep_merge(
+            _load_default_output_filter_policy(),
+            configured,
+        )
+
     # Validate enforce constraints
     _validate_enforce(accumulated_base, result.merged)
 
@@ -93,6 +93,16 @@ def merge_config_chain(
 def merge_two(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
     """Simple two-config merge (base → overlay). No enforcement validation."""
     return _deep_merge(base, overlay)
+
+
+def _load_default_output_filter_policy() -> dict[str, Any]:
+    """Load the canonical disabled output-filter policy."""
+    policy_path = Path(__file__).resolve().parent.parent / "app" / "output-filter-policy.json"
+    with open(policy_path, encoding="utf-8") as handle:
+        policy = json.load(handle)
+    if not isinstance(policy, dict):
+        raise ConfigMergeError(f"Invalid output-filter policy: {policy_path}")
+    return policy
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +118,8 @@ def _merge_project_over_base(
     merged: dict[str, Any] = {}
 
     all_keys = set(base.keys()) | set(project.keys())
+    if base.get("enforce", {}).get("requiredPlugins"):
+        all_keys.add("plugins")
 
     for key in all_keys:
         # Skip meta fields that don't participate in merge output
@@ -119,23 +131,21 @@ def _merge_project_over_base(
         base_val = base.get(key)
         proj_val = project.get(key)
 
-        if proj_val is None:
+        if key == "plugins":
+            merged[key] = _merge_plugins(base_val or {}, proj_val or {}, base)
+        elif proj_val is None:
             merged[key] = base_val
         elif key == "overrides":
             # Always validate overrides against base enforce, even if base has no overrides
             merged[key] = _validate_overrides(base, proj_val, result)
-        elif key == "constitution" and base_val is not None:
-            merged[key] = _merge_constitution(base_val, proj_val, base)
+        elif key == "constitution":
+            merged[key] = _merge_constitution(base_val or {}, proj_val, base)
         elif base_val is None:
             merged[key] = proj_val
-        elif key == "constitution":
-            merged[key] = _merge_constitution(base_val, proj_val, base)
         elif key == "agents":
             merged[key] = _merge_agents(base_val, proj_val, base)
         elif key == "rules":
             merged[key] = _merge_rules(base_val, proj_val)
-        elif key == "overrides":
-            merged[key] = _validate_overrides(base, proj_val, result)
         elif key == "enforce":
             # enforce blocks merge: base wins (projects cannot weaken enforcement)
             merged[key] = _merge_enforce(base_val, proj_val)
@@ -163,7 +173,7 @@ def _merge_constitution(
     """Merge constitution — additions only, no modifications.
 
     Rules:
-    1. Articles I-VI (1-6) are ABSOLUTELY immutable — toolkit core.
+    1. Articles I-VII (1-7) are ABSOLUTELY immutable — toolkit core.
     2. Articles defined by base configs are immutable — projects cannot modify.
     3. Projects can ADD new articles with article numbers not in base.
     """
@@ -177,8 +187,8 @@ def _merge_constitution(
         if article_num in IMMUTABLE_ARTICLES:
             raise ConfigMergeError(
                 f"Cannot modify Constitution Article {article_num} — immutable.\n"
-                f"Articles I-VI are defined by ai-toolkit and cannot be overridden.\n"
-                f"You can ADD new articles (article 7+)."
+                f"Articles I-VII are defined by ai-toolkit and cannot be overridden.\n"
+                f"You can ADD new articles (article 8+)."
             )
         if article_num in base_amendments:
             raise ConfigMergeError(
@@ -224,6 +234,71 @@ def _merge_agents(
         "disabled": sorted(set(project.get("disabled", [])) - required_agents),
         "custom": base.get("custom", []) + project.get("custom", []),
     }
+
+
+def _merge_plugins(
+    base: dict[str, Any],
+    project: dict[str, Any],
+    full_base: dict[str, Any],
+) -> dict[str, list[str]]:
+    """Merge plugin intent while preserving inherited requirements."""
+    base_enabled = _plugin_names(base, "enabled", "base plugins")
+    base_disabled = _plugin_names(base, "disabled", "base plugins")
+    project_enabled = _plugin_names(project, "enabled", "project plugins")
+    project_disabled = _plugin_names(project, "disabled", "project plugins")
+    required = _plugin_names(
+        full_base.get("enforce", {}),
+        "requiredPlugins",
+        "base enforce",
+    )
+    for label, enabled, disabled in (
+        ("base", base_enabled, base_disabled),
+        ("project", project_enabled, project_disabled),
+    ):
+        overlap = enabled & disabled
+        if overlap:
+            raise ConfigMergeError(
+                f"{label.capitalize()} plugins cannot be both enabled and "
+                f"disabled: {', '.join(sorted(overlap))}."
+            )
+    blocked = required & project_disabled
+    if blocked:
+        plugin = sorted(blocked)[0]
+        raise ConfigMergeError(
+            f"Cannot disable plugin '{plugin}' — required by base config "
+            f"'{full_base.get('name', 'unknown')}'."
+        )
+
+    enabled = set(base_enabled)
+    enabled.update(project_enabled)
+    enabled.difference_update(project_disabled)
+    enabled.update(required)
+    disabled = (base_disabled | project_disabled) - enabled
+    return {
+        "enabled": sorted(enabled),
+        "disabled": sorted(disabled),
+    }
+
+
+def _plugin_names(
+    block: Any,
+    key: str,
+    label: str,
+) -> set[str]:
+    """Return validated plugin names for a merge boundary."""
+    if not isinstance(block, dict):
+        raise ConfigMergeError(f"{label} must be an object.")
+    value = block.get(key, [])
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip()
+        for item in value
+    ):
+        raise ConfigMergeError(
+            f"{label}.{key} must be an array of non-empty strings."
+        )
+    if len(value) != len(set(value)):
+        raise ConfigMergeError(f"{label}.{key} must not contain duplicates.")
+    return set(value)
 
 
 # ---------------------------------------------------------------------------
@@ -363,7 +438,15 @@ def _validate_enforce(
                 f"is below minimum '{min_profile}' required by base config."
             )
 
-    # requiredPlugins — deferred to v2 (plugins field not in v1)
+    required_plugins = set(enforce.get("requiredPlugins", []))
+    if required_plugins:
+        enabled_plugins = set(merged.get("plugins", {}).get("enabled", []))
+        missing_plugins = required_plugins - enabled_plugins
+        if missing_plugins:
+            errors.append(
+                "Required plugins missing from enabled intent: "
+                f"{', '.join(sorted(missing_plugins))}."
+            )
 
     # requiredAgents
     required_agents = set(enforce.get("requiredAgents", []))

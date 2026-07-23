@@ -97,10 +97,10 @@ def cmd_validate(args: list[str]) -> int:
             return 1
 
     # Summary — these passed because validation above would have returned 1
-    print(f"  ✓ schema valid")
-    print(f"  ✓ no forbidden overrides")
+    print("  ✓ schema valid")
+    print("  ✓ no forbidden overrides")
     if extends:
-        print(f"  ✓ extends resolved")
+        print("  ✓ extends resolved")
 
     print("\n  Config valid ✓")
     return 0
@@ -217,7 +217,7 @@ def _diff_constitution(base: dict, project: dict) -> None:
     if base_articles or proj_articles:
         print()
         print("  Constitution:")
-        print("    = Articles I-VI             (immutable)")
+        print("    = Articles I-VII            (immutable)")
         for num, art in sorted(base_articles.items()):
             print(f"    = Article {num}: {art['title']}  (inherited from base)")
         for num, art in sorted(proj_articles.items()):

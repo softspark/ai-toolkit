@@ -20,8 +20,11 @@ hook_prompt() {
 }
 
 hook_session_id() {
-    local sid
-    sid=$(hook_json '.session_id // empty')
+    local sid raw_sid digest
+    sid=$(hook_json '.session_id // .conversation_id // .conversationId // empty')
+    if [ -z "$sid" ] || [ "$sid" = "null" ]; then
+        sid="${CLAUDE_SESSION_ID:-}"
+    fi
     if [ -z "$sid" ] || [ "$sid" = "null" ]; then
         local tp
         tp=$(hook_json '.transcript_path // empty')
@@ -30,7 +33,19 @@ hook_session_id() {
         fi
     fi
     [ -z "$sid" ] && sid="default"
-    printf '%s' "$sid" | LC_ALL=C tr -c 'a-zA-Z0-9_-' '_'
+    raw_sid="$sid"
+    sid=$(printf '%s' "$sid" | LC_ALL=C tr -c 'a-zA-Z0-9_-' '_')
+    if [ "$sid" != "$raw_sid" ] || [ "${#sid}" -gt 160 ]; then
+        if command -v shasum >/dev/null 2>&1; then
+            digest=$(printf '%s' "$raw_sid" | shasum -a 256 | cut -d ' ' -f 1)
+        elif command -v sha256sum >/dev/null 2>&1; then
+            digest=$(printf '%s' "$raw_sid" | sha256sum | cut -d ' ' -f 1)
+        else
+            digest=$(printf '%s' "$raw_sid" | cksum | cut -d ' ' -f 1)
+        fi
+        sid="${sid:0:135}-${digest:0:24}"
+    fi
+    printf '%s' "$sid"
 }
 
 hook_command() {

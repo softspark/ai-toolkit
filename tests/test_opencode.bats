@@ -94,6 +94,10 @@ teardown_file() {
     [ -f "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js" ]
 }
 
+@test "opencode: plugin never exports the Claude-only output filter" {
+    ! grep -q "filter-tool-output" "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
+}
+
 @test "opencode: plugin uses NAMED export only (opencode requirement)" {
     f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
     grep -q '^export const ' "$f"
@@ -116,6 +120,116 @@ teardown_file() {
     f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
     grep -q 'proc.stdin.write' "$f"
     grep -q 'bash \${scriptPath}' "$f"
+}
+
+@test "opencode: guard exit 2 rejects tool execution" {
+    run node - "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js" <<'JS'
+const fs = require("fs");
+
+(async () => {
+  const source = fs.readFileSync(process.argv[2]);
+  const pluginUrl = `data:text/javascript;base64,${source.toString("base64")}`;
+  const { AiToolkitHooks } = await import(pluginUrl);
+  const shell = () => {
+    const proc = {
+      env() { return this; },
+      stdin: { write() {}, end() {} },
+      quiet() { return this; },
+      nothrow() {
+        return Promise.resolve({
+          exitCode: 2,
+          stderr: { toString: () => "blocked by guard" },
+        });
+      },
+    };
+    return proc;
+  };
+  const hooks = await AiToolkitHooks({
+    $: shell,
+    project: {},
+    directory: "/tmp",
+    worktree: "/tmp",
+  });
+
+  try {
+    await hooks["tool.execute.before"](
+      { tool: "bash" },
+      { args: { command: "rm -rf /tmp/example" } },
+    );
+  } catch (error) {
+    if (!String(error.message).includes("guard-destructive.sh")) {
+      throw error;
+    }
+    return;
+  }
+  throw new Error("guard exit 2 did not block tool execution");
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+JS
+    [ "$status" -eq 0 ]
+}
+
+@test "opencode: payloads preserve session IDs and native tool input" {
+    run node - "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js" <<'JS'
+const fs = require("fs");
+
+(async () => {
+  const source = fs.readFileSync(process.argv[2]);
+  const pluginUrl = `data:text/javascript;base64,${source.toString("base64")}`;
+  const { AiToolkitHooks } = await import(pluginUrl);
+  const payloads = [];
+  const shell = () => {
+    const proc = {
+      env() { return this; },
+      stdin: {
+        write(input) { payloads.push(JSON.parse(input)); },
+        end() {},
+      },
+      quiet() { return this; },
+      nothrow() {
+        return Promise.resolve({
+          exitCode: 0,
+          stderr: { toString: () => "" },
+        });
+      },
+    };
+    return proc;
+  };
+  const hooks = await AiToolkitHooks({
+    $: shell,
+    project: {},
+    directory: "/tmp",
+    worktree: "/tmp",
+  });
+
+  await hooks["tool.execute.before"](
+    { tool: "bash", sessionID: "tool-session" },
+    { args: { command: "git status" } },
+  );
+  await hooks.event({
+    event: {
+      type: "session.created",
+      properties: { sessionID: "event-session" },
+    },
+  });
+
+  if (payloads[0].session_id !== "tool-session") {
+    throw new Error(`missing tool session ID: ${JSON.stringify(payloads[0])}`);
+  }
+  if (payloads[0].tool_input?.command !== "git status") {
+    throw new Error(`missing native tool input: ${JSON.stringify(payloads[0])}`);
+  }
+  if (payloads[2].session_id !== "event-session") {
+    throw new Error(`missing event session ID: ${JSON.stringify(payloads[2])}`);
+  }
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+JS
+    [ "$status" -eq 0 ]
 }
 
 # ── opencode.json (generate_opencode_json.py) ───────────────────────────────

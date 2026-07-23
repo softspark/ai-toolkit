@@ -29,6 +29,41 @@ run_hook_with_input() {
     run bash -c "echo '$input' | bash '$HOOKS_DIR/$hook'"
 }
 
+@test "hook-io: resolves Augment conversation IDs before transcript fallback" {
+    run bash -c \
+        "source '$HOOKS_DIR/_hook-io.sh'; INPUT='{\"conversation_id\":\"augment-snake\"}'; hook_session_id"
+    [ "$status" -eq 0 ]
+    [ "$output" = "augment-snake" ]
+
+    run bash -c \
+        "source '$HOOKS_DIR/_hook-io.sh'; INPUT='{\"conversationId\":\"augment-camel\"}'; hook_session_id"
+    [ "$status" -eq 0 ]
+    [ "$output" = "augment-camel" ]
+
+    run bash -c \
+        "source '$HOOKS_DIR/_hook-io.sh'; INPUT='{\"transcript_path\":\"/tmp/transcript-session.jsonl\"}'; hook_session_id"
+    [ "$status" -eq 0 ]
+    [ "$output" = "transcript-session" ]
+}
+
+@test "hook-io: bounds long unsafe session IDs without collapsing prefixes" {
+    first="$(printf 'a%.0s' {1..220})/one"
+    second="$(printf 'a%.0s' {1..220})/two"
+
+    run bash -c \
+        "source '$HOOKS_DIR/_hook-io.sh'; INPUT=\"{\\\"session_id\\\":\\\"$first\\\"}\"; hook_session_id"
+    [ "$status" -eq 0 ]
+    first_key="$output"
+    [ "${#first_key}" -le 160 ]
+    [[ "$first_key" != *"/"* ]]
+
+    run bash -c \
+        "source '$HOOKS_DIR/_hook-io.sh'; INPUT=\"{\\\"session_id\\\":\\\"$second\\\"}\"; hook_session_id"
+    [ "$status" -eq 0 ]
+    [ "${#output}" -le 160 ]
+    [ "$output" != "$first_key" ]
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # guard-destructive.sh
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -279,6 +314,13 @@ run_hook_with_input() {
     [ "$status" -eq 0 ]
 }
 
+@test "guard-path: blocks when jq is unavailable" {
+    PATH="/bin" run /bin/bash -c \
+        "echo '{\"tool_input\":{\"file_path\":\"/Users/wronguser/file.txt\"}}' | /bin/bash '$HOOKS_DIR/guard-path.sh'"
+    [ "$status" -eq 2 ]
+    echo "$output" | grep -q "requires jq"
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # quality-gate.sh
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -317,6 +359,26 @@ EOF
     PATH="$TEST_TMP/bin:$PATH" run_hook "quality-gate.sh"
     [ "$status" -eq 2 ]
     echo "$output" | grep -q "QUALITY GATE FAILED: ruff found errors"
+}
+
+@test "quality-gate: lists edits for payload conversation" {
+    local fake_toolkit="$TEST_TMP/fake-toolkit"
+    local session_log="$TEST_TMP/session-state-args"
+    mkdir -p "$fake_toolkit/scripts" "$TEST_TMP/project/.claude"
+    touch "$TEST_TMP/project/.claude/test-cohesion-map.json"
+    cat > "$fake_toolkit/scripts/session_state.py" <<'PY'
+import os
+import sys
+
+with open(os.environ["SESSION_LOG"], "w", encoding="utf-8") as log:
+    log.write(" ".join(sys.argv[1:]))
+PY
+    cd "$TEST_TMP/project"
+
+    run bash -c \
+        "echo '{\"conversation_id\":\"quality-conversation\"}' | AI_TOOLKIT_DIR='$fake_toolkit' SESSION_LOG='$session_log' bash '$HOOKS_DIR/quality-gate.sh'"
+    [ "$status" -eq 0 ]
+    [ "$(cat "$session_log")" = "list --session-id quality-conversation" ]
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -371,6 +433,47 @@ session_dir_for_cwd() {
     AI_TOOLKIT_HOOK_QUIET=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     [ -z "$output" ]
+}
+
+@test "session-start: resets state for payload session" {
+    export AI_TOOLKIT_DIR="$TOOLKIT_DIR"
+    run_hook_with_input "session-start.sh" '{"session_id":"start-session"}'
+    [ "$status" -eq 0 ]
+
+    run python3 "$TOOLKIT_DIR/scripts/session_state.py" session-id \
+        --session-id start-session
+    [ "$status" -eq 0 ]
+    [ "$output" = "start-session" ]
+}
+
+@test "session-start: resets state for alternate runtime conversation id" {
+    export AI_TOOLKIT_DIR="$TOOLKIT_DIR"
+    run_hook_with_input "session-start.sh" \
+        '{"conversationId":"augment-start-session"}'
+    [ "$status" -eq 0 ]
+
+    run python3 "$TOOLKIT_DIR/scripts/session_state.py" session-id \
+        --session-id "augment-start-session"
+    [ "$status" -eq 0 ]
+    [ "$output" = "augment-start-session" ]
+}
+
+@test "session-start: compaction preserves edits from the same session" {
+    export AI_TOOLKIT_DIR="$TOOLKIT_DIR"
+    python3 "$TOOLKIT_DIR/scripts/session_state.py" reset \
+        --session-id compact-session
+    python3 "$TOOLKIT_DIR/scripts/session_state.py" append \
+        --tool Edit --path /before-compact.py \
+        --session-id compact-session
+
+    run_hook_with_input "session-start.sh" \
+        '{"session_id":"compact-session","source":"compact"}'
+    [ "$status" -eq 0 ]
+
+    run python3 "$TOOLKIT_DIR/scripts/session_state.py" list \
+        --session-id compact-session
+    [ "$status" -eq 0 ]
+    [ "$output" = "/before-compact.py" ]
 }
 
 @test "session-start: includes session context from per-repo store" {
@@ -431,6 +534,85 @@ session_dir_for_cwd() {
     export TOOLKIT_HOOK_PROFILE="minimal"
     run_hook "session-end.sh"
     [ "$status" -eq 0 ]
+}
+
+@test "session-end: cleans output recovery before minimal-profile handoff skip" {
+    cd "$TEST_TMP/project" 2>/dev/null || {
+        mkdir -p "$TEST_TMP/project"
+        cd "$TEST_TMP/project"
+    }
+    recovery_root="$(session_dir_for_cwd)"
+    mkdir -p "$recovery_root/output-filter"
+    capture="$TEST_TMP/session-end-cleanup-args.json"
+    runtime="$TEST_TMP/fake-output-filter-cli.py"
+    cat > "$runtime" <<'PY'
+import json
+import os
+import sys
+
+with open(os.environ["CAPTURE_ARGS"], "w", encoding="utf-8") as handle:
+    json.dump(sys.argv[1:], handle)
+PY
+
+    export CAPTURE_ARGS="$capture"
+    export AI_TOOLKIT_OUTPUT_FILTER_CLI="$runtime"
+    export TOOLKIT_HOOK_PROFILE="minimal"
+    run_hook_with_input "session-end.sh" \
+        '{"session_id":"native-session-42"}'
+
+    [ "$status" -eq 0 ]
+    [ ! -f "$recovery_root/session-end.md" ]
+    python3 - "$capture" "$recovery_root" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    arguments = json.load(handle)
+assert arguments == [
+    "clean",
+    "--base-directory",
+    sys.argv[2],
+    "--session-id",
+    "native-session-42",
+], arguments
+PY
+}
+
+@test "session-end: cleans only the normalized edit state for the ending session" {
+    cd "$TEST_TMP/project" 2>/dev/null || {
+        mkdir -p "$TEST_TMP/project"
+        cd "$TEST_TMP/project"
+    }
+    capture="$TEST_TMP/session-state-cleanup-args.json"
+    runtime="$TEST_TMP/fake-session-state.py"
+    cat > "$runtime" <<'PY'
+import json
+import os
+import sys
+
+with open(os.environ["STATE_CAPTURE_ARGS"], "w", encoding="utf-8") as handle:
+    json.dump(sys.argv[1:], handle)
+PY
+
+    export STATE_CAPTURE_ARGS="$capture"
+    export AI_TOOLKIT_SESSION_STATE_CLI="$runtime"
+    export TOOLKIT_HOOK_PROFILE="minimal"
+    run_hook_with_input "session-end.sh" \
+        '{"conversationId":"augment-session-9"}'
+
+    [ "$status" -eq 0 ]
+    python3 - "$capture" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    arguments = json.load(handle)
+assert arguments == [
+    "clean",
+    "--session-id",
+    "augment-session-9",
+], arguments
+PY
 }
 
 @test "session-end: writes handoff file to per-repo store, not repo" {
@@ -607,6 +789,18 @@ session_dir_for_cwd() {
     echo "$output" | grep -q "PostToolUse"
 }
 
+@test "post-tool-use: records edit under payload conversation" {
+    export AI_TOOLKIT_DIR="$TOOLKIT_DIR"
+    run_hook_with_input "post-tool-use.sh" \
+        '{"conversation_id":"post-conversation","tool_name":"Edit","tool_input":{"file_path":"src/session.py"}}'
+    [ "$status" -eq 0 ]
+
+    run python3 "$TOOLKIT_DIR/scripts/session_state.py" list \
+        --session-id post-conversation
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"/src/session.py"* ]]
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # pre-compact.sh
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -689,6 +883,15 @@ session_dir_for_cwd() {
     grep -q "test-session-123" "$(session_dir_for_cwd)/session-context.md"
 }
 
+@test "save-session: accepts alternate runtime conversation id" {
+    cd "$TEST_TMP/project" 2>/dev/null || { mkdir -p "$TEST_TMP/project"; cd "$TEST_TMP/project"; }
+    run_hook_with_input "save-session.sh" \
+        '{"conversation_id":"augment-save-session","last_assistant_message":"saved"}'
+    [ "$status" -eq 0 ]
+    grep -q "Session: augment-save-session" \
+        "$(session_dir_for_cwd)/session-context.md"
+}
+
 @test "save-session: skips writing when no session ID" {
     cd "$TEST_TMP/project" 2>/dev/null || { mkdir -p "$TEST_TMP/project"; cd "$TEST_TMP/project"; }
     unset CLAUDE_SESSION_ID
@@ -713,6 +916,12 @@ session_dir_for_cwd() {
 
 @test "guard-config: blocks edit to tsconfig.json" {
     run_hook_with_input "guard-config.sh" '{"tool_input":{"file_path":"tsconfig.json"}}'
+    [ "$status" -eq 2 ]
+}
+
+@test "guard-config: prompt text cannot bypass protected config block" {
+    run_hook_with_input "guard-config.sh" \
+        '{"prompt":"intentionally editing config","tool_input":{"file_path":"tsconfig.json"}}'
     [ "$status" -eq 2 ]
 }
 
@@ -780,15 +989,42 @@ session_dir_for_cwd() {
     [ "$found" -ge 1 ]
 }
 
-@test "pre-compact-save: file contains session ID" {
-    export CLAUDE_SESSION_ID="test-session-abc"
-    run_hook_with_input "pre-compact-save.sh" '{"session_id":"test-abc"}'
+@test "pre-compact-save: payload session ID is not overwritten by environment" {
+    export CLAUDE_SESSION_ID="environment-session"
+    run_hook_with_input "pre-compact-save.sh" '{"session_id":"payload-session"}'
     [ "$status" -eq 0 ]
     local file
-    file=$(ls "$TEST_TMP/.softspark/ai-toolkit/compactions/"*test-abc*.txt 2>/dev/null | head -1)
+    file=$(ls "$TEST_TMP/.softspark/ai-toolkit/compactions/"*payload-session*.txt 2>/dev/null | head -1)
     [ -n "$file" ]
-    grep -q "test-session-abc" "$file"
+    grep -q "Session: payload-session" "$file"
+    ! grep -q "environment-session" "$file"
     unset CLAUDE_SESSION_ID
+}
+
+@test "pre-compact-save: unsafe long session ID stays inside compactions" {
+    long_id="$(printf 'x%.0s' {1..220})/../../outside"
+    run_hook_with_input "pre-compact-save.sh" \
+        "{\"session_id\":\"$long_id\"}"
+    [ "$status" -eq 0 ]
+
+    saved="$(find "$HOME/.softspark/ai-toolkit/compactions" -type f | head -1)"
+    [ -n "$saved" ]
+    [[ "$saved" == "$HOME/.softspark/ai-toolkit/compactions/"* ]]
+    [ "${#saved}" -lt 300 ]
+    [ ! -e "$HOME/.softspark/ai-toolkit/outside" ]
+}
+
+@test "hook session IDs with different unsafe bytes remain isolated" {
+    first=$(INPUT='{"session_id":"conversation/a"}' bash -c \
+        "source '$TOOLKIT_DIR/app/hooks/_hook-io.sh'; hook_session_id")
+    second=$(INPUT='{"session_id":"conversation?a"}' bash -c \
+        "source '$TOOLKIT_DIR/app/hooks/_hook-io.sh'; hook_session_id")
+
+    [ "$first" != "$second" ]
+    [[ "$first" != */* ]]
+    [[ "$second" != *\?* ]]
+    [ "${#first}" -le 160 ]
+    [ "${#second}" -le 160 ]
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

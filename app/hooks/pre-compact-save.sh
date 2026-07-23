@@ -7,19 +7,20 @@
 
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
 
 SAVE_DIR="$HOME/.softspark/ai-toolkit/compactions"
 mkdir -p "$SAVE_DIR"
 
 # Read from stdin (Claude Code passes JSON with .session_id)
+# shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 TIMESTAMP=$(date -u +"%Y-%m-%d_%H-%M-%S")
-SESSION=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
-[ -z "$SESSION" ] && SESSION="$$"
+SESSION=$(hook_session_id)
 SAVE_FILE="$SAVE_DIR/${TIMESTAMP}_${SESSION}.txt"
 
 # Gather context
-SESSION="${CLAUDE_SESSION_ID:-unknown}"
 WORKDIR="$(pwd)"
 BRANCH=""
 if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then

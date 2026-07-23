@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Safely remove ai-toolkit-managed runtime customizations.
+"""Safely remove ai-toolkit-managed runtime data and customizations.
 
 The default scope is the current user's global install. ``--local`` targets a
 project, while an explicit legacy positional target scans both project and
 home-style locations for backward compatibility. Only files, symlinks, JSON
 handlers, and marker blocks with verifiable ai-toolkit ownership are removed.
+Global scope also removes validated output-filter recovery files while keeping
+foreign content in the same session trees.
 
 Usage:
     python3 scripts/uninstall.py [--yes] [--local|--global] [--target DIR]
@@ -31,6 +33,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import app_dir, toolkit_dir
 from injection import strip_all_sections, strip_section, trim_trailing_blanks
+from tool_output_filter.recovery import clean_owned_recovery_tree
+from tool_output_filter.recovery import count_owned_recovery_artifacts
 
 
 CODEX_AGENT_MARKER = "# ai-toolkit-managed: codex-agent"
@@ -555,6 +559,45 @@ def _discover_claude_hooks(claude_dir: Path) -> list[tuple[str, str]]:
     return []
 
 
+_OUTPUT_FILTER_POLICY_NAME = "ai-toolkit-output-filter.json"
+_OUTPUT_FILTER_OWNER_NAME = ".ai-toolkit-output-filter.owner"
+_OUTPUT_FILTER_OWNER_MARKER = b"ai-toolkit-output-filter-policy-v1\n"
+
+
+def _managed_output_filter_policy(claude_dir: Path) -> list[Path]:
+    """Return the managed per-project policy pair, or [] when unmanaged."""
+    policy = claude_dir / _OUTPUT_FILTER_POLICY_NAME
+    owner = claude_dir / _OUTPUT_FILTER_OWNER_NAME
+    if owner.is_symlink() or not owner.is_file():
+        return []
+    try:
+        if owner.read_bytes() != _OUTPUT_FILTER_OWNER_MARKER:
+            return []
+    except OSError:
+        return []
+    managed = [owner]
+    if not policy.is_symlink() and policy.is_file():
+        managed.insert(0, policy)
+    return managed
+
+
+def _discover_output_filter_policy(claude_dir: Path) -> list[tuple[str, str]]:
+    if not _managed_output_filter_policy(claude_dir):
+        return []
+    return [(
+        f"Managed: {_OUTPUT_FILTER_POLICY_NAME} (project output-filter policy)",
+        "output-filter-policy",
+    )]
+
+
+def _remove_output_filter_policy(claude_dir: Path, trusted_root: Path) -> None:
+    managed = _managed_output_filter_policy(claude_dir)
+    for path in managed:
+        _safe_unlink(path, trusted_root)
+    if managed:
+        print(f"  Removed: .claude/{_OUTPUT_FILTER_POLICY_NAME} (managed)")
+
+
 def _discover_claude_markers(claude_dir: Path) -> list[tuple[str, str]]:
     found: list[tuple[str, str]] = []
     for item in ("constitution.md", "ARCHITECTURE.md"):
@@ -579,6 +622,7 @@ def discover_components(claude_dir: Path) -> list[tuple[str, str]]:
         found.append((f"Symlinks: skills/ ({len(skill_links)} toolkit directories)", "skill-link"))
     found.extend(_discover_claude_hooks(claude_dir))
     found.extend(_discover_claude_markers(claude_dir))
+    found.extend(_discover_output_filter_policy(claude_dir))
     return found
 
 
@@ -663,6 +707,7 @@ def remove_components(claude_dir: Path, trusted_root: Path) -> None:
     )
     _remove_claude_hooks(claude_dir, trusted_root)
     _remove_claude_markers(claude_dir, trusted_root)
+    _remove_output_filter_policy(claude_dir, trusted_root)
 
 
 # ---------------------------------------------------------------------------
@@ -1087,6 +1132,36 @@ def _remove_copilot(surface: CopilotSurface) -> None:
 # Scope resolution, safety preflight, CLI
 # ---------------------------------------------------------------------------
 
+def _discover_recovery(sessions_root: Path) -> list[tuple[str, str]]:
+    try:
+        os.lstat(sessions_root)
+    except FileNotFoundError:
+        return []
+    artifact_count = count_owned_recovery_artifacts(sessions_root)
+    if artifact_count == 0:
+        return []
+    noun = "artifact" if artifact_count == 1 else "artifacts"
+    return [
+        (
+            "Recovery: sessions/*/output-filter "
+            f"({artifact_count} owned {noun}) under {sessions_root}",
+            "output-filter-recovery",
+        )
+    ]
+
+
+def _remove_recovery(sessions_root: Path) -> None:
+    """Remove owned recovery last so its failure rolls back other surfaces."""
+    try:
+        removed = clean_owned_recovery_tree(sessions_root)
+    except OSError as error:
+        raise RuntimeError(
+            "output-filter recovery cleanup failed; an I/O fault after "
+            "preflight may have left recovery cleanup partial"
+        ) from error
+    print(f"  Removed: {removed} output-filter recovery file(s)")
+
+
 def _configured_home(env_name: str, fallback: Path, *, strict_absolute: bool) -> Path:
     value = os.environ.get(env_name)
     if not value:
@@ -1203,6 +1278,8 @@ def _transaction_specs(
         (claude / "hooks.json", False),
         (claude / "constitution.md", False),
         (claude / "ARCHITECTURE.md", False),
+        (claude / _OUTPUT_FILTER_POLICY_NAME, False),
+        (claude / _OUTPUT_FILTER_OWNER_NAME, False),
     ):
         add(path, recursive, claude_boundary)
     for surface in codex:
@@ -1240,8 +1317,8 @@ def _transaction_specs(
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Remove only ai-toolkit-managed Claude, Codex, and Copilot "
-            "customizations while preserving user-owned content."
+            "Remove only ai-toolkit-managed Claude, Codex, Copilot, and "
+            "output-filter recovery data while preserving user-owned content."
         ),
         epilog=(
             "Global Codex and Copilot locations honor CODEX_HOME and "
@@ -1290,6 +1367,17 @@ def main(argv: list[str] | None = None) -> None:
             components.extend(_discover_codex(surface))
         for surface in copilot:
             components.extend(_discover_copilot(surface))
+        recovery_root = (
+            target / ".softspark" / "ai-toolkit" / "sessions"
+            if scope in {"global", "both"}
+            else None
+        )
+        recovery_components = (
+            _discover_recovery(recovery_root)
+            if recovery_root is not None
+            else []
+        )
+        components.extend(recovery_components)
     except (OSError, RuntimeError, UnicodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         raise SystemExit(1) from error
@@ -1338,6 +1426,11 @@ def main(argv: list[str] | None = None) -> None:
         for surface in copilot:
             _preflight(target, claude, [], [surface])
             _remove_copilot(surface)
+        if recovery_root is not None and recovery_components:
+            # The recovery API preflights its complete tree before the first
+            # unlink. A later I/O fault can still leave recovery partially
+            # cleaned; the transaction restores every other runtime surface.
+            _remove_recovery(recovery_root)
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         rollback_error: RuntimeError | None = None
         if transaction is not None:

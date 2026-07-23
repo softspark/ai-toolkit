@@ -112,6 +112,33 @@ PY
     [ ! -f "$TEST_PROJECT/.github/hooks/ai-toolkit/copilot_hook.py" ]
 }
 
+@test "uninstall --local removes the managed project output-filter policy only" {
+    mkdir -p "$TEST_PROJECT/.claude"
+    printf '{"mode":"safe"}\n' \
+        > "$TEST_PROJECT/.claude/ai-toolkit-output-filter.json"
+    printf 'ai-toolkit-output-filter-policy-v1\n' \
+        > "$TEST_PROJECT/.claude/.ai-toolkit-output-filter.owner"
+
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$TEST_PROJECT"
+    [ "$status" -eq 0 ]
+    [ ! -f "$TEST_PROJECT/.claude/ai-toolkit-output-filter.json" ]
+    [ ! -f "$TEST_PROJECT/.claude/.ai-toolkit-output-filter.owner" ]
+
+    # A user-owned policy (foreign marker) must survive.
+    mkdir -p "$TEST_PROJECT/.claude"
+    printf '{"mode":"safe"}\n' \
+        > "$TEST_PROJECT/.claude/ai-toolkit-output-filter.json"
+    printf 'user-owned-marker\n' \
+        > "$TEST_PROJECT/.claude/.ai-toolkit-output-filter.owner"
+
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$TEST_PROJECT"
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_PROJECT/.claude/ai-toolkit-output-filter.json" ]
+    [ -f "$TEST_PROJECT/.claude/.ai-toolkit-output-filter.owner" ]
+}
+
 @test "uninstall --global honors CODEX_HOME and COPILOT_HOME" {
     local codex_home="$TEST_ROOT/custom-codex"
     local copilot_home="$TEST_ROOT/custom-copilot"
@@ -172,6 +199,38 @@ EOF
     [ ! -e "$copilot_home/skills/ai-toolkit-demo" ]
     [ ! -f "$copilot_home/hooks/ai-toolkit.json" ]
     [ ! -f "$copilot_home/hooks/ai-toolkit/copilot_hook.py" ]
+}
+
+@test "unsafe recovery symlink is rejected before editor mutations" {
+    local managed_agent="$TEST_HOME/.codex/agents/ai-toolkit-managed.toml"
+    local linked_copy="$TEST_HOME/managed-agent-hardlink"
+    local output_root="$TEST_HOME/.softspark/ai-toolkit/sessions/repo/output-filter"
+    local session_root="$output_root/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    local owned_name="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.json"
+    local external="$TEST_ROOT/external-recovery.json"
+
+    mkdir -p "$TEST_HOME/.codex/agents" "$session_root"
+    chmod 700 "$output_root" "$session_root"
+    printf '%s\n' '# ai-toolkit-managed: codex-agent' > "$managed_agent"
+    ln "$managed_agent" "$linked_copy"
+    printf '%s\n' 'external user data' > "$external"
+    ln -s "$external" "$session_root/$owned_name"
+
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --global --yes
+    [ "$status" -ne 0 ]
+
+    [ -f "$managed_agent" ]
+    [ -L "$session_root/$owned_name" ]
+    python3 - "$managed_agent" "$linked_copy" <<'PY'
+import os
+import sys
+
+assert os.path.samefile(sys.argv[1], sys.argv[2]), (
+    "unsafe recovery was detected only after editor mutations"
+)
+PY
+    grep -q '^external user data$' "$external"
 }
 
 @test "uninstall refuses symlinked editor roots before modifying sibling surfaces" {

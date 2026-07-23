@@ -8,15 +8,17 @@
 source "$(dirname "$0")/_profile-check.sh"
 # shellcheck source=_session-paths.sh
 source "$(dirname "$0")/_session-paths.sh"
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
 
 # Read from stdin (Claude Code passes JSON with .session_id, .last_assistant_message)
 INPUT=$(cat)
-SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
+SESSION_ID=$(hook_session_id)
 LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // "No summary available"' 2>/dev/null | head -5)
 
 SESSION_FILE="$SESSION_CONTEXT_FILE"
 
-if [ -n "$SESSION_ID" ]; then
+if [ "$SESSION_ID" != "default" ]; then
     mkdir -p "$SESSION_DIR"
 
     # Gather git state for richer context

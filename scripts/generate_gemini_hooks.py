@@ -26,7 +26,9 @@ Writes `<target-dir>/.gemini/settings.json` (merge-safe, idempotent).
 from __future__ import annotations
 
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_FORMAT=json "$HOME/.softspark/ai-toolkit/hooks/'
@@ -121,28 +123,49 @@ def merge_hooks(existing_hooks: dict, toolkit_hooks: dict) -> dict:
     return merged
 
 
+def _write_settings_atomic(settings_path: Path, settings: dict) -> None:
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            dir=settings_path.parent,
+            prefix=f".{settings_path.name}.",
+            encoding="utf-8",
+            delete=False,
+        ) as temp_file:
+            json.dump(settings, temp_file, indent=4, ensure_ascii=False, sort_keys=True)
+            temp_file.write("\n")
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+            temp_path = Path(temp_file.name)
+        os.replace(temp_path, settings_path)
+        temp_path = None
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+
+
 def generate(target_dir: Path) -> Path:
     """Write `<target_dir>/.gemini/settings.json` and return its path."""
     gemini_dir = target_dir / ".gemini"
+    if gemini_dir.is_symlink():
+        raise RuntimeError(f"Refusing symlinked Gemini directory: {gemini_dir}")
     gemini_dir.mkdir(parents=True, exist_ok=True)
     settings_path = gemini_dir / "settings.json"
+    if settings_path.is_symlink():
+        raise RuntimeError(f"Refusing symlinked Gemini settings: {settings_path}")
 
     settings: dict = {}
     if settings_path.is_file():
-        try:
-            with open(settings_path, encoding="utf-8") as f:
-                settings = json.load(f)
-            if not isinstance(settings, dict):
-                settings = {}
-        except (json.JSONDecodeError, OSError):
-            settings = {}
+        with open(settings_path, encoding="utf-8") as f:
+            settings = json.load(f)
+        if not isinstance(settings, dict):
+            raise ValueError(f"{settings_path} must contain a JSON object")
 
     existing_hooks = settings.get("hooks") if isinstance(settings.get("hooks"), dict) else {}
     settings["hooks"] = merge_hooks(existing_hooks or {}, build_toolkit_hooks())
 
-    with open(settings_path, "w", encoding="utf-8") as f:
-        json.dump(settings, f, indent=4, ensure_ascii=False, sort_keys=True)
-        f.write("\n")
+    _write_settings_atomic(settings_path, settings)
     return settings_path
 
 

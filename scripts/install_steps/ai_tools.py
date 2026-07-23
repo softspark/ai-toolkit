@@ -1,6 +1,7 @@
 """Install global and project-local AI tool configs."""
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -14,11 +15,17 @@ from codex_skill_adapter import (
     unmanaged_codex_skill_names,
 )
 from mcp_editors import sync_project_mcp_to_editors
+from secure_fs import SecureDestination, run_secure_transaction
 from injection import (
     collapse_blank_runs as _collapse_blank_runs,
     strip_all_sections as _strip_all_sections,
     trim_trailing_blanks as _trim_trailing_blanks,
 )
+
+
+OUTPUT_FILTER_POLICY_NAME = "ai-toolkit-output-filter.json"
+OUTPUT_FILTER_OWNER_NAME = ".ai-toolkit-output-filter.owner"
+OUTPUT_FILTER_OWNER_MARKER = b"ai-toolkit-output-filter-policy-v1\n"
 
 
 def install_ai_tools(target_dir: Path, rules_dir: Path,
@@ -750,6 +757,10 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
             print(f"  Would inject language rules: {', '.join(language_modules)}")
         if merged_config:
             print("  Would apply merged config from extends")
+        if merged_config and merged_config.get("toolOutputFilter") is not None:
+            print("  Would write: .claude/ai-toolkit-output-filter.json")
+        else:
+            print("  Would remove: managed project output-filter policy (if present)")
         return
 
     (cwd / ".claude").mkdir(parents=True, exist_ok=True)
@@ -759,6 +770,12 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
 
     _create_local_claude_md(cwd, reset)
     _create_local_settings(cwd, reset)
+    configured_policy = (
+        merged_config.get("toolOutputFilter")
+        if merged_config is not None
+        else None
+    )
+    _sync_local_output_filter_policy(cwd, configured_policy)
 
     legacy_local_hooks = cwd / ".claude" / "hooks.json"
     if legacy_local_hooks.is_file():
@@ -832,8 +849,8 @@ def _apply_extends_config(cwd: Path, merged: dict) -> None:
 
     # Inject constitution amendments
     amendments = merged.get("constitution", {}).get("amendments", [])
-    # Filter to non-toolkit articles (6+)
-    custom_amendments = [a for a in amendments if a.get("article", 0) >= 6]
+    # Articles I-VII are toolkit-owned; inherited custom amendments start at VIII.
+    custom_amendments = [a for a in amendments if a.get("article", 0) >= 8]
     if custom_amendments:
         constitution_file = cwd / ".claude" / "constitution.md"
         if constitution_file.is_file():
@@ -874,6 +891,88 @@ def _apply_extends_config(cwd: Path, merged: dict) -> None:
         state_file = cwd / ".softspark-toolkit-extends.json"
         state_file.write_text(_json.dumps(meta, indent=2) + "\n", encoding="utf-8")
         print("  Saved: .softspark-toolkit-extends.json (resolution metadata)")
+
+
+def _sync_local_output_filter_policy(
+    cwd: Path,
+    configured: dict | None,
+) -> None:
+    """Atomically synchronize the toolkit-owned per-project output policy."""
+    policy_path = cwd / ".claude" / OUTPUT_FILTER_POLICY_NAME
+    owner_path = cwd / ".claude" / OUTPUT_FILTER_OWNER_NAME
+    policy_destination = SecureDestination(
+        policy_path, cwd, "project output-filter policy",
+    )
+    owner_destination = SecureDestination(
+        owner_path, cwd, "project output-filter owner marker",
+    )
+    destinations = [policy_destination, owner_destination]
+
+    try:
+        policy_content = (
+            _materialize_output_filter_policy(configured)
+            if configured is not None
+            else None
+        )
+    except (
+        AttributeError,
+        json.JSONDecodeError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ) as error:
+        print(f"  Warning: project output-filter policy not changed: {error}")
+        return
+
+    def mutate(transaction) -> None:
+        owner = transaction.initial_content(owner_destination)
+        existing_policy = transaction.initial_content(policy_destination)
+        if owner is None and existing_policy is not None:
+            print("  Kept: user-owned .claude/ai-toolkit-output-filter.json")
+            return
+        if owner not in (None, OUTPUT_FILTER_OWNER_MARKER):
+            print("  Kept: untrusted .claude output-filter ownership marker")
+            return
+
+        if policy_content is None:
+            if owner == OUTPUT_FILTER_OWNER_MARKER:
+                transaction.unlink(policy_destination)
+                transaction.unlink(owner_destination)
+                print("  Removed: managed project output-filter policy")
+            return
+
+        transaction.atomic_write(policy_destination, policy_content, 0o600)
+        if owner is None:
+            transaction.atomic_write(
+                owner_destination,
+                OUTPUT_FILTER_OWNER_MARKER,
+                0o600,
+            )
+        print("  Wrote: .claude/ai-toolkit-output-filter.json")
+
+    try:
+        run_secure_transaction(destinations, mutate)
+    except RuntimeError as error:
+        print(f"  Warning: project output-filter policy not changed: {error}")
+
+
+def _materialize_output_filter_policy(configured: dict) -> bytes:
+    """Merge a partial project policy over canonical safe defaults."""
+    default_path = app_dir / "output-filter-policy.json"
+    with open(default_path, encoding="utf-8") as handle:
+        defaults = json.load(handle)
+    policy = dict(defaults)
+    policy.update(configured)
+    recovery = dict(defaults.get("recovery", {}))
+    recovery.update(configured.get("recovery", {}))
+    policy["recovery"] = recovery
+
+    from config_validator import validate_project_config
+    errors = validate_project_config({"toolOutputFilter": policy})
+    if errors:
+        raise RuntimeError("invalid output-filter policy: " + "; ".join(errors))
+    return (json.dumps(policy, indent=2, sort_keys=True) + "\n").encode()
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:

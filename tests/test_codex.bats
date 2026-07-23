@@ -294,6 +294,10 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "codex: hooks.json never exports the Claude-only output filter" {
+    ! grep -q "filter-tool-output" "$CX_DIR/.codex/hooks.json"
+}
+
 @test "codex: hooks.json uses only upstream-supported event names (10 events)" {
     # Per codex-rs/config/src/hook_config.rs HookEventName the accepted keys
     # are the 10 below. Verify no unsupported event sneaks in.
@@ -329,6 +333,24 @@ print('ok')
 import json
 data = json.load(open('$CX_DIR/.codex/hooks.json'))
 assert 'PermissionRequest' in data['hooks'], 'PermissionRequest missing'
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
+@test "codex: Bash path guard runs before execution and permission approval" {
+    run python3 -c "
+import json
+data = json.load(open('$CX_DIR/.codex/hooks.json'))
+for event in ('PreToolUse', 'PermissionRequest'):
+    commands = [
+        hook.get('command', '')
+        for group in data['hooks'][event]
+        for hook in group.get('hooks', [])
+    ]
+    matches = [command for command in commands if command.endswith('/guard-path.sh\"')]
+    assert len(matches) == 1, (event, commands)
 print('ok')
 "
     [ "$status" -eq 0 ]

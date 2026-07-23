@@ -61,6 +61,13 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
     for runtime_file in sorted(hooks_src.glob("*.json")):
         shutil.copy2(runtime_file, hooks_scripts_dir / runtime_file.name)
         copied += 1
+    output_filter_policy = app_dir / "output-filter-policy.json"
+    policy_destination = hooks_scripts_dir / output_filter_policy.name
+    # The global policy is user configuration: seed it once, never overwrite,
+    # so `ai-toolkit update` cannot silently reset an enabled mode to off.
+    if output_filter_policy.is_file() and not policy_destination.exists():
+        shutil.copy2(output_filter_policy, policy_destination)
+        copied += 1
     print(f"  Copied: {copied} hook scripts to ~/.softspark/ai-toolkit/hooks/")
     legacy_hooks = claude_dir / "hooks"
     if legacy_hooks.is_symlink():
@@ -71,6 +78,8 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
 # Python helpers that hooks invoke at runtime. Kept narrow on purpose — only
 # scripts that a deployed hook actually executes belong here.
 HOOK_RUNTIME_SCRIPTS: tuple[str, ...] = (
+    "output_filter_cli.py",
+    "output_filter_hook.py",
     "session_state.py",
     "session_token_stats.py",
     "test_cohesion.py",
@@ -98,8 +107,23 @@ def _copy_hook_runtime_scripts(scripts_dst: Path) -> None:
         shutil.copy2(src, dst)
         dst.chmod(dst.stat().st_mode | 0o111)
         copied += 1
+    output_filter_src = scripts_src / "tool_output_filter"
+    if output_filter_src.is_dir():
+        output_filter_dst = scripts_dst / output_filter_src.name
+        # Prune first: dirs_exist_ok alone never removes modules deleted in a
+        # newer release, and a stale .py at sys.path[0] would shadow the
+        # shipped implementation under `python3 -S`.
+        if output_filter_dst.is_dir() and not output_filter_dst.is_symlink():
+            shutil.rmtree(output_filter_dst)
+        shutil.copytree(
+            output_filter_src,
+            output_filter_dst,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
+        copied += 1
     if copied:
-        print(f"  Copied: {copied} hook runtime scripts to ~/.softspark/ai-toolkit/scripts/")
+        print(f"  Copied: {copied} hook runtime assets to ~/.softspark/ai-toolkit/scripts/")
 
 
 def _run_merge_hooks(action: str, *args: str) -> None:
