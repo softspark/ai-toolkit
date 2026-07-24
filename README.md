@@ -8,13 +8,15 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1477%20passing-success)](tests/)
 
-## What's New in v4.15.1
+## What's New in v4.16.0
 
-v4.15.1 fixes Copilot project upgrades and profile downgrades that could leave obsolete toolkit instructions, prompts, and hooks active.
+v4.16.0 adds a dependency-free, opt-in native tool-output filter for Claude Code and hardens the enterprise configuration surface around it.
 
-- **Complete legacy cleanup**: byte-exact generated files from v3.0.0 through v4.14.1 are recognized and removed when switching a project to `minimal`.
-- **No user-file deletion**: unmarked prompts and instructions that do not match a historical toolkit artifact remain untouched.
-- **Race-safe removal**: managed cleanup uses pinned directory descriptors and transactional rollback instead of path-based deletion.
+- **Native tool-output filter**: opt-in `PostToolUse` filter with `off`, `observe`, and `safe` modes; ships disabled, handles only allowlisted successful Bash test/validation output.
+- **Exact ephemeral recovery**: every safe replacement keeps a private, bounded, session-scoped copy of the original response, recoverable via `ai-toolkit output-filter recover`.
+- **Output-filter CLI**: `ai-toolkit output-filter status|inspect|recover|clean` plus a deterministic benchmark for the built-in profiles.
+- **Stricter config validation**: unknown top-level config keys are rejected, plugin manifests must declare `requires`, and lock files go stale on toolkit version bumps.
+- **GitHub Copilot compatibility reference**: new `kb/reference/copilot-compatibility.md` documenting the Copilot integration surface.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

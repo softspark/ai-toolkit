@@ -7,7 +7,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v4.16.0 — Native tool-output filtering (2026-07-24)
 
 Minor release. Adds a dependency-free, opt-in native tool-output filter for Claude Code and hardens the enterprise configuration, session-isolation, and editor-adapter surfaces around it. The filter ships disabled; `observe` and `safe` are per-project opt-ins. No source catalog count change (44 agents, 108 skills).
 
@@ -24,6 +24,7 @@ Minor release. Adds a dependency-free, opt-in native tool-output filter for Clau
 - **Exact ephemeral recovery** — every safe replacement is preceded by a private, bounded, session-scoped copy of the exact native response object. Opaque handles support manual recovery and cleanup without storing commands, paths, session IDs, or raw output in telemetry.
 - **Output-filter operations** — added inspect, status, recover, and clean entry points under `ai-toolkit output-filter`, plus a deterministic benchmark script for the built-in profiles.
 - **Project policy inheritance** — `toolOutputFilter` participates in schema validation, inheritance, merge, lock, local install, and managed project-policy cleanup.
+- **GitHub Copilot compatibility reference** — added `kb/reference/copilot-compatibility.md` documenting the Copilot integration surface, with cross-links from the Codex CLI, opencode, and global-install references.
 
 ### Fixed
 
@@ -35,6 +36,7 @@ Minor release. Adds a dependency-free, opt-in native tool-output filter for Clau
 - **Brand-voice fact checks** — missing extracted facts now fail the quality gate, while inline-code extraction is restricted to identifier-shaped values to avoid false positives.
 - **Enterprise configuration** — config and lock readers reject non-object JSON and invalid UTF-8 without traceback, invalid output-filter updates preserve the last valid managed policy, and lock staleness checks cover lock format, toolkit version, source, resolved version, and content integrity. Constitution Articles I through VII remain reserved, `requiredPlugins` materializes enforceable enable intent, and plugin manifests validate non-empty dependency constraints.
 - **Recovery cleanup** — session end and global uninstall remove only validated ai-toolkit recovery artifacts, remain idempotent for foreign-only trees, and abort before other mutations when the recovery namespace is unsafe.
+- **Flaky pack-audit tests** — npm's update-notifier stderr no longer corrupts JSON parsing in the package-content tests (`npm_config_update_notifier=false` in the test environment).
 
 Hook entries: 28 → 29. Test count: 1377 → 1477.
 

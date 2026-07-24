@@ -140,6 +140,7 @@ PY
     printf 'runtime entry\n' > "$fixture/kb/runtime.log"
 
     run env npm_config_cache="$fixture/.npm-cache" \
+        npm_config_update_notifier=false \
         npm pack --dry-run --json --pack-destination "$fixture" "$fixture"
     pack_status="$status"
     printf '%s\n' "$output" > "$fixture/pack.json"
@@ -171,6 +172,7 @@ PY
     fixture="$(mktemp -d)"
 
     run env npm_config_cache="$fixture/.npm-cache" \
+        npm_config_update_notifier=false \
         npm pack --dry-run --json --pack-destination "$fixture" "$TOOLKIT_DIR"
     pack_status="$status"
     printf '%s\n' "$output" > "$fixture/pack.json"

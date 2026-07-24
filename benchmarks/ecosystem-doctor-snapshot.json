@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-07-15T05:28:09Z",
+  "last_run": "2026-07-24T03:52:58Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "480f89501d47f5ec",
+      "docs_hash": "388c0b5e25ab4906",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "01981c240e67db02",
+      "docs_hash": "3c7ff437aec0ab98",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -107,7 +107,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "517ae09f5f1feba9",
+      "docs_hash": "a6ae93657498688c",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -135,15 +135,15 @@
         "PermissionRequest": false,
         "PostCompact": false,
         "PostToolBatch": false,
-        "PostToolUse": true,
+        "PostToolUse": false,
         "PostToolUseFailure": false,
         "PreCompact": false,
-        "PreToolUse": true,
-        "SKILL.md": true,
+        "PreToolUse": false,
+        "SKILL.md": false,
         "SessionEnd": false,
         "SessionStart": false,
         "Setup": true,
-        "Stop": true,
+        "Stop": false,
         "StopFailure": false,
         "SubagentStart": false,
         "SubagentStop": false,
@@ -159,14 +159,14 @@
         "hook handler: http": false,
         "hook handler: mcp_tool": false,
         "hook handler: prompt": false,
-        "output style": true,
-        "slash command": true,
+        "output style": false,
+        "slash command": false,
         "sub-agent": true
       },
-      "version": "2.1.210 (Claude Code)"
+      "version": "2.1.218 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "9a024e9356105f48",
+      "docs_hash": "3eaa20e45d385a1f",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -213,7 +213,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "cc18a01c239497e8",
+      "docs_hash": "87a5a879a39dc62c",
       "headings": [
         "API",
         "API Reference",
@@ -291,7 +291,7 @@
         "Reference",
         "Releases",
         "Resources",
-        "Return to a saved session",
+        "Return to a saved chat",
         "Review changes before they ship",
         "Run Codex and sign in",
         "SDKs and CLI",
@@ -346,10 +346,10 @@
         "mcp_servers": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.144.4"
+      "version": "codex-cli 0.145.0"
     },
     "cursor": {
-      "docs_hash": "34efb96589c7f123",
+      "docs_hash": "5387d04443d26da1",
       "headings": [],
       "markers": {
         ".cursor/rules": false,
@@ -365,7 +365,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "c24d346e0c5a1bb9",
+      "docs_hash": "8db25b552ffbed80",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -408,7 +408,7 @@
       }
     },
     "github-copilot": {
-      "docs_hash": "58d9980c29b7edb8",
+      "docs_hash": "5d021df2f3b4d39b",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -445,7 +445,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "9c9b420a22b35ae6",
+      "docs_hash": "03145f425dd475d1",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -461,7 +461,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "505b9771a6c768e6",
+      "docs_hash": "f1dd69ffcfb280fa",
       "headings": [
         "Add features",
         "Ask questions",
@@ -521,7 +521,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "2d4eb599c906bf2c",
+      "docs_hash": "bee6ba0ee1a517dd",
       "headings": [
         "Accounts",
         "Advanced",
@@ -558,7 +558,7 @@
         "AGENTS.md": true,
         "Cascade": true,
         "MCP": true,
-        "SKILL.md": true,
+        "SKILL.md": false,
         "always_on": false,
         "glob": true,
         "hooks": true,
