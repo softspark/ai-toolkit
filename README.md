@@ -6,17 +6,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1477%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1479%20passing-success)](tests/)
 
-## What's New in v4.16.0
+## What's New in v4.16.1
 
-v4.16.0 adds a dependency-free, opt-in native tool-output filter for Claude Code and hardens the enterprise configuration surface around it.
+v4.16.1 ships the native tool-output filter introduced in v4.16.0 and fixes local updates crashing on legacy Copilot skill remnants.
 
 - **Native tool-output filter**: opt-in `PostToolUse` filter with `off`, `observe`, and `safe` modes; ships disabled, handles only allowlisted successful Bash test/validation output.
 - **Exact ephemeral recovery**: every safe replacement keeps a private, bounded, session-scoped copy of the original response, recoverable via `ai-toolkit output-filter recover`.
 - **Output-filter CLI**: `ai-toolkit output-filter status|inspect|recover|clean` plus a deterministic benchmark for the built-in profiles.
 - **Stricter config validation**: unknown top-level config keys are rejected, plugin manifests must declare `requires`, and lock files go stale on toolkit version bumps.
 - **GitHub Copilot compatibility reference**: new `kb/reference/copilot-compatibility.md` documenting the Copilot integration surface.
+- **Copilot remnant recovery**: asset-only `.github/skills/ai-toolkit-*` leftovers from older cleanups are rebuilt in place instead of aborting `install --local` / `update`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -169,7 +170,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1477 tests)
+├── tests/               # Bats and Python test suite (1479 tests)
 └── CHANGELOG.md
 ```
 

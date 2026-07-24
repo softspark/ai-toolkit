@@ -974,6 +974,23 @@ def _is_managed_skill_dir(path: Path) -> bool:
     return path.is_dir() and not path.is_symlink() and _is_managed(skill_file)
 
 
+def _is_skill_remnant(path: Path) -> bool:
+    """Asset-only leftover of a legacy managed skill.
+
+    Pre-manifest toolkit versions tracked only SKILL.md as managed, so their
+    cleanup removed SKILL.md and left reference/ and scripts/ assets behind.
+    Without SKILL.md the directory is not a functional Copilot skill, so it is
+    safe to rebuild in place; a directory that still has any SKILL.md (managed
+    or not) is never classified as a remnant.
+    """
+    return (
+        path.is_dir()
+        and not path.is_symlink()
+        and not (path / "SKILL.md").exists()
+        and not (path / "SKILL.md").is_symlink()
+    )
+
+
 def _managed_skill_paths(path: Path) -> set[Path]:
     manifest = path / SKILL_MANIFEST
     if not manifest.is_file() or manifest.is_symlink():
@@ -999,7 +1016,8 @@ def _has_user_skill_extras(path: Path) -> bool:
 
 
 def _copy_user_skill_extras(existing: Path, staging: Path,
-                            generated_paths: set[Path]) -> None:
+                            generated_paths: set[Path],
+                            *, skip_stale_assets: bool = False) -> None:
     """Preserve files a user added inside a previously managed skill."""
     old_managed = _managed_skill_paths(existing)
     for source in sorted(existing.rglob("*")):
@@ -1011,6 +1029,8 @@ def _copy_user_skill_extras(existing: Path, staging: Path,
         if not source.is_file():
             continue
         if relative in generated_paths:
+            if skip_stale_assets:
+                continue
             raise RuntimeError(
                 f"Copilot skill update would overwrite a user asset: {source}"
             )
@@ -1046,7 +1066,10 @@ def _stage_skill(skills_root: Path, source_dir: Path,
             encoding="utf-8",
         )
         if existing is not None:
-            _copy_user_skill_extras(existing, staging, generated_paths)
+            _copy_user_skill_extras(
+                existing, staging, generated_paths,
+                skip_stale_assets=_is_skill_remnant(existing),
+            )
         return staging, name
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
@@ -1058,7 +1081,10 @@ def _replace_skill_dir(staging: Path, destination: Path) -> None:
     backup: Path | None = None
     try:
         if destination.exists():
-            if destination.is_symlink() or not _is_managed_skill_dir(destination):
+            if destination.is_symlink() or not (
+                _is_managed_skill_dir(destination)
+                or _is_skill_remnant(destination)
+            ):
                 raise RuntimeError(
                     f"Refusing user-owned Copilot skill collision: {destination}"
                 )
@@ -1125,7 +1151,12 @@ def _sync_copilot_skills(customization_root: Path, *, label: str) -> None:
         expected_dirs.add(destination_name)
         existing = destination if destination.exists() else None
         if existing is not None and not _is_managed_skill_dir(existing):
-            raise RuntimeError(f"Refusing user-owned Copilot skill collision: {destination}")
+            if not _is_skill_remnant(existing):
+                raise RuntimeError(f"Refusing user-owned Copilot skill collision: {destination}")
+            print(
+                f"Note: rebuilding asset-only Copilot skill remnant '{destination}'",
+                file=sys.stderr,
+            )
         staging, rendered_name = _stage_skill(skill_root, source_dir, existing)
         if rendered_name != logical_name:
             shutil.rmtree(staging, ignore_errors=True)

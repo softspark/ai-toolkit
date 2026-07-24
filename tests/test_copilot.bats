@@ -291,6 +291,41 @@ MD
     rm -rf "$tmp"
 }
 
+@test "generate_copilot.py rebuilds asset-only legacy skill remnants" {
+    # Legacy cleanup removed the managed SKILL.md (the only tracked path
+    # pre-manifest) and left reference/ and scripts/ assets behind. The sync
+    # must rebuild such remnants instead of failing the whole install.
+    local tmp; tmp="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_copilot.py" "$tmp" >/dev/null 2>&1
+    rm "$tmp/.github/skills/ai-toolkit-build/SKILL.md" \
+       "$tmp/.github/skills/ai-toolkit-build/.ai-toolkit-managed-files"
+    printf '%s\n' 'keep me' > "$tmp/.github/skills/ai-toolkit-build/user-note.txt"
+    run python3 "$TOOLKIT_DIR/scripts/generate_copilot.py" "$tmp"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "rebuilding asset-only Copilot skill remnant"
+    [ -f "$tmp/.github/skills/ai-toolkit-build/SKILL.md" ]
+    [ -f "$tmp/.github/skills/ai-toolkit-build/.ai-toolkit-managed-files" ]
+    grep -q '^keep me$' "$tmp/.github/skills/ai-toolkit-build/user-note.txt"
+    rm -rf "$tmp"
+}
+
+@test "generate_copilot.py still refuses prefixed skill dirs owned by the user" {
+    local tmp; tmp="$(mktemp -d)"
+    mkdir -p "$tmp/.github/skills/ai-toolkit-build"
+    cat > "$tmp/.github/skills/ai-toolkit-build/SKILL.md" <<'MD'
+---
+name: my-own-thing
+description: User-owned skill squatting a toolkit destination.
+---
+Mine.
+MD
+    run python3 "$TOOLKIT_DIR/scripts/generate_copilot.py" "$tmp"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "Refusing user-owned Copilot skill collision"
+    grep -q '^Mine\.$' "$tmp/.github/skills/ai-toolkit-build/SKILL.md"
+    rm -rf "$tmp"
+}
+
 @test "generate_copilot.py dynamic context conversion preserves normal bang code spans" {
     run python3 - "$TOOLKIT_DIR" <<'PY'
 import sys

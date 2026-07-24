@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.16.1 — Copilot skill remnant recovery (2026-07-24)
+
+### Fixed
+
+- **Legacy Copilot skill remnants no longer abort local updates** — `.github/skills/ai-toolkit-*` directories left behind by pre-manifest cleanups (assets without `SKILL.md`) are rebuilt in place instead of raising `Refusing user-owned Copilot skill collision`, which aborted the entire `install --local` / `update` run on affected projects. User files inside a remnant that do not collide with generated output are preserved; any directory that still contains a `SKILL.md` stays protected and is never reclaimed.
+- **Readable installer errors** — `scripts/install.py` reports fail-closed `RuntimeError` conditions as a single `ERROR:` line instead of a raw traceback.
+
+Test count: 1477 → 1479.
+
 ## v4.16.0 — Native tool-output filtering (2026-07-24)
 
 Minor release. Adds a dependency-free, opt-in native tool-output filter for Claude Code and hardens the enterprise configuration, session-isolation, and editor-adapter surfaces around it. The filter ships disabled; `observe` and `safe` are per-project opt-ins. No source catalog count change (44 agents, 108 skills).

@@ -841,4 +841,8 @@ def _infer_modules_from_legacy(profile: str, only: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except RuntimeError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        sys.exit(1)

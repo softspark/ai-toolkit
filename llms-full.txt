@@ -5524,9 +5524,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.11.0"
+version: "1.11.1"
 created: "2026-04-10"
-last_updated: "2026-06-02"
+last_updated: "2026-07-24"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, and the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5)."
 ---
 
@@ -5856,9 +5856,10 @@ grep -E '\-\-provenance|id-token: write' .github/workflows/publish.yml
 **2. URL-sourced rules and hooks are checksum-pinned:**
 
 ```bash
-# On a machine that has consumed URL rules/hooks at least once:
-jq 'to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/rules/sources.json
-jq 'to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/hooks/external/sources.json
+# On a machine that has consumed URL rules/hooks at least once
+# (schema_version 1: entries live under the .rules / .hooks key):
+jq '.rules | to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/rules/sources.json
+jq '.hooks | to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/hooks/external/sources.json
 ```
 
 - [ ] Both queries return empty arrays (every URL entry has a `sha256`)
