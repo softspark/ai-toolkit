@@ -442,25 +442,9 @@ def check_generated_artifacts(dr: DiagResult, fix_mode: bool) -> None:
             else:
                 dr.warn(f"{artifact} missing (run: ai-toolkit generate-all)")
 
-    # Check if AGENTS.md is stale (agents added/removed since generation)
-    agents_md = toolkit_dir / "AGENTS.md"
-    if agents_md.is_file():
-        agents_dir = toolkit_dir / "app" / "agents"
-        actual_agents = sum(1 for f in agents_dir.glob("*.md") if f.is_file()) if agents_dir.is_dir() else 0
-        content = agents_md.read_text(encoding="utf-8")
-        mentioned_agents = len(re.findall(r"^### `", content, re.MULTILINE))
-        if actual_agents != mentioned_agents:
-            if fix_mode:
-                result = subprocess.run(
-                    ["python3", str(toolkit_dir / "scripts" / "generate_agents_md.py")],
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode == 0:
-                    agents_md.write_text(result.stdout, encoding="utf-8")
-                    dr.fixed(f"regenerated stale AGENTS.md ({mentioned_agents} -> {actual_agents} entries)")
-            else:
-                dr.warn(f"AGENTS.md may be stale: {mentioned_agents} entries vs {actual_agents} agent files")
+    # AGENTS.md no longer embeds the agent catalog (agents are discovered from
+    # their native directories), so there is no per-entry staleness to check —
+    # presence is covered by the generated-artifacts loop above.
 
     print()
 

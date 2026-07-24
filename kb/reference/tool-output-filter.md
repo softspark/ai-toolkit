@@ -3,9 +3,9 @@ title: "Native Tool Output Filter"
 category: reference
 service: ai-toolkit
 tags: [output-filter, hooks, recovery, telemetry, claude-code]
-version: "1.0.0"
+version: "1.0.1"
 created: "2026-07-23"
-last_updated: "2026-07-23"
+last_updated: "2026-07-24"
 description: "Contract, configuration, safety boundaries, recovery, CLI, and runtime support for the native ai-toolkit output filter."
 ---
 
@@ -97,7 +97,11 @@ hook reads. [PATH: app/hooks/filter-tool-output.sh]
 
 Set `AI_TOOLKIT_OUTPUT_FILTER_DISABLE=1` for an immediate bypass without
 reinstalling. `AI_TOOLKIT_OUTPUT_FILTER_POLICY` may point the hook to an
-explicit regular policy file for controlled operational testing. The hook is
+explicit regular policy file for controlled operational testing. When
+exercising the hook manually this way, pre-create the per-repository session
+base `~/.softspark/ai-toolkit/sessions/<repo-key>/` (mode `0700`) first: the
+engine never creates that base itself (in live sessions the lifecycle hooks
+do), and without it `safe` mode silently returns the original response. The hook is
 also skipped by the `minimal` hook profile and may be listed in
 `AI_TOOLKIT_DISABLED_HOOKS`. `AI_TOOLKIT_OUTPUT_FILTER_HOOK_RUNTIME` is reserved
 for controlled runtime testing; the manual and cleanup CLI remains
