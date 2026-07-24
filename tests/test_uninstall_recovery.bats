@@ -98,13 +98,13 @@ PY
     HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
         --global --yes
     [ "$status" -eq 0 ]
-    [[ "$output" == *"No ai-toolkit-managed components found."* ]]
+    [[ "$output" == *"No toolkit components found. Nothing to remove."* ]]
     [ "$(cat "$session_directory/keep.txt")" = "keep user data" ]
 
     HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
         --global --yes
     [ "$status" -eq 0 ]
-    [[ "$output" == *"No ai-toolkit-managed components found."* ]]
+    [[ "$output" == *"No toolkit components found. Nothing to remove."* ]]
     [ "$(cat "$session_directory/keep.txt")" = "keep user data" ]
 }
 

@@ -37,6 +37,7 @@ Minor release. Adds a dependency-free, opt-in native tool-output filter for Clau
 - **Enterprise configuration** — config and lock readers reject non-object JSON and invalid UTF-8 without traceback, invalid output-filter updates preserve the last valid managed policy, and lock staleness checks cover lock format, toolkit version, source, resolved version, and content integrity. Constitution Articles I through VII remain reserved, `requiredPlugins` materializes enforceable enable intent, and plugin manifests validate non-empty dependency constraints.
 - **Recovery cleanup** — session end and global uninstall remove only validated ai-toolkit recovery artifacts, remain idempotent for foreign-only trees, and abort before other mutations when the recovery namespace is unsafe.
 - **Flaky pack-audit tests** — npm's update-notifier stderr no longer corrupts JSON parsing in the package-content tests (`npm_config_update_notifier=false` in the test environment).
+- **Linux-only test failures** — the jq-unavailable guard test hides `jq` via a stub `PATH` (plain `PATH=/bin` keeps `jq` visible on usrmerge systems where `/bin` is `/usr/bin`), and the foreign-recovery uninstall test now asserts the message `uninstall.py` actually prints. Both passed on macOS only because bash 3.2 does not enforce bare `[[ ]]` bats assertions.
 
 Hook entries: 28 → 29. Test count: 1377 → 1477.
 

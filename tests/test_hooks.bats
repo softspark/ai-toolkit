@@ -315,7 +315,12 @@ run_hook_with_input() {
 }
 
 @test "guard-path: blocks when jq is unavailable" {
-    PATH="/bin" run /bin/bash -c \
+    # PATH="/bin" is not enough: on usrmerge Linux /bin is /usr/bin, so jq
+    # stays visible. Build a stub PATH with only the binaries the hook needs.
+    local stub="$BATS_TEST_TMPDIR/no-jq-bin"
+    mkdir -p "$stub"
+    ln -s "$(command -v cat)" "$stub/cat"
+    PATH="$stub" run /bin/bash -c \
         "echo '{\"tool_input\":{\"file_path\":\"/Users/wronguser/file.txt\"}}' | /bin/bash '$HOOKS_DIR/guard-path.sh'"
     [ "$status" -eq 2 ]
     echo "$output" | grep -q "requires jq"
