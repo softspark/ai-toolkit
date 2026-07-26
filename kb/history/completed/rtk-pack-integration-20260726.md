@@ -9,16 +9,28 @@ tags:
   - vendored-binaries
   - cross-build
   - upstream-sync
-doc_type: plan
-status: proposed
+doc_type: postmortem
+status: completed
 created: "2026-07-26"
 last_updated: "2026-07-26"
-completion: "Phases 0, 1, 2, 4, 5 done; phase 3 cut"
+completion: "100% — phases 0, 1, 2, 4, 5 delivered; phase 3 cut on the measurement"
+shipped_in: "v4.18.0"
 pinned_upstream: "v0.44.0"
 description: "Integrate rtk as an opt-in ai-toolkit plugin pack: binaries cross-built from source in our CI with telemetry disabled, hosted on our own GitHub Release, fetched and checksum-verified at pack install, auto-update on ai-toolkit update, and an SOP for tracking upstream releases. Custom filter presets were cut on the measurement (0.008% of input tokens). Phase 0 validated the premise against v0.44.0 on the full transcript corpus before any build work."
 ---
 
 # rtk Pack Integration
+
+**Completed 2026-07-26, shipped in v4.18.0.** Kept whole rather than summarised,
+because the value here is the measurements and the things that turned out to be
+false, not the plan structure. Live procedure:
+`kb/procedures/rtk-upstream-sync-sop.md`.
+
+Headline: rtk-pack ships opt-in, built from source with telemetry compiled out,
+and saves a **measured 0.0615% of input tokens** against a kill number of 0.05%
+published before the measurement. Phase 3 (our own filter presets) was cut at
+0.008%. The projection this plan published for itself was about twice too
+optimistic, and section 10.1 says why.
 
 ## 1. Decision
 
@@ -341,16 +353,20 @@ identical inputs, `aarch64-apple-darwin`, `x86_64-apple-darwin`,
 byte-identical binaries. The concern about unset `trim-paths` embedding registry
 paths does not materialise on these runners.
 
-`x86_64-pc-windows-msvc` does not, and the cause is bounded: **24 bytes out of
-8,018,432 differ**, in five regions. Four are the same two-byte value at
+`x86_64-pc-windows-msvc` did not, and the cause was bounded: **24 bytes out of
+8,018,432 differed**, in five regions. Four were the same two-byte value at
 `0x100` and in the debug directory, which is the MSVC link timestamp; the fifth
-is a 16-byte CodeView GUID. The code is identical; only the link stamp varies.
-Adding `-C link-arg=/Brepro` would make it deterministic too, at the cost of
-rebuilding and republishing.
+was a 16-byte CodeView GUID. The code was identical; only the link stamp varied.
 
-This matters for the sync SOP: on four targets a changed digest means changed
-input rather than build noise, and on Windows that inference does not hold until
-`/Brepro` is adopted.
+`-C link-arg=/Brepro` is now set for the Windows target, which makes the linker
+derive that timestamp from content rather than the clock. **The shipped
+`softspark-rtk-v0.44.0-1` artifacts predate that change**, so the Windows digest
+in `plugin.json` is from a non-deterministic link; the flag takes effect on the
+next rebuild, which will produce a different Windows digest for the same source.
+
+This matters for the sync SOP: a changed digest means changed input rather than
+build noise. That inference holds on four targets today and on all five from the
+next rebuild onward.
 
 Note that the **archives** are not reproducible even where the binaries are,
 because gzip records a timestamp. Compare extracted binaries, never the
@@ -559,9 +575,24 @@ mechanism is unchanged. A before-and-after comparison cannot detect an effect of
   method that produced the honest 0% which retired the in-house filter, and it
   removes the confound of what work the user happened to do that week.
 
-`scripts/measure.py` reports session input tokens from the session JSONL
-[PATH: scripts/session_token_stats.py], summing all four usage fields, since in
-a cached session most context tokens land in the cache fields rather than
+The harness is `replay_rtk.py` in the measurement archive, not a script inside
+the pack. It pairs each successful Bash result with the command that produced
+it, keeps the ones the validated port says rtk would rewrite, and pipes the
+captured bytes through the shipped binary via `rtk pipe -f <filter>`.
+
+Two limits, stated because the number is meaningless without them:
+
+- `rtk pipe` runs the same filter code as the command path but knows less than
+  it does: no result caps, no exit code, no file set. For search families the
+  replay figure is a **lower bound** on what the command path would save.
+- Families with no pipe filter (`rtk read`, `rtk ls`, `rtk wc`) cannot be
+  measured this way at all. They are reported as **unmeasurable**, never folded
+  in as zero, because a zero that is really an absence is how the previous
+  effort talked itself into shipping.
+
+Session-level token accounting, when it is wanted, comes from the session JSONL
+[PATH: scripts/session_token_stats.py], summing all four usage fields: in a
+cached session most context tokens land in the cache fields rather than
 `input_tokens`.
 
 **Kill number, published before the measurement rather than argued after it:**
@@ -569,10 +600,58 @@ if replay on the full corpus shows the shipped binary saving less than 0.05% of
 input tokens, the pack is not worth its maintenance and supply-chain surface,
 and it is retired the way the output filter was.
 
-The projection to beat: **0.117% to 0.164%**, or 0.239% to 0.359% if rtk's own
-60-90% claim holds on this traffic, against an arithmetic ceiling of 4.54% for
-any tool-output mechanism. If the live number lands near the vendor claim, the
-projection was wrong about this workload and that belongs in the KB.
+### 10.1 Result: measured 0.0615%, kill number survived by 23%
+
+Full pool, 28.56 MB of successful Bash output, replayed through the published
+`softspark-rtk-v0.44.0-1` binary:
+
+| | |
+|---|---:|
+| Addressed by rtk | 9.99 MB, **35.00%** of Bash bytes |
+| Measurable through `rtk pipe` | 5.66 MB |
+| After filtering | 4.22 MB |
+| **Measured saving** | **1.44 MB = 360,529 tokens** |
+| As a share of tool-result bytes | 1.35% |
+| **As a share of input tokens** | **0.0615%** |
+
+Against a kill number of 0.05%, the pack survives by a factor of 1.23. That is a
+pass, not a vindication.
+
+**The projection published in section 2.5 was roughly twice too optimistic.**
+It said 0.117% to 0.164%; the measurement says 0.0615%. The error has a single
+identifiable cause: the model credited families it could not simulate with
+rtk's own claimed 60-90%. Replayed, the families that can be measured deliver
+**25.5%** in aggregate.
+
+Per family, measured against modelled and against upstream's claim:
+
+| Family | Measured | Modelled | Claimed |
+|---|---:|---:|---:|
+| `rtk grep` | **22.3%** | 9.0% | 75% |
+| `rtk git` | **33.1%** | — | 70% |
+| `rtk find` | **35.6%** | — | 70% |
+| `rtk rg` | **7.0%** | 30% | 75% |
+| `rtk ruff` | **0.0%** | — | — |
+
+The model **understated** grep by 2.5x and the total still came out high, so the
+two errors are unrelated: coverage modelling was sound, per-family effectiveness
+was guesswork wherever the source was not read closely.
+
+**What the replay does not settle.** 43.3% of addressed bytes (4.33 MB) have no
+`rtk pipe` filter and are unmeasurable, the largest being `rtk read` at 1.55 MB.
+That family is known from source to return files verbatim at the default
+`--level none`, so the headroom is smaller than 43.3% suggests. No extrapolation
+is applied: a zero that is really an absence of measurement is how the previous
+effort talked itself into shipping. For search families the pipe path also lacks
+the command path's result caps, making these figures a lower bound.
+
+**One independent confirmation.** The replay measured coverage at 35.00% of Bash
+bytes; the gated port measured 35.17% on the same pool by a different method.
+The port is right about *which* commands rtk touches even where it was wrong
+about how much each saves.
+
+Reproduce with `replay_rtk.py --pool 1300 --rtk <binary>` in the measurement
+archive.
 
 ## 11. Licence and security obligations
 

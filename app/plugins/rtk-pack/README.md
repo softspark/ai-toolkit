@@ -47,7 +47,7 @@ work is dominated by `cargo test`, `mvn` or `jest` output rather than file
 reading, rtk is calibrated for you and will do better. Measure before believing
 either number.
 
-Full method and caveats: `kb/planning/rtk-pack-integration-plan.md`.
+Full method and caveats: `kb/history/completed/rtk-pack-integration-20260726.md`.
 
 ## The binary
 

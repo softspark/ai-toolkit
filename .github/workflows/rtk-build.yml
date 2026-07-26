@@ -1,7 +1,7 @@
 name: rtk cross-build
 
 # Manual only. This never runs on push, and it never publishes unless the
-# `publish` input is set explicitly. See kb/planning/rtk-pack-integration-plan.md
+# `publish` input is set explicitly. See kb/history/completed/rtk-pack-integration-20260726.md
 # section 5.
 on:
   workflow_dispatch:
@@ -229,6 +229,18 @@ jobs:
       # A clean target directory per build, because build.rs emits no
       # cargo:rerun-if-env-changed for the telemetry vars and relies on cargo's
       # automatic option_env! tracking.
+      # /Brepro makes the MSVC linker derive its timestamp from the content
+      # instead of the clock. Without it the Windows artifact differs by 24
+      # bytes per link (the timestamp, repeated in the debug directory, plus a
+      # CodeView GUID) while the other four targets are byte-identical across
+      # runs. With it, "a changed digest means changed input" holds on all five,
+      # which is what the sync SOP relies on.
+      - name: Enable deterministic linking (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          "RUSTFLAGS=-C link-arg=/Brepro" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: pwsh
+
       - name: Build
         working-directory: rtk-src
         run: cargo build --release --locked --target ${{ matrix.target }}

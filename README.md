@@ -8,15 +8,15 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1484%20passing-success)](tests/)
 
-## What's New in v4.17.0
+## What's New in v4.18.0
 
-v4.17.0 removes the native tool-output filter shipped in v4.16.0.
+v4.18.0 adds `rtk-pack`, an opt-in command rewriter, and makes `ai-toolkit update` maintain installed packs.
 
-- **Native tool-output filter removed**: measured whole-session token saving was 0.0000% on real traffic, because agent-issued commands are overwhelmingly compound and the filter only accepted simple registered shapes. The `PostToolUse` hook, the CLI, and the `toolOutputFilter` config key are gone.
-- **Automatic cleanup on update**: `ai-toolkit update` removes the orphaned hook script, the global and project policy files, and any stored recovery artifacts left by v4.16.x. Foreign files in those directories are preserved.
-- **Stricter config validation**: unknown top-level config keys are rejected, plugin manifests must declare `requires`, and lock files go stale on toolkit version bumps.
-- **GitHub Copilot compatibility reference**: new `kb/reference/copilot-compatibility.md` documenting the Copilot integration surface.
-- **Copilot remnant recovery**: asset-only `.github/skills/ai-toolkit-*` leftovers from older cleanups are rebuilt in place instead of aborting `install --local` / `update`.
+- **`rtk-pack`, opt-in only**: rewrites Bash commands at `PreToolUse` via [rtk](https://github.com/rtk-ai/rtk) (Apache-2.0). Nothing installs it for you. `plugin install` fetches a platform binary from an ai-toolkit Release and verifies its SHA-256 before installing anything. Measured saving on the reference workload is 0.0615% of input tokens; the pack README states the trust boundary and the numbers up front.
+- **Binaries built from source, telemetry compiled out**: a manual-dispatch workflow cross-builds five targets with the compile-time telemetry endpoint undefined, proves each artifact starts, writes no telemetry state, and on Linux behaves identically with no network route.
+- **`ai-toolkit update` maintains installed packs**: it now runs the equivalent of `plugin update --all`. Updates are version-aware, so a pack whose manifest has not moved is a silent no-op instead of a remove-and-reinstall.
+- **Packs can report their own health**: `plugin status` picks up a pack's `scripts/status.py`, replacing a hardcoded per-pack branch.
+- **Security gates cover packs**: `audit_skills.py --ci` and the ShellCheck gate now scan `app/plugins/`, which they previously skipped.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -143,7 +143,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
-| `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
+| `plugins/` | 12 packs | Opt-in domain bundles (security, research, frontend, enterprise, memory, rtk, 6 language packs) |
 | `constitution.md` | 7 articles | Machine-enforced safety rules |
 | `rules/` | auto-synced | Global/project rule files for Claude and other editors |
 | `kb/` | reference docs | Architecture, procedures, and best practices |

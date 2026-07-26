@@ -7,6 +7,58 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.18.0 — rtk-pack, an opt-in command rewriter (2026-07-26)
+
+### Added
+
+- **`rtk-pack`**, an opt-in plugin pack that rewrites Bash commands at
+  `PreToolUse` via [rtk](https://github.com/rtk-ai/rtk) (Apache-2.0). Nothing
+  installs it for you. `ai-toolkit plugin install rtk-pack` fetches a
+  platform-specific binary from an ai-toolkit GitHub Release and verifies its
+  SHA-256 before installing anything; a mismatch aborts and leaves nothing
+  behind. Read `app/plugins/rtk-pack/README.md` before enabling it: the rewrite
+  means what runs is not literally what the model asked for, and rtk applies
+  your permission verdict for the original command to the rewritten one.
+- **`.github/workflows/rtk-build.yml`**, a manual-dispatch pipeline that
+  cross-builds rtk from upstream source for five targets with the compile-time
+  telemetry endpoint left undefined, proves each artifact starts, writes no
+  telemetry state and (on Linux) behaves identically with no network route,
+  then publishes checksummed artifacts with LICENSE and NOTICE.
+- **`scripts/verify_rtk_binary.py`**, the silence verifier that pipeline uses.
+  A target it cannot start reports `inconclusive`, never `pass`.
+- **`kb/procedures/rtk-upstream-sync-sop.md`**, the procedure for moving to a
+  newer upstream tag, including a re-measure gate and a published kill number.
+- Plugin packs can now ship `scripts/status.py` and have `plugin status` pick it
+  up. This replaces a hardcoded `if name == "memory-pack"` branch, so any pack
+  can report its own health.
+
+### Changed
+
+- **`ai-toolkit update` now updates installed plugin packs.** It reads
+  `plugins.json` and runs the equivalent of `plugin update --all` for every
+  installed pack. `--local` leaves packs alone, since they are global.
+- **`plugin update` is version-aware.** `plugins.json` records the pack version
+  installed per editor, and an update whose manifest version matches is a silent
+  no-op. Previously every update removed and reinstalled unconditionally, which
+  for a pack that downloads a binary meant refetching it every time. `--force`
+  overrides; `--dry-run` reports without acting. State written before versions
+  were tracked updates each pack exactly once.
+- Plugin packs are now covered by `audit_skills.py --ci` and by the ShellCheck
+  gate in CI. Both previously scanned only `app/skills`, `app/agents` and
+  `app/hooks`, exempting the highest-risk code in the repo.
+- A pack's install-time script may be named `init.py`; `init_db.py` still works.
+  Previously only the latter ran, so a pack using any other name installed
+  successfully while doing nothing.
+
+### Fixed
+
+- `plugin install` no longer aborts with `IsADirectoryError` when a pack ships a
+  subdirectory under `scripts/`.
+- A failing pack init script now always reports, instead of printing nothing
+  when it exited non-zero with empty stderr.
+
+---
+
 ## v4.17.0 — Native tool-output filter removed (2026-07-26)
 
 ### Removed

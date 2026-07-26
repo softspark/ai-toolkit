@@ -250,11 +250,16 @@ Add entry at the top of `CHANGELOG.md` (after the header, before previous releas
 
 ## Phase 4: Regenerate Artifacts
 
+Use the npm scripts, not the generators directly:
+
 ```bash
-python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_llms_txt.py > llms.txt
-python3 scripts/generate_llms_txt.py --full > llms-full.txt
+npm run generate:agents   # AI_TOOLKIT_NO_CUSTOM_RULES=1 python3 scripts/generate_agents_md.py > AGENTS.md
+npm run generate:llms     # llms.txt + llms-full.txt
 ```
+
+`generate:agents` sets `AI_TOOLKIT_NO_CUSTOM_RULES=1`. Running
+`generate_agents_md.py` bare picks up whatever is registered in the maintainer's
+own `~/.softspark/ai-toolkit/rules/`, which then ships inside `AGENTS.md`.
 
 Check if anything actually changed:
 

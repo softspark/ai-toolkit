@@ -72,10 +72,10 @@ Required keys:
 ## CLI Management
 
 ```bash
-ai-toolkit plugin list               # show all 11 packs with install status
+ai-toolkit plugin list               # show all 12 packs with install status
 ai-toolkit plugin install --editor claude <name>   # Claude Code global target
 ai-toolkit plugin install --editor codex <name>    # Codex global target
-ai-toolkit plugin install --editor all --all       # install all 11 packs for both runtimes
+ai-toolkit plugin install --editor all --all       # install all 12 packs for both runtimes
 ai-toolkit plugin update --editor all --all        # update all installed packs
 ai-toolkit plugin clean <name>       # prune data older than 90 days (default)
 ai-toolkit plugin clean <name> --days 30  # prune data older than 30 days
@@ -138,6 +138,21 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 | `kotlin-pack` | kotlin | 0 | 1 | 0 | Kotlin patterns |
 | `swift-pack` | swift | 0 | 1 | 0 | Swift patterns |
 | `ruby-pack` | ruby | 0 | 1 | 0 | Ruby patterns |
+| `rtk-pack` | token-reduction | 0 | 0 | 1 | Command rewriting via a checksum-pinned rtk binary fetched at install |
+
+`rtk-pack` is the first pack to break three assumptions the others share, so it
+is the one to read when extending the contract:
+
+- **It fetches from the network at install time.** `scripts/init.py` downloads a
+  platform-specific artifact and verifies its SHA-256 against `plugin.json`
+  before installing anything. A mismatch aborts and leaves nothing behind.
+- **It declares platform assets and digests in `plugin.json`.** The manifest
+  schema tolerates extra keys, so `upstream` and `binary` are additive; nothing
+  validates them, which means a malformed block fails at install rather than in
+  `validate.py --strict`.
+- **It reports its own health.** `scripts/status.py` is picked up generically by
+  `plugin status`, replacing what used to be a hardcoded `if name == "memory-pack"`
+  branch. Any pack can now ship one.
 
 ## Optional Hook Modules
 

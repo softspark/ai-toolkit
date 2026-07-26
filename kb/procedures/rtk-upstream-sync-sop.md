@@ -20,7 +20,7 @@ Currently pinned: **v0.44.0**, shipped as
 Upstream ships stable tags roughly every two to four weeks behind a long
 release-candidate train (300+ RCs preceded v0.44.0). Do not track RCs.
 
-Background and the measured numbers: `kb/planning/rtk-pack-integration-plan.md`.
+Background and the measured numbers: `kb/history/completed/rtk-pack-integration-20260726.md`.
 
 ## Why this SOP is not "just rebuild"
 
@@ -104,6 +104,37 @@ python3 measure_gated.py gated 0:1224
 
 Measure over the whole transcript pool, never the default 134-file window: at
 that size the projection swings 8.8x on an unchanged mechanism.
+
+### 3.1 Re-measure, do not just re-validate
+
+Port agreement proves rtk still rewrites the same commands. It says nothing
+about how much each rewrite saves, and that is where the value actually sits.
+
+**`rtk grep` carries 4.04 MB of the 5.66 MB measurable saving: 71% of the total
+rests on one family.** If upstream changes that one filter, the headline number
+moves even with the port at full agreement. Measured effectiveness has already
+diverged from expectation in both directions once: `rtk grep` measured 22.3%
+against 9.0% modelled, `rtk rg` 7.0% against 30% modelled.
+
+So on every bump, after the port passes, replay against the newly built binary:
+
+```bash
+python3 replay_rtk.py --pool 1300 --rtk <path-to-the-new-binary>
+```
+
+Compare per family against the recorded baseline:
+
+| Family | Measured at v0.44.0 | Share of total saving |
+|---|---:|---:|
+| `rtk grep` | 22.3% | 71% |
+| `rtk git` | 33.1% | 21% |
+| `rtk find` | 35.6% | 8% |
+
+**Act on the result, do not just record it.** If the total lands below the
+published kill number of **0.05% of input tokens**, the pack has stopped earning
+its supply-chain surface and retiring it is the correct outcome, exactly as the
+in-house filter was retired. The margin at v0.44.0 is 0.0615%, which is 1.23x
+the kill number, so a single-family regression is enough to cross it.
 
 ## Phase 4: Rebuild
 
@@ -243,6 +274,6 @@ the reason before changing the decision.
 
 ## Related
 
-- `kb/planning/rtk-pack-integration-plan.md` — decisions, measurements, pre-mortem
+- `kb/history/completed/rtk-pack-integration-20260726.md` — decisions, measurements, pre-mortem
 - `kb/history/completed/output-filter-retirement-20260726.md` — why premise validation comes first
 - `app/plugins/rtk-pack/README.md` — the user-facing trust boundary

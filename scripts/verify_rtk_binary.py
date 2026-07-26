@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify a cross-built rtk binary is silent, and fingerprint it for drift.
 
-Phase 1 of kb/planning/rtk-pack-integration-plan.md. "No telemetry symbols in
+Phase 1 of kb/history/completed/rtk-pack-integration-20260726.md. "No telemetry symbols in
 the binary" is NOT a usable acceptance test: the guard is a runtime branch on a
 const (`telemetry.rs:23-26`), not a `#[cfg]`, and `Cargo.toml:51` sets
 `strip = true`, so a symbol check passes for the wrong reason. This script

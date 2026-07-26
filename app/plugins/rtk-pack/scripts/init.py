@@ -5,7 +5,7 @@ Run by `ai-toolkit plugin install rtk-pack` (scripts/plugin.py invokes
 `init.py` if present). This is the only point at which the pack touches the
 network; nothing is fetched at runtime.
 
-Design constraints from kb/planning/rtk-pack-integration-plan.md section 6:
+Design constraints from kb/history/completed/rtk-pack-integration-20260726.md section 6:
 
 - Verify before install. A digest mismatch aborts and removes the partial
   download; a half-installed binary is worse than none.

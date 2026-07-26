@@ -58,7 +58,7 @@ Usage: ai-toolkit <command> [options]
 |---------|-------------|
 | `plugin list` | Show available plugin packs with install status |
 | `plugin install <name> [--editor claude\|codex\|all]` | Install a plugin pack for Claude Code and/or Codex (`claude` means Claude Code, not the Claude app) |
-| `plugin install --all [--editor claude\|codex\|all]` | Install all 11 plugin packs |
+| `plugin install --all [--editor claude\|codex\|all]` | Install all 12 plugin packs |
 | `plugin update <name> [--editor claude\|codex\|all]` | Update a plugin pack (remove + reinstall, preserves data) |
 | `plugin update --all [--editor claude\|codex\|all]` | Update all installed plugin packs |
 | `plugin clean <name> [--days N]` | Prune old plugin data (default: 90 days) |
