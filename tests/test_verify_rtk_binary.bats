@@ -51,7 +51,9 @@ print(json.load(open('$1'))['verdict'])
     bin="$(fake_rtk 'rtk 0.44.0')"
     run python3 "$VERIFY" --binary "$bin" --target "$NATIVE_TARGET" \
         --upstream-tag v0.44.0 --out "$TEST_TMP/m.json"
-    [ "$status" -eq 0 ]
+    # Print the manifest on failure: a bare status assertion tells you nothing
+    # about which of the four checks objected, which cost a CI round-trip once.
+    [ "$status" -eq 0 ] || { cat "$TEST_TMP/m.json" 2>/dev/null; echo "$output"; return 1; }
     run verdict_of "$TEST_TMP/m.json"
     [ "$output" = "pass" ]
 }
@@ -123,7 +125,7 @@ print(d['checks']['no_state']['pass'])
     bin="$(fake_rtk 'rtk 0.44.0')"
     run python3 "$VERIFY" --binary "$bin" --target "$NATIVE_TARGET" \
         --upstream-tag v0.44.0 --out "$TEST_TMP/m.json"
-    [ "$status" -eq 0 ]
+    [ "$status" -eq 0 ] || { cat "$TEST_TMP/m.json" 2>/dev/null; echo "$output"; return 1; }
     run python3 -c "
 import json, re, sys
 fp = json.load(open('$TEST_TMP/m.json'))['fingerprint']

@@ -243,6 +243,9 @@ PY
 }
 
 @test "hook forwards a valid rewrite from the binary" {
+    # Without jq the hook deliberately stays out of the way, so a test that
+    # asserts a rewrite has nothing to assert. Skip rather than fail.
+    command -v jq >/dev/null 2>&1 || skip "jq not installed"
     mkdir -p "$HOME/.softspark/ai-toolkit/plugin-scripts/rtk-pack/bin"
     cat > "$HOME/.softspark/ai-toolkit/plugin-scripts/rtk-pack/bin/rtk" <<'EOF'
 #!/usr/bin/env bash

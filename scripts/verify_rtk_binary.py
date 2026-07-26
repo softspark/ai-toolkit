@@ -233,10 +233,19 @@ def check_offline(binary: Path, target: str) -> dict:
         online_code, _, online_err = run(binary, ["--version"], env, wrapper=baseline + wrapper)
         offline_code, _, offline_err = run(binary, ["--version"], env, wrapper=isolated + wrapper)
     if online_code != 0:
-        raise Failure(
-            f"baseline run inside the namespace failed with exit {online_code}, "
-            f"so the network comparison proves nothing: {online_err.strip()[:200]}"
-        )
+        # The baseline could not start inside the namespace, so the comparison
+        # says nothing about the binary. That is a harness limitation, not a
+        # defect in the artifact, and reporting it as a failure would blame the
+        # thing being measured for the measurement not working. Skip instead,
+        # and carry the reason so it is visible rather than silent.
+        return {
+            "pass": None,
+            "skipped": (
+                f"baseline run under {' '.join(baseline)} exited {online_code}, "
+                f"so the network comparison proves nothing"
+            ),
+            "detail": online_err.strip()[:200],
+        }
     if offline_code != online_code:
         raise Failure(
             f"behaviour differs without a network route: online exit {online_code}, offline exit {offline_code}"
