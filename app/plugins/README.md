@@ -17,10 +17,22 @@ Plugin packs can target:
 These packs are not directly uploadable Claude app plugins. For Claude Chat,
 Desktop, and Cowork use `ai-toolkit claude-app export`.
 
-Current packs:
-- `security-pack`
-- `research-pack`
-- `frontend-pack`
+Current packs (12):
+- `csharp-pack`
 - `enterprise-pack`
+- `frontend-pack`
+- `java-pack`
+- `kotlin-pack`
+- `memory-pack`
+- `research-pack`
+- `rtk-pack`
+- `ruby-pack`
+- `rust-pack`
+- `security-pack`
+- `swift-pack`
+
+`rtk-pack` is the only one that fetches a native binary at install time and the
+only one that rewrites commands before they run. Read its README before
+installing it.
 
 See `kb/reference/plugin-pack-conventions.md` for pack rules, validation, and adoption guidance.

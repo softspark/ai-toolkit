@@ -13,9 +13,9 @@ doc_type: plan
 status: proposed
 created: "2026-07-26"
 last_updated: "2026-07-26"
-completion: "Phase 0 done"
+completion: "Phases 0, 1, 2, 4, 5 done; phase 3 cut"
 pinned_upstream: "v0.44.0"
-description: "Integrate rtk as an opt-in ai-toolkit plugin pack: binaries cross-built from source in our CI with telemetry disabled, hosted on our own GitHub Release, fetched and checksum-verified at pack install, with our own filter presets, auto-update on ai-toolkit update, and an SOP for tracking upstream releases. Phase 0 validated the premise against v0.44.0 on the full transcript corpus before any build work."
+description: "Integrate rtk as an opt-in ai-toolkit plugin pack: binaries cross-built from source in our CI with telemetry disabled, hosted on our own GitHub Release, fetched and checksum-verified at pack install, auto-update on ai-toolkit update, and an SOP for tracking upstream releases. Custom filter presets were cut on the measurement (0.008% of input tokens). Phase 0 validated the premise against v0.44.0 on the full transcript corpus before any build work."
 ---
 
 # rtk Pack Integration
@@ -50,8 +50,10 @@ Two structural facts, read from the source of both tags:
 
 - **Custom TOML filters are not wired into the rewrite path in v0.43.0.**
   `src/discover/registry.rs` at v0.43.0 contains zero references to
-  `toml_filter`. In v0.44.0 they appear at `registry.rs:1047,1055,1058`. Our own
-  presets, the pack's entire value-add over upstream, cannot fire on v0.43.0.
+  `toml_filter`. In v0.44.0 they appear at `registry.rs:1047,1055,1058`.
+  *This reason no longer applies:* section 7 cut our own presets, so nothing we
+  ship depends on that wiring. It is recorded because it was one of the two
+  arguments made at pin time, and the pin now rests on the second alone.
 - **`pipeline_final_safe` does not exist in v0.43.0.** It arrives in v0.44.0
   (`rules.rs:7,115,124`, `registry.rs:605,659,864,1069`). v0.43.0 rewrote the
   first pipeline stage; v0.44.0 rewrites the last. On this traffic 56.5% of
@@ -108,7 +110,7 @@ successful Bash, entry gate applied:
 | Ceiling: tool results as share of input volume | 5.52% | **4.54%** |
 | Projection at rtk's 60-90% claim | 0.32-0.48% | **0.239-0.359%** |
 | Projection, mechanism modelled | 0.15-0.21% | **0.117-0.164%** |
-| Reach of our own TOML presets | 1.91% of Bash | **1.08% of Bash** |
+| Reach of our own TOML presets (the number that cut section 7) | 1.91% of Bash | **1.08% of Bash** |
 | `Read` share of tool-result bytes | 53.8% | **62.8%** |
 
 Modelled effectiveness per family against the claim: `rtk grep` 75% claimed and
@@ -151,13 +153,9 @@ app/plugins/rtk-pack/
 ├── README.md
 ├── hooks/
 │   └── rewrite.sh       # PreToolUse; delegates to the fetched binary
-├── scripts/
-│   ├── init.py          # platform detect → fetch → verify → install → trust
-│   └── measure.py       # replay-based saving measurement
-├── filters/
-│   └── softspark.toml   # our own presets (section 7)
-└── skills/
-    └── rtk-report/      # optional: surface measured savings on demand
+└── scripts/
+    ├── init.py          # platform detect → fetch → verify → install
+    └── status.py        # reports binary, digest and hook wiring
 ```
 
 Runtime layout on a user machine:
@@ -168,16 +166,13 @@ Runtime layout on a user machine:
 └── plugin-scripts/rtk-pack/
     ├── bin/rtk                              # verified binary, 0755
     └── version.json                         # pinned version + recorded digest
-<dirs::config_dir()>/rtk/filters.toml        # our presets, user scope
-<dirs::data_local_dir()>/rtk/trusted_filters.json   # rtk's trust store
 ```
 
-The global filter path is **not** `~/.config/rtk/filters.toml` on every
-platform. `trust.rs:206-216` builds it from `dirs::config_dir()`, which on
-macOS is `~/Library/Application Support`, so the file lands at
-`~/Library/Application Support/rtk/filters.toml`. rtk's own error text hardcodes
-the Linux path and is wrong on macOS. The installer must resolve this per OS and
-must not copy the path from rtk's messages or README.
+Everything the pack writes lives under `plugin-scripts/rtk-pack/`, which
+`plugin remove` deletes wholesale (`plugin.py:500-503`). The pack owns no state
+outside the toolkit data directory: no `filters.toml`, no entry in rtk's trust
+store, nothing in an OS config directory. That is a consequence of cutting
+section 7 and it is what keeps removal complete.
 
 Binary supply chain:
 
@@ -185,7 +180,7 @@ Binary supply chain:
 upstream tag  →  our CI cross-build (RTK_TELEMETRY_URL unset)
               →  our GitHub Release  softspark-rtk-<upstream>-<build>
               →  SHA-256 recorded in plugin.json
-              →  plugin install: detect platform, fetch, verify, chmod, trust
+              →  plugin install: detect platform, fetch, verify, chmod
 ```
 
 ## 5. Phase 1: build pipeline and binary release
@@ -340,11 +335,26 @@ appear to be eliminated under LTO once the endpoint const is `None`. That is an
 optimisation outcome rather than a guarantee, which is why the fingerprint is
 recorded per target and drift fails the build.
 
-**The builds are bit-reproducible.** Two runs with identical inputs
-(30214341444 and 30214882862) produced byte-identical binaries for both targets
-that completed in each. The concern about unset `trim-paths` embedding registry
-paths does not materialise on these runners. This matters for the sync SOP: a
-changed digest means changed input, not build noise.
+**Four of five targets are bit-reproducible.** Across independent runs with
+identical inputs, `aarch64-apple-darwin`, `x86_64-apple-darwin`,
+`aarch64-unknown-linux-gnu` and `x86_64-unknown-linux-musl` produced
+byte-identical binaries. The concern about unset `trim-paths` embedding registry
+paths does not materialise on these runners.
+
+`x86_64-pc-windows-msvc` does not, and the cause is bounded: **24 bytes out of
+8,018,432 differ**, in five regions. Four are the same two-byte value at
+`0x100` and in the debug directory, which is the MSVC link timestamp; the fifth
+is a 16-byte CodeView GUID. The code is identical; only the link stamp varies.
+Adding `-C link-arg=/Brepro` would make it deterministic too, at the cost of
+rebuilding and republishing.
+
+This matters for the sync SOP: on four targets a changed digest means changed
+input rather than build noise, and on Windows that inference does not hold until
+`/Brepro` is adopted.
+
+Note that the **archives** are not reproducible even where the binaries are,
+because gzip records a timestamp. Compare extracted binaries, never the
+tarballs.
 
 Three defects the run surfaced, all now fixed and guarded:
 
@@ -374,127 +384,115 @@ Three defects the run surfaced, all now fixed and guarded:
   says so, matching how the core behaves when `jq` is missing.
 - The hook is wired at `PreToolUse` through the existing pack hook mechanism, so
   `plugin remove` strips it via the `_source` marker.
-- `plugin status` reports rtk version, digest match, and hook wiring.
-- `ai-toolkit doctor` gains an rtk-pack section.
+- `plugin status` dispatches to the pack's own `scripts/status.py`, which is
+  generic rather than another hardcoded `if name == ...` branch. It reports the
+  binary, the install record, the live version, and hook wiring, and announces a
+  missing binary as inert rather than letting a green install imply it works.
 
-### 6.1 The trust step is mandatory, and it is where this pack fails silently
+### 6.1 No trust step, because the pack ships no filters
 
-An untrusted or content-changed preset produces **zero output on the command
-path with no warning, no stderr line, and no non-zero exit**
-(`toml_filter.rs:220-221`, `:450-458`). That is the same shape of failure as the
-retired filter's 0%: installed, apparently fine, doing nothing. Install must end
-with a verification step, not a write.
+Section 7 is cut, so the pack writes no `filters.toml` and takes no entry in
+rtk's trust store. That removes the single highest-ranked risk this plan
+carried: an untrusted or content-changed preset produces **zero output on the
+command path with no warning, no stderr line, and no non-zero exit**
+(`toml_filter.rs:220-221`, `:450-458`) — installed, apparently fine, doing
+nothing, which is exactly the shape of failure that retired the in-house filter.
 
-Rules the installer and doctor must follow, each read from the pinned source:
+The pack instead reports whether it is actually working. `scripts/status.py`
+distinguishes installed from functioning: a missing binary is announced as
+`MISSING — the hook is inert and every command runs unchanged` rather than
+inferred from a green install.
 
-- **Re-trust after every write.** Trust is a byte-exact SHA-256 comparison
-  (`trust.rs:142-163`). A pack upgrade, a repair, an added trailing newline, or
-  git CRLF normalisation on Windows all invalidate it.
-- **Run `rtk trust --yes` from a scratch directory.** It is indiscriminate and
-  trusts every gated file that exists, including a `.rtk/filters.toml` an
-  attacker committed into whatever repo happens to be the CWD
+**If presets are ever revisited, these are the constraints, kept because they
+were expensive to establish:**
+
+- Trust is a byte-exact SHA-256 (`trust.rs:142-163`), so every write, upgrade,
+  repair, trailing newline, or git CRLF normalisation invalidates it.
+- `rtk trust --yes` is indiscriminate: it trusts every gated file that exists,
+  including a `.rtk/filters.toml` an attacker committed into the CWD
   (`trust.rs:262-305`, project path is CWD-relative at `:207`).
-- **Branch on its exit code.** `rtk trust --yes` exits 1 both when there is
-  nothing to trust and when the file is invalid TOML (`trust.rs:307-312`). Under
-  `set -e` a naive installer aborts on the benign case. Treat "not valid TOML"
-  as a hard failure, because the preset would be a permanent no-op.
-- **Doctor must re-hash, not list.** There is no `rtk doctor`, and
-  `rtk trust --list` always exits 0 and never re-hashes (`trust.rs:242-256`).
-  Our doctor reads the trust store, canonicalises the preset path the way rtk
-  does (`trust.rs:80-86`), and compares the stored digest to a freshly computed
-  one.
-- **Inject between markers, do not own the file.** The global `filters.toml` is
-  a single file with no include mechanism, and the merge-friendly install model
-  [PATH: kb/reference/merge-friendly-install-model.md] forbids full-file
-  replacement. Presets go between TOML comment markers, the same way
-  `constitution.md` and `CLAUDE.md` are handled, so a user's own filters
-  survive install, update, and removal. See open question 5.
-- **Prefer the global path over a project-scoped file.** The trust key is a
-  canonicalised absolute path, so a moved checkout, a changed `$HOME` symlink, a
-  container mount point, or macOS `/var` versus `/private/var` all silently
-  invalidate a project entry. `.rtk/filters.toml` is also resolved against the
-  process CWD with no repo-root walk (`toml_filter.rs:677`), so an agent that
-  cd's into a subdirectory loses it mid-session.
-- **Never set `RTK_TRUST_PROJECT_FILTERS=1` outside CI.** Without a recognised
-  CI marker it is ignored and prints a warning per gated file
-  (`trust.rs:104-118`).
-- **Serialise the trust step.** The store is written non-atomically with no lock
-  (`trust.rs:65-74`).
+- It exits 1 both when there is nothing to trust and when the file is invalid
+  TOML (`trust.rs:307-312`), so `set -e` aborts on the benign case.
+- There is no `rtk doctor`, and `rtk trust --list` never re-hashes
+  (`trust.rs:242-256`). Verification means reading the store and recomputing.
+- The global path is not `~/.config/rtk/filters.toml` everywhere: it comes from
+  `dirs::config_dir()` (`trust.rs:206-216`), which on macOS is
+  `~/Library/Application Support`. rtk's own error text hardcodes the Linux path
+  and is wrong there.
+- One global file, no include mechanism, so injection would have to follow the
+  merge-friendly install model [PATH: kb/reference/merge-friendly-install-model.md]
+  with comment markers rather than owning the file.
 
 **Success criteria:** install, status, update, remove, and re-install are
 idempotent; a machine without the pack behaves exactly as today; uninstalling
-ai-toolkit removes every pack artifact; and a post-install assertion proves the
-preset is trusted and its digest matches.
+ai-toolkit removes every pack artifact.
 
-## 7. Phase 3: our own filter presets
+## 7. Phase 3: cut
 
-**Outcome, revised down.** Phase 0 measured what this phase can reach:
-**1.08% of Bash bytes**, which is 0.27% of tool-result bytes. At a generous 60%
-reduction that is **0.008% of input tokens**. Phase 3 as originally scoped does
-not earn its maintenance cost, and the decision on whether to keep it, cut it to
-a single measured preset, or drop it belongs to the plan owner. The engineering
-constraints below hold either way, because they also govern any preset we ship.
+**Cut on the measurement, 2026-07-26.** Custom TOML presets reach **1.08% of
+Bash bytes**, which is 0.27% of tool-result bytes. At a generous 60% reduction
+that is **0.008% of input tokens**, roughly one part in twelve thousand.
 
-rtk's TOML DSL is a documented public interface, but the shipped documentation
-is wrong in several places and the structs are the only reliable source.
+Against that: presets would have required a trust step that fails silently, a
+doctor check that recomputes digests, marker injection into a file the user may
+also edit, re-trusting after every write, and a per-upstream-release review of a
+DSL whose `deny_unknown_fields` rejects the entire file on one unknown key. The
+maintenance surface is large, the payoff is not measurable, and every item on
+that list is a way for the pack to look installed while doing nothing.
 
-- **One unknown key rejects the entire file.** `deny_unknown_fields` propagates
-  a parse error out of `parse_and_compile` before any filter compiles
-  (`toml_filter.rs:226-227`), whereas a bad regex only drops one filter
-  (`:237-242`). A key added by a future rtk version silently disables everything.
-- **Precedence inside a file is alphabetical by filter name**, not file order
-  (`toml_filter.rs:76`, `:237`, first match wins at `:481-486`). A specific
-  filter placed above a general one still loses if it sorts later.
-- **`strip_lines_matching` and `keep_lines_matching` return `Lossiness::None`**
-  (`toml_filter.rs:642,647`), so no tee file is written and no recovery hint is
-  emitted. Content is dropped with no way back. This collides directly with the
-  retention rules carried over from the retired effort: never elide a
-  diagnostic, a file location, a severity, or a rule name, and never compress
-  failure output. A preset that must stay recoverable needs `head_lines` or
-  `max_lines` to reach `Lossiness::Tail`.
-- **With tee disabled the savings are zero.** Every lossy result is discarded
-  and the full raw output printed instead (`main.rs:1356`). Tee is a hard
-  dependency of any saving claim.
-- **Presets never fire in the final stage of a pipeline.** TOML-only commands
-  return before the filter lookup in `RewriteContext::PipelineFinal`
-  (`registry.rs:1043-1046`). Do not advertise pipeline coverage; smoke tests
-  must invoke commands standalone or they produce a false negative.
-- **`rtk verify` is not an acceptance gate.** It never loads the user-global
-  file (`toml_filter.rs:661-699`), and it calls `apply_filter` directly,
-  bypassing the never-worse guard, so a preset can pass verify and behave
-  differently in production.
-- **Reserved names are dead on arrival.** A preset whose `match_command` hits
-  `RUST_HANDLED_COMMANDS` or `RTK_META_COMMANDS` never runs; rtk warns only at
-  filter compile time (`toml_filter.rs:250-326`). Validate at pack build time.
-- **Pin `schema_version = 1`.** `rtk trust`'s pre-flight listing does not check
-  it while the loader does, so a wrong version lists fine and then filters
-  nothing.
+The pack therefore ships upstream rtk's built-in filters and nothing of our own.
+The 35.2% coverage quoted in section 2.5 is already what those built-ins
+deliver; it does not shrink as a result of this cut.
 
-**Success criteria:** each preset measured on owned fixtures against real
-captured output; presets install, trust cleanly, verify their trust digest, and
-survive `plugin update`.
+Two consequences recorded so they are not rediscovered:
+
+- The pack owns no state outside `~/.softspark/ai-toolkit/plugin-scripts/rtk-pack/`,
+  which is what makes `plugin remove` complete.
+- One of the two arguments for pinning v0.44.0 was that custom filters are only
+  wired into the rewrite path there. That argument is now moot; the pin rests on
+  `pipeline_final_safe`, which carries 56.5% of `rtk grep` hits on this traffic
+  and does not exist in v0.43.0. See section 2.1.
+
+Reopening this is a plan change, not a task: it needs a workload where rtk's
+built-ins measurably under-perform and a preset that measurably closes the gap,
+demonstrated by replay before any code is written.
 
 ## 8. Phase 4: auto-update on `ai-toolkit update`
 
-**Outcome:** a user who installed the pack gets the new binary and presets by
-running the update they already run.
+**Outcome:** a user who installed the pack gets the new binary by running the
+update they already run.
 
 Verified gap: `handleUpdate` in `bin/ai-toolkit.js` reads installed modules from
 `state.json` and does not touch `plugins.json`. Nothing propagates to packs
 today, so this is new wiring, not a configuration change.
 
+**Done.** `ai-toolkit update` now calls `plugin update --editor all --all`
+after the core update. Two things had to change first, both generic rather than
+rtk-specific:
+
+- `update_pack` was an unconditional remove-then-reinstall, so wiring it into
+  the core update would have refetched the binary on every run. `plugins.json`
+  now records the pack version installed per editor, and an update whose
+  manifest version matches is a silent no-op. `--force` overrides.
+- State written before versions were tracked has no `versions` map, so every
+  pack reads as stale exactly once and is updated once. That is the intended
+  migration, not a bug.
+
+`--local` leaves packs alone: they live in `~/.softspark/ai-toolkit` and are
+global, while `--local` is project-local config only.
+
 - After the core update completes, `ai-toolkit update` reads `plugins.json` and
   runs the equivalent of `plugin update` for every **currently installed** pack.
   Packs that are not installed stay untouched, which preserves adoption rule 1.
 - The rtk-pack update path is: compare the manifest's pinned version against the
-  recorded `version.json`; if they differ, fetch and verify the new binary, then
-  re-install hooks and presets **and re-run the trust step**, because any write
-  invalidates the digest.
+  recorded pack version; if they differ, fetch and verify the new binary and
+  re-install the hook.
 - `--dry-run` reports what would change per pack.
 - A pack update failure warns and continues; it never fails the core update.
-- Bats coverage: stale binary replaced; current binary untouched; pack absent
-  means no work; fetch failure warns without breaking the core update; and a
-  preset rewrite leaves the filter trusted rather than silently inert.
+- Bats coverage in `tests/test_plugin_update.bats`: stale version replaced;
+  current version untouched and silent; pack absent means no work; `--dry-run`
+  reports without acting; legacy state with no version map updates once; a
+  corrupt `plugins.json` does not crash the run.
 
 **Success criteria:** the wiring is generic across packs, not rtk-specific;
 `update` remains idempotent; a failed pack update never leaves a half-installed
@@ -503,8 +501,9 @@ binary.
 ## 9. Phase 5: upstream sync SOP
 
 **Outcome:** a written procedure so tracking upstream is routine rather than a
-research project each time. Lands as `kb/procedures/rtk-upstream-sync-sop.md`,
-modelled on the existing ecosystem-sync SOP.
+research project each time. **Written**, at
+`kb/procedures/rtk-upstream-sync-sop.md`, modelled on the existing
+ecosystem-sync SOP.
 
 The 0.43.0 to 0.44.0 bump is a worked example of why the review step exists: 200
 commits, and every file the SOP names changed, including a semantic inversion in
@@ -526,13 +525,12 @@ Steps the SOP must cover:
    and replay both. Anything short of full agreement invalidates every coverage
    number until the port is fixed.
 4. **Rebuild** all five targets from the new tag with telemetry unset.
-5. **Verify.** Binary runs on each target; the four silence assertions pass; our
-   presets still parse, still trust, and still fire; the pack's fixtures still
-   produce the expected decisions.
+5. **Verify.** Binary runs on each target; the silence assertions pass; the
+   pack's fixtures still produce the expected decisions.
 6. **Publish** a new release in our namespace and record the new digests.
 7. **Bump** `rtk-pack` version in `plugin.json` and note the upstream version it
-   tracks. Pack version is ours; upstream version is a separate field, so a
-   preset-only change does not pretend to be an upstream bump.
+   tracks. The bump is what makes `plugin update` fire at all, since a pack whose
+   recorded version still matches is skipped silently.
 8. **Ship** in the next ai-toolkit release; installed packs pick it up through
    Phase 4.
 9. **Record** the licence position if upstream relicenses or adds a NOTICE.
@@ -594,15 +592,25 @@ projection was wrong about this workload and that belongs in the KB.
   `plugin install` must not be silent about it. The README must also disclose
   the `rtk cc` npx path.
 
+  The sharp edge is more specific than "the command changes". rtk evaluates the
+  host's permission rules against the **original** command and applies the
+  verdict to the **rewritten** one: `decide_hook_action(cmd, ...)` takes the
+  command the model asked for, and `permissionDecision: allow` is then emitted
+  for the substituted `rtk …` form (`hook_cmd.rs:405-436`). An allowlist entry
+  for `git status` therefore authorises `rtk git status`, which the user never
+  wrote a rule for. Upstream documents the absence case in its own test
+  (`hook_cmd.rs:1272-1283`): with no matching allow rule, no decision is emitted
+  and the normal prompt stands. Both halves belong in the README.
+
 ## 12. Pre-mortem
 
 | Rank | Failure mode | Probability | Impact | Mitigation |
 |---:|---|:---:|:---:|---|
-| 1 | Presets install but are untrusted, so they silently do nothing | High | High | Install ends in a verification step; doctor re-hashes; `rtk trust` exit code branched on. Section 6.1 |
+| — | ~~Presets install but are untrusted, so they silently do nothing~~ | — | — | **Eliminated**, not mitigated: section 7 is cut, so the pack ships no filters and takes no trust-store entry |
 | 2 | Cross-building with bundled SQLite is fragile in CI | Medium | Medium | Copy upstream's `cross` setup for aarch64-linux; five targets not six; a target that will not build is dropped, not faked |
 | 3 | Pre-execution rewriting changes command semantics | Medium | High | Opt-in pack, documented one-flag disable, upstream's own review process, our integration tests on real commands |
 | 4 | Windows binary cross-built without the 8 MiB stack reservation | Medium | High | Build natively on `windows-latest`, or pass the link-arg explicitly. `build.rs:6-13` |
-| 5 | Upstream velocity breaks our presets or the DSL | Medium | Medium | Pinned version, SOP review step naming exact files, port re-validation as a gate, fork option preserved by Apache-2.0 |
+| 5 | Upstream velocity breaks the rewrite logic the coverage numbers model | Medium | Medium | Pinned version, SOP review step naming exact files, port re-validation as a gate, fork option preserved by Apache-2.0 |
 | 6 | Unpinned toolchain plus `warnings = "deny"` turns builds red with no change | Medium | Low | Pin an exact rustc version; treat bumps as deliberate |
 | 7 | A fetch failure leaves a half-installed pack | Medium | Medium | Verify-then-install, abort and clean on digest mismatch, `doctor` detects drift |
 | 8 | Live saving lands near the projection, not the claim | High | Medium | Section 10 measures it by replay either way, against a published kill number |
@@ -612,35 +620,12 @@ projection was wrong about this workload and that belongs in the KB.
 ## 13. Open questions
 
 1. ~~Which upstream tag do we pin first?~~ **Answered: v0.44.0.** See section 2.1.
-2. Do our presets install to user scope only, or also offer a project-scoped
-   variant for registered projects? Section 6.1 argues for user scope only: the
-   project path is CWD-relative with no repo-root walk, and its trust key breaks
-   on any path change.
+2. ~~User scope only, or a project-scoped preset variant too?~~ **Moot:** section 7 is cut, so the pack installs no presets at any scope.
 3. ~~Is patching `pipeline_final_safe` for `head`/`tail` in scope later?~~
    **Answered: no.** See section 2.6.
-4. **New.** Does Phase 3 survive its own measurement at 0.008% of input tokens,
-   and if it ships in reduced form, which single preset is worth the trust and
-   maintenance surface?
-5. **New, and mostly answered by existing convention.** rtk has exactly one
-   global filter file with no include or merge mechanism (`trust.rs:206-216`).
-   The merge-friendly install model
-   [PATH: kb/reference/merge-friendly-install-model.md] rules out full-file
-   replacement and prescribes **marker injection** for exactly this shape, the
-   same strategy already used for `constitution.md`, `ARCHITECTURE.md` and
-   `CLAUDE.md`: user content outside the markers is preserved and uninstall
-   removes only the marked block. TOML comments carry the markers.
-
-   Two things that model does not anticipate, and which the pack must handle:
-
-   - **Any write invalidates trust.** Injection must be followed by
-     `rtk trust --yes`, and so must a user's own edit outside the markers,
-     which rtk accepts silently while filtering nothing. Only our doctor check
-     surfaces that state.
-   - **Marker position does not set precedence.** Ordering inside the file is
-     alphabetical by filter name (`toml_filter.rs:76,237`), so the injected
-     block cannot rely on being first. Preset names carry the namespace that
-     makes ordering deterministic.
-
-   What remains open is narrow: does the pack refuse to inject when the file
-   already contains a `[filters.*]` table whose `match_command` overlaps a
-   preset, or inject anyway and report the collision through doctor?
+4. ~~Does Phase 3 survive its own measurement at 0.008% of input tokens?~~
+   **Answered: no, cut 2026-07-26.** See section 7.
+5. ~~How does the pack share rtk's single global `filters.toml`?~~ **Moot:** it
+   writes no filters at all. The marker-injection design and the trust
+   constraints that would have applied are kept in section 6.1 in case presets
+   are ever revisited.

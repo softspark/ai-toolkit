@@ -76,8 +76,8 @@ CODEX_PLUGIN_ASSET_MARKER = "# ai-toolkit-managed: codex-plugin-hook"
 def _empty_state() -> dict:
     return {
         "targets": {
-            "claude": {"installed": []},
-            "codex": {"installed": []},
+            "claude": {"installed": [], "versions": {}},
+            "codex": {"installed": [], "versions": {}},
         }
     }
 
@@ -103,6 +103,13 @@ def load_state() -> dict:
                     installed = targets.get(editor, {}).get("installed", [])
                     if isinstance(installed, list):
                         state["targets"][editor]["installed"] = sorted(set(installed))
+                    # Absent in state written before versions were tracked, so
+                    # every pack looks stale once and is updated exactly once.
+                    versions = targets.get(editor, {}).get("versions", {})
+                    if isinstance(versions, dict):
+                        state["targets"][editor]["versions"] = {
+                            k: v for k, v in versions.items() if isinstance(v, str)
+                        }
     return state
 
 
@@ -116,6 +123,18 @@ def save_state(state: dict) -> None:
 
 def _installed_for(state: dict, editor: str) -> list[str]:
     return list(state.get("targets", {}).get(editor, {}).get("installed", []))
+
+
+def _installed_version(state: dict, editor: str, name: str) -> str:
+    return state.get("targets", {}).get(editor, {}).get("versions", {}).get(name, "")
+
+
+def _record_version(state: dict, editor: str, name: str, version: str) -> None:
+    state.setdefault("targets", {}).setdefault(editor, {}).setdefault("versions", {})[name] = version
+
+
+def _forget_version(state: dict, editor: str, name: str) -> None:
+    state.get("targets", {}).get(editor, {}).get("versions", {}).pop(name, None)
 
 
 def _set_installed(state: dict, editor: str, names: list[str]) -> None:
@@ -264,6 +283,11 @@ def _copy_plugin_scripts(name: str, pack_dir: Path, installed_items: list[str]) 
     for script_file in sorted(plugin_scripts_dir.iterdir()):
         if script_file.name.startswith("__"):
             continue
+        # copy2 on a directory raises IsADirectoryError and aborts the install
+        # halfway with nothing rolled back, so a pack that ships scripts/bin/
+        # or a stray __pycache__ would break it.
+        if not script_file.is_file():
+            continue
         dest = scripts_dest / script_file.name
         shutil.copy2(script_file, dest)
         if script_file.suffix in (".py", ".sh"):
@@ -271,8 +295,13 @@ def _copy_plugin_scripts(name: str, pack_dir: Path, installed_items: list[str]) 
         print(f"    Copied script: {script_file.name}")
         installed_items.append(f"script:{dest}")
 
-    init_script = plugin_scripts_dir / "init_db.py"
-    if init_script.is_file():
+    # `init.py` is the generic name; `init_db.py` predates it and is what
+    # memory-pack ships. A pack whose init script is named anything else is
+    # silently never run, and the install still reports success.
+    for candidate in ("init.py", "init_db.py"):
+        init_script = plugin_scripts_dir / candidate
+        if not init_script.is_file():
+            continue
         result = subprocess.run(
             ["python3", str(init_script)],
             capture_output=True,
@@ -280,8 +309,10 @@ def _copy_plugin_scripts(name: str, pack_dir: Path, installed_items: list[str]) 
         )
         if result.returncode == 0 and result.stdout.strip():
             print(f"    Init: {result.stdout.strip()}")
-        elif result.returncode != 0 and result.stderr.strip():
-            print(f"    WARN init failed: {result.stderr.strip()}")
+        elif result.returncode != 0:
+            detail = result.stderr.strip() or result.stdout.strip() or "no output"
+            print(f"    WARN init failed: {detail}")
+        break
 
 
 def _copy_plugin_hook_scripts(name: str, hook_specs: list[dict], installed_items: list[str]) -> None:
@@ -908,6 +939,10 @@ def install_pack(name: str, editor: str) -> bool:
     if name not in installed:
         installed.append(name)
     _set_installed(state, editor, installed)
+    # Recorded so `update --all` can skip a pack whose manifest has not moved.
+    # Without it, update removes and reinstalls every pack every time, which for
+    # a pack that downloads a binary means refetching it on every core update.
+    _record_version(state, editor, name, str(pack.get("version", "")))
     save_state(state)
     return True
 
@@ -941,17 +976,40 @@ def remove_pack(name: str, editor: str) -> bool:
 
     installed = [p for p in installed if p != name]
     _set_installed(state, editor, installed)
+    _forget_version(state, editor, name)
     save_state(state)
     return True
 
 
-def update_pack(name: str, editor: str) -> bool:
+def pack_update_pending(name: str, editor: str) -> tuple[bool, str, str]:
+    """(needs_update, installed_version, available_version) for one pack."""
+    state = load_state()
+    if name not in _installed_for(state, editor):
+        return False, "", ""
+    pack = find_pack(name)
+    if not pack:
+        return False, _installed_version(state, editor, name), ""
+    available = str(pack.get("version", ""))
+    current = _installed_version(state, editor, name)
+    return current != available, current, available
+
+
+def update_pack(name: str, editor: str, *, force: bool = False) -> bool:
     state = load_state()
     if name not in _installed_for(state, editor):
         print(f"  Plugin '{name}' is not installed for {editor} — use 'install' instead")
         return False
 
-    print(f"  Updating: {name} for {editor}")
+    pending, current, available = pack_update_pending(name, editor)
+    if not pending and not force:
+        # Silent no-op by design: `ai-toolkit update` runs this for every
+        # installed pack on every invocation.
+        return True
+
+    if current and available:
+        print(f"  Updating: {name} for {editor} ({current} -> {available})")
+    else:
+        print(f"  Updating: {name} for {editor}")
     remove_pack(name, editor)
     return install_pack(name, editor)
 
@@ -1090,6 +1148,34 @@ def _show_memory_stats() -> None:
         print(f"    DB: {_human_size(MEMORY_DB.stat().st_size)} (error reading stats)")
 
 
+def _show_pack_status(name: str, pack_dir: Path) -> None:
+    """Let a pack report its own state via scripts/status.py.
+
+    Generic counterpart to the install-time init.py hook. Before this, anything
+    beyond a hook listing meant another hardcoded `if name == ...` branch, which
+    is why memory-pack is the only pack that ever reported anything.
+
+    The script owns its output format; it is indented and shown verbatim.
+    Failure is not an error: status must never be the thing that breaks.
+    """
+    status_script = pack_dir / "scripts" / "status.py"
+    if not status_script.is_file():
+        return
+    try:
+        result = subprocess.run(
+            ["python3", str(status_script)],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"    (status unavailable: {exc})")
+        return
+    stream = result.stdout if result.stdout.strip() else result.stderr
+    for line in stream.strip().splitlines():
+        print(f"    {line}")
+
+
 def cmd_status(editors: list[str]) -> None:
     state = load_state()
     shown = False
@@ -1117,6 +1203,8 @@ def cmd_status(editors: list[str]) -> None:
                     print(f"    Hooks: {', '.join(h.name for h in hooks)}")
             if name == "memory-pack":
                 _show_memory_stats()
+            else:
+                _show_pack_status(name, Path(pack["_dir"]))
         print()
 
     if not shown and all(not _installed_for(state, editor) for editor in editors):
@@ -1199,24 +1287,56 @@ def _cmd_remove(args: list[str], editors: list[str]) -> None:
 def _cmd_update(args: list[str], editors: list[str]) -> None:
     if not args:
         print("Usage: ai-toolkit plugin update [--editor claude|codex|all] <pack-name> [...]")
-        print("       ai-toolkit plugin update [--editor claude|codex|all] --all")
+        print("       ai-toolkit plugin update [--editor claude|codex|all] --all [--dry-run]")
         sys.exit(1)
+
+    dry_run = "--dry-run" in args or "--list" in args
+    force = "--force" in args
+    everything = "--all" in args
+    explicit = [a for a in args if not a.startswith("--")]
+
     state = load_state()
     for editor in editors:
-        names = list(_installed_for(state, editor)) if "--all" in args else args
+        names = list(_installed_for(state, editor)) if everything else explicit
         if not names:
+            if everything:
+                # Nothing installed is the common case; do not make the core
+                # update noisy about it.
+                continue
             print(f"No plugins installed for {editor}.")
             print()
             continue
-        if "--all" in args:
-            print(f"Updating {len(names)} installed plugin(s) for {editor}...\n")
-        ok = 0
-        for name in names:
-            if update_pack(name, editor):
-                ok += 1
+
+        if dry_run:
+            pending = []
+            for name in names:
+                needs, current, available = pack_update_pending(name, editor)
+                if needs or force:
+                    pending.append(f"{name} ({current or 'unrecorded'} -> {available or 'unknown'})")
+            if pending:
+                print(f"Would update for {editor}: {', '.join(pending)}")
+            else:
+                print(f"All {len(names)} pack(s) up to date for {editor}")
             print()
-        if "--all" in args:
+            continue
+
+        ok = 0
+        failed: list[str] = []
+        for name in names:
+            try:
+                if update_pack(name, editor, force=force):
+                    ok += 1
+                else:
+                    failed.append(name)
+            except Exception as exc:  # noqa: BLE001
+                # A pack failure must never abort the run: `ai-toolkit update`
+                # calls this after the core update has already succeeded.
+                print(f"  WARN update failed for {name}: {exc}")
+                failed.append(name)
+        if everything and (failed or force):
             print(f"Updated: {ok}/{len(names)} packs for {editor}")
+            if failed:
+                print(f"  Failed: {', '.join(failed)}")
             print()
 
 

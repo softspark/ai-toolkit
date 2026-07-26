@@ -41,7 +41,7 @@ jobs:
           python3 scripts/validate.py --strict
           python3 scripts/audit_skills.py --ci
           python3 scripts/audit_skills.py --sarif > audit.sarif
-          shellcheck --severity=warning app/hooks/*.sh
+          shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh
           npm test
 
       - name: Upload security audit

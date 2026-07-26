@@ -18,7 +18,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
 
       - name: Run ShellCheck on hooks
-        run: shellcheck --severity=warning app/hooks/*.sh
+        run: shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh
 
   python-syntax:
     name: Python syntax check

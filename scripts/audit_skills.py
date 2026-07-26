@@ -454,6 +454,27 @@ def audit(toolkit_root: Path) -> list[Finding]:
             scan_secrets(agent_md, findings)
             scan_unicode(agent_md, findings)
 
+    # Scan plugin packs. Pack code ships and executes exactly like skill code,
+    # and rtk-pack's install script downloads and runs a native binary, so
+    # leaving app/plugins out of the HIGH gate exempted the highest-risk code
+    # in the repo from the check that exists to catch it.
+    plugins = app / "plugins"
+    if plugins.is_dir():
+        for pack_dir in sorted(plugins.iterdir()):
+            if not pack_dir.is_dir():
+                continue
+            for py in sorted(pack_dir.rglob("*.py")):
+                scan_file_patterns(py, PYTHON_HIGH, "HIGH", findings)
+                scan_file_patterns(py, PYTHON_WARN, "WARN", findings)
+                scan_secrets(py, findings)
+            for sh in sorted(pack_dir.rglob("*.sh")):
+                scan_file_patterns(sh, BASH_HIGH, "HIGH", findings)
+                scan_file_patterns(sh, BASH_WARN, "WARN", findings)
+                scan_secrets(sh, findings)
+            for md in sorted(pack_dir.rglob("*.md")):
+                scan_secrets(md, findings)
+                scan_unicode(md, findings)
+
     # Unicode safety across the rest of the shipped prompt surface.
     for extra in ("rules", "personas", "mcp-templates"):
         extra_dir = app / extra

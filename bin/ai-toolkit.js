@@ -574,6 +574,21 @@ function handleUpdate(args) {
   // User-provided args override state-derived args
   run(scriptPath('install.py'), [...stateArgs, ...args]);
 
+  // Installed plugin packs live under ~/.softspark/ai-toolkit and are global,
+  // so --local (project-local config only) leaves them alone. The wiring is
+  // generic: plugin.py decides per pack whether anything changed and stays
+  // silent when nothing has, so this adds no noise for the common case.
+  if (!isLocal) {
+    const pluginArgs = ['update', '--editor', 'all', '--all'];
+    if (isDryRun) pluginArgs.push('--dry-run');
+    try {
+      run(scriptPath('plugin.py'), pluginArgs);
+    } catch (_err) {
+      // A pack update never fails the core update that already succeeded.
+      console.warn('WARN: plugin pack update skipped');
+    }
+  }
+
   // After global update (not --local), propagate to all registered projects
   if (!isLocal && !isDryRun) {
     const registryPath = path.join(process.env.HOME, '.softspark', 'ai-toolkit', 'projects.json');
