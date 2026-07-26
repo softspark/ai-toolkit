@@ -215,6 +215,12 @@ Build constraints, all read from the pinned checkout:
   silently drops the 8 MiB stack reservation that upstream's own comment says is
   what makes `rtk.exe --version`, `--help`, and hook entry points start
   reliably. Build on `windows-latest`, or pass the link-arg explicitly.
+- **Both darwin targets build on `macos-latest` (arm64).** `macos-13` is the
+  last x86_64 macOS image and GitHub is winding it down: on runs 30212577757 and
+  30214341444 that job sat queued indefinitely while every other target
+  finished. Upstream builds both on arm64 too, but never runs its x86_64
+  artifact. We do: the verifier detects Rosetta 2 and executes it, and reports
+  `inconclusive` rather than `pass` if it cannot.
 - **Every target needs a target-capable C compiler.** rusqlite `bundled`
   (`Cargo.toml:26`) is not switchable off; there is no `[features]` table and no
   `cfg(feature` in `src/`. There is no pure-Rust escape route.
@@ -265,6 +271,12 @@ whether the code is present. A symbol check would pass for the wrong reason.
 
 What we assert instead:
 
+0. **The artifact was actually started.** Every other assertion is worthless on
+   a binary nobody executed, and two of the five targets are not native to their
+   runner. `aarch64-unknown-linux-gnu` runs under `qemu-user` with the cross
+   sysroot passed as `-L`, and `x86_64-apple-darwin` runs under Rosetta 2 on the
+   arm64 runner. A target that cannot be started reports `inconclusive`, never
+   `pass`.
 1. **Build gate.** `RTK_TELEMETRY_URL` and `RTK_TELEMETRY_TOKEN` are unset in
    the build environment, asserted in CI before `cargo build`, with a clean
    target directory per build.

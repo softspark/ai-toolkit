@@ -99,11 +99,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Native runner per Apple arch, so every darwin artifact gets a real
-          # smoke test. Upstream builds both on macos-latest and therefore
-          # never runs its x86_64 binary.
+          # macos-13 is the last x86_64 macOS image and GitHub is winding it
+          # down; runs 30212577757 and 30214341444 both sat queued on it
+          # indefinitely while every other target finished. Built on arm64
+          # instead, as upstream does. Unlike upstream we still try to run the
+          # artifact: verify_rtk_binary.py detects Rosetta 2 and executes it,
+          # and reports `inconclusive` rather than `pass` if it cannot.
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-latest
             archive: tar.gz
           - target: aarch64-apple-darwin
             os: macos-latest

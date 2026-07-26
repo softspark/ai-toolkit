@@ -58,6 +58,11 @@ QEMU_FOR = {
     "aarch64-unknown-linux-musl": ("qemu-aarch64-static", "qemu-aarch64"),
 }
 
+# Rosetta 2 does the same job on Apple silicon, which is what lets us verify an
+# x86_64 artifact built on an arm64 runner. Probed, never assumed: the image can
+# ship without it.
+ROSETTA_FOR = {"x86_64-apple-darwin": ("Darwin", "arm64")}
+
 
 class Failure(Exception):
     pass
@@ -86,6 +91,20 @@ def emulator_for(target: str) -> list | None:
     return None
 
 
+def rosetta_for(target: str) -> list | None:
+    if ROSETTA_FOR.get(target) != (platform.system(), platform.machine()):
+        return None
+    if shutil.which("arch") is None:
+        return None
+    try:
+        probe = subprocess.run(
+            ["arch", "-x86_64", "/usr/bin/true"], capture_output=True, timeout=30
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return ["arch", "-x86_64"] if probe.returncode == 0 else None
+
+
 def launcher(target: str):
     """(wrapper, how) for running this target here, or (None, reason)."""
     if can_run_natively(target):
@@ -93,6 +112,9 @@ def launcher(target: str):
     emu = emulator_for(target)
     if emu:
         return emu, f"emulated via {Path(emu[0]).name}"
+    rosetta = rosetta_for(target)
+    if rosetta:
+        return rosetta, "translated via Rosetta 2"
     return None, f"{target} is not runnable on {platform.system()}/{platform.machine()} and no emulator is installed"
 
 
