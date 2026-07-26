@@ -173,8 +173,11 @@ jobs:
             echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar"
             # The gnu target is dynamically linked, so qemu-user needs the
             # aarch64 sysroot to find /lib/ld-linux-aarch64.so.1. Without this
-            # the verification step fails with exit 255 before the binary
-            # starts, which is exactly what happened on run 30212577757.
+            # verification fails with exit 255 before the binary starts, which
+            # is what happened on run 30212577757. verify_rtk_binary.py reads
+            # this and passes it to qemu as `-L`, because the offline check runs
+            # under sudo and sudo's env_reset would otherwise drop it (run
+            # 30214341444).
             echo "QEMU_LD_PREFIX=/usr/aarch64-linux-gnu"
           } >> "$GITHUB_ENV"
 

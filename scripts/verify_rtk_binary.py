@@ -68,12 +68,21 @@ def can_run_natively(target: str) -> bool:
 
 
 def emulator_for(target: str) -> list | None:
+    """qemu invocation for this target, with the sysroot passed as a flag.
+
+    The prefix goes through `-L` rather than QEMU_LD_PREFIX because the offline
+    check runs under sudo, and sudo's env_reset strips the variable. A gnu
+    target is dynamically linked, so losing it means qemu cannot find
+    ld-linux-aarch64.so.1 and the process dies with 255 before main.
+    """
     if can_run_natively(target) or platform.system() != "Linux":
         return None
     for candidate in QEMU_FOR.get(target, ()):
         found = shutil.which(candidate)
-        if found:
-            return [found]
+        if not found:
+            continue
+        prefix = os.environ.get("QEMU_LD_PREFIX", "")
+        return [found, "-L", prefix] if prefix else [found]
     return None
 
 
@@ -180,21 +189,31 @@ def check_offline(binary: Path, target: str) -> dict:
     # Ubuntu 24.04 sets kernel.apparmor_restrict_unprivileged_userns=1, so the
     # unprivileged form is refused on GitHub runners and this assertion silently
     # became a skip. Fall back to passwordless sudo, which runners have.
-    isolators = [["unshare", "-rn"], ["sudo", "-n", "unshare", "-rn"]]
-    isolator = None
-    for candidate in isolators:
-        probe = subprocess.run(candidate + ["true"], capture_output=True, timeout=30)
-        if probe.returncode == 0:
-            isolator = candidate
+    #
+    # Each entry is (baseline, isolated): identical except for the network
+    # namespace. Comparing against a plain run instead would confound the
+    # network with sudo's env_reset, and the difference would be read as
+    # evidence about the binary when it is evidence about the harness.
+    isolators = [
+        (["unshare", "-r"], ["unshare", "-rn"]),
+        (["sudo", "-n", "unshare", "-r"], ["sudo", "-n", "unshare", "-rn"]),
+    ]
+    baseline = isolated = None
+    for base, iso in isolators:
+        if subprocess.run(iso + ["true"], capture_output=True, timeout=30).returncode == 0:
+            baseline, isolated = base, iso
             break
-    if isolator is None:
+    if isolated is None:
         return {"pass": None, "skipped": "no usable network namespace: unprivileged userns refused and sudo unavailable"}
 
     with tempfile.TemporaryDirectory() as tmp:
         env = sandbox_env(Path(tmp))
-        online_code, _, _ = run(binary, ["--version"], env, wrapper=wrapper)
-        offline_code, _, offline_err = run(
-            binary, ["--version"], env, wrapper=isolator + wrapper
+        online_code, _, online_err = run(binary, ["--version"], env, wrapper=baseline + wrapper)
+        offline_code, _, offline_err = run(binary, ["--version"], env, wrapper=isolated + wrapper)
+    if online_code != 0:
+        raise Failure(
+            f"baseline run inside the namespace failed with exit {online_code}, "
+            f"so the network comparison proves nothing: {online_err.strip()[:200]}"
         )
     if offline_code != online_code:
         raise Failure(
@@ -204,7 +223,7 @@ def check_offline(binary: Path, target: str) -> dict:
         "pass": True,
         "exit_code": offline_code,
         "stderr_empty": not offline_err.strip(),
-        "isolator": " ".join(isolator),
+        "isolator": " ".join(isolated),
     }
 
 
