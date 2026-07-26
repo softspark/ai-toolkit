@@ -319,8 +319,47 @@ as a reason to block the pack. `docs/TELEMETRY.md:180` calls the mechanism
 the same reason our own criterion changed.
 
 **Success criteria:** five artifacts build from the pinned tag; each runs
-`rtk --version` on its target; the four silence assertions pass; checksums
-published.
+`rtk --version` on its target; the silence assertions pass or say plainly that
+they did not run; checksums published.
+
+### 5.2 Result, run 30214882862
+
+All five targets build and verify. Every artifact was actually started, none
+shipped on a skipped assertion.
+
+| Target | `runs` | `offline` |
+|---|---|---|
+| `aarch64-apple-darwin` | native | not applicable |
+| `x86_64-apple-darwin` | translated via Rosetta 2 | not applicable |
+| `x86_64-unknown-linux-musl` | native | passed under `sudo -n unshare -rn` |
+| `aarch64-unknown-linux-gnu` | emulated via `qemu-aarch64-static` | passed under `sudo -n unshare -rn` |
+| `x86_64-pc-windows-msvc` | native | not applicable |
+
+No TLS markers in any artifact, so `ureq`, `rustls`, `ring` and `webpki-roots`
+appear to be eliminated under LTO once the endpoint const is `None`. That is an
+optimisation outcome rather than a guarantee, which is why the fingerprint is
+recorded per target and drift fails the build.
+
+**The builds are bit-reproducible.** Two runs with identical inputs
+(30214341444 and 30214882862) produced byte-identical binaries for both targets
+that completed in each. The concern about unset `trim-paths` embedding registry
+paths does not materialise on these runners. This matters for the sync SOP: a
+changed digest means changed input, not build noise.
+
+Three defects the run surfaced, all now fixed and guarded:
+
+- The gnu target is dynamically linked, so `qemu-user` needs the cross sysroot.
+  It is passed as `-L` rather than `QEMU_LD_PREFIX`, because the offline check
+  runs under `sudo` and `env_reset` drops the variable.
+- The offline check compared a plain run against a namespaced one, so `sudo`'s
+  environment handling was confounded with the network variable and a harness
+  failure was reported as a behaviour difference in the binary. Both sides now
+  run in a namespace and differ only in `-n`.
+- `7z` stored the full relative path, so the Windows zip held
+  `rtk-src/target/<triple>/release/rtk.exe` while every tar.gz held a bare
+  `rtk`. The pack installer extracts all five the same way, so this was a
+  silent install failure on one platform. A `collect` step now asserts every
+  archive holds exactly one flat entry.
 
 ## 6. Phase 2: the pack
 

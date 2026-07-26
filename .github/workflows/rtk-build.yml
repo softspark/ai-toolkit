@@ -266,11 +266,17 @@ jobs:
             -C "rtk-src/target/${{ matrix.target }}/release" rtk
         shell: bash
 
+      # 7z stores whatever relative path it is given, so zipping the full path
+      # buried rtk.exe under rtk-src/target/<triple>/release/ inside the
+      # archive while every tar.gz held a bare `rtk` (run 30214882862). Push
+      # into the release directory first so all five archives have one flat
+      # entry and the pack installer can extract them the same way.
       - name: Package (Windows)
         if: runner.os == 'Windows'
         run: |
-          7z a "rtk-${{ matrix.target }}.${{ matrix.archive }}" `
-            "rtk-src/target/${{ matrix.target }}/release/rtk.exe"
+          Push-Location "rtk-src/target/${{ matrix.target }}/release"
+          7z a "$env:GITHUB_WORKSPACE/rtk-${{ matrix.target }}.${{ matrix.archive }}" rtk.exe
+          Pop-Location
         shell: pwsh
 
       - name: Upload artifact
@@ -310,6 +316,33 @@ jobs:
           cd release
           sha256sum rtk-*.tar.gz rtk-*.zip > checksums.txt
           cat checksums.txt
+
+      # Every archive must hold exactly one flat entry. The pack installer
+      # extracts all five the same way, so a nested path is a silent install
+      # failure on one platform only. The Windows zip shipped like that on run
+      # 30214882862 and nothing caught it.
+      - name: Assert archive layout
+        run: |
+          set -eu
+          fail=0
+          for f in release/rtk-*.tar.gz; do
+            entries=$(tar -tzf "$f")
+            count=$(printf '%s\n' "$entries" | wc -l | tr -d ' ')
+            if [ "$count" != "1" ] || [ "$entries" != "rtk" ]; then
+              echo "::error::$f should contain exactly one entry named rtk, got: $entries"
+              fail=1
+            fi
+          done
+          for f in release/rtk-*.zip; do
+            entries=$(unzip -Z1 "$f")
+            count=$(printf '%s\n' "$entries" | wc -l | tr -d ' ')
+            if [ "$count" != "1" ] || [ "$entries" != "rtk.exe" ]; then
+              echo "::error::$f should contain exactly one entry named rtk.exe, got: $entries"
+              fail=1
+            fi
+          done
+          [ "$fail" = "0" ] && echo "all archives hold a single flat binary"
+          exit "$fail"
 
       # Upstream has no NOTICE file. Apache-2.0 section 4 lets us add one, and
       # it is where the single build-time difference is recorded.
