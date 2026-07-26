@@ -1,0 +1,344 @@
+name: rtk cross-build
+
+# Manual only. This never runs on push, and it never publishes unless the
+# `publish` input is set explicitly. See kb/planning/rtk-pack-integration-plan.md
+# section 5.
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: "Upstream rtk tag to build from"
+        required: true
+        default: "v0.44.0"
+      build_revision:
+        description: "Our build revision for this upstream tag"
+        required: true
+        default: "1"
+      rust_version:
+        description: "Exact toolchain. Upstream uses unpinned stable with warnings=deny, which we refuse to inherit."
+        required: true
+        default: "1.91.0"
+      publish:
+        description: "Publish a GitHub Release with the artifacts"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  # Left undefined on purpose. option_env! resolves these at compile time
+  # (telemetry.rs:16-17, telemetry_cmd.rs:176,189); with neither defined the
+  # endpoint cannot be re-enabled by any runtime env var or config.
+  CARGO_TERM_COLOR: always
+
+jobs:
+  audit:
+    name: cargo audit (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out upstream rtk
+        uses: actions/checkout@v6
+        with:
+          repository: rtk-ai/rtk
+          ref: ${{ inputs.upstream_tag }}
+          path: rtk-src
+
+      - name: Install Rust ${{ inputs.rust_version }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust_version }}
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      # Upstream's own audit is advisory: ci.yml:88-96 swallows failures into a
+      # warning. Rebuilding from a tag inherits that lockfile, so ours blocks.
+      - name: Audit the pinned lockfile
+        working-directory: rtk-src
+        run: cargo audit --deny warnings
+
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Native runner per Apple arch, so every darwin artifact gets a real
+          # smoke test. Upstream builds both on macos-latest and therefore
+          # never runs its x86_64 binary.
+          - target: x86_64-apple-darwin
+            os: macos-13
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+
+          # Static musl is our only x86_64 Linux artifact. It runs on glibc,
+          # and upstream's own Homebrew formula routes Linux x86_64 here
+          # (release.yml:314-316).
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+            musl: true
+
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+            cross: true
+
+          # Native, and not negotiable: build.rs:6-13 emits
+          # cargo:rustc-link-arg=/STACK:8388608 under #[cfg(windows)], which in
+          # a build script is a HOST predicate. Cross-building from Linux
+          # silently drops the 8 MiB stack reservation that upstream says is
+          # what makes rtk.exe start reliably.
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+
+    steps:
+      - name: Check out ai-toolkit
+        uses: actions/checkout@v6
+        with:
+          path: ai-toolkit
+
+      - name: Check out upstream rtk ${{ inputs.upstream_tag }}
+        uses: actions/checkout@v6
+        with:
+          repository: rtk-ai/rtk
+          ref: ${{ inputs.upstream_tag }}
+          path: rtk-src
+
+      - name: Install Rust ${{ inputs.rust_version }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust_version }}
+          targets: ${{ matrix.target }}
+
+      - name: Install musl tools
+        if: matrix.musl
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y musl-tools
+
+      # rusqlite `bundled` (Cargo.toml:26) is not switchable off, so this target
+      # needs a target-capable C compiler for SQLite. Upstream sets only the
+      # linker and lets the cc crate guess; we set CC and AR explicitly so a
+      # runner image change fails loudly instead of producing an arch mismatch
+      # at link time.
+      - name: Install aarch64 cross toolchain
+        if: matrix.cross
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            qemu-user-static
+          {
+            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc"
+            echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
+            echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar"
+          } >> "$GITHUB_ENV"
+
+      - name: Assert the telemetry build gate (POSIX)
+        if: runner.os != 'Windows'
+        run: |
+          set -eu
+          # Checked without indirect expansion so this behaves identically on
+          # the macOS runners' bash 3.2.
+          if [ -n "${RTK_TELEMETRY_URL:-}" ]; then
+            echo "::error::RTK_TELEMETRY_URL is set; this build would compile in a telemetry endpoint"
+            exit 1
+          fi
+          if [ -n "${RTK_TELEMETRY_TOKEN:-}" ]; then
+            echo "::error::RTK_TELEMETRY_TOKEN is set; this build would compile in a telemetry token"
+            exit 1
+          fi
+          echo "both telemetry build variables are undefined"
+        shell: bash
+
+      - name: Assert the telemetry build gate (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          foreach ($var in @('RTK_TELEMETRY_URL','RTK_TELEMETRY_TOKEN')) {
+            $value = [Environment]::GetEnvironmentVariable($var)
+            if (-not [string]::IsNullOrEmpty($value)) {
+              Write-Output "::error::$var is set; this build would compile in a telemetry endpoint"
+              exit 1
+            }
+          }
+          Write-Output "both telemetry build variables are undefined"
+        shell: pwsh
+
+      # A clean target directory per build, because build.rs emits no
+      # cargo:rerun-if-env-changed for the telemetry vars and relies on cargo's
+      # automatic option_env! tracking.
+      - name: Build
+        working-directory: rtk-src
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Verify the binary is silent (POSIX)
+        if: runner.os != 'Windows'
+        run: |
+          python3 ai-toolkit/scripts/verify_rtk_binary.py \
+            --binary "rtk-src/target/${{ matrix.target }}/release/rtk" \
+            --target "${{ matrix.target }}" \
+            --upstream-tag "${{ inputs.upstream_tag }}" \
+            --out "verification-${{ matrix.target }}.json"
+        shell: bash
+
+      - name: Verify the binary is silent (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python ai-toolkit/scripts/verify_rtk_binary.py `
+            --binary "rtk-src/target/${{ matrix.target }}/release/rtk.exe" `
+            --target "${{ matrix.target }}" `
+            --upstream-tag "${{ inputs.upstream_tag }}" `
+            --out "verification-${{ matrix.target }}.json"
+        shell: pwsh
+
+      - name: Collect Apache-2.0 obligations
+        run: |
+          cp rtk-src/LICENSE "LICENSE-rtk-${{ matrix.target }}"
+        shell: bash
+
+      - name: Package (POSIX)
+        if: runner.os != 'Windows'
+        run: |
+          set -eu
+          tar -czf "rtk-${{ matrix.target }}.${{ matrix.archive }}" \
+            -C "rtk-src/target/${{ matrix.target }}/release" rtk
+        shell: bash
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          7z a "rtk-${{ matrix.target }}.${{ matrix.archive }}" `
+            "rtk-src/target/${{ matrix.target }}/release/rtk.exe"
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtk-${{ matrix.target }}
+          path: |
+            rtk-${{ matrix.target }}.${{ matrix.archive }}
+            verification-${{ matrix.target }}.json
+            LICENSE-rtk-${{ matrix.target }}
+          if-no-files-found: error
+
+  collect:
+    name: Checksums and verification summary
+    needs: [audit, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out ai-toolkit
+        uses: actions/checkout@v6
+        with:
+          path: ai-toolkit
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten and checksum
+        run: |
+          set -eu
+          mkdir -p release
+          find artifacts -type f \( -name 'rtk-*.tar.gz' -o -name 'rtk-*.zip' \) \
+            -exec cp {} release/ \;
+          cp artifacts/*/LICENSE-rtk-* release/ 2>/dev/null || true
+          cp "$(find artifacts -name 'LICENSE-rtk-*' | head -1)" release/LICENSE
+          rm -f release/LICENSE-rtk-*
+          cd release
+          sha256sum rtk-*.tar.gz rtk-*.zip > checksums.txt
+          cat checksums.txt
+
+      # Upstream has no NOTICE file. Apache-2.0 section 4 lets us add one, and
+      # it is where the single build-time difference is recorded.
+      - name: Write NOTICE
+        run: |
+          cat > release/NOTICE <<EOF
+          This distribution contains rtk (https://github.com/rtk-ai/rtk),
+          licensed under the Apache License, Version 2.0. See LICENSE.
+
+          Built from upstream tag ${{ inputs.upstream_tag }} by SoftSpark for
+          @softspark/ai-toolkit, build revision ${{ inputs.build_revision }}.
+
+          The only build-time difference from an upstream release build is that
+          RTK_TELEMETRY_URL and RTK_TELEMETRY_TOKEN are left undefined, so the
+          compile-time telemetry endpoint is absent and cannot be supplied at
+          runtime. No source modifications were made.
+
+          Upstream DISCLAIMER.md is deliberately not redistributed: it states
+          that telemetry is collected by default, which is not true of this
+          build.
+          EOF
+          cat release/NOTICE
+
+      - name: Summarise verification
+        run: |
+          set -eu
+          echo "## rtk ${{ inputs.upstream_tag }} verification" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| target | verdict | checks |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          fail=0
+          for f in $(find artifacts -name 'verification-*.json' | sort); do
+            python3 - "$f" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          checks = "; ".join(
+              f"{k}={'ok' if v.get('pass') else ('skip' if v.get('pass') is None else 'FAIL')}"
+              for k, v in d["checks"].items()
+          )
+          print(f"| {d['target']} | {d['verdict']} | {checks} |")
+          PY
+            verdict=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['verdict'])" "$f")
+            target=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['target'])" "$f")
+            case "$verdict" in
+              pass) ;;
+              # Every runtime assertion was skipped, so the artifact was never
+              # started. Surfaced loudly rather than counted as green, but not
+              # a build failure: it means this host could not run the target.
+              inconclusive)
+                echo "::warning::$target verified inconclusive; no runtime assertion executed" ;;
+              *)
+                echo "::error::$target failed verification"
+                fail=1 ;;
+            esac
+          done
+          exit "$fail"
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: softspark-rtk-${{ inputs.upstream_tag }}-${{ inputs.build_revision }}
+          path: release/
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: collect
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: softspark-rtk-${{ inputs.upstream_tag }}-${{ inputs.build_revision }}
+          path: release
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: softspark-rtk-${{ inputs.upstream_tag }}-${{ inputs.build_revision }}
+        run: |
+          set -eu
+          gh release create "$TAG" release/* \
+            --repo "${{ github.repository }}" \
+            --title "$TAG" \
+            --notes "rtk ${{ inputs.upstream_tag }} built from source with the telemetry endpoint undefined. Apache-2.0; see LICENSE and NOTICE in the assets."
