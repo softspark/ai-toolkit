@@ -28,10 +28,19 @@ permissions:
   contents: read
 
 env:
-  # Left undefined on purpose. option_env! resolves these at compile time
-  # (telemetry.rs:16-17, telemetry_cmd.rs:176,189); with neither defined the
-  # endpoint cannot be re-enabled by any runtime env var or config.
+  # RTK_TELEMETRY_URL and RTK_TELEMETRY_TOKEN are left undefined on purpose.
+  # option_env! resolves them at compile time (telemetry.rs:16-17,
+  # telemetry_cmd.rs:176,189); with neither defined the endpoint cannot be
+  # re-enabled by any runtime env var or config.
   CARGO_TERM_COLOR: always
+
+  # Advisory remediation applied to the pinned upstream lockfile. Both the
+  # audit job and every build job apply this, so we audit exactly the
+  # dependency set we ship. Cargo.toml is untouched: these are in-range
+  # updates, so no source modification is involved.
+  #   anyhow          1.0.102 -> 1.0.103   RUSTSEC-2026-0190 (unsound)
+  #   crossbeam-epoch 0.9.18  -> 0.9.20    RUSTSEC-2026-0204
+  RTK_CARGO_UPDATES: "anyhow crossbeam-epoch"
 
 jobs:
   audit:
@@ -53,11 +62,35 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
 
+      - name: Apply advisory remediation to the lockfile
+        working-directory: rtk-src
+        run: |
+          set -eu
+          read -ra crates <<< "$RTK_CARGO_UPDATES"
+          for c in "${crates[@]}"; do cargo update -p "$c"; done
+          git --no-pager diff --stat Cargo.lock
+
       # Upstream's own audit is advisory: ci.yml:88-96 swallows failures into a
       # warning. Rebuilding from a tag inherits that lockfile, so ours blocks.
-      - name: Audit the pinned lockfile
+      #
+      # Two quick-xml advisories are ignored with reasons, not waved through:
+      # RUSTSEC-2026-0194 and RUSTSEC-2026-0195 are both fixed only in 0.41.0,
+      # while rtk pins "0.37" as a direct dependency (Cargo.toml:34). Taking the
+      # fix means editing Cargo.toml and the calling code in
+      # src/cmds/dotnet/dotnet_trx.rs, which would break the promise that the
+      # only difference from an upstream build is the undefined telemetry
+      # endpoint. The reachable surface is narrow: quick-xml is used only to
+      # parse .NET TRX test output (dotnet_trx.rs, dotnet_cmd.rs), the input is
+      # a test report produced locally by the user's own run, and both
+      # advisories are availability-only (CVSS C:N/I:N/A:H).
+      # Revisit on every upstream sync: if rtk moves to quick-xml >= 0.41,
+      # delete these two ignores rather than carrying them forward.
+      - name: Audit the remediated lockfile
         working-directory: rtk-src
-        run: cargo audit --deny warnings
+        run: |
+          cargo audit --deny warnings \
+            --ignore RUSTSEC-2026-0194 \
+            --ignore RUSTSEC-2026-0195
 
   build:
     name: ${{ matrix.target }}
@@ -138,6 +171,11 @@ jobs:
             echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc"
             echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
             echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar"
+            # The gnu target is dynamically linked, so qemu-user needs the
+            # aarch64 sysroot to find /lib/ld-linux-aarch64.so.1. Without this
+            # the verification step fails with exit 255 before the binary
+            # starts, which is exactly what happened on run 30212577757.
+            echo "QEMU_LD_PREFIX=/usr/aarch64-linux-gnu"
           } >> "$GITHUB_ENV"
 
       - name: Assert the telemetry build gate (POSIX)
@@ -169,6 +207,18 @@ jobs:
           }
           Write-Output "both telemetry build variables are undefined"
         shell: pwsh
+
+      # Must match the audit job exactly, or we would audit one dependency set
+      # and ship another. `--locked` below still holds: Cargo.toml is unchanged,
+      # so the updated lockfile stays consistent with it.
+      - name: Apply advisory remediation to the lockfile
+        working-directory: rtk-src
+        run: |
+          set -eu
+          read -ra crates <<< "$RTK_CARGO_UPDATES"
+          for c in "${crates[@]}"; do cargo update -p "$c"; done
+          git --no-pager diff --stat Cargo.lock
+        shell: bash
 
       # A clean target directory per build, because build.rs emits no
       # cargo:rerun-if-env-changed for the telemetry vars and relies on cargo's
@@ -266,10 +316,15 @@ jobs:
           Built from upstream tag ${{ inputs.upstream_tag }} by SoftSpark for
           @softspark/ai-toolkit, build revision ${{ inputs.build_revision }}.
 
-          The only build-time difference from an upstream release build is that
-          RTK_TELEMETRY_URL and RTK_TELEMETRY_TOKEN are left undefined, so the
-          compile-time telemetry endpoint is absent and cannot be supplied at
-          runtime. No source modifications were made.
+          Two build-time differences from an upstream release build, and no
+          source modifications:
+
+          1. RTK_TELEMETRY_URL and RTK_TELEMETRY_TOKEN are left undefined, so
+             the compile-time telemetry endpoint is absent and cannot be
+             supplied at runtime.
+          2. Cargo.lock carries in-range security updates for anyhow
+             (RUSTSEC-2026-0190) and crossbeam-epoch (RUSTSEC-2026-0204).
+             Cargo.toml is unchanged; no dependency requirement was altered.
 
           Upstream DISCLAIMER.md is deliberately not redistributed: it states
           that telemetry is collected by default, which is not true of this

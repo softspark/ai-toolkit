@@ -224,7 +224,26 @@ Build constraints, all read from the pinned checkout:
   export `CC_aarch64_unknown_linux_gnu` and `AR_aarch64_unknown_linux_gnu`
   explicitly so a runner image change surfaces as a clear error.
 - **Run our own blocking `cargo audit`.** Upstream's is advisory: `ci.yml:88-96`
-  swallows failures into a warning. Rebuilding from a tag inherits that lockfile.
+  swallows failures into a warning. Rebuilding from a tag inherits that
+  lockfile, and on v0.44.0 it inherits four advisories across three of its 203
+  crates. The audit and the build jobs apply the same remediation, so we audit
+  the dependency set we ship rather than a different one:
+
+  | Crate | Advisory | Disposition |
+  |---|---|---|
+  | `anyhow` 1.0.102 | RUSTSEC-2026-0190 | `cargo update` to 1.0.103, in range |
+  | `crossbeam-epoch` 0.9.18 | RUSTSEC-2026-0204 | `cargo update` to 0.9.20, in range |
+  | `quick-xml` 0.37.5 | RUSTSEC-2026-0194, RUSTSEC-2026-0195 | ignored with reasons |
+
+  The quick-xml fix lands only in 0.41.0 while rtk pins `"0.37"` as a direct
+  dependency (`Cargo.toml:34`), so taking it means editing `Cargo.toml` and the
+  calling code in `src/cmds/dotnet/dotnet_trx.rs`. That would break the promise
+  that the only difference from an upstream build is the undefined telemetry
+  endpoint. The reachable surface is narrow: quick-xml parses .NET TRX test
+  output only, the input is a report produced locally by the user's own test
+  run, and both advisories are availability-only (CVSS `C:N/I:N/A:H`). The SOP
+  re-checks this on every sync and deletes the ignores once upstream moves to
+  quick-xml 0.41 or later.
 - A target that will not build is dropped, not faked.
 
 ### 5.1 Proving the binary is silent
@@ -250,7 +269,14 @@ What we assert instead:
    the build environment, asserted in CI before `cargo build`, with a clean
    target directory per build.
 2. **Offline smoke run.** Each artifact runs its real command surface with no
-   network route available and makes zero outbound connections.
+   network route available and makes zero outbound connections. This is
+   Linux-only: `unshare -rn` has no unprivileged equivalent on macOS or Windows
+   runners, and Ubuntu 24.04's
+   `kernel.apparmor_restrict_unprivileged_userns=1` means even there it needs
+   `sudo`. On the first run this assertion silently degraded to a skip on every
+   target while the verdict still read `pass`, so the manifest now records which
+   isolator was used and a target that could not be started at all reports
+   `inconclusive` rather than `pass`.
 3. **Filesystem assertion.** No telemetry state is created under the resolved
    data directory.
 4. **Drift detection.** Record artifact size and a string-allowlist hash per

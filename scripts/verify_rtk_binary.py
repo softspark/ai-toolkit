@@ -177,23 +177,35 @@ def check_offline(binary: Path, target: str) -> dict:
     if platform.system() != "Linux" or shutil.which("unshare") is None:
         return {"pass": None, "skipped": "unshare(1) network namespaces are Linux-only"}
 
-    probe = subprocess.run(
-        ["unshare", "-rn", "true"], capture_output=True, timeout=30
-    )
-    if probe.returncode != 0:
-        return {"pass": None, "skipped": "unprivileged network namespaces unavailable on this runner"}
+    # Ubuntu 24.04 sets kernel.apparmor_restrict_unprivileged_userns=1, so the
+    # unprivileged form is refused on GitHub runners and this assertion silently
+    # became a skip. Fall back to passwordless sudo, which runners have.
+    isolators = [["unshare", "-rn"], ["sudo", "-n", "unshare", "-rn"]]
+    isolator = None
+    for candidate in isolators:
+        probe = subprocess.run(candidate + ["true"], capture_output=True, timeout=30)
+        if probe.returncode == 0:
+            isolator = candidate
+            break
+    if isolator is None:
+        return {"pass": None, "skipped": "no usable network namespace: unprivileged userns refused and sudo unavailable"}
 
     with tempfile.TemporaryDirectory() as tmp:
         env = sandbox_env(Path(tmp))
         online_code, _, _ = run(binary, ["--version"], env, wrapper=wrapper)
         offline_code, _, offline_err = run(
-            binary, ["--version"], env, wrapper=["unshare", "-rn"] + wrapper
+            binary, ["--version"], env, wrapper=isolator + wrapper
         )
     if offline_code != online_code:
         raise Failure(
             f"behaviour differs without a network route: online exit {online_code}, offline exit {offline_code}"
         )
-    return {"pass": True, "exit_code": offline_code, "stderr_empty": not offline_err.strip()}
+    return {
+        "pass": True,
+        "exit_code": offline_code,
+        "stderr_empty": not offline_err.strip(),
+        "isolator": " ".join(isolator),
+    }
 
 
 def fingerprint(binary: Path) -> dict:
@@ -253,6 +265,10 @@ def main() -> int:
         "target": args.target,
         "upstream_tag": args.upstream_tag,
         "host": f"{platform.system()}/{platform.machine()}",
+        # Recorded because the emulated path only works when the workflow
+        # supplies the cross sysroot; a manifest that does not say so cannot be
+        # audited later.
+        "qemu_ld_prefix": os.environ.get("QEMU_LD_PREFIX", ""),
         "checks": checks,
         "fingerprint": fingerprint(args.binary),
         "verdict": verdict,
