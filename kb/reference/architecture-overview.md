@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-03-23"
-last_updated: "2026-07-23"
+last_updated: "2026-07-26"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -300,7 +300,6 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | UserPromptSubmit | Before user prompt execution | `track-usage.sh` | Record skill invocations to stats.json |
 | PostToolUse | After edit/write tools | `post-tool-use.sh` | Lightweight validation reminders |
 | PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
-| PostToolUse | After successful Bash | `filter-tool-output.sh` | Observe eligible text or replace it only after exact recovery succeeds; Claude Code only |
 | Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
 | Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |

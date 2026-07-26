@@ -1,5 +1,7 @@
 #!/usr/bin/env bats
-# Global uninstall coverage for output-filter recovery cleanup.
+# Global uninstall coverage for leftover v4.16.x output-filter recovery data.
+# The filter itself was removed; these fixtures reproduce the on-disk layout
+# those releases created, so uninstall keeps reclaiming it.
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
@@ -16,40 +18,32 @@ create_recovery_session() {
     local session_identifier="$2"
     mkdir -p "$repository"
     chmod 700 "$repository"
-    python3 - "$TOOLKIT_DIR" "$repository" "$session_identifier" <<'PY'
+    python3 - "$repository" "$session_identifier" <<'PY'
 import hashlib
+import json
 import sys
 from pathlib import Path
 
-toolkit = Path(sys.argv[1])
-repository = Path(sys.argv[2])
-session_identifier = sys.argv[3]
-sys.path.insert(0, str(toolkit))
-
-from scripts.tool_output_filter.contracts import FilterTelemetry
-from scripts.tool_output_filter.recovery import EphemeralRecoveryStore
-
-with EphemeralRecoveryStore(
-    repository,
-    session_identifier=session_identifier,
-    random_handle=lambda: "a" * 32,
-) as recovery:
-    recovery.save({"stdout": "remove me"})
-    recovery.save_failure_count(2)
-    recovery.record(
-        FilterTelemetry(
-            profile_id="repeat-lines",
-            profile_version=1,
-            input_bytes=100,
-            output_bytes=20,
-            input_lines=10,
-            output_lines=2,
-            outcome="observed",
-        )
-    )
+repository = Path(sys.argv[1])
+session_identifier = sys.argv[2]
 
 session_key = hashlib.sha256(session_identifier.encode()).hexdigest()[:32]
-print(repository / "output-filter" / session_key)
+session_directory = repository / "output-filter" / session_key
+session_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+(repository / "output-filter").chmod(0o700)
+session_directory.chmod(0o700)
+
+artifacts = {
+    "a" * 32 + ".json": json.dumps({"stdout": "remove me"}),
+    ".circuit-state.json": json.dumps({"failures": 2}),
+    ".telemetry.jsonl": json.dumps({"outcome": "observed"}) + "\n",
+}
+for name, payload in artifacts.items():
+    path = session_directory / name
+    path.write_text(payload, encoding="utf-8")
+    path.chmod(0o600)
+
+print(session_directory)
 PY
 }
 

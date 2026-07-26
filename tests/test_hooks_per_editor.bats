@@ -49,16 +49,6 @@ teardown_file() {
     [ -f "$HPE_DIR/.gemini/settings.json" ]
 }
 
-@test "hooks: no editor surface exports the Claude-only output filter" {
-    for surface in "$HPE_DIR/.gemini/settings.json" \
-        "$HPE_DIR/.cursor/hooks.json" \
-        "$HPE_DIR/.devin/hooks.v1.json" \
-        "$HPE_DIR/.augment/settings.json"; do
-        [ -f "$surface" ]
-        ! grep -q "filter-tool-output" "$surface"
-    done
-}
-
 @test "hooks: augment writes .augment/settings.json" {
     [ -f "$HPE_DIR/.augment/settings.json" ]
 }

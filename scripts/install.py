@@ -51,7 +51,7 @@ from emission import agent_count as count_agents, skill_count as count_skills
 
 # Step modules
 from install_steps.symlinks import install_agents, install_skills, clean_legacy_commands
-from install_steps.hooks import install_hooks
+from install_steps.hooks import cleanup_retired_output_filter, install_hooks
 from install_steps.markers import install_marker_files, inject_rules, refresh_url_hooks, refresh_url_mcp
 from install_steps.ai_tools import install_ai_tools, install_local_project, run_script
 from install_steps.install_state import (
@@ -435,6 +435,7 @@ def install_claude_code(target_dir: Path, hooks_scripts_dir: Path,
     install_agents(claude_dir, only, skip, dry_run)
     install_skills(claude_dir, only, skip, dry_run)
     clean_legacy_commands(claude_dir, dry_run)
+    cleanup_retired_output_filter(hooks_scripts_dir, dry_run)
     install_hooks(claude_dir, hooks_scripts_dir, only, skip, dry_run)
     install_marker_files(claude_dir, only, skip, dry_run)
 

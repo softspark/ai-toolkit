@@ -1,6 +1,7 @@
 # Contributing
 
-We welcome bug fixes, new skills, agents, hooks, and improvements. This guide explains how to contribute.
+We welcome bug fixes, new skills, agents, hooks, and improvements. This guide explains
+how to contribute: workflow, branching, commits, and the checks your PR must pass.
 
 ## Workflow
 
@@ -44,10 +45,17 @@ Your PR must pass **all** CI jobs before review. Run them locally:
 
 ```bash
 # All of these must pass with zero errors:
-python3 scripts/validate.py           # Toolkit integrity
-python3 scripts/audit_skills.py --ci  # Security audit (0 HIGH findings)
-python3 scripts/evaluate_skills.py    # Skill evaluation
-bats tests/ --jobs 4 --no-parallelize-within-files  # Test suite
+npm test                                # Test suite (bats tests/)
+python3 scripts/validate.py --strict    # Toolkit integrity + count drift
+python3 scripts/audit_skills.py --ci    # Security audit (0 HIGH findings)
+python3 scripts/evaluate_skills.py      # Skill evaluation
+```
+
+If you touched any hook script, also run ShellCheck yourself — CI runs it, but
+`validate.py`, `npm test`, and the publish workflow do not:
+
+```bash
+shellcheck --severity=warning app/hooks/*.sh
 ```
 
 Additionally, CI runs:

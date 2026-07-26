@@ -294,10 +294,6 @@ PY
     [ "$status" -eq 0 ]
 }
 
-@test "codex: hooks.json never exports the Claude-only output filter" {
-    ! grep -q "filter-tool-output" "$CX_DIR/.codex/hooks.json"
-}
-
 @test "codex: hooks.json uses only upstream-supported event names (10 events)" {
     # Per codex-rs/config/src/hook_config.rs HookEventName the accepted keys
     # are the 10 below. Verify no unsupported event sneaks in.

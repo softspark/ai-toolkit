@@ -26,6 +26,7 @@ from config_resolver import (
 )
 from config_merger import ConfigMergeError, merge_config_chain
 from config_validator import (
+    RETIRED_CONFIG_FIELDS,
     validate_merged_config,
     validate_project_config,
 )
@@ -54,6 +55,9 @@ def cmd_validate(args: list[str]) -> int:
         return 2
 
     print(f"  Validating {project_dir / PROJECT_CONFIG_FILENAME}...")
+    for key, reason in sorted(RETIRED_CONFIG_FIELDS.items()):
+        if key in config:
+            print(f"  ! Retired key '{key}': {reason}")
     errors = validate_project_config(config, project_dir)
 
     if errors:

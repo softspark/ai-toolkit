@@ -6,15 +6,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1479%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1445%20passing-success)](tests/)
 
-## What's New in v4.16.1
+## What's New in v4.17.0
 
-v4.16.1 ships the native tool-output filter introduced in v4.16.0 and fixes local updates crashing on legacy Copilot skill remnants.
+v4.17.0 removes the native tool-output filter shipped in v4.16.0.
 
-- **Native tool-output filter**: opt-in `PostToolUse` filter with `off`, `observe`, and `safe` modes; ships disabled, handles only allowlisted successful Bash test/validation output.
-- **Exact ephemeral recovery**: every safe replacement keeps a private, bounded, session-scoped copy of the original response, recoverable via `ai-toolkit output-filter recover`.
-- **Output-filter CLI**: `ai-toolkit output-filter status|inspect|recover|clean` plus a deterministic benchmark for the built-in profiles.
+- **Native tool-output filter removed**: measured whole-session token saving was 0.0000% on real traffic, because agent-issued commands are overwhelmingly compound and the filter only accepted simple registered shapes. The `PostToolUse` hook, the CLI, and the `toolOutputFilter` config key are gone.
+- **Automatic cleanup on update**: `ai-toolkit update` removes the orphaned hook script, the global and project policy files, and any stored recovery artifacts left by v4.16.x. Foreign files in those directories are preserved.
 - **Stricter config validation**: unknown top-level config keys are rejected, plugin manifests must declare `requires`, and lock files go stale on toolkit version bumps.
 - **GitHub Copilot compatibility reference**: new `kb/reference/copilot-compatibility.md` documenting the Copilot integration surface.
 - **Copilot remnant recovery**: asset-only `.github/skills/ai-toolkit-*` leftovers from older cleanups are rebuilt in place instead of aborting `install --local` / `update`.
@@ -92,10 +91,7 @@ ai-toolkit claude-app export --verify
 ```
 
 Re-export and re-upload after toolkit or registered-rule updates. Skills work
-in Chat and Cowork; hooks and sub-agents are active only in Cowork. The native
-tool-output replacement hook remains Claude Code-only and is excluded from the
-Claude app archive until that runtime has an independently verified replacement
-contract.
+in Chat and Cowork; hooks and sub-agents are active only in Cowork.
 
 ### Install Profiles
 
@@ -146,7 +142,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
-| `hooks/` | 29 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, output filtering, session lifecycle |
+| `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
 | `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, 6 language packs) |
 | `constitution.md` | 7 articles | Machine-enforced safety rules |
 | `rules/` | auto-synced | Global/project rule files for Claude and other editors |
@@ -170,7 +166,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1479 tests)
+├── tests/               # Bats and Python test suite (1445 tests)
 └── CHANGELOG.md
 ```
 
@@ -182,9 +178,7 @@ ai-toolkit/
 
 **Machine-enforced constitution** — 7-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
-**29 lifecycle hook entries:** Executable handlers across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, search-first discipline, and opt-in output filtering. See [Hooks Catalog](kb/reference/hooks-catalog.md).
-
-**Native tool-output filtering** — dependency-free, post-execution filtering for successful Claude Code Bash output, shipped **disabled by default** (`off`). Neither `off` nor `observe` ever replaces output; opt-in `safe` mode replaces only validated `repeat-lines` or `tap-success` results after exact ephemeral recovery is available. Failures, diagnostics, unsupported payloads, and unavailable recovery always pass through unchanged. See [Tool Output Filter](kb/reference/tool-output-filter.md).
+**28 lifecycle hook entries:** Executable handlers across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, and search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
 
 **Security scanning** — `/skill-audit` for code-level risks, `/cve-scan` for dependency CVEs. Both CI-ready with exit codes.
 

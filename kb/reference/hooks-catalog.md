@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.8.0"
+version: "1.9.0"
 created: "2026-03-27"
-last_updated: "2026-07-23"
+last_updated: "2026-07-26"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -31,9 +31,6 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 **File locations:**
 
 - Scripts: `~/.softspark/ai-toolkit/hooks/*.sh`
-- Output-filter runtime: `~/.softspark/ai-toolkit/scripts/output_filter_hook.py`, `output_filter_cli.py`, and `tool_output_filter/`
-- Global output-filter policy: `~/.softspark/ai-toolkit/hooks/output-filter-policy.json`
-- Managed project policy: `<project>/.claude/ai-toolkit-output-filter.json`
 - Config: `~/.claude/settings.json` → `hooks` key
 - Source: `ai-toolkit/app/hooks/*.sh` + `app/hooks.json`
 
@@ -178,59 +175,6 @@ arms the corrective Stop hook.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
-### PostToolUse (native Bash output filter): `filter-tool-output.sh`
-
-| Field | Value |
-|-------|-------|
-| Event | `PostToolUse` |
-| Matcher | `Bash` |
-| Script | `~/.softspark/ai-toolkit/hooks/filter-tool-output.sh` |
-| Fires | After a successful Claude Code Bash tool call |
-
-The hook is disabled by default and runs last among the installed
-`PostToolUse` handlers. Its modes are:
-
-| Mode | Behavior |
-|------|----------|
-| `off` | Shell fast path exits before Python starts |
-| `observe` | Evaluates eligible output and writes content-free metadata, but emits no replacement |
-| `safe` | Replaces eligible output only after invariants pass and the exact native response is stored for recovery |
-
-Only explicitly allowlisted test, lint, typecheck, and validation command
-shapes are eligible. Failed or interrupted tools, non-empty stderr, image or
-binary results, pipes, redirects, deployment, migrations, audits, security
-scanners, malformed payloads, unavailable recovery, and any uncertain case
-remain unchanged.
-
-The per-project policy `<project>/.claude/ai-toolkit-output-filter.json` is
-honored only when **both** checks pass: the project root is registered in
-`~/.softspark/ai-toolkit/projects.json`, and the sibling regular file
-`<project>/.claude/.ai-toolkit-output-filter.owner` holds the ai-toolkit owner
-marker. `ai-toolkit install --local` writes both. Registration is required
-because the owner marker is a public constant, so a cloned or untrusted
-checkout must never be able to self-enable filtering by shipping its own
-marker. An unregistered project, a missing or foreign marker, or a symlinked
-project root or `.claude` directory falls back to the installed global policy
-at `~/.softspark/ai-toolkit/hooks/output-filter-policy.json`, which ships as
-`off`.
-
-`jq` is a required system dependency (`python3 scripts/check_deps.py`
-verifies it alongside `python3`, `git`, and `node`); without it `guard-path.sh`
-blocks file tools rather than skipping path validation.
-
-Recovery data is private and session-scoped under
-`~/.softspark/ai-toolkit/sessions/<repo-key>/output-filter/`. Telemetry records
-only profile/version, byte and line counts, latency, outcome, and fallback
-reason. Recovery-backed modes require a bounded native session ID containing
-only ASCII letters, digits, underscores, or hyphens. Three consecutive
-profile, invariant, or recovery safety failures open a session circuit
-breaker. Set `AI_TOOLKIT_OUTPUT_FILTER_DISABLE=1` for an immediate bypass.
-
-The replacement adapter is Claude Code-specific. Claude Chat/Cowork exports
-exclude it, and the generated hooks for other editors do not activate it.
-The `minimal` hook profile and `AI_TOOLKIT_DISABLED_HOOKS=filter-tool-output`
-bypass it before the Python runtime starts.
-
 ### Stop (quality check) — `quality-check.sh`
 
 | Field | Value |
@@ -344,8 +288,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/session-end.sh` |
 | Fires | When a Claude session ends |
 
-**Action:** Removes private output-filter artifacts and isolated edit state for
-the ending native session, then writes `session-end.md` to the per-repo session store
+**Action:** Removes isolated edit state for the ending native session, then writes `session-end.md` to the per-repo session store
 (`~/.softspark/ai-toolkit/sessions/<repo-key>/`) with a lightweight handoff note
 for the next session.
 

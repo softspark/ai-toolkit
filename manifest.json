@@ -1,83 +1,130 @@
 {
-  "version": "4.16.1",
+  "version": "4.17.0",
   "components": {
     "agents": {
       "description": "44 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
       "path": "app/agents",
       "target": ".claude/agents",
       "type": "symlink",
-      "tags": ["core", "agents"]
+      "tags": [
+        "core",
+        "agents"
+      ]
     },
     "skills": {
       "description": "108 skills (32 task + 30 hybrid + 46 knowledge)",
       "path": "app/skills",
       "target": ".claude/skills",
       "type": "symlink",
-      "tags": ["core", "skills", "commands"]
+      "tags": [
+        "core",
+        "skills",
+        "commands"
+      ]
     },
     "hooks": {
-      "description": "29 hook entries across 14 lifecycle events plus statusLine",
-      "path": "app/hooks.json + app/hooks/*.sh + scripts/tool_output_filter/ + scripts/output_filter_{hook,cli}.py",
+      "description": "28 hook entries across 14 lifecycle events plus statusLine",
+      "path": "app/hooks.json + app/hooks/*.sh",
       "target": "~/.claude/settings.json (merge) + ~/.softspark/ai-toolkit/{hooks,scripts}/ (copy)",
       "type": "merge+copy",
-      "tags": ["core", "hooks", "quality", "output-filter"]
+      "tags": [
+        "core",
+        "hooks",
+        "quality"
+      ]
     },
     "plugin-packs": {
       "description": "Experimental domain plugin packs and optional hook/policy modules",
       "path": "app/plugins",
       "target": "opt-in / not installed by default",
       "type": "experimental",
-      "tags": ["plugins", "packs", "experimental"]
+      "tags": [
+        "plugins",
+        "packs",
+        "experimental"
+      ]
     },
     "constitution": {
       "description": "7-article machine-enforced safety constitution",
       "path": "app/constitution.md",
       "target": ".claude/constitution.md",
       "type": "symlink",
-      "tags": ["core", "safety", "constitution"]
+      "tags": [
+        "core",
+        "safety",
+        "constitution"
+      ]
     },
     "architecture": {
       "description": "System architecture documentation",
       "path": "app/ARCHITECTURE.md",
       "target": ".claude/ARCHITECTURE.md",
       "type": "symlink",
-      "tags": ["docs"]
+      "tags": [
+        "docs"
+      ]
     },
     "output-styles": {
       "description": "System prompt output style overrides (e.g. Golden Rules enforcement)",
       "path": "app/output-styles",
       "target": ".claude/output-styles",
       "type": "symlink",
-      "tags": ["core", "output-styles"]
+      "tags": [
+        "core",
+        "output-styles"
+      ]
     },
     "rules": {
       "description": "Rules synced to Claude Code rule files and exported as a Claude app plugin skill",
       "path": "app/rules",
       "target": "~/.claude/rules + .claude/rules + Claude app plugin skill",
       "type": "sync+plugin",
-      "tags": ["core", "rules"]
+      "tags": [
+        "core",
+        "rules"
+      ]
     }
   },
   "bundles": {
     "minimal": {
       "description": "Hooks and constitution only -- safety without agents",
-      "includes": ["hooks", "constitution"]
+      "includes": [
+        "hooks",
+        "constitution"
+      ]
     },
     "standard": {
       "description": "Full toolkit (recommended)",
-      "includes": ["agents", "skills", "hooks", "constitution", "rules"]
+      "includes": [
+        "agents",
+        "skills",
+        "hooks",
+        "constitution",
+        "rules"
+      ]
     },
     "agents-only": {
       "description": "Agents without skills (for custom skill setup)",
-      "includes": ["agents", "hooks", "constitution"]
+      "includes": [
+        "agents",
+        "hooks",
+        "constitution"
+      ]
     },
     "skills-only": {
       "description": "Skills without agents",
-      "includes": ["skills", "hooks", "constitution"]
+      "includes": [
+        "skills",
+        "hooks",
+        "constitution"
+      ]
     },
     "safety": {
       "description": "Constitution + hooks only (zero agent overhead)",
-      "includes": ["hooks", "constitution"]
+      "includes": [
+        "hooks",
+        "constitution"
+      ]
     }
   },
   "modules": {
@@ -99,55 +146,93 @@
     },
     "rules-typescript": {
       "description": "TypeScript-specific rules",
-      "auto_detect": ["package.json", "tsconfig.json"]
+      "auto_detect": [
+        "package.json",
+        "tsconfig.json"
+      ]
     },
     "rules-python": {
       "description": "Python-specific rules",
-      "auto_detect": ["requirements.txt", "pyproject.toml", "setup.py", "Pipfile"]
+      "auto_detect": [
+        "requirements.txt",
+        "pyproject.toml",
+        "setup.py",
+        "Pipfile"
+      ]
     },
     "rules-golang": {
       "description": "Go-specific rules",
-      "auto_detect": ["go.mod"]
+      "auto_detect": [
+        "go.mod"
+      ]
     },
     "rules-rust": {
       "description": "Rust-specific rules",
-      "auto_detect": ["Cargo.toml"]
+      "auto_detect": [
+        "Cargo.toml"
+      ]
     },
     "rules-java": {
       "description": "Java-specific rules",
-      "auto_detect": ["pom.xml", "build.gradle", "build.gradle.kts"]
+      "auto_detect": [
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts"
+      ]
     },
     "rules-kotlin": {
       "description": "Kotlin-specific rules",
-      "auto_detect": ["build.gradle.kts"]
+      "auto_detect": [
+        "build.gradle.kts"
+      ]
     },
     "rules-swift": {
       "description": "Swift-specific rules",
-      "auto_detect": ["Package.swift", "*.xcodeproj"]
+      "auto_detect": [
+        "Package.swift",
+        "*.xcodeproj"
+      ]
     },
     "rules-dart": {
       "description": "Dart/Flutter-specific rules",
-      "auto_detect": ["pubspec.yaml"]
+      "auto_detect": [
+        "pubspec.yaml"
+      ]
     },
     "rules-csharp": {
       "description": "C#/.NET-specific rules",
-      "auto_detect": ["*.csproj", "*.sln"]
+      "auto_detect": [
+        "*.csproj",
+        "*.sln"
+      ]
     },
     "rules-php": {
       "description": "PHP-specific rules",
-      "auto_detect": ["composer.json"]
+      "auto_detect": [
+        "composer.json"
+      ]
     },
     "rules-cpp": {
       "description": "C++-specific rules",
-      "auto_detect": ["CMakeLists.txt", "Makefile", "*.cpp"]
+      "auto_detect": [
+        "CMakeLists.txt",
+        "Makefile",
+        "*.cpp"
+      ]
     },
     "rules-ruby": {
       "description": "Ruby-specific rules",
-      "auto_detect": ["Gemfile", "*.gemspec"]
+      "auto_detect": [
+        "Gemfile",
+        "*.gemspec"
+      ]
     },
     "rules-medplum": {
       "description": "Medplum/FHIR healthcare platform rules",
-      "auto_detect": ["medplum.config.mts", "medplum.config.ts"]
+      "auto_detect": [
+        "medplum.config.mts",
+        "medplum.config.ts"
+      ]
     },
     "mcp-templates": {
       "description": "26 MCP server config templates",
@@ -155,11 +240,32 @@
     }
   },
   "profiles": {
-    "minimal": ["core"],
-    "standard": ["core", "agents", "skills", "rules-common"],
-    "strict": ["core", "agents", "skills", "rules-common", "mcp-templates"],
-    "full": ["core", "agents", "skills", "rules-common", "mcp-templates"],
-    "offline-slm": ["core"]
+    "minimal": [
+      "core"
+    ],
+    "standard": [
+      "core",
+      "agents",
+      "skills",
+      "rules-common"
+    ],
+    "strict": [
+      "core",
+      "agents",
+      "skills",
+      "rules-common",
+      "mcp-templates"
+    ],
+    "full": [
+      "core",
+      "agents",
+      "skills",
+      "rules-common",
+      "mcp-templates"
+    ],
+    "offline-slm": [
+      "core"
+    ]
   },
   "config_inheritance": {
     "schema": "scripts/schemas/ai-toolkit-config.schema.json",
@@ -167,8 +273,13 @@
     "base_config": "ai-toolkit.config.json",
     "lock_file": ".softspark-toolkit.lock.json",
     "v1_fields": [
-      "extends", "profile", "agents", "plugins", "rules", "constitution",
-      "enforce", "toolOutputFilter"
+      "extends",
+      "profile",
+      "agents",
+      "plugins",
+      "rules",
+      "constitution",
+      "enforce"
     ],
     "max_extends_depth": 5
   }

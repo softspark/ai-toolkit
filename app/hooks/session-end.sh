@@ -3,7 +3,7 @@
 #
 # Fires on: SessionEnd
 # Matcher: all
-# The handoff snapshot is skipped for the minimal profile. Owned recovery
+# The handoff snapshot is skipped for the minimal profile. Session-state
 # cleanup still runs for every profile.
 
 # shellcheck source=_session-paths.sh
@@ -18,18 +18,6 @@ if [ ! -t 0 ]; then
     INPUT=$(cat)
 fi
 SESSION_ID=$(hook_session_id)
-RECOVERY_ROOT="$SESSION_DIR/output-filter"
-OUTPUT_FILTER_CLI="${AI_TOOLKIT_OUTPUT_FILTER_CLI:-$HOME/.softspark/ai-toolkit/scripts/output_filter_cli.py}"
-if [ "$SESSION_ID" != "default" ] &&
-   [ -d "$RECOVERY_ROOT" ] &&
-   [ ! -L "$RECOVERY_ROOT" ] &&
-   [ -f "$OUTPUT_FILTER_CLI" ] &&
-   [ ! -L "$OUTPUT_FILTER_CLI" ] &&
-   command -v python3 >/dev/null 2>&1; then
-    python3 -S "$OUTPUT_FILTER_CLI" clean \
-        --base-directory "$SESSION_DIR" \
-        --session-id "$SESSION_ID" >/dev/null 2>&1 || true
-fi
 
 SESSION_STATE_CLI="${AI_TOOLKIT_SESSION_STATE_CLI:-$HOME/.softspark/ai-toolkit/scripts/session_state.py}"
 if [ "$SESSION_ID" != "default" ] &&

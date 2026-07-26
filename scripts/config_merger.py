@@ -77,13 +77,6 @@ def merge_config_chain(
     # Merge project over accumulated base
     result.merged = _merge_project_over_base(accumulated_base, project_config, result)
 
-    if "toolOutputFilter" in accumulated_base or "toolOutputFilter" in project_config:
-        configured = result.merged.get("toolOutputFilter", {})
-        result.merged["toolOutputFilter"] = _deep_merge(
-            _load_default_output_filter_policy(),
-            configured,
-        )
-
     # Validate enforce constraints
     _validate_enforce(accumulated_base, result.merged)
 
@@ -93,16 +86,6 @@ def merge_config_chain(
 def merge_two(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
     """Simple two-config merge (base → overlay). No enforcement validation."""
     return _deep_merge(base, overlay)
-
-
-def _load_default_output_filter_policy() -> dict[str, Any]:
-    """Load the canonical disabled output-filter policy."""
-    policy_path = Path(__file__).resolve().parent.parent / "app" / "output-filter-policy.json"
-    with open(policy_path, encoding="utf-8") as handle:
-        policy = json.load(handle)
-    if not isinstance(policy, dict):
-        raise ConfigMergeError(f"Invalid output-filter policy: {policy_path}")
-    return policy
 
 
 # ---------------------------------------------------------------------------

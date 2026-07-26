@@ -7,6 +7,38 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.17.0 — Native tool-output filter removed (2026-07-26)
+
+### Removed
+
+- **BREAKING for anyone who opted in.** The native tool-output filter shipped
+  in v4.16.0 is gone: the `PostToolUse` hook `filter-tool-output.sh`, the
+  `scripts/tool_output_filter/` runtime, the `ai-toolkit output-filter` CLI,
+  the benchmark corpus, and the `toolOutputFilter` key in
+  `.softspark-toolkit.json`. The key is accepted and ignored rather than
+  rejected, so an existing config still validates; `ai-toolkit config validate`
+  reports it as a retired key you can delete.
+- Why: measured whole-session token saving was **0.0000%** on real traffic.
+  Across 134 session transcripts spanning 22 projects, 7600 successful Bash
+  results contained 145 that parsed as simple command shapes, 18 that matched a
+  registered shape, and 0 that any filter accepted. The filter was correct;
+  its premise was not. Agent-issued commands are overwhelmingly compound
+  (`&&` and `;` chains, pipelines, heredocs), and the design accepted only
+  simple registered shapes. See
+  `kb/history/completed/output-filter-retirement-20260726.md`.
+
+### Changed
+
+- `ai-toolkit install` and `ai-toolkit update` now remove the artifacts left by
+  v4.16.x: the installed hook script, the global
+  `hooks/output-filter-policy.json`, the managed project policy and owner
+  marker under `.claude/`, and stored recovery trees under
+  `sessions/<repo-key>/output-filter/`. Cleanup is idempotent, verifies
+  ai-toolkit ownership before deleting, and leaves foreign files untouched.
+- The stale `PostToolUse` entry is removed from `~/.claude/settings.json` by
+  the existing hook strip-and-remerge cycle, so no manual edit is needed.
+- Hook counts drop from 29 entries to 28 across the same 14 events.
+
 ## v4.16.1 — Copilot skill remnant recovery (2026-07-24)
 
 ### Fixed

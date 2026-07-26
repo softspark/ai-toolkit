@@ -5,8 +5,8 @@ The default scope is the current user's global install. ``--local`` targets a
 project, while an explicit legacy positional target scans both project and
 home-style locations for backward compatibility. Only files, symlinks, JSON
 handlers, and marker blocks with verifiable ai-toolkit ownership are removed.
-Global scope also removes validated output-filter recovery files while keeping
-foreign content in the same session trees.
+Global scope also removes validated recovery files left behind by the v4.16.x
+tool-output filter while keeping foreign content in the same session trees.
 
 Usage:
     python3 scripts/uninstall.py [--yes] [--local|--global] [--target DIR]
@@ -33,8 +33,16 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import app_dir, toolkit_dir
 from injection import strip_all_sections, strip_section, trim_trailing_blanks
-from tool_output_filter.recovery import clean_owned_recovery_tree
-from tool_output_filter.recovery import count_owned_recovery_artifacts
+# Retirement cleanup for the v4.16.x tool-output filter. The runtime package
+# that wrote those files is gone; output_filter_retirement re-states its
+# ownership rules as self-contained constants for both install and uninstall.
+from output_filter_retirement import (
+    PROJECT_OWNER_NAME as _OUTPUT_FILTER_OWNER_NAME,
+    PROJECT_POLICY_NAME as _OUTPUT_FILTER_POLICY_NAME,
+    clean_owned_recovery_tree,
+    count_owned_recovery_artifacts,
+    managed_project_policy as _managed_output_filter_policy,
+)
 
 
 CODEX_AGENT_MARKER = "# ai-toolkit-managed: codex-agent"
@@ -557,28 +565,6 @@ def _discover_claude_hooks(claude_dir: Path) -> list[tuple[str, str]]:
     if '"_source"' in content and '"ai-toolkit"' in content:
         return [("Merged: hooks.json (toolkit entries)", "hooks-merged")]
     return []
-
-
-_OUTPUT_FILTER_POLICY_NAME = "ai-toolkit-output-filter.json"
-_OUTPUT_FILTER_OWNER_NAME = ".ai-toolkit-output-filter.owner"
-_OUTPUT_FILTER_OWNER_MARKER = b"ai-toolkit-output-filter-policy-v1\n"
-
-
-def _managed_output_filter_policy(claude_dir: Path) -> list[Path]:
-    """Return the managed per-project policy pair, or [] when unmanaged."""
-    policy = claude_dir / _OUTPUT_FILTER_POLICY_NAME
-    owner = claude_dir / _OUTPUT_FILTER_OWNER_NAME
-    if owner.is_symlink() or not owner.is_file():
-        return []
-    try:
-        if owner.read_bytes() != _OUTPUT_FILTER_OWNER_MARKER:
-            return []
-    except OSError:
-        return []
-    managed = [owner]
-    if not policy.is_symlink() and policy.is_file():
-        managed.insert(0, policy)
-    return managed
 
 
 def _discover_output_filter_policy(claude_dir: Path) -> list[tuple[str, str]]:
@@ -1318,7 +1304,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Remove only ai-toolkit-managed Claude, Codex, Copilot, and "
-            "output-filter recovery data while preserving user-owned content."
+            "leftover v4.16.x recovery data while preserving user-owned content."
         ),
         epilog=(
             "Global Codex and Copilot locations honor CODEX_HOME and "

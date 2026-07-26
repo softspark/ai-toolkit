@@ -20,18 +20,23 @@ from typing import Any
 
 VALID_PROFILES = {"minimal", "standard", "strict", "full", "offline-slm"}
 VALID_HOOK_PROFILES = {"minimal", "standard", "strict"}
-VALID_OUTPUT_FILTER_MODES = {"off", "observe", "safe"}
-VALID_OUTPUT_FILTER_PROFILES = {"repeat-lines", "tap-success"}
-MAX_OUTPUT_FILTER_INPUT_BYTES = 8_388_608
-DEFAULT_OUTPUT_FILTER_MIN_SAVINGS_BYTES = 1_024
 HOOK_PROFILE_ORDER = {"minimal": 0, "standard": 1, "strict": 2}
 IMMUTABLE_ARTICLES = frozenset({1, 2, 3, 4, 5, 6, 7})
 MIN_JUSTIFICATION_LEN = 20
 VALID_CONFIG_FIELDS = frozenset({
     "$schema", "extends", "name", "version", "description", "profile",
     "agents", "plugins", "rules", "constitution", "enforce", "overrides",
-    "toolOutputFilter",
 })
+
+# Keys from removed features. Accepted and ignored so an upgrade never fails
+# validation on a config the user has not cleaned up yet, but reported so the
+# line does not sit there forever pretending to configure something.
+RETIRED_CONFIG_FIELDS = {
+    "toolOutputFilter": (
+        "the native tool-output filter was removed in v4.17.0; this key is "
+        "ignored and can be deleted"
+    ),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -125,7 +130,7 @@ def validate_merged_config(
 def _validate_schema(config: dict[str, Any], errors: list[str]) -> None:
     """Validate structural correctness of config."""
 
-    unknown = set(config) - VALID_CONFIG_FIELDS
+    unknown = set(config) - VALID_CONFIG_FIELDS - set(RETIRED_CONFIG_FIELDS)
     if unknown:
         errors.append(
             f"Unknown top-level config keys: {', '.join(sorted(unknown))}."
@@ -173,10 +178,6 @@ def _validate_schema(config: dict[str, Any], errors: list[str]) -> None:
     overrides = config.get("overrides")
     if overrides is not None:
         _validate_overrides_block(overrides, errors)
-
-    output_filter = config.get("toolOutputFilter")
-    if output_filter is not None:
-        _validate_output_filter_block(output_filter, errors)
 
 
 def _validate_agents_block(agents: Any, errors: list[str]) -> None:
@@ -354,134 +355,6 @@ def _validate_overrides_block(overrides: Any, errors: list[str]) -> None:
                 f"'overrides.{key}.justification' too short "
                 f"({len(justification)} chars, min {MIN_JUSTIFICATION_LEN})."
             )
-
-
-def _validate_output_filter_block(output_filter: Any, errors: list[str]) -> None:
-    """Validate native tool-output filter configuration."""
-    if not isinstance(output_filter, dict):
-        errors.append("'toolOutputFilter' must be an object.")
-        return
-
-    valid_keys = {
-        "mode", "profiles", "maxInputBytes", "minSavingsBytes",
-        "minSavingsRatio", "recovery",
-    }
-    unknown = set(output_filter) - valid_keys
-    if unknown:
-        errors.append(
-            f"Unknown keys in 'toolOutputFilter': {', '.join(sorted(unknown))}."
-        )
-
-    mode = output_filter.get("mode")
-    if mode is not None and mode not in VALID_OUTPUT_FILTER_MODES:
-        errors.append(
-            f"Invalid 'toolOutputFilter.mode' '{mode}'. "
-            f"Valid: {', '.join(sorted(VALID_OUTPUT_FILTER_MODES))}."
-        )
-
-    profiles = output_filter.get("profiles")
-    if profiles is not None:
-        if not isinstance(profiles, list) or not all(
-            isinstance(profile, str) for profile in profiles
-        ):
-            errors.append("'toolOutputFilter.profiles' must be an array of strings.")
-        else:
-            invalid = set(profiles) - VALID_OUTPUT_FILTER_PROFILES
-            if invalid:
-                errors.append(
-                    "Invalid 'toolOutputFilter.profiles': "
-                    f"{', '.join(sorted(invalid))}."
-                )
-            if len(profiles) != len(set(profiles)):
-                errors.append(
-                    "'toolOutputFilter.profiles' must not contain duplicate items."
-                )
-
-    _validate_output_filter_limits(output_filter, errors)
-    recovery = output_filter.get("recovery")
-    if recovery is not None:
-        _validate_output_filter_recovery(recovery, errors)
-
-
-def _validate_output_filter_limits(
-    output_filter: dict[str, Any],
-    errors: list[str],
-) -> None:
-    """Validate output-filter byte and ratio bounds."""
-    _validate_bounded_integer(
-        output_filter.get("maxInputBytes"),
-        "toolOutputFilter.maxInputBytes",
-        errors,
-        minimum=1,
-        maximum=MAX_OUTPUT_FILTER_INPUT_BYTES,
-    )
-    _validate_bounded_integer(
-        output_filter.get("minSavingsBytes"),
-        "toolOutputFilter.minSavingsBytes",
-        errors,
-        minimum=0,
-        maximum=MAX_OUTPUT_FILTER_INPUT_BYTES,
-    )
-    _validate_output_filter_savings_relation(output_filter, errors)
-
-    ratio = output_filter.get("minSavingsRatio")
-    if ratio is not None and (
-        isinstance(ratio, bool)
-        or not isinstance(ratio, (int, float))
-        or not 0 <= ratio <= 1
-    ):
-        errors.append("'toolOutputFilter.minSavingsRatio' must be between 0 and 1.")
-
-
-def _validate_output_filter_savings_relation(
-    output_filter: dict[str, Any],
-    errors: list[str],
-) -> None:
-    """Ensure the savings threshold can be reached within the input limit."""
-    max_input = output_filter.get(
-        "maxInputBytes",
-        MAX_OUTPUT_FILTER_INPUT_BYTES,
-    )
-    min_savings = output_filter.get(
-        "minSavingsBytes",
-        DEFAULT_OUTPUT_FILTER_MIN_SAVINGS_BYTES,
-    )
-    values = (max_input, min_savings)
-    if any(
-        not isinstance(value, int) or isinstance(value, bool)
-        for value in values
-    ):
-        return
-    if min_savings > max_input:
-        errors.append(
-            "'toolOutputFilter.minSavingsBytes' must not exceed "
-            "'toolOutputFilter.maxInputBytes'."
-        )
-
-
-def _validate_output_filter_recovery(recovery: Any, errors: list[str]) -> None:
-    """Validate secure ephemeral recovery settings."""
-    if not isinstance(recovery, dict):
-        errors.append("'toolOutputFilter.recovery' must be an object.")
-        return
-
-    valid_keys = {"mode", "ttlMinutes", "maxSessionBytes"}
-    unknown = set(recovery) - valid_keys
-    if unknown:
-        errors.append(
-            "Unknown keys in 'toolOutputFilter.recovery': "
-            f"{', '.join(sorted(unknown))}."
-        )
-
-    if recovery.get("mode") not in (None, "ephemeral"):
-        errors.append("'toolOutputFilter.recovery.mode' must be 'ephemeral'.")
-    for key in ("ttlMinutes", "maxSessionBytes"):
-        _validate_bounded_integer(
-            recovery.get(key),
-            f"toolOutputFilter.recovery.{key}",
-            errors,
-            minimum=1,
-        )
 
 
 def _validate_bounded_integer(

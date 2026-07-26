@@ -94,10 +94,6 @@ teardown_file() {
     [ -f "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js" ]
 }
 
-@test "opencode: plugin never exports the Claude-only output filter" {
-    ! grep -q "filter-tool-output" "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
-}
-
 @test "opencode: plugin uses NAMED export only (opencode requirement)" {
     f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
     grep -q '^export const ' "$f"

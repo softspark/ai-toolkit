@@ -19,6 +19,7 @@
 - [Spike: F2 MCP Context Trim — Hook Feasibility & Path Decision](kb/history/completed/f2-mcp-trim-spike-20260504.md)
 - [Implementation Plan: Native Tool Output Filter](kb/history/completed/native-tool-output-filter-plan.md)
 - [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/history/completed/offline-slm-profile-plan-20260411.md)
+- [Retirement: Native Tool-Output Filter](kb/history/completed/output-filter-retirement-20260726.md)
 - [Plan: Output & Token Discipline](kb/history/completed/output-token-discipline-plan-20260504.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
@@ -63,7 +64,6 @@
 - [Usage Statistics](kb/reference/stats.md)
 - [Supported Tools Registry](kb/reference/supported-tools-registry.md)
 - [Config Sync](kb/reference/sync.md)
-- [Native Tool Output Filter](kb/reference/tool-output-filter.md)
 - [Unique Features & Differentiators](kb/reference/unique-features.md)
 - [Windows Support](kb/reference/windows-support.md)
 - [Troubleshooting](kb/troubleshooting/README.md)
@@ -3045,6 +3045,139 @@ This plan shares modification targets with the Enterprise Config plan:
 ---
 
 **Last Updated:** 2026-04-10
+
+---
+
+## kb/history/completed/output-filter-retirement-20260726.md
+
+---
+title: "Retirement: Native Tool-Output Filter — Measured 0% and Removed"
+category: planning
+service: ai-toolkit
+tags:
+  - output-filter
+  - token-reduction
+  - postmortem
+  - measurement
+  - claude-code
+doc_type: postmortem
+status: completed
+created: "2026-07-26"
+last_updated: "2026-07-26"
+shipped_in: "v4.17.0 (removal)"
+description: "Why the native tool-output filter shipped in v4.16.0 was removed in v4.17.0: measured 0.0000% whole-session token saving on real traffic, because agent-issued commands are compound and the design accepted only simple registered shapes."
+---
+
+# Retirement: Native Tool-Output Filter
+
+**Shipped:** v4.16.0 (2026-07-23). **Removed:** v4.17.0 (2026-07-26).
+
+## The number
+
+Measured whole-session input-token saving: **0.0000%**.
+
+Real Bash results from local Claude Code transcripts were replayed through the
+shipped classifier and the full filter registry. The filters ran on the actual
+captured output; this is a measurement, not an estimate.
+
+| Scope | Value |
+|---|---:|
+| Transcripts replayed | 134, across 22 distinct projects |
+| Successful Bash results | 7600 |
+| Of those, parsed as a simple command shape | 145 (1.9%) |
+| Of those, matched a registered shape | 18 (0.24%) — 16 `git diff`, 2 `git show` |
+| Accepted by any filter | **0** |
+| Bytes saved | **0** |
+
+The classifier was verified working before the result was accepted: `git
+status`, `git log -n 20`, `pytest -v`, `bats --tap`, and `npm test` each
+produced exactly one candidate. The zero is real.
+
+## Why: the premise, not the implementation
+
+Seventeen filters were correct. They cleared their byte floors on owned
+fixtures (44–95% reduction), stayed inside every latency budget at the 8 MiB
+engine cap, passed adversarial safety review, and never once compressed a
+failure. None of that mattered, because the commands they were built for are
+not the commands that get issued.
+
+95% of successful Bash invocations are compound. The byte pool breaks down as:
+
+| Class | Share of compound bytes | Why the filter refused it |
+|---|---:|---|
+| `;` chain | 44.3% | multiple output producers, attribution ambiguous |
+| multiline script | 29.1% | rejected at the raw-string boundary |
+| pipeline | 12.7% | the pipe transformed the output |
+| `&&` chain with producing segments | 5.6% | multiple output producers |
+| redirect, substitution | 4.4% | rejected at the raw-string boundary |
+| heredoc | 3.5% | rejected at the raw-string boundary |
+
+Every one of those refusals was the correct safety decision in isolation.
+Together they excluded the entire population.
+
+The most-frequent single shape was `cd <path> && …`, at 375 results and 480 KB.
+A bounded `cd`-prefix subset had already been designed, threat-modelled, and
+measured during Phase 3, and it was dropped because it covered 0.00% of the
+compound pool. The retirement measurement confirms why: of those 375 results,
+only 5 had a single simple second segment, and those 5 produced 0 bytes of
+output.
+
+## What was already rejected on the way, and still stands
+
+- **Read-result coverage: rejected on the `Edit` exact-match hazard.** On
+  670.7 KB of real Read content, adjacent-duplicate collapse saves 0.00%,
+  blank-run collapse 0.04%, trailing-whitespace 0.00%. Anything above noise
+  requires elision, and 80.7% of `Edit` old-strings target a file read earlier
+  in the same session, 63.4% of them multi-line byte-exact quotes. A Read
+  result asserts what is on disk, so omission is a false claim rather than a
+  summary.
+- **Compound-command subset: designed, measured at 0.00% coverage, dropped.**
+  The pipeline-truncator shape failed on an inversion: a truncated document
+  parses cleanly exactly where the shape would pay, and rejects exactly where
+  truncation is detectable.
+
+## The process lesson
+
+The plan validated its **design** exhaustively across five phases and its
+**premise** not at all until the fifth. Fixtures measured the filter; only real
+traffic measured the value, and the two disagreed by two orders of magnitude.
+
+The end-to-end replay that produced the 0% took under an hour and could have
+run on day one, before any filter existed. Any future plan of this shape must
+put premise validation in Phase 0, with a kill number published before the
+measurement rather than argued after it.
+
+## Evaluated as a replacement: rtk
+
+`rtk` (https://github.com/rtk-ai/rtk, Apache-2.0) rewrites commands at
+`PreToolUse` rather than filtering output afterwards, which is the mechanism
+this project's own safety contract had excluded. Its rewrite pipeline was
+ported and validated against 197 of its own test assertions (197/197 exact
+agreement), then applied to the same traffic:
+
+- addresses **31.5%** of successful Bash bytes, **9.7%** of all tool-result
+  bytes — genuinely non-zero, so the in-house 0% was a coverage failure rather
+  than a law of nature;
+- projected saving is **0.32–0.48%** of session input tokens on rtk's own
+  60–90% claim, and **0.15–0.21%** once its filters' actual behaviour is
+  modelled;
+- its two largest families here under-deliver: `rtk read` returns files
+  verbatim at the default `--level none`, and `rtk grep` models at 12.3%
+  against a claimed 75%;
+- custom TOML filters, the documented extension point, would reach 1.91% of
+  Bash bytes. The large misses are structurally unreachable from config:
+  `| head` and `| tail` (34.6%) are blocked by the pipeline-final rule, and
+  `sed` (19.4%) sits in the hard-ignored prefix list.
+
+Not adopted.
+
+## Where the tokens actually are
+
+The measurement points somewhere other than command output. In this traffic,
+`Read` is 53.8% of tool-result bytes, and within Bash the two largest buckets
+are `sed` used as a file reader (16.2%) and `| head` / `| tail` pipeline tails
+(34.6%). Those are file-reading patterns, not tool reports. Any future attempt
+at token reduction should start there, and should start by measuring.
 
 ---
 
@@ -6844,9 +6977,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-03-23"
-last_updated: "2026-07-23"
+last_updated: "2026-07-26"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -7141,7 +7274,6 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | UserPromptSubmit | Before user prompt execution | `track-usage.sh` | Record skill invocations to stats.json |
 | PostToolUse | After edit/write tools | `post-tool-use.sh` | Lightweight validation reminders |
 | PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
-| PostToolUse | After successful Bash | `filter-tool-output.sh` | Observe eligible text or replace it only after exact recovery succeeds; Claude Code only |
 | Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
 | Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |
@@ -7558,9 +7690,9 @@ The reference benchmark set is intentionally curated:
 title: "CLI Reference"
 category: reference
 service: ai-toolkit
-tags: [cli, commands, reference, install, update, plugin, mcp, telemetry, output-filter]
+tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-07-23"
+last_updated: "2026-07-26"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -7635,18 +7767,8 @@ Usage: ai-toolkit <command> [options]
 
 | Command | Description |
 |---------|-------------|
-| `output-filter status [--policy PATH]` | Print the effective trusted project/global policy, or inspect an explicit policy |
-| `output-filter inspect --profile repeat-lines\|tap-success` | Read stdin and print content-free candidate metadata without changing or echoing the input |
-| `output-filter recover <handle> [--base-directory PATH] [--session-id ID]` | Print the exact stored native response object for an opaque recovery handle |
-| `output-filter clean [--base-directory PATH] [--session-id ID]` | Remove owned filter artifacts for one session or all sessions in the current repository |
-| `output-filter clean --session-id ID --expired` | Remove expired exact-response artifacts for one native session |
-| `output-filter hook --policy PATH` | **Internal, not for manual use.** `PostToolUse` entry point that reads the native hook payload on stdin and emits any replacement. The installed hook `filter-tool-output.sh` calls the same runtime through the lean `output_filter_hook.py` process instead |
 
-`off` is the default. Configure `toolOutputFilter.mode` in
-`.softspark-toolkit.json`, then run `install --local` or `update --local`.
 `AI_TOOLKIT_OUTPUT_FILTER_DISABLE=1` bypasses active filtering immediately.
-See [Native Tool Output Filter](tool-output-filter.md) for eligibility,
-privacy, recovery, and runtime support.
 
 ## Project Registry
 
@@ -8944,7 +9066,7 @@ tags:
   - multi-repo
 doc_type: reference
 created: "2026-04-11"
-last_updated: "2026-07-23"
+last_updated: "2026-07-26"
 description: "Comprehensive guide for setting up and using ai-toolkit configuration inheritance. Covers base config creation, project setup, enforcement rules, CI integration, and troubleshooting."
 ---
 
@@ -9011,7 +9133,6 @@ ai-toolkit config check       # CI enforcement check
 |-------|------|-------------|
 | `extends` | string | Base config source (npm, git URL, local path) |
 | `profile` | enum | `minimal`, `standard`, `strict`, `full`, `offline-slm` |
-| `toolOutputFilter` | object | Native Bash result filtering policy: mode, profiles, savings thresholds, and recovery limits |
 | `agents` | object | `enabled`, `disabled`, `custom` arrays |
 | `plugins` | object | Resolved `enabled` and `disabled` plugin intent |
 | `rules` | object | `inject`, `remove` arrays |
@@ -9090,25 +9211,6 @@ Base configs can define non-overridable constraints via the `enforce` block:
 effective intent explicit and causes validation to reject a conflicting
 `plugins.disabled` entry. Install the named plugin pack separately with
 `ai-toolkit plugin install <name>` or your organization deployment workflow.
-
-### Native tool-output filtering
-
-Projects can opt into the dependency-free output filter without changing the
-organization-wide default:
-
-```json
-{
-  "toolOutputFilter": {
-    "mode": "observe",
-    "profiles": ["repeat-lines", "tap-success"]
-  }
-}
-```
-
-`ai-toolkit install --local` materializes the effective policy as the managed
-`.claude/ai-toolkit-output-filter.json` file. `off` is the default, `observe`
-collects metadata without changing model-visible output, and `safe` permits
-replacement only when every invariant and exact-recovery check succeeds.
 
 ### Overrides
 
@@ -10054,9 +10156,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.8.0"
+version: "1.9.0"
 created: "2026-03-27"
-last_updated: "2026-07-23"
+last_updated: "2026-07-26"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -10082,9 +10184,6 @@ ai-toolkit update     # re-copies scripts, re-merges (idempotent)
 **File locations:**
 
 - Scripts: `~/.softspark/ai-toolkit/hooks/*.sh`
-- Output-filter runtime: `~/.softspark/ai-toolkit/scripts/output_filter_hook.py`, `output_filter_cli.py`, and `tool_output_filter/`
-- Global output-filter policy: `~/.softspark/ai-toolkit/hooks/output-filter-policy.json`
-- Managed project policy: `<project>/.claude/ai-toolkit-output-filter.json`
 - Config: `~/.claude/settings.json` → `hooks` key
 - Source: `ai-toolkit/app/hooks/*.sh` + `app/hooks.json`
 
@@ -10229,59 +10328,6 @@ arms the corrective Stop hook.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
-### PostToolUse (native Bash output filter): `filter-tool-output.sh`
-
-| Field | Value |
-|-------|-------|
-| Event | `PostToolUse` |
-| Matcher | `Bash` |
-| Script | `~/.softspark/ai-toolkit/hooks/filter-tool-output.sh` |
-| Fires | After a successful Claude Code Bash tool call |
-
-The hook is disabled by default and runs last among the installed
-`PostToolUse` handlers. Its modes are:
-
-| Mode | Behavior |
-|------|----------|
-| `off` | Shell fast path exits before Python starts |
-| `observe` | Evaluates eligible output and writes content-free metadata, but emits no replacement |
-| `safe` | Replaces eligible output only after invariants pass and the exact native response is stored for recovery |
-
-Only explicitly allowlisted test, lint, typecheck, and validation command
-shapes are eligible. Failed or interrupted tools, non-empty stderr, image or
-binary results, pipes, redirects, deployment, migrations, audits, security
-scanners, malformed payloads, unavailable recovery, and any uncertain case
-remain unchanged.
-
-The per-project policy `<project>/.claude/ai-toolkit-output-filter.json` is
-honored only when **both** checks pass: the project root is registered in
-`~/.softspark/ai-toolkit/projects.json`, and the sibling regular file
-`<project>/.claude/.ai-toolkit-output-filter.owner` holds the ai-toolkit owner
-marker. `ai-toolkit install --local` writes both. Registration is required
-because the owner marker is a public constant, so a cloned or untrusted
-checkout must never be able to self-enable filtering by shipping its own
-marker. An unregistered project, a missing or foreign marker, or a symlinked
-project root or `.claude` directory falls back to the installed global policy
-at `~/.softspark/ai-toolkit/hooks/output-filter-policy.json`, which ships as
-`off`.
-
-`jq` is a required system dependency (`python3 scripts/check_deps.py`
-verifies it alongside `python3`, `git`, and `node`); without it `guard-path.sh`
-blocks file tools rather than skipping path validation.
-
-Recovery data is private and session-scoped under
-`~/.softspark/ai-toolkit/sessions/<repo-key>/output-filter/`. Telemetry records
-only profile/version, byte and line counts, latency, outcome, and fallback
-reason. Recovery-backed modes require a bounded native session ID containing
-only ASCII letters, digits, underscores, or hyphens. Three consecutive
-profile, invariant, or recovery safety failures open a session circuit
-breaker. Set `AI_TOOLKIT_OUTPUT_FILTER_DISABLE=1` for an immediate bypass.
-
-The replacement adapter is Claude Code-specific. Claude Chat/Cowork exports
-exclude it, and the generated hooks for other editors do not activate it.
-The `minimal` hook profile and `AI_TOOLKIT_DISABLED_HOOKS=filter-tool-output`
-bypass it before the Python runtime starts.
-
 ### Stop (quality check) — `quality-check.sh`
 
 | Field | Value |
@@ -10395,8 +10441,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/session-end.sh` |
 | Fires | When a Claude session ends |
 
-**Action:** Removes private output-filter artifacts and isolated edit state for
-the ending native session, then writes `session-end.md` to the per-repo session store
+**Action:** Removes isolated edit state for the ending native session, then writes `session-end.md` to the per-repo session store
 (`~/.softspark/ai-toolkit/sessions/<repo-key>/`) with a lightweight handoff note
 for the next session.
 
@@ -13157,7 +13202,6 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
 | Tracked handler types | `command`, `prompt`, `agent`, `mcp_tool`, `http` (POST event JSON to allowlisted URLs via `allowedHttpHookUrls`) |
-| Tool-output replacement | Native `PostToolUse.updatedToolOutput`; ai-toolkit exposes dependency-free `off`, byte-identical `observe`, and opt-in recoverable `safe` modes for eligible successful Bash text |
 | Other capabilities | slash commands, MCP server/client, sub-agent, output style, `SKILL.md` (≥500 lines warn) |
 | Version probe | `claude --version` |
 | Notes | v2.1.169 added `disableBundledSkills` setting + `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` env var (hides bundled skills/built-in slash commands from the model; toolkit skills in `.claude/skills/` are unaffected — useful when toolkit skills overlap built-ins) and `claude --safe-mode` / `CLAUDE_CODE_SAFE_MODE` (starts with hooks, skills, agents, and CLAUDE.md disabled — first isolation step when debugging toolkit rule enforcement). `fallbackModel` settings key (v2.1.166) noted as not-adopted (class C, no toolkit surface writes model settings). |
@@ -13177,7 +13221,6 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Plugin layout | `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`; ai-toolkit uses manifest paths under `claude-app/` for its generated app-only rules and hooks |
 | Our generator | `scripts/claude_app.py` (`ai-toolkit claude-app export`) |
 | Runtime split | Skills work in Chat (web/Desktop) and Cowork. Hooks and sub-agents run only in Cowork. Claude app does **not** scan Claude Code's `~/.claude/rules/`, `CLAUDE.md`, or `~/.claude/settings.json`. |
-| Tool-output replacement | Not shipped. The Claude Code-only filter hook and runtime are excluded from the app archive until Cowork has an independently verified replacement contract. |
 | Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. |
 
 ---
@@ -13325,7 +13368,6 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_agents.py` (native custom-agent TOML), `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
 | Rules delivery | Universal coding rules are inlined into `AGENTS.md` (Codex reads instructions only from AGENTS.md, not `.agents/rules/`); language rules ship as `<lang>-rules` skills under `.agents/skills/`. Global install writes `~/.codex/AGENTS.md` (not `~/AGENTS.md`, which Codex never loads globally); plugin-pack rules are marker-injected into the same file. `project_doc_max_bytes` default is 32 KiB and Codex silently truncates AGENTS.md past that (see codex-cli-compatibility.md). |
 | Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We wire 9 through an explicit Codex map, including destructive-command and wrong-home path guards on both Bash `PreToolUse` and `PermissionRequest`. `PostCompact` is not wired (its only hook was the removed environment-snapshot probe). |
-| Tool-output replacement | Manual `ai-toolkit output-filter inspect` only. The Claude-specific `updatedToolOutput` adapter is not emitted into Codex hooks. |
 | Tracked handler types | `command` (emitted by default; the only handler Codex actually runs). `prompt` and `agent` are parsed by Codex but NOT yet executed, so hand-authored handlers of those types are inert. |
 | Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.agents/skills/*/SKILL.md` (native Codex skill discovery path), `.codex/agents/*.toml` (native custom agents) |
 | Version probe | `codex --version` |
@@ -13340,7 +13382,6 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Config paths | `opencode.json`, `.opencode/agents/*.md`, `.opencode/commands/*.md`, `.opencode/plugins/*`, `.opencode/skills/*/SKILL.md` (v1.14+), `AGENTS.md`; skill fallback discovery: `.claude/skills/`, `.agents/skills/`, `~/.config/opencode/skills/`, `~/.claude/skills/`, `~/.agents/skills/` |
 | Our generators | `scripts/generate_opencode.py`, `scripts/generate_opencode_agents.py`, `scripts/generate_opencode_commands.py`, `scripts/generate_opencode_json.py`, `scripts/generate_opencode_plugin.py` |
 | Hook isolation | Tool hooks preserve native `sessionID` as normalized `session_id`; exit code 2 from a blocking pre-tool guard is raised back to OpenCode instead of being ignored. |
-| Tool-output replacement | Manual `ai-toolkit output-filter inspect` only. No active OpenCode output adapter is shipped. |
 | Tracked plugin events | `session.created`, `session.compacted`, `session.deleted`, `message.updated`, `tool.execute.before`, `tool.execute.after`, `permission.asked`, `command.executed` |
 | Other capabilities | `opencode.json` config, primary + subagent modes, `@`-mention subagents, `/`-invocation commands, MCP (local + remote), plugin hooks in JS/TS, native `SKILL.md` discovery with Claude-compatible fallback, `permission.skill.*` matrix |
 | Version probe | `opencode --version` |
@@ -13475,299 +13516,6 @@ ai-toolkit sync --pull abc123def456   # Use gist ID from first push
 - Gists are created as **secret** (not discoverable, but accessible via URL)
 - Rules may contain project-specific instructions — review before sharing
 - No credentials or tokens are stored in the snapshot
-
----
-
-## kb/reference/tool-output-filter.md
-
----
-title: "Native Tool Output Filter"
-category: reference
-service: ai-toolkit
-tags: [output-filter, hooks, recovery, telemetry, claude-code]
-version: "1.0.0"
-created: "2026-07-23"
-last_updated: "2026-07-23"
-description: "Contract, configuration, safety boundaries, recovery, CLI, and runtime support for the native ai-toolkit output filter."
----
-
-# Native Tool Output Filter
-
-## Overview
-
-ai-toolkit includes an original, dependency-free filter for selected
-post-execution tool results. It is disabled by default and does not depend on,
-vendor, execute, or copy another output-filter package.
-
-The active adapter targets Claude Code because its `PostToolUse` contract can
-replace a native tool response through
-`hookSpecificOutput.updatedToolOutput`. The replacement object retains the
-native response shape and changes only `stdout`. See the
-[Claude Code hooks reference](https://code.claude.com/docs/en/hooks).
-
-The filter never changes the command, arguments, environment, working
-directory, permission decision, exit status, or signal. [PATH:
-scripts/tool_output_filter/hook_runtime.py] [PATH:
-scripts/tool_output_filter/engine.py]
-
-## Modes
-
-| Mode | Model-visible result | Recovery | Telemetry |
-|------|----------------------|----------|-----------|
-| `off` | Original | None | None |
-| `observe` | Original | No raw response | Content-free decision metadata |
-| `safe` | Replacement only after every gate passes | Exact native response saved first | Content-free decision metadata |
-
-`off` is a shell fast path, so the Python runtime is not started. Any runtime
-error, malformed payload, unsafe command, failed invariant, unavailable secure
-storage, or insufficient saving leaves the original response unchanged.
-
-Three consecutive profile, invariant, or recovery safety failures open a
-persistent session-scoped circuit breaker. One bounded Claude system message
-reports the bypass, then later results stay unchanged for that session.
-
-## Configuration
-
-Configure the project in `.softspark-toolkit.json`:
-
-```json
-{
-  "toolOutputFilter": {
-    "mode": "observe",
-    "profiles": ["repeat-lines", "tap-success"],
-    "maxInputBytes": 8388608,
-    "minSavingsBytes": 1024,
-    "minSavingsRatio": 0.15,
-    "recovery": {
-      "mode": "ephemeral",
-      "ttlMinutes": 60,
-      "maxSessionBytes": 33554432
-    }
-  }
-}
-```
-
-Run `ai-toolkit install --local` or `ai-toolkit update --local` to materialize
-the effective policy as:
-
-```text
-<project>/.claude/ai-toolkit-output-filter.json
-<project>/.claude/.ai-toolkit-output-filter.owner
-```
-
-The managed files use mode `0600`. The hook accepts a project policy only when
-the project root is registered in `~/.softspark/ai-toolkit/projects.json`
-**and** the regular owner marker matches ai-toolkit. Registration is the
-security boundary: the owner marker is a public constant, so requiring the
-registry stops a cloned or untrusted checkout from self-enabling filtering by
-committing its own marker. An unregistered project, a missing or foreign
-marker, or a symlinked project root or `.claude` directory falls back to the
-installed global policy at
-`~/.softspark/ai-toolkit/hooks/output-filter-policy.json`, which defaults to
-`off`. [PATH: app/hooks/filter-tool-output.sh] [PATH:
-scripts/install_steps/ai_tools.py]
-
-`jq` is a required system dependency for the lifecycle hooks and is verified
-by `python3 scripts/check_deps.py` alongside `python3`, `git`, and `node`.
-
-Before executing anything, the hook validates the resolved Python runtime path:
-it must be a readable regular file and must not be a symlink. A missing,
-non-regular, unreadable, or symlinked runtime makes the hook exit silently and
-leave the tool response unchanged, so a tampered or half-installed runtime
-cannot be invoked. The same regular-file rule applies to every policy file the
-hook reads. [PATH: app/hooks/filter-tool-output.sh]
-
-Set `AI_TOOLKIT_OUTPUT_FILTER_DISABLE=1` for an immediate bypass without
-reinstalling. `AI_TOOLKIT_OUTPUT_FILTER_POLICY` may point the hook to an
-explicit regular policy file for controlled operational testing. The hook is
-also skipped by the `minimal` hook profile and may be listed in
-`AI_TOOLKIT_DISABLED_HOOKS`. `AI_TOOLKIT_OUTPUT_FILTER_HOOK_RUNTIME` is reserved
-for controlled runtime testing; the manual and cleanup CLI remains
-`output_filter_cli.py`.
-
-## Eligibility
-
-The Claude adapter considers only a completed `PostToolUse` event with:
-
-- tool name `Bash`;
-- a non-empty native session ID of at most 160 ASCII letters, digits,
-  underscores, or hyphens;
-- string `stdout`;
-- empty `stderr`;
-- `interrupted: false`;
-- `isImage: false`;
-- a command that matches a strict allowlist for test, lint, typecheck, or
-  validation tools;
-- input at or below 8 MiB;
-- valid text without binary or terminal-control content.
-
-The following always pass through unchanged:
-
-- failed, interrupted, image, binary, invalid-text, TTY, or streaming results;
-- pipes, redirects, shell chaining, substitutions, and multiline commands;
-- deployment, release, migration, publish, destroy, audit, and security-scanner
-  commands;
-- arbitrary Python scripts and unknown command shapes;
-- output with non-empty stderr;
-- unknown profiles or native payload shapes;
-- candidates that save less than both the configured byte and ratio threshold.
-
-The command classifier is eligibility logic only. It never parses and
-re-executes a command. [PATH: scripts/tool_output_filter/hook_runtime.py]
-
-## Profiles
-
-### `repeat-lines`
-
-Collapses only adjacent identical, non-diagnostic lines. It retains the first
-line and adds a versioned marker with the exact number of omitted copies.
-Warnings, failures, permissions, security diagnostics, blank lines, comments,
-existing filter markers, and control-bearing output are not collapsed.
-
-### `tap-success`
-
-Accepts only a strict, complete, successful TAP stream with a single plan and
-contiguous `ok` result numbers. It retains the TAP version, plan, directives,
-comments, totals, duration, and other summary lines. Diagnostics, `not ok`,
-non-zero failure summaries, malformed plans, gaps, duplicates, and unknown
-content reject the whole profile.
-
-Both profiles are deterministic and idempotent. A safe replacement must remain
-smaller after the recovery marker is added. [PATH:
-scripts/tool_output_filter/profiles/] [PATH:
-tests/test_tool_output_filter_properties.py]
-
-## Exact Recovery and Privacy
-
-Before `safe` mode emits a replacement, it stores and reloads the complete
-native tool-response object. Equality must succeed before the hook prints
-`updatedToolOutput`.
-
-```text
-~/.softspark/ai-toolkit/sessions/<repo-key>/
-└── output-filter/
-    └── <hashed-session>/
-        ├── <opaque-handle>.json
-        ├── .circuit-state.json
-        └── .telemetry.jsonl
-```
-
-Recovery directories use `0700`; response, state, and telemetry files use
-`0600`. Creation and cleanup use pinned directory descriptors, no-follow
-operations, atomic publication, opaque random handles, a per-session quota,
-and TTL cleanup. If this secure contract is unavailable, `safe` mode returns
-the original response.
-
-The replacement ends with a marker similar to:
-
-```text
-[ai-toolkit-output-filter repeat-lines/v1; original_lines=500; emitted_lines=3; recovery=<opaque-handle>]
-```
-
-The recovery file can contain everything returned by the tool, including
-secrets. Treat the session directory as sensitive. Telemetry never stores raw
-output, commands, paths, environment values, session IDs, or recovery handles.
-It contains only profile/version, input/output byte and line counts, latency,
-outcome, and a bounded fallback reason.
-
-Session end, explicit cleanup, and global uninstall remove only validated
-ai-toolkit-owned filter artifacts. Foreign files and directories are
-preserved. [PATH: scripts/tool_output_filter/recovery.py] [PATH:
-app/hooks/session-end.sh] [PATH: scripts/uninstall.py]
-
-## CLI
-
-Inspect candidate savings without changing output:
-
-```bash
-some-test-command | ai-toolkit output-filter inspect --profile repeat-lines
-some-tap-command | ai-toolkit output-filter inspect --profile tap-success
-```
-
-The JSON report contains counts, eligibility, outcome, and fallback reason. It
-does not echo stdin.
-
-Inspect the effective trusted project or global policy:
-
-```bash
-ai-toolkit output-filter status
-ai-toolkit output-filter status --policy /path/to/materialized-policy.json
-```
-
-Recover the exact native response object using the handle printed in a safe
-replacement:
-
-```bash
-ai-toolkit output-filter recover <opaque-handle>
-```
-
-The default lookup derives the current repository session directory. Advanced
-or test workflows can add `--base-directory PATH` or `--session-id ID`.
-
-Clean the ending session, expired exact responses, or all filter artifacts for
-the current repository:
-
-```bash
-ai-toolkit output-filter clean --session-id <native-session-id>
-ai-toolkit output-filter clean --session-id <native-session-id> --expired
-ai-toolkit output-filter clean
-```
-
-`--expired` requires `--session-id`. Cleanup prints only the removed artifact
-count and scope.
-
-## Runtime Capability Matrix
-
-| Runtime | Active result replacement | Capability |
-|---------|---------------------------|------------|
-| Claude Code | Yes, opt-in | Native `PostToolUse.updatedToolOutput` adapter |
-| Claude Chat / Cowork | No | Plugin export explicitly excludes the Claude Code-only hook |
-| Cursor | No | Manual `output-filter inspect` only |
-| Windsurf / Devin | No | Manual `output-filter inspect` only |
-| GitHub Copilot | No | Manual `output-filter inspect` only |
-| Gemini CLI | No | Manual `output-filter inspect` only |
-| Cline | No | Manual `output-filter inspect` only |
-| Roo Code | No | Manual `output-filter inspect` only |
-| Aider | No | Manual `output-filter inspect` only |
-| Augment | No | Manual `output-filter inspect` only |
-| Google Antigravity | No | Manual `output-filter inspect` only |
-| Codex CLI | No | Manual `output-filter inspect` only |
-| OpenCode | No | Manual `output-filter inspect` only |
-
-An editor hook, extra context message, or command wrapper is not treated as
-result replacement. A new adapter requires a verified native replacement
-contract and dedicated native payload tests.
-
-## Benchmark Semantics
-
-Run the deterministic offline corpus:
-
-```bash
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/benchmark_output_filter.py
-```
-
-The benchmark measures profile p95 latency, production Bash-wrapper latency
-with a fresh Python process per sample in one native session, traced peak
-allocation, and eligible-output byte reduction. It uses 100 samples by default
-to avoid a one-sample p95 swing. The current gates are:
-
-- at least 30% candidate byte reduction;
-- at most 20 ms p95 for profile inputs up to 100 KiB;
-- at most 150 ms p95 for the 8 MiB profile case;
-- at most 75 ms p95 for a cold end-to-end hook process;
-- peak traced allocation no greater than three input sizes plus 16 MiB.
-
-Byte reduction is not billed-token savings and is not a whole-session cost
-claim. Measure actual model token receipts separately before changing the
-default mode. [PATH: scripts/benchmark_output_filter.py] [PATH:
-benchmarks/output-filter/]
-
-## Related
-
-- [Hooks Catalog](hooks-catalog.md)
-- [Supported Tools Registry](supported-tools-registry.md)
-- [Architecture Overview](architecture-overview.md)
-- [Output Token Discipline Plan](../history/completed/output-token-discipline-plan-20260504.md)
 
 ---
 

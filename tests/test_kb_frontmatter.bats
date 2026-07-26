@@ -43,10 +43,25 @@ KB_DIR="$TOOLKIT_DIR/kb"
             fi
         fi
 
-        # Tags non-empty
-        tags_line=$(echo "$fm" | grep '^tags:' || true)
-        if [ -n "$tags_line" ]; then
-            tag_count=$(echo "$tags_line" | grep -oE '\[.*\]' | tr ',' '\n' | grep -c '[a-z]' || echo "0")
+        # Tags non-empty (accepts inline "[a, b]" and block "- a" list styles)
+        if echo "$fm" | grep -q '^tags:'; then
+            tag_count=$(echo "$fm" | awk '
+                /^tags:/ {
+                    inline = $0
+                    sub(/^tags:[[:space:]]*/, "", inline)
+                    if (inline ~ /\[/) {
+                        gsub(/[][]/, "", inline)
+                        n = split(inline, parts, ",")
+                        for (i = 1; i <= n; i++) if (parts[i] ~ /[a-z]/) count++
+                    } else {
+                        block = 1
+                    }
+                    next
+                }
+                block && /^[[:space:]]+-[[:space:]]*[^[:space:]]/ { count++; next }
+                block && /^[^[:space:]]/ { block = 0 }
+                END { print count + 0 }
+            ')
             if [ "$tag_count" -lt 1 ]; then
                 echo "EMPTY tags: $f"
                 errors=$((errors + 1))

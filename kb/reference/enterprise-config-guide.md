@@ -10,7 +10,7 @@ tags:
   - multi-repo
 doc_type: reference
 created: "2026-04-11"
-last_updated: "2026-07-23"
+last_updated: "2026-07-26"
 description: "Comprehensive guide for setting up and using ai-toolkit configuration inheritance. Covers base config creation, project setup, enforcement rules, CI integration, and troubleshooting."
 ---
 
@@ -77,7 +77,6 @@ ai-toolkit config check       # CI enforcement check
 |-------|------|-------------|
 | `extends` | string | Base config source (npm, git URL, local path) |
 | `profile` | enum | `minimal`, `standard`, `strict`, `full`, `offline-slm` |
-| `toolOutputFilter` | object | Native Bash result filtering policy: mode, profiles, savings thresholds, and recovery limits |
 | `agents` | object | `enabled`, `disabled`, `custom` arrays |
 | `plugins` | object | Resolved `enabled` and `disabled` plugin intent |
 | `rules` | object | `inject`, `remove` arrays |
@@ -156,25 +155,6 @@ Base configs can define non-overridable constraints via the `enforce` block:
 effective intent explicit and causes validation to reject a conflicting
 `plugins.disabled` entry. Install the named plugin pack separately with
 `ai-toolkit plugin install <name>` or your organization deployment workflow.
-
-### Native tool-output filtering
-
-Projects can opt into the dependency-free output filter without changing the
-organization-wide default:
-
-```json
-{
-  "toolOutputFilter": {
-    "mode": "observe",
-    "profiles": ["repeat-lines", "tap-success"]
-  }
-}
-```
-
-`ai-toolkit install --local` materializes the effective policy as the managed
-`.claude/ai-toolkit-output-filter.json` file. `off` is the default, `observe`
-collects metadata without changing model-visible output, and `safe` permits
-replacement only when every invariant and exact-recovery check succeeds.
 
 ### Overrides
 

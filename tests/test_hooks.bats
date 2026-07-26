@@ -541,48 +541,6 @@ session_dir_for_cwd() {
     [ "$status" -eq 0 ]
 }
 
-@test "session-end: cleans output recovery before minimal-profile handoff skip" {
-    cd "$TEST_TMP/project" 2>/dev/null || {
-        mkdir -p "$TEST_TMP/project"
-        cd "$TEST_TMP/project"
-    }
-    recovery_root="$(session_dir_for_cwd)"
-    mkdir -p "$recovery_root/output-filter"
-    capture="$TEST_TMP/session-end-cleanup-args.json"
-    runtime="$TEST_TMP/fake-output-filter-cli.py"
-    cat > "$runtime" <<'PY'
-import json
-import os
-import sys
-
-with open(os.environ["CAPTURE_ARGS"], "w", encoding="utf-8") as handle:
-    json.dump(sys.argv[1:], handle)
-PY
-
-    export CAPTURE_ARGS="$capture"
-    export AI_TOOLKIT_OUTPUT_FILTER_CLI="$runtime"
-    export TOOLKIT_HOOK_PROFILE="minimal"
-    run_hook_with_input "session-end.sh" \
-        '{"session_id":"native-session-42"}'
-
-    [ "$status" -eq 0 ]
-    [ ! -f "$recovery_root/session-end.md" ]
-    python3 - "$capture" "$recovery_root" <<'PY'
-import json
-import sys
-
-with open(sys.argv[1], encoding="utf-8") as handle:
-    arguments = json.load(handle)
-assert arguments == [
-    "clean",
-    "--base-directory",
-    sys.argv[2],
-    "--session-id",
-    "native-session-42",
-], arguments
-PY
-}
-
 @test "session-end: cleans only the normalized edit state for the ending session" {
     cd "$TEST_TMP/project" 2>/dev/null || {
         mkdir -p "$TEST_TMP/project"

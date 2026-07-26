@@ -38,7 +38,6 @@ PLUGIN_SCRIPT_FILES = (
     "test_cohesion.py",
     "version_check.py",
 )
-CLAUDE_CODE_ONLY_HOOKS = frozenset({"filter-tool-output.sh"})
 RULE_FILES = tuple(sorted((APP_DIR / "rules").glob("*.md"))) + tuple(
     sorted((APP_DIR / "rules" / "common").glob("*.md"))
 )
@@ -66,25 +65,9 @@ def render_plugin_hooks() -> str:
     source = json.loads((APP_DIR / "hooks.json").read_text(encoding="utf-8"))
     hooks = source.get("hooks", {})
 
-    def supports_claude_app(handler: object) -> bool:
-        if not isinstance(handler, dict):
-            return True
-        command = handler.get("command")
-        if not isinstance(command, str):
-            return True
-        return not any(name in command for name in CLAUDE_CODE_ONLY_HOOKS)
-
     app_hooks = {}
     for event, groups in hooks.items():
-        app_groups = []
-        for group in groups:
-            handlers = [
-                handler
-                for handler in group.get("hooks", [])
-                if supports_claude_app(handler)
-            ]
-            if handlers:
-                app_groups.append({**group, "hooks": handlers})
+        app_groups = [group for group in groups if group.get("hooks")]
         if app_groups:
             app_hooks[event] = app_groups
 
@@ -161,9 +144,7 @@ def _copy_tree(source: Path, destination: Path) -> None:
     for path in sorted(source.rglob("*")):
         relative = path.relative_to(source)
         if any(
-            part in SKIP_NAMES
-            or part in CLAUDE_CODE_ONLY_HOOKS
-            or part.endswith(".pyc")
+            part in SKIP_NAMES or part.endswith(".pyc")
             for part in relative.parts
         ):
             continue

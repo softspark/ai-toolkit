@@ -54,6 +54,15 @@ LEGACY_TOOLKIT_HOOKS = {
     ],
 }
 
+# Hook scripts older releases installed and current releases no longer ship.
+# Claude Code rewrites settings.json without the "_source" tag, so a retired
+# entry cannot be reclaimed by tag, and it cannot be reclaimed by signature
+# either because the matching entry is gone from the toolkit hooks.json. The
+# script path under the toolkit-owned hooks directory is the durable marker.
+RETIRED_HOOK_SCRIPTS = (
+    "ai-toolkit/hooks/filter-tool-output.sh",
+)
+
 
 def load_json(path: str) -> dict:
     """Load and parse a JSON file.
@@ -91,6 +100,25 @@ def _is_toolkit_entry(entry: dict) -> bool:
     return False
 
 
+def _is_retired_toolkit_entry(entry: dict) -> bool:
+    """Check if every handler in an entry runs a retired toolkit hook script.
+
+    Requiring *all* handlers to match keeps a user entry that merely shares an
+    event with a retired hook, and keeps entries that chain their own command
+    after the toolkit one.
+    """
+    handlers = entry.get("hooks", [])
+    if not handlers:
+        return False
+    for hook in handlers:
+        if not isinstance(hook, dict):
+            return False
+        command = hook.get("command", "")
+        if not any(script in command for script in RETIRED_HOOK_SCRIPTS):
+            return False
+    return True
+
+
 def _entry_signature(entry: dict) -> tuple:
     """Return the behavior-defining parts of a hook entry.
 
@@ -112,7 +140,7 @@ def _entry_signature(entry: dict) -> tuple:
 
 
 def strip_toolkit(hooks: dict, toolkit_hooks: dict | None = None) -> dict:
-    """Remove entries tagged with ai-toolkit or matching legacy toolkit hooks."""
+    """Remove ai-toolkit entries: tagged, legacy-signature, or retired script."""
     legacy_signatures: dict[str, set[tuple]] = {}
     if toolkit_hooks:
         for event, entries in toolkit_hooks.items():
@@ -137,7 +165,10 @@ def strip_toolkit(hooks: dict, toolkit_hooks: dict | None = None) -> dict:
             if not _is_toolkit_entry(e)
             and not (
                 isinstance(e, dict)
-                and _entry_signature(e) in signatures
+                and (
+                    _entry_signature(e) in signatures
+                    or _is_retired_toolkit_entry(e)
+                )
             )
         ]
         if filtered:
