@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Generate ``.cursor/agents/ai-toolkit-*.md`` files for Cursor IDE.
 
 Each ai-toolkit agent is mirrored as a Cursor custom agent. Per Cursor's

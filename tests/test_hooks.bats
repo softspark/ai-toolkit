@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # test_hooks.bats — Tests for all hook scripts in app/hooks/
 # Run with: bats tests/test_hooks.bats
 

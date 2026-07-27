@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Propagate rules, hooks, and MCP configs to all globally installed editors.
 
 Called automatically after inject-rule, inject-hook, add-rule, remove-rule,

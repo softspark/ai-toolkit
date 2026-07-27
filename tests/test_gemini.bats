@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Per-tool tests for Gemini CLI integration (generate_gemini.py).
 #
 # Upstream docs (as of 2026-04-23): https://github.com/google-gemini/gemini-cli

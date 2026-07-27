@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Build and verify the uploadable ai-toolkit plugin for the Claude app.
 
 Claude Code reads ``~/.claude`` directly. Claude Chat and Cowork do not: they

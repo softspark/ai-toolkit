@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Tests for skill and agent frontmatter correctness — optimized single-pass loops
 # Agent structural tests (name, description, tools, format) are in test_agents.bats.
 # This file focuses on: skill validation, tool whitelist, depends-on, and dirname matching.

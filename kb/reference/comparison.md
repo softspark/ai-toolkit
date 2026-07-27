@@ -24,6 +24,6 @@ description: "Feature comparison of ai-toolkit vs other Claude Code toolkits and
 | Session persistence | Yes | Yes | No | No |
 | Architecture notes | **Yes** | No | No | No |
 | KB/RAG integration | **Yes** | No | No | Yes |
-| License | MIT | MIT | MIT | MIT |
+| License | **Apache-2.0** (NOTICE attribution, change notices, patent grant) | MIT | MIT | MIT |
 
 For live benchmark data, see the [ecosystem benchmark snapshot](claude-ecosystem-benchmark-snapshot.md).

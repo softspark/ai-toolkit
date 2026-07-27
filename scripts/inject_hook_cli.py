@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Inject external hooks into Claude settings and native Codex hooks.
 
 Allows external tools (MCP servers, plugins, etc.) to register their own

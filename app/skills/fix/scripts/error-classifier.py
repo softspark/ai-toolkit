@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Parse lint/test error output from stdin and classify as auto-fixable or manual.
 
 Reads multi-tool error output (ruff, mypy, ESLint, tsc, phpstan) from

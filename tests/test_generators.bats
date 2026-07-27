@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Workstream 3: Generator contract tests — cached to temp files (avoids env size limits)
 # Each generator runs ONCE in setup_file, output written to temp files.
 

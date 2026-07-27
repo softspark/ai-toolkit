@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # instructions-audit.sh — Log which CLAUDE.md / rules / skills loaded.
 #
 # Fires on: InstructionsLoaded

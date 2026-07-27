@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Markdown emission helpers for agent/skill listing and generator content blocks.
 
 Provides functions to emit agents and skills as markdown headings or

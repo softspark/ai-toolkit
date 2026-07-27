@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """YAML frontmatter parsing for agent and skill markdown files.
 
 Stdlib-only. Extracts fields from ``---`` delimited frontmatter blocks.

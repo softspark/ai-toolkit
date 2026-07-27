@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # guard-path.sh — Prevent Claude from guessing/hallucinating user home directory paths.
 #
 # Fires on: PreToolUse (Bash|Read|Edit|Write|MultiEdit|Glob|Grep|NotebookEdit|mcp__filesystem__.*)

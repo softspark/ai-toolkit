@@ -3,10 +3,10 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.12.0"
+version: "1.13.0"
 created: "2026-04-10"
 last_updated: "2026-07-27"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5), and the pre-push tag assertions added in v1.12.0 after v4.19.0 was tagged on the wrong commit (Phase 7)."
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5), the pre-push tag assertions added in v1.12.0 after v4.19.0 was tagged on the wrong commit (Phase 7), and the licensing gate added in v1.13.0 with the move to Apache-2.0 (Phase 5c)."
 ---
 
 # SOP: Release Preparation
@@ -64,6 +64,9 @@ python3 scripts/audit_skills.py --permissions   # review Bash/Write/Edit footpri
 
 # 5b. Ecosystem gate — snapshot must be current before tag
 python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem snapshot — re-run doctor"; exit 1; }
+
+# 5c. Licensing gate — SPDX headers, LICENSE, NOTICE, manifest consistency
+npx bats tests/test_licensing.bats || { echo "LICENSING GATE FAILED"; exit 1; }
 
 # 6. Commit + tag + push
 git add -A && git commit -m "chore: release vX.Y.Z"
@@ -339,6 +342,46 @@ python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && 
 - Missing frontmatter → add to new KB docs
 - Broken symlink → `ai-toolkit doctor --fix`
 
+### Phase 5c: Licensing Gate (v4.20.0+)
+
+The project is Apache-2.0. Attribution only works if the artefact actually
+carries it, and every part of that is mechanically checkable.
+
+```bash
+# The whole gate, enforced in CI. Run it here so a failure is caught before tagging.
+npx bats tests/test_licensing.bats
+```
+
+The seven assertions, and why each exists:
+
+| Check | Fails when |
+|---|---|
+| Every shipped source file carries an SPDX header | A new `.py`/`.sh`/`.js`/`.bats` file was added without one — the common case, and the reason this is a test rather than a habit |
+| Headers name Apache-2.0 and nothing else | A file was copied in from an MIT/GPL source with its own header intact |
+| **No** markdown file carries an SPDX header | Someone "helpfully" ran the header script over `app/skills/` — headers there sit above parsed frontmatter and bill every session for it |
+| `LICENSE` is the complete Apache 2.0 text | The file was truncated or replaced with a summary |
+| `NOTICE` carries attribution, the source URL, §4(d) and the MIT-era notice | The attribution mechanism was gutted |
+| `LICENSE` **and** `NOTICE` ship in the npm package | `package.json` `files` lost an entry — a NOTICE that never reaches the consumer cannot satisfy §4(d) |
+| Every manifest declaring a licence declares Apache-2.0 | `package.json`, `manifest.json`, `plugin.json` and `package-lock.json` drifted apart |
+
+**Adding source files in this release?** The header goes *after* the shebang,
+never before it. Short SPDX form:
+
+```
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+```
+
+`//` for JavaScript. Full convention and the reasoning behind the markdown
+exclusion: [Licensing](../reference/licensing.md).
+
+**Changing the licence itself?** Do not hand-type the licence text. Take it
+verbatim from a published copy and cross-verify against a second independent
+copy before writing `LICENSE` — a rendered or summarised licence is not the
+licence. Prior releases stay under their original terms; a licence change
+applies going forward and revokes nothing already granted.
+
 ### Phase 5a: Supply-Chain Hardening Verification (v2.8.0+)
 
 These checks enforce the security standard introduced in v2.8.0. Do NOT tag a release until all pass.
@@ -492,6 +535,7 @@ git push origin --delete vX.Y.Z
 | 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh` | Exit 0, no output (mirrors ci.yml; publish.yml does NOT run it) |
 | 14 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
 | 15 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
+| 15a | Licensing gate | `npx bats tests/test_licensing.bats` | 7/7 — SPDX headers, LICENSE, NOTICE, npm `files`, manifest consistency |
 | 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
 | 17 | Commit | `git commit` | Clean working tree |
 | 18 | Tag | `git tag vX.Y.Z` | Tag exists |

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Pack a codebase into a single AI-friendly markdown file under a token budget.
 
 Walks the current working directory (or --root), respects .gitignore, ranks files

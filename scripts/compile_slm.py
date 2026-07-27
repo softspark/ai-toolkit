@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Compile ai-toolkit into a minimal system prompt for Small Language Models.
 
 Reads all toolkit components (constitution, agents, skills, rules, personas),

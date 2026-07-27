@@ -9,7 +9,7 @@
     "url": "https://github.com/softspark"
   },
   "repository": "https://github.com/softspark/ai-toolkit",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "homepage": "https://github.com/softspark/ai-toolkit",
   "skills": "./claude-app/skills/",
   "hooks": "./claude-app/hooks/hooks.json",

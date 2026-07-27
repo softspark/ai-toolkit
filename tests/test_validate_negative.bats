@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Negative tests for validate.py — each test injects a specific defect and verifies detection.
 # Uses a minimal fixture (~3 agents, ~3 skills) instead of copying the full toolkit.
 

@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Install profile × editor matrix tests (v3.0.0 Bucket A).
 #
 # Exercises `install.py --local --editors <ed> --profile <p>` for the editors

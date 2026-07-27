@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Per-tool tests for Augment integration (generate_augment.py + generate_augment_rules.py).
 #
 # Upstream docs (as of 2026-04-23):

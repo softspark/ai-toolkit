@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Workstream 2: CLI end-to-end coverage for bin/ai-toolkit.js
 # Tests the public CLI surface: help, error handling, file-generating commands,
 # and rule management (add-rule / remove-rule).

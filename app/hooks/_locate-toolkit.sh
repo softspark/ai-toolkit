@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # _locate-toolkit.sh — shared toolkit-root locator for hooks needing scripts/.
 #
 # Source this file to get $TOOLKIT_DIR set to the ai-toolkit checkout root.

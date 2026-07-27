@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Ecosystem Doctor — detects upstream drift across supported tools.
 
 Reads scripts/ecosystem_tools.json, probes each tool's documentation page

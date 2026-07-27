@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Centralized path constants for ai-toolkit.
 
 All scripts MUST import paths from here — never hardcode ~/.ai-toolkit or

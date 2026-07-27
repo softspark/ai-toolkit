@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Workstream 1: Metadata contracts
 # Validates that public claims in README and ARCHITECTURE match actual repo state.
 # Run with: bats tests/test_metadata_contracts.bats

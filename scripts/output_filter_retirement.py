@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Retirement cleanup for the v4.16.x native tool-output filter.
 
 v4.16.0 and v4.16.1 installed a PostToolUse filter that wrote files outside the

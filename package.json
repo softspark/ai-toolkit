@@ -34,7 +34,7 @@
   "bugs": {
     "url": "https://github.com/softspark/ai-toolkit/issues"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "SoftSpark <biuro@softspark.eu>",
   "main": "bin/ai-toolkit.js",
   "bin": {
@@ -88,6 +88,7 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
+    "NOTICE",
     "AGENTS.md",
     "llms.txt",
     "llms-full.txt"

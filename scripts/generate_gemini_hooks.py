@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Generate .gemini/settings.json hooks block for Gemini CLI.
 
 Merges ai-toolkit hook entries into `<target>/.gemini/settings.json`. User

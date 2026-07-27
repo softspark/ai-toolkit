@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Cursor-specific tests for generate_cursor_mdc.py and generate_cursor_rules.py.
 # The bulk of Cursor coverage lives in test_generators.bats; this file adds
 # activation-mode and frontmatter contract tests that the 2026-04 docs sweep

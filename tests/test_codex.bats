@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Codex CLI generator smoke tests.
 # Verifies our generators produce output shapes that match the Codex CLI
 # upstream contract (codex-rs/config/src/hook_config.rs, docs/agents_md.md).

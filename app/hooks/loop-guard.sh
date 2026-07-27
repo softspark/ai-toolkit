@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # loop-guard.sh — Advisory detection of repeated identical actions (stuck loops).
 #
 # Fires on: PostToolUse (Bash|Edit|MultiEdit|Write)

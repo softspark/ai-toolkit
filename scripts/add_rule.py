@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """add-rule -- Register a rule file or URL in ~/.softspark/ai-toolkit/rules/.
 
 Registered rules are automatically injected into all AI tool configs

@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Smoke tests for language rules content — guards against accidental removal of
 # canonical sections from app/rules/*.md. Intentionally non-brittle: checks
 # section headings only, not exact wording.

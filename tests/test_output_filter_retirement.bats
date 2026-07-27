@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Retirement cleanup for the v4.16.x native tool-output filter.
 #
 # v4.16.0/v4.16.1 wrote files outside the npm package; v4.17.0 removed the

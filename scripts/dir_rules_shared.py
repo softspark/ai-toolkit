@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Shared content and helpers for directory-based rule generators.
 
 Used by: Antigravity, Cursor .mdc, Windsurf, Cline, Roo Code.

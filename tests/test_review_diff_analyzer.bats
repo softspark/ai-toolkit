@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Tests for /review diff-analyzer hardening — category ordering, secret
 # false-positive guard, and rename parsing in `git diff --numstat -z`.
 

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # ai-toolkit-statusline.sh — comprehensive Claude Code status line.
 #
 # Renders one line. Left side: cwd, git, ctx%, i/o token split.

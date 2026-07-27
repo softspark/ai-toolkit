@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Initialize SQLite memory database for ai-toolkit memory-pack.
 
 Creates ~/.softspark/ai-toolkit/memory.db with sessions, observations, and FTS5 tables.

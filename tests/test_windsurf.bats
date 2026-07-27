@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Windsurf/Devin-Desktop integration tests for generate_windsurf_rules.py.
 # Verifies activation-mode frontmatter (trigger, globs, description), the
 # workflows directory emission, and the .devin/ + .windsurf/ dual-emit

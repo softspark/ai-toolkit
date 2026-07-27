@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Per-editor hook generator contract tests (v3.0.0 Bucket A).
 #
 # Covers the native-hooks generators shipped by ai-toolkit:

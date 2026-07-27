@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Tests for app/hooks/ai-toolkit-statusline.sh — comprehensive Claude Code status line.
 #
 # The hook reads native Claude Code statusLine input on stdin (full schema:

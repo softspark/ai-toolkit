@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """CLI wrapper around inject_rule() and remove_rule_section() from _common.
 
 Injects a rule file into CLAUDE.md using idempotent marker-based injection.

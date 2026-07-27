@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # test_search_first_flow.bats — End-to-end test of the search-first enforcement
 # trio: user-prompt-submit.sh (set flag) + search-tracker.sh (clear flag)
 # + stop-search-check.sh (block Stop when flag is set).

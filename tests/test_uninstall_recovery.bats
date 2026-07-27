@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Global uninstall coverage for leftover v4.16.x output-filter recovery data.
 # The filter itself was removed; these fixtures reproduce the on-disk layout
 # those releases created, so uninstall keeps reclaiming it.

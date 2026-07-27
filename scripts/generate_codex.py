@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Generate the compact shared AGENTS.md policy for OpenAI Codex CLI.
 
 Agent and skill discovery is installed separately in native directories, so

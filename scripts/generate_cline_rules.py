@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """Generate ``.clinerules/*.md`` files and companion workflows for Cline.
 
 Cline reads rules from the ``.clinerules/`` directory (since Cline 3.7).

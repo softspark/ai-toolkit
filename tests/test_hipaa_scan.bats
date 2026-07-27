@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # Tests for hipaa-validate scanner — fixture-driven positive/negative cases.
 # Focuses on Python pattern tightening and cross-language isolation.
 

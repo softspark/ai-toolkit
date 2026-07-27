@@ -1,4 +1,8 @@
 #!/usr/bin/env bats
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # test_test_cohesion_resolver.bats — Tests for scripts/test_cohesion.py
 # Run with: bats tests/test_test_cohesion_resolver.bats
 

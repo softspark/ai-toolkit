@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+#
 # _hook-io.sh — shared JSON input/output helpers for multi-editor hooks.
 #
 # Source this file from hook scripts. It expects the caller to set INPUT to the

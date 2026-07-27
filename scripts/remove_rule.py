@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+
 """remove-rule -- Unregister a rule (opposite of add-rule).
 
 Removes the rule file from ~/.softspark/ai-toolkit/rules/ (so it is no longer
