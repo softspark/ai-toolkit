@@ -6,17 +6,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1484%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1465%20passing-success)](tests/)
 
-## What's New in v4.18.0
+## What's New in v4.19.0
 
-v4.18.0 adds `rtk-pack`, an opt-in command rewriter, and makes `ai-toolkit update` maintain installed packs.
+v4.19.0 removes `rtk-pack`. The pack that v4.18.0 shipped is gone; everything the work built underneath it stays.
 
-- **`rtk-pack`, opt-in only**: rewrites Bash commands at `PreToolUse` via [rtk](https://github.com/rtk-ai/rtk) (Apache-2.0). Nothing installs it for you. `plugin install` fetches a platform binary from an ai-toolkit Release and verifies its SHA-256 before installing anything. Measured saving on the reference workload is 0.0615% of input tokens; the pack README states the trust boundary and the numbers up front.
-- **Binaries built from source, telemetry compiled out**: a manual-dispatch workflow cross-builds five targets with the compile-time telemetry endpoint undefined, proves each artifact starts, writes no telemetry state, and on Linux behaves identically with no network route.
-- **`ai-toolkit update` maintains installed packs**: it now runs the equivalent of `plugin update --all`. Updates are version-aware, so a pack whose manifest has not moved is a silent no-op instead of a remove-and-reinstall.
+- **`rtk-pack` retired**: it broke every command it rewrote. rtk names itself bare in the rewrite, the pack kept its binary off `PATH` on purpose, and the result was exit 127 on `git`, `ls`, `cat`, `find`, `grep` and the rest. Measured value before the defect was 0.0615% of input tokens against a 0.05% kill number, so the fix was not worth the surface. See [the retirement note](kb/history/completed/rtk-pack-retirement-20260727.md).
+- **Pack hook wiring for Cursor and Gemini stays**: packs write user-scope entries to `~/.cursor/hooks.json` and `~/.gemini/settings.json`, tagged per pack, and `plugin remove` takes only its own back out.
+- **`ai-toolkit update` maintains installed packs**: it runs the equivalent of `plugin update --all`. Updates are version-aware, so a pack whose manifest has not moved is a silent no-op instead of a remove-and-reinstall.
 - **Packs can report their own health**: `plugin status` picks up a pack's `scripts/status.py`, replacing a hardcoded per-pack branch.
 - **Security gates cover packs**: `audit_skills.py --ci` and the ShellCheck gate now scan `app/plugins/`, which they previously skipped.
+
+If you installed the pack under v4.18.0, run `ai-toolkit plugin remove rtk-pack`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -143,7 +145,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
-| `plugins/` | 12 packs | Opt-in domain bundles (security, research, frontend, enterprise, memory, rtk, 6 language packs) |
+| `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, memory, 6 language packs) |
 | `constitution.md` | 7 articles | Machine-enforced safety rules |
 | `rules/` | auto-synced | Global/project rule files for Claude and other editors |
 | `kb/` | reference docs | Architecture, procedures, and best practices |
@@ -166,7 +168,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1484 tests)
+├── tests/               # Bats and Python test suite (1494 tests)
 └── CHANGELOG.md
 ```
 

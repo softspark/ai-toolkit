@@ -286,7 +286,20 @@ def parse_args(argv: list[str]) -> dict:
             print(f"Unknown option: {arg}")
             sys.exit(1)
         else:
-            cfg["target_dir"] = Path(arg)
+            # A bare word that is not an existing directory is almost never a
+            # deliberate install target: `ai-toolkit install <pack>` reads like
+            # `plugin install <pack>` and silently writes a full toolkit tree
+            # into ./<pack>. Require an existing directory or an explicit path
+            # separator, so creating a new top-level directory has to be asked
+            # for rather than typed by accident.
+            candidate = Path(arg)
+            looks_like_path = "/" in arg or "\\" in arg or arg.startswith("~") or arg == "."
+            if not candidate.is_dir() and not looks_like_path:
+                print(f"Refusing to install into a new directory named '{arg}'.")
+                print(f"  If you meant a plugin pack:  ai-toolkit plugin install {arg}")
+                print(f"  If you really meant a path:  ai-toolkit install ./{arg}")
+                sys.exit(1)
+            cfg["target_dir"] = candidate
         i += 1
     return cfg
 

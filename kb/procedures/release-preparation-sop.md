@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.11.1"
+version: "1.11.2"
 created: "2026-04-10"
-last_updated: "2026-07-24"
+last_updated: "2026-07-27"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, and the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5)."
 ---
 
@@ -295,7 +295,15 @@ diff \
   && echo "OK: registry matches filesystem" \
   || { echo "DRIFT: update supported-tools-registry.md before tagging"; exit 1; }
 
-# Run npm test ONCE, cache output, parse from file. The suite is 900+ bats
+# Stage first IF this release adds or deletes a kb/ file. The test
+# "npm package KB files match the tracked release set" compares `git ls-files
+# kb` (the index) against what `npm pack` sees (the working tree), so an
+# unstaged addition reads as "extra" and an unstaged deletion as "missing".
+# Phase 6 stages, and it runs after this one, so the ordering fails the test
+# for any release that touches the KB. Staging early costs nothing.
+git status --porcelain kb/ | grep -qE '^(\?\?| D|\?M)' && git add -A kb/
+
+# Run npm test ONCE, cache output, parse from file. The suite is 1400+ bats
 # cases — rerunning it per check wastes minutes. Do not pipe npm test into
 # tail/grep multiple times in the same session.
 npm test > /tmp/npm-test.log 2>&1
@@ -452,7 +460,7 @@ git push origin --delete vX.Y.Z
 | 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh` | Exit 0, no output (mirrors ci.yml; publish.yml does NOT run it) |
 | 14 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
 | 15 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
-| 16 | Tests | `npm test` | All pass |
+| 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
 | 17 | Commit | `git commit` | Clean working tree |
 | 18 | Tag | `git tag vX.Y.Z` | Tag exists |
 | 19 | Push | `git push origin main --tags` | CI triggered with `id-token: write` |

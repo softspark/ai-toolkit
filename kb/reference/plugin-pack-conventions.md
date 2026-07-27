@@ -138,21 +138,30 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 | `kotlin-pack` | kotlin | 0 | 1 | 0 | Kotlin patterns |
 | `swift-pack` | swift | 0 | 1 | 0 | Swift patterns |
 | `ruby-pack` | ruby | 0 | 1 | 0 | Ruby patterns |
-| `rtk-pack` | token-reduction | 0 | 0 | 1 | Command rewriting via a checksum-pinned rtk binary fetched at install |
 
-`rtk-pack` is the first pack to break three assumptions the others share, so it
-is the one to read when extending the contract:
+Every pack here is content that ships in this repository. None fetches anything
+at install time.
 
-- **It fetches from the network at install time.** `scripts/init.py` downloads a
-  platform-specific artifact and verifies its SHA-256 against `plugin.json`
-  before installing anything. A mismatch aborts and leaves nothing behind.
-- **It declares platform assets and digests in `plugin.json`.** The manifest
-  schema tolerates extra keys, so `upstream` and `binary` are additive; nothing
-  validates them, which means a malformed block fails at install rather than in
-  `validate.py --strict`.
-- **It reports its own health.** `scripts/status.py` is picked up generically by
-  `plugin status`, replacing what used to be a hardcoded `if name == "memory-pack"`
-  branch. Any pack can now ship one.
+**A pack that downloads a binary has been tried once and retired.** `rtk-pack`
+(v4.18.0, removed in v4.19.0) fetched a checksum-pinned artifact in
+`scripts/init.py`, declared platform assets and digests in `plugin.json`, and
+rewrote commands at `PreToolUse`. Read
+`kb/history/completed/rtk-pack-retirement-20260727.md` before proposing another
+pack of that shape; the two defects that killed it were both invisible to
+`validate.py --strict` and to the pack's own status check.
+
+What survives from that work and applies to any pack:
+
+- **A pack reports its own health.** `scripts/status.py` is picked up
+  generically by `plugin status`, replacing what used to be a hardcoded
+  `if name == "memory-pack"` branch. A status check must distinguish *installed*
+  from *working*, and prove the working part by exercising it rather than by
+  checking that files exist.
+- **A pack may declare `supported_editors`.** Without it a pack installs on
+  every runtime and silently does nothing on the ones it was never built for.
+- **The manifest schema tolerates extra keys.** Anything additive is unvalidated,
+  so a malformed block fails at install time rather than in `validate.py
+  --strict`. Do not rely on the schema to catch it.
 
 ## Optional Hook Modules
 

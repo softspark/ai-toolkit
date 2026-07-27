@@ -455,7 +455,7 @@ def audit(toolkit_root: Path) -> list[Finding]:
             scan_unicode(agent_md, findings)
 
     # Scan plugin packs. Pack code ships and executes exactly like skill code,
-    # and rtk-pack's install script downloads and runs a native binary, so
+    # and a pack may carry an install script that runs at install time, so
     # leaving app/plugins out of the HIGH gate exempted the highest-risk code
     # in the repo from the check that exists to catch it.
     plugins = app / "plugins"

@@ -6,7 +6,7 @@ tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, iso
 version: "1.0.0"
 created: "2026-07-26"
 last_updated: "2026-07-26"
-description: "Smoke-test a published @softspark/ai-toolkit release from npm in an isolated HOME and npm prefix, without touching the maintainer's real install. Covers provenance, CLI, doctor, and the full plugin-pack lifecycle including the degraded-install path. Written after v4.18.0, the first release shipping a pack that downloads a binary."
+description: "Smoke-test a published @softspark/ai-toolkit release from npm in an isolated HOME and npm prefix, without touching the maintainer's real install. Covers provenance, CLI, doctor, and the full plugin-pack lifecycle including the degraded-install path. Written for v4.18.0 and not run; v4.18.0 shipped a pack that broke every command it touched, and every step here would have caught it."
 ---
 
 # SOP: Post-Release Testing
@@ -149,9 +149,12 @@ print('hook still present:', '<pack>' in json.dumps(d.get('hooks', {})))
 **This is the step most worth keeping.** A pack that fetches anything can fail
 to fetch, and the failure mode must be inert rather than broken or silent.
 
+No pack in the toolkit fetches anything today. Run this phase if one ever does
+again, pointing its source-override variable at a dead URL:
+
 ```bash
 "$AT" plugin remove <pack>
-RTK_PACK_RELEASE_BASE_URL="file:///nonexistent" "$AT" plugin install <pack>
+<PACK>_RELEASE_BASE_URL="file:///nonexistent" "$AT" plugin install <pack>
 ```
 
 **Verify:**
@@ -211,4 +214,4 @@ print(f'removed {sb} ({n} files)')
 
 - [Release Preparation](release-preparation-sop.md) — run before tagging
 - [Release Verification](release-verification-sop.md) — the maintainer-install checks
-- [rtk Upstream Sync](rtk-upstream-sync-sop.md) — for the pack whose binary this SOP exercises
+- [rtk-pack Retirement](../history/completed/rtk-pack-retirement-20260727.md) — what happened the one time this SOP was written and not run

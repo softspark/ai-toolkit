@@ -2,14 +2,14 @@
 """ai-toolkit plugin — install, remove, update, clean, and list plugin packs.
 
 Usage:
-    plugin.py list [--editor claude|codex|all]
-    plugin.py status [--editor claude|codex|all]
-    plugin.py install [--editor claude|codex|all] <pack-name> [<pack-name> ...]
-    plugin.py install [--editor claude|codex|all] --all
-    plugin.py remove [--editor claude|codex|all] <pack-name> [<pack-name> ...]
-    plugin.py remove [--editor claude|codex|all] --all
-    plugin.py update [--editor claude|codex|all] <pack-name> [<pack-name> ...]
-    plugin.py update [--editor claude|codex|all] --all
+    plugin.py list [--editor claude|codex|cursor|gemini|all]
+    plugin.py status [--editor claude|codex|cursor|gemini|all]
+    plugin.py install [--editor claude|codex|cursor|gemini|all] <pack-name> [<pack-name> ...]
+    plugin.py install [--editor claude|codex|cursor|gemini|all] --all
+    plugin.py remove [--editor claude|codex|cursor|gemini|all] <pack-name> [<pack-name> ...]
+    plugin.py remove [--editor claude|codex|cursor|gemini|all] --all
+    plugin.py update [--editor claude|codex|cursor|gemini|all] <pack-name> [<pack-name> ...]
+    plugin.py update [--editor claude|codex|cursor|gemini|all] --all
     plugin.py clean <pack-name> [--days N]
 
 Actions:
@@ -64,7 +64,38 @@ HOOKS_DIR = _HOOKS_DIR
 PLUGINS_STATE_FILE = TOOLKIT_DATA_DIR / "plugins.json"
 MEMORY_DB = TOOLKIT_DATA_DIR / "memory.db"
 
-VALID_EDITORS = ("claude", "codex")
+VALID_EDITORS = ("claude", "codex", "cursor", "gemini")
+
+# Runtimes whose hook config is a JSON document we merge a single pack entry
+# into, rather than a surface with its own installer. Everything below is read
+# from the matching scripts/generate_<runtime>_hooks.py.
+#
+# `source_tag` deliberately differs from those generators' own `SOURCE_TAG`
+# ("ai-toolkit"): their strip predicates match that value exactly, so a pack
+# entry tagged `ai-toolkit-plugin-<pack>` survives a core regeneration instead
+# of being deleted as legacy output.
+#
+# Pack hooks are user-scope only. Cursor's project manifest is deliberately
+# self-contained so cloud agents can read it (tests/test_cursor.bats), and a
+# `$HOME/.softspark` command would break that; `~/.cursor/hooks.json` is a local
+# file where a home-relative command is correct.
+JSON_HOOK_RUNTIMES: dict[str, dict] = {
+    "cursor": {
+        "config": Path.home() / ".cursor" / "hooks.json",
+        # Claude event name -> this runtime's event name. An event with no
+        # mapping is skipped loudly rather than guessed at.
+        "events": {"PreToolUse": "beforeShellExecution"},
+        "shape": "flat",      # entry is the command record itself
+        "timeout": 10,
+    },
+    "gemini": {
+        "config": Path.home() / ".gemini" / "settings.json",
+        "events": {"PreToolUse": "BeforeTool", "PostToolUse": "AfterTool"},
+        "shape": "nested",    # entry wraps a hooks[] list, optional matcher
+        "matcher": "run_shell_command",
+        "root_key": "hooks",  # hooks live under a key inside a larger document
+    },
+}
 CODEX_PLUGIN_NAME_PATTERN = re.compile(r"[a-z0-9][a-z0-9-]*")
 CODEX_PLUGIN_ASSET_MARKER = "# ai-toolkit-managed: codex-plugin-hook"
 
@@ -74,12 +105,9 @@ CODEX_PLUGIN_ASSET_MARKER = "# ai-toolkit-managed: codex-plugin-hook"
 # ---------------------------------------------------------------------------
 
 def _empty_state() -> dict:
-    return {
-        "targets": {
-            "claude": {"installed": [], "versions": {}},
-            "codex": {"installed": [], "versions": {}},
-        }
-    }
+    # Built from VALID_EDITORS so adding a runtime cannot leave load_state()
+    # indexing a key that was never created.
+    return {"targets": {editor: {"installed": [], "versions": {}} for editor in VALID_EDITORS}}
 
 
 def load_state() -> dict:
@@ -336,6 +364,142 @@ def _plugin_hook_command(name: str, spec: dict) -> str:
     return f"\"$HOME/.softspark/ai-toolkit/hooks/plugin-{name}-{spec['name']}\""
 
 
+def _json_runtime_entry(runtime: str, name: str, spec: dict) -> dict:
+    """One hook entry in this runtime's schema, tagged as owned by the pack."""
+    cfg = JSON_HOOK_RUNTIMES[runtime]
+    command = _plugin_hook_command(name, spec)
+    # The hook is one script for every runtime; the target is its first
+    # argument, so a pack can branch on which host is calling rather than
+    # always assuming Claude.
+    command = f"{command} {runtime}"
+    source_tag = f"ai-toolkit-plugin-{name}"
+
+    if cfg["shape"] == "flat":
+        entry = {"_source": source_tag, "command": command}
+        if cfg.get("timeout"):
+            entry["timeout"] = cfg["timeout"]
+        return entry
+
+    entry = {"_source": source_tag, "hooks": [{"type": "command", "command": command}]}
+    if cfg.get("matcher"):
+        entry["matcher"] = cfg["matcher"]
+    return entry
+
+
+def _json_runtime_hooks_block(runtime: str, document: dict) -> dict:
+    cfg = JSON_HOOK_RUNTIMES[runtime]
+    root = cfg.get("root_key")
+    if root:
+        block = document.get(root)
+        return block if isinstance(block, dict) else {}
+    block = document.get("hooks")
+    return block if isinstance(block, dict) else {}
+
+
+def _json_runtime_set_hooks(runtime: str, document: dict, hooks: dict) -> None:
+    cfg = JSON_HOOK_RUNTIMES[runtime]
+    document[cfg.get("root_key") or "hooks"] = hooks
+
+
+def _merge_json_runtime_hooks(runtime: str, name: str, hook_specs: list[dict]) -> bool:
+    """Add this pack's hooks to a JSON-configured runtime. True if anything landed."""
+    cfg = JSON_HOOK_RUNTIMES[runtime]
+    config_path: Path = cfg["config"]
+    if config_path.is_symlink() or config_path.parent.is_symlink():
+        print(f"    WARN refusing symlinked {runtime} config: {config_path}")
+        return False
+
+    source_tag = f"ai-toolkit-plugin-{name}"
+    document = _load_json(config_path, {})
+    hooks = _json_runtime_hooks_block(runtime, document)
+
+    # Drop this pack's previous entries everywhere before appending, so a
+    # re-install cannot duplicate and two hooks on one event both survive.
+    hooks = {
+        event: [e for e in entries if not (isinstance(e, dict) and e.get("_source") == source_tag)]
+        if isinstance(entries, list) else entries
+        for event, entries in hooks.items()
+    }
+
+    landed = 0
+    for spec in hook_specs:
+        if spec["is_core"]:
+            continue
+        target_event = cfg["events"].get(spec["event"])
+        if not target_event:
+            print(
+                f"    WARN {runtime} has no equivalent of {spec['event']} "
+                f"for {spec['name']}, hook not registered"
+            )
+            continue
+        hooks.setdefault(target_event, []).append(_json_runtime_entry(runtime, name, spec))
+        landed += 1
+
+    if not landed:
+        return False
+
+    hooks = {event: entries for event, entries in hooks.items() if entries}
+    _json_runtime_set_hooks(runtime, document, hooks)
+    _write_json(config_path, document)
+    print(f"    Merged hooks into {config_path}")
+    return True
+
+
+def _strip_json_runtime_hooks(runtime: str, name: str) -> None:
+    cfg = JSON_HOOK_RUNTIMES[runtime]
+    config_path: Path = cfg["config"]
+    if not config_path.is_file() or config_path.is_symlink():
+        return
+    source_tag = f"ai-toolkit-plugin-{name}"
+    document = _load_json(config_path, {})
+    hooks = _json_runtime_hooks_block(runtime, document)
+    kept = {}
+    removed = 0
+    for event, entries in hooks.items():
+        if not isinstance(entries, list):
+            kept[event] = entries
+            continue
+        survivors = [
+            e for e in entries
+            if not (isinstance(e, dict) and e.get("_source") == source_tag)
+        ]
+        removed += len(entries) - len(survivors)
+        if survivors:
+            kept[event] = survivors
+    if not removed:
+        return
+    _json_runtime_set_hooks(runtime, document, kept)
+    _write_json(config_path, document)
+    print(f"    Stripped hooks from {config_path}")
+
+
+def install_pack_json_runtime(runtime: str, name: str, pack: dict, pack_dir: Path) -> bool:
+    hook_specs = _resolve_pack_hooks(pack, pack_dir)
+    installed_items: list[str] = []
+    _copy_plugin_scripts(name, pack_dir, installed_items)
+    _copy_plugin_hook_scripts(name, hook_specs, installed_items)
+    if not _merge_json_runtime_hooks(runtime, name, hook_specs):
+        print(f"    WARN nothing registered for {runtime}; pack files are installed but inert")
+    print(f"  Done: {name} for {runtime} ({len(installed_items)} file items)")
+    return True
+
+
+def remove_pack_json_runtime(
+    runtime: str, name: str, pack: dict, pack_dir: Path, *, keep_shared_assets: bool
+) -> bool:
+    _strip_json_runtime_hooks(runtime, name)
+    if not keep_shared_assets:
+        for hook in HOOKS_DIR.glob(f"plugin-{name}-*"):
+            hook.unlink()
+            print(f"    Removed hook: {hook.name}")
+        scripts_dir = TOOLKIT_DATA_DIR / "plugin-scripts" / name
+        if scripts_dir.is_dir():
+            shutil.rmtree(scripts_dir)
+            print(f"    Removed scripts: {scripts_dir}")
+    print(f"  Done: removed {name} from {runtime}")
+    return True
+
+
 def _load_json(path: Path, default: dict) -> dict:
     if not path.is_file():
         return json.loads(json.dumps(default))
@@ -430,6 +594,16 @@ def _merge_claude_hooks(name: str, hook_specs: list[dict]) -> None:
     hooks = settings.setdefault("hooks", {})
     source_tag = f"ai-toolkit-plugin-{name}"
 
+    # Drop this pack's previous entries once per event, before appending any.
+    # Stripping inside the loop also removed the entry appended by an earlier
+    # iteration, so a pack shipping two non-core hooks on the same event kept
+    # only the last one. memory-pack does not hit this because its two hooks
+    # sit on different events.
+    events = {spec["event"] for spec in hook_specs if not spec["is_core"]}
+    for event in events:
+        existing = hooks.get(event, [])
+        hooks[event] = [h for h in existing if h.get("_source") != source_tag]
+
     for spec in hook_specs:
         if spec["is_core"]:
             # Base Claude install already owns core hooks.
@@ -444,10 +618,7 @@ def _merge_claude_hooks(name: str, hook_specs: list[dict]) -> None:
                 }
             ],
         }
-        event_hooks = hooks.setdefault(spec["event"], [])
-        event_hooks = [h for h in event_hooks if h.get("_source") != source_tag]
-        event_hooks.append(entry)
-        hooks[spec["event"]] = event_hooks
+        hooks.setdefault(spec["event"], []).append(entry)
 
     _write_json(settings_path, settings)
     print("    Merged hooks into ~/.claude/settings.json")
@@ -513,12 +684,49 @@ def install_pack_claude(name: str, pack: dict, pack_dir: Path) -> bool:
     return True
 
 
+def _remove_claude_pack_links(pack: dict, pack_dir: Path) -> None:
+    """Drop skill/agent symlinks this pack owns.
+
+    Install symlinks both into ~/.claude but removal never did, so every pack
+    left them behind. Ownership is decided by where the link resolves: only a
+    link into the pack's own directory is removed. A link into app/skills or
+    app/agents is a core asset the pack merely referenced, and the base install
+    would have created it anyway, so it stays.
+    """
+    pack_dir = pack_dir.resolve()
+
+    for skill in pack.get("includes", {}).get("skills", []):
+        link = CLAUDE_DIR / "skills" / skill
+        if not link.is_symlink():
+            continue
+        try:
+            target = link.resolve()
+        except OSError:
+            continue
+        if target.is_relative_to(pack_dir):
+            link.unlink()
+            print(f"    Removed skill link: {skill}")
+
+    for agent in pack.get("includes", {}).get("agents", []):
+        link = CLAUDE_DIR / "agents" / f"{agent}.md"
+        if not link.is_symlink():
+            continue
+        try:
+            target = link.resolve()
+        except OSError:
+            continue
+        if target.is_relative_to(pack_dir):
+            link.unlink()
+            print(f"    Removed agent link: {agent}")
+
+
 def remove_pack_claude(name: str, pack: dict, pack_dir: Path, *, keep_shared_assets: bool) -> bool:
     hook_specs = _resolve_pack_hooks(pack, pack_dir)
     rule_specs = _resolve_pack_rules(pack, pack_dir)
+    _remove_claude_pack_links(pack, pack_dir)
 
     if not keep_shared_assets:
-        for hook in HOOKS_DIR.glob(f"plugin-{name}-*.sh"):
+        for hook in HOOKS_DIR.glob(f"plugin-{name}-*"):
             hook.unlink()
             print(f"    Removed hook: {hook.name}")
 
@@ -890,7 +1098,7 @@ def remove_pack_codex(name: str, pack: dict, pack_dir: Path, *, keep_shared_asse
     _strip_codex_hooks(name)
 
     if CODEX_HOOKS_DIR.is_dir():
-        for hook in CODEX_HOOKS_DIR.glob(f"plugin-{name}-*.sh"):
+        for hook in CODEX_HOOKS_DIR.glob(f"plugin-{name}-*"):
             if hook.is_symlink():
                 raise RuntimeError(f"Refusing symlinked Codex plugin hook: {hook}")
             if _is_owned_codex_plugin_asset(hook, name):
@@ -902,7 +1110,7 @@ def remove_pack_codex(name: str, pack: dict, pack_dir: Path, *, keep_shared_asse
     if not keep_shared_assets:
         # Clean paths used by releases before native Codex plugin assets moved
         # under $CODEX_HOME. Claude still owns these when installed for both.
-        for hook in HOOKS_DIR.glob(f"plugin-{name}-*.sh"):
+        for hook in HOOKS_DIR.glob(f"plugin-{name}-*"):
             hook.unlink()
             print(f"    Removed hook: {hook.name}")
 
@@ -927,10 +1135,30 @@ def install_pack(name: str, editor: str) -> bool:
         print(f"  Available: {', '.join(p['name'] for p in list_available())}")
         return False
 
+    # A pack may declare which runtimes it actually works on. Without this a
+    # pack installs everywhere and silently does nothing on the runtimes it was
+    # never built for: a hook that speaks Claude Code's payload format would be
+    # wired into Codex and never fire.
+    supported = pack.get("supported_editors")
+    if isinstance(supported, list) and supported and editor not in supported:
+        print(
+            f"  Skipping: {name} does not support {editor} "
+            f"(supported: {', '.join(supported)})"
+        )
+        return False
+
     pack_dir = Path(pack["_dir"])
     print(f"  Installing: {name} for {editor} ({pack.get('description', '')})")
 
-    ok = install_pack_claude(name, pack, pack_dir) if editor == "claude" else install_pack_codex(name, pack, pack_dir)
+    if editor == "claude":
+        ok = install_pack_claude(name, pack, pack_dir)
+    elif editor == "codex":
+        ok = install_pack_codex(name, pack, pack_dir)
+    elif editor in JSON_HOOK_RUNTIMES:
+        ok = install_pack_json_runtime(editor, name, pack, pack_dir)
+    else:
+        print(f"  ERROR: no installer for runtime '{editor}'")
+        return False
     if not ok:
         return False
 
@@ -966,11 +1194,17 @@ def remove_pack(name: str, editor: str) -> bool:
         for other in VALID_EDITORS
         if other != editor
     )
-    ok = (
-        remove_pack_claude(name, pack, pack_dir, keep_shared_assets=keep_shared_assets)
-        if editor == "claude"
-        else remove_pack_codex(name, pack, pack_dir, keep_shared_assets=keep_shared_assets)
-    )
+    if editor == "claude":
+        ok = remove_pack_claude(name, pack, pack_dir, keep_shared_assets=keep_shared_assets)
+    elif editor == "codex":
+        ok = remove_pack_codex(name, pack, pack_dir, keep_shared_assets=keep_shared_assets)
+    elif editor in JSON_HOOK_RUNTIMES:
+        ok = remove_pack_json_runtime(
+            editor, name, pack, pack_dir, keep_shared_assets=keep_shared_assets
+        )
+    else:
+        print(f"  ERROR: no remover for runtime '{editor}'")
+        return False
     if not ok:
         return False
 
@@ -1194,11 +1428,11 @@ def cmd_status(editors: list[str]) -> None:
                 continue
             print(f"  {name}: {pack.get('description', '')}")
             if editor == "claude":
-                hooks = list(HOOKS_DIR.glob(f"plugin-{name}-*.sh"))
+                hooks = list(HOOKS_DIR.glob(f"plugin-{name}-*"))
                 if hooks:
                     print(f"    Hooks: {', '.join(h.name for h in hooks)}")
             elif editor == "codex":
-                hooks = sorted(CODEX_HOOKS_DIR.glob(f"plugin-{name}-*.sh"))
+                hooks = sorted(CODEX_HOOKS_DIR.glob(f"plugin-{name}-*"))
                 if hooks:
                     print(f"    Hooks: {', '.join(h.name for h in hooks)}")
             if name == "memory-pack":
@@ -1250,8 +1484,8 @@ def _parse_editors(args: list[str]) -> tuple[list[str], list[str]]:
 
 def _cmd_install(args: list[str], editors: list[str]) -> None:
     if not args:
-        print("Usage: ai-toolkit plugin install [--editor claude|codex|all] <pack-name> [...]")
-        print("       ai-toolkit plugin install [--editor claude|codex|all] --all")
+        print("Usage: ai-toolkit plugin install [--editor claude|codex|cursor|gemini|all] <pack-name> [...]")
+        print("       ai-toolkit plugin install [--editor claude|codex|cursor|gemini|all] --all")
         sys.exit(1)
     names = [pack["name"] for pack in list_available()] if "--all" in args else args
     for editor in editors:
@@ -1269,8 +1503,8 @@ def _cmd_install(args: list[str], editors: list[str]) -> None:
 
 def _cmd_remove(args: list[str], editors: list[str]) -> None:
     if not args:
-        print("Usage: ai-toolkit plugin remove [--editor claude|codex|all] <pack-name> [...]")
-        print("       ai-toolkit plugin remove [--editor claude|codex|all] --all")
+        print("Usage: ai-toolkit plugin remove [--editor claude|codex|cursor|gemini|all] <pack-name> [...]")
+        print("       ai-toolkit plugin remove [--editor claude|codex|cursor|gemini|all] --all")
         sys.exit(1)
     state = load_state()
     for editor in editors:
@@ -1286,8 +1520,8 @@ def _cmd_remove(args: list[str], editors: list[str]) -> None:
 
 def _cmd_update(args: list[str], editors: list[str]) -> None:
     if not args:
-        print("Usage: ai-toolkit plugin update [--editor claude|codex|all] <pack-name> [...]")
-        print("       ai-toolkit plugin update [--editor claude|codex|all] --all [--dry-run]")
+        print("Usage: ai-toolkit plugin update [--editor claude|codex|cursor|gemini|all] <pack-name> [...]")
+        print("       ai-toolkit plugin update [--editor claude|codex|cursor|gemini|all] --all [--dry-run]")
         sys.exit(1)
 
     dry_run = "--dry-run" in args or "--list" in args
