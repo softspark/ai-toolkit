@@ -7,7 +7,43 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## v4.20.0 — nine plugin packs removed (2026-07-27)
+## v4.20.0 — Apache-2.0, nine plugin packs removed (2026-07-27)
+
+### Changed — licence: MIT to Apache-2.0
+
+The project is now licensed under the Apache License 2.0. It stays permissive:
+fork it, modify it, ship it commercially. What changes is what a redistributor
+owes back.
+
+- **`NOTICE` is the point.** MIT already required keeping the copyright notice,
+  so attribution is not new. What Apache-2.0 adds is §4(d): a redistributor must
+  carry the contents of the `NOTICE` file — project name, copyright, source URL —
+  into their distribution. That is the strongest attribution mechanism available
+  in a permissive licence, and it is why this change was made. `NOTICE` is now in
+  `package.json` `files`, so it ships with the npm package.
+- **Modified files must say so** (§4b). MIT had no equivalent.
+- **Express patent grant with retaliation** (§3) and **no trademark rights**
+  (§6). Neither existed under MIT.
+- **Nothing is revoked.** Releases up to and including v4.20.0 were published
+  under MIT and remain available under MIT. This applies going forward.
+- **Prior contributions are handled correctly.** Contributions received while the
+  project was MIT-licensed remain their authors' copyright. MIT permits
+  sublicensing, so they are redistributed under Apache-2.0 with the original MIT
+  notice preserved verbatim in `NOTICE`, which is what MIT requires.
+
+`LICENSE` now holds the verbatim Apache-2.0 text, cross-verified against two
+independent published copies before being written.
+
+- **SPDX headers on 253 source files.** Short three-line form, placed after the
+  shebang. Markdown is deliberately excluded: skill and agent files carry parsed
+  frontmatter, and their descriptions cost 5,051 and 2,750 tokens of every
+  session's context, so a header there would be billed on every conversation for
+  a notice Apache only recommends.
+- **`tests/test_licensing.bats`, 7 assertions, enforced in CI**: headers present
+  and naming Apache-2.0, no header in markdown, `LICENSE` complete, `NOTICE`
+  carrying attribution and section 4(d), both files in `package.json` `files`,
+  and every manifest agreeing. The release SOP gains Phase 5c running the same
+  gate before the tag. Convention and reasoning: `kb/reference/licensing.md`.
 
 ### Removed
 

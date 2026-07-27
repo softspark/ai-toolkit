@@ -3,14 +3,16 @@
 > Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 108 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude Code, Claude Chat/Cowork, Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1466%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1473%20passing-success)](tests/)
 
 ## What's New in v4.20.0
 
-v4.20.0 removes nine plugin packs that installed nothing. Plugin count: 11 → 2.
+v4.20.0 relicenses the project to Apache-2.0 and removes nine plugin packs that installed nothing. Plugin count: 11 → 2.
+
+- **Licence: MIT → Apache-2.0.** Still permissive — fork it, modify it, ship it commercially. The change is what a redistributor owes back: the contents of [NOTICE](NOTICE) must travel with any redistribution (§4d), modified files must say they were modified (§4b), and there is now an express patent grant and a trademark reservation. Releases up to v4.20.0 stay available under MIT; nothing already granted is revoked. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 - **Nine packs removed**: `csharp`, `java`, `kotlin`, `ruby`, `rust`, `swift`, `frontend`, `research`, `security`. Each declared only skills and agents that already ship in the core install, so `plugin install` reported `(0 file items)` and wrote no file — on both runtimes and all three profiles. Eight owned nothing but a `README.md`. See [the measurement](kb/history/completed/no-op-plugin-packs-removed-20260727.md).
 - **Nothing is lost by the removal.** `rust-patterns`, `java-patterns`, `security-patterns`, `research-mastery` and the rest are **core skills**, still installed, still triggering as before. The packs never held them — they only listed them.
@@ -310,7 +312,15 @@ See [SECURITY.md](SECURITY.md) for responsible disclosure policy.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+Fork it, modify it, ship it commercially. Three things the licence asks in return:
+
+- **Keep the attribution.** Redistributions must carry the contents of [NOTICE](NOTICE) (§4d) — that is where the project name, copyright and source URL live.
+- **Say what you changed.** Modified files must carry a prominent notice stating that you changed them (§4b).
+- **Names are not included.** The licence grants no rights to the "ai-toolkit" or "SoftSpark" names or marks (§6).
+
+Releases up to and including v4.20.0 were published under MIT and stay available under MIT; the change applies going forward and revokes nothing already granted. Contributions received while the project was MIT-licensed remain their authors' copyright and are redistributed under Apache 2.0 with the original MIT notice preserved in [NOTICE](NOTICE), as MIT requires.
 
 ## Changelog
 

@@ -55,6 +55,7 @@
 - [Hooks Catalog](kb/reference/hooks-catalog.md)
 - [External Integrations](kb/reference/integrations.md)
 - [Language Rules System](kb/reference/language-rules.md)
+- [Licensing](kb/reference/licensing.md)
 - [Manifest-Driven Install System](kb/reference/manifest-install.md)
 - [MCP Editor Compatibility](kb/reference/mcp-editor-compatibility.md)
 - [MCP Server Templates](kb/reference/mcp-templates.md)

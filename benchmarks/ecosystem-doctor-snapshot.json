@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-07-27T07:12:31Z",
+  "last_run": "2026-07-27T11:02:34Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "1925050f50fb6fc3",
+      "docs_hash": "08443e412637cd52",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -364,7 +364,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "1149b358f401b6b3",
+      "docs_hash": "6e930c2fa0b827f5",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
