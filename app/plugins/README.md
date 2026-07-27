@@ -17,7 +17,7 @@ Plugin packs can target:
 These packs are not directly uploadable Claude app plugins. For Claude Chat,
 Desktop, and Cowork use `ai-toolkit claude-app export`.
 
-Current packs (12):
+Current packs (11):
 - `csharp-pack`
 - `enterprise-pack`
 - `frontend-pack`
@@ -25,14 +25,14 @@ Current packs (12):
 - `kotlin-pack`
 - `memory-pack`
 - `research-pack`
-- `rtk-pack`
 - `ruby-pack`
 - `rust-pack`
 - `security-pack`
 - `swift-pack`
 
-`rtk-pack` is the only one that fetches a native binary at install time and the
-only one that rewrites commands before they run. Read its README before
-installing it.
+Every pack here is content: agents, skills, rules and hook scripts that ship in
+this repository. None fetches a binary at install time. `rtk-pack` did, and was
+retired in v4.19.0; see `kb/history/completed/rtk-pack-retirement-20260727.md`
+before proposing another pack of that shape.
 
 See `kb/reference/plugin-pack-conventions.md` for pack rules, validation, and adoption guidance.

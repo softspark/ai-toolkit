@@ -7,6 +7,43 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.19.0 — rtk-pack retired (2026-07-27)
+
+### Removed
+
+- **`rtk-pack`**, one day after it shipped. The first real install proved every
+  rewritten command failed with exit 127: rtk names itself bare in the rewrite
+  and the pack keeps its binary off `PATH` on purpose, so the shell could not
+  find it. `git`, `ls`, `cat`, `find`, `grep`, `diff` and the rest all died
+  before running. A second defect fetched the Intel build onto Apple Silicon,
+  because `platform.machine()` reports `x86_64` from a Rosetta-translated
+  Python. The pack's own `plugin status` reported both as green.
+
+  All three were fixed and tested before the decision. The measured saving was
+  0.0615% of input tokens against a kill number of 0.05%, a margin the
+  integration plan itself called "a pass, not a vindication", which does not
+  justify a supply-chain surface, a five-target cross-build workflow, an
+  upstream-sync SOP, and a hook that rewrites every command before it runs.
+
+  Full postmortem: `kb/history/completed/rtk-pack-retirement-20260727.md`.
+- `.github/workflows/rtk-build.yml`, `scripts/verify_rtk_binary.py`,
+  `tests/test_rtk_pack.bats`, `tests/test_verify_rtk_binary.bats`,
+  `kb/procedures/rtk-upstream-sync-sop.md`, and the GitHub Release
+  `softspark-rtk-v0.44.0-1` holding the five cross-built binaries.
+
+If you installed the pack under v4.18.0, run
+`ai-toolkit plugin remove rtk-pack`.
+
+### Kept
+
+Everything the pack work built underneath it, none of which is rtk-specific:
+pack hook wiring for Cursor and Gemini, `supported_editors` in the manifest,
+generic `plugin status` dispatch to a pack's own `scripts/status.py`,
+version-aware `plugin update`, and `audit_skills.py --ci` plus the ShellCheck
+gate covering `app/plugins/`.
+
+---
+
 ## v4.18.0 — rtk-pack, an opt-in command rewriter (2026-07-26)
 
 ### Added

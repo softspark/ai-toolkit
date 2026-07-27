@@ -281,7 +281,7 @@ function showHelp() {
   console.log('  remove --all    Remove all installed plugins');
   console.log('  list            Show available plugin packs with install status');
   console.log('  status          Show currently installed plugins with data stats');
-  console.log('  --editor <list> Runtime target: claude, codex, or all (default: claude)');
+  console.log('  --editor <list> Runtime target: claude, codex, cursor, gemini, or all (default: claude)');
   console.log('\nOptions for claude-app:');
   console.log('  export [--output FILE] [--no-custom-rules] [--verify]');
   console.log('                  Build a ZIP for Customize > Plugins and Cowork instructions');

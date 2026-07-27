@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-07-26T11:36:57Z",
+  "last_run": "2026-07-27T07:12:31Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "1dd9e9f490e7103a",
+      "docs_hash": "b8b7ddbeaccd618d",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "9a5cb995316c7c71",
+      "docs_hash": "1925050f50fb6fc3",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -107,7 +107,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "d373a3e4db1f4c79",
+      "docs_hash": "e85f8751f08026f0",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -166,7 +166,7 @@
       "version": "2.1.220 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "d76db24ff58cb7ea",
+      "docs_hash": "3bbabe935a9e6ebb",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -364,7 +364,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "c6d93617f9359329",
+      "docs_hash": "1149b358f401b6b3",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -444,7 +444,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "03145f425dd475d1",
+      "docs_hash": "1e0c0d249231d2a9",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -520,7 +520,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "d57d379406804a4b",
+      "docs_hash": "56080b3b62a1de8e",
       "headings": [
         "Accounts",
         "Advanced",

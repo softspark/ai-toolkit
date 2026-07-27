@@ -490,3 +490,47 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+def _cleanup_config_path(target_dir: Path) -> Path | None:
+    return Path(target_dir).expanduser() / ".cursor" / "hooks.json"
+
+
+def _cleanup_write(path: Path, document: dict) -> None:
+    path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def cleanup(target_dir: Path) -> None:
+    """Strip this toolkit's hook entries for an uninstall or profile downgrade.
+
+    Only entries tagged with SOURCE_TAG are removed; user and plugin-pack
+    entries are left in place. The file is deleted only when nothing survives,
+    so an uninstall does not take a user's own configuration with it.
+    """
+    config = _cleanup_config_path(target_dir)
+    if config is None or not config.is_file() or config.is_symlink():
+        return
+    try:
+        with open(config, encoding="utf-8") as handle:
+            document = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(document, dict):
+        return
+
+    hooks = document.get("hooks")
+    if not isinstance(hooks, dict):
+        return
+    survivors = strip_toolkit_hooks(hooks)
+    if survivors == hooks:
+        return
+
+    if survivors:
+        document["hooks"] = survivors
+    else:
+        document.pop("hooks", None)
+
+    if document:
+        _cleanup_write(config, document)
+    else:
+        config.unlink()

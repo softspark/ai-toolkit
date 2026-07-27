@@ -277,7 +277,7 @@ teardown() {
 
 @test "cli: help lists plugin editor option" {
     run $CLI help
-    echo "$output" | grep -q -- '--editor <list> Runtime target: claude, codex, or all'
+    echo "$output" | grep -q -- '--editor <list> Runtime target: claude, codex, cursor, gemini, or all'
 }
 
 @test "cli: mcp editors exits 0" {
@@ -691,4 +691,26 @@ print('ok')
 "
     [ "$status" -eq 0 ]
     [ "$output" = "ok" ]
+}
+
+@test "install refuses a bare word that is not an existing directory" {
+    # `ai-toolkit install <pack>` reads like `plugin install <pack>` and used to
+    # write a full toolkit tree into ./<pack>.
+    d="$(mktemp -d)"
+    run bash -c "cd '$d' && HOME='$d' python3 '$TOOLKIT_DIR/scripts/install.py' some-pack-name 2>&1"
+    [ "$status" -ne 0 ]
+    case "$output" in
+        *"Refusing to install into a new directory"*) ;;
+        *) echo "expected a refusal, got: $output"; return 1 ;;
+    esac
+    [ ! -e "$d/some-pack-name" ]
+}
+
+@test "install still accepts an explicit relative path and an existing directory" {
+    d="$(mktemp -d)"
+    mkdir -p "$d/explicit" "$d/existing"
+    run bash -c "cd '$d' && HOME='$d' python3 '$TOOLKIT_DIR/scripts/install.py' ./explicit --dry-run 2>&1 | head -1"
+    [ "$status" -eq 0 ]
+    run bash -c "cd '$d' && HOME='$d' python3 '$TOOLKIT_DIR/scripts/install.py' existing --dry-run 2>&1 | head -1"
+    [ "$status" -eq 0 ]
 }

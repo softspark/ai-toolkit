@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import importlib
 import json
 import os
 import re
@@ -1324,6 +1325,28 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return args
 
 
+def _remove_editor_hook_configs(target: Path) -> None:
+    """Strip toolkit hook entries from editor configs that have no other cleanup.
+
+    Best effort by design: a missing generator or an unreadable config must not
+    abort an uninstall that has already removed the primary surfaces.
+    """
+    for module_name, label in (
+        ("generate_cursor_hooks", "Cursor"),
+        ("generate_gemini_hooks", "Gemini"),
+    ):
+        try:
+            module = importlib.import_module(module_name)
+            cleanup = getattr(module, "cleanup", None)
+            if cleanup is None:
+                continue
+            cleanup(target)
+        except (ImportError, OSError, RuntimeError, ValueError) as error:
+            print(f"  WARN could not clean {label} hooks: {error}")
+        else:
+            print(f"  Cleaned: {label} hook entries")
+
+
 def main(argv: list[str] | None = None) -> None:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     explicit_target = args.target or args.legacy_target
@@ -1412,6 +1435,12 @@ def main(argv: list[str] | None = None) -> None:
         for surface in copilot:
             _preflight(target, claude, [], [surface])
             _remove_copilot(surface)
+        # Cursor and Gemini hook configs were never cleaned: uninstall knew
+        # only Codex and Copilot, so `.cursor/hooks.json` and the hooks block in
+        # `.gemini/settings.json` survived an uninstall. Both cleanups strip
+        # only entries tagged `ai-toolkit`, leaving user-authored and
+        # plugin-pack entries and any unrelated settings in place.
+        _remove_editor_hook_configs(target)
         if recovery_root is not None and recovery_components:
             # The recovery API preflights its complete tree before the first
             # unlink. A later I/O fault can still leave recovery partially
