@@ -7,6 +7,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.19.1 — re-release from corrected history (2026-07-27)
+
+No functional change. The package contents are identical to v4.19.0.
+
+v4.19.0 was committed with two commit messages attached to the wrong changes:
+the commit titled `chore: release v4.19.0` held only the post-release testing
+SOP, and the release itself shipped under a recycled message about a CodeQL
+action bump. `main` has been rewritten so the history states what each commit
+actually did, and this version is published from that corrected history.
+
+The `v4.19.0` tag is deliberately left pointing at the pre-rewrite commit
+`8c90024`. That commit is what the published SLSA attestation for v4.19.0 pins,
+so the tag keeps it fetchable even though it is no longer an ancestor of `main`.
+Do not delete that tag.
+
+---
+
 ## v4.19.0 — rtk-pack retired (2026-07-27)
 
 ### Removed

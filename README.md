@@ -8,9 +8,11 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1465%20passing-success)](tests/)
 
-## What's New in v4.19.0
+## What's New in v4.19.1
 
-v4.19.0 removes `rtk-pack`. The pack that v4.18.0 shipped is gone; everything the work built underneath it stays.
+v4.19.1 is v4.19.0 re-published from a corrected commit history — same package contents, no functional change. What that release does:
+
+Removes `rtk-pack`. The pack that v4.18.0 shipped is gone; everything the work built underneath it stays.
 
 - **`rtk-pack` retired**: it broke every command it rewrote. rtk names itself bare in the rewrite, the pack kept its binary off `PATH` on purpose, and the result was exit 127 on `git`, `ls`, `cat`, `find`, `grep` and the rest. Measured value before the defect was 0.0615% of input tokens against a 0.05% kill number, so the fix was not worth the surface. See [the retirement note](kb/history/completed/rtk-pack-retirement-20260727.md).
 - **Pack hook wiring for Cursor and Gemini stays**: packs write user-scope entries to `~/.cursor/hooks.json` and `~/.gemini/settings.json`, tagged per pack, and `plugin remove` takes only its own back out.
