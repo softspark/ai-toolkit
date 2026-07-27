@@ -3,10 +3,10 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.11.2"
+version: "1.12.0"
 created: "2026-04-10"
 last_updated: "2026-07-27"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, and the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5)."
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5), and the pre-push tag assertions added in v1.12.0 after v4.19.0 was tagged on the wrong commit (Phase 7)."
 ---
 
 # SOP: Release Preparation
@@ -68,7 +68,14 @@ python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem
 # 6. Commit + tag + push
 git add -A && git commit -m "chore: release vX.Y.Z"
 git tag vX.Y.Z
-git push origin main --tags
+
+# 6a. Assert the tag before pushing it (v4.19.0 postmortem, Phase 7)
+test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" || { echo "FAIL: tag not on HEAD"; exit 1; }
+git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
+
+# 6b. Branch first, then the single tag by full ref. Never --tags.
+git push origin main
+git push origin refs/tags/vX.Y.Z
 ```
 
 ---
@@ -405,8 +412,33 @@ git commit -m "chore: release vX.Y.Z"
 
 ```bash
 git tag vX.Y.Z
-git push origin main --tags
+
+# Assert the tag before pushing it. Both checks are one line each and both
+# have caught a real broken release.
+test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" \
+  || { echo "FAIL: tag is not on HEAD"; exit 1; }
+git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
+  || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }
+
+# Push the branch, then the single release tag by its full ref.
+git push origin main
+git push origin refs/tags/vX.Y.Z
 ```
+
+**Why the assertions (v4.19.0 postmortem).** v4.19.0 was tagged on a commit
+that contained only a KB document and still carried `package.json` version
+`4.18.0`; the actual release sat in the commit above it under a recycled
+`fix:` message. `publish.yml` fired, tried to publish a version already on
+npm, and failed. Nothing on npm, a tag pointing at the wrong tree, and the
+only way out was rewriting a pushed commit. Both assertions above catch this
+in under a second. Run them.
+
+**Never `git push --tags`.** It pushes every local tag at once, and GitHub
+suppresses tag-triggered workflow runs when many tags arrive in a single push
+— the workflow silently does not fire and nothing publishes. Push the single
+release tag by its full ref, as above. (Sibling evidence: this is exactly how
+rag-mcp's `1.0.3` image build was skipped, when a `--tags` push carried 37
+tags at once.)
 
 This triggers `.github/workflows/publish.yml` which:
 1. Runs `validate.py --strict`
@@ -463,4 +495,6 @@ git push origin --delete vX.Y.Z
 | 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
 | 17 | Commit | `git commit` | Clean working tree |
 | 18 | Tag | `git tag vX.Y.Z` | Tag exists |
-| 19 | Push | `git push origin main --tags` | CI triggered with `id-token: write` |
+| 18a | Tag is on HEAD | `test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)"` | Exit 0 |
+| 18b | Tag is on the release commit | `git show --no-patch --format=%s vX.Y.Z` | Reads `chore: release vX.Y.Z` |
+| 19 | Push branch, then the single tag | `git push origin main && git push origin refs/tags/vX.Y.Z` | CI triggered with `id-token: write`. Never `--tags`. |

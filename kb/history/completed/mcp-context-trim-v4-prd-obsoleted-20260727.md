@@ -10,23 +10,56 @@ tags:
   - tokens
   - v4
 doc_type: plan
-status: proposed
+status: obsoleted
 created: "2026-05-04"
-last_updated: "2026-05-04"
-completion: "0%"
-target_milestone: "v4.0"
+last_updated: "2026-07-27"
+completion: "0% — never started, and no longer worth starting"
+target_milestone: "v4.0 (abandoned)"
 predecessor:
   - "kb/history/completed/output-token-discipline-plan-20260504.md"
   - "kb/history/completed/f2-mcp-trim-spike-20260504.md"
-description: "Local MCP proxy server that compresses tool descriptions before they reach the model. Carved out of the v3.2.0 output-token-discipline plan (Feature 2), deferred after the 2026-05-04 spike showed Claude Code hooks cannot modify tools/list metadata. Targets ~8-15k token reduction per session for users with many MCP servers."
+description: "ABANDONED 2026-07-27. Local MCP proxy that would compress tool descriptions before they reach the model. Never built. Claude Code now defers MCP tool schemas by default — the catalog costs ~120 tokens of tool names, with schemas fetched on demand — so the 8-15k per-turn overhead this PRD was written to remove no longer exists. Kept as the record of a plan the platform solved first."
 ---
 
-# PRD: MCP Context Trim v4.0
+# PRD: MCP Context Trim v4.0 — ABANDONED
 
-**Status:** Proposed
+> **Abandoned 2026-07-27, never implemented.**
+>
+> **Why:** the premise expired. This PRD is built on one measured claim — that
+> MCP tool descriptions sit in every turn's system prompt, costing 8–15k tokens
+> per turn. Claude Code now **defers MCP tool schemas by default**: the model
+> receives roughly 120 tokens of tool *names*, and full schemas are fetched on
+> demand through tool search when a task actually needs one.
+> ([Claude Code docs — context window](https://code.claude.com/docs/en/context-window),
+> `ENABLE_TOOL_SEARCH=auto|false` controls the older eager behaviour.)
+>
+> The overhead this proxy was designed to remove is already gone. Building it
+> now would add a supervised local daemon, an `.mcp.json` rewrite, a rollback
+> path and five pre-mortem failure modes in order to compress a 120-token
+> catalog.
+>
+> **How it was caught:** during the 2026-07-27 token-reduction review, a
+> measurement of 1189 real sessions put the median startup context at 22,175
+> tokens against ~7,850 in the documented reference shape. Attributing that gap
+> showed the excess was skill and agent descriptions and rule files — not MCP.
+> The MCP catalog was already deferred, exactly as the docs describe. Full
+> context: [`tool-output-token-reduction-closed-20260727.md`](tool-output-token-reduction-closed-20260727.md).
+>
+> **What survives:** nothing in the architecture below is reusable, because it
+> exists to solve a problem the host now solves. What survives is the process
+> note — this PRD sat in `kb/planning/` for nearly three months while the
+> platform shipped the fix, and nobody re-checked the premise. A plan blocked on
+> a host limitation should carry a re-validation date, not wait indefinitely.
+>
+> Everything below is the document as written on 2026-05-04. It is preserved
+> unedited so the reasoning stays auditable.
+
+---
+
+**Status:** Proposed *(as of 2026-05-04; see abandonment note above)*
 **Target milestone:** v4.0
-**Carved out of:** [`output-token-discipline-plan-20260504.md`](../history/completed/output-token-discipline-plan-20260504.md) (was Feature 2)
-**Spike basis:** [`f2-mcp-trim-spike-20260504.md`](../history/completed/f2-mcp-trim-spike-20260504.md)
+**Carved out of:** [`output-token-discipline-plan-20260504.md`](output-token-discipline-plan-20260504.md) (was Feature 2)
+**Spike basis:** [`f2-mcp-trim-spike-20260504.md`](f2-mcp-trim-spike-20260504.md)
 
 ## Problem
 
@@ -156,3 +189,4 @@ Applied to each tool description in `tools/list` response:
 | Date | Status | Author |
 |------|--------|--------|
 | 2026-05-04 | PRD drafted from spike conclusions, carved out of v3.2.0 plan | claude |
+| 2026-07-27 | Abandoned without implementation. Claude Code began deferring MCP tool schemas by default, removing the per-turn overhead this proxy targeted. Moved from `kb/planning/` to `kb/history/completed/`. | claude |

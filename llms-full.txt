@@ -17,16 +17,17 @@
 - [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/history/completed/ecosystem-deep-sweep-20260423.md)
 - [Plan: Enterprise Config Inheritance — Multi-Repo Governance with `extends`](kb/history/completed/enterprise-config-inheritance-plan-20260412.md)
 - [Spike: F2 MCP Context Trim — Hook Feasibility & Path Decision](kb/history/completed/f2-mcp-trim-spike-20260504.md)
+- [PRD: MCP Context Trim v4.0 — ABANDONED](kb/history/completed/mcp-context-trim-v4-prd-obsoleted-20260727.md)
 - [Implementation Plan: Native Tool Output Filter](kb/history/completed/native-tool-output-filter-plan.md)
 - [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/history/completed/offline-slm-profile-plan-20260411.md)
 - [Retirement: Native Tool-Output Filter](kb/history/completed/output-filter-retirement-20260726.md)
 - [Plan: Output & Token Discipline](kb/history/completed/output-token-discipline-plan-20260504.md)
 - [rtk Pack Integration](kb/history/completed/rtk-pack-integration-20260726.md)
 - [Retirement: rtk-pack](kb/history/completed/rtk-pack-retirement-20260727.md)
+- [Closed: Tool-Output Token Reduction](kb/history/completed/tool-output-token-reduction-closed-20260727.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
 - [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/planning/drop-cascade-hooks-after-sunset.md)
-- [PRD: MCP Context Trim v4.0](kb/planning/mcp-context-trim-v4-prd.md)
 - [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
 - [SOP: AI Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Post-Release Testing](kb/procedures/post-release-testing-sop.md)
@@ -1777,6 +1778,203 @@ Estimate in the PRD: ~8 working days.
 | 2026-05-04 | Spike completed | claude |
 | 2026-05-04 | User decision: defer F2 to v4.0 entirely (no F2-lite in v3.2.0) | lukasz.krzemien |
 | 2026-05-04 | Spike archived to `kb/history/completed/` alongside the parent plan | claude |
+
+---
+
+## kb/history/completed/mcp-context-trim-v4-prd-obsoleted-20260727.md
+
+---
+title: "PRD: MCP Context Trim v4.0 — Local Proxy with Description Compression"
+category: planning
+service: ai-toolkit
+tags:
+  - mcp
+  - proxy
+  - tool-descriptions
+  - jsonrpc
+  - tokens
+  - v4
+doc_type: plan
+status: obsoleted
+created: "2026-05-04"
+last_updated: "2026-07-27"
+completion: "0% — never started, and no longer worth starting"
+target_milestone: "v4.0 (abandoned)"
+predecessor:
+  - "kb/history/completed/output-token-discipline-plan-20260504.md"
+  - "kb/history/completed/f2-mcp-trim-spike-20260504.md"
+description: "ABANDONED 2026-07-27. Local MCP proxy that would compress tool descriptions before they reach the model. Never built. Claude Code now defers MCP tool schemas by default — the catalog costs ~120 tokens of tool names, with schemas fetched on demand — so the 8-15k per-turn overhead this PRD was written to remove no longer exists. Kept as the record of a plan the platform solved first."
+---
+
+# PRD: MCP Context Trim v4.0 — ABANDONED
+
+> **Abandoned 2026-07-27, never implemented.**
+>
+> **Why:** the premise expired. This PRD is built on one measured claim — that
+> MCP tool descriptions sit in every turn's system prompt, costing 8–15k tokens
+> per turn. Claude Code now **defers MCP tool schemas by default**: the model
+> receives roughly 120 tokens of tool *names*, and full schemas are fetched on
+> demand through tool search when a task actually needs one.
+> ([Claude Code docs — context window](https://code.claude.com/docs/en/context-window),
+> `ENABLE_TOOL_SEARCH=auto|false` controls the older eager behaviour.)
+>
+> The overhead this proxy was designed to remove is already gone. Building it
+> now would add a supervised local daemon, an `.mcp.json` rewrite, a rollback
+> path and five pre-mortem failure modes in order to compress a 120-token
+> catalog.
+>
+> **How it was caught:** during the 2026-07-27 token-reduction review, a
+> measurement of 1189 real sessions put the median startup context at 22,175
+> tokens against ~7,850 in the documented reference shape. Attributing that gap
+> showed the excess was skill and agent descriptions and rule files — not MCP.
+> The MCP catalog was already deferred, exactly as the docs describe. Full
+> context: [`tool-output-token-reduction-closed-20260727.md`](tool-output-token-reduction-closed-20260727.md).
+>
+> **What survives:** nothing in the architecture below is reusable, because it
+> exists to solve a problem the host now solves. What survives is the process
+> note — this PRD sat in `kb/planning/` for nearly three months while the
+> platform shipped the fix, and nobody re-checked the premise. A plan blocked on
+> a host limitation should carry a re-validation date, not wait indefinitely.
+>
+> Everything below is the document as written on 2026-05-04. It is preserved
+> unedited so the reasoning stays auditable.
+
+---
+
+**Status:** Proposed *(as of 2026-05-04; see abandonment note above)*
+**Target milestone:** v4.0
+**Carved out of:** [`output-token-discipline-plan-20260504.md`](output-token-discipline-plan-20260504.md) (was Feature 2)
+**Spike basis:** [`f2-mcp-trim-spike-20260504.md`](f2-mcp-trim-spike-20260504.md)
+
+## Problem
+
+MCP server tool descriptions are injected into every model turn's system prompt. With ~100 tools across 7 typical servers, descriptions consume 8–15k tokens per turn — pure overhead, paid every message. Examples observed in users' configs:
+
+- `dart-mcp-server` — ~30 tools with multi-paragraph descriptions
+- `filesystem` — verbose paths and example sections
+- `pencil` — "IMPORTANT" stanzas repeated across tools
+- `jira-mcp` — long `Use this tool to…` boilerplate
+
+The v3.2.0 output-discipline plan attempted to solve this with a hook-based trimmer. The spike conducted 2026-05-04 proved Claude Code hooks do not expose `tools/list` metadata or the system-prompt tool catalog. The only viable architecture is a local MCP proxy.
+
+## Goal
+
+Reduce MCP-description overhead by ≥40% per server, with **zero** loss of parameter schemas, required fields, or discrimination signals (`not`, `never`, `only`, `except`, `unless`).
+
+## Non-goals
+
+- Modifying tool **call** behavior (only descriptions)
+- Compressing user-facing prompts or completions
+- Replacing or rewriting upstream MCP servers
+- Touching MCP servers we do not control
+
+## Architecture
+
+### Proxy topology
+
+```
+Claude Code  ──stdio──▶  ai-toolkit MCP proxy  ──stdio/SSE──▶  upstream MCP server
+                                │
+                                └─ rewrites tools/list response
+                                   passes through tools/call unchanged
+```
+
+One proxy process per upstream server, supervised by `ai-toolkit mcp-trim daemon` (or equivalent). User's `~/.claude/.mcp.json` is rewritten by `ai-toolkit install` (opt-in) to point Claude Code at the proxy instead of upstream — proxy reads the original target from a sidecar config.
+
+### Required components
+
+| Component | Purpose |
+|-----------|---------|
+| `scripts/mcp_proxy_server.py` | JSON-RPC 2.0 proxy. Reads stdin, forwards to upstream over stdio or SSE, intercepts `tools/list` response, rewrites descriptions. Stdlib-only. |
+| `scripts/mcp_description_trimmer.py` | Pure function library: `trim(description: str) → str`. Reused from heuristics below. Stdlib-only. |
+| `scripts/mcp_proxy_config.py` | Reads `~/.softspark/ai-toolkit/mcp-proxy/servers.json`, validates upstream targets, generates supervisord/launchd config. |
+| `app/hooks/mcp-proxy-health.sh` | SessionStart hook — verifies all configured proxies responsive; fall through (warn, do not block) if any down. |
+| `app/skills/mcp-trim/SKILL.md` | Knowledge skill: how to enable, opt out, audit savings. |
+| `bin/ai-toolkit-mcp-trim` | CLI: `enable`, `disable`, `status`, `audit` (per-server token savings report). |
+| `tests/test_mcp_proxy.bats` | Integration tests with mock upstream MCP servers. |
+| `tests/test_mcp_trimmer.bats` | Unit tests for description trim heuristics on captured fixtures. |
+
+### Compression heuristics (from spike)
+
+Applied to each tool description in `tools/list` response:
+
+- Drop example sections >40 chars
+- Collapse `Use this server to…` / `Use this tool to…` boilerplate to minimum form preserving intent
+- Drop duplicate occurrences of tool name in its own description
+- **Preserve bytewise:** `inputSchema.properties[*].description`, `required`, `enum` values, URL/path identifiers
+- **Never strip:** the words `not`, `never`, `only`, `except`, `unless` — these carry "when NOT to use" signals
+- Target: ≥40% length reduction, 0% schema loss
+
+### Failure modes & rollback
+
+| Scenario | Behavior |
+|----------|----------|
+| Proxy crashes mid-session | `mcp-proxy-health.sh` detects on next SessionStart, prints warning, suggests `ai-toolkit mcp-trim disable <server>` |
+| Upstream MCP server changes its tool catalog | Proxy passes through unchanged tools (no cached schema), warns once if a tool's description was previously trimmed |
+| Trimmer produces malformed JSON | Proxy falls through to upstream response unchanged, logs to `~/.softspark/ai-toolkit/mcp-proxy/error.log` |
+| User wants to bypass | `AI_TOOLKIT_MCP_TRIM_DISABLE=1` env var → proxies pass everything through unchanged |
+| User wants to fully uninstall | `ai-toolkit mcp-trim disable` reverts `~/.claude/.mcp.json` to original upstream targets |
+
+### Migration of existing user `.mcp.json`
+
+`ai-toolkit mcp-trim enable` does:
+
+1. Backup `~/.claude/.mcp.json` → `~/.softspark/ai-toolkit/mcp-proxy/.mcp.json.bak.<timestamp>`
+2. Read each server entry, store in `~/.softspark/ai-toolkit/mcp-proxy/servers.json`
+3. Rewrite each entry to point at the local proxy (with sidecar `target` field)
+4. Spawn supervisor (per-OS: launchd on macOS, systemd on Linux, scheduled task on Windows)
+5. Verify each upstream reachable via proxy, abort + restore backup on any failure
+
+## Out-of-scope decisions (rejected mid-spike)
+
+| Option | Why rejected |
+|--------|--------------|
+| Pre-install rewrite of `.mcp.json` only | MCP spec sources descriptions from server runtime, not config — wouldn't take effect |
+| Source-side forks of MCP servers | Doesn't help users with custom servers; high maintenance |
+| F2-lite observability tool | User decision 2026-05-04: tracking token waste without trimming is half-value; do the full thing in v4.0 |
+| Hook-based interception | Spike proved hooks cannot reach `tools/list` |
+
+## Success criteria
+
+- ≥40% description-length reduction per server on the captured fixture set (jira, filesystem, dart, pencil)
+- Deep-equal `inputSchema` between trimmed and upstream — zero schema regression
+- Proxy adds <50ms per `tools/list` call (one-time per session)
+- Proxy adds <5ms per `tools/call` (passthrough overhead)
+- Round-trip correctness: every tool callable via proxy returns byte-identical result vs direct call
+- Zero MCP-skill regressions in `npm test` after enabling proxy in CI
+- Rollback (`ai-toolkit mcp-trim disable`) restores byte-identical original `.mcp.json`
+
+## Open questions
+
+1. Process supervision per-OS — launchd / systemd / scheduled-task wrappers, or a built-in `ai-toolkit-mcp-trimd` daemon binary?
+2. SSE-mode upstreams (e.g., rag-mcp at `http://localhost:8081/mcp/sse`) — proxy listens on SSE locally too, or stdio-only with internal SSE client?
+3. Description rewrites — static dictionary of "boilerplate phrases to drop" (faster, deterministic) vs LLM-based summarizer (more aggressive, less predictable)? Recommend static for v4.0, LLM as v4.1 stretch.
+4. Config path — `~/.softspark/ai-toolkit/mcp-proxy/` (matches existing convention) or `~/.claude/mcp-proxy/` (closer to MCP config)? Recommend the former.
+5. Telemetry — does this become an opt-in metric in `/briefing --tokens` ("MCP descriptions: 12.3k → 7.2k, saved 5.1k per turn")? Recommend yes.
+
+## Pre-mortem (failure scenarios to design against)
+
+1. **Proxy gets out of sync with upstream** — upstream adds a new tool, proxy doesn't know how to compress it → passthrough that tool's description unchanged, log warning
+2. **Compression breaks tool discriminability** — model picks wrong tool because trimmed description lost the "use only when X" qualifier → the `not/never/only/except/unless` blacklist must be exhaustive; add per-server allowlists for false positives
+3. **Multi-process race on `.mcp.json` rewrite** — two `ai-toolkit install` invocations clobber each other → file lock during enable/disable
+4. **Proxy supervisor fails to start on user's machine** — different distro / no systemd → ai-toolkit doctor must detect and report; degrade to "MCP proxy unavailable, falling through" with no functionality loss
+5. **User has custom MCP server we don't recognize** — must work without per-server schema; default heuristics must be safe enough for arbitrary servers
+
+## Estimate
+
+- Architecture spike + working proxy prototype: 2 days
+- Production proxy + supervisor + config + CLI: 3 days
+- Test suite + fixtures + CI integration: 2 days
+- Documentation + migration guide + release notes: 1 day
+
+**Total: ~8 working days** (1.5–2 weeks calendar time at typical pace)
+
+## Status
+
+| Date | Status | Author |
+|------|--------|--------|
+| 2026-05-04 | PRD drafted from spike conclusions, carved out of v3.2.0 plan | claude |
+| 2026-07-27 | Abandoned without implementation. Claude Code began deferring MCP tool schemas by default, removing the per-turn overhead this proxy targeted. Moved from `kb/planning/` to `kb/history/completed/`. | claude |
 
 ---
 
@@ -4338,6 +4536,201 @@ designed for.
 
 ---
 
+## kb/history/completed/tool-output-token-reduction-closed-20260727.md
+
+---
+title: "Closed: Tool-Output Token Reduction — Three Attempts, One Ceiling"
+category: planning
+service: ai-toolkit
+tags:
+  - token-reduction
+  - measurement
+  - postmortem
+  - prompt-caching
+  - context-window
+  - closed-line-of-work
+doc_type: postmortem
+status: completed
+created: "2026-07-27"
+last_updated: "2026-07-27"
+description: "Closes the tool-output token-reduction line of work after a third measurement. Decomposes 1189 real sessions by cost: 84% is context being fed to the model, 14.7% is responses. Tool output is a small lever by construction and three independent attempts have now hit the same ceiling. Records what shipped (a 20.2% rag-mcp response trim, worth 0.49% of cost), what was killed by its own kill number, and the three measurement errors made on the way."
+---
+
+# Closed: Tool-Output Token Reduction
+
+**Read this before proposing a fourth attempt.**
+
+Three independent efforts have tried to cut tokens by shrinking what tools
+return. All three were competently built. All three measured out near zero.
+
+| Attempt | Shipped | Measured saving |
+|---|---|---:|
+| [Native tool-output filter](output-filter-retirement-20260726.md) | v4.16.0, removed v4.17.0 | **0.0000%** |
+| [rtk-pack](rtk-pack-retirement-20260727.md) | v4.18.0, removed v4.19.0 | **0.0615%** |
+| This review's only clean win (rag-mcp response trim) | rag-mcp, 2026-07-27 | **0.49%** |
+
+This is not three unlucky implementations. It is one structural fact, measured
+three different ways.
+
+## Where the money actually is
+
+1189 sessions with traffic, 83,352 assistant turns, priced at Opus list rates:
+
+| Component | Share of cost |
+|---|---:|
+| `cache_read` | **63.1%** |
+| `cache_creation` | 20.9% |
+| `output` | 14.7% |
+| `input` (uncached) | 1.3% |
+
+**84% of cost is feeding context to the model.** Responses are 14.7%. That
+closes "make the model write less" as a serious lever — the whole `brand-voice`
+concise mode plays for a seventh of the bill.
+
+Cache hit rate is **97.4%**. Published guidance treats 80–95% as the achievable
+band, so there is nothing to win in cache tuning either.
+
+Session shape: median 29 turns (mean 70.1), median peak context 71,276 tokens
+(mean 114,712), median startup context 22,175 tokens.
+
+## Why tool output cannot be the lever
+
+Decomposed by amplification — every tool result is re-read on every turn that
+follows it, so a result's true cost is its size times the turns remaining:
+
+| Category | Share of `cache_read` |
+|---|---:|
+| Fixed startup prelude | 12.4% |
+| `Read` results | 15.6% |
+| `Bash` results | 6.7% |
+| `rag-mcp` results | 3.8% |
+| Unattributed (assistant text, thinking, user messages, reminders) | ~61% |
+
+Every tool in the toolbox, amplified across every turn, is **26.1%** of
+`cache_read`, and it is not compressible without losing what it says. The
+original Phase 0 calculation reached the same place from the other direction:
+tool results are 4.54% of input-token volume, so 4.54% is the arithmetic
+ceiling for any mechanism operating on them.
+
+Raw tool-result bytes, 113 MB across 1308 session files:
+
+| Tool | Share of bytes |
+|---|---:|
+| `Read` | 62.2% |
+| `Bash` | 26.1% |
+| `rag-mcp` (3 tools) | 7.6% |
+| everything else | <2% each |
+
+## What shipped
+
+**rag-mcp response compaction** — `compact_payload()` in
+`app/rag-mcp-server/routes/kb_search.py`, applied to `smart_query`,
+`hybrid_search_kb` and `get_document`, plus both sides of the smart_query cache
+so a hit and a miss return identical bytes.
+
+Verified by running the shipped function over 1356 real responses captured from
+session logs: **20.2% smaller, with no field the agent acts on removed.**
+That is 0.77% of `cache_read`, **0.49% of total cost**.
+
+It drops request echo (`use_hyde`/`use_crag`/`use_multi_hop`), null result
+columns, `_from_cache: false`, `total_documents_used` when it equals the result
+count, and the part of `source_documents_used` that merely repeats
+`results[].kb_id`. It deliberately keeps `file_path` (addresses Read/Edit, where
+`kb_id` addresses get_document), `routing` (the only signal for which pipeline
+ran), `score: 0.0`, and empty result sets. 16 unit tests, most of them asserting
+what must survive rather than what gets removed.
+
+## What was killed, and by what
+
+A kill number was published before the work: *if the shipped changes do not cut
+`cache_read` by 3%, stop and do not proceed to the behavioural changes.*
+
+Result: **0.79%.** The threshold was not met, and the remaining items were not
+built. The kill number did its job — this is the first of the three attempts
+where it bound before code was written rather than after it shipped.
+
+## Three measurement errors, and what they cost
+
+Recorded because each one nearly produced a wrong decision, and because two of
+them are the same class of error that produced the previous two failures.
+
+**1. Duplicate reads: 11.1% was actually 0.1%.** The first pass keyed duplicate
+detection on `file_path` alone, counting re-reads of *different ranges* of the
+same file as waste. Re-keyed on `(file_path, offset, limit)`:
+
+| Key | Duplicates | Bytes | Share of `Read` |
+|---|---:|---:|---:|
+| path only (wrong) | 1754 | 7,787,530 | 11.1% |
+| path + offset + limit (right) | **36** | **90,975** | **0.1%** |
+
+A whole planned deliverable — a session-scoped dedup hook, with a designed
+mitigation for the post-compaction re-read hazard — rested on that 11.1%. It
+does not exist.
+
+**2. A 58% "trim" that was deleting document content.** An aggressive variant of
+the rag-mcp compaction measured 58% smaller. It was whitelisting top-level keys
+and thereby dropping `content` — which for `get_document` *is* the document,
+30.5% of all bytes those endpoints return. Not a trim; data loss that looked
+like a win. The honest figure is 20.2%.
+
+**3. "77.5% of the rag-mcp response is overhead."** Roughly half of that
+non-content mass is `kb_id`, `file_path`, `title` and `score` — fields the agent
+uses. Removable overhead is about 20%, not 77%.
+
+The common thread: **every one of these errors made the opportunity look bigger
+than it is, and every one was caught only by decomposing before building.** The
+filter retirement drew the same conclusion about premise validation; rtk-pack
+drew it about installing the artifact. This adds a third: decompose the metric
+before trusting its headline.
+
+## What is left, and why it was not taken
+
+| Option | Value | Why not |
+|---|---:|---|
+| Model routing | tens of % | Ruled out by the maintainer — Opus 5 stays |
+| Trim the toolkit's own startup prelude | ~2.5% of cost | Ruled out — costs skill/agent discoverability |
+| `Read` with ranges instead of whole files | up to 10.4% of `cache_read` | The only remaining item of size, and **not quality-neutral**: it is a behavioural change whose effect on correctness cannot be measured automatically |
+| Unattributed ~61% of `cache_read` | unknown | Assistant text, thinking blocks, user messages, system reminders — no clean cut available |
+
+For the record, the startup prelude was measured rather than guessed. Median
+startup context is 22,175 tokens against ~7,850 in the documented reference
+shape, and the gap is the toolkit's own:
+
+| Component | Count | ~tokens |
+|---|---:|---:|
+| skill descriptions | 108 | 5,051 |
+| agent descriptions | 44 | 2,750 |
+| project rules | 5 | 3,802 |
+| global rules | 6 | 3,133 |
+| `CLAUDE.md` files | 3 | 2,338 |
+| **total** | | **17,076** |
+
+The tool built to reduce tokens is the single largest addition to every
+session's context. That is worth knowing, and it is still only 2.5% of cost,
+because the prelude is 12.4% of `cache_read` and only part of it is removable.
+
+## The rule this leaves behind
+
+**Do not open a fourth tool-output token-reduction effort without first
+producing a measurement that beats 4.54%.** That is the ceiling on this workload
+and it has now been approached from three directions. Any proposal in this space
+must state, before any code, which share of *input token volume* it addresses —
+not which share of tool output, not which share of Bash bytes.
+
+If token cost genuinely needs to come down, the levers that are actually large
+are model selection and turn count. Both are policy decisions, not engineering
+projects, and neither is in this line of work.
+
+## Related
+
+- [Output Filter Retirement](output-filter-retirement-20260726.md) — attempt one, 0.0000%
+- [rtk-pack Retirement](rtk-pack-retirement-20260727.md) — attempt two, 0.0615%
+- [rtk Pack Integration](rtk-pack-integration-20260726.md) — the Phase 0 ceiling calculation
+- [MCP Context Trim v4.0 — abandoned](mcp-context-trim-v4-prd-obsoleted-20260727.md) — a fourth idea in this space, killed by the platform shipping the fix first
+- [Output & Token Discipline](output-token-discipline-plan-20260504.md) — the plan all of this descends from
+
+---
+
 ## kb/howto/README.md
 
 ---
@@ -5626,169 +6019,6 @@ removing it before the sunset breaks Cascade users who are still on the old agen
 
 ---
 
-## kb/planning/mcp-context-trim-v4-prd.md
-
----
-title: "PRD: MCP Context Trim v4.0 — Local Proxy with Description Compression"
-category: planning
-service: ai-toolkit
-tags:
-  - mcp
-  - proxy
-  - tool-descriptions
-  - jsonrpc
-  - tokens
-  - v4
-doc_type: plan
-status: proposed
-created: "2026-05-04"
-last_updated: "2026-05-04"
-completion: "0%"
-target_milestone: "v4.0"
-predecessor:
-  - "kb/history/completed/output-token-discipline-plan-20260504.md"
-  - "kb/history/completed/f2-mcp-trim-spike-20260504.md"
-description: "Local MCP proxy server that compresses tool descriptions before they reach the model. Carved out of the v3.2.0 output-token-discipline plan (Feature 2), deferred after the 2026-05-04 spike showed Claude Code hooks cannot modify tools/list metadata. Targets ~8-15k token reduction per session for users with many MCP servers."
----
-
-# PRD: MCP Context Trim v4.0
-
-**Status:** Proposed
-**Target milestone:** v4.0
-**Carved out of:** [`output-token-discipline-plan-20260504.md`](../history/completed/output-token-discipline-plan-20260504.md) (was Feature 2)
-**Spike basis:** [`f2-mcp-trim-spike-20260504.md`](../history/completed/f2-mcp-trim-spike-20260504.md)
-
-## Problem
-
-MCP server tool descriptions are injected into every model turn's system prompt. With ~100 tools across 7 typical servers, descriptions consume 8–15k tokens per turn — pure overhead, paid every message. Examples observed in users' configs:
-
-- `dart-mcp-server` — ~30 tools with multi-paragraph descriptions
-- `filesystem` — verbose paths and example sections
-- `pencil` — "IMPORTANT" stanzas repeated across tools
-- `jira-mcp` — long `Use this tool to…` boilerplate
-
-The v3.2.0 output-discipline plan attempted to solve this with a hook-based trimmer. The spike conducted 2026-05-04 proved Claude Code hooks do not expose `tools/list` metadata or the system-prompt tool catalog. The only viable architecture is a local MCP proxy.
-
-## Goal
-
-Reduce MCP-description overhead by ≥40% per server, with **zero** loss of parameter schemas, required fields, or discrimination signals (`not`, `never`, `only`, `except`, `unless`).
-
-## Non-goals
-
-- Modifying tool **call** behavior (only descriptions)
-- Compressing user-facing prompts or completions
-- Replacing or rewriting upstream MCP servers
-- Touching MCP servers we do not control
-
-## Architecture
-
-### Proxy topology
-
-```
-Claude Code  ──stdio──▶  ai-toolkit MCP proxy  ──stdio/SSE──▶  upstream MCP server
-                                │
-                                └─ rewrites tools/list response
-                                   passes through tools/call unchanged
-```
-
-One proxy process per upstream server, supervised by `ai-toolkit mcp-trim daemon` (or equivalent). User's `~/.claude/.mcp.json` is rewritten by `ai-toolkit install` (opt-in) to point Claude Code at the proxy instead of upstream — proxy reads the original target from a sidecar config.
-
-### Required components
-
-| Component | Purpose |
-|-----------|---------|
-| `scripts/mcp_proxy_server.py` | JSON-RPC 2.0 proxy. Reads stdin, forwards to upstream over stdio or SSE, intercepts `tools/list` response, rewrites descriptions. Stdlib-only. |
-| `scripts/mcp_description_trimmer.py` | Pure function library: `trim(description: str) → str`. Reused from heuristics below. Stdlib-only. |
-| `scripts/mcp_proxy_config.py` | Reads `~/.softspark/ai-toolkit/mcp-proxy/servers.json`, validates upstream targets, generates supervisord/launchd config. |
-| `app/hooks/mcp-proxy-health.sh` | SessionStart hook — verifies all configured proxies responsive; fall through (warn, do not block) if any down. |
-| `app/skills/mcp-trim/SKILL.md` | Knowledge skill: how to enable, opt out, audit savings. |
-| `bin/ai-toolkit-mcp-trim` | CLI: `enable`, `disable`, `status`, `audit` (per-server token savings report). |
-| `tests/test_mcp_proxy.bats` | Integration tests with mock upstream MCP servers. |
-| `tests/test_mcp_trimmer.bats` | Unit tests for description trim heuristics on captured fixtures. |
-
-### Compression heuristics (from spike)
-
-Applied to each tool description in `tools/list` response:
-
-- Drop example sections >40 chars
-- Collapse `Use this server to…` / `Use this tool to…` boilerplate to minimum form preserving intent
-- Drop duplicate occurrences of tool name in its own description
-- **Preserve bytewise:** `inputSchema.properties[*].description`, `required`, `enum` values, URL/path identifiers
-- **Never strip:** the words `not`, `never`, `only`, `except`, `unless` — these carry "when NOT to use" signals
-- Target: ≥40% length reduction, 0% schema loss
-
-### Failure modes & rollback
-
-| Scenario | Behavior |
-|----------|----------|
-| Proxy crashes mid-session | `mcp-proxy-health.sh` detects on next SessionStart, prints warning, suggests `ai-toolkit mcp-trim disable <server>` |
-| Upstream MCP server changes its tool catalog | Proxy passes through unchanged tools (no cached schema), warns once if a tool's description was previously trimmed |
-| Trimmer produces malformed JSON | Proxy falls through to upstream response unchanged, logs to `~/.softspark/ai-toolkit/mcp-proxy/error.log` |
-| User wants to bypass | `AI_TOOLKIT_MCP_TRIM_DISABLE=1` env var → proxies pass everything through unchanged |
-| User wants to fully uninstall | `ai-toolkit mcp-trim disable` reverts `~/.claude/.mcp.json` to original upstream targets |
-
-### Migration of existing user `.mcp.json`
-
-`ai-toolkit mcp-trim enable` does:
-
-1. Backup `~/.claude/.mcp.json` → `~/.softspark/ai-toolkit/mcp-proxy/.mcp.json.bak.<timestamp>`
-2. Read each server entry, store in `~/.softspark/ai-toolkit/mcp-proxy/servers.json`
-3. Rewrite each entry to point at the local proxy (with sidecar `target` field)
-4. Spawn supervisor (per-OS: launchd on macOS, systemd on Linux, scheduled task on Windows)
-5. Verify each upstream reachable via proxy, abort + restore backup on any failure
-
-## Out-of-scope decisions (rejected mid-spike)
-
-| Option | Why rejected |
-|--------|--------------|
-| Pre-install rewrite of `.mcp.json` only | MCP spec sources descriptions from server runtime, not config — wouldn't take effect |
-| Source-side forks of MCP servers | Doesn't help users with custom servers; high maintenance |
-| F2-lite observability tool | User decision 2026-05-04: tracking token waste without trimming is half-value; do the full thing in v4.0 |
-| Hook-based interception | Spike proved hooks cannot reach `tools/list` |
-
-## Success criteria
-
-- ≥40% description-length reduction per server on the captured fixture set (jira, filesystem, dart, pencil)
-- Deep-equal `inputSchema` between trimmed and upstream — zero schema regression
-- Proxy adds <50ms per `tools/list` call (one-time per session)
-- Proxy adds <5ms per `tools/call` (passthrough overhead)
-- Round-trip correctness: every tool callable via proxy returns byte-identical result vs direct call
-- Zero MCP-skill regressions in `npm test` after enabling proxy in CI
-- Rollback (`ai-toolkit mcp-trim disable`) restores byte-identical original `.mcp.json`
-
-## Open questions
-
-1. Process supervision per-OS — launchd / systemd / scheduled-task wrappers, or a built-in `ai-toolkit-mcp-trimd` daemon binary?
-2. SSE-mode upstreams (e.g., rag-mcp at `http://localhost:8081/mcp/sse`) — proxy listens on SSE locally too, or stdio-only with internal SSE client?
-3. Description rewrites — static dictionary of "boilerplate phrases to drop" (faster, deterministic) vs LLM-based summarizer (more aggressive, less predictable)? Recommend static for v4.0, LLM as v4.1 stretch.
-4. Config path — `~/.softspark/ai-toolkit/mcp-proxy/` (matches existing convention) or `~/.claude/mcp-proxy/` (closer to MCP config)? Recommend the former.
-5. Telemetry — does this become an opt-in metric in `/briefing --tokens` ("MCP descriptions: 12.3k → 7.2k, saved 5.1k per turn")? Recommend yes.
-
-## Pre-mortem (failure scenarios to design against)
-
-1. **Proxy gets out of sync with upstream** — upstream adds a new tool, proxy doesn't know how to compress it → passthrough that tool's description unchanged, log warning
-2. **Compression breaks tool discriminability** — model picks wrong tool because trimmed description lost the "use only when X" qualifier → the `not/never/only/except/unless` blacklist must be exhaustive; add per-server allowlists for false positives
-3. **Multi-process race on `.mcp.json` rewrite** — two `ai-toolkit install` invocations clobber each other → file lock during enable/disable
-4. **Proxy supervisor fails to start on user's machine** — different distro / no systemd → ai-toolkit doctor must detect and report; degrade to "MCP proxy unavailable, falling through" with no functionality loss
-5. **User has custom MCP server we don't recognize** — must work without per-server schema; default heuristics must be safe enough for arbitrary servers
-
-## Estimate
-
-- Architecture spike + working proxy prototype: 2 days
-- Production proxy + supervisor + config + CLI: 3 days
-- Test suite + fixtures + CI integration: 2 days
-- Documentation + migration guide + release notes: 1 day
-
-**Total: ~8 working days** (1.5–2 weeks calendar time at typical pace)
-
-## Status
-
-| Date | Status | Author |
-|------|--------|--------|
-| 2026-05-04 | PRD drafted from spike conclusions, carved out of v3.2.0 plan | claude |
-
----
-
 ## kb/procedures/ecosystem-sync-sop.md
 
 ---
@@ -6770,10 +7000,10 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.11.2"
+version: "1.12.0"
 created: "2026-04-10"
 last_updated: "2026-07-27"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, and the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5)."
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5), and the pre-push tag assertions added in v1.12.0 after v4.19.0 was tagged on the wrong commit (Phase 7)."
 ---
 
 # SOP: Release Preparation
@@ -6835,7 +7065,14 @@ python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem
 # 6. Commit + tag + push
 git add -A && git commit -m "chore: release vX.Y.Z"
 git tag vX.Y.Z
-git push origin main --tags
+
+# 6a. Assert the tag before pushing it (v4.19.0 postmortem, Phase 7)
+test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" || { echo "FAIL: tag not on HEAD"; exit 1; }
+git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
+
+# 6b. Branch first, then the single tag by full ref. Never --tags.
+git push origin main
+git push origin refs/tags/vX.Y.Z
 ```
 
 ---
@@ -7172,8 +7409,33 @@ git commit -m "chore: release vX.Y.Z"
 
 ```bash
 git tag vX.Y.Z
-git push origin main --tags
+
+# Assert the tag before pushing it. Both checks are one line each and both
+# have caught a real broken release.
+test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" \
+  || { echo "FAIL: tag is not on HEAD"; exit 1; }
+git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
+  || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }
+
+# Push the branch, then the single release tag by its full ref.
+git push origin main
+git push origin refs/tags/vX.Y.Z
 ```
+
+**Why the assertions (v4.19.0 postmortem).** v4.19.0 was tagged on a commit
+that contained only a KB document and still carried `package.json` version
+`4.18.0`; the actual release sat in the commit above it under a recycled
+`fix:` message. `publish.yml` fired, tried to publish a version already on
+npm, and failed. Nothing on npm, a tag pointing at the wrong tree, and the
+only way out was rewriting a pushed commit. Both assertions above catch this
+in under a second. Run them.
+
+**Never `git push --tags`.** It pushes every local tag at once, and GitHub
+suppresses tag-triggered workflow runs when many tags arrive in a single push
+— the workflow silently does not fire and nothing publishes. Push the single
+release tag by its full ref, as above. (Sibling evidence: this is exactly how
+rag-mcp's `1.0.3` image build was skipped, when a `--tags` push carried 37
+tags at once.)
 
 This triggers `.github/workflows/publish.yml` which:
 1. Runs `validate.py --strict`
@@ -7230,7 +7492,9 @@ git push origin --delete vX.Y.Z
 | 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
 | 17 | Commit | `git commit` | Clean working tree |
 | 18 | Tag | `git tag vX.Y.Z` | Tag exists |
-| 19 | Push | `git push origin main --tags` | CI triggered with `id-token: write` |
+| 18a | Tag is on HEAD | `test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)"` | Exit 0 |
+| 18b | Tag is on the release commit | `git show --no-patch --format=%s vX.Y.Z` | Reads `chore: release vX.Y.Z` |
+| 19 | Push branch, then the single tag | `git push origin main && git push origin refs/tags/vX.Y.Z` | CI triggered with `id-token: write`. Never `--tags`. |
 
 ---
 
