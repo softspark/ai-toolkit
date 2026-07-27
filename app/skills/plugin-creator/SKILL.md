@@ -39,10 +39,10 @@ app/plugins/<plugin-name>/
 
 ```json
 {
-  "name": "security-pack",
-  "description": "Domain plugin pack for secure coding, review, and hardening workflows.",
+  "name": "memory-pack",
+  "description": "Domain plugin pack for persistent cross-session memory.",
   "version": "1.0.0",
-  "domain": "security",
+  "domain": "memory",
   "type": "plugin-pack",
   "status": "experimental",
   "requires": {
@@ -50,18 +50,27 @@ app/plugins/<plugin-name>/
     "claude-code": ">=1.0.33"
   },
   "includes": {
-    "agents": ["security-auditor", "security-architect"],
-    "skills": ["review", "security-patterns"],
+    "agents": [],
+    "skills": ["mem-search"],
     "rules": [],
-    "hooks": []
+    "hooks": ["observation-capture.sh", "session-summary.sh"]
+  },
+  "hook_events": {
+    "observation-capture.sh": "PostToolUse",
+    "session-summary.sh": "Stop"
   }
 }
 ```
 
+The two hooks are files the pack **owns**, under `app/plugins/memory-pack/hooks/`.
+That is what makes this a pack rather than a bookmark: installing it puts scripts
+on disk and entries in the host's hook config that were not there before.
+
 ## Authoring Rules
 
-- **MUST** keep packs domain-scoped — "security-pack", "mobile-pack", not "misc-pack"
-- **MUST** reference existing toolkit assets before duplicating — packs extend, they do not fork
+- **MUST** keep packs domain-scoped — "memory-pack", "mobile-pack", not "misc-pack"
+- **MUST** install something the core install does not already provide. `ai-toolkit install` links every core skill and agent, so a pack whose `includes` names only core assets installs **zero files** and is a no-op. Verify before shipping: install core into a throwaway `HOME`, then install the pack, and confirm the file count changed. Nine packs were removed in v4.20.0 for failing exactly this check.
+- **MUST** reference existing toolkit assets rather than forking them — but referencing alone is not a pack. A pack earns its existence through hooks, scripts, or assets of its own; the reference list is context, not content.
 - **MUST** ship a valid `plugin.json` with `name`, `description`, `version`, `domain`, `type`, `status`, and `includes`
 - **NEVER** have a pack silently alter default global install behavior — experimental packs are **opt-in only**
 - **NEVER** copy an agent or skill file into a pack when referencing the toolkit-level version suffices; duplication creates drift
@@ -79,6 +88,7 @@ app/plugins/<plugin-name>/
 ## Validation Checklist
 
 - [ ] `app/plugins/<plugin-name>/plugin.json` exists and parses as JSON
+- [ ] **The pack installs a non-zero number of files.** `ai-toolkit install` into a throwaway `HOME`, then `plugin install <name>`, and confirm the reported file count is above zero on every runtime the pack claims. A pack reporting `(0 file items)` does nothing and must not ship.
 - [ ] `README.md` explains purpose, included assets, and opt-in flow
 - [ ] Referenced agents and skills exist or are created in the same change set
 - [ ] Optional hooks are executable and use `#!/bin/bash`

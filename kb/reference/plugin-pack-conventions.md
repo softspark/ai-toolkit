@@ -125,22 +125,30 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 
 ## Current Experimental Packs
 
-| Pack | Domain | Agents | Skills | Hooks | Description |
-|------|--------|--------|--------|-------|-------------|
-| `security-pack` | security | 3 | 3 | 2 | Security auditing, threat modeling, OWASP |
-| `research-pack` | research | 4 | 4 | 1 | Multi-source research, synthesis, fact-checking |
-| `frontend-pack` | frontend | 3 | 3 | 1 | React/Vue/CSS, SEO, design engineering |
-| `enterprise-pack` | enterprise | 3 | 3 | 3 | Executive briefings, infra architecture, status |
-| `memory-pack` | memory | 0 | 1 | 2 | SQLite persistent memory with FTS5 search |
-| `rust-pack` | rust | 0 | 1 | 0 | Rust patterns |
-| `java-pack` | java | 0 | 1 | 0 | Java patterns |
-| `csharp-pack` | csharp | 0 | 1 | 0 | C# patterns |
-| `kotlin-pack` | kotlin | 0 | 1 | 0 | Kotlin patterns |
-| `swift-pack` | swift | 0 | 1 | 0 | Swift patterns |
-| `ruby-pack` | ruby | 0 | 1 | 0 | Ruby patterns |
+| Pack | Domain | Owns | Installs (claude / codex) | Description |
+|------|--------|------|---------------------------|-------------|
+| `memory-pack` | memory | 2 hooks, 2 scripts, 1 skill | 4 / 4 files | SQLite persistent memory with FTS5 search |
+| `enterprise-pack` | enterprise | 2 hooks | 2 / 2 files | Status-line and output-style overlays |
 
-Every pack here is content that ships in this repository. None fetches anything
-at install time.
+Both packs ship content in this repository. Neither fetches anything at install
+time.
+
+### The rule the table now enforces
+
+**A pack must install files the core install does not.** `ai-toolkit install`
+links every core skill and agent, so a manifest naming only core assets resolves
+to nothing: `plugin install` reports `(0 file items)` and no file appears on
+disk. This is not a subtle degradation — it is a complete no-op, identical on
+every profile (`minimal`, `standard`, `strict`) and on both runtimes.
+
+Nine packs were removed in v4.20.0 for failing this: `csharp`, `java`, `kotlin`,
+`ruby`, `rust`, `swift`, `frontend`, `research`, `security`. Every one declared
+only skills and agents that already ship in core, and eight of them owned nothing
+but a `README.md`. Full measurement:
+[`no-op-plugin-packs-removed-20260727.md`](../history/completed/no-op-plugin-packs-removed-20260727.md).
+
+Before adding a pack, prove it does something: install core into a throwaway
+`HOME`, install the pack, and check that the reported file count is above zero.
 
 **A pack that downloads a binary has been tried once and retired.** `rtk-pack`
 (v4.18.0, removed in v4.19.0) fetched a checksum-pinned artifact in

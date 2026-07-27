@@ -290,8 +290,8 @@ EOF
 }
 
 @test "validate.py catches invalid plugin pack manifest JSON" {
-    mkdir -p "$TEST_DIR/app/plugins/security-pack"
-    printf '{ invalid json\n' > "$TEST_DIR/app/plugins/security-pack/plugin.json"
+    mkdir -p "$TEST_DIR/app/plugins/example-pack"
+    printf '{ invalid json\n' > "$TEST_DIR/app/plugins/example-pack/plugin.json"
     run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
     [ "$status" -ne 0 ]
     echo "$output" | grep -q "Invalid plugin pack manifest"

@@ -30,7 +30,7 @@ setup() {
     "minHookProfile": "standard",
     "requiredAgents": ["security-auditor"],
     "forbidOverride": ["constitution", "guard-destructive"],
-    "requiredPlugins": ["security-pack"]
+    "requiredPlugins": ["memory-pack"]
   }
 }
 EOF

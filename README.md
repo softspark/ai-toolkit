@@ -6,21 +6,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1465%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1466%20passing-success)](tests/)
 
-## What's New in v4.19.1
+## What's New in v4.20.0
 
-v4.19.1 is v4.19.0 re-published from a corrected commit history — same package contents, no functional change. What that release does:
+v4.20.0 removes nine plugin packs that installed nothing. Plugin count: 11 → 2.
 
-Removes `rtk-pack`. The pack that v4.18.0 shipped is gone; everything the work built underneath it stays.
+- **Nine packs removed**: `csharp`, `java`, `kotlin`, `ruby`, `rust`, `swift`, `frontend`, `research`, `security`. Each declared only skills and agents that already ship in the core install, so `plugin install` reported `(0 file items)` and wrote no file — on both runtimes and all three profiles. Eight owned nothing but a `README.md`. See [the measurement](kb/history/completed/no-op-plugin-packs-removed-20260727.md).
+- **Nothing is lost by the removal.** `rust-patterns`, `java-patterns`, `security-patterns`, `research-mastery` and the rest are **core skills**, still installed, still triggering as before. The packs never held them — they only listed them.
+- **`memory-pack` and `enterprise-pack` stay**: the two packs that ship files of their own — hooks, scripts, and in memory-pack's case its own skill and a SQLite store.
+- **A pack must now earn its existence**: `plugin-creator`'s authoring rule required referencing core assets rather than forking them, which against a core install that ships everything produced a no-op every time. It now requires that a pack install files the core does not, with a verification step in the checklist.
+- **`rtk-pack` retired in v4.19.0**: it broke every command it rewrote — exit 127 on `git`, `ls`, `cat`, `find`, `grep`. Measured value was 0.0615% of input tokens against a 0.05% kill number. See [the retirement note](kb/history/completed/rtk-pack-retirement-20260727.md).
 
-- **`rtk-pack` retired**: it broke every command it rewrote. rtk names itself bare in the rewrite, the pack kept its binary off `PATH` on purpose, and the result was exit 127 on `git`, `ls`, `cat`, `find`, `grep` and the rest. Measured value before the defect was 0.0615% of input tokens against a 0.05% kill number, so the fix was not worth the surface. See [the retirement note](kb/history/completed/rtk-pack-retirement-20260727.md).
-- **Pack hook wiring for Cursor and Gemini stays**: packs write user-scope entries to `~/.cursor/hooks.json` and `~/.gemini/settings.json`, tagged per pack, and `plugin remove` takes only its own back out.
-- **`ai-toolkit update` maintains installed packs**: it runs the equivalent of `plugin update --all`. Updates are version-aware, so a pack whose manifest has not moved is a silent no-op instead of a remove-and-reinstall.
-- **Packs can report their own health**: `plugin status` picks up a pack's `scripts/status.py`, replacing a hardcoded per-pack branch.
-- **Security gates cover packs**: `audit_skills.py --ci` and the ShellCheck gate now scan `app/plugins/`, which they previously skipped.
-
-If you installed the pack under v4.18.0, run `ai-toolkit plugin remove rtk-pack`.
+If you installed any removed pack, run `ai-toolkit plugin remove <name>` to drop its bookkeeping entry. No skill or agent disappears.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -147,7 +145,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
-| `plugins/` | 11 packs | Opt-in domain bundles (security, research, frontend, enterprise, memory, 6 language packs) |
+| `plugins/` | 2 packs | Opt-in packs that install files of their own (memory, enterprise) |
 | `constitution.md` | 7 articles | Machine-enforced safety rules |
 | `rules/` | auto-synced | Global/project rule files for Claude and other editors |
 | `kb/` | reference docs | Architecture, procedures, and best practices |
@@ -164,7 +162,7 @@ ai-toolkit/
 │   ├── rules/           # Source rules synced into Claude/editor rule files
 │   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
 │   ├── claude-app/      # Generated Chat/Cowork plugin rules, hooks, instructions
-│   ├── plugins/         # 11 experimental plugin packs (opt-in)
+│   ├── plugins/         # 2 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
 │   ├── constitution.md  # 7 immutable safety articles
 │   └── ARCHITECTURE.md  # Full system design

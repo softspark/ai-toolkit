@@ -177,7 +177,7 @@ Use the `enforce` block to set non-overridable constraints:
     "minHookProfile": "standard",
     "requiredAgents": ["security-auditor"],
     "forbidOverride": ["constitution"],
-    "requiredPlugins": ["security-pack"]
+    "requiredPlugins": ["memory-pack"]
   }}
 }}
 ```

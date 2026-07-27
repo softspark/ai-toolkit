@@ -14,11 +14,14 @@
 - [Best Practices](kb/best-practices/README.md)
 - [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
 - [Plan: Deep Coverage v3.0 — 100% Native Surface Utilization](kb/history/completed/deep-coverage-v3-20260423.md)
+- [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/history/completed/drop-cascade-hooks-after-sunset-20260710.md)
 - [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/history/completed/ecosystem-deep-sweep-20260423.md)
 - [Plan: Enterprise Config Inheritance — Multi-Repo Governance with `extends`](kb/history/completed/enterprise-config-inheritance-plan-20260412.md)
 - [Spike: F2 MCP Context Trim — Hook Feasibility & Path Decision](kb/history/completed/f2-mcp-trim-spike-20260504.md)
+- [Language Plugin Packs — REMOVED](kb/history/completed/language-packs-removed-20260727.md)
 - [PRD: MCP Context Trim v4.0 — ABANDONED](kb/history/completed/mcp-context-trim-v4-prd-obsoleted-20260727.md)
 - [Implementation Plan: Native Tool Output Filter](kb/history/completed/native-tool-output-filter-plan.md)
+- [Removed: Nine Plugin Packs That Installed Nothing](kb/history/completed/no-op-plugin-packs-removed-20260727.md)
 - [Plan: Offline-First SLM Profile — Lightweight Mode for Local Models](kb/history/completed/offline-slm-profile-plan-20260411.md)
 - [Retirement: Native Tool-Output Filter](kb/history/completed/output-filter-retirement-20260726.md)
 - [Plan: Output & Token Discipline](kb/history/completed/output-token-discipline-plan-20260504.md)
@@ -27,7 +30,6 @@
 - [Closed: Tool-Output Token Reduction](kb/history/completed/tool-output-token-reduction-closed-20260727.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
-- [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/planning/drop-cascade-hooks-after-sunset.md)
 - [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
 - [SOP: AI Toolkit Maintenance](kb/procedures/maintenance-sop.md)
 - [SOP: Post-Release Testing](kb/procedures/post-release-testing-sop.md)
@@ -52,7 +54,6 @@
 - [Hierarchical Override Pattern](kb/reference/hierarchical-override-pattern.md)
 - [Hooks Catalog](kb/reference/hooks-catalog.md)
 - [External Integrations](kb/reference/integrations.md)
-- [Language Plugin Packs](kb/reference/language-packs.md)
 - [Language Rules System](kb/reference/language-rules.md)
 - [Manifest-Driven Install System](kb/reference/manifest-install.md)
 - [MCP Editor Compatibility](kb/reference/mcp-editor-compatibility.md)
@@ -456,6 +457,131 @@ Definition of "100% coverage" chosen: **each editor works at 100% of its native 
 - `kb/reference/global-install-model.md` — install scope semantics
 - `kb/reference/supported-tools-registry.md` — tool registry
 - `scripts/config_validator.py` — `VALID_PROFILES` already includes `full`
+
+---
+
+## kb/history/completed/drop-cascade-hooks-after-sunset-20260710.md
+
+---
+title: "Plan: Drop Cascade hooks after 2026-07-01 sunset"
+category: planning
+service: ai-toolkit
+tags:
+  - windsurf
+  - devin
+  - cascade
+  - hooks
+  - deprecation
+  - cleanup
+doc_type: plan
+status: completed
+created: "2026-06-10"
+last_updated: "2026-07-10"
+completion: "100%"
+trigger_date: "2026-07-01"
+description: "Completed cleanup of the deprecated Windsurf Cascade hooks generator after the 2026-07-01 sunset; Devin CLI .devin/hooks.v1.json is now the sole live hook surface."
+---
+
+# Plan: Drop Cascade hooks after 2026-07-01 sunset
+
+**Completed in v4.13.0 (2026-07-10).** The deprecated generator and install/test wiring were removed; the Devin hook generator remains.
+
+> **Filed to history 2026-07-27.** The plan was finished in v4.13.0 but sat in
+> `kb/planning/` for another two and a half weeks, where it read as open work.
+> Before moving it, every claim in the Verification section below was re-run
+> against the codebase:
+>
+> | Check | Result |
+> |---|---|
+> | `scripts/generate_windsurf_hooks.py` deleted | gone |
+> | `grep -rn generate_windsurf_hooks scripts/ tests/` | no source references (one stale `.pyc` under gitignored `__pycache__`) |
+> | `_HOOK_STEM_ALIAS = {"devin": "windsurf"}` retained in `validate.py` | present, line 882 |
+> | windsurf `our_generators` in `scripts/ecosystem_tools.json` | Cascade generator absent, `generate_devin_hooks.py` present |
+> | `kb/reference/supported-tools-registry.md` hooks-migration row | reads "Complete" in past tense |
+> | `validate.py --strict` | 0 errors, 0 warnings |
+>
+> The work was real and complete. Only the filing was wrong.
+>
+> **Process note.** This is the second document found misfiled in
+> `kb/planning/` on the same day; the other,
+> [`mcp-context-trim-v4-prd-obsoleted-20260727.md`](mcp-context-trim-v4-prd-obsoleted-20260727.md),
+> had gone obsolete because the platform shipped the fix first. A plan with a
+> `trigger_date` needs a matching move-to-history step in the release that acts
+> on it — otherwise `kb/planning/` accumulates work that is already done or no
+> longer worth doing, and the next reader cannot tell which is which.
+
+## Why this exists
+
+Windsurf rebranded to Devin Desktop on 2026-06-02. The Cascade agent — and its
+`.windsurf/hooks.json` hook surface (`agent_action_name`/`tool_info` format) — is
+available **only through 2026-07-01**. Devin Local / Devin CLI do **not** read
+`.windsurf/hooks.json` as a fallback.
+
+v4.8.0 already shipped the replacement: `generate_devin_hooks.py` emits
+`.devin/hooks.v1.json` in the Claude-compatible format Devin CLI uses. During the
+transition **both** generators run at `profile=full` so pre-sunset Cascade users
+keep working. After 2026-07-01 the Cascade half is dead code and must be removed
+(Constitution Art. VI.1 — no dead code).
+
+## Trigger
+
+First ai-toolkit release **on or after 2026-07-01**. Do NOT do this earlier —
+removing it before the sunset breaks Cascade users who are still on the old agent.
+
+## Scope — remove the Cascade hooks surface
+
+1. **Delete the generator:** `scripts/generate_windsurf_hooks.py`.
+2. **Unwire the install step:** in `scripts/install_steps/ai_tools.py`, remove the
+   `_try_generator("generate_windsurf_hooks", cwd)` call (keep
+   `generate_devin_hooks`). Update the `profile=full` dry-run message to drop
+   `.windsurf/hooks.json (Cascade, deprecated)`.
+3. **Tests:** remove the windsurf-`.windsurf/hooks.json` cases from
+   `tests/test_hooks_per_editor.bats` (output path, valid JSON, source tag,
+   `$HOME` prefix, idempotence, user-preservation, `pre_write_code` coverage) and
+   the `profile=full` assertion in `tests/test_install_profiles.bats`
+   (`windsurf + full emits .windsurf/hooks.json`). Keep all `.devin/hooks.v1.json`
+   tests. Adjust the README test-count badge to the new total.
+4. **Registry:** in `scripts/ecosystem_tools.json` (windsurf entry), remove
+   `scripts/generate_windsurf_hooks.py` from `our_generators`; keep
+   `.windsurf/hooks.json` out of `config_paths` (it was never listed). Trim the
+   `status_note` hooks-migration paragraph to past tense ("Cascade hooks removed
+   in vX.Y.Z").
+5. **Docs:** in `kb/reference/supported-tools-registry.md` drop the
+   `generate_windsurf_hooks.py` row and the "drop after 2026-07-01" note; in
+   `kb/reference/hooks-catalog.md` remove the Cascade row from the
+   Per-Editor Native Hooks table and the deprecation wording, leaving the Devin CLI
+   section as the windsurf-family hook surface.
+6. **validate.py:** the `_HOOK_STEM_ALIAS = {"devin": "windsurf"}` mapping STAYS —
+   it is what keeps the `devin` hook generator counted as windsurf hooks in the
+   README-honesty check after the Cascade generator is gone.
+7. **CHANGELOG / version:** minor bump, `Removed` entry, regen artifacts, full
+   release-preparation SOP gate.
+
+## Verification
+
+- `python3 scripts/validate.py --strict` — 0/0 (editor-hooks-honesty must still
+  report windsurf as hook-enabled via the `devin` generator alias).
+- `python3 scripts/ecosystem_doctor.py --offline --check` — exit 0.
+- `npm test` — 0 `not ok`; no test recreates the deleted
+  `generate_windsurf_hooks.py` generator.
+- `grep -rn "generate_windsurf_hooks" scripts/ tests/` returns nothing
+  (Art. VI.1 orphan check — the deleted generator is fully unwired).
+  `.windsurf/hooks.json` intentionally remains referenced by the one-time
+  migration/strip cleanup (`scripts/install_steps/ai_tools.py`) and its test,
+  and in narrative docs (CHANGELOG, README, `kb/`, docstrings).
+
+## Do NOT touch
+
+- `generate_devin_hooks.py` and `.devin/hooks.v1.json` — the live replacement.
+- The `.devin/`/`.windsurf/` rules + skills dual-emit (that fallback persists as
+  long as Devin Desktop reads legacy `.windsurf/` paths; this plan is hooks-only).
+
+## Related
+
+- `kb/reference/hooks-catalog.md` — Per-Editor Native Hooks + Devin CLI section
+- `kb/reference/supported-tools-registry.md` — windsurf entry, hooks-migration row
+- `kb/procedures/ecosystem-sync-sop.md` — class-D deprecation workflow
+- `scripts/ecosystem_tools.json` — windsurf `status_note`
 
 ---
 
@@ -1781,6 +1907,88 @@ Estimate in the PRD: ~8 working days.
 
 ---
 
+## kb/history/completed/language-packs-removed-20260727.md
+
+---
+title: "AI Toolkit - Language Plugin Packs (removed)"
+category: planning
+service: ai-toolkit
+tags: [plugins, languages, rust, java, csharp, kotlin, swift, ruby, removed]
+doc_type: postmortem
+status: completed
+version: "1.1.0"
+created: "2026-03-29"
+last_updated: "2026-07-27"
+description: "REMOVED 2026-07-27 in v4.20.0. The six language packs wrapped skills that already ship in core, so installing one put zero files on disk. The skills themselves (rust-patterns, java-patterns, csharp-patterns, kotlin-patterns, swift-patterns, ruby-patterns) were never in the packs and are unaffected."
+---
+
+# Language Plugin Packs — REMOVED
+
+> **Removed 2026-07-27 in v4.20.0. Nothing was lost.**
+>
+> The six packs described below each declared exactly one skill —
+> `rust-patterns`, `java-patterns`, `csharp-patterns`, `kotlin-patterns`,
+> `swift-patterns`, `ruby-patterns` — and every one of those skills lives in
+> `app/skills/`, is part of the core install, and **still does**. The packs
+> owned no files of their own beyond a `README.md`.
+>
+> Because `ai-toolkit install` links every core skill, installing a language
+> pack put **zero** files on disk. Measured on both runtimes and all three
+> profiles: `(0 file items)` every time.
+>
+> **If you used one of these packs, you lose nothing.** The skill it named is
+> already installed and triggers on the same file types it always did — open a
+> `.rs` file and `rust-patterns` still loads.
+>
+> Full measurement and the rule that now prevents a repeat:
+> [`no-op-plugin-packs-removed-20260727.md`](no-op-plugin-packs-removed-20260727.md).
+>
+> The document below is preserved as written on 2026-03-29.
+
+---
+
+## Overview
+
+Language packs are domain-scoped plugin packs that provide knowledge skills for specific programming languages. Each pack contains a single knowledge skill with idiomatic patterns, error handling, testing conventions, common frameworks, and performance tips.
+
+## Available Packs
+
+| Pack | Skill | Language | Key Topics |
+|------|-------|----------|------------|
+| `rust-pack` | `rust-patterns` | Rust | Ownership, borrowing, Cargo, tokio, serde |
+| `java-pack` | `java-patterns` | Java | Records, sealed classes, Spring Boot, JUnit 5 |
+| `csharp-pack` | `csharp-patterns` | C# / .NET | Nullable refs, async/await, ASP.NET Core, EF Core |
+| `kotlin-pack` | `kotlin-patterns` | Kotlin | Coroutines, DSLs, sealed classes, Ktor, MockK |
+| `swift-pack` | `swift-patterns` | Swift / iOS | Protocol-oriented, SwiftUI, async/await, SPM |
+| `ruby-pack` | `ruby-patterns` | Ruby | Blocks, Rails conventions, RSpec, ActiveRecord |
+
+## Skill Content Sections
+
+Each language skill follows a consistent structure:
+
+1. **Project Structure** — standard directory layout and build tool configuration
+2. **Idioms / Code Style** — language-specific patterns and conventions
+3. **Error Handling** — error types, patterns, and best practices
+4. **Testing Patterns** — test frameworks, assertion libraries, mocking
+5. **Common Libraries / Frameworks** — ecosystem essentials
+6. **Performance Tips** — optimization techniques and profiling
+7. **Build / Package Management** — dependency management and CI
+
+## How Knowledge Skills Work
+
+These skills have `user-invocable: false` in their frontmatter, meaning they are NOT slash commands. Instead, Claude loads them contextually when the conversation topic matches the skill's description trigger.
+
+For example, when a user asks "How do I handle errors in Rust?", Claude automatically loads `rust-patterns` to provide idiomatic Rust error handling guidance.
+
+## Requesting New Language Packs
+
+File an issue with the `language-pack` label. Include:
+- Language name
+- Key topics to cover
+- Popular frameworks/libraries to include
+
+---
+
 ## kb/history/completed/mcp-context-trim-v4-prd-obsoleted-20260727.md
 
 ---
@@ -2497,6 +2705,138 @@ the savings threshold, and all unsafe paths remain exact passthrough.
   ledger.
 - If any upstream expression is intentionally adapted, stop and perform an
   Apache-2.0 attribution and NOTICE review before continuing.
+
+---
+
+## kb/history/completed/no-op-plugin-packs-removed-20260727.md
+
+---
+title: "Removed: Nine Plugin Packs That Installed Nothing"
+category: planning
+service: ai-toolkit
+tags:
+  - plugins
+  - plugin-pack
+  - measurement
+  - postmortem
+  - dead-code
+doc_type: postmortem
+status: completed
+created: "2026-07-27"
+last_updated: "2026-07-27"
+shipped_in: "v4.20.0 (removal)"
+description: "Nine of eleven plugin packs installed zero files, because every asset they declared already ships in the core install. Measured across both runtimes and all three profiles. Records what was removed, what survived, why the authoring guidance produced the problem, and the check that now prevents a repeat."
+---
+
+# Removed: Nine Plugin Packs That Installed Nothing
+
+`csharp-pack`, `java-pack`, `kotlin-pack`, `ruby-pack`, `rust-pack`,
+`swift-pack`, `frontend-pack`, `research-pack`, `security-pack` — removed in
+v4.20.0. `memory-pack` and `enterprise-pack` stay.
+
+## The measurement
+
+`ai-toolkit install` into a throwaway `HOME`, then `plugin install <pack>`, on
+each runtime. The number is what `plugin install` itself reports:
+
+| Pack | claude | codex |
+|---|---:|---:|
+| `csharp-pack` | 0 | 0 |
+| `java-pack` | 0 | 0 |
+| `kotlin-pack` | 0 | 0 |
+| `ruby-pack` | 0 | 0 |
+| `rust-pack` | 0 | 0 |
+| `swift-pack` | 0 | 0 |
+| `research-pack` | 0 | 0 |
+| `security-pack` | 0 | 0 |
+| `frontend-pack` | 0 | **1** |
+| **`memory-pack`** | **4** | **4** |
+| **`enterprise-pack`** | **2** | **2** |
+
+Cross-checked against the filesystem, not just the reported count: after core
+install (108 skills, 44 agents, 4742 characters of hook config), installing
+`rust-pack`, `security-pack`, `research-pack` or any language pack produced
+`+0` skills, `+0` agents, `+0` bytes of `settings.json` and `+0` files under
+`~/.softspark`.
+
+Profiles make no difference. `minimal`, `standard` and `strict` all install the
+same 108 skills and 44 agents, and packs add `+0` to each.
+
+## Why
+
+Every one of the nine declared only assets that already ship in core:
+
+| Pack | Declared | All present in core? |
+|---|---|---|
+| `rust-pack` | `rust-patterns` | yes |
+| `security-pack` | `review`, `security-patterns`, `panic`, `security-auditor`, `security-architect`, `code-reviewer` | yes |
+| `research-pack` | `docs`, `research-mastery`, `plan`, `technical-researcher`, `fact-checker`, `search-specialist` | yes |
+
+Since `ai-toolkit install` links every core skill and agent, a manifest that
+names only core assets resolves to a set of things already installed. There is
+nothing left to do, so nothing is done.
+
+Eight of the nine owned no file but `README.md`. `security-pack`'s two hooks
+were core's `guard-destructive.sh` and `quality-gate.sh`; `research-pack`'s was
+core's `user-prompt-submit.sh`.
+
+## The one that was not quite zero
+
+`frontend-pack` installed exactly one file, on codex only:
+`plugin-frontend-pack-post-tool-use.sh`. The pack owned no such file — it
+declared core's `post-tool-use.sh`, which core's codex surface does not install,
+so the pack copied it in under a pack-prefixed name.
+
+That is a generic hook wearing a domain label, not frontend functionality. It
+was removed with the pack. **If `post-tool-use` should run on codex, it belongs
+in the core codex hook set**, and adding it there is a separate, honest change —
+not a side effect of installing a pack named after a UI framework.
+
+## The authoring rule that caused this
+
+`app/skills/plugin-creator/SKILL.md` told pack authors:
+
+> **MUST** reference existing toolkit assets before duplicating — packs extend,
+> they do not fork
+
+Read literally against a core install that ships everything, that instruction
+produces a no-op every time. It was correct about avoiding forks and silent
+about the pack needing to add anything. Nine packs followed it exactly.
+
+The rule now reads that a pack **must install something the core install does
+not**, with the verification spelled out, and the validation checklist carries a
+line item requiring a non-zero file count on every runtime the pack claims.
+
+## What survived, and what users lose
+
+**Nothing.** Every skill and agent the nine packs named is a core asset, still
+present, still installed, still triggering on the same conditions. A Rust
+developer who had `rust-pack` installed keeps `rust-patterns`, because it was
+never in the pack.
+
+The two remaining packs are the two that own files:
+
+- `memory-pack` — two hooks, `init_db.py`, `strip_private.py`, and its own
+  `mem-search` skill. Verified working the same day: driving
+  `observation-capture.sh` with a real payload wrote a row to the SQLite store.
+- `enterprise-pack` — `status-line.sh` and `output-style.sh`, both its own.
+
+## Process note
+
+The removal was nearly made on a wrong measurement. The first pass concluded
+"nine no-ops on every editor" after testing only four packs on the claude
+surface. `tests/test_plugin.bats` contradicted it by asserting that
+`frontend-pack` creates a file on codex — the test was right and the
+measurement was incomplete. The full 11 × 2 matrix was only then run.
+
+The existing test suite caught an error in a fresh measurement. That is worth
+remembering next time a test looks like it is merely in the way of a cleanup.
+
+## Related
+
+- [Plugin Pack Conventions](../../reference/plugin-pack-conventions.md) — the rule this postmortem installed
+- [Language Packs (removed)](language-packs-removed-20260727.md) — the reference doc for six of the nine
+- [rtk-pack Retirement](rtk-pack-retirement-20260727.md) — the pack removed the day before, for a different reason
 
 ---
 
@@ -5915,107 +6255,6 @@ Examples:
 **Last Updated:** 2026-04-10
 **Council Reviewed:** 2026-04-10
 **Orchestration Reviewed:** 2026-04-10 (4 agents: tech-lead, security-architect, product-manager, code-reviewer)
-
----
-
-## kb/planning/drop-cascade-hooks-after-sunset.md
-
----
-title: "Plan: Drop Cascade hooks after 2026-07-01 sunset"
-category: planning
-service: ai-toolkit
-tags:
-  - windsurf
-  - devin
-  - cascade
-  - hooks
-  - deprecation
-  - cleanup
-doc_type: plan
-status: completed
-created: "2026-06-10"
-last_updated: "2026-07-10"
-completion: "100%"
-trigger_date: "2026-07-01"
-description: "Completed cleanup of the deprecated Windsurf Cascade hooks generator after the 2026-07-01 sunset; Devin CLI .devin/hooks.v1.json is now the sole live hook surface."
----
-
-# Plan: Drop Cascade hooks after 2026-07-01 sunset
-
-**Completed in v4.13.0 (2026-07-10).** The deprecated generator and install/test wiring were removed; the Devin hook generator remains.
-
-## Why this exists
-
-Windsurf rebranded to Devin Desktop on 2026-06-02. The Cascade agent — and its
-`.windsurf/hooks.json` hook surface (`agent_action_name`/`tool_info` format) — is
-available **only through 2026-07-01**. Devin Local / Devin CLI do **not** read
-`.windsurf/hooks.json` as a fallback.
-
-v4.8.0 already shipped the replacement: `generate_devin_hooks.py` emits
-`.devin/hooks.v1.json` in the Claude-compatible format Devin CLI uses. During the
-transition **both** generators run at `profile=full` so pre-sunset Cascade users
-keep working. After 2026-07-01 the Cascade half is dead code and must be removed
-(Constitution Art. VI.1 — no dead code).
-
-## Trigger
-
-First ai-toolkit release **on or after 2026-07-01**. Do NOT do this earlier —
-removing it before the sunset breaks Cascade users who are still on the old agent.
-
-## Scope — remove the Cascade hooks surface
-
-1. **Delete the generator:** `scripts/generate_windsurf_hooks.py`.
-2. **Unwire the install step:** in `scripts/install_steps/ai_tools.py`, remove the
-   `_try_generator("generate_windsurf_hooks", cwd)` call (keep
-   `generate_devin_hooks`). Update the `profile=full` dry-run message to drop
-   `.windsurf/hooks.json (Cascade, deprecated)`.
-3. **Tests:** remove the windsurf-`.windsurf/hooks.json` cases from
-   `tests/test_hooks_per_editor.bats` (output path, valid JSON, source tag,
-   `$HOME` prefix, idempotence, user-preservation, `pre_write_code` coverage) and
-   the `profile=full` assertion in `tests/test_install_profiles.bats`
-   (`windsurf + full emits .windsurf/hooks.json`). Keep all `.devin/hooks.v1.json`
-   tests. Adjust the README test-count badge to the new total.
-4. **Registry:** in `scripts/ecosystem_tools.json` (windsurf entry), remove
-   `scripts/generate_windsurf_hooks.py` from `our_generators`; keep
-   `.windsurf/hooks.json` out of `config_paths` (it was never listed). Trim the
-   `status_note` hooks-migration paragraph to past tense ("Cascade hooks removed
-   in vX.Y.Z").
-5. **Docs:** in `kb/reference/supported-tools-registry.md` drop the
-   `generate_windsurf_hooks.py` row and the "drop after 2026-07-01" note; in
-   `kb/reference/hooks-catalog.md` remove the Cascade row from the
-   Per-Editor Native Hooks table and the deprecation wording, leaving the Devin CLI
-   section as the windsurf-family hook surface.
-6. **validate.py:** the `_HOOK_STEM_ALIAS = {"devin": "windsurf"}` mapping STAYS —
-   it is what keeps the `devin` hook generator counted as windsurf hooks in the
-   README-honesty check after the Cascade generator is gone.
-7. **CHANGELOG / version:** minor bump, `Removed` entry, regen artifacts, full
-   release-preparation SOP gate.
-
-## Verification
-
-- `python3 scripts/validate.py --strict` — 0/0 (editor-hooks-honesty must still
-  report windsurf as hook-enabled via the `devin` generator alias).
-- `python3 scripts/ecosystem_doctor.py --offline --check` — exit 0.
-- `npm test` — 0 `not ok`; no test recreates the deleted
-  `generate_windsurf_hooks.py` generator.
-- `grep -rn "generate_windsurf_hooks" scripts/ tests/` returns nothing
-  (Art. VI.1 orphan check — the deleted generator is fully unwired).
-  `.windsurf/hooks.json` intentionally remains referenced by the one-time
-  migration/strip cleanup (`scripts/install_steps/ai_tools.py`) and its test,
-  and in narrative docs (CHANGELOG, README, `kb/`, docstrings).
-
-## Do NOT touch
-
-- `generate_devin_hooks.py` and `.devin/hooks.v1.json` — the live replacement.
-- The `.devin/`/`.windsurf/` rules + skills dual-emit (that fallback persists as
-  long as Devin Desktop reads legacy `.windsurf/` paths; this plan is hooks-only).
-
-## Related
-
-- `kb/reference/hooks-catalog.md` — Per-Editor Native Hooks + Devin CLI section
-- `kb/reference/supported-tools-registry.md` — windsurf entry, hooks-migration row
-- `kb/procedures/ecosystem-sync-sop.md` — class-D deprecation workflow
-- `scripts/ecosystem_tools.json` — windsurf `status_note`
 
 ---
 
@@ -10583,7 +10822,7 @@ Base configs can define non-overridable constraints via the `enforce` block:
 {
   "enforce": {
     "minHookProfile": "standard",
-    "requiredPlugins": ["security-pack"],
+    "requiredPlugins": ["memory-pack"],
     "forbidOverride": ["constitution", "guard-destructive"],
     "requiredAgents": ["security-auditor"]
   }
@@ -12316,63 +12555,6 @@ ai-toolkit add-rule ./jira-rules.md
 
 ---
 
-## kb/reference/language-packs.md
-
----
-title: "AI Toolkit - Language Plugin Packs"
-category: reference
-service: ai-toolkit
-tags: [plugins, languages, rust, java, csharp, kotlin, swift, ruby]
-version: "1.0.0"
-created: "2026-03-29"
-last_updated: "2026-03-29"
-description: "6 language-specific plugin packs providing knowledge skills for Rust, Java, C#, Kotlin, Swift, and Ruby."
----
-
-# Language Plugin Packs
-
-## Overview
-
-Language packs are domain-scoped plugin packs that provide knowledge skills for specific programming languages. Each pack contains a single knowledge skill with idiomatic patterns, error handling, testing conventions, common frameworks, and performance tips.
-
-## Available Packs
-
-| Pack | Skill | Language | Key Topics |
-|------|-------|----------|------------|
-| `rust-pack` | `rust-patterns` | Rust | Ownership, borrowing, Cargo, tokio, serde |
-| `java-pack` | `java-patterns` | Java | Records, sealed classes, Spring Boot, JUnit 5 |
-| `csharp-pack` | `csharp-patterns` | C# / .NET | Nullable refs, async/await, ASP.NET Core, EF Core |
-| `kotlin-pack` | `kotlin-patterns` | Kotlin | Coroutines, DSLs, sealed classes, Ktor, MockK |
-| `swift-pack` | `swift-patterns` | Swift / iOS | Protocol-oriented, SwiftUI, async/await, SPM |
-| `ruby-pack` | `ruby-patterns` | Ruby | Blocks, Rails conventions, RSpec, ActiveRecord |
-
-## Skill Content Sections
-
-Each language skill follows a consistent structure:
-
-1. **Project Structure** — standard directory layout and build tool configuration
-2. **Idioms / Code Style** — language-specific patterns and conventions
-3. **Error Handling** — error types, patterns, and best practices
-4. **Testing Patterns** — test frameworks, assertion libraries, mocking
-5. **Common Libraries / Frameworks** — ecosystem essentials
-6. **Performance Tips** — optimization techniques and profiling
-7. **Build / Package Management** — dependency management and CI
-
-## How Knowledge Skills Work
-
-These skills have `user-invocable: false` in their frontmatter, meaning they are NOT slash commands. Instead, Claude loads them contextually when the conversation topic matches the skill's description trigger.
-
-For example, when a user asks "How do I handle errors in Rust?", Claude automatically loads `rust-patterns` to provide idiomatic Rust error handling guidance.
-
-## Requesting New Language Packs
-
-File an issue with the `language-pack` label. Include:
-- Language name
-- Key topics to cover
-- Popular frameworks/libraries to include
-
----
-
 ## kb/reference/language-rules.md
 
 ---
@@ -13934,22 +14116,30 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 
 ## Current Experimental Packs
 
-| Pack | Domain | Agents | Skills | Hooks | Description |
-|------|--------|--------|--------|-------|-------------|
-| `security-pack` | security | 3 | 3 | 2 | Security auditing, threat modeling, OWASP |
-| `research-pack` | research | 4 | 4 | 1 | Multi-source research, synthesis, fact-checking |
-| `frontend-pack` | frontend | 3 | 3 | 1 | React/Vue/CSS, SEO, design engineering |
-| `enterprise-pack` | enterprise | 3 | 3 | 3 | Executive briefings, infra architecture, status |
-| `memory-pack` | memory | 0 | 1 | 2 | SQLite persistent memory with FTS5 search |
-| `rust-pack` | rust | 0 | 1 | 0 | Rust patterns |
-| `java-pack` | java | 0 | 1 | 0 | Java patterns |
-| `csharp-pack` | csharp | 0 | 1 | 0 | C# patterns |
-| `kotlin-pack` | kotlin | 0 | 1 | 0 | Kotlin patterns |
-| `swift-pack` | swift | 0 | 1 | 0 | Swift patterns |
-| `ruby-pack` | ruby | 0 | 1 | 0 | Ruby patterns |
+| Pack | Domain | Owns | Installs (claude / codex) | Description |
+|------|--------|------|---------------------------|-------------|
+| `memory-pack` | memory | 2 hooks, 2 scripts, 1 skill | 4 / 4 files | SQLite persistent memory with FTS5 search |
+| `enterprise-pack` | enterprise | 2 hooks | 2 / 2 files | Status-line and output-style overlays |
 
-Every pack here is content that ships in this repository. None fetches anything
-at install time.
+Both packs ship content in this repository. Neither fetches anything at install
+time.
+
+### The rule the table now enforces
+
+**A pack must install files the core install does not.** `ai-toolkit install`
+links every core skill and agent, so a manifest naming only core assets resolves
+to nothing: `plugin install` reports `(0 file items)` and no file appears on
+disk. This is not a subtle degradation — it is a complete no-op, identical on
+every profile (`minimal`, `standard`, `strict`) and on both runtimes.
+
+Nine packs were removed in v4.20.0 for failing this: `csharp`, `java`, `kotlin`,
+`ruby`, `rust`, `swift`, `frontend`, `research`, `security`. Every one declared
+only skills and agents that already ship in core, and eight of them owned nothing
+but a `README.md`. Full measurement:
+[`no-op-plugin-packs-removed-20260727.md`](../history/completed/no-op-plugin-packs-removed-20260727.md).
+
+Before adding a pack, prove it does something: install core into a throwaway
+`HOME`, install the pack, and check that the reported file count is above zero.
 
 **A pack that downloads a binary has been tried once and retired.** `rtk-pack`
 (v4.18.0, removed in v4.19.0) fetched a checksum-pinned artifact in

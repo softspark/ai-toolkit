@@ -1,15 +1,40 @@
 ---
-title: "AI Toolkit - Language Plugin Packs"
-category: reference
+title: "AI Toolkit - Language Plugin Packs (removed)"
+category: planning
 service: ai-toolkit
-tags: [plugins, languages, rust, java, csharp, kotlin, swift, ruby]
-version: "1.0.0"
+tags: [plugins, languages, rust, java, csharp, kotlin, swift, ruby, removed]
+doc_type: postmortem
+status: completed
+version: "1.1.0"
 created: "2026-03-29"
-last_updated: "2026-03-29"
-description: "6 language-specific plugin packs providing knowledge skills for Rust, Java, C#, Kotlin, Swift, and Ruby."
+last_updated: "2026-07-27"
+description: "REMOVED 2026-07-27 in v4.20.0. The six language packs wrapped skills that already ship in core, so installing one put zero files on disk. The skills themselves (rust-patterns, java-patterns, csharp-patterns, kotlin-patterns, swift-patterns, ruby-patterns) were never in the packs and are unaffected."
 ---
 
-# Language Plugin Packs
+# Language Plugin Packs — REMOVED
+
+> **Removed 2026-07-27 in v4.20.0. Nothing was lost.**
+>
+> The six packs described below each declared exactly one skill —
+> `rust-patterns`, `java-patterns`, `csharp-patterns`, `kotlin-patterns`,
+> `swift-patterns`, `ruby-patterns` — and every one of those skills lives in
+> `app/skills/`, is part of the core install, and **still does**. The packs
+> owned no files of their own beyond a `README.md`.
+>
+> Because `ai-toolkit install` links every core skill, installing a language
+> pack put **zero** files on disk. Measured on both runtimes and all three
+> profiles: `(0 file items)` every time.
+>
+> **If you used one of these packs, you lose nothing.** The skill it named is
+> already installed and triggers on the same file types it always did — open a
+> `.rs` file and `rust-patterns` still loads.
+>
+> Full measurement and the rule that now prevents a repeat:
+> [`no-op-plugin-packs-removed-20260727.md`](no-op-plugin-packs-removed-20260727.md).
+>
+> The document below is preserved as written on 2026-03-29.
+
+---
 
 ## Overview
 

@@ -137,7 +137,7 @@ Base configs can define non-overridable constraints via the `enforce` block:
 {
   "enforce": {
     "minHookProfile": "standard",
-    "requiredPlugins": ["security-pack"],
+    "requiredPlugins": ["memory-pack"],
     "forbidOverride": ["constitution", "guard-destructive"],
     "requiredAgents": ["security-auditor"]
   }

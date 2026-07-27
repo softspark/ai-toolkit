@@ -7,6 +7,50 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.20.0 — nine plugin packs removed (2026-07-27)
+
+### Removed
+
+- **Nine plugin packs that installed nothing**: `csharp-pack`, `java-pack`,
+  `kotlin-pack`, `ruby-pack`, `rust-pack`, `swift-pack`, `frontend-pack`,
+  `research-pack`, `security-pack`. Every one declared only skills and agents
+  that already ship in the core install, so `plugin install` reported
+  `(0 file items)` and put no file on disk. Measured on both runtimes and all
+  three profiles. Eight of the nine owned nothing but a `README.md`.
+
+  **Nothing is lost.** `rust-patterns`, `java-patterns`, `security-patterns`,
+  `research-mastery` and every other asset those packs named are core skills and
+  agents; they are still installed and still trigger exactly as before. A pack
+  never held them.
+
+  `frontend-pack` was the sole partial exception: on codex it copied core's
+  `post-tool-use.sh` in under a pack-prefixed name. That is a generic hook with a
+  domain label, not frontend functionality. If `post-tool-use` should run on
+  codex it belongs in the core codex hook set, as its own change.
+
+  Full measurement: `kb/history/completed/no-op-plugin-packs-removed-20260727.md`.
+- `kb/reference/language-packs.md`, the reference for six of the removed packs,
+  moved to `kb/history/completed/language-packs-removed-20260727.md`.
+
+### Changed
+
+- **`plugin-creator` now requires a pack to do something.** The authoring rule
+  said "reference existing toolkit assets before duplicating", which against a
+  core install that ships everything produces a no-op every time — nine packs
+  followed it exactly. It now requires that a pack install files the core does
+  not, and the validation checklist carries a non-zero-file-count check on every
+  runtime the pack claims.
+- `kb/reference/plugin-pack-conventions.md` documents the two surviving packs by
+  what they **own**, not by what they list.
+
+### Kept
+
+`memory-pack` (2 hooks, 2 scripts, its own `mem-search` skill) and
+`enterprise-pack` (`status-line.sh`, `output-style.sh`) — the two packs that
+ship files of their own.
+
+---
+
 ## v4.19.1 — re-release from corrected history (2026-07-27)
 
 No functional change. The package contents are identical to v4.19.0.

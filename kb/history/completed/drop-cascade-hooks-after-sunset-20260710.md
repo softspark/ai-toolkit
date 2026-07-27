@@ -22,6 +22,30 @@ description: "Completed cleanup of the deprecated Windsurf Cascade hooks generat
 
 **Completed in v4.13.0 (2026-07-10).** The deprecated generator and install/test wiring were removed; the Devin hook generator remains.
 
+> **Filed to history 2026-07-27.** The plan was finished in v4.13.0 but sat in
+> `kb/planning/` for another two and a half weeks, where it read as open work.
+> Before moving it, every claim in the Verification section below was re-run
+> against the codebase:
+>
+> | Check | Result |
+> |---|---|
+> | `scripts/generate_windsurf_hooks.py` deleted | gone |
+> | `grep -rn generate_windsurf_hooks scripts/ tests/` | no source references (one stale `.pyc` under gitignored `__pycache__`) |
+> | `_HOOK_STEM_ALIAS = {"devin": "windsurf"}` retained in `validate.py` | present, line 882 |
+> | windsurf `our_generators` in `scripts/ecosystem_tools.json` | Cascade generator absent, `generate_devin_hooks.py` present |
+> | `kb/reference/supported-tools-registry.md` hooks-migration row | reads "Complete" in past tense |
+> | `validate.py --strict` | 0 errors, 0 warnings |
+>
+> The work was real and complete. Only the filing was wrong.
+>
+> **Process note.** This is the second document found misfiled in
+> `kb/planning/` on the same day; the other,
+> [`mcp-context-trim-v4-prd-obsoleted-20260727.md`](mcp-context-trim-v4-prd-obsoleted-20260727.md),
+> had gone obsolete because the platform shipped the fix first. A plan with a
+> `trigger_date` needs a matching move-to-history step in the release that acts
+> on it — otherwise `kb/planning/` accumulates work that is already done or no
+> longer worth doing, and the next reader cannot tell which is which.
+
 ## Why this exists
 
 Windsurf rebranded to Devin Desktop on 2026-06-02. The Cascade agent — and its

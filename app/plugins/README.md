@@ -17,21 +17,21 @@ Plugin packs can target:
 These packs are not directly uploadable Claude app plugins. For Claude Chat,
 Desktop, and Cowork use `ai-toolkit claude-app export`.
 
-Current packs (11):
-- `csharp-pack`
-- `enterprise-pack`
-- `frontend-pack`
-- `java-pack`
-- `kotlin-pack`
-- `memory-pack`
-- `research-pack`
-- `ruby-pack`
-- `rust-pack`
-- `security-pack`
-- `swift-pack`
+Current packs (2):
+- `memory-pack` — SQLite cross-session memory. Owns 2 hooks, 2 scripts and its own skill.
+- `enterprise-pack` — owns the `status-line` and `output-style` hooks.
 
-Every pack here is content: agents, skills, rules and hook scripts that ship in
-this repository. None fetches a binary at install time. `rtk-pack` did, and was
+**A pack must install something the core install does not.** `ai-toolkit install`
+links every core skill and agent, so a pack whose manifest names only core assets
+puts zero files on disk. Nine packs did exactly that and were removed in v4.20.0
+(`csharp`, `java`, `kotlin`, `ruby`, `rust`, `swift`, `frontend`, `research`,
+`security`) — see
+[`no-op-plugin-packs-removed-20260727.md`](../../kb/history/completed/no-op-plugin-packs-removed-20260727.md).
+Nothing was lost with them: the language packs never held their own content.
+`rust-patterns`, `java-patterns` and the rest are core skills and stayed where
+they were.
+
+Neither remaining pack fetches anything at install time. `rtk-pack` did, and was
 retired in v4.19.0; see `kb/history/completed/rtk-pack-retirement-20260727.md`
 before proposing another pack of that shape.
 

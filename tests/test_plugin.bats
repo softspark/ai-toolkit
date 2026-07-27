@@ -76,14 +76,11 @@ PY
     [ "$status" -eq 0 ]
 }
 
-@test "plugin install --editor codex installs plugin rules without duplicating base guard hook" {
-    run $CLI plugin install --editor codex security-pack
+@test "plugin install --editor codex does not duplicate a core hook the pack declares" {
+    # enterprise-pack declares core's session-end.sh alongside two hooks of its
+    # own. A pack naming a core hook must not get a second copy of it.
+    run $CLI plugin install --editor codex enterprise-pack
     [ "$status" -eq 0 ]
-
-    # Codex reads instructions only from AGENTS.md, so pack rules are marker-
-    # injected into ~/.codex/AGENTS.md, not written as unread ~/.agents/rules/ files.
-    grep -q '<!-- TOOLKIT:plugin-security-pack-quality-gates START -->' "$TEST_TMP/.codex/AGENTS.md"
-    [ ! -f "$TEST_TMP/.agents/rules/plugin-security-pack-quality-gates.md" ]
 
     run python3 - <<PY
 import json
@@ -95,16 +92,51 @@ matches = 0
 for entries in hooks["hooks"].values():
     for entry in entries:
         for hook in entry.get("hooks", []):
-            if hook.get("command", "").endswith("guard-destructive.sh\""):
+            if hook.get("command", "").endswith("session-end.sh\""):
                 matches += 1
 
-# Base Codex hooks register guard-destructive.sh twice: PreToolUse + PermissionRequest.
-# Plugin install must not increase that count.
-assert matches == 2, matches
+# Base Codex hooks already register session-end.sh. Installing a pack that
+# declares the same core hook must not increase that count.
+assert matches <= 1, matches
 PY
     [ "$status" -eq 0 ]
-    [ ! -e "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-security-pack-guard-destructive.sh" ]
-    [ ! -e "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-security-pack-quality-gate.sh" ]
+    [ ! -e "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-enterprise-pack-session-end.sh" ]
+
+    # The pack's own hooks DO land, under pack-prefixed names.
+    [ -x "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-enterprise-pack-status-line.sh" ]
+    [ -x "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-enterprise-pack-output-style.sh" ]
+}
+
+@test "plugin rules are marker-injected into Codex AGENTS.md, not written as files" {
+    # Driven against a fixture pack: no shipped pack declares rules since the
+    # nine no-op packs were removed, and creating one under app/plugins would
+    # race the pack-count assertions in other files under --jobs 4.
+    run python3 - <<PY
+import json, pathlib, sys, tempfile
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+import plugin
+
+tmp = pathlib.Path(tempfile.mkdtemp())
+pack = tmp / "fixture-pack"
+(pack / "rules").mkdir(parents=True)
+(pack / "rules" / "quality-gates.md").write_text("# Fixture rule\n\nBody.\n")
+(pack / "plugin.json").write_text(json.dumps({
+    "name": "fixture-pack",
+    "description": "ships one rule",
+    "version": "1.0.0",
+    "domain": "testing",
+    "type": "plugin-pack",
+    "includes": {"agents": [], "skills": [], "rules": ["quality-gates"], "hooks": []},
+}))
+plugin.PLUGINS_DIR = tmp
+sys.exit(0 if plugin.install_pack("fixture-pack", "codex") else 1)
+PY
+    [ "$status" -eq 0 ]
+
+    # Codex reads instructions only from AGENTS.md, so pack rules are marker-
+    # injected there, not written as unread ~/.agents/rules/ files.
+    grep -q '<!-- TOOLKIT:plugin-fixture-pack-quality-gates START -->' "$TEST_TMP/.codex/AGENTS.md"
+    [ ! -f "$TEST_TMP/.agents/rules/plugin-fixture-pack-quality-gates.md" ]
 }
 
 @test "plugin Codex install preserves user logical skill collisions" {
@@ -389,14 +421,18 @@ PY
 }
 
 @test "plugin Codex install keeps multiple hooks for one event across pack installs" {
+    # enterprise-pack puts two hooks on Stop; memory-pack adds a third from a
+    # different pack, plus one on PostToolUse. Two packs writing the same event
+    # must accumulate rather than overwrite each other.
     run $CLI plugin install --editor codex enterprise-pack
     [ "$status" -eq 0 ]
-    run $CLI plugin install --editor codex frontend-pack
+    run $CLI plugin install --editor codex memory-pack
     [ "$status" -eq 0 ]
 
     [ -x "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-enterprise-pack-status-line.sh" ]
     [ -x "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-enterprise-pack-output-style.sh" ]
-    [ -x "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-frontend-pack-post-tool-use.sh" ]
+    [ -x "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-memory-pack-session-summary.sh" ]
+    [ -x "$TEST_TMP/.codex/ai-toolkit-hooks/plugin-memory-pack-observation-capture.sh" ]
 
     run python3 - <<PY
 import json
@@ -404,21 +440,27 @@ from pathlib import Path
 
 data = json.loads(Path("$TEST_TMP/.codex/hooks.json").read_text(encoding="utf-8"))
 enterprise = "AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-enterprise-pack"
-frontend = "AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-frontend-pack"
-stop_groups = [
+memory = "AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-memory-pack"
+stop_enterprise = [
     group
     for group in data["hooks"]["Stop"]
     if any(enterprise in handler["command"] for handler in group["hooks"])
 ]
-post_groups = [
+stop_memory = [
+    group
+    for group in data["hooks"]["Stop"]
+    if any(memory in handler["command"] for handler in group["hooks"])
+]
+post_memory = [
     group
     for group in data["hooks"]["PostToolUse"]
-    if any(frontend in handler["command"] for handler in group["hooks"])
+    if any(memory in handler["command"] for handler in group["hooks"])
 ]
-assert len(stop_groups) == 2, stop_groups
-assert all("matcher" not in group for group in stop_groups)
-assert len(post_groups) == 1, post_groups
-assert post_groups[0].get("matcher") == "Bash"
+# The second pack must not clobber the first one's entries on the same event.
+assert len(stop_enterprise) == 2, stop_enterprise
+assert len(stop_memory) == 1, stop_memory
+assert all("matcher" not in group for group in stop_enterprise + stop_memory)
+assert len(post_memory) == 1, post_memory
 assert "_source" not in json.dumps(data)
 PY
     [ "$status" -eq 0 ]
