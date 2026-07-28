@@ -95,9 +95,16 @@ HOOK_REQUIRED_FIELDS = {
     "mcp_tool": ("server", "tool", "arguments"),
 }
 
+# The taxonomy. `app/skills/documentation-standards/SKILL.md` documents the same
+# eight and is what authors read; this set is what rejects a typo. They are one
+# list in two places, so a change belongs in both.
+#
+# `decisions` and `runbooks` were missing until v4.21.0 while the kb-migration
+# SOP had been telling people to create those directories for months, so a
+# correctly-filed ADR failed validation.
 VALID_KB_CATEGORIES = frozenset({
     "reference", "howto", "procedures", "troubleshooting", "best-practices",
-    "planning",
+    "decisions", "runbooks", "planning",
 })
 
 VALID_RULE_CATEGORIES = frozenset({
@@ -728,6 +735,31 @@ def validate_kb_documents(tk_dir: Path, vr: ValidationResult) -> None:
         kb_category = _fm_field(fm_lines, "category").strip()
         if kb_category and kb_category not in VALID_KB_CATEGORIES:
             vr.error(f"{kb_name} - Invalid category '{kb_category}' (valid: {', '.join(sorted(VALID_KB_CATEGORIES))})")
+            kb_errors += 1
+
+        # `section` is a legacy alias for `category`, not a second axis. A
+        # document carrying both with different values is indexed twice and
+        # found once, and nothing about that is visible to its author.
+        kb_section = _fm_field(fm_lines, "section").strip()
+        if kb_section and kb_category and kb_section != kb_category:
+            vr.error(
+                f"{kb_name} - section '{kb_section}' disagrees with category "
+                f"'{kb_category}'; section is an alias and must match"
+            )
+            kb_errors += 1
+
+        # A document filed under a taxonomy directory must declare that
+        # category, or a browsing reader and a search hit disagree about what it
+        # is. The rule is scoped to directories that ARE category names on
+        # purpose: `kb/history/completed/` is a lifecycle location, not a type,
+        # and a finished plan is still a `planning` document.
+        relative = kb_file.relative_to(kb_dir).parts
+        top = relative[0] if len(relative) > 1 else ""
+        if kb_category and top in VALID_KB_CATEGORIES and top != kb_category:
+            vr.error(
+                f"{kb_name} - is in {top}/ but declares category "
+                f"'{kb_category}'; they must agree"
+            )
             kb_errors += 1
 
         # Validate tags is not empty
