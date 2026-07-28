@@ -108,7 +108,7 @@
 - **design-engineering**: UI craftsmanship: animation rules, easing, micro-interactions, state polish. Triggers: animation, transition, ease-out, motion, micro-interaction, hover, loading state, UI polish.
 - **docker-devops**: Docker/K8s: Dockerfile, multi-stage, compose, manifests, Helm. Triggers: Docker, Dockerfile, container, Kubernetes, k8s, compose, Helm, pod.
 - **docs**: Generates/updates README, API docs, architecture notes. Triggers: docs, README, API docs, architecture note, documentation.
-- **documentation-standards**: KB conventions: YAML frontmatter, 5-category taxonomy (reference/howto/procedures/troubleshooting/best-practices). Triggers: kb/, SOP, runbook, howto, frontmatter, knowledge base.
+- **documentation-standards**: KB conventions: YAML frontmatter, 8-category taxonomy (reference/howto/procedures/troubleshooting/best-practices/decisions/runbooks/planning). Triggers: kb/, SOP, runbook, howto, frontmatter, knowledge base.
 - **ecommerce-patterns**: E-commerce: cart, checkout, payments (Stripe/Adyen), order state, inventory, promos, tax. Triggers: cart, checkout, SKU, payment, Stripe, Shopify, Medusa, Magento, coupon, refund.
 - **evaluate**: Evaluates RAG retrieval and LLM-as-judge metrics (faithfulness, relevancy, context precision). Triggers: measure RAG quality, knowledge gap, RAG eval, golden dataset.
 - **evolve**: Analyzes agent/skill failures, drafts prompt/permission fixes. Triggers: improve agent, refine skill, system prompt, optimize agent.

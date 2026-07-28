@@ -8,23 +8,29 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1473%20passing-success)](tests/)
 
-## What's New in v4.20.0
+## What's New in v4.21.0
 
-v4.20.0 relicenses the project to Apache-2.0 and removes nine plugin packs that installed nothing. Plugin count: 11 → 2.
+v4.21.0 makes the KB taxonomy one list instead of three, and teaches
+`validate.py` to enforce it.
 
-- **Licence: MIT → Apache-2.0.** Still permissive — fork it, modify it, ship it commercially. The change is what a redistributor owes back: the contents of [NOTICE](NOTICE) must travel with any redistribution (§4d), modified files must say they were modified (§4b), and there is now an express patent grant and a trademark reservation. Releases up to v4.20.0 stay available under MIT; nothing already granted is revoked. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
-
-- **Nine packs removed**: `csharp`, `java`, `kotlin`, `ruby`, `rust`, `swift`, `frontend`, `research`, `security`. Each declared only skills and agents that already ship in the core install, so `plugin install` reported `(0 file items)` and wrote no file — on both runtimes and all three profiles. Eight owned nothing but a `README.md`. See [the measurement](kb/history/completed/no-op-plugin-packs-removed-20260727.md).
-- **Nothing is lost by the removal.** `rust-patterns`, `java-patterns`, `security-patterns`, `research-mastery` and the rest are **core skills**, still installed, still triggering as before. The packs never held them — they only listed them.
-- **`memory-pack` and `enterprise-pack` stay**: the two packs that ship files of their own — hooks, scripts, and in memory-pack's case its own skill and a SQLite store.
-- **A pack must now earn its existence**: `plugin-creator`'s authoring rule required referencing core assets rather than forking them, which against a core install that ships everything produced a no-op every time. It now requires that a pack install files the core does not, with a verification step in the checklist.
-- **`rtk-pack` retired in v4.19.0**: it broke every command it rewrote — exit 127 on `git`, `ls`, `cat`, `find`, `grep`. Measured value was 0.0615% of input tokens against a 0.05% kill number. See [the retirement note](kb/history/completed/rtk-pack-retirement-20260727.md).
-
-If you installed any removed pack, run `ai-toolkit plugin remove <name>` to drop its bookkeeping entry. No skill or agent disappears.
+- **The taxonomy is eight categories**: `reference`, `howto`, `procedures`,
+  `troubleshooting`, `best-practices`, `decisions`, `runbooks`, `planning`.
+  `decisions` and `runbooks` were missing while the `kb-migration` SOP had been
+  telling people to create those directories for months — a correctly-filed ADR
+  failed validation.
+- **The `documentation-standards` skill no longer contradicts itself.** Its
+  frontmatter said "5-category", its table listed five, and a line below named
+  six. Author and validator disagreed, and only the validator got a vote.
+- **`section:` is documented as a legacy alias for `category:`**, and
+  `validate.py` rejects a document carrying both with different values — that
+  document is indexed twice and found once.
+- **A document's category must name its directory**, checked only for
+  directories that are category names: `kb/history/completed/` is a lifecycle
+  location, not a type, and a finished plan filed there is still `planning`.
+- **`procedures` and `runbooks` stopped describing each other.** A procedure is
+  followed by a person; a runbook is run against a live system.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
-
----
 
 ## Table of Contents
 

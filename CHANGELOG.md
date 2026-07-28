@@ -7,6 +7,47 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.21.0 — one KB taxonomy, in one place (2026-07-28)
+
+### Fixed
+
+- **The `documentation-standards` skill contradicted itself.** Its frontmatter
+  said "5-category taxonomy", its table listed those five, and three paragraphs
+  below a "Valid categories" line named six — adding `planning`. An author
+  reading the table and a validator reading the code disagreed about what was
+  legal, and only the validator got a vote.
+- **`decisions` and `runbooks` were not valid categories**, while the
+  `kb-migration` SOP had been instructing people to create exactly those
+  directories for months. A correctly-filed ADR failed `scripts/validate.py`.
+  Both are now in the taxonomy, which is eight: `reference`, `howto`,
+  `procedures`, `troubleshooting`, `best-practices`, `decisions`, `runbooks`,
+  `planning`.
+- **`procedures` and `runbooks` no longer describe each other.** The table gave
+  "SOPs, runbooks, operational processes" for `procedures`, which left no way to
+  choose between them. `procedures` is a process a person follows; `runbooks`
+  are run against a live system, usually under pressure.
+
+### Added
+
+- **`section:` is documented as what it is: a legacy alias for `category:`.**
+  Older documents and the `kb-migration` SOP write `section:`; both names are
+  read in the wild. A document may carry both, and `validate.py` now rejects it
+  when they disagree — a document filed as `category: reference` and
+  `section: howto` is indexed twice and found once.
+- **`validate.py` checks that a document's category names its directory.** The
+  rule is scoped to directories that *are* category names, deliberately:
+  `kb/history/completed/` is a lifecycle location rather than a type, and a
+  finished plan filed there is still a `planning` document. Fifteen of this
+  project's own documents are in exactly that position.
+
+### Changed
+
+- `VALID_KB_CATEGORIES` in `scripts/validate.py` and the taxonomy table in
+  `app/skills/documentation-standards/SKILL.md` are one list in two places, and
+  each now says so. They were previously two lists that had drifted.
+
+---
+
 ## v4.20.0 — Apache-2.0, nine plugin packs removed (2026-07-27)
 
 ### Changed — licence: MIT to Apache-2.0
