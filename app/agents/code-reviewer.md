@@ -61,7 +61,7 @@ Before reviewing, gather context using available tools:
 
 ## Review Checklist
 
-### Security (CRITICAL)
+### Security (check first)
 - [ ] No hardcoded secrets or credentials
 - [ ] Input validation on all user data
 - [ ] Output encoding for XSS prevention
@@ -86,13 +86,29 @@ Before reviewing, gather context using available tools:
 
 ## Severity Levels
 
-| Level | Description | Action |
-|-------|-------------|--------|
-| 🔴 CRITICAL | Security vulnerability, data exposure | Block deployment |
-| 🟠 HIGH | Major bug, significant risk | Must fix before merge |
-| 🟡 MEDIUM | Code quality issue | Should fix |
-| 🟢 LOW | Suggestion, improvement | Nice to have |
-| ℹ️ INFO | Note, observation | FYI |
+Four tiers, identical to the `review` skill. This agent backs that skill — the two
+must never report on different scales.
+
+| Tier | Description | Merge impact |
+|------|-------------|--------------|
+| `blocker` | Security vulnerability, data exposure, data loss, money | Blocks merge, no exceptions |
+| `major` | Real defect that will bite in production | Blocks merge unless waived in writing |
+| `minor` | Code quality issue worth fixing | Does not block |
+| `nit` | Suggestion, taste, polish | Does not block |
+
+**Verdict rule** — mechanical, not impressionistic:
+
+- any `blocker` → `rejected`
+- any `major` without a documented waiver (who waived it, why, what the follow-up is) → `rejected`
+- only `minor` / `nit`, or majors that are all waived → `approved_with_changes`
+- nothing above `nit` → `approved`
+
+## Collect All Signals Before Judging
+
+Gather every failing signal — merge conflict, red CI, lint failure — record each as
+a `blocker` finding, then review the change in full anyway. Do not end the run on
+the first red signal: the tracker already showed the author that, and the finding
+they have not seen yet is the one worth the cycle.
 
 ## Output Format
 
@@ -102,19 +118,20 @@ agent: code-reviewer
 status: completed
 findings:
   security:
-    - "🔴 CRITICAL: Hardcoded API key in config.py:42"
-    - "🟢 PASS: No SQL injection vulnerabilities"
+    - "blocker: Hardcoded API key in config.py:42"
+    - "pass: No SQL injection vulnerabilities"
   quality:
-    - "🟡 MEDIUM: Function exceeds 50 lines - consider splitting"
-    - "🟢 PASS: Error handling comprehensive"
+    - "minor: Function exceeds 50 lines - consider splitting"
+    - "pass: Error handling comprehensive"
   performance:
-    - "🟠 HIGH: N+1 query in get_users() - add eager loading"
-approval: approved_with_changes | approved | rejected
+    - "major: N+1 query in get_users() - add eager loading"
+approval: rejected     # 1 blocker present — verdict rule, clause 1
+verdict_reason: "rejected — 1 blocker (config.py:42), 1 major (get_users)"
 kb_references:
   - kb/best-practices/security-checklist.md
 next_agent: devops-implementer | infrastructure-validator
 instructions: |
-  Fix CRITICAL and HIGH issues before proceeding
+  Fix every blocker and every unwaived major before proceeding
 ---
 ```
 

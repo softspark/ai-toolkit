@@ -82,6 +82,7 @@ Use `ci-cd-patterns` skill for pipeline templates and best practices.
 - **NEVER** commit generated CI configs that embed hardcoded secrets or tokens
 - **CRITICAL**: preserve existing job names and triggers unless the user explicitly asks for a restructure
 - **MANDATORY**: every generated pipeline must include lint + test stages at minimum
+- **MUST** collect every failing job before diagnosing — do not stop at the first red check. A pipeline usually breaks in more than one place, and reporting only the first one costs a full cycle per remaining failure
 
 ## Gotchas
 

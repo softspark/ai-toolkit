@@ -197,6 +197,7 @@ Report consensus when done.
 - **NEVER** apply fixes without first reproducing the symptom
 - **CRITICAL**: trace from symptom to root cause — do not stop at the first plausible explanation
 - **MANDATORY**: if the bug is intermittent, log enough state to reproduce it deterministically before fixing
+- **MUST** finish collecting evidence (logs, health, recent diff, error-parser output) before forming the hypothesis — an investigation that halts at the first error found reports what the user already saw and misses the one they did not
 
 ## Gotchas
 

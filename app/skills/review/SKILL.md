@@ -19,6 +19,23 @@ Reviews code changes for quality and issues.
 
 - Changes: !`git diff --stat main...HEAD 2>/dev/null || git diff --cached --stat 2>/dev/null || echo "no changes detected"`
 
+## Signal Collection (never stop at the first red)
+
+Collect every failing signal up front, then review the diff in full **anyway**:
+
+| Signal | How to read it |
+|--------|----------------|
+| Merge conflict with base | `gh pr view --json mergeable,mergeStateStatus` or `git merge-tree` |
+| Failing CI checks | `gh pr checks` or the platform equivalent |
+| Lint / typecheck failure | the project's own commands |
+
+Each failing signal becomes a `blocker` finding. **None of them ends the run.**
+
+A review that aborts on the first red signal spends the whole cycle repeating what
+the tracker already displayed, while the finding that would have told the author
+something new never gets written. One invocation produces the most complete picture
+of the change that it can.
+
 ## Automated Diff Analysis
 
 Before starting manual review, run the diff analyzer script to get a structured risk assessment:
@@ -58,8 +75,8 @@ Each reviewer should report findings independently. Do NOT modify files.
 
 After all reviewers complete:
 1. Synthesize findings into unified Code Review Report
-2. Prioritize by severity (Critical > Major > Minor)
-3. Issue verdict: APPROVE / REQUEST_CHANGES / NEEDS_DISCUSSION
+2. Prioritize by severity (blocker > major > minor > nit)
+3. Issue verdict per the verdict rule below — not by impression
 
 > **When to use**: PRs with >5 files changed, cross-module changes, security-sensitive code.
 > **READ-ONLY**: No teammate should modify files during review.
@@ -101,12 +118,15 @@ After all reviewers complete:
 - [ ] A08: Integrity checks on deserialized data, CI/CD pipeline safety
 - [ ] A09: Security-relevant events logged (without PII)
 - [ ] A10: External URL handling validates scheme/host (SSRF prevention)
+- [ ] Cross-scope replay: can an identifier from one tenant/user/org be replayed in another?
+- [ ] Fails closed wherever the path affects security, money, or data retention
 
 ### API / Contract Changes
 - [ ] Backward compatibility preserved (no silent breaking changes)
 - [ ] API versioning updated if contract changed
 - [ ] Schema validation on request/response
 - [ ] Error responses follow project convention
+- [ ] Wire-level contracts checked, not just code signatures: HTTP routes, webhook payloads, event/queue schemas
 
 ### Concurrency / Async
 - [ ] Shared mutable state protected (locks, atomics, channels)
@@ -131,6 +151,26 @@ After all reviewers complete:
 - [ ] Edge cases covered
 - [ ] Mocks appropriate
 
+## Severity & Verdict
+
+| Tier | Meaning | Merge impact |
+|------|---------|--------------|
+| `blocker` | Causes damage: data loss, security hole, money, corruption | Blocks merge, no exceptions |
+| `major` | Real defect that will bite in production | Blocks merge unless waived in writing |
+| `minor` | Should be fixed, not worth blocking on | Does not block |
+| `nit` | Polish, taste, style | Does not block |
+
+**Verdict rule** — apply it mechanically, do not negotiate with yourself:
+
+- any `blocker` → `REQUEST_CHANGES`
+- any `major` without a documented waiver (who waived it, why, what the follow-up is) → `REQUEST_CHANGES`
+- only `minor` / `nit` → `APPROVE`
+- the change cannot be classified from the diff → `NEEDS_DISCUSSION`, and state what would resolve it
+
+Severity describes impact, confidence describes certainty — they are independent
+axes. A finding with confidence < 6 is reported at the tier its evidence supports
+and is never promoted to `blocker` on suspicion alone.
+
 ## Output Format
 
 ```markdown
@@ -145,9 +185,9 @@ After all reviewers complete:
 
 ### Findings
 
-#### Critical
+#### Blocker
 - **[file:line]**: [issue]
-  - Severity: critical | Confidence: [1-10]
+  - Severity: blocker | Confidence: [1-10]
   - Evidence: [specific code reference and reasoning]
   - Suggested fix: [code]
 
@@ -181,6 +221,11 @@ After all reviewers complete:
 
 ### Verdict
 [APPROVE / REQUEST_CHANGES / NEEDS_DISCUSSION]
+
+State which clause of the verdict rule produced it, e.g.
+"REQUEST_CHANGES — 1 blocker (auth.ts:88)" or
+"APPROVE — 2 minor, 1 nit, no blocker or major".
+Waived majors must name the waiver and the follow-up.
 ```
 
 ## Common Rationalizations

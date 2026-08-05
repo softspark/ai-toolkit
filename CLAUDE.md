@@ -28,6 +28,7 @@ Stale counts = broken user trust. This is non-negotiable.
 # Validate: python3 scripts/validate.py
 # Evaluate: python3 scripts/evaluate_skills.py
 # Audit:    python3 scripts/audit_skills.py --ci  (security scan, exit 1 on HIGH)
+# Split gate: python3 scripts/check_split.py <skill> --before <pre-split SKILL.md>  (run after every body -> reference/ split; proves no code/section/description was lost)
 # Shellcheck: shellcheck --severity=warning app/hooks/*.sh  (hook lint; required before tagging, not run by publish.yml)
 # Benchmark: python3 scripts/benchmark_ecosystem.py --offline
 # Harvest: python3 scripts/harvest_ecosystem.py --offline
