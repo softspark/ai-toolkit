@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.13.0"
+version: "1.14.0"
 created: "2026-04-10"
-last_updated: "2026-07-27"
+last_updated: "2026-08-06"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5), the pre-push tag assertions added in v1.12.0 after v4.19.0 was tagged on the wrong commit (Phase 7), and the licensing gate added in v1.13.0 with the move to Apache-2.0 (Phase 5c)."
 ---
 
@@ -209,6 +209,48 @@ echo "package-lock.json: $(python3 -c "import json; print(json.load(open('packag
 ```
 
 All four must print the same version. If not, fix before proceeding.
+
+### Public surface review
+
+```bash
+python3 scripts/surface_manifest.py --update
+git diff app/surface.json
+```
+
+**Every line the diff removes is a breaking change.** Restore it, or take the
+deprecation path in `BACKWARD_COMPATIBILITY.md` and add a `DECISIONS.md` entry
+before the tag. Lines added are new surface being adopted into protection — that
+needs no ceremony.
+
+Do not run `--update` to make a red build green. The check fails because something
+users depend on disappeared; regenerating the manifest deletes the evidence, not
+the problem.
+
+### Skill body budget ratchet
+
+`validate.py` prints the largest skill body on every run:
+
+```
+Body budget: largest is <skill> at <N> bytes (warn 18000, error 20000)
+```
+
+Once that number sits at least 2000 bytes under `SKILL_BODY_BUDGET_WARN`, lower
+`SKILL_BODY_BUDGET_WARN` by 2000 in `scripts/validate.py` and ship the tightened
+threshold with the release. Target floor is 12000.
+
+Two rules, both learned the hard way:
+
+- **Never lower a threshold in the same change that something violates it.** Split
+  the offending skill into `SKILL.md` + `reference/` first, prove it with
+  `python3 scripts/check_split.py <skill> --before <pre-split SKILL.md>`, then
+  tighten in a follow-up.
+- **Never raise a threshold to make a red build green.** A body over budget means
+  detail that belongs in `reference/` is loading on every trigger match, including
+  the accidental ones. Raising the number hides the cost, it does not remove it.
+
+If the largest body has not moved since the previous release, leave the threshold
+alone and say so in the release notes. A ratchet that never advances is honest;
+one that advances past reality is not.
 
 ---
 

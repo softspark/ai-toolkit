@@ -25,7 +25,7 @@ Pipe error output through the error parser for structured diagnosis:
 
 ```bash
 # Pipe from failing command
-your_command 2>&1 | python3 "$(dirname "$0")/scripts/error-parser.py"
+your_command 2>&1 | python3 ${CLAUDE_SKILL_DIR}/scripts/error-parser.py
 
 # Or from a log file
 cat /var/log/app/error.log | python3 scripts/error-parser.py

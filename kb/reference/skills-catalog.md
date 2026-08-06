@@ -3,9 +3,9 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.4.3"
+version: "1.5.0"
 created: "2026-03-23"
-last_updated: "2026-04-12"
+last_updated: "2026-08-06"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
@@ -18,13 +18,13 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | Tier | Skills | When |
 |------|--------|------|
 | **1 — Quick single-agent** | `/debug`, `/review`, `/refactor`, `/analyze`, `/docs`, `/plan`, `/explain`, `/tdd`, `/grill-me`, `/triage-issue` | One concern, fast |
+| **1.5 — Should we build it?** | `/brainstorm` | Pre-artifact conversation; prices the zero option and may end in "do not build this" |
 | **1.5 — Product planning** | `/write-a-prd` → `/prd-to-plan` → `/prd-to-issues` | Interview-driven PRD → vertical-slice plan → GitHub issues |
 | **1.5 — Design & architecture** | `/design-an-interface`, `/architecture-audit`, `/refactor-plan`, `/ubiquitous-language`, `/qa-session` | Parallel sub-agent exploration |
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (30)
-
+## Task Skills
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
 | Skill | Slash Command | Effort | Description |
@@ -62,8 +62,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **seo-validate** | `/seo-validate` | medium | Scan codebase for SEO issues: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Framework-aware (Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML). |
 | **mcp-builder** | `/mcp-builder` | high | Build production-grade MCP servers using the 4-phase methodology (research, implement, test, evaluate). TypeScript/Python, stdio/streamable-http. |
 
-## Hybrid Skills (32)
-
+## Hybrid Skills
 Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
 
 | Skill | Slash Command | Effort | Description |
@@ -96,6 +95,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **mem-search** | `/mem-search` | medium | Search past coding sessions via natural language (memory-pack) |
 | **persona** | `/persona` | low | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
 | **council** | `/council` | high | 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) with synthesis and confidence-rated recommendation. Tier 1, orchestrator, `context: fork`. |
+| **brainstorm** | `/brainstorm` | high | Pre-artifact conversation that prices "build nothing" as a real candidate and sends the conclusion to a separate challenger agent before routing. Six exit ramps, one of which is stop. |
 | **introspect** | `/introspect` | medium | Agent self-debugging: classify failure pattern, suggest smallest recovery action, emit structured introspection report |
 | **brand-voice** | `/brand-voice` | medium | Anti-trope list, voice principles, LLM rhetoric prevention; output modes (`concise` ≤60% tokens, `strict` ≤40%) governing conversational responses. |
 
@@ -119,8 +119,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | `application-deploy` | 3 | Deploy → smoke test → release notes |
 | `proactive-troubleshooting` | 4 | Investigate → check perf → preventive fix → docs |
 
-## Knowledge Skills - Development (15)
-
+## Knowledge Skills - Development
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **app-builder** | `skills/app-builder/` | Full-stack application architecture |
@@ -139,8 +138,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **design-engineering** | `skills/design-engineering/` | UI polish, animation craft, easing, transforms, accessibility |
 | **documentation-standards** | `skills/documentation-standards/` | KB document conventions, frontmatter validation, category taxonomy |
 
-## Knowledge Skills - Infrastructure (6)
-
+## Knowledge Skills - Infrastructure
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **docker-devops** | `skills/docker-devops/` | Docker, deployment, infrastructure |
@@ -150,8 +148,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **testing-patterns** | `skills/testing-patterns/` | Multi-language TDD: pytest, vitest, phpunit, go test, flutter |
 | **migration-patterns** | `skills/migration-patterns/` | Database migrations, API versioning, zero-downtime |
 
-## Knowledge Skills - AI/RAG (6)
-
+## Knowledge Skills - AI/RAG
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **rag-patterns** | `skills/rag-patterns/` | RAG pipelines, chunking, reranking, evaluation |
@@ -161,8 +158,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **content-moderation-patterns** | `skills/content-moderation-patterns/` | Two-stage moderation: pre-filter + LLM classifier; categories; thresholds |
 | **model-routing-patterns** | `skills/model-routing-patterns/` | Haiku/Sonnet/Opus routing; escalation; sub-agent delegation; fallback |
 
-## Knowledge Skills - Process (6)
-
+## Knowledge Skills - Process
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **git-mastery** | `skills/git-mastery/` | Git workflows, branching, conflict resolution |

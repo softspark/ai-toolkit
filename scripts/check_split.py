@@ -24,6 +24,11 @@ Four gates:
                          description decides which prompts select the skill, so
                          changing it during a refactor is a behavioural change
                          wearing a refactor's clothes.
+  E  link integrity      Every relative link in the body and in reference/ resolves
+                         from the file that holds it. A split invalidates every
+                         `(reference/x.md)` path that moves down a directory, and
+                         validate.py only checks links in SKILL.md — so a broken
+                         pointer inside reference/ ships silently.
 
 Stdlib-only. Human-readable text to stdout; --json for machine use.
 
@@ -56,6 +61,13 @@ ALWAYS_LOADED_SECTIONS = ("Rules", "Gotchas", "When NOT to Use")
 
 HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$")
 FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})")
+LINK_RE = re.compile(r"\]\(([^)\s]+)\)")
+# Inline code spans are literal text. A regex such as
+# `type=["']password["'](?!.*autocomplete)` reads as a link to the naive matcher.
+INLINE_CODE_RE = re.compile(r"`+[^`]*`+")
+
+# Link targets that are not files on disk and must not be resolved.
+NON_FILE_PREFIXES = ("#", "/", "mailto:", "tel:", "$")
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +229,60 @@ def gate_c_sections(before_body: str, after_body: str) -> dict:
     }
 
 
+def markdown_links(text: str) -> list[str]:
+    """Markdown link targets that sit outside fenced code blocks.
+
+    Links inside a fence are examples, not pointers — resolving them would flag
+    every sample path a skill documents.
+    """
+    out: list[str] = []
+    fence = ""
+    for line in text.splitlines():
+        match = FENCE_RE.match(line)
+        if match:
+            marker = match.group(1)[0]
+            fence = "" if fence == marker else (fence or marker)
+            continue
+        if fence:
+            continue
+        out.extend(LINK_RE.findall(INLINE_CODE_RE.sub(" ", line)))
+    return out
+
+
+def gate_e_links(skill_dir: Path, after_body: str) -> dict:
+    """Every relative link resolves from the file that holds it.
+
+    Checked across the body and every reference/*.md, because moving a section
+    down one directory silently invalidates the paths it carried, and
+    validate.py's own link check never looks inside reference/.
+    """
+    sources: list[tuple[Path, str]] = [(skill_dir / "SKILL.md", after_body)]
+    ref_dir = skill_dir / "reference"
+    if ref_dir.is_dir():
+        for path in sorted(ref_dir.rglob("*.md")):
+            sources.append((path, path.read_text(encoding="utf-8")))
+
+    broken: list[str] = []
+    checked = 0
+    for path, text in sources:
+        for target in markdown_links(text):
+            if "://" in target or target.startswith(NON_FILE_PREFIXES):
+                continue
+            relative = target.split("#", 1)[0]
+            if not relative:
+                continue
+            checked += 1
+            if not (path.parent / relative).exists():
+                broken.append(f"{path.name} -> {target}")
+
+    return {
+        "status": "pass" if not broken else "fail",
+        "links_checked": checked,
+        "broken_count": len(broken),
+        "broken": broken,
+    }
+
+
 def gate_d_description(before_fm: str, after_fm: str) -> dict:
     """Routing must not move during a refactor."""
     before = description_of(before_fm)
@@ -347,6 +413,16 @@ def report_text(result: dict) -> None:
     else:
         print("  OK: description unchanged")
 
+    links = gates["E_link_integrity"]
+    if links["broken"]:
+        print(f"  ERROR: {links['broken_count']} relative links do not resolve")
+        for entry in links["broken"][:20]:
+            print(f"    BROKEN: {entry}")
+        if links["broken_count"] > 20:
+            print(f"    ... and {links['broken_count'] - 20} more")
+    else:
+        print(f"  OK: {links['links_checked']} relative links resolve")
+
     print()
     print(f"  body: {result['body_before_bytes']} -> {result['body_after_bytes']} bytes")
     print(f"  reference files: {len(result['reference_files'])}")
@@ -392,6 +468,7 @@ def main(argv: list[str]) -> int:
         "B_content_trace": gate_b_trace(before_body, after_body, reference_text, opts["strict"]),
         "C_always_loaded_sections": gate_c_sections(before_body, after_body),
         "D_description_stable": gate_d_description(before_fm, after_fm),
+        "E_link_integrity": gate_e_links(skill_dir, after_body),
     }
     ok = all(gate["status"] != "fail" for gate in gates.values())
 

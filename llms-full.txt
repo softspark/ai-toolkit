@@ -84,6 +84,7 @@
 - **architecture-audit**: Audits codebase for architectural friction, shallow modules; proposes RFCs. Triggers: improve architecture, shallow modules, deepen modules, reduce coupling.
 - **architecture-decision**: Architecture decisions in ADR/RFC/RFD format: context, constraints, options, recommendation. Triggers: ADR, RFC, RFD, trade-offs, design choice, pick between, evaluate approach.
 - **biz-scan**: Scans codebase for revenue opportunities, KPIs, monetization gaps. Triggers: business metrics, KPI, analytics gaps, monetization, revenue.
+- **brainstorm**: Pre-artifact conversation that prices the zero option and can end in 'do not build this'. Triggers: brainstorm, should we build, is this worth it, explore idea, thinking out loud, half-formed idea.
 - **brand-voice**: Direct technical voice for docs, README, user-facing text. Concise/strict modes. Triggers: documentation, README, content, output-mode, voice, prose style.
 - **briefing**: Executive daily briefing aggregating reports from all agents into decision-focused summary. Triggers: briefing, daily summary, status across system, executive update.
 - **build**: Builds project with auto-detected toolchain (npm, poetry, cargo, go, flutter, Docker). Triggers: build, compile, bundle, produce artifacts.
@@ -7447,6 +7448,48 @@ echo "package-lock.json: $(python3 -c "import json; print(json.load(open('packag
 
 All four must print the same version. If not, fix before proceeding.
 
+### Public surface review
+
+```bash
+python3 scripts/surface_manifest.py --update
+git diff app/surface.json
+```
+
+**Every line the diff removes is a breaking change.** Restore it, or take the
+deprecation path in `BACKWARD_COMPATIBILITY.md` and add a `DECISIONS.md` entry
+before the tag. Lines added are new surface being adopted into protection — that
+needs no ceremony.
+
+Do not run `--update` to make a red build green. The check fails because something
+users depend on disappeared; regenerating the manifest deletes the evidence, not
+the problem.
+
+### Skill body budget ratchet
+
+`validate.py` prints the largest skill body on every run:
+
+```
+Body budget: largest is <skill> at <N> bytes (warn 18000, error 20000)
+```
+
+Once that number sits at least 2000 bytes under `SKILL_BODY_BUDGET_WARN`, lower
+`SKILL_BODY_BUDGET_WARN` by 2000 in `scripts/validate.py` and ship the tightened
+threshold with the release. Target floor is 12000.
+
+Two rules, both learned the hard way:
+
+- **Never lower a threshold in the same change that something violates it.** Split
+  the offending skill into `SKILL.md` + `reference/` first, prove it with
+  `python3 scripts/check_split.py <skill> --before <pre-split SKILL.md>`, then
+  tighten in a follow-up.
+- **Never raise a threshold to make a red build green.** A body over budget means
+  detail that belongs in `reference/` is loading on every trigger match, including
+  the accidental ones. Raising the number hides the cost, it does not remove it.
+
+If the largest body has not moved since the previous release, leave the threshold
+alone and say so in the release notes. A ratchet that never advances is honest;
+one that advances past reality is not.
+
 ---
 
 ## Phase 3: Write CHANGELOG Entry
@@ -8855,7 +8898,7 @@ Three tiers determine how to approach a task:
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 32 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 30 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
 | Knowledge | `user-invocable: false` | Claude auto-loads | 46 |
 
 ## Multi-Agent Execution

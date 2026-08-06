@@ -1,34 +1,38 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 108 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude Code, Claude Chat/Cowork, Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode.
+> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 109 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude Code, Claude Chat/Cowork, Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-108-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1486%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1508%20passing-success)](tests/)
 
-## What's New in v4.21.0
+## What's New in v4.22.0
 
-v4.21.0 makes the KB taxonomy one list instead of three, and teaches
-`validate.py` to enforce it.
+v4.22.0 turns compatibility promises into tests, and makes two validator skills
+actually run the scanners they ship.
 
-- **The taxonomy is eight categories**: `reference`, `howto`, `procedures`,
-  `troubleshooting`, `best-practices`, `decisions`, `runbooks`, `planning`.
-  `decisions` and `runbooks` were missing while the `kb-migration` SOP had been
-  telling people to create those directories for months — a correctly-filed ADR
-  failed validation.
-- **The `documentation-standards` skill no longer contradicts itself.** Its
-  frontmatter said "5-category", its table listed five, and a line below named
-  six. Author and validator disagreed, and only the validator got a vote.
-- **`section:` is documented as a legacy alias for `category:`**, and
-  `validate.py` rejects a document carrying both with different values — that
-  document is indexed twice and found once.
-- **A document's category must name its directory**, checked only for
-  directories that are category names: `kb/history/completed/` is a lifecycle
-  location, not a type, and a finished plan filed there is still `planning`.
-- **`procedures` and `runbooks` stopped describing each other.** A procedure is
-  followed by a person; a runbook is run against a live system.
+- **The public surface is checked, not documented.** `app/surface.json` pins 275
+  entries — skills, agents, frontmatter fields, CLI commands, hook scripts and
+  events, KB categories, plugin packs. Removing any of them fails `npm test`.
+  Adding is free: a surface nobody has installed has no users to break.
+  `BACKWARD_COMPATIBILITY.md` says which surfaces are load-bearing and how to
+  deprecate one properly.
+- **`a11y-validate` and `seo-validate` shipped scanners that nothing invoked.**
+  1,196 lines of working Python sat on disk while the model was told to grep the
+  pattern tables by hand. Both now run their script for a deterministic baseline,
+  then take an explicit manual pass — with a measured coverage table saying which
+  criteria the script handles and which are yours.
+- **`/brainstorm`** — the first planning skill allowed to conclude "do not build
+  this". Every other one produces an artifact; a pipeline that cannot say no is a
+  yes-machine.
+- **Skill bodies have a budget.** Error above 20,000 bytes, warn above 18,000,
+  headroom printed every run. Three validator skills were split into
+  `reference/`, taking 47 KB off the hot path, with `scripts/check_split.py`
+  proving nothing was lost.
+- **Four skills invoked their scripts through a path that never resolved.**
+  `$(dirname "$0")` expands to the shell's directory, not the skill's.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -60,7 +64,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 108 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 109 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 **Windows:** WSL is the recommended runtime. Native Windows works when Git Bash is available for hook scripts; dependency hints cover `winget`, Chocolatey, and Scoop. See [Windows Support](kb/reference/windows-support.md).
 
@@ -149,7 +153,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Component | Count | Description |
 |-----------|-------|-------------|
 | `skills/` (task) | 32 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/mcp-builder`, ... |
-| `skills/` (hybrid) | 30 | Slash commands with agent knowledge base |
+| `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
@@ -166,7 +170,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   ├── skills/          # 108 skills (task / hybrid / knowledge)
+│   ├── skills/          # 109 skills (task / hybrid / knowledge)
 │   ├── rules/           # Source rules synced into Claude/editor rule files
 │   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
 │   ├── claude-app/      # Generated Chat/Cowork plugin rules, hooks, instructions

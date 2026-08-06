@@ -7,6 +7,72 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.22.0 — the public surface is a test, not a promise (2026-08-06)
+
+### Added
+
+- **`scripts/surface_manifest.py` + `app/surface.json`** — 275 entries of public
+  surface (skills, agents, frontmatter fields, CLI commands, hook scripts and
+  events, KB categories, plugin packs) snapshotted and checked in `npm test`.
+  Removing any of them fails the build; adding is free, because a surface nobody
+  has installed has no users to break. The manifest is deliberately not
+  auto-regenerated — if it were, deleting a skill would delete its entry in the
+  same breath and the check would prove nothing.
+- **`BACKWARD_COMPATIBILITY.md`** — which surfaces are load-bearing, what may
+  change freely, and the deprecation path when a break is unavoidable.
+- **`DECISIONS.md`** — why things are the way they are, including what was
+  rejected and what may yet turn out to be ceremony.
+- **`scripts/check_split.py`** — five gates proving a `SKILL.md` → `reference/`
+  refactor lost nothing: fenced code lines survive, removed prose is traceable,
+  always-loaded sections stay in the body, `description` is byte-identical, and
+  every relative link still resolves. It caught a heading corrupted inside a
+  fenced example on its first real use.
+- **`scripts/sync_badges.py`** — README count badges derived from the tree and
+  rewritten inside `generate:all`, before `validate.py --strict` reads them.
+  Hand-maintained badges broke the build three times in one session.
+- **`/brainstorm`** — the first planning skill allowed to end in "do not build
+  this". Prices the zero option as a real candidate and sends the conclusion to a
+  separate challenger agent before routing anywhere.
+- **Skill body budget in `validate.py`** — error above 20,000 bytes, warn above
+  18,000, with the current headroom printed on every run and a ratchet step in
+  the release SOP.
+- **Hook events `MessageDisplay` and `DirectoryAdded`** added to
+  `VALID_HOOK_EVENTS`. Both are documented Claude Code events; without them
+  `validate.py` rejected a user's hook on either as an invalid name.
+
+### Changed
+
+- **`a11y-validate` and `seo-validate` now run the scanners they ship.**
+  `a11y-scanner.py` (643 lines) and `seo-scanner.py` (553 lines) were on disk and
+  invoked by nothing — the model was told to grep the pattern tables by hand.
+  Both skills now run their script for a deterministic baseline, then take an
+  explicit manual pass, with a measured coverage table in the body saying which
+  part is which. `a11y-scanner.py` covers 13 of ~50 documented WCAG success
+  criteria; `seo-scanner.py` covers 8 of 10 categories and none of category 7
+  (Rendering & Crawlability) or 10 (Topical Authority).
+- **Review severity is one four-tier scale.** `/review` asked for
+  `Critical/Major/Minor/Nit` while the `code-reviewer` agent it delegates to
+  reported `CRITICAL/HIGH/MEDIUM/LOW/INFO`. The agent won at runtime, so the
+  skill never received the format it specified. Both now use
+  `blocker/major/minor/nit` with a mechanical verdict rule, and severity (impact)
+  is explicitly separated from confidence (certainty).
+- **`/review`, `/ci` and `/debug` collect every failing signal before judging**
+  instead of stopping at the first red one.
+- **Three validator skills split into `reference/`**: `hipaa-validate`
+  23,905 → 10,433 B, `a11y-validate` 25,306 → 13,269 B, `seo-validate`
+  35,066 → 13,430 B. 47 KB off the hot path.
+- **`a11y-validate` and `seo-validate` gained `## Gotchas` and
+  `## When NOT to Use`**, written from the traps the scanner wiring introduced.
+
+### Fixed
+
+- **Four skills invoked their scripts through a path that never resolved.**
+  `debug`, `fix`, `pr` and `hipaa-validate` used `$(dirname "$0")`, which expands
+  to the shell's directory, not the skill's. All four now use
+  `${CLAUDE_SKILL_DIR}`, matching the other 14.
+
+---
+
 ## v4.21.0 — one KB taxonomy, in one place (2026-07-28)
 
 ### Fixed

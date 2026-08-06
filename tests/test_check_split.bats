@@ -197,8 +197,76 @@ assert d['ok'] is False, d['ok']
 assert d['skill'] == 'demo', d['skill']
 assert d['gates']['A_code_preservation']['code_lines_lost'] == 1, d['gates']['A_code_preservation']
 assert d['gates']['D_description_stable']['status'] == 'pass', d['gates']['D_description_stable']
+assert d['gates']['E_link_integrity']['status'] == 'pass', d['gates']['E_link_integrity']
 print('OK')
 " | grep -q OK
+}
+
+@test "gate E fails on a relative link that does not resolve from its own file" {
+    local root
+    root="$(_fixture)"
+    # The classic split casualty: a path that was correct in the body and is wrong
+    # one directory down. validate.py never looks inside reference/, so only this
+    # gate sees it.
+    printf '# Steps\n\nSee [reference/other.md](reference/other.md)\n\n```bash\npython3 scripts/thing.py --flag\necho "second command"\n```\n' \
+        > "$root/app/skills/demo/reference/steps.md"
+    run python3 "$CHECK_SPLIT" demo --toolkit-dir "$root" --before "$root/demo.before"
+    rm -rf "$root"
+
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q "BROKEN: steps.md -> reference/other.md"
+    echo "$output" | grep -q "SPLIT GATE FAILED"
+}
+
+@test "gate E resolves a link that points at a sibling reference file" {
+    local root
+    root="$(_fixture)"
+    printf '# Other\n\nnothing here\n' > "$root/app/skills/demo/reference/other.md"
+    printf '# Steps\n\nSee [other.md](other.md) and [anchored](other.md#section)\n\n```bash\npython3 scripts/thing.py --flag\necho "second command"\n```\n' \
+        > "$root/app/skills/demo/reference/steps.md"
+    run python3 "$CHECK_SPLIT" demo --toolkit-dir "$root" --before "$root/demo.before"
+    rm -rf "$root"
+
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "relative links resolve"
+}
+
+@test "gate E ignores fenced examples, inline-code regexes, URLs and anchors" {
+    local root
+    root="$(_fixture)"
+    {
+        printf '# Steps\n\n'
+        printf 'External [docs](https://example.com/missing.md) and an [anchor](#somewhere).\n\n'
+        # A regex in inline code that reads as a link to a naive matcher.
+        printf 'Grep: `type=["'"'"']password["'"'"'](?!.*autocomplete)`\n\n'
+        printf '```markdown\nSample only: [not-a-real-file.md](not-a-real-file.md)\n```\n\n'
+        printf '```bash\npython3 scripts/thing.py --flag\necho "second command"\n```\n'
+    } > "$root/app/skills/demo/reference/steps.md"
+    run python3 "$CHECK_SPLIT" demo --toolkit-dir "$root" --before "$root/demo.before"
+    rm -rf "$root"
+
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "SPLIT GATE PASSED"
+}
+
+@test "every shipped skill has resolvable relative links" {
+    # Regression guard for the whole tree, not just a skill under refactor.
+    run python3 - "$TOOLKIT_DIR" <<'PY'
+import importlib.util, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("cs", root / "scripts" / "check_split.py")
+cs = importlib.util.module_from_spec(spec); spec.loader.exec_module(cs)
+broken = []
+for d in sorted((root / "app" / "skills").iterdir()):
+    if not d.is_dir() or d.name.startswith("_") or not (d / "SKILL.md").is_file():
+        continue
+    _, body = cs.split_frontmatter((d / "SKILL.md").read_text(encoding="utf-8"))
+    for entry in cs.gate_e_links(d, body)["broken"]:
+        broken.append(f"{d.name}: {entry}")
+print("\n".join(broken) if broken else "OK")
+PY
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "^OK$"
 }
 
 @test "check_split exits 2 when no content source is given" {

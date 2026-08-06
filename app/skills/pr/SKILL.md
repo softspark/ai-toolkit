@@ -28,7 +28,7 @@ Create a GitHub pull request.
 Generate a structured PR summary from the commit history before writing the PR description:
 
 ```bash
-python3 "$(dirname "$0")/scripts/pr-summary.py" [base_branch]
+python3 ${CLAUDE_SKILL_DIR}/scripts/pr-summary.py [base_branch]
 # Default base branch: main
 # Example: python3 scripts/pr-summary.py develop
 ```

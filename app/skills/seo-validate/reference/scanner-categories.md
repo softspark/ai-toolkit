@@ -1,0 +1,304 @@
+# SEO Scanner Categories
+
+### Category 1: HTML Semantics & W3C
+
+Scan HTML/JSX/Vue/Svelte/Astro templates for W3C HTML5 compliance.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| `<html>` without `lang` attribute | HIGH | definitive | HTML5 §3.2.6 — `lang` required for SEO + a11y |
+| Missing `<meta charset="utf-8">` in `<head>` | HIGH | definitive | HTML5 §4.2.5.5 — required first |
+| Missing `<meta name="viewport">` | HIGH | definitive | Mobile-first indexing requires viewport |
+| Multiple `<h1>` per page/route component | WARN | heuristic | One H1 per document is standard SEO practice |
+| No `<h1>` in page component | WARN | heuristic | Every indexable page should have H1 |
+| Heading level skip (h1 → h3) | WARN | heuristic | Document outline breaks assistive tech + crawlers |
+| Missing landmarks (`<main>`, `<nav>`, `<header>`, `<footer>`) | WARN | heuristic | Semantic HTML aids both a11y and crawlers |
+| Missing `<!DOCTYPE html>` | HIGH | definitive | Triggers quirks mode in older browsers |
+
+See: [w3c-guidelines.md](w3c-guidelines.md)
+
+---
+
+### Category 2: Meta & Open Graph
+
+Check `<head>` composition in entry HTML, framework metadata exports, and route-level metadata.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| Missing `<title>` / framework title | HIGH | definitive | Required for SERP display |
+| `<title>` >60 chars OR <10 chars | WARN | definitive | Recommended 50–60 char range |
+| Missing `<meta name="description">` | HIGH | definitive | Required for SERP snippets |
+| Description >160 chars OR <50 chars | WARN | definitive | Recommended 150–160 char range |
+| Missing `<link rel="canonical">` on indexable pages | HIGH | definitive | Prevents duplicate-content dilution |
+| `<meta name="robots" content="noindex">` on production route | WARN | heuristic | Confirm intentional — blocks indexing |
+| Missing OG tags: `og:title`, `og:description`, `og:image`, `og:url`, `og:type` | WARN | definitive | Required for rich social cards |
+| Missing Twitter Card (`twitter:card`) | WARN | definitive | Required for Twitter/X rich previews |
+| OG image without absolute URL | WARN | definitive | OG spec requires absolute URLs |
+
+**Framework adapters**:
+- **Next.js App Router**: look for `export const metadata = { ... }` or `generateMetadata()` in `layout.tsx`/`page.tsx`.
+- **Next.js Pages Router**: look for `<Head>` from `next/head`.
+- **Nuxt**: look for `useHead()` / `definePageMeta({ title, ... })`.
+- **Astro**: look for `<BaseHead>` component or direct `<meta>` in layout.
+- **Gatsby**: look for `<Helmet>` from `react-helmet`.
+- **SvelteKit**: look for `<svelte:head>` blocks.
+- **SPAs (Vue/Vite/CRA/Angular)**: look for `react-helmet-async`, `vue-meta`, `@angular/platform-browser`'s `Meta`/`Title` services. Flag runtime-only meta as a rendering-crawlability issue (Category 7).
+
+---
+
+### Category 3: Structured Data / Schema.org
+
+Scan for JSON-LD (`<script type="application/ld+json">`) presence and correctness on key page types.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| No JSON-LD on article/blog route | WARN | heuristic | `Article` schema improves rich results |
+| JSON-LD missing `@context` | HIGH | definitive | Must be `https://schema.org` |
+| JSON-LD missing `@type` | HIGH | definitive | Type declaration is required |
+| `Article` missing `headline` / `author` / `datePublished` | WARN | definitive | Required properties per schema.org |
+| `FAQPage` missing `mainEntity` array | WARN | definitive | FAQ rich result needs Q&A pairs |
+| `BreadcrumbList` missing `itemListElement` | WARN | definitive | Breadcrumb rich result needs list |
+| `Organization` missing `name` / `url` / `logo` | WARN | definitive | Knowledge Graph signals |
+| `Product` missing `name` / `offers` / `aggregateRating` | WARN | definitive | Product rich results |
+| `LocalBusiness` missing `address` / `telephone` / `openingHours` | WARN | definitive | Local SEO signals |
+
+See: [schema-types.md](schema-types.md) for required-property matrix.
+
+---
+
+### Category 4: Hreflang & i18n
+
+Scan all locale variants for hreflang correctness.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| Hreflang pair not bidirectional (A→B but not B→A) | HIGH | definitive | Google ignores unidirectional hreflang |
+| Missing `hreflang="x-default"` | WARN | definitive | Fallback required for unmatched locales |
+| Missing self-referencing hreflang tag | WARN | definitive | Each version must reference itself |
+| Invalid BCP 47 code (e.g., `en_US` instead of `en-US`) | HIGH | definitive | RFC 5646 requires hyphen-separated subtags |
+| Unknown language code (not ISO 639-1) | HIGH | definitive | Invalid language subtag |
+| Unknown region code (not ISO 3166-1 alpha-2) | HIGH | definitive | Invalid region subtag |
+| Hreflang points to URL returning canonical to different URL | WARN | heuristic | Canonical must match hreflang target |
+
+---
+
+### Category 5: Core Web Vitals (Static Signals)
+
+Detect code patterns that cause CWV regressions. Covers LCP, INP, CLS, resource hints, and above-the-fold optimization.
+
+#### 5a. LCP (Largest Contentful Paint, target <2.5s)
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| `<img>` without `width`/`height` attributes | HIGH | definitive | Causes CLS + delays LCP |
+| Above-the-fold `<img>` without `fetchpriority="high"` (or framework equivalent) | HIGH | heuristic | LCP image must be prioritized |
+| Above-the-fold `<img loading="lazy">` | HIGH | definitive | Actively harmful — delays LCP |
+| `@font-face` without `font-display` | HIGH | definitive | Blocks text paint |
+| Missing `<link rel="preload" as="image">` for known hero image | WARN | heuristic | Preload accelerates LCP |
+| Missing `<link rel="preload" as="font" crossorigin>` for self-hosted webfonts | WARN | heuristic | Fonts are a common LCP blocker |
+| Missing `<link rel="preconnect">` for 3rd-party font/image/CDN origins on critical path | WARN | heuristic | Saves ~100–300ms per origin |
+| Render-blocking `<link rel="stylesheet">` without `media` split or critical-inline | WARN | heuristic | Blocks first paint |
+| Responsive image: `<img>` >600px without `srcset`+`sizes` or `<picture>` | WARN | heuristic | Over-fetches on mobile |
+| **Next.js**: `<img>` used instead of `next/image` in route component | WARN | definitive | Misses automatic optimization |
+| **Next.js**: `next/image` without `priority` on detected LCP element | HIGH | heuristic | LCP will under-perform |
+| **Nuxt**: `<img>` instead of `<NuxtImg>`/`<NuxtPicture>` | WARN | definitive | Misses auto-optimization |
+| **Astro**: `<img>` instead of `<Image>` from `astro:assets` | WARN | definitive | Misses auto-optimization |
+| **Gatsby**: `<img>` instead of `GatsbyImage` | WARN | definitive | Misses auto-optimization |
+
+#### 5b. INP (Interaction to Next Paint, target <200ms)
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| `<script>` in `<head>` without `async`/`defer` | HIGH | definitive | Render-blocking |
+| Third-party analytics/chat/ads without `async`/`defer` or framework lazy strategy | WARN | definitive | Blocks main thread |
+| `document.write` usage | HIGH | definitive | Blocks parser; disabled by modern browsers |
+| Heavy top-level `useEffect(() => {...}, [])` (many sync calls) | WARN | heuristic | Long tasks delay INP |
+| Client bundle estimated >300KB gzipped gating interaction | WARN | heuristic | Excessive JS delays hydration + INP |
+| **Next.js**: `<Script>` without `strategy` prop on non-critical scripts | WARN | definitive | Defaults to `afterInteractive` — often not optimal |
+| Missing `fetchpriority="low"` on deferrable below-the-fold resources | INFO | heuristic | Helps browser prioritize LCP |
+
+#### 5c. CLS (Cumulative Layout Shift, target <0.1)
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| Images without `width`/`height` or `aspect-ratio` CSS | HIGH | definitive | Primary CLS cause |
+| Iframes (YouTube/maps/ads) without dimensions or aspect-ratio | HIGH | definitive | Embeds shift layout |
+| Dynamically injected ads/embeds without reserved placeholder space | WARN | heuristic | Shifts layout on load |
+| `@font-face` without `font-display: swap`/`optional` | WARN | definitive | FOIT/FOUT shifts |
+| SSR hydration mismatch: `typeof window` branches rendering different content | WARN | heuristic | Hydration-triggered shift |
+| Skeleton → content of different height | WARN | heuristic | Load-state shift |
+
+#### 5d. Resource Hints & Route Prefetching
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| `<link rel="preload">` for non-critical resource | WARN | heuristic | Wastes bandwidth + contention |
+| Next-route not prefetched when framework supports it (Next `<Link>`, Nuxt `<NuxtLink>`, SvelteKit `data-sveltekit-preload-data`) | INFO | heuristic | Hurts soft-navigation UX |
+| External origin referenced in critical path without `<link rel="preconnect">` | WARN | definitive | Adds 100–300ms per origin |
+| Less-critical external origin without `<link rel="dns-prefetch">` | INFO | heuristic | Lightweight fallback |
+| ESM chunks on critical path without `<link rel="modulepreload">` | INFO | heuristic | Helps browser parse ahead |
+| `<link rel="preload">` appears AFTER resource that uses it in document order | WARN | heuristic | Preload must come first to help |
+| >6 `<link rel="preload">` directives on one page | WARN | heuristic | Over-hinting — browsers throttle |
+
+#### 5e. Above-the-Fold Heuristic
+
+"Above-the-fold" candidates (confidence: heuristic):
+- First `<img>` / `<Image>` / `<NuxtImg>` / `<Image from 'astro:assets'>` / `GatsbyImage` inside a page/route component.
+- First child of `<main>` or `<section>`.
+- Components named `Hero`, `Banner`, `Masthead`, `Jumbotron`, `HeroSection`, `CoverImage`.
+- Images inside `<header>` that appear before any scroll-margin content.
+
+Rules for ATF elements:
+- MUST have explicit `width` + `height`.
+- MUST have high priority (`fetchpriority="high"` or `priority` prop).
+- MUST NOT have `loading="lazy"`.
+- SHOULD have a matching `<link rel="preload">` entry.
+
+Rules for below-the-fold:
+- SHOULD have `loading="lazy"` + `decoding="async"`.
+- MAY have `fetchpriority="low"`.
+
+See: [core-web-vitals.md](core-web-vitals.md)
+
+---
+
+### Category 6: GEO (Generative Engine Optimization)
+
+Content structure for AI answer engines (ChatGPT, Perplexity, Google AI Overviews, Bing Copilot, Google AI Mode). **Most findings here are severity `INFO` or `WARN`** — guidance based on measured citation patterns, not penalty-causing.
+
+Google's retrieval stage splits content into chunks of ≤500 tokens (~375 words). Each section must be a self-contained answer unit. See [ai-pipeline.md](ai-pipeline.md) for the full 4-stage pipeline and 7 ranking signals. See [content-citability.md](content-citability.md) for chunk anatomy, semantic triples, and hedging patterns.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| No `FAQPage` schema on FAQ-style content | INFO | heuristic | Highly extractable by LLMs |
+| No `speakable` schema on summary content | INFO | heuristic | Voice/audio answer engines |
+| H2 section body exceeds ~375 words without an H3 sub-heading | WARN | heuristic | Exceeds single chunk boundary (~500 tokens); AI cannot extract cleanly — split with H3 |
+| First paragraph under a heading exceeds 60 words before a concrete fact, number, or direct recommendation | INFO | heuristic | AI extracts first 2–3 sentences as the answer; preamble displaces the answer |
+| Hedging language in recommendation or product context: "may be", "might be", "could be", "worth considering", "for many", "for most people" | INFO | heuristic | AI skips hedged claims; Jetstream signal rewards declarative recommendations (see [content-citability.md](content-citability.md)) |
+| No decision framework ("if X → choose Y" / "for X, use Y") in guide or category content | INFO | heuristic | Decision frameworks are the most-cited AI construction; covers Jetstream cross-attention signal |
+| No contrast or comparison ("X vs Y", "unlike X", "in contrast to X") in content with comparative headings | INFO | heuristic | Jetstream directly rewards explicit contrasts; absence reduces AI citation probability |
+| No negative definition ("not recommended for", "not suitable for", "avoid if") on product or category pages | INFO | heuristic | Covers AI exclusion sub-queries ("which product is not for stomach sleepers?") |
+| Author name uses generic placeholder: "Admin", "Team", "Staff", "Editor", or no author at all | WARN | heuristic | E-E-A-T Experience signal requires a real named author; generic names suppressed by Google Bury Rules |
+| Author block contains fewer than 30 words of bio text near the author name | INFO | heuristic | LLM answer engines use author credentials as an authority signal; stub bios do not qualify |
+| Article `dateModified` (JSON-LD or `<time>`) is older than 13 weeks with no visible update notice | WARN | heuristic | 50% of top AI-cited content updated within 13 weeks (Blyskall, 40M AI Overviews study); stale content drops from citation pools |
+| Missing explicit citation/source markup (`<cite>`, author bylines) | INFO | heuristic | LLM answer engines prefer attributable sources |
+| No `<q>` or quote schema on quoted content | INFO | heuristic | Aids AI extraction |
+| No Q&A structure on how-to content | INFO | heuristic | LLMs favor structured Q&A |
+| Heavy reliance on `<div>` over semantic HTML | INFO | heuristic | Semantic HTML improves AI parsing |
+| Key facts hidden behind JS interactions (tabs, accordions) | INFO | heuristic | LLMs see initial DOM only |
+
+See: [geo-guidelines.md](geo-guidelines.md), [content-citability.md](content-citability.md), [ai-pipeline.md](ai-pipeline.md)
+
+---
+
+### Category 7: Rendering Mode & SPA/CSR/SSG Crawlability ⭐
+
+**The most critical category for JS apps.** A CSR-only app with no prerendering is effectively invisible to most crawlers.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| Entry HTML contains only mount point (`<div id="root">` or `<div id="app">`) with no prerendered content, and no SSR/SSG configured | HIGH | definitive | Crawlers see empty page |
+| Meta/title set only in JS runtime (react-helmet-async, vue-meta, `document.title = ...`) with no SSR/SSG fallback | HIGH | definitive | Public routes won't have crawlable meta |
+| `HashRouter` / hash-based routing (`/#/about`) on public routes | HIGH | definitive | Google ignores fragments for indexing |
+| CSR app without `<noscript>` fallback containing meaningful content | WARN | heuristic | Minimum no-JS signal for crawlers |
+| **Next.js**: `'use client'` at top of every page/layout forcing CSR | WARN | heuristic | Defeats SSR/SSG benefits |
+| **Next.js**: Content page missing `generateMetadata` / static `metadata` export | WARN | heuristic | No crawlable metadata |
+| **Next.js**: `dynamic(..., { ssr: false })` wrapping LCP / above-the-fold content | HIGH | definitive | Blocks both SSR and LCP |
+| **Nuxt**: `ssr: false` in config or route with public content | WARN | heuristic | Disables SSR intentionally |
+| **Astro**: `client:only` on hero/content components | WARN | heuristic | Component not prerendered |
+| **SvelteKit**: `export const ssr = false` on public route | WARN | heuristic | Disables SSR |
+| **Gatsby**: route excluded from prerender (`gatsby-plugin-exclude`) | WARN | heuristic | Verify intent |
+| **Angular SPA**: project uses `@angular/core` without `@angular/ssr` or `@nguniversal/*` | HIGH | definitive | Default Angular is CSR-only |
+| **Vue SPA / React SPA / CRA / Vite-SPA**: no prerender plugin detected (no `vite-plugin-ssr`, `react-snap`, `prerender-spa-plugin`, `vite-plugin-prerender`) | HIGH | definitive | Content invisible to crawlers |
+| `suppressHydrationWarning` overuse (>3 occurrences) | WARN | heuristic | Masks real hydration mismatches |
+| `typeof window !== 'undefined'` / `isBrowser` checks in render paths | WARN | heuristic | Often signals hydration mismatch |
+| Static `robots.txt` references dynamic routes that aren't prerendered | WARN | heuristic | Crawlers hit empty pages |
+| `prerender.io` / `rendertron` / dynamic-rendering middleware detected | INFO | definitive | Legacy pattern — Google now prefers SSR/SSG |
+
+See: [spa-ssg-patterns.md](spa-ssg-patterns.md)
+
+---
+
+### Category 8: Technical SEO
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| Missing `robots.txt` | HIGH | definitive | Blocks crawler directives + sitemap reference |
+| `robots.txt` contains `Disallow: /` in production build | HIGH | definitive | Blocks entire site |
+| Missing `sitemap.xml` / framework sitemap generator | HIGH | definitive | Slows discovery |
+| `robots.txt` missing `Sitemap:` directive | WARN | definitive | Crawlers may not find sitemap |
+| Canonical URLs inconsistent with actual deployed URLs | WARN | heuristic | Dilutes link equity |
+| Canonical URL includes query params on parametrized pages (e.g., `?q=`, `?page=`, `?sort=`) | HIGH | heuristic | Canonical must point to clean base URL, not parametrized variant — else each query variant is a duplicate |
+| Site has search feature (detected: `<input type="search">`, `<form action="/search">`, route `/search`, `?q=` / `?query=` / `?s=` / `?search=`) but `robots.txt` does NOT `Disallow` the search URL pattern | HIGH | heuristic | Parametrized search URLs create unlimited duplicate-content pages — crawl budget waste + index bloat |
+| Site has faceted navigation (filters, sort params, pagination like `?filter=`, `?sort=`, `?page=`, `?color=`) without `robots.txt` Disallow rules OR parameter-handling via canonical | WARN | heuristic | Faceted URLs multiply indexable variants exponentially |
+| Search result page (SRP) missing `<meta name="robots" content="noindex, follow">` | HIGH | heuristic | SRPs are thin/duplicate content per Google Search Essentials; indexing wastes crawl budget |
+| Search result page missing self-referencing canonical OR canonical with dynamic query in it | WARN | heuristic | SRP should either canonical to clean `/search` or be noindexed entirely |
+| Parametrized URLs (tracking: `utm_*`, `gclid`, `fbclid`, `ref=`) served without canonical to clean URL | HIGH | heuristic | Tracking params create duplicate URLs — canonical must strip them |
+| Trailing-slash inconsistency (some pages `/about/`, some `/about`) | WARN | heuristic | Duplicate-content risk |
+| HTTPS not enforced (hardcoded `http://` internal links) | WARN | definitive | Mixed-content + security |
+| No 404 page / no custom `not-found` route | WARN | heuristic | Default 404s hurt UX |
+| Meta `robots: noindex,nofollow` on indexable production routes | HIGH | heuristic | Blocks indexing — verify intent |
+
+**Parameter-handling guidance**: Google deprecated the Search Console URL Parameters tool in April 2022. Today the only signals are:
+1. **Canonical tags** — every parametrized variant must `<link rel="canonical">` to the clean base URL.
+2. **`robots.txt` Disallow rules** — block crawlers from following parameter patterns entirely (`Disallow: /*?q=*`, `Disallow: /search?*`).
+3. **`noindex` meta** — allow crawl (for link discovery) but prevent indexing on SRPs and thin faceted pages.
+
+Choose ONE strategy per parameter type — mixing `Disallow` + `noindex` is contradictory (Disallow prevents crawler from ever seeing the noindex directive).
+
+**Example `robots.txt` for a site with search**:
+```
+User-agent: *
+Disallow: /search?*
+Disallow: /*?q=*
+Disallow: /*?query=*
+Disallow: /*?s=*
+Disallow: /*?utm_*
+Disallow: /*?gclid=*
+Disallow: /*?fbclid=*
+Allow: /
+
+Sitemap: https://example.com/sitemap.xml
+```
+
+**Example canonical on a parametrized page** (`/products?category=shoes&color=red&sort=price`):
+```html
+<link rel="canonical" href="https://example.com/products">
+```
+
+The canonical points to the clean page; the specific filter combination is a view, not a distinct URL.
+
+---
+
+### Category 9: Accessibility for SEO
+
+Accessibility ↔ SEO overlap. WCAG compliance improves ranking signals.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| `<img>` missing `alt` attribute | WARN | definitive | WCAG 1.1.1 + image SEO |
+| `<img alt="">` on informational image | WARN | heuristic | Empty alt only for decorative |
+| Icon-only `<button>` without `aria-label` | WARN | definitive | Screen readers + semantic crawlers |
+| Form `<input>` without associated `<label>` | WARN | definitive | WCAG 3.3.2 |
+| `<div>` used for interactive element (click handler on `<div>`) | WARN | heuristic | Should be `<button>` or `<a>` |
+| Link text is "click here" / "read more" | WARN | heuristic | Anchor text is a ranking signal |
+| `<a>` without `href` (fake link) | WARN | definitive | Not crawlable |
+
+---
+
+### Category 10: Topical Authority & Cluster Architecture
+
+Topical authority is the degree to which a domain is recognised as an expert source across an entire topic, not just individual pages. AI retrieval (Gecko Score / semantic embedding) rewards domains with deep, interlinked coverage. Classical SEO also benefits — Senuto's study of 212K phrases across 7,200 semantic groups showed topical coverage dominates top-10 rankings independently of individual technical metrics.
+
+| Pattern | Severity | Confidence | Description |
+|---------|----------|------------|-------------|
+| Long-form page (>800 words) has internal link density below 1 link per 800 characters of body text | WARN | heuristic | Google's internal linking guideline: ~1 contextual internal link per 800 chars; low density = weak cluster signal |
+| Internal link uses generic anchor text: "click here", "read more", "here", "this page", "learn more" | WARN | definitive | Anchor text is a topical signal; descriptive claim-based anchors transfer semantic context to the linked page |
+| Page >2,000 words with no outbound internal links to topically related pages | INFO | heuristic | Pillar pages must link out to cluster articles; absence breaks the pillar→cluster signal and reduces Gecko relevance |
+| Page has >500 words of indexable content with zero detected inbound internal links (orphan page) | WARN | heuristic | Orphan pages receive minimal crawl budget and no authority pass-through; every content page needs at least one inbound link |
+| Content page URL slug contains numeric IDs, UUIDs, or is purely numeric (e.g., `/post/12345`, `/p/abc-uuid`) | WARN | heuristic | Natural-language slugs (5–7 descriptive words) show +11.4% AI citation rate vs. ID-based URLs (Blyskall study) |
+| Two or more pages on the same domain target the same primary keyword in H1 and title | WARN | heuristic | Keyword cannibalization: pages compete against each other, diluting authority; consolidate into pillar + cluster |
+
+**Topical authority strategy note:** Query Fan Out means AI generates 50+ sub-queries per user question, 95% of which have zero Monthly Search Volume in any keyword tool. Covering a topic with a pillar + cluster architecture answers the full sub-query space that keyword tools cannot see. See [ai-pipeline.md](ai-pipeline.md).
+
+---

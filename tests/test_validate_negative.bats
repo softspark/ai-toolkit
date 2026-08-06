@@ -187,6 +187,40 @@ EOF
     echo "$output" | grep -qi "Missing name"
 }
 
+@test "validate.py catches a skill body over the 20000-byte budget" {
+    mkdir -p "$TEST_DIR/app/skills/fat-skill"
+    {
+        printf -- '---\nname: fat-skill\ndescription: "A skill whose body blew the budget"\n---\n'
+        # 300 x 87 bytes = 26100, comfortably over the 20000 error threshold.
+        for _ in $(seq 1 300); do
+            printf 'filler prose line that carries no information whatsoever and only exists to add bytes.\n'
+        done
+    } > "$TEST_DIR/app/skills/fat-skill/SKILL.md"
+
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "skills/fat-skill/SKILL.md: body is"
+    echo "$output" | grep -q "limit 20000"
+}
+
+@test "validate.py warns rather than errors between the warn and error budget" {
+    mkdir -p "$TEST_DIR/app/skills/chunky-skill"
+    {
+        printf -- '---\nname: chunky-skill\ndescription: "A skill just over the warn budget"\n---\n'
+        # 215 x 87 bytes = 18705: past the 18000 warn line, short of the 20000 error line.
+        for _ in $(seq 1 215); do
+            printf 'filler prose line that carries no information whatsoever and only exists to add bytes.\n'
+        done
+    } > "$TEST_DIR/app/skills/chunky-skill/SKILL.md"
+
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    # Assert the wording, not the exit code: the shared fixture carries unrelated
+    # defects, so a global exit status would not isolate this check.
+    echo "$output" | grep -q "skills/chunky-skill/SKILL.md: body is 18705 bytes (budget 18000)"
+    run bash -c "python3 '$TOOLKIT_DIR/scripts/validate.py' '$TEST_DIR' | grep 'chunky-skill' | grep -c 'limit 20000' || true"
+    [ "$output" -eq 0 ]
+}
+
 @test "validate.py catches missing depends-on reference" {
     mkdir -p "$TEST_DIR/app/skills/dep-test"
     cat > "$TEST_DIR/app/skills/dep-test/SKILL.md" <<'EOF'

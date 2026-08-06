@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.6.0"
+version: "1.6.1"
 created: "2026-03-23"
-last_updated: "2026-07-26"
+last_updated: "2026-08-06"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -207,7 +207,7 @@ Three tiers determine how to approach a task:
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 32 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 30 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
 | Knowledge | `user-invocable: false` | Claude auto-loads | 46 |
 
 ## Multi-Agent Execution

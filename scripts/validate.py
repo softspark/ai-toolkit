@@ -45,6 +45,7 @@ VALID_TOOLS = frozenset({
 VALID_HOOK_EVENTS = frozenset({
     # Core lifecycle
     "SessionStart", "SessionEnd", "UserPromptSubmit", "Notification",
+    "MessageDisplay",
     # Tool lifecycle
     "PreToolUse", "PostToolUse", "PostToolUseFailure", "PostToolBatch",
     # Turn lifecycle
@@ -60,7 +61,7 @@ VALID_HOOK_EVENTS = frozenset({
     "TaskCreated", "TaskCompleted", "TeammateIdle",
     # Worktrees & environment
     "WorktreeCreate", "WorktreeRemove",
-    "CwdChanged", "FileChanged", "ConfigChange",
+    "CwdChanged", "FileChanged", "ConfigChange", "DirectoryAdded",
     # Setup / bootstrap
     "Setup", "InstructionsLoaded",
 })
@@ -106,6 +107,19 @@ VALID_KB_CATEGORIES = frozenset({
     "reference", "howto", "procedures", "troubleshooting", "best-practices",
     "decisions", "runbooks", "planning",
 })
+
+# Skill body budget, in bytes after the frontmatter block.
+#
+# The body loads in full every time a trigger matches, including when it matches
+# by accident. Detail that only some runs need belongs in the skill's reference/
+# directory, reached from a pointer in the body.
+#
+# Ratchet: lower WARN by 2_000 each release until it reaches 12_000. Never lower a
+# threshold in the same change that something violates it — split the skill first,
+# then tighten. The step lives in kb/procedures/release-preparation-sop.md so it
+# does not rot as a comment nobody reads.
+SKILL_BODY_BUDGET_ERROR = 20_000
+SKILL_BODY_BUDGET_WARN = 18_000
 
 VALID_RULE_CATEGORIES = frozenset({
     "coding-style",
@@ -226,6 +240,22 @@ def _body_line_count(filepath: Path) -> int:
     return count
 
 
+def _body_bytes(filepath: Path) -> int:
+    """Byte size of the body — everything after the frontmatter block.
+
+    Unlike _body_line_count this anchors on the frontmatter delimiters at the top
+    of the file, so a `---` horizontal rule inside the body does not shift the
+    measurement.
+    """
+    text = filepath.read_text(encoding="utf-8")
+    lines = text.splitlines(keepends=True)
+    if lines and lines[0].strip() == "---":
+        for idx in range(1, len(lines)):
+            if lines[idx].strip() == "---":
+                return len("".join(lines[idx + 1:]).encode("utf-8"))
+    return len(text.encode("utf-8"))
+
+
 def _body_nonblank_count(filepath: Path) -> int:
     """Count non-blank lines after the second --- delimiter."""
     count = 0
@@ -332,6 +362,18 @@ def _validate_skill_frontmatter(tk_dir: Path, skill_path: Path,
     if body_lines > 500:
         vr.warn(f"skills/{name}/SKILL.md: body is {body_lines} lines (recommended < 500)")
 
+    body_bytes = _body_bytes(skill_file)
+    if body_bytes > SKILL_BODY_BUDGET_ERROR:
+        vr.error(
+            f"skills/{name}/SKILL.md: body is {body_bytes} bytes "
+            f"(limit {SKILL_BODY_BUDGET_ERROR}) - move detail into reference/"
+        )
+    elif body_bytes > SKILL_BODY_BUDGET_WARN:
+        vr.warn(
+            f"skills/{name}/SKILL.md: body is {body_bytes} bytes "
+            f"(budget {SKILL_BODY_BUDGET_WARN}) - move detail into reference/"
+        )
+
     desc_value = _fm_field(fm_lines, "description")
     if len(desc_value) > 1024:
         vr.warn(f"{name} - Description exceeds 1024 characters")
@@ -384,6 +426,7 @@ def validate_skills(tk_dir: Path, vr: ValidationResult) -> int:
     print("## Skills")
     skills_dir = tk_dir / "app" / "skills"
     skill_count = 0
+    largest_body = (0, "")
 
     if not skills_dir.is_dir():
         vr.error("app/skills directory not found")
@@ -408,8 +451,15 @@ def validate_skills(tk_dir: Path, vr: ValidationResult) -> int:
         fm_lines = _parse_frontmatter_lines(skill_file)
         _validate_skill_frontmatter(tk_dir, skill_path, fm_lines, vr)
         _validate_skill_references(tk_dir, skill_path, fm_lines, vr)
+        largest_body = max(largest_body, (_body_bytes(skill_file), name))
 
     print(f"  Found: {skill_count} skills")
+    if skill_count:
+        size, worst = largest_body
+        print(
+            f"  Body budget: largest is {worst} at {size} bytes "
+            f"(warn {SKILL_BODY_BUDGET_WARN}, error {SKILL_BODY_BUDGET_ERROR})"
+        )
     print()
     return skill_count
 

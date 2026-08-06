@@ -26,7 +26,7 @@ Before entering the fix loop, classify errors to prioritize auto-fixable ones:
 
 ```bash
 # Pipe lint or test output
-ruff check . 2>&1 | python3 "$(dirname "$0")/scripts/error-classifier.py"
+ruff check . 2>&1 | python3 ${CLAUDE_SKILL_DIR}/scripts/error-classifier.py
 mypy src/ 2>&1 | python3 scripts/error-classifier.py
 npx eslint . 2>&1 | python3 scripts/error-classifier.py
 ```
