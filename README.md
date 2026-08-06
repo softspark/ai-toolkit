@@ -6,7 +6,15 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1508%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1513%20passing-success)](tests/)
+
+## What's New in v4.22.1
+
+**v4.22.1** — nine skills, not four, could not find their own scripts. v4.22.0
+grepped for one spelling of the bug and missed five more, a `.py` file run
+through `bash`, and a script that crashed on `--help`. `validate.py` now fails
+the build on the entire class, and the post-release SOP runs every skill's
+documented command from the installed copy — which is how these were found.
 
 ## What's New in v4.22.0
 

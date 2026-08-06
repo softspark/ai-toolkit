@@ -108,8 +108,22 @@ data.children.forEach(c=>render(c,document.getElementById('root')));
 </script></body></html>'''
     output.write_text(html)
 
+USAGE = """usage: visualize.py [PATH]
+
+Scan PATH (default: current directory) and write an interactive codebase map to
+codebase-map.html, then open it in the default browser.
+"""
+
 if __name__ == '__main__':
-    target = Path(sys.argv[1] if len(sys.argv) > 1 else '.').resolve()
+    if len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'):
+        print(USAGE)
+        raise SystemExit(0)
+
+    target = Path(sys.argv[1] if len(sys.argv) > 1 else '.')
+    if not target.is_dir():
+        print(f'{{"error": "Not a directory: {target}"}}')
+        raise SystemExit(1)
+    target = target.resolve()
     stats = {"files": 0, "dirs": 0, "extensions": Counter(), "ext_sizes": Counter()}
     data = scan(target, stats)
     out = Path('codebase-map.html')

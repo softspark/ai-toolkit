@@ -50,7 +50,7 @@ Deploy application to target environment.
 
 Run automated pre-deployment checks:
 ```bash
-python3 scripts/pre_deploy_check.py [environment]
+python3 ${CLAUDE_SKILL_DIR}/scripts/pre_deploy_check.py [environment]
 ```
 
 Returns JSON with pass/fail for each check:

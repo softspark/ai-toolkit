@@ -31,7 +31,7 @@ Create, run, or manage database migrations with auto-detection of the migration 
 
 Detect migration tool and report status:
 ```bash
-python3 scripts/migration-status.py [directory]
+python3 ${CLAUDE_SKILL_DIR}/scripts/migration-status.py [directory]
 ```
 
 Returns JSON with: `tool`, `config_file`, `migrations_dir`, `total_migrations`, `latest`, `commands{}` (status/create/upgrade/downgrade).

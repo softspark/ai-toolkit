@@ -99,7 +99,7 @@ It does NOT write or modify any files.
 For an interactive HTML tree visualization of the codebase:
 
 ```bash
-python ${CLAUDE_SKILL_DIR}/scripts/visualize.py .
+python3 ${CLAUDE_SKILL_DIR}/scripts/visualize.py .
 ```
 
 This generates `codebase-map.html` with collapsible directories, file sizes, and type-colored indicators.

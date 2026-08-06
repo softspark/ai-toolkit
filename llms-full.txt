@@ -7019,10 +7019,10 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: ai-toolkit
 tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, isolation]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-07-26"
-last_updated: "2026-07-26"
-description: "Smoke-test a published @softspark/ai-toolkit release from npm in an isolated HOME and npm prefix, without touching the maintainer's real install. Covers provenance, CLI, doctor, and the full plugin-pack lifecycle including the degraded-install path. Written for v4.18.0 and not run; v4.18.0 shipped a pack that broke every command it touched, and every step here would have caught it."
+last_updated: "2026-08-06"
+description: "Smoke-test a published @softspark/ai-toolkit release from npm in an isolated HOME and npm prefix, without touching the maintainer's real install. Covers provenance, CLI, doctor, per-skill script resolution, scanner wiring, and the full plugin-pack lifecycle including the degraded-install path. Written for v4.18.0 and not run; v4.18.0 shipped a pack that broke every command it touched. First actually run on v4.22.0, which added Phases 4b and 4c after that release fixed four skills whose documented script path had never resolved and two that shipped a scanner nothing invoked."
 ---
 
 # SOP: Post-Release Testing
@@ -7107,6 +7107,95 @@ npm install -g --prefix "$SB/npm" "@softspark/ai-toolkit@${VERSION}"
 **A doctor run before `install` reports `agents directory missing` and
 `skills directory missing`.** That is the sandbox being empty, not a defect.
 Install first, then judge doctor.
+
+## Phase 4b: Skill scripts resolve and run from the installed copy
+
+23 skills ship an executable script under `scripts/`. A skill body invokes it
+through `${CLAUDE_SKILL_DIR}`, which only resolves once the skill is installed —
+so a wrong path is invisible in the working tree and invisible to `validate.py`,
+which checks that the file exists on disk, never that the documented command
+finds it.
+
+This is exactly how four skills shipped with `$(dirname "$0")`, which expands to
+the shell's directory rather than the skill's. Every one of them had been broken
+for as long as the line existed.
+
+Iterate over every skill that ships a script. Do not hand-pick the ones the
+release touched — the point of this phase is to catch the ones nobody remembered.
+
+```bash
+for D in "$HOME"/.claude/skills/*/; do
+  s=$(basename "$D")
+  [ -d "$D/scripts" ] || continue
+  # Match ANY interpreter and ANY extension. Narrowing this to `python3` and
+  # `.py` is how the first version of this phase reported "no invocation" for a
+  # skill that used `python`, and missed one that ran a .py file through bash.
+  ref=$(grep -ohE '(python3?|bash|sh|node) +\$\{CLAUDE_SKILL_DIR\}/scripts/[A-Za-z0-9_.-]+' "$D/SKILL.md" | head -1)
+  [ -n "$ref" ] || { printf '%-22s NO ${CLAUDE_SKILL_DIR} INVOCATION\n' "$s"; continue; }
+  interp=${ref%% *}
+  rel=${ref##*\$\{CLAUDE_SKILL_DIR\}/}
+  printf '%-22s %-10s %-26s ' "$s" "$interp" "$rel"
+  [ -f "$D/$rel" ] || { echo 'PATH DOES NOT RESOLVE'; continue; }
+  out=$(CLAUDE_SKILL_DIR="$D" timeout 20 "$interp" "$D/$rel" --help </dev/null 2>&1 | head -1)
+  printf 'rc=%s %s\n' "$?" "$(echo "$out" | cut -c1-40)"
+done
+```
+
+**Verify:**
+- [ ] Every skill with a `scripts/` directory has a documented invocation
+- [ ] Every documented path resolves to a file that exists
+- [ ] Every script exits without a traceback and without hanging
+- [ ] The interpreter matches the file: no `.py` through `bash`, no bare `python`
+
+A skill reported as `NO ${CLAUDE_SKILL_DIR} INVOCATION` is not automatically a
+defect — some ship assets rather than executables (`write-a-prd` ships `.html`,
+`.js` and `.cjs`). Read the skill before filing it. What *is* always a defect is
+an invocation that names a skill-owned script through any other path.
+
+`validate.py` now fails the build on that class (`_validate_skill_script_invocations`),
+so this phase is the second line rather than the first. Keep it: the validator
+reasons about the source, this runs the real thing.
+
+**`</dev/null` and `timeout` are not defensive padding.** Several of these
+scripts are stdin filters (`error-parser.py`, `error-classifier.py`) documented
+as `command 2>&1 | python3 …`. Probing one with `--help` and an open stdin
+blocks forever, and the run looks like a slow test rather than a hung one. A
+correct stdin filter answers an empty stdin with a JSON error and `rc=0`; a
+traceback there is a real finding.
+
+## Phase 4c: Skills that wrap a scanner actually scan
+
+For any skill whose body tells the model to run a scanner, presence of the script
+is not evidence the wiring works. Build a fixture with known defects and confirm
+the scanner reports them.
+
+```bash
+FX="$SB/fixture"; mkdir -p "$FX"
+cat > "$FX/index.html" <<'EOF'
+<!DOCTYPE html><html><head><title>t</title></head>
+<body><h1>A</h1><h3>skipped h2</h3><img src="x.png"><input type="text"><div onclick="go()">click</div></body></html>
+EOF
+printf '{"name":"fx","dependencies":{"react":"18"}}\n' > "$FX/package.json"
+
+for s in a11y-validate seo-validate hipaa-validate cve-scan; do
+  D="$HOME/.claude/skills/$s"
+  script=$(ls "$D"/scripts/*.py 2>/dev/null | head -1)
+  [ -n "$script" ] || continue
+  echo "=== $s ==="
+  CLAUDE_SKILL_DIR="$D" timeout 60 python3 "$script" "$FX" --output json </dev/null 2>&1 | head -3
+done
+```
+
+**Verify:**
+- [ ] The scanner returns findings, not an empty set — the fixture has real defects
+- [ ] Findings span more than one category, proving the whole check set ran
+- [ ] A scanner that exits non-zero on findings is doing its job, not failing
+
+`a11y-validate` and `seo-validate` shipped working scanners that **no step in
+either skill invoked** for their entire life before v4.22.0. The model was told to
+grep the pattern tables by hand instead. Nothing in the test suite noticed,
+because a script nobody calls still passes every check that asks whether it
+exists.
 
 ## Phase 5: Plugin-pack lifecycle
 
@@ -7241,9 +7330,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.13.0"
+version: "1.14.0"
 created: "2026-04-10"
-last_updated: "2026-07-27"
+last_updated: "2026-08-06"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5), the pre-push tag assertions added in v1.12.0 after v4.19.0 was tagged on the wrong commit (Phase 7), and the licensing gate added in v1.13.0 with the move to Apache-2.0 (Phase 5c)."
 ---
 
@@ -8694,9 +8783,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.6.0"
+version: "1.6.1"
 created: "2026-03-23"
-last_updated: "2026-07-26"
+last_updated: "2026-08-06"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -14554,9 +14643,9 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.4.3"
+version: "1.5.0"
 created: "2026-03-23"
-last_updated: "2026-04-12"
+last_updated: "2026-08-06"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
@@ -14569,13 +14658,13 @@ All functionality is unified under skills. Task and hybrid skills are user-invoc
 | Tier | Skills | When |
 |------|--------|------|
 | **1 — Quick single-agent** | `/debug`, `/review`, `/refactor`, `/analyze`, `/docs`, `/plan`, `/explain`, `/tdd`, `/grill-me`, `/triage-issue` | One concern, fast |
+| **1.5 — Should we build it?** | `/brainstorm` | Pre-artifact conversation; prices the zero option and may end in "do not build this" |
 | **1.5 — Product planning** | `/write-a-prd` → `/prd-to-plan` → `/prd-to-issues` | Interview-driven PRD → vertical-slice plan → GitHub issues |
 | **1.5 — Design & architecture** | `/design-an-interface`, `/architecture-audit`, `/refactor-plan`, `/ubiquitous-language`, `/qa-session` | Parallel sub-agent exploration |
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-## Task Skills (30)
-
+## Task Skills
 Task skills execute a specific action. Invoked via slash commands. `disable-model-invocation: true`.
 
 | Skill | Slash Command | Effort | Description |
@@ -14613,8 +14702,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **seo-validate** | `/seo-validate` | medium | Scan codebase for SEO issues: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Framework-aware (Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML). |
 | **mcp-builder** | `/mcp-builder` | high | Build production-grade MCP servers using the 4-phase methodology (research, implement, test, evaluate). TypeScript/Python, stdio/streamable-http. |
 
-## Hybrid Skills (32)
-
+## Hybrid Skills
 Hybrid skills combine slash-command invocation with domain knowledge that agents reference.
 
 | Skill | Slash Command | Effort | Description |
@@ -14647,6 +14735,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **mem-search** | `/mem-search` | medium | Search past coding sessions via natural language (memory-pack) |
 | **persona** | `/persona` | low | Switch engineering persona at runtime (backend-lead, frontend-lead, devops-eng, junior-dev) |
 | **council** | `/council` | high | 4-perspective decision evaluation (Advocate, Critic, Pragmatist, User-Proxy) with synthesis and confidence-rated recommendation. Tier 1, orchestrator, `context: fork`. |
+| **brainstorm** | `/brainstorm` | high | Pre-artifact conversation that prices "build nothing" as a real candidate and sends the conclusion to a separate challenger agent before routing. Six exit ramps, one of which is stop. |
 | **introspect** | `/introspect` | medium | Agent self-debugging: classify failure pattern, suggest smallest recovery action, emit structured introspection report |
 | **brand-voice** | `/brand-voice` | medium | Anti-trope list, voice principles, LLM rhetoric prevention; output modes (`concise` ≤60% tokens, `strict` ≤40%) governing conversational responses. |
 
@@ -14670,8 +14759,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | `application-deploy` | 3 | Deploy → smoke test → release notes |
 | `proactive-troubleshooting` | 4 | Investigate → check perf → preventive fix → docs |
 
-## Knowledge Skills - Development (15)
-
+## Knowledge Skills - Development
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **app-builder** | `skills/app-builder/` | Full-stack application architecture |
@@ -14690,8 +14778,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **design-engineering** | `skills/design-engineering/` | UI polish, animation craft, easing, transforms, accessibility |
 | **documentation-standards** | `skills/documentation-standards/` | KB document conventions, frontmatter validation, category taxonomy |
 
-## Knowledge Skills - Infrastructure (6)
-
+## Knowledge Skills - Infrastructure
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **docker-devops** | `skills/docker-devops/` | Docker, deployment, infrastructure |
@@ -14701,8 +14788,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **testing-patterns** | `skills/testing-patterns/` | Multi-language TDD: pytest, vitest, phpunit, go test, flutter |
 | **migration-patterns** | `skills/migration-patterns/` | Database migrations, API versioning, zero-downtime |
 
-## Knowledge Skills - AI/RAG (6)
-
+## Knowledge Skills - AI/RAG
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **rag-patterns** | `skills/rag-patterns/` | RAG pipelines, chunking, reranking, evaluation |
@@ -14712,8 +14798,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **content-moderation-patterns** | `skills/content-moderation-patterns/` | Two-stage moderation: pre-filter + LLM classifier; categories; thresholds |
 | **model-routing-patterns** | `skills/model-routing-patterns/` | Haiku/Sonnet/Opus routing; escalation; sub-agent delegation; fallback |
 
-## Knowledge Skills - Process (6)
-
+## Knowledge Skills - Process
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **git-mastery** | `skills/git-mastery/` | Git workflows, branching, conflict resolution |

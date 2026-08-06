@@ -187,6 +187,56 @@ EOF
     echo "$output" | grep -qi "Missing name"
 }
 
+_skill_with_script() {
+    # $1 = skill dir name, $2 = the invocation line to put in the body
+    local d="$TEST_DIR/app/skills/$1"
+    mkdir -p "$d/scripts"
+    printf 'print("hi")\n' > "$d/scripts/tool.py"
+    printf -- '---\nname: %s\ndescription: "d"\nscripts:\n  - scripts/tool.py\n---\n\n```bash\n%s\n```\n' "$1" "$2" \
+        > "$d/SKILL.md"
+}
+
+@test "validate.py catches a skill running its own script by a cwd-relative path" {
+    _skill_with_script relpath-skill 'python3 scripts/tool.py'
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "runs its own 'tool.py' via 'scripts/tool.py'"
+    echo "$output" | grep -q 'CLAUDE_SKILL_DIR'
+}
+
+@test "validate.py catches a skill running its own script by a repo-relative path" {
+    _skill_with_script repopath-skill 'python3 app/skills/repopath-skill/scripts/tool.py'
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "runs its own 'tool.py'"
+}
+
+@test "validate.py catches a .py script run through bash" {
+    _skill_with_script badinterp-skill 'bash ${CLAUDE_SKILL_DIR}/scripts/tool.py'
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "wrong interpreter for a .py file"
+}
+
+@test "validate.py warns on 'python' instead of 'python3'" {
+    _skill_with_script py2-skill 'python ${CLAUDE_SKILL_DIR}/scripts/tool.py'
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    echo "$output" | grep -q "prefer 'python3'"
+    # A warning, not an error: it degrades on some systems rather than always failing.
+    run bash -c "python3 '$TOOLKIT_DIR/scripts/validate.py' '$TEST_DIR' | grep -c \"ERROR.*py2-skill\" || true"
+    [ "$output" -eq 0 ]
+}
+
+@test "validate.py accepts the correct invocation and ignores repo-level scripts" {
+    _skill_with_script good-skill 'python3 ${CLAUDE_SKILL_DIR}/scripts/tool.py'
+    # A repo-level script the skill does not own must not be flagged.
+    printf -- '---\nname: repo-ref-skill\ndescription: "d"\n---\n\n```bash\npython3 scripts/validate.py --strict\n```\n' \
+        > "$TEST_DIR/app/skills/repo-ref-skill/SKILL.md" 2>/dev/null \
+        || { mkdir -p "$TEST_DIR/app/skills/repo-ref-skill"; printf -- '---\nname: repo-ref-skill\ndescription: "d"\n---\n\n```bash\npython3 scripts/validate.py --strict\n```\n' > "$TEST_DIR/app/skills/repo-ref-skill/SKILL.md"; }
+    run bash -c "python3 '$TOOLKIT_DIR/scripts/validate.py' '$TEST_DIR' | grep -c 'runs its own' || true"
+    [ "$output" -eq 0 ]
+}
+
 @test "validate.py catches a skill body over the 20000-byte budget" {
     mkdir -p "$TEST_DIR/app/skills/fat-skill"
     {

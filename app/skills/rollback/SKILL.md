@@ -59,7 +59,7 @@ git reset --soft <commit-sha>  # Keep changes staged
 
 Run the rollback info script to assess current state before rolling back:
 ```bash
-bash scripts/rollback_info.py
+python3 ${CLAUDE_SKILL_DIR}/scripts/rollback_info.py
 ```
 
 Returns JSON with:

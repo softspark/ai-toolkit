@@ -379,6 +379,71 @@ def _validate_skill_frontmatter(tk_dir: Path, skill_path: Path,
         vr.warn(f"{name} - Description exceeds 1024 characters")
 
 
+def _validate_skill_script_invocations(skill_path: Path, vr: ValidationResult) -> None:
+    """Every documented run of a skill-owned script must resolve after install.
+
+    A skill's own scripts live beside it and are reachable only through
+    `${CLAUDE_SKILL_DIR}`. A relative path such as `python3 scripts/foo.py`
+    resolves against the user's working directory, and a repo-relative one such
+    as `app/skills/<name>/scripts/foo.py` against a tree the user does not have.
+    Both look correct in the source and fail for every installed user.
+
+    Nine skills shipped with one of those forms before this check existed.
+    `_validate_skill_references` never caught them because it asks whether the
+    file is on disk, not whether the documented command can find it.
+
+    Only executable invocations are checked. The frontmatter `scripts:` list
+    declares ownership and is correctly relative; prose that names a script in
+    backticks runs nothing.
+    """
+    name = skill_path.name
+    scripts_dir = skill_path / "scripts"
+    if not scripts_dir.is_dir():
+        return
+    owned = {p.name for p in scripts_dir.iterdir() if p.is_file()}
+    if not owned:
+        return
+
+    skill_file = skill_path / "SKILL.md"
+    text = skill_file.read_text(encoding="utf-8")
+
+    # Skip the frontmatter block: `scripts:` entries there are declarations.
+    lines = text.splitlines()
+    start = 0
+    if lines and lines[0].strip() == "---":
+        for idx in range(1, len(lines)):
+            if lines[idx].strip() == "---":
+                start = idx + 1
+                break
+
+    interpreters = {"python3": {".py"}, "python": {".py"}, "bash": {".sh"}, "sh": {".sh"}}
+    invocation = re.compile(r"\b(python3|python|bash|sh)\s+(\S+)")
+
+    for offset, line in enumerate(lines[start:], start=start + 1):
+        for interp, target in invocation.findall(line):
+            base = target.rsplit("/", 1)[-1].strip("\"'`")
+            if base not in owned:
+                continue  # a repo-level script such as scripts/validate.py
+            if "${CLAUDE_SKILL_DIR}" not in target:
+                vr.error(
+                    f"skills/{name}/SKILL.md:{offset}: runs its own '{base}' via "
+                    f"'{target}' - use ${{CLAUDE_SKILL_DIR}}/scripts/{base}, which "
+                    f"is the only path that resolves after install"
+                )
+            suffix = base[base.rfind("."):] if "." in base else ""
+            allowed = interpreters.get(interp, set())
+            if suffix and allowed and suffix not in allowed:
+                vr.error(
+                    f"skills/{name}/SKILL.md:{offset}: runs '{base}' with "
+                    f"'{interp}' - wrong interpreter for a {suffix} file"
+                )
+            elif interp == "python":
+                vr.warn(
+                    f"skills/{name}/SKILL.md:{offset}: uses 'python' for '{base}' "
+                    f"- prefer 'python3', 'python' is absent or Python 2 on many systems"
+                )
+
+
 def _validate_skill_references(tk_dir: Path, skill_path: Path,
                                fm_lines: list[str], vr: ValidationResult) -> None:
     """Validate agent refs, depends-on, context/agent co-occurrence, and reference links."""
@@ -411,6 +476,8 @@ def _validate_skill_references(tk_dir: Path, skill_path: Path,
         vr.warn(f"{name} - Uses deprecated 'delegate-agent' field (rename to 'agent:')")
     if _fm_has(fm_lines, "run-mode"):
         vr.warn(f"{name} - Uses deprecated 'run-mode' field (rename to 'context:')")
+
+    _validate_skill_script_invocations(skill_path, vr)
 
     ref_dir = skill_path / "reference"
     if ref_dir.is_dir():

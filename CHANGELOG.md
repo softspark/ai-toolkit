@@ -7,6 +7,43 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.22.1 — nine skills, not four, could not find their own scripts (2026-08-06)
+
+v4.22.0 claimed to fix four skills whose documented script path never resolved.
+The first real run of the post-release SOP found five more, plus a wrong
+interpreter and a script that crashed on `--help`. The v4.22.0 fix had grepped
+for one spelling of the bug and missed the others.
+
+### Fixed
+
+- **Five more skills ran their own script through a path that cannot resolve
+  after install**: `brand-voice` (repo-relative `app/skills/.../measure.py`),
+  `ci`, `deploy`, `migrate` and `rollback` (cwd-relative `scripts/*.py`). Four
+  further example lines in `debug`, `fix`, `pr` and `review` had the same defect
+  in a secondary snippet while the primary invocation was already correct.
+- **`rollback` ran a Python file through `bash`.** `bash scripts/rollback_info.py`
+  was wrong twice over.
+- **`explore` used `python` rather than `python3`**, which is missing or Python 2
+  on many systems.
+- **`explore`'s `visualize.py` crashed with a traceback on `--help`**, treating
+  the flag as a directory to scan. It now prints usage, and reports a JSON error
+  with exit 1 for a path that does not exist.
+
+### Added
+
+- **`validate.py` fails the build on the whole class.**
+  `_validate_skill_script_invocations` checks every documented command that runs
+  a skill-owned script: the path must go through `${CLAUDE_SKILL_DIR}`, and the
+  interpreter must match the file. `python` instead of `python3` is a warning.
+  Repo-level scripts such as `scripts/validate.py` are correctly ignored, and the
+  frontmatter `scripts:` list stays relative because it declares rather than runs.
+- **Post-release SOP phases 4b and 4c** (`post-release-testing-sop.md` v1.1.0):
+  run every skill's documented invocation from the installed copy, and prove
+  scanner-wrapping skills actually scan a fixture with known defects. Phase 4b
+  found every defect in this release on its first run.
+
+---
+
 ## v4.22.0 — the public surface is a test, not a promise (2026-08-06)
 
 ### Added

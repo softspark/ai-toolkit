@@ -162,7 +162,7 @@ Modes change *prose*, not *data*. If you cut a fact to fit a length budget, you 
 
 ### Measurement
 
-Run `python3 app/skills/brand-voice/scripts/measure.py --fixtures tests/fixtures/output-modes/` to compare baseline vs mode tokens on the fixture set. Report shows per-fixture deltas and an aggregate ratio.
+Run `python3 ${CLAUDE_SKILL_DIR}/scripts/measure.py --fixtures tests/fixtures/output-modes/` to compare baseline vs mode tokens on the fixture set. Report shows per-fixture deltas and an aggregate ratio.
 
 ## When NOT to Load
 

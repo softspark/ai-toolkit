@@ -30,7 +30,7 @@ Generate a structured PR summary from the commit history before writing the PR d
 ```bash
 python3 ${CLAUDE_SKILL_DIR}/scripts/pr-summary.py [base_branch]
 # Default base branch: main
-# Example: python3 scripts/pr-summary.py develop
+# Example: python3 ${CLAUDE_SKILL_DIR}/scripts/pr-summary.py develop
 ```
 
 The script outputs JSON with:

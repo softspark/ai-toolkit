@@ -28,7 +28,7 @@ Pipe error output through the error parser for structured diagnosis:
 your_command 2>&1 | python3 ${CLAUDE_SKILL_DIR}/scripts/error-parser.py
 
 # Or from a log file
-cat /var/log/app/error.log | python3 scripts/error-parser.py
+cat /var/log/app/error.log | python3 ${CLAUDE_SKILL_DIR}/scripts/error-parser.py
 ```
 
 The script outputs JSON with:

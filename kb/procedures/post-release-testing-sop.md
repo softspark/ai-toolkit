@@ -3,10 +3,10 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: ai-toolkit
 tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, isolation]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-07-26"
-last_updated: "2026-07-26"
-description: "Smoke-test a published @softspark/ai-toolkit release from npm in an isolated HOME and npm prefix, without touching the maintainer's real install. Covers provenance, CLI, doctor, and the full plugin-pack lifecycle including the degraded-install path. Written for v4.18.0 and not run; v4.18.0 shipped a pack that broke every command it touched, and every step here would have caught it."
+last_updated: "2026-08-06"
+description: "Smoke-test a published @softspark/ai-toolkit release from npm in an isolated HOME and npm prefix, without touching the maintainer's real install. Covers provenance, CLI, doctor, per-skill script resolution, scanner wiring, and the full plugin-pack lifecycle including the degraded-install path. Written for v4.18.0 and not run; v4.18.0 shipped a pack that broke every command it touched. First actually run on v4.22.0, which added Phases 4b and 4c after that release fixed four skills whose documented script path had never resolved and two that shipped a scanner nothing invoked."
 ---
 
 # SOP: Post-Release Testing
@@ -91,6 +91,95 @@ npm install -g --prefix "$SB/npm" "@softspark/ai-toolkit@${VERSION}"
 **A doctor run before `install` reports `agents directory missing` and
 `skills directory missing`.** That is the sandbox being empty, not a defect.
 Install first, then judge doctor.
+
+## Phase 4b: Skill scripts resolve and run from the installed copy
+
+23 skills ship an executable script under `scripts/`. A skill body invokes it
+through `${CLAUDE_SKILL_DIR}`, which only resolves once the skill is installed —
+so a wrong path is invisible in the working tree and invisible to `validate.py`,
+which checks that the file exists on disk, never that the documented command
+finds it.
+
+This is exactly how four skills shipped with `$(dirname "$0")`, which expands to
+the shell's directory rather than the skill's. Every one of them had been broken
+for as long as the line existed.
+
+Iterate over every skill that ships a script. Do not hand-pick the ones the
+release touched — the point of this phase is to catch the ones nobody remembered.
+
+```bash
+for D in "$HOME"/.claude/skills/*/; do
+  s=$(basename "$D")
+  [ -d "$D/scripts" ] || continue
+  # Match ANY interpreter and ANY extension. Narrowing this to `python3` and
+  # `.py` is how the first version of this phase reported "no invocation" for a
+  # skill that used `python`, and missed one that ran a .py file through bash.
+  ref=$(grep -ohE '(python3?|bash|sh|node) +\$\{CLAUDE_SKILL_DIR\}/scripts/[A-Za-z0-9_.-]+' "$D/SKILL.md" | head -1)
+  [ -n "$ref" ] || { printf '%-22s NO ${CLAUDE_SKILL_DIR} INVOCATION\n' "$s"; continue; }
+  interp=${ref%% *}
+  rel=${ref##*\$\{CLAUDE_SKILL_DIR\}/}
+  printf '%-22s %-10s %-26s ' "$s" "$interp" "$rel"
+  [ -f "$D/$rel" ] || { echo 'PATH DOES NOT RESOLVE'; continue; }
+  out=$(CLAUDE_SKILL_DIR="$D" timeout 20 "$interp" "$D/$rel" --help </dev/null 2>&1 | head -1)
+  printf 'rc=%s %s\n' "$?" "$(echo "$out" | cut -c1-40)"
+done
+```
+
+**Verify:**
+- [ ] Every skill with a `scripts/` directory has a documented invocation
+- [ ] Every documented path resolves to a file that exists
+- [ ] Every script exits without a traceback and without hanging
+- [ ] The interpreter matches the file: no `.py` through `bash`, no bare `python`
+
+A skill reported as `NO ${CLAUDE_SKILL_DIR} INVOCATION` is not automatically a
+defect — some ship assets rather than executables (`write-a-prd` ships `.html`,
+`.js` and `.cjs`). Read the skill before filing it. What *is* always a defect is
+an invocation that names a skill-owned script through any other path.
+
+`validate.py` now fails the build on that class (`_validate_skill_script_invocations`),
+so this phase is the second line rather than the first. Keep it: the validator
+reasons about the source, this runs the real thing.
+
+**`</dev/null` and `timeout` are not defensive padding.** Several of these
+scripts are stdin filters (`error-parser.py`, `error-classifier.py`) documented
+as `command 2>&1 | python3 …`. Probing one with `--help` and an open stdin
+blocks forever, and the run looks like a slow test rather than a hung one. A
+correct stdin filter answers an empty stdin with a JSON error and `rc=0`; a
+traceback there is a real finding.
+
+## Phase 4c: Skills that wrap a scanner actually scan
+
+For any skill whose body tells the model to run a scanner, presence of the script
+is not evidence the wiring works. Build a fixture with known defects and confirm
+the scanner reports them.
+
+```bash
+FX="$SB/fixture"; mkdir -p "$FX"
+cat > "$FX/index.html" <<'EOF'
+<!DOCTYPE html><html><head><title>t</title></head>
+<body><h1>A</h1><h3>skipped h2</h3><img src="x.png"><input type="text"><div onclick="go()">click</div></body></html>
+EOF
+printf '{"name":"fx","dependencies":{"react":"18"}}\n' > "$FX/package.json"
+
+for s in a11y-validate seo-validate hipaa-validate cve-scan; do
+  D="$HOME/.claude/skills/$s"
+  script=$(ls "$D"/scripts/*.py 2>/dev/null | head -1)
+  [ -n "$script" ] || continue
+  echo "=== $s ==="
+  CLAUDE_SKILL_DIR="$D" timeout 60 python3 "$script" "$FX" --output json </dev/null 2>&1 | head -3
+done
+```
+
+**Verify:**
+- [ ] The scanner returns findings, not an empty set — the fixture has real defects
+- [ ] Findings span more than one category, proving the whole check set ran
+- [ ] A scanner that exits non-zero on findings is doing its job, not failing
+
+`a11y-validate` and `seo-validate` shipped working scanners that **no step in
+either skill invoked** for their entire life before v4.22.0. The model was told to
+grep the pattern tables by hand instead. Nothing in the test suite noticed,
+because a script nobody calls still passes every check that asks whether it
+exists.
 
 ## Phase 5: Plugin-pack lifecycle
 

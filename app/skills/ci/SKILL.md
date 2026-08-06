@@ -27,7 +27,7 @@ Generate, update, or troubleshoot CI/CD pipeline configuration based on project 
 
 Detect CI platform and analyze configuration:
 ```bash
-python3 scripts/ci-detect.py [directory]
+python3 ${CLAUDE_SKILL_DIR}/scripts/ci-detect.py [directory]
 ```
 
 Returns JSON with:

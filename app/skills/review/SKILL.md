@@ -43,7 +43,7 @@ Before starting manual review, run the diff analyzer script to get a structured 
 ```bash
 python3 ${CLAUDE_SKILL_DIR}/scripts/diff-analyzer.py [base_branch]
 # Default base branch: main
-# Example: python3 scripts/diff-analyzer.py develop
+# Example: python3 ${CLAUDE_SKILL_DIR}/scripts/diff-analyzer.py develop
 ```
 
 The script outputs JSON with:
