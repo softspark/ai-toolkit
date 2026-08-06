@@ -3,7 +3,7 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.6.1"
+version: "1.7.0"
 created: "2026-03-23"
 last_updated: "2026-08-06"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
@@ -50,7 +50,10 @@ ai-toolkit/
     inject_section_cli.py    # Marker-based content injection (canonical implementation)
     _common.py               # Shared helper for generators (frontmatter, agents/skills emission)
     merge-hooks.py           # JSON merge for hooks into settings.json (inject/strip modes)
-    validate.py              # Toolkit integrity check
+    validate.py              # Toolkit integrity check (+ skill body budget, script-invocation gate)
+    surface_manifest.py      # Public-surface snapshot vs app/surface.json; removals fail the build
+    check_split.py           # Split gate: proves a SKILL.md -> reference/ refactor lost nothing
+    sync_badges.py           # Derives README count badges from the tree (runs inside generate:all)
     evaluate_skills.py       # Skill quality report
     generate_agents_md.py    # Regenerates AGENTS.md
     generate_cursor_rules.py # Generates .cursorrules (sources _common.py)

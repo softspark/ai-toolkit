@@ -3,9 +3,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.3.0"
+version: "3.4.0"
 created: "2026-03-23"
-last_updated: "2026-07-14"
+last_updated: "2026-08-06"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -209,8 +209,30 @@ that runtime should receive the change.
    user-invocable: false            # knowledge skill
    ---
    ```
-2. Update `kb/reference/skills-catalog.md` and `app/ARCHITECTURE.md`
-3. Run `scripts/validate.py`
+2. If the skill ships an executable, put it in `app/skills/<skill-name>/scripts/`
+   and invoke it **only** as:
+   ```bash
+   python3 ${CLAUDE_SKILL_DIR}/scripts/<name>.py [args]
+   ```
+   `${CLAUDE_SKILL_DIR}` is the sole path that resolves once the skill is
+   installed. `scripts/<name>.py` resolves against the user's working directory,
+   `app/skills/<name>/scripts/…` against a repo they do not have, and
+   `$(dirname "$0")` against the shell's directory — all three look right in the
+   source and fail for every user. Nine skills shipped with one of them before
+   `validate.py` started failing the build on it.
+
+   Match the interpreter to the file (`python3` for `.py`, never `bash`, never
+   bare `python`). The frontmatter `scripts:` list stays relative — it declares
+   ownership rather than running anything.
+
+   Add `--help` handling. A script that treats `--help` as a positional argument
+   greets the user with a traceback, and one that reads stdin must answer an
+   empty stdin with an error rather than blocking forever.
+3. Update `kb/reference/skills-catalog.md` and `app/ARCHITECTURE.md`
+4. Run `scripts/validate.py` — it checks the invocation, the body budget, and
+   `reference/` link resolution
+5. Run `python3 scripts/surface_manifest.py` before the next release to adopt the
+   new skill into the protected surface
 
 ## Adding a New Hook
 

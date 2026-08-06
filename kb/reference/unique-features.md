@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-07-10"
+last_updated: "2026-08-06"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -108,6 +108,29 @@ The `Stop` hook runs after every response across 5 languages:
 | PHP | phpstan | phpstan |
 | Dart | dart analyze | dart analyze |
 | Go | go vet | go vet |
+
+## 5b. Repo-Integrity Gates (`validate.py` + `npm test`)
+
+Four gates that fail the build rather than documenting a rule and hoping. Each was
+added after the thing it checks had already shipped broken.
+
+| Gate | What it fails on | Why prose was not enough |
+|------|------------------|--------------------------|
+| **Public surface** (`surface_manifest.py` + `app/surface.json`) | a skill, agent, CLI command, frontmatter field, hook, KB category or pack disappearing | `BACKWARD_COMPATIBILITY.md` listed the surfaces; renaming one still left every check green |
+| **Script invocation** (`validate.py`) | a skill running its own script by any path other than `${CLAUDE_SKILL_DIR}`, or through the wrong interpreter | nine skills shipped invocations that resolved only in the repo, never on an installed machine |
+| **Skill body budget** (`validate.py`) | a `SKILL.md` body over 20,000 bytes; warns over 18,000 | the body loads on every trigger match, including accidental ones; three skills sat at 24–35 KB |
+| **Split integrity** (`check_split.py`) | a body → `reference/` refactor that lost a fenced code line, a required section, the description, or a working link | run by hand during a split; caught a heading corrupted inside a fenced example on first use |
+
+The surface check is deliberately one-directional: **removals fail, additions pass.**
+A surface nobody has installed has no users to break, and letting additions through
+silently is what stops the gate from becoming a tax people learn to bypass. The
+manifest is never auto-regenerated — if `generate:all` rewrote it, deleting a skill
+would delete its entry in the same breath and the check would prove nothing.
+
+`sync_badges.py` closes the matching hole in the other direction: README count
+badges are derived from the tree inside `generate:all`, before `validate.py --strict`
+reads them, so adding a test can no longer redden the build until someone edits a
+number by hand.
 
 ## 6. Iron Law Enforcement
 
