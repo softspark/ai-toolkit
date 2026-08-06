@@ -161,6 +161,9 @@ This distinction helps compliance officers prioritize immediate remediation (def
 
 ## Gotchas
 
+- **Check `language_detection` in the summary before trusting a zero.** Category 1, 3, 4 and 7 patterns are language-tagged and only fire for a detected language. Manifests decide first (`pyproject.toml`, `package.json`, `go.mod`, …); without one the scanner falls back to file extensions. If it reports `languages: ["any"]` with `language_detection: "none"`, the language rules never ran and `HIGH: 0` means *unscanned*, not *compliant* — the scanner prints that warning to stderr, so a run whose stderr is discarded loses it.
+- Scanning a monorepo package or a subdirectory can put you below the manifest. The extension fallback covers the common case, but a directory of `.sql`, `.yaml` or templates resolves to no language at all — scan from the level that holds the manifest.
+
 - Test fixtures and seed data often contain **synthetic** PHI that looks real (SSN-shaped IDs, formatted phone numbers, sample email addresses). Flag them but lower severity — production code handling the same patterns is the actual risk.
 - HIPAA §164.312(b) requires audit logging but does not specify a format. "Logs exist" is not evidence of compliance — the logs must capture WHO (authenticated user), WHAT (action), WHEN (timestamp), WHERE (resource), and they must be immutable (append-only or write-once storage).
 - Encryption-at-rest varies silently by storage layer. RDS auto-encrypts new volumes since 2017, but older DB snapshots may not be; S3 bucket policies can override instance-level encryption. Treat "encryption enabled" as a claim to verify with the cloud provider, not a state to trust.

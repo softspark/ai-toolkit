@@ -302,8 +302,24 @@ def context_gate(files: list[Path], keywords: list[str],
 # Language detection (Step 1)
 # ---------------------------------------------------------------------------
 
-def detect_languages(root: Path) -> set[str]:
-    """Detect project languages from manifest files."""
+def detect_languages(root: Path, files: list[Path] | None = None) -> tuple[set[str], str]:
+    """Detect project languages. Returns (languages, how_they_were_detected).
+
+    Manifest files decide when present. When none is found, fall back to the
+    extensions of the files actually being scanned.
+
+    The fallback exists because language-tagged patterns fire only when the
+    project language includes the tag, so a manifest-less directory of Python
+    scanned clean while every Python rule sat unused — and the report said
+    `HIGH: 0`, which reads as compliant rather than unscanned. Silence is the
+    worst possible output for a compliance tool. A monorepo package, a scan
+    pointed at a subdirectory, or a service whose manifest lives one level up
+    all hit this.
+
+    Manifests still win: a project that declares itself keeps exactly the
+    behaviour it had, so upgrading changes nothing for anyone who was already
+    being scanned properly.
+    """
     langs = set()
     for indicator, lang in LANGUAGE_INDICATORS.items():
         if "*" in indicator:
@@ -314,7 +330,20 @@ def detect_languages(root: Path) -> set[str]:
         else:
             if (root / indicator).exists():
                 langs.add(lang)
-    return langs or {"any"}
+    if langs:
+        return langs, "manifest"
+
+    if files:
+        ext_to_lang: dict[str, set[str]] = {}
+        for lang, exts in LANG_EXTENSIONS.items():
+            for ext in exts:
+                ext_to_lang.setdefault(ext, set()).add(lang)
+        for f in files:
+            langs |= ext_to_lang.get(f.suffix, set())
+        if langs:
+            return langs, "file extensions (no manifest found)"
+
+    return {"any"}, "none — language-tagged patterns were skipped"
 
 
 # ---------------------------------------------------------------------------
@@ -616,7 +645,8 @@ def format_text_report(findings: list[dict], mode: str,
 
 def format_json_report(findings: list[dict], mode: str,
                        phi_count: int, scanned_count: int,
-                       categories_run: list[int], languages: list[str]) -> str:
+                       categories_run: list[int], languages: list[str],
+                       language_source: str = "manifest") -> str:
     """Format findings as structured JSON for CI integration."""
     high_count = sum(1 for f in findings if f["severity"] == "HIGH")
     warn_count = sum(1 for f in findings if f["severity"] == "WARN")
@@ -628,6 +658,7 @@ def format_json_report(findings: list[dict], mode: str,
             "files_scanned": scanned_count,
             "categories_run": sorted(categories_run),
             "languages": sorted(languages),
+            "language_detection": language_source,
             "high": high_count,
             "warn": warn_count,
             "total": len(findings),
@@ -723,8 +754,9 @@ def main() -> None:
               file=sys.stderr)
         print("Consider narrowing the scan path for targeted results.", file=sys.stderr)
 
-    # Step 1: Detect languages
-    languages = detect_languages(root)
+    # Step 1: Detect languages. Categories 1-2 scan everything, so the extension
+    # fallback looks at all collected files, not just the PHI-adjacent subset.
+    languages, lang_source = detect_languages(root, all_files)
 
     # Step 2: Run categories
     findings: list[dict] = []
@@ -789,10 +821,18 @@ def main() -> None:
     if args.output == "json":
         print(format_json_report(findings, args.mode, phi_count,
                                  scanned_count, categories_run,
-                                 sorted(languages)))
+                                 sorted(languages), lang_source))
     else:
         print(format_text_report(findings, args.mode, phi_count,
                                  scanned_count, categories_run))
+        if languages == {"any"}:
+            # Never let an unscanned run read as a clean one.
+            print("\nWARNING: no project language identified "
+                  f"({lang_source}).", file=sys.stderr)
+            print("Language-tagged patterns (Python, JS/TS, Go, Java, Ruby, C#) "
+                  "did NOT run.", file=sys.stderr)
+            print("A zero-finding result here means unscanned, not compliant. "
+                  "Scan from the directory holding the manifest.", file=sys.stderr)
 
     # Exit code: non-zero if HIGH findings
     high_count = sum(1 for f in findings if f["severity"] == "HIGH")

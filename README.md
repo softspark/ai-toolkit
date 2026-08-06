@@ -6,7 +6,16 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1513%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1516%20passing-success)](tests/)
+
+## What's New in v4.23.0
+
+**v4.23.0** — `hipaa-validate` scanned a project without a manifest silently
+clean: its language-tagged patterns never ran, and the report said `HIGH: 0`.
+Zero reads as compliant. Detection now falls back to file extensions, the summary
+says how the language was decided, and an undecidable run warns that a zero means
+unscanned. Manifest-declaring projects are unaffected. Found by the post-release
+SOP, not by a user.
 
 ## What's New in v4.22.1
 

@@ -183,3 +183,62 @@ EOF
     run _scan
     echo "$output" | grep -q 'AllowAny'
 }
+
+# ── Language detection: a manifest-less project must not scan silently clean ──
+
+@test "language falls back to file extensions when no manifest exists" {
+    local d="$BATS_TEST_TMPDIR/nomanifest"
+    mkdir -p "$d"
+    # Deliberately NO pyproject.toml / requirements.txt.
+    cat > "$d/api.py" <<'EOF'
+import logging
+logger = logging.getLogger(__name__)
+def get_patient(patient_id):
+    logger.info(f"fetching patient {patient_id} ssn")
+EOF
+    run python3 "$HIPAA_SCRIPT" "$d" --output json
+    echo "$output" | python3 -c "
+import json, sys
+s = json.load(sys.stdin)['summary']
+assert 'python' in s['languages'], s['languages']
+assert s['language_detection'].startswith('file extensions'), s['language_detection']
+assert s['high'] >= 1, s
+print('OK')" | grep -q OK
+}
+
+@test "a manifest still wins over the extension fallback" {
+    local d="$BATS_TEST_TMPDIR/withmanifest"
+    _mk_python_fixture "$d"
+    cat > "$d/api.py" <<'EOF'
+import logging
+logger = logging.getLogger(__name__)
+def get_patient(patient_id):
+    logger.info(f"fetching patient {patient_id} ssn")
+EOF
+    run python3 "$HIPAA_SCRIPT" "$d" --output json
+    echo "$output" | python3 -c "
+import json, sys
+s = json.load(sys.stdin)['summary']
+assert s['language_detection'] == 'manifest', s['language_detection']
+assert s['high'] >= 1, s
+print('OK')" | grep -q OK
+}
+
+@test "an unidentifiable project reports why, instead of a silent clean run" {
+    local d="$BATS_TEST_TMPDIR/unknown"
+    mkdir -p "$d"
+    printf 'patient notes\nSELECT * FROM patient_records\n' > "$d/notes.sql"
+
+    run python3 "$HIPAA_SCRIPT" "$d" --output json
+    echo "$output" | python3 -c "
+import json, sys
+s = json.load(sys.stdin)['summary']
+assert s['languages'] == ['any'], s['languages']
+assert s['language_detection'].startswith('none'), s['language_detection']
+print('OK')" | grep -q OK
+
+    # The text report must say so on stderr — a zero here means unscanned.
+    run bash -c "python3 '$HIPAA_SCRIPT' '$d' 2>&1 >/dev/null"
+    echo "$output" | grep -q "did NOT run"
+    echo "$output" | grep -q "unscanned, not compliant"
+}

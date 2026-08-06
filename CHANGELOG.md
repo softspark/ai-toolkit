@@ -7,6 +7,35 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.23.0 — a compliance scanner that says nothing must say why (2026-08-06)
+
+### Fixed
+
+- **`hipaa-validate` scanned a manifest-less project silently clean.** Category
+  1, 3, 4 and 7 patterns are language-tagged and fire only for a detected
+  language, and detection read manifest files only. A directory of Python with
+  PHI in its loggers therefore reported `HIGH: 0` while every Python rule sat
+  unused — the worst possible output for a compliance tool, because zero reads
+  as compliant. Found by the post-release SOP on v4.22.1.
+
+  Detection now falls back to the extensions of the files being scanned when no
+  manifest is present. **Manifests still win**, so a project that already
+  declared itself keeps exactly the behaviour it had.
+
+### Changed
+
+- **The scan summary reports how the language was decided.** A new
+  `language_detection` field says `manifest`, `file extensions (no manifest
+  found)`, or `none`. When it is `none` the text report writes to stderr that
+  language-tagged patterns did not run and that a zero-finding result means
+  unscanned rather than compliant.
+
+  **Upgrade note:** a project scanned without a manifest may now report HIGH
+  findings where v4.22.x reported none. Those findings were always there. A CI
+  job gating on the exit code can start failing on real PHI exposure.
+
+---
+
 ## v4.22.1 — nine skills, not four, could not find their own scripts (2026-08-06)
 
 v4.22.0 claimed to fix four skills whose documented script path never resolved.
