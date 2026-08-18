@@ -588,3 +588,100 @@ PY
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "^OK\$"
 }
+
+# A pack dropped into the user-level plugins dir, i.e. outside the npm package.
+# AI_TOOLKIT_HOME points the toolkit's data dir at the test HOME, so the pack
+# root under test is $TEST_TMP/.softspark/ai-toolkit/plugins.
+_user_pack() {
+    local dir="$TEST_TMP/.softspark/ai-toolkit/plugins/demo-user-pack"
+    mkdir -p "$dir/agents" "$dir/skills/demo-user-skill"
+
+    cat > "$dir/plugin.json" <<'EOF'
+{
+  "name": "demo-user-pack",
+  "description": "Pack installed outside the toolkit package",
+  "version": "2.0.0",
+  "domain": "demo",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {"ai-toolkit": ">=1.0.0", "claude-code": ">=1.0.33"},
+  "includes": {"agents": ["demo-user-agent"], "skills": ["demo-user-skill"], "rules": [], "hooks": []},
+  "hook_events": {}
+}
+EOF
+    cat > "$dir/agents/demo-user-agent.md" <<'EOF'
+---
+name: demo-user-agent
+description: An agent from a user-installed pack
+tools: Read
+model: sonnet
+---
+Body.
+EOF
+    cat > "$dir/skills/demo-user-skill/SKILL.md" <<'EOF'
+---
+name: demo-user-skill
+description: "A skill from a user-installed pack"
+allowed-tools: Read
+---
+Body.
+EOF
+    echo "$dir"
+}
+
+@test "plugin list discovers a pack in the user-level plugins dir" {
+    _user_pack >/dev/null
+
+    AI_TOOLKIT_HOME="$TEST_TMP/.softspark/ai-toolkit" run $CLI plugin list
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "demo-user-pack"
+    # Core packs stay visible alongside it.
+    echo "$output" | grep -q "memory-pack"
+}
+
+@test "plugin install works from the user-level plugins dir" {
+    local dir
+    dir="$(_user_pack)"
+
+    AI_TOOLKIT_HOME="$TEST_TMP/.softspark/ai-toolkit" run $CLI plugin install --editor claude demo-user-pack
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Linked agent: demo-user-agent"
+    echo "$output" | grep -q "Linked skill: demo-user-skill"
+
+    # Both links resolve into the user dir, not into the toolkit package.
+    run readlink "$TEST_TMP/.claude/agents/demo-user-agent.md"
+    echo "$output" | grep -q "\.softspark/ai-toolkit/plugins/demo-user-pack/agents/demo-user-agent.md"
+    run readlink "$TEST_TMP/.claude/skills/demo-user-skill"
+    echo "$output" | grep -q "\.softspark/ai-toolkit/plugins/demo-user-pack/skills/demo-user-skill"
+}
+
+@test "a core pack wins a name collision with a user pack" {
+    local dir="$TEST_TMP/.softspark/ai-toolkit/plugins/memory-pack"
+    mkdir -p "$dir"
+    cat > "$dir/plugin.json" <<'EOF'
+{
+  "name": "memory-pack",
+  "description": "Shadow attempt",
+  "version": "9.9.9",
+  "domain": "demo",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {"ai-toolkit": ">=1.0.0", "claude-code": ">=1.0.33"},
+  "includes": {"agents": [], "skills": [], "rules": [], "hooks": []},
+  "hook_events": {}
+}
+EOF
+
+    AI_TOOLKIT_HOME="$TEST_TMP/.softspark/ai-toolkit" run python3 -c "
+import sys
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+import plugin
+packs = [p for p in plugin.list_available() if p['name'] == 'memory-pack']
+assert len(packs) == 1, packs
+assert packs[0]['_root'] == 'core', packs[0]['_root']
+assert packs[0]['version'] != '9.9.9', packs[0]['version']
+print('OK')
+"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "^OK\$"
+}

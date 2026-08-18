@@ -97,15 +97,26 @@ HOOK_REQUIRED_FIELDS = {
 }
 
 # The taxonomy. `app/skills/documentation-standards/SKILL.md` documents the same
-# eight and is what authors read; this set is what rejects a typo. They are one
-# list in two places, so a change belongs in both.
+# list and is what authors read; this set is what rejects a typo. rag-mcp holds
+# a third copy in `scripts/validate_kb_frontmatter.py`, which runs against
+# knowledge bases this validator never sees. They are one list in three places,
+# so a change belongs in all of them.
 #
 # `decisions` and `runbooks` were missing until v4.21.0 while the kb-migration
 # SOP had been telling people to create those directories for months, so a
 # correctly-filed ADR failed validation.
+#
+# `business` and `templates` were missing for the same reason: rag-mcp's
+# `add-new-repository-to-rag-mcp.md` mandates `kb/business/` and
+# `kb/templates/`. A directory an SOP mandates must be a category the validator
+# accepts, or the two documents contradict each other.
+#
+# `history/` and `summaries/` are deliberately absent. They are lifecycle and
+# runtime locations, not types: a finished plan under `history/completed/` is
+# still a `planning` document and declares that.
 VALID_KB_CATEGORIES = frozenset({
     "reference", "howto", "procedures", "troubleshooting", "best-practices",
-    "decisions", "runbooks", "planning",
+    "decisions", "runbooks", "planning", "business", "templates",
 })
 
 # Skill body budget, in bytes after the frontmatter block.

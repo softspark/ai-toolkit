@@ -7,6 +7,32 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.24.0 — external packs stop dying on upgrade (2026-08-18)
+
+### Added
+
+- **`~/.softspark/ai-toolkit/plugins/` is a second pack root.** Until now
+  `plugin.py` scanned exactly one directory — `app/plugins/`, inside the npm
+  package — so the only way to add a pack from its own repository was to drop it
+  in there, where the next `npm install -g @softspark/ai-toolkit` deleted it along
+  with the rest of `app/`. External packs now live in the user-owned data dir and
+  survive every upgrade. `plugin list`, `install`, `update`, `remove` and `status`
+  all see both roots; `AI_TOOLKIT_HOME` moves the user root with the data dir.
+
+  A **core pack wins a name collision**, so an external directory cannot shadow
+  shipped behaviour. Each pack dict carries `_root` (`core` or `user`) — `_source`
+  was already taken as the hook-ownership marker.
+
+  The entry may be a directory or a **symlink**, which is what gives an external
+  pack a versioned update path: point it at an npm-installed package and
+  `npm install -g <pack>@latest` rewrites the target in place, with nothing to
+  re-link. Documented in `kb/reference/plugin-pack-conventions.md`
+  (*Where Packs Live*), including the per-scope registry caveat when one package
+  in a scope is public and another private.
+
+- **Three tests.** A pack in the user root is listed, installs with both its agent
+  and skill linked back into that root, and loses a name collision to a core pack.
+
 ## v4.23.1 — a pack could ship an agent nobody installed (2026-08-18)
 
 ### Fixed

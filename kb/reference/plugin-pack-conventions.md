@@ -3,9 +3,9 @@ title: "Plugin Pack Conventions"
 category: reference
 service: ai-toolkit
 tags: [plugins, plugin-packs, conventions, manifests, hooks, policy-packs]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-03-28"
-last_updated: "2026-07-14"
+last_updated: "2026-08-18"
 description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across Claude Code and Codex runtimes."
 ---
 
@@ -13,7 +13,46 @@ description: "Conventions for experimental ai-toolkit plugin packs, policy packs
 
 ## Purpose
 
-`ai-toolkit` includes experimental plugin packs under `app/plugins/` for Claude Code and optional global Codex layering. These internal pack manifests are distinct from the official uploadable Claude app plugin built by `ai-toolkit claude-app export`.
+`ai-toolkit` includes experimental plugin packs under `app/plugins/` for Claude Code and optional global Codex layering, and discovers external packs under `~/.softspark/ai-toolkit/plugins/` (see *Where Packs Live*). These internal pack manifests are distinct from the official uploadable Claude app plugin built by `ai-toolkit claude-app export`.
+
+## Where Packs Live
+
+| Root | Owner | Survives `npm install -g @softspark/ai-toolkit` | Use for |
+|------|-------|------------------------------------------------|---------|
+| `app/plugins/<pack>/` | this repository | no — the upgrade replaces `app/` wholesale | packs shipped with the toolkit (`memory-pack`, `enterprise-pack`) |
+| `~/.softspark/ai-toolkit/plugins/<pack>/` | the user | **yes** | external / private packs maintained in their own repository |
+
+Both roots are scanned by `plugin list`, `install`, `update`, `remove` and
+`status`. A **core pack wins a name collision**, so an external directory cannot
+shadow shipped behaviour. `AI_TOOLKIT_HOME` moves the user root along with the
+rest of the toolkit data dir, which is what the test suite uses.
+
+Before v4.24.0 there was only the first root, so the only way to add an external
+pack was to drop it inside the npm package — where the next toolkit upgrade
+deleted it. That is what the user root exists to end.
+
+### Installing an external pack
+
+The entry may be a directory **or a symlink**, which is what gives an external
+pack a versioned update path:
+
+```bash
+# Distributed as a package (private registry example)
+npm install -g @softspark/<pack> --registry=https://npm.pkg.github.com
+mkdir -p ~/.softspark/ai-toolkit/plugins
+ln -s "$(npm root -g)/@softspark/<pack>" ~/.softspark/ai-toolkit/plugins/<pack>
+ai-toolkit plugin install --editor claude <pack>
+
+# Update later: the symlink target is rewritten in place, nothing to re-link
+npm install -g @softspark/<pack>@latest --registry=https://npm.pkg.github.com
+```
+
+A plain `git clone` into the same directory works too; update it with `git pull`.
+
+> **Scope note:** `npm` resolves a registry per **scope**, not per package. If one
+> package in a scope lives on public npm and another on a private registry, the
+> private one needs `--registry=` on every command — a scope-wide
+> `npm config set @scope:registry` would misroute the public one.
 
 ## Pack Types
 

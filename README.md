@@ -6,18 +6,18 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1519%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1522%20passing-success)](tests/)
 
-## What's New in v4.23.1
+## What's New in v4.24.0
 
-**v4.23.1** — a plugin pack that shipped its own agent never got it installed.
-`plugin install` resolved `includes.agents` against the toolkit's own
-`app/agents/`, printed `WARN agent not found`, and moved on — while the removal
-path already knew how to unlink a pack-owned agent, and skills had resolved from
-the pack directory all along. `validate.py` had the same blind spot for both
-agents and skills, so a self-contained pack was reported broken twice over.
-Agents now resolve from the pack first-class, core assets still win, and
-validation accepts either. Found by a downstream pack's post-release smoke test.
+**v4.24.0** — a plugin pack maintained in its own repository had nowhere safe to
+live: the only directory the toolkit scanned was `app/plugins/`, inside the npm
+package, so every `npm install -g` upgrade deleted it. Packs now also load from
+`~/.softspark/ai-toolkit/plugins/`, which the user owns and upgrades never touch.
+The entry can be a symlink to an npm-installed package, so updating an external
+pack is one `npm install -g` with nothing to re-link. Core packs still win a name
+collision. Ships with v4.23.1's fix for pack-shipped agents, which the same
+external-pack workflow depends on.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

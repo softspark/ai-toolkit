@@ -60,6 +60,12 @@ from plugin_schema import resolve_hook_event
 
 
 PLUGINS_DIR = app_dir / "plugins"
+# External packs live outside the npm package so a toolkit upgrade cannot delete
+# them: `npm install -g @softspark/ai-toolkit` replaces app/ wholesale, taking any
+# third-party pack dropped in there with it. TOOLKIT_DATA_DIR is user-owned and
+# survives. The entry may be a directory or a symlink (e.g. to an npm-installed
+# pack), which is how an external pack gets a versioned update path.
+USER_PLUGINS_DIR = TOOLKIT_DATA_DIR / "plugins"
 CLAUDE_DIR = Path.home() / ".claude"
 CODEX_ROOT = Path.home()
 CODEX_HOME = Path(os.environ.get("CODEX_HOME", CODEX_ROOT / ".codex")).expanduser()
@@ -178,22 +184,40 @@ def _set_installed(state: dict, editor: str, names: list[str]) -> None:
 # Plugin discovery
 # ---------------------------------------------------------------------------
 
+def plugin_roots() -> list[Path]:
+    """Directories scanned for packs, in precedence order.
+
+    Core packs ship inside the npm package; user packs live under
+    TOOLKIT_DATA_DIR and outlive every toolkit upgrade. A core pack wins a name
+    collision so a stray external directory cannot shadow shipped behaviour.
+    """
+    return [PLUGINS_DIR, USER_PLUGINS_DIR]
+
+
 def list_available() -> list[dict]:
-    """List all available plugin packs."""
+    """List all available plugin packs, core first, then user-installed."""
     packs: list[dict] = []
-    if not PLUGINS_DIR.is_dir():
-        return packs
-    for d in sorted(PLUGINS_DIR.iterdir()):
-        manifest = d / "plugin.json"
-        if not manifest.is_file():
+    seen: set[str] = set()
+    for root in plugin_roots():
+        if not root.is_dir():
             continue
-        try:
-            with open(manifest, encoding="utf-8") as f:
-                data = json.load(f)
+        for d in sorted(root.iterdir()):
+            manifest = d / "plugin.json"
+            if not manifest.is_file():
+                continue
+            try:
+                with open(manifest, encoding="utf-8") as f:
+                    data = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                continue
+            name = data.get("name")
+            if not name or name in seen:
+                continue
+            seen.add(name)
             data["_dir"] = str(d)
+            # "_source" is taken: hook entries use it as an ownership marker.
+            data["_root"] = "core" if root == PLUGINS_DIR else "user"
             packs.append(data)
-        except (json.JSONDecodeError, OSError):
-            continue
     return packs
 
 

@@ -230,12 +230,14 @@
   ],
   "kb_categories": [
     "best-practices",
+    "business",
     "decisions",
     "howto",
     "planning",
     "procedures",
     "reference",
     "runbooks",
+    "templates",
     "troubleshooting"
   ],
   "cli_commands": [

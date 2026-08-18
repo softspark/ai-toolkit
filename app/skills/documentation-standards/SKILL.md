@@ -1,6 +1,6 @@
 ---
 name: documentation-standards
-description: "KB conventions: YAML frontmatter, 8-category taxonomy (reference/howto/procedures/troubleshooting/best-practices/decisions/runbooks/planning). Triggers: kb/, SOP, runbook, howto, frontmatter, knowledge base."
+description: "KB conventions: YAML frontmatter, 10-category taxonomy (reference/howto/procedures/troubleshooting/best-practices/decisions/runbooks/planning/business/templates). Triggers: kb/, SOP, runbook, howto, frontmatter, knowledge base."
 effort: medium
 user-invocable: false
 allowed-tools: Read
@@ -17,7 +17,7 @@ Every document in `kb/` MUST start with YAML frontmatter:
 ```yaml
 ---
 title: "Document Title"                    # REQUIRED — English, descriptive
-category: reference                        # REQUIRED — one of 5 valid categories
+category: reference                        # REQUIRED — one of the 10 valid categories
 service: ai-toolkit                        # REQUIRED — service identifier
 tags: [tag1, tag2, tag3]                   # REQUIRED — minimum 1, recommended 3+
 last_updated: "YYYY-MM-DD"                 # REQUIRED — ISO format
@@ -53,11 +53,21 @@ and never authoritative on its own.
 | `decisions` | `kb/decisions/` | Architecture decision records and design rationale | `adr-004-kb-migration.md` |
 | `runbooks` | `kb/runbooks/` | Procedures run against a live system, usually under pressure | `deployment.md`, `incident-response.md` |
 | `planning` | `kb/planning/` | Roadmaps, PRDs, work not yet done | `q3-roadmap.md` |
+| `business` | `kb/business/` | Domain model, requirements, use cases, user stories | `domain-model.md`, `user-stories.md` |
+| `templates` | `kb/templates/` | Reusable document templates | `adr-template.md`, `sop-template.md` |
 
 **Rule:** A document filed under one of the directories above MUST declare that
 category. The rule is scoped to those directories deliberately: `kb/history/`
-and similar are lifecycle locations rather than types, and a finished plan filed
-under `history/completed/` is still a `planning` document.
+and `kb/summaries/` are lifecycle and runtime locations rather than types, and a
+finished plan filed under `history/completed/` is still a `planning` document.
+
+**Templates carry placeholders on purpose.** A file under `templates/` exists to
+be copied, so a literal `YYYY-MM-DD` date and `[placeholder]` body text are
+correct there rather than defects. Every other convention still applies.
+
+This taxonomy lives in three places: ai-toolkit's `scripts/validate.py`,
+rag-mcp's `scripts/validate_kb_frontmatter.py`, and this document. They are one
+list, and a change belongs in all three.
 
 ## Naming Conventions
 
