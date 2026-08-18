@@ -7,6 +7,42 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.23.1 — a pack could ship an agent nobody installed (2026-08-18)
+
+### Fixed
+
+- **`plugin install` never linked an agent the pack shipped itself.**
+  `_install_claude_agents` resolved `includes.agents` only against the toolkit's
+  own `app/agents/<name>.md`, so a self-contained pack got `WARN agent not found`
+  and the agent silently stayed uninstalled. The asymmetry was visible inside the
+  same file: skills already resolved through `_resolve_skill_source`, which falls
+  back to the pack directory, and `_remove_claude_pack_links` already unlinked
+  agent symlinks pointing into a pack — a removal path for links the installer
+  could never create.
+
+  Agents now go through `_resolve_agent_source`, mirroring skills: a core agent in
+  `app/agents` still wins, otherwise `<pack>/agents/<name>.md` is linked. Packs
+  that merely reference a core agent behave exactly as before.
+
+- **`validate.py` reported self-contained packs as broken.** `validate_references`
+  checked `app/agents` and `app/skills` only, so a pack shipping its own assets
+  drew `References missing agent: X` and `References missing skill: Y` even though
+  the installer handled the skill correctly. It now also accepts
+  `<pack>/agents/<name>.md` and `<pack>/skills/<name>/SKILL.md`; a genuinely
+  missing reference still errors. `pack_dir` is an optional argument, so existing
+  callers are unaffected.
+
+  Found by the post-release smoke test of a downstream pack (`legal-pl-pack`),
+  not by a user report.
+
+### Added
+
+- **Three tests covering the class.** `tests/test_plugin.bats` builds a throwaway
+  toolkit whose only pack ships its own agent and skill, then asserts the agent is
+  linked into the pack (not `app/agents`), that removal drops the link, and that
+  reference validation accepts pack-shipped assets while still failing on a
+  genuinely missing one.
+
 ## v4.23.0 — a compliance scanner that says nothing must say why (2026-08-06)
 
 ### Fixed

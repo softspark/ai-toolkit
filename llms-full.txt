@@ -6527,9 +6527,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.3.0"
+version: "3.4.0"
 created: "2026-03-23"
-last_updated: "2026-07-14"
+last_updated: "2026-08-06"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -6733,8 +6733,30 @@ that runtime should receive the change.
    user-invocable: false            # knowledge skill
    ---
    ```
-2. Update `kb/reference/skills-catalog.md` and `app/ARCHITECTURE.md`
-3. Run `scripts/validate.py`
+2. If the skill ships an executable, put it in `app/skills/<skill-name>/scripts/`
+   and invoke it **only** as:
+   ```bash
+   python3 ${CLAUDE_SKILL_DIR}/scripts/<name>.py [args]
+   ```
+   `${CLAUDE_SKILL_DIR}` is the sole path that resolves once the skill is
+   installed. `scripts/<name>.py` resolves against the user's working directory,
+   `app/skills/<name>/scripts/…` against a repo they do not have, and
+   `$(dirname "$0")` against the shell's directory — all three look right in the
+   source and fail for every user. Nine skills shipped with one of them before
+   `validate.py` started failing the build on it.
+
+   Match the interpreter to the file (`python3` for `.py`, never `bash`, never
+   bare `python`). The frontmatter `scripts:` list stays relative — it declares
+   ownership rather than running anything.
+
+   Add `--help` handling. A script that treats `--help` as a positional argument
+   greets the user with a traceback, and one that reads stdin must answer an
+   empty stdin with an error rather than blocking forever.
+3. Update `kb/reference/skills-catalog.md` and `app/ARCHITECTURE.md`
+4. Run `scripts/validate.py` — it checks the invocation, the body budget, and
+   `reference/` link resolution
+5. Run `python3 scripts/surface_manifest.py` before the next release to adopt the
+   new skill into the protected surface
 
 ## Adding a New Hook
 
@@ -8783,7 +8805,7 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.6.1"
+version: "1.7.0"
 created: "2026-03-23"
 last_updated: "2026-08-06"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
@@ -8830,7 +8852,10 @@ ai-toolkit/
     inject_section_cli.py    # Marker-based content injection (canonical implementation)
     _common.py               # Shared helper for generators (frontmatter, agents/skills emission)
     merge-hooks.py           # JSON merge for hooks into settings.json (inject/strip modes)
-    validate.py              # Toolkit integrity check
+    validate.py              # Toolkit integrity check (+ skill body budget, script-invocation gate)
+    surface_manifest.py      # Public-surface snapshot vs app/surface.json; removals fail the build
+    check_split.py           # Split gate: proves a SKILL.md -> reference/ refactor lost nothing
+    sync_badges.py           # Derives README count badges from the tree (runs inside generate:all)
     evaluate_skills.py       # Skill quality report
     generate_agents_md.py    # Regenerates AGENTS.md
     generate_cursor_rules.py # Generates .cursorrules (sources _common.py)
@@ -14588,10 +14613,10 @@ title: "AI Toolkit - Skill Templates"
 category: reference
 service: ai-toolkit
 tags: [templates, scaffolding, create, skills]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-29"
-last_updated: "2026-04-01"
-description: "5 skill templates for scaffolding new skills: linter, reviewer, generator, workflow, knowledge."
+last_updated: "2026-08-06"
+description: "5 skill templates for scaffolding new skills: linter, reviewer, generator, workflow, knowledge. Includes the ${CLAUDE_SKILL_DIR} rule for shipping executable scripts."
 ---
 
 # Skill Templates
@@ -14632,7 +14657,40 @@ Templates are stored in `app/templates/skill/{type}/SKILL.md.template`.
 
 1. Edit the generated `app/skills/{name}/SKILL.md`
 2. Add `reference/` or `templates/` subdirectories if needed
-3. Run `ai-toolkit validate` to verify
+3. If the skill ships an executable, invoke it **only** through
+   `${CLAUDE_SKILL_DIR}` — see [Shipping a script](#shipping-a-script)
+4. Run `ai-toolkit validate` to verify
+
+## Shipping a script
+
+Put executables in `app/skills/{name}/scripts/` and document them as:
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/{name}.py [args]
+```
+
+That is the only path that resolves once a skill is installed and symlinked into
+`~/.claude/skills/`. Three other spellings look correct in the repo and fail for
+every user:
+
+| Spelling | Resolves against | Result after install |
+|----------|------------------|----------------------|
+| `scripts/foo.py` | the user's working directory | not found |
+| `app/skills/{name}/scripts/foo.py` | a repo the user does not have | not found |
+| `$(dirname "$0")/scripts/foo.py` | the shell's directory | not found |
+
+Nine skills shipped with one of these before `validate.py` began failing the
+build on it. The check also enforces that the interpreter matches the file — a
+`.py` run through `bash` is an error, and bare `python` a warning, because it is
+missing or Python 2 on many systems.
+
+The frontmatter `scripts:` list stays relative. It declares which files the skill
+owns; it does not run them.
+
+**Give the script `--help`.** A script that treats `--help` as a positional
+argument answers with a traceback, and a stdin filter with no input must return
+an error rather than blocking forever — the post-release SOP probes every shipped
+script exactly this way.
 
 ---
 
@@ -15457,7 +15515,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-07-10"
+last_updated: "2026-08-06"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -15561,6 +15619,29 @@ The `Stop` hook runs after every response across 5 languages:
 | PHP | phpstan | phpstan |
 | Dart | dart analyze | dart analyze |
 | Go | go vet | go vet |
+
+## 5b. Repo-Integrity Gates (`validate.py` + `npm test`)
+
+Four gates that fail the build rather than documenting a rule and hoping. Each was
+added after the thing it checks had already shipped broken.
+
+| Gate | What it fails on | Why prose was not enough |
+|------|------------------|--------------------------|
+| **Public surface** (`surface_manifest.py` + `app/surface.json`) | a skill, agent, CLI command, frontmatter field, hook, KB category or pack disappearing | `BACKWARD_COMPATIBILITY.md` listed the surfaces; renaming one still left every check green |
+| **Script invocation** (`validate.py`) | a skill running its own script by any path other than `${CLAUDE_SKILL_DIR}`, or through the wrong interpreter | nine skills shipped invocations that resolved only in the repo, never on an installed machine |
+| **Skill body budget** (`validate.py`) | a `SKILL.md` body over 20,000 bytes; warns over 18,000 | the body loads on every trigger match, including accidental ones; three skills sat at 24–35 KB |
+| **Split integrity** (`check_split.py`) | a body → `reference/` refactor that lost a fenced code line, a required section, the description, or a working link | run by hand during a split; caught a heading corrupted inside a fenced example on first use |
+
+The surface check is deliberately one-directional: **removals fail, additions pass.**
+A surface nobody has installed has no users to break, and letting additions through
+silently is what stops the gate from becoming a tax people learn to bypass. The
+manifest is never auto-regenerated — if `generate:all` rewrote it, deleting a skill
+would delete its entry in the same breath and the check would prove nothing.
+
+`sync_badges.py` closes the matching hole in the other direction: README count
+badges are derived from the tree inside `generate:all`, before `validate.py --strict`
+reads them, so adding a test can no longer redden the build until someone edits a
+number by hand.
 
 ## 6. Iron Law Enforcement
 

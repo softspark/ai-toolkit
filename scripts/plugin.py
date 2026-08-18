@@ -215,6 +215,23 @@ def _resolve_skill_source(pack_dir: Path, skill: str) -> Path | None:
     return None
 
 
+def _resolve_agent_source(pack_dir: Path, agent: str) -> Path | None:
+    """Locate the agent file a pack references.
+
+    Mirrors _resolve_skill_source: a core agent in app/agents wins, otherwise the
+    pack may ship its own under <pack>/agents/. Resolving only against app/agents
+    is what made every pack-shipped agent print "WARN agent not found" while
+    _remove_claude_pack_links already knew how to unlink one.
+    """
+    core = app_dir / "agents" / f"{agent}.md"
+    plugin = pack_dir / "agents" / f"{agent}.md"
+    if core.is_file():
+        return core
+    if plugin.is_file():
+        return plugin
+    return None
+
+
 def _resolve_rule_source(pack_dir: Path, rule_name: str) -> tuple[Path, bool] | None:
     candidates = [
         (pack_dir / f"{rule_name}.md", False),
@@ -577,13 +594,13 @@ def _install_claude_skills(pack: dict, pack_dir: Path, installed_items: list[str
             print(f"    WARN skill not found: {skill}")
 
 
-def _install_claude_agents(pack: dict, installed_items: list[str]) -> None:
+def _install_claude_agents(pack: dict, pack_dir: Path, installed_items: list[str]) -> None:
     for agent in pack.get("includes", {}).get("agents", []):
         agent_file = CLAUDE_DIR / "agents" / f"{agent}.md"
-        source_file = app_dir / "agents" / f"{agent}.md"
+        source_file = _resolve_agent_source(pack_dir, agent)
         if agent_file.exists() or agent_file.is_symlink():
             print(f"    OK agent: {agent}")
-        elif source_file.is_file():
+        elif source_file is not None:
             agent_file.parent.mkdir(parents=True, exist_ok=True)
             agent_file.symlink_to(source_file)
             print(f"    Linked agent: {agent}")
@@ -676,7 +693,7 @@ def install_pack_claude(name: str, pack: dict, pack_dir: Path) -> bool:
     rule_specs = _resolve_pack_rules(pack, pack_dir)
 
     _ensure_core_hook_scripts()
-    _install_claude_agents(pack, installed_items)
+    _install_claude_agents(pack, pack_dir, installed_items)
     _install_claude_skills(pack, pack_dir, installed_items)
     _copy_plugin_hook_scripts(name, hook_specs, installed_items)
     _copy_plugin_scripts(name, pack_dir, installed_items)

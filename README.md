@@ -6,50 +6,18 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1516%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1519%20passing-success)](tests/)
 
-## What's New in v4.23.0
+## What's New in v4.23.1
 
-**v4.23.0** — `hipaa-validate` scanned a project without a manifest silently
-clean: its language-tagged patterns never ran, and the report said `HIGH: 0`.
-Zero reads as compliant. Detection now falls back to file extensions, the summary
-says how the language was decided, and an undecidable run warns that a zero means
-unscanned. Manifest-declaring projects are unaffected. Found by the post-release
-SOP, not by a user.
-
-## What's New in v4.22.1
-
-**v4.22.1** — nine skills, not four, could not find their own scripts. v4.22.0
-grepped for one spelling of the bug and missed five more, a `.py` file run
-through `bash`, and a script that crashed on `--help`. `validate.py` now fails
-the build on the entire class, and the post-release SOP runs every skill's
-documented command from the installed copy — which is how these were found.
-
-## What's New in v4.22.0
-
-v4.22.0 turns compatibility promises into tests, and makes two validator skills
-actually run the scanners they ship.
-
-- **The public surface is checked, not documented.** `app/surface.json` pins 275
-  entries — skills, agents, frontmatter fields, CLI commands, hook scripts and
-  events, KB categories, plugin packs. Removing any of them fails `npm test`.
-  Adding is free: a surface nobody has installed has no users to break.
-  `BACKWARD_COMPATIBILITY.md` says which surfaces are load-bearing and how to
-  deprecate one properly.
-- **`a11y-validate` and `seo-validate` shipped scanners that nothing invoked.**
-  1,196 lines of working Python sat on disk while the model was told to grep the
-  pattern tables by hand. Both now run their script for a deterministic baseline,
-  then take an explicit manual pass — with a measured coverage table saying which
-  criteria the script handles and which are yours.
-- **`/brainstorm`** — the first planning skill allowed to conclude "do not build
-  this". Every other one produces an artifact; a pipeline that cannot say no is a
-  yes-machine.
-- **Skill bodies have a budget.** Error above 20,000 bytes, warn above 18,000,
-  headroom printed every run. Three validator skills were split into
-  `reference/`, taking 47 KB off the hot path, with `scripts/check_split.py`
-  proving nothing was lost.
-- **Four skills invoked their scripts through a path that never resolved.**
-  `$(dirname "$0")` expands to the shell's directory, not the skill's.
+**v4.23.1** — a plugin pack that shipped its own agent never got it installed.
+`plugin install` resolved `includes.agents` against the toolkit's own
+`app/agents/`, printed `WARN agent not found`, and moved on — while the removal
+path already knew how to unlink a pack-owned agent, and skills had resolved from
+the pack directory all along. `validate.py` had the same blind spot for both
+agents and skills, so a self-contained pack was reported broken twice over.
+Agents now resolve from the pack first-class, core assets still win, and
+validation accepts either. Found by a downstream pack's post-release smoke test.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

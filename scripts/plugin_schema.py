@@ -139,8 +139,14 @@ def validate_references(
     data: dict,
     agents_dir: Path,
     skills_dir: Path,
+    pack_dir: Path | None = None,
 ) -> list[str]:
     """Validate that referenced agents and skills exist.
+
+    A pack may either reference a core asset (app/agents, app/skills) or ship its
+    own under <pack>/agents and <pack>/skills. Checking only the core directories
+    reported every self-contained pack as broken even though the installer links
+    its skills fine. pack_dir stays optional so existing callers keep working.
 
     Returns a list of error messages.
     """
@@ -148,11 +154,17 @@ def validate_references(
     includes = data.get("includes", {})
 
     for agent in includes.get("agents", []):
-        if not (agents_dir / f"{agent}.md").is_file():
+        candidates = [agents_dir / f"{agent}.md"]
+        if pack_dir is not None:
+            candidates.append(pack_dir / "agents" / f"{agent}.md")
+        if not any(c.is_file() for c in candidates):
             errors.append(f"References missing agent: {agent}")
 
     for skill in includes.get("skills", []):
-        if not (skills_dir / skill / "SKILL.md").is_file():
+        candidates = [skills_dir / skill / "SKILL.md"]
+        if pack_dir is not None:
+            candidates.append(pack_dir / "skills" / skill / "SKILL.md")
+        if not any(c.is_file() for c in candidates):
             errors.append(f"References missing skill: {skill}")
 
     return errors

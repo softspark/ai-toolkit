@@ -469,3 +469,122 @@ assert "_source" not in json.dumps(data)
 PY
     [ "$status" -eq 0 ]
 }
+
+# A throwaway toolkit whose only pack ships its own agent and skill, mirroring a
+# self-contained plugin pack rather than one that merely references core assets.
+_selfcontained_pack_toolkit() {
+    local root
+    root="$(mktemp -d)"
+    cp -R "$TOOLKIT_DIR/bin" "$TOOLKIT_DIR/scripts" "$root/"
+    mkdir -p "$root/app/agents" "$root/app/skills" "$root/app/hooks" \
+             "$root/app/plugins/demo-selfcontained/agents" \
+             "$root/app/plugins/demo-selfcontained/skills/demo-own-skill"
+
+    cat > "$root/app/plugins/demo-selfcontained/plugin.json" <<'EOF'
+{
+  "name": "demo-selfcontained",
+  "description": "Pack shipping its own agent and skill",
+  "version": "1.0.0",
+  "domain": "demo",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {"ai-toolkit": ">=1.0.0", "claude-code": ">=1.0.33"},
+  "includes": {"agents": ["demo-own-agent"], "skills": ["demo-own-skill"], "rules": [], "hooks": []},
+  "hook_events": {}
+}
+EOF
+    cat > "$root/app/plugins/demo-selfcontained/agents/demo-own-agent.md" <<'EOF'
+---
+name: demo-own-agent
+description: An agent shipped by the pack itself
+tools: Read
+model: sonnet
+---
+Body.
+EOF
+    cat > "$root/app/plugins/demo-selfcontained/skills/demo-own-skill/SKILL.md" <<'EOF'
+---
+name: demo-own-skill
+description: "A skill shipped by the pack itself"
+allowed-tools: Read
+---
+Body.
+EOF
+    echo "$root"
+}
+
+@test "plugin install links an agent the pack ships itself" {
+    local root
+    root="$(_selfcontained_pack_toolkit)"
+
+    run node "$root/bin/ai-toolkit.js" plugin install --editor claude demo-selfcontained
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Linked agent: demo-own-agent"
+    echo "$output" | grep -qv "WARN agent not found"
+
+    # The link must point into the pack, not into app/agents.
+    [ -L "$TEST_TMP/.claude/agents/demo-own-agent.md" ]
+    run readlink "$TEST_TMP/.claude/agents/demo-own-agent.md"
+    echo "$output" | grep -q "plugins/demo-selfcontained/agents/demo-own-agent.md"
+    [ -e "$TEST_TMP/.claude/skills/demo-own-skill" ]
+
+    rm -rf "$root"
+}
+
+@test "plugin remove drops the agent link the pack owns" {
+    local root
+    root="$(_selfcontained_pack_toolkit)"
+
+    run node "$root/bin/ai-toolkit.js" plugin install --editor claude demo-selfcontained
+    [ "$status" -eq 0 ]
+    [ -L "$TEST_TMP/.claude/agents/demo-own-agent.md" ]
+
+    run node "$root/bin/ai-toolkit.js" plugin remove --editor claude demo-selfcontained
+    [ "$status" -eq 0 ]
+    [ ! -e "$TEST_TMP/.claude/agents/demo-own-agent.md" ]
+
+    rm -rf "$root"
+}
+
+@test "pack reference validation accepts assets the pack ships itself" {
+    run python3 - <<PY
+import sys, tempfile
+from pathlib import Path
+
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+from plugin_schema import validate_references
+
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp)
+    core_agents = root / "app" / "agents"
+    core_skills = root / "app" / "skills"
+    pack = root / "app" / "plugins" / "demo"
+    core_agents.mkdir(parents=True)
+    core_skills.mkdir(parents=True)
+    (pack / "agents").mkdir(parents=True)
+    (pack / "skills" / "own-skill").mkdir(parents=True)
+    (pack / "agents" / "own-agent.md").write_text("x", encoding="utf-8")
+    (pack / "skills" / "own-skill" / "SKILL.md").write_text("x", encoding="utf-8")
+
+    data = {"includes": {"agents": ["own-agent"], "skills": ["own-skill"]}}
+
+    # Core dirs only: the pack's own assets are invisible — the old false errors.
+    without = validate_references(data, core_agents, core_skills)
+    assert len(without) == 2, without
+
+    # With the pack dir: clean.
+    with_pack = validate_references(data, core_agents, core_skills, pack_dir=pack)
+    assert with_pack == [], with_pack
+
+    # A genuinely missing reference still errors.
+    missing = validate_references(
+        {"includes": {"agents": ["nope"], "skills": []}},
+        core_agents, core_skills, pack_dir=pack,
+    )
+    assert missing == ["References missing agent: nope"], missing
+
+print("OK")
+PY
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "^OK\$"
+}

@@ -764,6 +764,7 @@ def _validate_pack_refs(tk_dir: Path, pack_path: Path, d: dict,
         d,
         agents_dir=tk_dir / "app" / "agents",
         skills_dir=tk_dir / "app" / "skills",
+        pack_dir=pack_path,
     )
     for err in ref_errors:
         vr.error(f"app/plugins/{pack_name}/plugin.json {err}")
