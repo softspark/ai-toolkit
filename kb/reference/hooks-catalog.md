@@ -3,7 +3,7 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.10.0"
+version: "1.11.0"
 created: "2026-03-27"
 last_updated: "2026-08-19"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -611,7 +611,25 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
 | GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
 | Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
+| Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native five-event schema plus adjacent Python adapter |
 | OpenCode | `.opencode/plugins/ai-toolkit-hooks.js`; user `~/.config/opencode/plugins/ai-toolkit-hooks.js` | `generate_opencode_plugin.py` | Native JavaScript plugin hooks |
+
+### Google Antigravity hooks (`.agents/hooks.json`)
+
+The toolkit owns only the top-level `ai-toolkit` namespace and preserves
+unrelated namespaces. The exact event set is `PreToolUse`, `PostToolUse`,
+`PreInvocation`, `PostInvocation`, and `Stop`. Tool events use matcher groups;
+the other events use direct command-handler lists. Every handler has a bounded
+timeout.
+
+The adjacent Python runtime maps `.toolCall.name` and
+`.toolCall.args.CommandLine` to native camelCase responses. `PreToolUse`
+returns `allow`, `deny`, or `ask`; `PostToolUse` returns `{}`; invocation events
+use object-shaped `injectSteps` and a native `terminationBehavior`; `Stop`
+returns `decision: continue` only for an explicit factual block and refuses
+re-entry when `stopHookActive` is true or `executionNum` shows a repeat.
+Project commands use `.agents/hooks/`; exported plugin commands resolve through
+`${extensionPath}`.
 
 ### Cursor hooks (`.cursor/hooks.json`)
 

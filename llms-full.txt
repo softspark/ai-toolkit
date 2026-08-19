@@ -9406,9 +9406,9 @@ title: "Claude Ecosystem Expansion Foundations"
 category: reference
 service: ai-toolkit
 tags: [benchmark, claude-code, ecosystem, hooks, plugins, architecture]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-03-27"
-last_updated: "2026-07-10"
+last_updated: "2026-08-19"
 description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit, including runtime-aware plugin packaging."
 ---
 
@@ -9446,9 +9446,21 @@ hooks and sub-agents are Cowork-only.
 
 ### 2. Broader lifecycle coverage
 
-The toolkit now covers prompt, edit, subagent, compaction, and session-end phases.
+The validator tracks the complete current Claude Code hook schema. Tracking an
+event means plugin manifests and hand-authored hook configuration can use it; it
+does not mean the default toolkit bundle registers a handler for that event.
 
-Implemented events:
+Tracked schema events:
+- `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`
+- `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`
+- `Stop`, `StopFailure`, `UserPromptExpansion`
+- `SubagentStart`, `SubagentStop`, `PreCompact`, `PostCompact`
+- `PermissionRequest`, `PermissionDenied`, `Elicitation`, `ElicitationResult`
+- `TaskCreated`, `TaskCompleted`, `TeammateIdle`
+- `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `DirectoryAdded`, `FileChanged`, `ConfigChange`
+- `Setup`, `InstructionsLoaded`
+
+Toolkit-wired events in `app/hooks.json`:
 - `SessionStart`
 - `Notification`
 - `PreToolUse`
@@ -9461,6 +9473,19 @@ Implemented events:
 - `SubagentStop`
 - `PreCompact`
 - `SessionEnd`
+- `InstructionsLoaded`
+- `ConfigChange`
+
+`MessageDisplay` and `DirectoryAdded` are tracked but intentionally have no
+default toolkit handler. `DirectoryAdded` runs asynchronously after `/add-dir`
+or SDK `register_repo_root` and cannot block the add. `MessageDisplay` can
+replace rendered text through `displayContent` without changing the transcript.
+
+Claude Code also recognizes native plugin workflows, output styles, LSP
+servers, experimental themes and monitors, MCP-backed channels, and root plugin
+settings. Those are documented class C surfaces rather than generated toolkit
+output; root plugin settings currently support only `agent` and
+`subagentStatusLine`.
 
 ### 3. Creator workflows
 
@@ -9523,7 +9548,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-07-26"
+last_updated: "2026-08-19"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -9550,6 +9575,8 @@ Usage: ai-toolkit <command> [options]
 | `eject [dir]` | Export standalone config (no symlinks, no toolkit dependency) |
 | `claude-app export [--output FILE] [--no-custom-rules] [--verify]` | Build an uploadable Claude Chat/Desktop/Cowork plugin ZIP and global-instructions file |
 | `claude-app verify` | Validate a clean staged plugin with structural checks and the official Claude plugin validator |
+| `codex-plugin export [--output FILE]` | Build a deterministic native Codex plugin ZIP with skills and self-contained hooks |
+| `codex-plugin verify` | Validate a clean native Codex plugin stage without installing it or changing user configuration |
 
 ## Rule & Hook Injection
 
@@ -9573,6 +9600,9 @@ Usage: ai-toolkit <command> [options]
 
 ## Plugin Management
 
+`plugin ...` manages ai-toolkit's experimental runtime packs. Native Codex
+plugin packaging uses the separate `codex-plugin ...` command above.
+
 | Command | Description |
 |---------|-------------|
 | `plugin list` | Show available plugin packs with install status |
@@ -9583,6 +9613,23 @@ Usage: ai-toolkit <command> [options]
 | `plugin clean <name> [--days N]` | Prune old plugin data (default: 90 days) |
 | `plugin remove <name> [--editor claude\|codex\|all]` | Remove a plugin pack |
 | `plugin status [--editor claude\|codex\|all]` | Show installed plugins with runtime-specific details |
+
+### Native Codex plugin package
+
+```bash
+ai-toolkit codex-plugin export --output ai-toolkit-codex-plugin.zip
+ai-toolkit codex-plugin verify
+```
+
+Extract the ZIP to `<marketplace-root>/plugins/ai-toolkit/`, add an entry with
+`source.path: ./plugins/ai-toolkit` in
+`<marketplace-root>/.agents/plugins/marketplace.json`, then run
+`codex plugin marketplace add <marketplace-root>` for that non-default local
+marketplace. Open `/plugins` in Codex CLI, install the plugin, review/trust the
+bundled hooks, and start a new session. The ZIP includes plugin-local skill
+runtime resources, including the skill-audit helper and its Python imports.
+Export refuses symlinked output files and ancestors instead of resolving them
+to another destination. Codex IDE does not support plugins.
 
 ## Config Inheritance
 
@@ -9632,6 +9679,8 @@ Usage: ai-toolkit <command> [options]
 | `augment-rules` | Generate `.augment/rules/ai-toolkit.md` (legacy) |
 | `augment-dir-rules` | Generate `.augment/rules/ai-toolkit-*.md` (recommended) |
 | `antigravity-rules` | Generate `.agents/rules/` and `.agents/workflows/` |
+| `antigravity-plugin export [output]` | Export deterministic native Antigravity plugin ZIP |
+| `antigravity-plugin verify <archive-or-dir>` | Verify Antigravity plugin schema, paths, hooks, modes, and self-containment offline |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
 
 ## Other Commands
@@ -9681,9 +9730,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.4"
+version: "1.1.0"
 created: "2026-04-12"
-last_updated: "2026-07-14"
+last_updated: "2026-08-19"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -9752,6 +9801,72 @@ Codex base. Codex hooks no longer depend on executable paths under
 `~/.softspark/ai-toolkit/`; project assets live beside `.codex/hooks.json`, and
 user assets live under `$CODEX_HOME/ai-toolkit-hooks/`.
 
+## Native Codex Plugin Export
+
+The separate native distribution command packages the toolkit for Codex's
+plugin marketplace flow without writing user configuration:
+
+```bash
+ai-toolkit codex-plugin export --output ai-toolkit-codex-plugin.zip
+ai-toolkit codex-plugin verify
+```
+
+The deterministic archive has this root layout:
+
+```text
+.codex-plugin/plugin.json
+skills/*/SKILL.md
+skills/persona/personas/*.md
+skills/briefing/scripts/session_token_stats.py
+scripts/audit_skills.py
+scripts/{_common,frontmatter,injection,emission,instruction_core}.py
+hooks/hooks.json
+hooks/*
+constitution.md
+LICENSE
+```
+
+The manifest name is `ai-toolkit`, its version comes from `package.json`, and
+`skills` points to `./skills/`. It intentionally omits a `hooks` field because
+Codex discovers the default `hooks/hooks.json` file. Every bundled hook command
+uses `${PLUGIN_ROOT}/hooks/...`; no command depends on a git root, `CODEX_HOME`,
+or the toolkit's global-install hook directory. Executable modes, archive order,
+and timestamps are fixed so identical sources produce identical ZIP bytes.
+Skill references are adapted to plugin-local paths. Validation covers every
+intentionally bundled cross-skill/runtime dependency, including persona
+definitions, the briefing helper, the documentation standards skill, and the
+constitution referenced by the security skill. Bare `scripts/...` references
+are classified as plugin runtime, target-workspace, skill-local, or
+source-toolkit references; unclassified paths fail validation. The skill-audit
+command uses the staged helper, whose local imports are bundled at plugin root.
+
+`verify` stages a clean plugin under a temporary directory and checks the
+manifest, component paths, skills, exact canonical command-only hooks,
+executable assets, `SessionEnd` timeout, and symlink safety. The check is
+self-contained: it does not execute mutable validators selected from `$HOME`
+or environment-provided paths, add a marketplace, install a plugin, or write
+under `~/.agents` or `~/.codex`.
+Archive output uses the shared pinned-directory transaction and rejects a
+symlink at the destination or in any requested ancestor, so a redirected path
+cannot write outside the lexical destination.
+
+To test the exported archive through a non-default local marketplace:
+
+1. Extract it to `<marketplace-root>/plugins/ai-toolkit/`.
+2. Add an `ai-toolkit` entry to
+   `<marketplace-root>/.agents/plugins/marketplace.json` with
+   `source.path: ./plugins/ai-toolkit`.
+3. Run `codex plugin marketplace add <marketplace-root>` once for that
+   non-default marketplace.
+4. Open `/plugins` in Codex CLI, install `ai-toolkit`, review/trust its hooks,
+   and start a new session.
+
+Codex IDE does not support plugins. Use Codex CLI or the ChatGPT desktop app for
+plugin browsing and installation.
+
+Sources: [Codex plugin packaging](https://developers.openai.com/plugins/build/plugins),
+[plugin availability](https://learn.chatgpt.com/docs/plugins).
+
 ## Skill Translation Model
 
 Two delivery modes are used for Codex:
@@ -9801,9 +9916,8 @@ even when its tool list is otherwise portable. Examples include:
 
 ## Hook Compatibility
 
-Codex does not expose the full Claude hook event surface. Codex's
-`HookEventName` enum defines 10 events; the Codex hook generator wires 9 of
-them:
+Codex does not expose the full Claude hook event surface. The current native
+contract defines 11 events; the Codex hook generator wires 10 of them:
 
 - `SessionStart`
 - `PreToolUse`
@@ -9813,13 +9927,34 @@ them:
 - `SubagentStart`
 - `SubagentStop`
 - `PreCompact`
+- `SessionEnd`
 - `Stop`
 
 `PostCompact` is the one enum event left unwired (its only hook was the removed
 environment-snapshot probe). Claude-only events such as `TaskCompleted`,
-`TeammateIdle`, `SessionEnd`, and `Notification` have no Codex equivalent and
-are not available in `.codex/hooks.json`. Handler types: only `command` runs;
-`prompt` and `agent` are parsed by Codex but not yet executed.
+`TeammateIdle`, and `Notification` have no Codex equivalent and are not
+available in `.codex/hooks.json`.
+
+The generated `SessionEnd` handler runs the self-contained `session-end.sh`
+asset with `timeout: 3`, Codex's documented maximum. It runs only for the main
+thread, always synchronously, and is advisory: its output cannot steer Codex or
+keep the thread open. The asset therefore stays silent, cleans the session's
+toolkit state when available, and writes the handoff snapshot outside the
+repository with Codex-native `AGENTS.md` restart guidance.
+
+Existing native hook documents may include an optional top-level string
+`description`; merges preserve it unchanged. Command handlers may include a
+non-negative integer `additionalContextLimit`, including zero, and valid user
+values are also preserved. Booleans, negative values, and non-integers are
+rejected before any file is changed. `SessionEnd` timeouts above three seconds
+are rejected.
+
+Only executable `type: "command"` handlers are accepted. The current official
+hooks page says `prompt` and `agent` handlers are parsed but skipped, and does
+not establish an executable `mcp_tool` handler schema. Codex CLI 0.148.0 release
+notes mention MCP hooks, which conflicts with that page. Toolkit support stays
+command-only until OpenAI confirms the native config schema and execution
+semantics in the canonical hooks documentation.
 
 The generator merges these Codex-compatible events into project or user
 `hooks.json`, preserving unrelated user handlers and replacing only commands
@@ -9837,10 +9972,12 @@ After installation or any hook change, open `/hooks` in Codex and review/trust
 the exact definitions. Project hooks additionally require a trusted `.codex`
 project layer. The installer never bypasses hook trust.
 
+Source: [Codex hooks](https://learn.chatgpt.com/docs/hooks).
+
 Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. Native
-`SessionStart`, `PreCompact`, and MCP-health adapters use Codex instruction and
-config terminology (`AGENTS.md`, `.codex/config.toml`) instead of Claude-only
-paths. The generated
+`SessionStart`, `SessionEnd`, `PreCompact`, and MCP-health adapters use Codex
+instruction and config terminology (`AGENTS.md`, `.codex/config.toml`) instead
+of Claude-only paths. The generated
 `UserPromptSubmit` governance hook does not set `AI_TOOLKIT_HOOK_FORMAT=json`
 by default because Codex currently renders `additionalContext` as visible hook
 context in the TUI. This keeps prompt-submit output quiet while preserving hook
@@ -9912,6 +10049,8 @@ The Codex compatibility path is verified by:
 2. Local install tests for `.agents/skills/` and `.codex/hooks.json`
 3. Plugin install tests for global Codex rules, hooks, and cleanup paths
 4. CLI tests for `codex-md` and `codex-hooks`
+5. Native plugin export tests for layout, hooks, determinism, validation, CLI
+   dispatch, and no-home-mutation behavior
 
 ## Related
 
@@ -11599,7 +11738,7 @@ The `--profile` flag controls how much of each editor's native surface is activa
 | Profile | What runs | Use when |
 |---------|-----------|----------|
 | `minimal` | Smallest editor surface. Copilot still receives its root instructions, native agents, and self-contained skills; Codex still receives instructions, agents, skills, and native safety hooks. | You want the smallest supported footprint. |
-| `standard` (default) | Claude Code + editor rule files. Includes Gemini hooks and native Copilot instructions, agents, portable skills, and hooks. | Day-to-day installs. Most users. |
+| `standard` (default) | Claude Code + editor rule files. Includes Gemini and Antigravity hooks plus native Copilot instructions, agents, portable skills, and hooks. | Day-to-day installs. Most users. |
 | `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks. | Solo dev or tight team with zero tolerance for drift. |
 | `full` | Every native surface across every editor: hooks, sub-agents, custom commands, skill pointers for Cursor / Windsurf / Gemini / Augment / Antigravity. | You want maximum coverage and understand that each editor will carry generated files under its own layout. |
 
@@ -11655,7 +11794,7 @@ scoped to whatever documented HOME file surface each exposes:
 
 - `cursor`: `~/.cursor/hooks.json` (safety/quality hooks; profile ≥ standard). Cursor RULES stay project-local — their only global surface is the Settings UI.
 - `copilot`: instructions, native agents, portable skills, and native hooks under `$COPILOT_HOME` when set or `~/.copilot` otherwise. The hook config is `hooks/ai-toolkit.json`; its self-contained runtime is `hooks/ai-toolkit/copilot_hook.py`. VS Code and GitHub.com still use repo `.github/` files, which local install emits.
-- `antigravity`: skill pointer at `~/.gemini/config/skills/` and `~/.gemini/antigravity-cli/skills/`. Antigravity RULES stay project-local.
+- `antigravity`: canonical skill pointer at `~/.gemini/config/skills/`; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. `~/.gemini/antigravity-cli/skills/` is compatibility-only. Antigravity rules stay project-local. Native plugins are opt-in exports installed manually under `~/.gemini/config/plugins/`.
 
 Their global MCP support, where available, is handled by `ai-toolkit mcp
 install`, not by the rule installer.
@@ -11987,9 +12126,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.9.0"
+version: "1.11.0"
 created: "2026-03-27"
-last_updated: "2026-07-26"
+last_updated: "2026-08-19"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -12595,7 +12734,25 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
 | GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
 | Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
+| Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native five-event schema plus adjacent Python adapter |
 | OpenCode | `.opencode/plugins/ai-toolkit-hooks.js`; user `~/.config/opencode/plugins/ai-toolkit-hooks.js` | `generate_opencode_plugin.py` | Native JavaScript plugin hooks |
+
+### Google Antigravity hooks (`.agents/hooks.json`)
+
+The toolkit owns only the top-level `ai-toolkit` namespace and preserves
+unrelated namespaces. The exact event set is `PreToolUse`, `PostToolUse`,
+`PreInvocation`, `PostInvocation`, and `Stop`. Tool events use matcher groups;
+the other events use direct command-handler lists. Every handler has a bounded
+timeout.
+
+The adjacent Python runtime maps `.toolCall.name` and
+`.toolCall.args.CommandLine` to native camelCase responses. `PreToolUse`
+returns `allow`, `deny`, or `ask`; `PostToolUse` returns `{}`; invocation events
+use object-shaped `injectSteps` and a native `terminationBehavior`; `Stop`
+returns `decision: continue` only for an explicit factual block and refuses
+re-entry when `stopHookActive` is true or `executionNum` shows a repeat.
+Project commands use `.agents/hooks/`; exported plugin commands resolve through
+`${extensionPath}`.
 
 ### Cursor hooks (`.cursor/hooks.json`)
 
@@ -12625,10 +12782,11 @@ Codex hooks follow the native [Codex hooks contract](https://learn.chatgpt.com/d
 
 - **Locations:** repository hooks live in `.codex/hooks.json`; user hooks live in `$CODEX_HOME/hooks.json` (default `~/.codex/hooks.json`). Project hooks load only for a trusted `.codex` layer.
 - **Assets:** repository commands use self-contained `.codex/hooks/*`; user commands use `$CODEX_HOME/ai-toolkit-hooks/*`. They do not call Claude's `~/.softspark/ai-toolkit/hooks/` paths.
-- **Events:** Codex documents 10 events. ai-toolkit wires 9: `SessionStart`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact` is intentionally unwired.
+- **Events:** Codex documents 11 events. ai-toolkit wires 10: `SessionStart`, `SessionEnd`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact` remains a valid event for injected command hooks but is intentionally unwired in the base bundle.
+- **Session end:** `SessionEnd` runs the self-contained `session-end.sh` asset with a three-second timeout. Its result is advisory, so the adapter records the handoff without emitting steering output.
 - **Compaction:** `PreCompact` runs `codex-pre-compact.sh`, a Codex-native reminder that refers to the active `AGENTS.md` chain, plan, and git state. It does not run Claude's `pre-compact.sh` or `pre-compact-save.sh` payload adapters.
 - **Ownership:** native JSON contains no private `_source` keys. Core handlers carry `AI_TOOLKIT_HOOK_OWNER=ai-toolkit` in their command; plugin and external handlers use exact source-specific command markers.
-- **Preservation:** generation replaces only toolkit-owned handlers and assets. Unrelated user handlers and plugin-owned handlers remain intact.
+- **Preservation:** generation replaces only toolkit-owned handlers and assets. Unrelated user handlers, plugin-owned handlers, an optional top-level `description`, and valid handler-level `additionalContextLimit` values remain intact.
 - **Trust:** installation never bypasses trust. Review the active definitions with `/hooks` after install or update.
 
 ### Devin CLI hooks (`.devin/hooks.v1.json`)
@@ -13354,7 +13512,7 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds Copilot-required `type` and `tools` fields |
 | Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Merges `mcpServers` into settings JSON |
-| Google Antigravity | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Preserves documented `command`, `serverUrl`, and `url` transports plus optional authentication, disablement, and tool-filter fields |
+| Google Antigravity | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits current `command` or `serverUrl` transports; normalizes legacy input `url` to `serverUrl`, rejects `httpUrl`, and preserves optional authentication, disablement, and tool-filter fields |
 | Roo Code | project | `.roo/mcp.json` | Mirrors `mcpServers` into the documented project-level MCP file |
 | Windsurf | global | `~/.codeium/windsurf/mcp_config.json` | Global-only JSON config |
 | Cline | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only JSON config |
@@ -13471,7 +13629,7 @@ When `install` runs with `--scope project`, ai-toolkit also updates the project'
 | `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
 | `copilot` | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds `type` and `tools: ["*"]` automatically |
 | `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
-| `antigravity` | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Preserves `url` or `serverUrl` remote transports and Antigravity authentication/tool-control fields |
+| `antigravity` | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits `serverUrl` for remote transports, normalizes legacy input `url`, rejects `httpUrl`, and preserves Antigravity authentication/tool-control fields |
 | `roo` | project | `.roo/mcp.json` | Mirrors canonical `mcpServers` into Roo's project MCP file |
 | `windsurf` | global | `~/.codeium/windsurf/mcp_config.json` | Global-only official config |
 | `cline` | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only official config |
@@ -15199,9 +15357,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.11.0"
+version: "1.12.0"
 created: "2026-04-23"
-last_updated: "2026-07-23"
+last_updated: "2026-08-19"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code, Claude Chat/Cowork, and 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
 ---
 
@@ -15225,11 +15383,12 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
 | Changelog | https://code.claude.com/docs/en/changelog; GitHub release feed is authoritative when the generated page lags (current local/release: 2.1.206, 2026-07-10) |
-| Config paths | `~/.claude/settings.json`, `.claude/settings.json` (project, committed), `.claude/settings.local.json`, `CLAUDE.md`, `.claude/rules/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+) |
+| Config paths | Settings and direct content: `~/.claude/settings.json`, `.claude/settings.json` (project, committed), `.claude/settings.local.json`, `CLAUDE.md`, `.claude/rules/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+). Native plugin root: `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `commands/*.md`, `agents/*.md`, `workflows/`, `output-styles/`, `themes/`, `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `monitors/monitors.json`, `bin/*`, `settings.json` |
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
-| Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
+| Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `DirectoryAdded`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
 | Tracked handler types | `command`, `prompt`, `agent`, `mcp_tool`, `http` (POST event JSON to allowlisted URLs via `allowedHttpHookUrls`) |
 | Other capabilities | slash commands, MCP server/client, sub-agent, output style, `SKILL.md` (≥500 lines warn) |
+| Plugin component coverage | Existing plugin packaging uses skills and hooks. Native workflows, output styles, LSP servers, experimental themes and monitors, MCP-backed channels, and root plugin `settings.json` are recognized class C surfaces and are not generated. Claude Code accepts only `agent` and `subagentStatusLine` in root plugin settings. |
 | Version probe | `claude --version` |
 | Notes | v2.1.169 added `disableBundledSkills` setting + `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` env var (hides bundled skills/built-in slash commands from the model; toolkit skills in `.claude/skills/` are unaffected — useful when toolkit skills overlap built-ins) and `claude --safe-mode` / `CLAUDE_CODE_SAFE_MODE` (starts with hooks, skills, agents, and CLAUDE.md disabled — first isolation step when debugging toolkit rule enforcement). `fallbackModel` settings key (v2.1.166) noted as not-adopted (class C, no toolkit surface writes model settings). |
 
@@ -15376,12 +15535,13 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `google-antigravity` |
 | Docs | https://antigravity.google/docs (JavaScript SPA — use bundle strings / sitemap to verify) |
 | Changelog | https://antigravity.google/changelog (SPA; changelog entries embedded in main-*.js) |
-| Config paths | `.agents/rules/*.md`, `.agents/workflows/*.md` (plural is the Antigravity 2.0 default; singular `.agent/rules`, `.agent/workflows` still read as fallback), `.agent/skills/*/SKILL.md` (IDE), `.agents/skills/*/SKILL.md` (CLI), `.agents/hooks.json` (CLI hooks), `.agents/mcp_config.json` (workspace MCP), `AGENTS.md`, `GEMINI.md` |
-| Global config paths | Skills: `~/.gemini/config/skills/*/SKILL.md` (shared across all Antigravity products) and `~/.gemini/antigravity-cli/skills/*/SKILL.md` (CLI-private) — both documented in the official Skills codelab. MCP: `~/.gemini/config/mcp_config.json` (shared global, resolved by CLI v1.0.14; the `~/.gemini/antigravity-cli/mcp_config.json` path is legacy). Rules: `~/.gemini/GEMINI.md` (dual-owner with Gemini CLI — Antigravity's IDE "+ Global" writes the same file; gemini-cli#16058 closed "not planned"). Hooks: `~/.gemini/config/hooks.json` (shared, since CLI v1.0.8). |
-| Our generators | `scripts/generate_antigravity.py` (rules + workflows + skill pointer dual-emitted to `.agent/skills/` and `.agents/skills/`; `generate_global()` writes the pointer to the two HOME skill dirs). Native MCP project/global merge and removal are provided by `scripts/mcp_editors.py`. |
-| Global install | `ai-toolkit install --editors antigravity` writes the skill pointer to `~/.gemini/config/skills/` and `~/.gemini/antigravity-cli/skills/`. Rules stay project-local (no mergeable global rules file beyond the Gemini-CLI-shared `~/.gemini/GEMINI.md`, covered by `--editors gemini`). `ai-toolkit mcp install --editor antigravity <template>` writes the global MCP config; add `--scope project --target <repo>` for `.agents/mcp_config.json`. |
-| Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, hooks, `AGENTS.md`, `GEMINI.md`, agent permissions, global skills, `~/.gemini/config/mcp_config.json` |
-| CLI notes | Antigravity CLI (GA 2026-05-19; latest CLI v1.0.14 2026-06-30, IDE 2.2.1). Hooks are IDE + CLI (`.agents/hooks.json` workspace, `~/.gemini/config/hooks.json` global; event set `PreToolUse`/`PostToolUse`/`PreInvocation`/`PostInvocation`/`Stop` — `PreInvocation`/`PostInvocation` have no Claude equivalent; shell tool is `run_command` with args at `.toolCall.args.CommandLine`). MCP: the official 2.1.4 changelog (2026-06-11) confirms that `url` is accepted alongside `serverUrl`; `httpUrl` is not documented and the adapter rejects it. The native adapter preserves documented `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` fields. A `generate_antigravity_hooks.py` remains backlog. |
+| Config paths | Rules/workflows: `.agents/rules/*.md`, `.agents/workflows/*.md`. Skills: canonical `.agents/skills/*/SKILL.md`; `.agent/skills/*/SKILL.md` is compatibility-only. Agents: `.agents/agents/ai-toolkit-*/agent.md`. Hooks: `.agents/hooks.json` plus `.agents/hooks/ai-toolkit-antigravity-hook.py`. Plugins: `.agents/plugins/<plugin>/plugin.json`. MCP: `.agents/mcp_config.json`. Cross-tool instructions: `AGENTS.md`, `GEMINI.md`. |
+| Global config paths | Canonical skills `~/.gemini/config/skills/*/SKILL.md`, agents `~/.gemini/config/agents/ai-toolkit-*/agent.md`, hooks `~/.gemini/config/hooks.json` plus adjacent runtime, plugins `~/.gemini/config/plugins/<plugin>/plugin.json`, MCP `~/.gemini/config/mcp_config.json`. `~/.gemini/antigravity-cli/skills/*/SKILL.md` is emitted only for compatibility. Rules stay project-local; `~/.gemini/GEMINI.md` remains the Gemini-CLI-shared instruction surface. |
+| Our generators | `scripts/generate_antigravity.py` (rules, workflows, canonical + compatibility skill pointer), `scripts/generate_antigravity_hooks.py` (exact five-event schema and self-contained adapter), `scripts/generate_antigravity_agents.py` (native subagents and explicit tool mapping), `scripts/antigravity_plugin.py` (deterministic opt-in export/verify), and `scripts/mcp_editors.py` (transactional project/global MCP adapter). |
+| Install profiles | `minimal`: rules/workflows/skills only. `standard` and `strict`: add native hooks. `full`: additionally adds native agents. Global install follows the same gates under `~/.gemini/config/`; it never auto-installs the plugin. |
+| Plugin flow | `ai-toolkit antigravity-plugin export [output]` creates a self-contained ZIP with exact manifest fields `$schema`, `name`, `description`, rules, skills, agents, hooks, runtime, and LICENSE. Verify offline with `ai-toolkit antigravity-plugin verify <archive-or-dir>`, then install manually under `.agents/plugins/` or `~/.gemini/config/plugins/`. Hook commands resolve from `${extensionPath}`. |
+| Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, hooks, five native hook events, subagents, agent permissions, plugins, global skills/hooks/agents, `AGENTS.md`, `GEMINI.md`, `serverUrl` |
+| Current versions / notes | Antigravity 2.0 v2.8.1, Antigravity CLI v1.1.14, IDE v2.5.5 (verified 2026-08-19). Hooks use `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. The adapter returns native camelCase payloads, object-shaped `injectSteps`, empty default `terminationBehavior`, and a `decision` string for Stop while preventing re-entry loops. MCP input `url` is accepted only as migration input and emitted as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
 | Doc access note | Docs are a JavaScript SPA, but the official search index exposes the current MCP guide and changelog text. Verify changelog claims against the dated official entry because the MCP guide's warning can lag schema releases. |
 
 ### Codex CLI
@@ -15391,12 +15551,13 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `codex-cli` |
 | Docs | https://learn.chatgpt.com/docs/codex/cli (official Codex CLI documentation; the previous `https://developers.openai.com/codex` endpoint now redirects to the generic ChatGPT Learn overview; latest verified local/npm release: codex-cli 0.144.4, 2026-07-14) |
 | Release notes | https://github.com/openai/codex/releases |
-| Config paths | **Instructions:** project `AGENTS.md` (root→cwd chain, closest wins) and global `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md`; `~/.codex/AGENTS.override.md` takes precedence). NOTE: `~/AGENTS.md` is NOT a global-instruction surface — Codex only reads it if a session's cwd is exactly `$HOME`. Plus `.agents/skills/*/SKILL.md`, `.codex/agents/*.toml`, `~/.codex/agents/*.toml`, `.codex/hooks.json`, `~/.codex/hooks.json`, `.codex/config.toml` (project layers, root→cwd, closest wins, trusted projects only), `~/.codex/config.toml`. |
-| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_agents.py` (native custom-agent TOML), `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`) |
+| Config paths | **Instructions:** project `AGENTS.md` (root→cwd chain, closest wins) and global `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md`; `~/.codex/AGENTS.override.md` takes precedence). NOTE: `~/AGENTS.md` is NOT a global-instruction surface — Codex only reads it if a session's cwd is exactly `$HOME`. Plus `.agents/skills/*/SKILL.md`, `.codex/agents/*.toml`, `~/.codex/agents/*.toml`, `.codex/hooks.json`, `~/.codex/hooks.json`, `.codex/config.toml` (project layers, root→cwd, closest wins, trusted projects only), `~/.codex/config.toml`. **Native plugins:** `.codex-plugin/plugin.json`, root `skills/*/SKILL.md`, default `hooks/hooks.json`, and `.agents/plugins/marketplace.json`. |
+| Our generators | `scripts/generate_codex.py`, `scripts/generate_codex_agents.py` (native custom-agent TOML), `scripts/generate_codex_hooks.py`, `scripts/generate_codex_skills.py` (opt-in via `--codex-skills`), `scripts/codex_plugin.py` (deterministic native plugin exporter/validator) |
 | Rules delivery | Universal coding rules are inlined into `AGENTS.md` (Codex reads instructions only from AGENTS.md, not `.agents/rules/`); language rules ship as `<lang>-rules` skills under `.agents/skills/`. Global install writes `~/.codex/AGENTS.md` (not `~/AGENTS.md`, which Codex never loads globally); plugin-pack rules are marker-injected into the same file. `project_doc_max_bytes` default is 32 KiB and Codex silently truncates AGENTS.md past that (see codex-cli-compatibility.md). |
-| Tracked hook events | Upstream canonical (codex-rs `HookEventName` enum): `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (10 events). We wire 9 through an explicit Codex map, including destructive-command and wrong-home path guards on both Bash `PreToolUse` and `PermissionRequest`. `PostCompact` is not wired (its only hook was the removed environment-snapshot probe). |
+| Tracked hook events | Official Codex hooks contract: `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PreCompact`, `PostCompact`, `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop` (11 events). We wire 10 through the Codex map, including the advisory `SessionEnd` handoff and destructive-command and wrong-home path guards on both Bash `PreToolUse` and `PermissionRequest`. `PostCompact` remains valid for injected command hooks but is not wired in the base bundle (its only hook was the removed environment-snapshot probe). |
 | Tracked handler types | `command` (emitted by default; the only handler Codex actually runs). `prompt` and `agent` are parsed by Codex but NOT yet executed, so hand-authored handlers of those types are inert. |
 | Other capabilities | `AGENTS.md`, `config.toml`, `mcp_servers`, sandbox policies, `.agents/skills/*/SKILL.md` (native Codex skill discovery path), `.codex/agents/*.toml` (native custom agents) |
+| Native plugin distribution | `ai-toolkit codex-plugin export` packages `.codex-plugin/plugin.json`, plugin-adapted skills, default lifecycle hooks, executable assets, and LICENSE. Hook commands resolve through `${PLUGIN_ROOT}`. Installation uses a local marketplace and `/plugins`; Codex IDE does not support plugins. |
 | Version probe | `codex --version` |
 
 ### opencode

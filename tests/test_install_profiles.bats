@@ -107,6 +107,33 @@ run_install() {
     compgen -G "$TEST_PROJECT/.gemini/commands/ai-toolkit-*.toml" >/dev/null
 }
 
+# ── Antigravity × profile matrix ──────────────────────────────────────────
+
+@test "profiles: antigravity + minimal does not emit native hooks or agents" {
+    run_install --editors antigravity --profile minimal >/dev/null 2>&1
+    [ ! -f "$TEST_PROJECT/.agents/hooks.json" ]
+    [ ! -d "$TEST_PROJECT/.agents/agents" ]
+}
+
+@test "profiles: antigravity + standard emits hooks but not agents" {
+    run_install --editors antigravity --profile standard >/dev/null 2>&1
+    [ -f "$TEST_PROJECT/.agents/hooks.json" ]
+    [ -x "$TEST_PROJECT/.agents/hooks/ai-toolkit-antigravity-hook.py" ]
+    [ ! -d "$TEST_PROJECT/.agents/agents" ]
+}
+
+@test "profiles: antigravity + strict emits hooks but not agents" {
+    run_install --editors antigravity --profile strict >/dev/null 2>&1
+    [ -f "$TEST_PROJECT/.agents/hooks.json" ]
+    [ ! -d "$TEST_PROJECT/.agents/agents" ]
+}
+
+@test "profiles: antigravity + full emits hooks and native agents" {
+    run_install --editors antigravity --profile full >/dev/null 2>&1
+    [ -f "$TEST_PROJECT/.agents/hooks.json" ]
+    [ -f "$TEST_PROJECT/.agents/agents/ai-toolkit-debugger/agent.md" ]
+}
+
 # ── Augment × profile matrix ───────────────────────────────────────────────
 
 @test "profiles: augment + minimal does NOT emit any native surface" {

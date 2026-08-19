@@ -520,7 +520,7 @@ def _normalize_server(editor: str, server: dict) -> dict:
 
 
 def _normalize_antigravity_server(server: dict) -> dict:
-    """Validate Antigravity's native MCP schema without rewriting transports."""
+    """Validate and emit Antigravity's current ``serverUrl`` MCP schema."""
     if not isinstance(server, dict):
         raise ValueError("Antigravity MCP server configuration must be an object")
 
@@ -537,6 +537,13 @@ def _normalize_antigravity_server(server: dict) -> dict:
         )
     transport_key = transport_keys[0]
     _require_antigravity_string(data, transport_key)
+
+    # Current Antigravity documentation emits only serverUrl. Accept the old
+    # portable `url` input so existing .mcp.json templates keep working, but
+    # never persist that legacy spelling in native Antigravity configuration.
+    if transport_key == "url":
+        data["serverUrl"] = data.pop("url")
+        transport_key = "serverUrl"
 
     if transport_key == "command":
         _validate_antigravity_stdio(data)

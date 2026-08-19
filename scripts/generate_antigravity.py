@@ -15,10 +15,10 @@ Antigravity reads rules from:
   * ``.agents/rules/*.md`` — per-category rule files (this generator)
   * ``.agents/workflows/*.md`` — workflow templates (this generator)
 
-Antigravity also supports the Agent Skills standard. The IDE reads
-``.agent/skills/<skill-name>/SKILL.md`` (singular), while the Antigravity CLI
-(GA 2026-05-19) reads ``.agents/skills/`` (plural) — so the skill pointer is
-dual-emitted to both. We do not duplicate our full skill catalogue; instead we
+Antigravity also supports the Agent Skills standard. The canonical project
+surface is ``.agents/skills/<skill-name>/SKILL.md``. The older singular
+``.agent/skills/`` path remains a compatibility output only, so the skill
+pointer is dual-emitted. We do not duplicate our full skill catalogue; instead we
 emit a single pointer skill that teaches Antigravity to look up the real
 catalogue in ``~/.softspark/ai-toolkit/app/skills/`` (global install) or
 ``.claude/skills/`` (local install).
@@ -27,7 +27,8 @@ Usage:
   python3 scripts/generate_antigravity.py [target-dir]
 
 Writes rules/workflows to target-dir/.agents/{rules,workflows}/ and the skill
-pointer to target-dir/.agent/skills/ (IDE) + target-dir/.agents/skills/ (CLI).
+pointer to target-dir/.agents/skills/ (canonical) + target-dir/.agent/skills/
+(legacy compatibility).
 """
 from __future__ import annotations
 
@@ -88,11 +89,11 @@ def _pointer_skill_md() -> str:
 def _write_skill_pointer(target_dir: Path) -> None:
     """Write the pointer SKILL.md for both the IDE and the CLI surface.
 
-    The IDE reads ``.agent/skills/`` (singular); the Antigravity CLI reads
-    ``.agents/skills/`` (plural).
+    ``.agents/skills/`` is canonical. ``.agent/skills/`` is retained only for
+    older Antigravity installations.
     """
     content = _pointer_skill_md()
-    for tree in (".agent", ".agents"):
+    for tree in (".agents", ".agent"):
         skill_dir = target_dir / tree / "skills" / POINTER_SKILL_NAME
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "SKILL.md").write_text(content, encoding="utf-8")
@@ -105,8 +106,8 @@ def _write_skill_pointer(target_dir: Path) -> None:
 
 def generate_global(target_dir: Path) -> None:
     """Write the skill pointer to Antigravity's documented HOME-scoped skill
-    dirs. ``~/.gemini/config/skills/`` is shared across all Antigravity products
-    (IDE, editor, CLI); ``~/.gemini/antigravity-cli/skills/`` is CLI-private.
+    dirs. ``~/.gemini/config/skills/`` is canonical across Antigravity products;
+    ``~/.gemini/antigravity-cli/skills/`` is a legacy compatibility surface.
     Antigravity RULES have no documented global file surface, so only the skill
     pointer is emitted globally (rules stay project-local).
     """

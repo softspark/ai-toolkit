@@ -6,7 +6,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1544%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1567%20passing-success)](tests/)
 
 ## What's New in v4.24.1
 
@@ -142,7 +142,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Roo Code / [Zoo Code](https://zoocode.dev/) | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
 | Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | ✅ | global + project |
-| Google Antigravity | `.agents/rules/*.md` + `.agents/workflows/*.md` + skill pointer in `.agent/skills/*` (IDE) and `.agents/skills/*` (CLI) | — | project |
+| Google Antigravity | Project `.agents/{rules,workflows,skills,agents,hooks}/`; user `~/.gemini/config/{skills,agents,hooks}/`; opt-in native plugin export | ✅ | project + user |
 | Codex CLI | Project: `AGENTS.md` + `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
 | opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | ✅ | project + global (`~/.config/opencode/`) |
 
@@ -182,7 +182,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1544 tests)
+├── tests/               # Bats and Python test suite (1567 tests)
 └── CHANGELOG.md
 ```
 

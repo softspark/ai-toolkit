@@ -211,20 +211,45 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         installed.append("copilot")
 
     if "antigravity" in eds:
-        # Antigravity RULES stay project-local, but the skill pointer has a
-        # documented global surface: ~/.gemini/config/skills (all Antigravity
-        # products) and ~/.gemini/antigravity-cli/skills (CLI-private).
+        # Antigravity rules stay project-local. Global config owns canonical
+        # skills and hooks; full additionally installs native subagents.
         if dry_run:
-            print("  Would generate: ~/.gemini/config/skills/, ~/.gemini/antigravity-cli/skills/ (skill pointer)")
+            print("  Would generate: ~/.gemini/config/skills/ (skill pointer)")
+            print("  Would generate: ~/.gemini/antigravity-cli/skills/ (legacy pointer)")
+            if add_hooks:
+                print("  Would generate: ~/.gemini/config/hooks.json + hooks runtime")
+            if add_native_surfaces:
+                print("  Would generate: ~/.gemini/config/agents/ (profile=full)")
         else:
             from generate_antigravity import generate_global as gen_antigravity_global
             gen_antigravity_global(target_dir)
+            if add_hooks:
+                _try_generator(
+                    "generate_antigravity_hooks",
+                    target_dir,
+                    global_install=True,
+                )
+            else:
+                from generate_antigravity_hooks import cleanup as cleanup_hooks
+
+                cleanup_hooks(target_dir, global_install=True)
+            antigravity_config = target_dir / ".gemini" / "config"
+            if add_native_surfaces:
+                _try_generator(
+                    "generate_antigravity_agents",
+                    target_dir,
+                    config_root=antigravity_config,
+                )
+            else:
+                from generate_antigravity_agents import cleanup as cleanup_agents
+
+                cleanup_agents(target_dir, config_root=antigravity_config)
         installed.append("antigravity")
 
     print()
     print(f"  Available: {', '.join(GLOBAL_CAPABLE_EDITORS)}")
     print("  Note: Cursor and Antigravity RULES stay project-local (no mergeable "
-          "global file surface); their global installs cover hooks/skills only. "
+          "global file surface); Antigravity full also installs native agents. "
           "Use 'ai-toolkit install --local' for full per-project setup.")
 
     return installed
@@ -1079,6 +1104,8 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
                   ".github/hooks/ (profile >= standard)")
     if "gemini" in eds and add_gemini_hooks:
         print("  Would generate: .gemini/settings.json hooks (profile >= standard)")
+    if "antigravity" in eds and add_gemini_hooks:
+        print("  Would generate: .agents/hooks.json + hooks runtime (profile >= standard)")
     if add_native_surfaces:
         if "cursor" in eds:
             print("  Would generate: .cursor/hooks.json + .cursor/agents/ + .cursor/skills/ (profile=full)")
@@ -1091,6 +1118,8 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
                   "$HOME/.augment/settings.json + .augment/skills/ (profile=full)")
         if "gemini" in eds:
             print("  Would generate: .gemini/commands/ + .gemini/skills/ (profile=full)")
+        if "antigravity" in eds:
+            print("  Would generate: .agents/agents/ (profile=full)")
     if "codex" in eds:
         print("  Would generate: .codex/agents/ native agents")
         print("  Would generate: .agents/skills/ Codex skills")
@@ -1409,6 +1438,18 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         from generate_antigravity import generate as gen_antigravity
         gen_antigravity(cwd, language_modules=language_modules,
                         rules_dir=rules_dir)
+        if add_gemini_hooks:
+            _try_generator("generate_antigravity_hooks", cwd)
+        else:
+            from generate_antigravity_hooks import cleanup as cleanup_hooks
+
+            cleanup_hooks(cwd)
+        if add_native_surfaces:
+            _try_generator("generate_antigravity_agents", cwd)
+        else:
+            from generate_antigravity_agents import cleanup as cleanup_agents
+
+            cleanup_agents(cwd)
 
     if "codex" in eds:
         # AGENTS.md — marker injection; universal coding rules are inlined into

@@ -58,6 +58,7 @@ const SCRIPT_COMMANDS = {
   'pack-codebase':        { script: 'pack_codebase.py' },
   'claude-app':           { script: 'claude_app.py',          toolkitCwd: true },
   'codex-plugin':         { script: 'codex_plugin.py',         toolkitCwd: true },
+  'antigravity-plugin':   { script: 'antigravity_plugin.py',   toolkitCwd: true },
 };
 
 // ---------------------------------------------------------------------------
@@ -117,6 +118,7 @@ const COMMANDS = {
   'pack-codebase': 'Pack the current codebase into a single AI-friendly markdown file (--budget, --include, --exclude, --dry-run)',
   'claude-app': 'Export or verify the uploadable Claude Chat/Desktop/Cowork plugin',
   'codex-plugin': 'Export or verify the native Codex CLI plugin package',
+  'antigravity-plugin': 'Export or verify the native Google Antigravity plugin package',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
   'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, opencode, llms)',
   help: 'Show this help message',
@@ -297,6 +299,10 @@ function showHelp() {
   console.log('  verify          Validate structure, schema, paths, hooks, and self-containment');
   console.log('                  Install/use through a local marketplace and /plugins in Codex CLI');
   console.log('                  Codex IDE does not support plugins');
+  console.log('\nOptions for antigravity-plugin:');
+  console.log('  export [output|--output FILE]  Build a deterministic Antigravity plugin ZIP');
+  console.log('  verify <archive-or-dir>        Validate schema, paths, hooks, and self-containment');
+  console.log('                  Install under .agents/plugins/ or ~/.gemini/config/plugins/');
   console.log('\nOptions for mcp:');
   console.log('  list                          List available MCP templates');
   console.log('  editors                       List editors with native MCP config adapters');
@@ -515,6 +521,8 @@ function handleGenerateAll(_args) {
   }
   // Directory-based generators (multi-file output)
   run(scriptPath('generate_antigravity.py'), [CWD]);
+  run(scriptPath('generate_antigravity_hooks.py'), [CWD]);
+  run(scriptPath('generate_antigravity_agents.py'), [CWD]);
   run(scriptPath('generate_cursor_mdc.py'), [CWD]);
   run(scriptPath('generate_windsurf_rules.py'), [CWD]);
   run(scriptPath('generate_cline_rules.py'), [CWD]);

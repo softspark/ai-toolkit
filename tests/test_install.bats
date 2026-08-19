@@ -495,11 +495,23 @@ MD
     grep -q '"AI_TOOLKIT_HOOK_OWNER": "ai-toolkit"' \
         "$TMP_HOME/.copilot/hooks/ai-toolkit.json"
 
-    # Antigravity: skill pointer in both documented global skill dirs.
+    # Antigravity: canonical config skills/hooks/agents plus legacy CLI pointer.
     [ -f "$TMP_HOME/.gemini/config/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
     [ -f "$TMP_HOME/.gemini/antigravity-cli/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ -f "$TMP_HOME/.gemini/config/hooks.json" ]
+    [ -x "$TMP_HOME/.gemini/config/hooks/ai-toolkit-antigravity-hook.py" ]
+    [ -f "$TMP_HOME/.gemini/config/agents/ai-toolkit-debugger/agent.md" ]
     # Antigravity RULES stay project-local.
     [ ! -d "$TMP_HOME/.agents/rules" ]
+}
+
+@test "install --editors antigravity global standard emits canonical hooks without agents" {
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors antigravity --profile standard >/dev/null 2>&1
+
+    [ -f "$TMP_HOME/.gemini/config/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ -f "$TMP_HOME/.gemini/config/hooks.json" ]
+    [ ! -d "$TMP_HOME/.gemini/config/agents" ]
 }
 
 @test "install --editors copilot honors COPILOT_HOME for every user customization" {

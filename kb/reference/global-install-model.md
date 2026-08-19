@@ -55,7 +55,7 @@ The `--profile` flag controls how much of each editor's native surface is activa
 | Profile | What runs | Use when |
 |---------|-----------|----------|
 | `minimal` | Smallest editor surface. Copilot still receives its root instructions, native agents, and self-contained skills; Codex still receives instructions, agents, skills, and native safety hooks. | You want the smallest supported footprint. |
-| `standard` (default) | Claude Code + editor rule files. Includes Gemini hooks and native Copilot instructions, agents, portable skills, and hooks. | Day-to-day installs. Most users. |
+| `standard` (default) | Claude Code + editor rule files. Includes Gemini and Antigravity hooks plus native Copilot instructions, agents, portable skills, and hooks. | Day-to-day installs. Most users. |
 | `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks. | Solo dev or tight team with zero tolerance for drift. |
 | `full` | Every native surface across every editor: hooks, sub-agents, custom commands, skill pointers for Cursor / Windsurf / Gemini / Augment / Antigravity. | You want maximum coverage and understand that each editor will carry generated files under its own layout. |
 
@@ -111,7 +111,7 @@ scoped to whatever documented HOME file surface each exposes:
 
 - `cursor`: `~/.cursor/hooks.json` (safety/quality hooks; profile ≥ standard). Cursor RULES stay project-local — their only global surface is the Settings UI.
 - `copilot`: instructions, native agents, portable skills, and native hooks under `$COPILOT_HOME` when set or `~/.copilot` otherwise. The hook config is `hooks/ai-toolkit.json`; its self-contained runtime is `hooks/ai-toolkit/copilot_hook.py`. VS Code and GitHub.com still use repo `.github/` files, which local install emits.
-- `antigravity`: skill pointer at `~/.gemini/config/skills/` and `~/.gemini/antigravity-cli/skills/`. Antigravity RULES stay project-local.
+- `antigravity`: canonical skill pointer at `~/.gemini/config/skills/`; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. `~/.gemini/antigravity-cli/skills/` is compatibility-only. Antigravity rules stay project-local. Native plugins are opt-in exports installed manually under `~/.gemini/config/plugins/`.
 
 Their global MCP support, where available, is handled by `ai-toolkit mcp
 install`, not by the rule installer.

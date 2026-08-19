@@ -51,7 +51,7 @@ When `install` runs with `--scope project`, ai-toolkit also updates the project'
 | `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
 | `copilot` | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds `type` and `tools: ["*"]` automatically |
 | `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
-| `antigravity` | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Preserves `url` or `serverUrl` remote transports and Antigravity authentication/tool-control fields |
+| `antigravity` | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits `serverUrl` for remote transports, normalizes legacy input `url`, rejects `httpUrl`, and preserves Antigravity authentication/tool-control fields |
 | `roo` | project | `.roo/mcp.json` | Mirrors canonical `mcpServers` into Roo's project MCP file |
 | `windsurf` | global | `~/.codeium/windsurf/mcp_config.json` | Global-only official config |
 | `cline` | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only official config |

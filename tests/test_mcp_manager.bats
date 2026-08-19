@@ -226,7 +226,7 @@ assert 'github' in cfg['mcpServers']
     [ "$status" -eq 0 ]
 }
 
-@test "Antigravity MCP project adapter preserves url schema, user data, and idempotence" {
+@test "Antigravity MCP normalizes legacy url to serverUrl and preserves user data" {
     mkdir -p "$TEST_TMP/.agents"
     printf '%s\n' '{"theme":"user","mcpServers":{"user-owned":{"command":"true"}}}' > "$TEST_TMP/.agents/mcp_config.json"
 
@@ -259,7 +259,10 @@ assert path.read_bytes() == first
 config = json.loads(first)
 assert config["theme"] == "user"
 assert config["mcpServers"]["user-owned"] == {"command": "true"}
-assert config["mcpServers"]["remote"] == servers["remote"]
+expected = dict(servers["remote"])
+expected["serverUrl"] = expected.pop("url")
+assert config["mcpServers"]["remote"] == expected
+assert "url" not in config["mcpServers"]["remote"]
 PY
     [ "$status" -eq 0 ]
 }

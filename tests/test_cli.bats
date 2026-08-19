@@ -205,6 +205,22 @@ teardown() {
     [ -f "$TEST_TMP/.aider.conf.yml" ]
     [ -f "$TEST_TMP/llms.txt" ]
     [ -f "$TEST_TMP/llms-full.txt" ]
+    [ -f "$TEST_TMP/.agents/hooks.json" ]
+    [ -f "$TEST_TMP/.agents/agents/ai-toolkit-debugger/agent.md" ]
+}
+
+@test "cli: antigravity-plugin help and export dispatch" {
+    run $CLI antigravity-plugin --help
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export"* ]]
+    [[ "$output" == *"verify"* ]]
+
+    archive="$TEST_TMP/antigravity-plugin.zip"
+    run $CLI antigravity-plugin export --output "$archive"
+    [ "$status" -eq 0 ]
+    [ -f "$archive" ]
+    run $CLI antigravity-plugin verify "$archive"
+    [ "$status" -eq 0 ]
 }
 
 # ── platform-specific generators ─────────────────────────────────────────────
@@ -672,6 +688,7 @@ required = [
     'generate:windsurf-rules',
     'generate:roo-rules',
     'generate:augment-rules',
+    'generate:antigravity',
     'generate:cline',
     'generate:opencode-agents',
     'generate:opencode-commands',
