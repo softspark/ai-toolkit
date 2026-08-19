@@ -564,6 +564,7 @@
         "hook event: PreToolUse",
         "hook event: PostToolUse",
         "hook event: SessionStart",
+        "hook event: SessionEnd",
         "hook event: UserPromptSubmit",
         "hook event: Stop",
         "hook event: PermissionRequest",
