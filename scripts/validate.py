@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -735,6 +736,25 @@ def validate_planned_assets(tk_dir: Path, vr: ValidationResult) -> None:
             print("  OK: Claude app plugin assets match canonical rules/hooks")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         vr.error(f"Invalid Claude app generated assets: {exc}")
+
+    # Validate a clean native Codex plugin stage without touching user state.
+    if tk_dir.resolve() == default_toolkit_dir.resolve():
+        try:
+            from codex_plugin import PLUGIN_NAME, stage_plugin, validate_staged_plugin
+
+            with tempfile.TemporaryDirectory(
+                prefix="ai-toolkit-codex-plugin-validation-"
+            ) as temporary:
+                staged = Path(temporary) / PLUGIN_NAME
+                stage_plugin(staged)
+                errors = validate_staged_plugin(staged)
+            if errors:
+                for error in errors:
+                    vr.error(f"Invalid native Codex plugin: {error}")
+            else:
+                print("  OK: native Codex plugin stage is schema-valid and self-contained")
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            vr.error(f"Invalid native Codex plugin generated assets: {exc}")
 
     # Validate benchmark dashboard JSON
     benchmark_dashboard = tk_dir / "benchmarks" / "ecosystem-dashboard.json"

@@ -125,6 +125,7 @@ expected = {
         'scripts/generate_codex_agents.py',
         'scripts/generate_codex_hooks.py',
         'scripts/generate_codex_skills.py',
+        'scripts/codex_plugin.py',
     },
     'github-copilot': {
         'scripts/generate_copilot.py',

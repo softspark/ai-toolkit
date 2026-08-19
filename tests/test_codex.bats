@@ -489,6 +489,7 @@ expected = {
     'scripts/generate_codex_agents.py',
     'scripts/generate_codex_hooks.py',
     'scripts/generate_codex_skills.py',
+    'scripts/codex_plugin.py',
 }
 missing = expected - gens
 assert not missing, f'registry missing generators: {missing}'

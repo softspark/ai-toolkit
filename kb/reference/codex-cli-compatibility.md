@@ -74,6 +74,56 @@ Codex base. Codex hooks no longer depend on executable paths under
 `~/.softspark/ai-toolkit/`; project assets live beside `.codex/hooks.json`, and
 user assets live under `$CODEX_HOME/ai-toolkit-hooks/`.
 
+## Native Codex Plugin Export
+
+The separate native distribution command packages the toolkit for Codex's
+plugin marketplace flow without writing user configuration:
+
+```bash
+ai-toolkit codex-plugin export --output ai-toolkit-codex-plugin.zip
+ai-toolkit codex-plugin verify
+```
+
+The deterministic archive has this root layout:
+
+```text
+.codex-plugin/plugin.json
+skills/*/SKILL.md
+hooks/hooks.json
+hooks/*
+LICENSE
+```
+
+The manifest name is `ai-toolkit`, its version comes from `package.json`, and
+`skills` points to `./skills/`. It intentionally omits a `hooks` field because
+Codex discovers the default `hooks/hooks.json` file. Every bundled hook command
+uses `${PLUGIN_ROOT}/hooks/...`; no command depends on a git root, `CODEX_HOME`,
+or the toolkit's global-install hook directory. Executable modes, archive order,
+and timestamps are fixed so identical sources produce identical ZIP bytes.
+
+`verify` stages a clean plugin under a temporary directory and checks the
+manifest, component paths, skills, exact command-only hook schema, executable
+assets, `SessionEnd` timeout, and symlink safety. It also runs the shared Codex
+plugin validator when that validator is installed. It does not add a
+marketplace, install a plugin, or write under `~/.agents` or `~/.codex`.
+
+To test the exported archive through a non-default local marketplace:
+
+1. Extract it to `<marketplace-root>/plugins/ai-toolkit/`.
+2. Add an `ai-toolkit` entry to
+   `<marketplace-root>/.agents/plugins/marketplace.json` with
+   `source.path: ./plugins/ai-toolkit`.
+3. Run `codex plugin marketplace add <marketplace-root>` once for that
+   non-default marketplace.
+4. Open `/plugins` in Codex CLI, install `ai-toolkit`, review/trust its hooks,
+   and start a new session.
+
+Codex IDE does not support plugins. Use Codex CLI or the ChatGPT desktop app for
+plugin browsing and installation.
+
+Sources: [Codex plugin packaging](https://developers.openai.com/plugins/build/plugins),
+[plugin availability](https://learn.chatgpt.com/docs/plugins).
+
 ## Skill Translation Model
 
 Two delivery modes are used for Codex:
@@ -256,6 +306,8 @@ The Codex compatibility path is verified by:
 2. Local install tests for `.agents/skills/` and `.codex/hooks.json`
 3. Plugin install tests for global Codex rules, hooks, and cleanup paths
 4. CLI tests for `codex-md` and `codex-hooks`
+5. Native plugin export tests for layout, hooks, determinism, validation, CLI
+   dispatch, and no-home-mutation behavior
 
 ## Related
 

@@ -57,6 +57,7 @@ const SCRIPT_COMMANDS = {
   'compile-slm':          { script: 'compile_slm.py' },
   'pack-codebase':        { script: 'pack_codebase.py' },
   'claude-app':           { script: 'claude_app.py',          toolkitCwd: true },
+  'codex-plugin':         { script: 'codex_plugin.py',         toolkitCwd: true },
 };
 
 // ---------------------------------------------------------------------------
@@ -115,6 +116,7 @@ const COMMANDS = {
   'compile-slm': 'Compile toolkit into a minimal SLM system prompt (--budget, --model-size, --dry-run)',
   'pack-codebase': 'Pack the current codebase into a single AI-friendly markdown file (--budget, --include, --exclude, --dry-run)',
   'claude-app': 'Export or verify the uploadable Claude Chat/Desktop/Cowork plugin',
+  'codex-plugin': 'Export or verify the native Codex CLI plugin package',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
   'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, opencode, llms)',
   help: 'Show this help message',
@@ -290,6 +292,11 @@ function showHelp() {
   console.log('  export [--output FILE] [--no-custom-rules] [--verify]');
   console.log('                  Build a ZIP for Customize > Plugins and Cowork instructions');
   console.log('  verify          Run structural checks and the official Claude plugin validator');
+  console.log('\nOptions for codex-plugin:');
+  console.log('  export [--output FILE]  Build a deterministic native Codex plugin ZIP');
+  console.log('  verify          Validate structure, schema, paths, hooks, and self-containment');
+  console.log('                  Install/use through a local marketplace and /plugins in Codex CLI');
+  console.log('                  Codex IDE does not support plugins');
   console.log('\nOptions for mcp:');
   console.log('  list                          List available MCP templates');
   console.log('  editors                       List editors with native MCP config adapters');

@@ -547,13 +547,18 @@
         ".codex/hooks.json",
         "~/.codex/hooks.json",
         ".codex/config.toml",
-        "~/.codex/config.toml"
+        "~/.codex/config.toml",
+        ".codex-plugin/plugin.json",
+        "hooks/hooks.json",
+        "skills/*/SKILL.md",
+        ".agents/plugins/marketplace.json"
       ],
       "our_generators": [
         "scripts/generate_codex.py",
         "scripts/generate_codex_agents.py",
         "scripts/generate_codex_hooks.py",
-        "scripts/generate_codex_skills.py"
+        "scripts/generate_codex_skills.py",
+        "scripts/codex_plugin.py"
       ],
       "capability_markers": [
         "AGENTS.md",
@@ -576,7 +581,12 @@
         "hook handler: prompt",
         "hook handler: agent",
         ".agents/skills",
-        ".codex/agents"
+        ".codex/agents",
+        ".codex-plugin/plugin.json",
+        "hooks/hooks.json",
+        "PLUGIN_ROOT",
+        "/plugins",
+        "plugin marketplace"
       ],
       "version_probe": {
         "kind": "command",

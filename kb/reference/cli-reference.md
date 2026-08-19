@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-07-26"
+last_updated: "2026-08-19"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -31,6 +31,8 @@ Usage: ai-toolkit <command> [options]
 | `eject [dir]` | Export standalone config (no symlinks, no toolkit dependency) |
 | `claude-app export [--output FILE] [--no-custom-rules] [--verify]` | Build an uploadable Claude Chat/Desktop/Cowork plugin ZIP and global-instructions file |
 | `claude-app verify` | Validate a clean staged plugin with structural checks and the official Claude plugin validator |
+| `codex-plugin export [--output FILE]` | Build a deterministic native Codex plugin ZIP with skills and self-contained hooks |
+| `codex-plugin verify` | Validate a clean native Codex plugin stage without installing it or changing user configuration |
 
 ## Rule & Hook Injection
 
@@ -54,6 +56,9 @@ Usage: ai-toolkit <command> [options]
 
 ## Plugin Management
 
+`plugin ...` manages ai-toolkit's experimental runtime packs. Native Codex
+plugin packaging uses the separate `codex-plugin ...` command above.
+
 | Command | Description |
 |---------|-------------|
 | `plugin list` | Show available plugin packs with install status |
@@ -64,6 +69,20 @@ Usage: ai-toolkit <command> [options]
 | `plugin clean <name> [--days N]` | Prune old plugin data (default: 90 days) |
 | `plugin remove <name> [--editor claude\|codex\|all]` | Remove a plugin pack |
 | `plugin status [--editor claude\|codex\|all]` | Show installed plugins with runtime-specific details |
+
+### Native Codex plugin package
+
+```bash
+ai-toolkit codex-plugin export --output ai-toolkit-codex-plugin.zip
+ai-toolkit codex-plugin verify
+```
+
+Extract the ZIP to `<marketplace-root>/plugins/ai-toolkit/`, add an entry with
+`source.path: ./plugins/ai-toolkit` in
+`<marketplace-root>/.agents/plugins/marketplace.json`, then run
+`codex plugin marketplace add <marketplace-root>` for that non-default local
+marketplace. Open `/plugins` in Codex CLI, install the plugin, review/trust the
+bundled hooks, and start a new session. Codex IDE does not support plugins.
 
 ## Config Inheritance
 
