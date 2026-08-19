@@ -109,6 +109,39 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
+@test "claude-code: prompt and agent hook types share the exact supported event set" {
+    run python3 -c "
+import contextlib
+import io
+import sys
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from validate import HOOK_TYPE_EVENTS, ValidationResult, _validate_hook_handler
+
+expected = frozenset({
+    'PermissionDenied', 'PermissionRequest', 'PostToolBatch', 'PostToolUse',
+    'PostToolUseFailure', 'PreToolUse', 'Stop', 'SubagentStop',
+    'TaskCompleted', 'TaskCreated', 'TeammateIdle', 'UserPromptExpansion',
+    'UserPromptSubmit',
+})
+assert HOOK_TYPE_EVENTS['prompt'] == expected
+assert HOOK_TYPE_EVENTS['agent'] == expected
+
+for hook_type, event in (('agent', 'PreToolUse'), ('prompt', 'TaskCreated')):
+    valid = ValidationResult()
+    _validate_hook_handler(event, {'type': hook_type, 'prompt': 'Check \$ARGUMENTS'}, valid)
+    assert valid.errors == 0
+
+for hook_type in ('prompt', 'agent'):
+    invalid = ValidationResult()
+    with contextlib.redirect_stdout(io.StringIO()):
+        _validate_hook_handler('SessionStart', {'type': hook_type, 'prompt': 'No'}, invalid)
+    assert invalid.errors == 1
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
 # ── skill-creator frontmatter reference ─────────────────────────────────────
 
 @test "skill-creator SKILL.md references the new frontmatter fields Claude Code accepts" {
@@ -134,10 +167,13 @@ assert entry['kind'] == 'primary'
 assert 'DirectoryAdded' in entry['capability_markers']
 for path in (
     '.claude-plugin/plugin.json', 'skills/*/SKILL.md', 'commands/*.md',
-    'agents/*.md', 'hooks/hooks.json', '.mcp.json', '.lsp.json',
-    'monitors/monitors.json', 'bin/*', 'settings.json',
+    'agents/*.md', 'workflows/', 'output-styles/', 'themes/',
+    'hooks/hooks.json', '.mcp.json', '.lsp.json', 'monitors/monitors.json',
+    'bin/*', 'settings.json',
 ):
     assert path in entry['config_paths'], path
+note = entry['status_note'].lower()
+assert all(marker in note for marker in ('themes', 'experimental', 'class c', 'does not generate'))
 print('ok')
 "
     [ "$status" -eq 0 ]

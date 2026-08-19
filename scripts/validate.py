@@ -75,18 +75,25 @@ VALID_HOOK_TYPES = frozenset({
     "mcp_tool",
 })
 
+PROMPT_AGENT_HOOK_EVENTS = frozenset({
+    "PermissionDenied",
+    "PermissionRequest",
+    "PostToolBatch",
+    "PostToolUse",
+    "PostToolUseFailure",
+    "PreToolUse",
+    "Stop",
+    "SubagentStop",
+    "TaskCompleted",
+    "TaskCreated",
+    "TeammateIdle",
+    "UserPromptExpansion",
+    "UserPromptSubmit",
+})
+
 HOOK_TYPE_EVENTS = {
-    "agent": frozenset({"Stop", "SubagentStop"}),
-    "prompt": frozenset({
-        "PreToolUse",
-        "PostToolUse",
-        "PostToolUseFailure",
-        "PostToolBatch",
-        "UserPromptSubmit",
-        "UserPromptExpansion",
-        "Stop",
-        "SubagentStop",
-    }),
+    "agent": PROMPT_AGENT_HOOK_EVENTS,
+    "prompt": PROMPT_AGENT_HOOK_EVENTS,
 }
 
 HOOK_REQUIRED_FIELDS = {

@@ -78,10 +78,11 @@ default toolkit handler. `DirectoryAdded` runs asynchronously after `/add-dir`
 or SDK `register_repo_root` and cannot block the add. `MessageDisplay` can
 replace rendered text through `displayContent` without changing the transcript.
 
-Claude Code also recognizes native plugin LSP servers, experimental monitors,
-MCP-backed channels, and root plugin settings. Those are documented class C
-surfaces rather than generated toolkit output; root plugin settings currently
-support only `agent` and `subagentStatusLine`.
+Claude Code also recognizes native plugin workflows, output styles, LSP
+servers, experimental themes and monitors, MCP-backed channels, and root plugin
+settings. Those are documented class C surfaces rather than generated toolkit
+output; root plugin settings currently support only `agent` and
+`subagentStatusLine`.
 
 ### 3. Creator workflows
 

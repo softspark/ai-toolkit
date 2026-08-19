@@ -25,6 +25,9 @@
         "skills/*/SKILL.md",
         "commands/*.md",
         "agents/*.md",
+        "workflows/",
+        "output-styles/",
+        "themes/",
         "hooks/hooks.json",
         ".mcp.json",
         ".lsp.json",
@@ -33,7 +36,7 @@
         "settings.json"
       ],
       "our_generators": [],
-      "status_note": "Claude Code auto-discovers native plugin skills, commands, agents, hooks, MCP servers, LSP servers, monitors, executables, and root settings. ai-toolkit's primary install emits its existing rules, skills, agents, and hooks; plugin monitors, LSP servers, channels, and root plugin settings are recognized class C surfaces that ai-toolkit does not generate. Monitors are experimental, and plugin settings support only agent and subagentStatusLine.",
+      "status_note": "Claude Code auto-discovers native plugin skills, commands, agents, workflows, output styles, themes, hooks, MCP servers, LSP servers, monitors, executables, and root settings. ai-toolkit's primary install emits its existing rules, skills, agents, and hooks; plugin workflows, output styles, themes, monitors, LSP servers, channels, and root plugin settings are recognized class C surfaces that ai-toolkit does not generate. Themes and monitors are experimental, and plugin settings support only agent and subagentStatusLine.",
       "capability_markers": [
         "PreToolUse",
         "PostToolUse",
@@ -67,6 +70,9 @@
         "Setup",
         "InstructionsLoaded",
         "plugins",
+        "workflows",
+        "outputStyles",
+        "themes",
         "LSP servers",
         "monitors",
         "channels",
