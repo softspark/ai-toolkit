@@ -11,7 +11,7 @@ tags:
 doc_type: reference
 created: "2026-04-11"
 last_updated: "2026-07-26"
-description: "Comprehensive guide for setting up and using ai-toolkit configuration inheritance. Covers base config creation, project setup, enforcement rules, CI integration, and troubleshooting."
+description: "Configuration inheritance for ai-toolkit projects extends base settings from npm packages, Git URLs, or local paths. Defines merge semantics, enforcement rules, and CLI commands for validating and diffing configurations."
 ---
 
 # Enterprise Config Inheritance Guide
