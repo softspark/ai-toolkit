@@ -4,7 +4,7 @@
 # Source: https://github.com/softspark/ai-toolkit
 #
 # Antigravity-specific tests for generate_antigravity.py.
-# Verifies the new .agent/skills/ pointer emission alongside rules/workflows.
+# Verifies canonical .agents/skills/ plus the .agent/skills/ compatibility copy.
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 POINTER_SKILL="ai-toolkit-skill-catalogue"
@@ -78,12 +78,24 @@ PY
     rm -rf "$tmp"
 }
 
-# ── Skill pointer dual-emit (IDE singular + CLI plural) ────────────────────
+# ── Canonical workspace skill plus compatibility copy ──────────────
 
-@test "antigravity: pointer skill is dual-emitted to .agents/skills (CLI)" {
+@test "antigravity: .agents/skills is canonical and .agent/skills is compatibility-only" {
     [ -f "$AG_TMP/.agents/skills/$POINTER_SKILL/SKILL.md" ]
     diff "$AG_TMP/.agent/skills/$POINTER_SKILL/SKILL.md" \
          "$AG_TMP/.agents/skills/$POINTER_SKILL/SKILL.md"
+}
+
+@test "antigravity: generator documents the canonical workspace skill root" {
+    run python3 - <<PY
+import sys
+sys.path.insert(0, "$TOOLKIT_DIR/scripts")
+from generate_antigravity import generate
+print(generate.__doc__)
+PY
+    [ "$status" -eq 0 ] || return 1
+    [[ "$output" == *'``.agents/skills/`` is the canonical workspace surface'* ]] || return 1
+    [[ "$output" == *'``.agent/skills/`` is a legacy compatibility copy'* ]] || return 1
 }
 
 @test "antigravity: pointer-only .agents/skills does not auto-detect codex" {

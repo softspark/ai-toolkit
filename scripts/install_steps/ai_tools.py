@@ -226,8 +226,14 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         # Antigravity rules stay project-local. CLI and IDE/shared product each
         # own a canonical skill root; full additionally installs subagents.
         if dry_run:
-            print("  Would generate: ~/.gemini/antigravity-cli/skills/ (CLI pointer)")
-            print("  Would generate: ~/.gemini/config/skills/ (IDE/shared pointer)")
+            print(
+                "  Would generate: ~/.gemini/antigravity-cli/skills/ "
+                "(current CLI skills)"
+            )
+            print(
+                "  Would generate: ~/.gemini/config/skills/ "
+                "(current IDE/shared skills)"
+            )
             if add_hooks:
                 print("  Would generate: ~/.gemini/config/hooks.json + hooks runtime")
             if add_native_surfaces:
@@ -729,8 +735,8 @@ def _detect_editors(cwd: Path) -> list[str]:
         if not p.exists():
             continue
         if marker == ".agents/skills" and _is_pointer_only_skills_dir(p):
-            # The Antigravity CLI pointer skill also lives in .agents/skills/;
-            # only real (materialized) skills indicate a Codex install.
+            # The canonical workspace Antigravity pointer also lives in
+            # .agents/skills/; only materialized skills indicate Codex.
             continue
         found.add(editor)
     return sorted(found)

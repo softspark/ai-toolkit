@@ -125,8 +125,9 @@ def generate(target_dir: Path, *,
              emit_skill_pointer: bool = True) -> None:
     """Write ``.agents/{rules,workflows}/`` and the dual skill pointers.
 
-    ``emit_skill_pointer`` controls whether the pointer SKILL.md is written
-    to ``.agent/skills/`` (IDE) and ``.agents/skills/`` (CLI). Set to
+    ``emit_skill_pointer`` controls whether the pointer SKILL.md is written.
+    ``.agents/skills/`` is the canonical workspace surface, while
+    ``.agent/skills/`` is a legacy compatibility copy. Set this option to
     ``False`` if you manage those directories yourself.
     """
     rules = dict(STANDARD_RULES)

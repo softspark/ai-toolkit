@@ -194,6 +194,16 @@ PY
     [ -f "$TEST_PROJECT/.agents/agents/ai-toolkit-debugger/agent.md" ]
 }
 
+@test "profiles: antigravity global dry-run names current CLI and IDE skill roots" {
+    run env HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors antigravity --profile full --dry-run
+
+    [ "$status" -eq 0 ] || return 1
+    [[ "$output" == *"~/.gemini/antigravity-cli/skills/ (current CLI skills)"* ]] || return 1
+    [[ "$output" == *"~/.gemini/config/skills/ (current IDE/shared skills)"* ]] || return 1
+    [[ "$output" != *"legacy pointer"* ]] || return 1
+}
+
 # ── Augment × profile matrix ───────────────────────────────────────────────
 
 @test "profiles: augment + minimal does NOT emit any native surface" {
