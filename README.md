@@ -6,20 +6,18 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1636%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1637%20passing-success)](tests/)
 
-## What's New in v4.25.0
+## What's New in v4.25.1
 
-**v4.25.0** brings the editor integrations onto their current native surfaces:
+**v4.25.1** fixes the CVE scanner path exercised by the published-package smoke test:
 
-- Codex gets its exact 11-event hook contract and a deterministic native plugin
-  exporter with offline verification.
-- Google Antigravity gets native hooks, agents, plugin packaging, MCP mapping,
-  and local/global install profiles.
-- Gemini gains native agents, OpenCode gains native skill directories, and Cline
-  gains native rules plus its exact 8-event hook lifecycle.
-- Claude Code validation now matches the current prompt, agent, HTTP hook, and
-  plugin contracts, with transactional symlink protections across new writers.
+- Legacy npm audit `advisories` are normalized alongside the modern
+  `vulnerabilities` response.
+- HIGH advisories now produce findings and the documented non-zero exit code
+  instead of a false clean result.
+- The post-release scanner fixture now exercises accessibility, SEO, HIPAA, and
+  a deliberately vulnerable npm dependency with their real CLI flags.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -185,7 +183,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1636 tests)
+├── tests/               # Bats and Python test suite (1637 tests)
 └── CHANGELOG.md
 ```
 

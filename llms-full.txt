@@ -7041,9 +7041,9 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: ai-toolkit
 tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, isolation]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-07-26"
-last_updated: "2026-08-06"
+last_updated: "2026-08-19"
 description: "Smoke-test a published @softspark/ai-toolkit release from npm in an isolated HOME and npm prefix, without touching the maintainer's real install. Covers provenance, CLI, doctor, per-skill script resolution, scanner wiring, and the full plugin-pack lifecycle including the degraded-install path. Written for v4.18.0 and not run; v4.18.0 shipped a pack that broke every command it touched. First actually run on v4.22.0, which added Phases 4b and 4c after that release fixed four skills whose documented script path had never resolved and two that shipped a scanner nothing invoked."
 ---
 
@@ -7197,21 +7197,30 @@ cat > "$FX/index.html" <<'EOF'
 <!DOCTYPE html><html><head><title>t</title></head>
 <body><h1>A</h1><h3>skipped h2</h3><img src="x.png"><input type="text"><div onclick="go()">click</div></body></html>
 EOF
-printf '{"name":"fx","dependencies":{"react":"18"}}\n' > "$FX/package.json"
+cat > "$FX/patient.py" <<'EOF'
+patient = {"ssn": "123-45-6789", "diagnosis": "fixture"}
+endpoint = "http://example.com/patient"
+encrypt = False
+EOF
+printf '{"name":"fx","dependencies":{"lodash":"4.17.20","react":"18"}}\n' > "$FX/package.json"
+npm install --package-lock-only --ignore-scripts --prefix "$FX"
 
-for s in a11y-validate seo-validate hipaa-validate cve-scan; do
-  D="$HOME/.claude/skills/$s"
-  script=$(ls "$D"/scripts/*.py 2>/dev/null | head -1)
-  [ -n "$script" ] || continue
-  echo "=== $s ==="
-  CLAUDE_SKILL_DIR="$D" timeout 60 python3 "$script" "$FX" --output json </dev/null 2>&1 | head -3
-done
+D="$HOME/.claude/skills/a11y-validate"
+CLAUDE_SKILL_DIR="$D" timeout 60 python3 "$D/scripts/a11y-scanner.py" "$FX" --output json </dev/null
+D="$HOME/.claude/skills/seo-validate"
+CLAUDE_SKILL_DIR="$D" timeout 60 python3 "$D/scripts/seo-scanner.py" "$FX" --output json </dev/null
+D="$HOME/.claude/skills/hipaa-validate"
+CLAUDE_SKILL_DIR="$D" timeout 60 python3 "$D/scripts/hipaa_scan.py" "$FX" --output json </dev/null
+D="$HOME/.claude/skills/cve-scan"
+CLAUDE_SKILL_DIR="$D" timeout 60 python3 "$D/scripts/cve_scan.py" "$FX" --json </dev/null
 ```
 
 **Verify:**
 - [ ] The scanner returns findings, not an empty set — the fixture has real defects
 - [ ] Findings span more than one category, proving the whole check set ran
 - [ ] A scanner that exits non-zero on findings is doing its job, not failing
+- [ ] CVE output has `total_findings > 0`; raw npm advisories with an empty
+      normalized `findings` array are a parser failure, not a clean scan
 
 `a11y-validate` and `seo-validate` shipped working scanners that **no step in
 either skill invoked** for their entire life before v4.22.0. The model was told to
@@ -11046,7 +11055,7 @@ tags:
 doc_type: reference
 created: "2026-04-11"
 last_updated: "2026-07-26"
-description: "Comprehensive guide for setting up and using ai-toolkit configuration inheritance. Covers base config creation, project setup, enforcement rules, CI integration, and troubleshooting."
+description: "Configuration inheritance for ai-toolkit projects extends base settings from npm packages, Git URLs, or local paths. Defines merge semantics, enforcement rules, and CLI commands for validating and diffing configurations."
 ---
 
 # Enterprise Config Inheritance Guide

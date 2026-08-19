@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.25.1 — npm advisories count again (2026-08-19)
+
+### Fixed
+
+- **`cve-scan` reported zero findings for a vulnerable npm project.** npm audit
+  can return the legacy `advisories` object as well as the current
+  `vulnerabilities` object. The scanner parsed only the latter, so five real
+  lodash advisories remained trapped in `raw_output` while `total_findings` was
+  zero and the process exited successfully. Both formats are now normalized,
+  and HIGH advisories restore the documented non-zero exit code.
+
+### Changed
+
+- **The published-package scanner smoke uses real per-scanner fixtures and
+  flags.** It now includes healthcare patterns and a deliberately vulnerable
+  locked npm dependency, invokes `cve-scan` with `--json`, and treats raw npm
+  advisories with no normalized findings as a parser failure.
+
+### Tests
+
+- Added a public-CLI regression test with a stubbed legacy npm audit response;
+  it asserts normalized severity, installed version, CVE, fixed range, finding
+  count, and exit status.
+
 ## v4.25.0 — editor-native integrations catch up (2026-08-19)
 
 ### Added
