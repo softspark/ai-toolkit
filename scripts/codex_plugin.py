@@ -51,6 +51,10 @@ _SEMVER_RE = re.compile(
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
 _PLUGIN_ASSET_RE = re.compile(r"\$\{PLUGIN_ROOT\}/hooks/([A-Za-z0-9._-]+)")
+_BARE_SCRIPT_REFERENCE_RE = re.compile(
+    r"(?<![./A-Za-z0-9_-])"
+    r"(scripts/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+)"
+)
 _SKILL_TEXT_REWRITES = {
     "briefing": (
         ("scripts/session_token_stats.py", "./scripts/session_token_stats.py"),
@@ -89,6 +93,9 @@ _SKILL_TEXT_REWRITES = {
         ),
         ("app/personas/", "./personas/"),
     ),
+    "skill-audit": (
+        ("scripts/audit_skills.py", "../../scripts/audit_skills.py"),
+    ),
 }
 _SKILL_RESOURCE_SOURCES = {
     "briefing": (
@@ -98,6 +105,51 @@ _SKILL_RESOURCE_SOURCES = {
         ),
     ),
     "persona": ((APP_DIR / "personas", Path("personas")),),
+}
+_PLUGIN_SCRIPT_NAMES = (
+    "_common.py",
+    "audit_skills.py",
+    "emission.py",
+    "frontmatter.py",
+    "injection.py",
+    "instruction_core.py",
+)
+# Bare paths have different ownership semantics. Plugin runtime helpers must be
+# rewritten and bundled. The other categories intentionally describe either a
+# target repository or the source toolkit and must remain visible to the model.
+_BARE_SCRIPT_CLASSIFICATIONS = {
+    ("a11y-validate", "scripts/a11y-scanner.py"): "skill-local-informational",
+    ("agent-creator", "scripts/validate.py"): "source-toolkit-operation",
+    ("briefing", "scripts/session_token_stats.py"): "plugin-runtime",
+    (
+        "documentation-standards",
+        "scripts/validate.py",
+    ): "source-toolkit-informational",
+    (
+        "documentation-standards",
+        "scripts/validate_kb_frontmatter.py",
+    ): "target-workspace-informational",
+    ("evaluate", "scripts/evaluate_rag.py"): "target-workspace-operation",
+    ("evaluate", "scripts/evaluate_skills.py"): "source-toolkit-informational",
+    ("evaluate", "scripts/golden_dataset.json"): "target-workspace-resource",
+    ("evaluate", "scripts/knowledge_gaps.py"): "target-workspace-operation",
+    ("evolve", "scripts/audit_skills.py"): "source-toolkit-informational",
+    ("evolve", "scripts/evaluate_skills.py"): "source-toolkit-informational",
+    ("evolve", "scripts/validate.py"): "source-toolkit-operation",
+    ("hipaa-validate", "scripts/hipaa_scan.py"): "skill-local-informational",
+    (
+        "hook-creator",
+        "scripts/install_git_hooks.py",
+    ): "source-toolkit-informational",
+    ("hook-creator", "scripts/validate.py"): "source-toolkit-operation",
+    ("plugin-creator", "scripts/validate.py"): "source-toolkit-operation",
+    ("rag-patterns", "scripts/evaluate_rag.py"): "target-workspace-operation",
+    (
+        "rag-patterns",
+        "scripts/knowledge_gaps.py",
+    ): "target-workspace-operation",
+    ("seo-validate", "scripts/seo-scanner.py"): "skill-local-informational",
+    ("skill-audit", "scripts/audit_skills.py"): "plugin-runtime",
 }
 # Full-catalog audit: source-workspace paths in authoring/audit skills operate on
 # the user's current checkout. These are the package-owned cross-resource paths
@@ -110,6 +162,9 @@ _SKILL_RUNTIME_REFERENCES = {
         "personas/devops-eng.md",
         "personas/frontend-lead.md",
         "personas/junior-dev.md",
+    ),
+    "skill-audit": tuple(
+        f"../../scripts/{name}" for name in _PLUGIN_SCRIPT_NAMES
     ),
 }
 
@@ -187,9 +242,26 @@ def render_manifest() -> str:
     return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
 
 
+def _bare_script_references(text: str) -> set[str]:
+    return set(_BARE_SCRIPT_REFERENCE_RE.findall(text))
+
+
+def _assert_bare_script_references_classified(skill_name: str, text: str) -> None:
+    unknown = sorted(
+        reference
+        for reference in _bare_script_references(text)
+        if (skill_name, reference) not in _BARE_SCRIPT_CLASSIFICATIONS
+    )
+    if unknown:
+        raise ValueError(
+            f"unclassified bare script references in {skill_name}: {unknown}"
+        )
+
+
 def _plugin_skill_text(source: Path) -> str:
     """Render a Codex-adapted skill accepted by plugin ingestion."""
     rendered = build_codex_skill_text(source)
+    _assert_bare_script_references_classified(source.parent.name, rendered)
     rendered = _TASK_ONLY_FRONTMATTER_RE.sub("", rendered)
     for source_path, plugin_path in _SKILL_TEXT_REWRITES.get(
         source.parent.name,
@@ -197,6 +269,43 @@ def _plugin_skill_text(source: Path) -> str:
     ):
         rendered = rendered.replace(source_path, plugin_path)
     return rendered
+
+
+def _plugin_audit_helper_content(source: Path) -> str:
+    """Adapt the source audit helper to the native plugin skills layout."""
+    text = source.read_text(encoding="utf-8")
+    import_marker = "from frontmatter import frontmatter_field\n"
+    helper = (
+        "\n\ndef _skills_dir(toolkit_root: Path) -> Path:\n"
+        "    plugin_skills = toolkit_root / \"skills\"\n"
+        "    if (toolkit_root / \".codex-plugin\").is_dir():\n"
+        "        return plugin_skills\n"
+        "    return toolkit_root / \"app\" / \"skills\"\n"
+    )
+    replacements = {
+        "skills = toolkit_root / \"app\" / \"skills\"": (
+            "skills = _skills_dir(toolkit_root)"
+        ),
+        "skills = app / \"skills\"": "skills = _skills_dir(toolkit_root)",
+    }
+    if text.count(import_marker) != 1:
+        raise ValueError("audit_skills.py import marker changed")
+    text = text.replace(import_marker, import_marker + helper, 1)
+    for original, replacement in replacements.items():
+        if text.count(original) != 1:
+            raise ValueError(f"audit_skills.py layout marker changed: {original}")
+        text = text.replace(original, replacement, 1)
+    return text
+
+
+def _stage_plugin_scripts(destination: Path) -> None:
+    destination.mkdir()
+    for name in _PLUGIN_SCRIPT_NAMES:
+        source = TOOLKIT_DIR / "scripts" / name
+        target = destination / name
+        _copy_file_strict(source, target)
+        if name == "audit_skills.py":
+            target.write_text(_plugin_audit_helper_content(source), encoding="utf-8")
 
 
 def _copy_file_strict(source: Path, destination: Path) -> None:
@@ -293,6 +402,7 @@ def stage_plugin(destination: Path) -> None:
     manifest_path.write_text(render_manifest(), encoding="utf-8")
 
     _stage_skills(destination / "skills")
+    _stage_plugin_scripts(destination / "scripts")
 
     hooks_dir = destination / "hooks"
     hooks_dir.mkdir()
@@ -444,6 +554,29 @@ def _validate_skill_runtime_dependencies(
                 )
 
 
+def _validate_bare_script_references(
+    plugin_dir: Path,
+    errors: list[str],
+) -> None:
+    for skill_file in sorted((plugin_dir / "skills").glob("*/SKILL.md")):
+        skill_name = skill_file.parent.name
+        text = skill_file.read_text(encoding="utf-8")
+        for reference in sorted(_bare_script_references(text)):
+            classification = _BARE_SCRIPT_CLASSIFICATIONS.get(
+                (skill_name, reference)
+            )
+            if classification is None:
+                errors.append(
+                    f"{skill_name} has an unclassified bare script reference: "
+                    f"{reference}"
+                )
+            elif classification == "plugin-runtime":
+                errors.append(
+                    f"{skill_name} plugin runtime script was not rewritten: "
+                    f"{reference}"
+                )
+
+
 def _validate_hooks(plugin_dir: Path, errors: list[str]) -> None:
     hooks_path = plugin_dir / "hooks" / "hooks.json"
     hooks = _load_json_object(hooks_path, "hooks/hooks.json", errors)
@@ -503,6 +636,7 @@ def validate_staged_plugin(plugin_dir: Path) -> list[str]:
     _validate_manifest(plugin_dir, errors)
     _validate_skills(plugin_dir, errors)
     _validate_skill_runtime_dependencies(plugin_dir, errors)
+    _validate_bare_script_references(plugin_dir, errors)
     _validate_hooks(plugin_dir, errors)
     license_path = plugin_dir / "LICENSE"
     if license_path.is_symlink() or not license_path.is_file():

@@ -87,6 +87,49 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "codex-plugin: skill audit uses a self-contained staged helper" {
+    archive="$TEST_TMP/skill-audit.zip"
+    extracted="$TEST_TMP/plugin"
+
+    python3 "$TOOLKIT_DIR/scripts/codex_plugin.py" export --output "$archive" >/dev/null
+
+    run python3 - "$archive" "$extracted" <<'PY'
+import json
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
+
+archive = Path(sys.argv[1])
+extracted = Path(sys.argv[2])
+with zipfile.ZipFile(archive) as plugin:
+    names = set(plugin.namelist())
+    required_helpers = {
+        "scripts/audit_skills.py",
+        "scripts/_common.py",
+        "scripts/frontmatter.py",
+        "scripts/injection.py",
+        "scripts/emission.py",
+        "scripts/instruction_core.py",
+    }
+    assert required_helpers <= names
+    skill = plugin.read("skills/skill-audit/SKILL.md").decode()
+    assert "../../scripts/audit_skills.py" in skill
+    assert "python3 scripts/audit_skills.py" not in skill
+    plugin.extractall(extracted)
+
+result = subprocess.run(
+    [sys.executable, str(extracted / "scripts/audit_skills.py"), "--json"],
+    check=True,
+    text=True,
+    capture_output=True,
+)
+report = json.loads(result.stdout)
+assert report["summary"]["total"] >= 0
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "codex-plugin: every explicit plugin-local skill dependency resolves" {
     archive="$TEST_TMP/dependency-audit.zip"
 
@@ -278,6 +321,35 @@ errors = codex_plugin.validate_staged_plugin(plugin)
 assert any("persona runtime resource is missing" in error for error in errors), errors
 assert any("briefing runtime resource is missing" in error for error in errors), errors
 assert any("source-root runtime reference" in error for error in errors), errors
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-plugin: validation rejects an unclassified bare script reference" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+temporary = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import codex_plugin
+
+plugin = temporary / "unclassified-script-reference"
+codex_plugin.stage_plugin(plugin)
+skill = plugin / "skills/skill-audit/SKILL.md"
+skill.write_text(
+    skill.read_text(encoding="utf-8")
+    + "\nRun `python3 scripts/missed_plugin_helper.py` from this skill.\n",
+    encoding="utf-8",
+)
+(plugin / "scripts/missed_plugin_helper.py").write_text(
+    "print('sentinel')\n",
+    encoding="utf-8",
+)
+
+errors = codex_plugin.validate_staged_plugin(plugin)
+assert any("unclassified bare script reference" in error for error in errors), errors
 PY
     [ "$status" -eq 0 ]
 }

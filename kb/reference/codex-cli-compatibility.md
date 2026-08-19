@@ -91,6 +91,8 @@ The deterministic archive has this root layout:
 skills/*/SKILL.md
 skills/persona/personas/*.md
 skills/briefing/scripts/session_token_stats.py
+scripts/audit_skills.py
+scripts/{_common,frontmatter,injection,emission,instruction_core}.py
 hooks/hooks.json
 hooks/*
 constitution.md
@@ -106,7 +108,10 @@ and timestamps are fixed so identical sources produce identical ZIP bytes.
 Skill references are adapted to plugin-local paths. Validation covers every
 intentionally bundled cross-skill/runtime dependency, including persona
 definitions, the briefing helper, the documentation standards skill, and the
-constitution referenced by the security skill.
+constitution referenced by the security skill. Bare `scripts/...` references
+are classified as plugin runtime, target-workspace, skill-local, or
+source-toolkit references; unclassified paths fail validation. The skill-audit
+command uses the staged helper, whose local imports are bundled at plugin root.
 
 `verify` stages a clean plugin under a temporary directory and checks the
 manifest, component paths, skills, exact command-only hook schema, executable
