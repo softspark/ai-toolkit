@@ -40,13 +40,14 @@ VALID_TYPES = frozenset({
 
 # Valid hook event names (must match validate.py VALID_HOOK_EVENTS)
 VALID_HOOK_EVENTS = frozenset({
-    "SessionStart", "Notification", "PreToolUse", "PostToolUse", "Stop",
-    "PreCompact", "SubagentStop", "UserPromptSubmit", "TaskCompleted",
-    "TeammateIdle", "SubagentStart", "SessionEnd", "PermissionRequest", "Setup",
-    "InstructionsLoaded", "ConfigChange", "PostToolUseFailure", "PostToolBatch",
-    "UserPromptExpansion", "PostCompact", "StopFailure", "CwdChanged",
-    "FileChanged", "PermissionDenied", "Elicitation", "ElicitationResult",
-    "WorktreeCreate", "WorktreeRemove", "TaskCreated",
+    "SessionStart", "SessionEnd", "UserPromptSubmit", "Notification",
+    "MessageDisplay", "PreToolUse", "PostToolUse", "PostToolUseFailure",
+    "PostToolBatch", "Stop", "StopFailure", "UserPromptExpansion",
+    "SubagentStart", "SubagentStop", "PreCompact", "PostCompact",
+    "PermissionRequest", "PermissionDenied", "Elicitation", "ElicitationResult",
+    "TaskCreated", "TaskCompleted", "TeammateIdle", "WorktreeCreate",
+    "WorktreeRemove", "CwdChanged", "FileChanged", "ConfigChange",
+    "DirectoryAdded", "Setup", "InstructionsLoaded",
 })
 
 

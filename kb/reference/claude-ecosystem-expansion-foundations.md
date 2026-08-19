@@ -3,9 +3,9 @@ title: "Claude Ecosystem Expansion Foundations"
 category: reference
 service: ai-toolkit
 tags: [benchmark, claude-code, ecosystem, hooks, plugins, architecture]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-03-27"
-last_updated: "2026-07-10"
+last_updated: "2026-08-19"
 description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit, including runtime-aware plugin packaging."
 ---
 
@@ -43,9 +43,21 @@ hooks and sub-agents are Cowork-only.
 
 ### 2. Broader lifecycle coverage
 
-The toolkit now covers prompt, edit, subagent, compaction, and session-end phases.
+The validator tracks the complete current Claude Code hook schema. Tracking an
+event means plugin manifests and hand-authored hook configuration can use it; it
+does not mean the default toolkit bundle registers a handler for that event.
 
-Implemented events:
+Tracked schema events:
+- `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`
+- `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`
+- `Stop`, `StopFailure`, `UserPromptExpansion`
+- `SubagentStart`, `SubagentStop`, `PreCompact`, `PostCompact`
+- `PermissionRequest`, `PermissionDenied`, `Elicitation`, `ElicitationResult`
+- `TaskCreated`, `TaskCompleted`, `TeammateIdle`
+- `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `DirectoryAdded`, `FileChanged`, `ConfigChange`
+- `Setup`, `InstructionsLoaded`
+
+Toolkit-wired events in `app/hooks.json`:
 - `SessionStart`
 - `Notification`
 - `PreToolUse`
@@ -58,6 +70,18 @@ Implemented events:
 - `SubagentStop`
 - `PreCompact`
 - `SessionEnd`
+- `InstructionsLoaded`
+- `ConfigChange`
+
+`MessageDisplay` and `DirectoryAdded` are tracked but intentionally have no
+default toolkit handler. `DirectoryAdded` runs asynchronously after `/add-dir`
+or SDK `register_repo_root` and cannot block the add. `MessageDisplay` can
+replace rendered text through `displayContent` without changing the transcript.
+
+Claude Code also recognizes native plugin LSP servers, experimental monitors,
+MCP-backed channels, and root plugin settings. Those are documented class C
+surfaces rather than generated toolkit output; root plugin settings currently
+support only `agent` and `subagentStatusLine`.
 
 ### 3. Creator workflows
 

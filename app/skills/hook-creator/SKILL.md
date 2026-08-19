@@ -23,7 +23,7 @@ Create a new Claude Code hook following ai-toolkit conventions.
 | `SessionEnd` | Session is closing | any | Flush logs, save transcripts |
 | `UserPromptSubmit` | User submits a prompt | any | Prompt governance, usage tracking |
 | `Notification` | Claude sends a notification | any | OS alerts, Slack pings |
-| `MessageDisplay` | Assistant message is about to be shown to the user | any | Transform or hide assistant message text before display |
+| `MessageDisplay` | Assistant message text streams in completed-line batches | none | Return `displayContent` to replace the rendered batch without changing the transcript |
 
 ### Tool lifecycle
 
@@ -80,6 +80,7 @@ Create a new Claude Code hook following ai-toolkit conventions.
 | `WorktreeCreate` | Worktree is being created; `type: "http"` can return `hookSpecificOutput.worktreePath` | any | Provision worktree dirs |
 | `WorktreeRemove` | Worktree is being removed | any | Cleanup |
 | `CwdChanged` | Working directory changes during a session | any | Reactive env management (e.g., direnv) |
+| `DirectoryAdded` | A working directory was added with `/add-dir` or SDK `register_repo_root`; runs asynchronously after the add and cannot block it | `slash_command\|register_repo_root` | Prepare a newly added repository |
 | `FileChanged` | Tracked file is modified on disk | any | Re-lint, reload config |
 | `ConfigChange` | Settings / config file changed | any | Re-validate, warn on drift |
 
@@ -99,7 +100,7 @@ Claude Code supports five handler `type` values in `hooks.json`:
 | `command` | Run a shell script / binary | `command` (path + args) |
 | `http` | Call a local or remote HTTP endpoint | `url` |
 | `prompt` | Inject a prompt to the fast inline model and use its verdict | `prompt` |
-| `agent` | Spawn a full subagent to evaluate the event (must target `Stop` / `SubagentStop`) | `agent` (agent name) |
+| `agent` | Spawn an experimental tool-using subagent to evaluate the event | `prompt` |
 | `mcp_tool` | Invoke an MCP tool directly (no subprocess) | `server`, `tool`, `arguments` |
 
 `command` remains the default and ai-toolkit's hook entries all use it. The other types are documented here so you can author them by hand when needed.
@@ -146,9 +147,22 @@ Required fields:
 - `hooks[].command`: path to script using `$HOME/.softspark/ai-toolkit/hooks/` prefix (for `type: command`)
 
 Optional fields (read from Claude Code docs, not emitted by ai-toolkit by default):
-- `hooks[].timeout`: seconds to wait before killing the hook (global default applies if omitted)
-- `hooks[].if`: permission-rule filter (e.g. `"Bash(git push*)"`) to reduce process spawning
+
+Common to every handler type:
+- `hooks[].if`: one permission-rule filter (e.g. `"Bash(git push*)"`); evaluated only for tool events
+- `hooks[].timeout`: seconds to wait before canceling the handler (type and event defaults apply if omitted)
 - `hooks[].statusMessage`: short message surfaced in the UI while the hook runs
+- `hooks[].once`: run once per session; only honored in skill frontmatter and ignored in settings files or agent frontmatter
+
+Command-handler fields:
+- `hooks[].args`: argument vector for exec form. Prefer exec form when a command uses `${CLAUDE_PROJECT_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, or `${CLAUDE_PLUGIN_DATA}` path placeholders
+- `hooks[].async`: run in the background without blocking; background hooks cannot return decisions
+- `hooks[].asyncRewake`: run in the background and wake Claude on exit code 2; implies `async`
+- `hooks[].shell`: choose `bash` or `powershell` for shell form; ignored when `args` selects exec form
+
+Prompt and agent handlers both require `hooks[].prompt`; `type: agent` does not accept an agent name field. Agent handlers are experimental, so prefer `command` for production enforcement.
+
+`MessageDisplay` has no matcher, runs once per rendered batch in interactive sessions, and defaults to a 10-second timeout. Its `displayContent` output changes only the screen text; Claude and the transcript retain the original response. `DirectoryAdded` is always asynchronous and non-blocking regardless of the handler configuration.
 
 ## Script Template
 

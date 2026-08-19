@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-07-14",
+  "last_updated": "2026-08-19",
   "tools": [
     {
       "id": "claude-code",
@@ -20,9 +20,20 @@
         ".claude/rules/*.md",
         ".claude/agents/*.md",
         ".claude/skills/*/SKILL.md",
-        "~/.claude/themes/*.json"
+        "~/.claude/themes/*.json",
+        ".claude-plugin/plugin.json",
+        "skills/*/SKILL.md",
+        "commands/*.md",
+        "agents/*.md",
+        "hooks/hooks.json",
+        ".mcp.json",
+        ".lsp.json",
+        "monitors/monitors.json",
+        "bin/*",
+        "settings.json"
       ],
       "our_generators": [],
+      "status_note": "Claude Code auto-discovers native plugin skills, commands, agents, hooks, MCP servers, LSP servers, monitors, executables, and root settings. ai-toolkit's primary install emits its existing rules, skills, agents, and hooks; plugin monitors, LSP servers, channels, and root plugin settings are recognized class C surfaces that ai-toolkit does not generate. Monitors are experimental, and plugin settings support only agent and subagentStatusLine.",
       "capability_markers": [
         "PreToolUse",
         "PostToolUse",
@@ -52,8 +63,15 @@
         "CwdChanged",
         "FileChanged",
         "ConfigChange",
+        "DirectoryAdded",
         "Setup",
         "InstructionsLoaded",
+        "plugins",
+        "LSP servers",
+        "monitors",
+        "channels",
+        "userConfig",
+        "settings.json",
         "slash command",
         "MCP server",
         "sub-agent",

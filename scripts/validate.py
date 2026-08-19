@@ -93,7 +93,7 @@ HOOK_REQUIRED_FIELDS = {
     "command": ("command",),
     "http": ("url",),
     "prompt": ("prompt",),
-    "agent": ("agent",),
+    "agent": ("prompt",),
     "mcp_tool": ("server", "tool", "arguments"),
 }
 

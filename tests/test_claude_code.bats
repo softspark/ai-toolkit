@@ -15,40 +15,50 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
 # ── Hook event allowlist ─────────────────────────────────────────────────────
 
-@test "claude-code: validate.py VALID_HOOK_EVENTS covers every event in the CHANGELOG tracked today" {
-    # These are the events mentioned in the CHANGELOG as of 2.1.118.
-    # When Anthropic ships a new hook event, add it here AND to validate.py.
-    expected=(
-        SessionStart SessionEnd UserPromptSubmit Notification
-        PreToolUse PostToolUse PostToolUseFailure PostToolBatch
-        Stop StopFailure
-        SubagentStart SubagentStop
-        PreCompact PostCompact
-        PermissionRequest PermissionDenied
-        Elicitation ElicitationResult
-        UserPromptExpansion
-        TaskCreated TaskCompleted TeammateIdle
-        WorktreeCreate WorktreeRemove
-        CwdChanged FileChanged ConfigChange
-        Setup InstructionsLoaded
-    )
-    missing=()
-    for ev in "${expected[@]}"; do
-        grep -q "\"${ev}\"" "$TOOLKIT_DIR/scripts/validate.py" || missing+=("$ev")
-    done
-    if [ "${#missing[@]}" -ne 0 ]; then
-        echo "Missing hook events in validate.py VALID_HOOK_EVENTS: ${missing[*]}" >&2
-        return 1
-    fi
-}
-
-@test "claude-code: validate.py rejects a bogus hook event name" {
-    # Regression: ensure the allowlist is actually enforced.
+@test "claude-code: hook event allowlists exactly match the current Claude Code contract" {
     run python3 -c "
 import sys
 sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from plugin_schema import VALID_HOOK_EVENTS as PLUGIN_HOOK_EVENTS
 from validate import VALID_HOOK_EVENTS
-assert 'TotallyMadeUpEvent' not in VALID_HOOK_EVENTS
+
+expected = frozenset({
+    'SessionStart', 'SessionEnd', 'UserPromptSubmit', 'Notification',
+    'MessageDisplay', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure',
+    'PostToolBatch', 'Stop', 'StopFailure', 'UserPromptExpansion',
+    'SubagentStart', 'SubagentStop', 'PreCompact', 'PostCompact',
+    'PermissionRequest', 'PermissionDenied', 'Elicitation',
+    'ElicitationResult', 'TaskCreated', 'TaskCompleted', 'TeammateIdle',
+    'WorktreeCreate', 'WorktreeRemove', 'CwdChanged', 'FileChanged',
+    'ConfigChange', 'DirectoryAdded', 'Setup', 'InstructionsLoaded',
+})
+assert VALID_HOOK_EVENTS == expected
+assert PLUGIN_HOOK_EVENTS == VALID_HOOK_EVENTS
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
+@test "claude-code: plugin manifest validator rejects a bogus hook event name" {
+    run python3 -c "
+import sys
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from plugin_schema import validate_manifest
+
+manifest = {
+    'name': 'test',
+    'description': 'test plugin',
+    'version': '1.0.0',
+    'domain': 'test',
+    'type': 'hook-pack',
+    'status': 'stable',
+    'requires': {'ai-toolkit': '>=1.0.0'},
+    'includes': {'agents': [], 'skills': [], 'rules': [], 'hooks': []},
+    'hook_events': {'bad.sh': 'TotallyMadeUpEvent'},
+}
+errors = validate_manifest(manifest)
+assert any(\"invalid event 'TotallyMadeUpEvent'\" in error for error in errors)
 print('ok')
 "
     [ "$status" -eq 0 ]
@@ -59,7 +69,7 @@ print('ok')
 
 @test "hook-creator SKILL.md documents the new hook events added in Claude Code 2.1.x" {
     skill="$TOOLKIT_DIR/app/skills/hook-creator/SKILL.md"
-    for ev in StopFailure PostCompact PermissionDenied Elicitation ElicitationResult TaskCreated WorktreeCreate WorktreeRemove CwdChanged FileChanged ConfigChange InstructionsLoaded; do
+    for ev in MessageDisplay DirectoryAdded StopFailure PostCompact PermissionDenied Elicitation ElicitationResult TaskCreated WorktreeCreate WorktreeRemove CwdChanged FileChanged ConfigChange InstructionsLoaded; do
         grep -q "\`${ev}\`" "$skill" || { echo "Missing \`${ev}\` row in hook-creator/SKILL.md" >&2; return 1; }
     done
 }
@@ -69,6 +79,34 @@ print('ok')
     for ty in command http prompt agent mcp_tool; do
         grep -q "\`${ty}\`" "$skill" || { echo "Missing handler type \`${ty}\` in hook-creator/SKILL.md" >&2; return 1; }
     done
+    for field in if timeout statusMessage once args async asyncRewake shell prompt; do
+        grep -q "hooks\[\]\\.${field}" "$skill" || { echo "Missing handler field \`${field}\` in hook-creator/SKILL.md" >&2; return 1; }
+    done
+    grep -q 'slash_command.*register_repo_root' "$skill"
+    grep -q 'displayContent' "$skill"
+    grep -q 'only honored.*skill frontmatter' "$skill"
+}
+
+@test "claude-code: agent hooks require prompt and reject the obsolete agent field" {
+    run python3 -c "
+import contextlib
+import io
+import sys
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from validate import HOOK_REQUIRED_FIELDS, ValidationResult, _validate_hook_handler
+
+assert HOOK_REQUIRED_FIELDS['agent'] == ('prompt',)
+valid = ValidationResult()
+_validate_hook_handler('Stop', {'type': 'agent', 'prompt': 'Verify tests. \$ARGUMENTS'}, valid)
+assert valid.errors == 0
+invalid = ValidationResult()
+with contextlib.redirect_stdout(io.StringIO()):
+    _validate_hook_handler('Stop', {'type': 'agent', 'agent': 'test-engineer'}, invalid)
+assert invalid.errors == 1
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
 }
 
 # ── skill-creator frontmatter reference ─────────────────────────────────────
@@ -91,7 +129,15 @@ import json
 d = json.load(open('$TOOLKIT_DIR/scripts/ecosystem_tools.json'))
 entries = [t for t in d['tools'] if t['id'] == 'claude-code']
 assert len(entries) == 1, 'claude-code missing from registry'
-assert entries[0]['kind'] == 'primary'
+entry = entries[0]
+assert entry['kind'] == 'primary'
+assert 'DirectoryAdded' in entry['capability_markers']
+for path in (
+    '.claude-plugin/plugin.json', 'skills/*/SKILL.md', 'commands/*.md',
+    'agents/*.md', 'hooks/hooks.json', '.mcp.json', '.lsp.json',
+    'monitors/monitors.json', 'bin/*', 'settings.json',
+):
+    assert path in entry['config_paths'], path
 print('ok')
 "
     [ "$status" -eq 0 ]
