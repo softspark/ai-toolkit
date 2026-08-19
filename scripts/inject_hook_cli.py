@@ -65,38 +65,16 @@ from secure_fs import (
     nearest_existing_root,
     run_secure_transaction,
 )
+from generate_codex_hooks import (
+    HANDLER_KEYS as CODEX_NATIVE_HANDLER_KEYS,
+    SUPPORTED_EVENTS as CODEX_EVENTS,
+)
 
 # Protected source tag -- this CLI must never touch ai-toolkit's own entries.
 PROTECTED_SOURCE = "ai-toolkit"
 
-# Codex CLI's native HookEventName enum defines these 10 events. External
-# command hooks can target all of them even though ai-toolkit's base bundle does
-# not currently ship a PostCompact handler.
-CODEX_EVENTS = {
-    "SessionStart",
-    "PreToolUse",
-    "PostToolUse",
-    "PermissionRequest",
-    "PostCompact",
-    "UserPromptSubmit",
-    "SubagentStart",
-    "SubagentStop",
-    "PreCompact",
-    "Stop",
-}
-
 CODEX_OWNER_PREFIX = "ai-toolkit-external"
 CODEX_NATIVE_GROUP_KEYS = frozenset({"matcher", "hooks"})
-CODEX_NATIVE_HANDLER_KEYS = frozenset(
-    {
-        "type",
-        "command",
-        "commandWindows",
-        "timeout",
-        "statusMessage",
-        "async",
-    }
-)
 CODEX_OWNER_PATTERN = re.compile(
     r"(?:^|\s)AI_TOOLKIT_HOOK_OWNER=(?P<owner>[a-z0-9][a-z0-9-]*)(?=\s|$)"
 )

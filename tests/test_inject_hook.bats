@@ -494,8 +494,8 @@ assert commands == [f"AI_TOOLKIT_HOOK_OWNER={owner} echo codex"], commands
 PY
 }
 
-@test "inject_hook_cli.py skips unsupported Codex events without modifying hooks.json" {
-    _make_hooks_file "$TEST_DIR/non-codex.json" "SessionEnd" "echo bye"
+@test "inject_hook_cli.py propagates SessionEnd using the exact Codex event allowlist" {
+    _make_hooks_file "$TEST_DIR/session-end.json" "SessionEnd" "echo bye"
     mkdir -p "$TEST_DIR/.codex"
     cat > "$TEST_DIR/.codex/hooks.json" <<'JSON'
 {
@@ -506,15 +506,94 @@ PY
   }
 }
 JSON
-    cp "$TEST_DIR/.codex/hooks.json" "$TEST_DIR/codex.before"
 
     run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
-        "$TEST_DIR/non-codex.json" "$TEST_DIR"
+        "$TEST_DIR/session-end.json" "$TEST_DIR"
 
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Skipped Codex hook"* ]]
+    [[ "$output" != *"Skipped Codex hook"* ]]
     grep -q 'SessionEnd' "$TEST_DIR/.claude/settings.json"
-    cmp "$TEST_DIR/codex.before" "$TEST_DIR/.codex/hooks.json"
+    python3 - "$TEST_DIR/.codex/hooks.json" "$TOOLKIT_DIR/scripts" <<'PY'
+import json
+import sys
+
+sys.path.insert(0, sys.argv[2])
+from generate_codex_hooks import SUPPORTED_EVENTS
+from inject_hook_cli import CODEX_EVENTS, _codex_owner
+
+assert CODEX_EVENTS == SUPPORTED_EVENTS
+assert len(CODEX_EVENTS) == 11
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+assert data["hooks"]["Stop"][0]["hooks"][0]["command"] == "echo user"
+handler = data["hooks"]["SessionEnd"][0]["hooks"][0]
+owner = _codex_owner("session-end")
+assert handler["command"] == f"AI_TOOLKIT_HOOK_OWNER={owner} echo bye", handler
+PY
+}
+
+@test "inject_hook_cli.py preserves valid Codex additionalContextLimit" {
+    cat > "$TEST_DIR/context-limit.json" <<'JSON'
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "echo context",
+        "additionalContextLimit": 0
+      }]
+    }]
+  }
+}
+JSON
+
+    run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+        "$TEST_DIR/context-limit.json" "$TEST_DIR"
+
+    [ "$status" -eq 0 ]
+    python3 - "$TEST_DIR/.codex/hooks.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+handler = data["hooks"]["PreToolUse"][0]["hooks"][0]
+assert handler["additionalContextLimit"] == 0, handler
+PY
+}
+
+@test "inject_hook_cli.py rejects invalid Codex additionalContextLimit transactionally" {
+    local value case_dir
+    for value in true -1 1.5 '"4096"'; do
+        case_dir="$TEST_DIR/case-${value//[^a-zA-Z0-9]/_}"
+        mkdir -p "$case_dir/.claude"
+        cat > "$case_dir/invalid-context.json" <<JSON
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "echo invalid",
+        "additionalContextLimit": $value
+      }]
+    }]
+  }
+}
+JSON
+
+        run env HOME="$case_dir" \
+            SOFTSPARK_HOME="$case_dir/.softspark" \
+            python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" \
+            "$case_dir/invalid-context.json" "$case_dir"
+
+        [ "$status" -ne 0 ]
+        [[ "$output" == *"additionalContextLimit must be a non-negative integer"* ]]
+        [ ! -e "$case_dir/.claude/settings.json" ]
+        [ ! -e "$case_dir/.codex/hooks.json" ]
+        [ ! -e "$case_dir/.softspark/ai-toolkit/hooks/external/sources.json" ]
+    done
 }
 
 @test "inject_hook_cli.py Codex propagation is idempotent" {

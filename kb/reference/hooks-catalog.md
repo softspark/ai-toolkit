@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.9.0"
+version: "1.10.0"
 created: "2026-03-27"
-last_updated: "2026-07-26"
+last_updated: "2026-08-19"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -641,10 +641,11 @@ Codex hooks follow the native [Codex hooks contract](https://learn.chatgpt.com/d
 
 - **Locations:** repository hooks live in `.codex/hooks.json`; user hooks live in `$CODEX_HOME/hooks.json` (default `~/.codex/hooks.json`). Project hooks load only for a trusted `.codex` layer.
 - **Assets:** repository commands use self-contained `.codex/hooks/*`; user commands use `$CODEX_HOME/ai-toolkit-hooks/*`. They do not call Claude's `~/.softspark/ai-toolkit/hooks/` paths.
-- **Events:** Codex documents 10 events. ai-toolkit wires 9: `SessionStart`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact` is intentionally unwired.
+- **Events:** Codex documents 11 events. ai-toolkit wires 10: `SessionStart`, `SessionEnd`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact` remains a valid event for injected command hooks but is intentionally unwired in the base bundle.
+- **Session end:** `SessionEnd` runs the self-contained `session-end.sh` asset with a three-second timeout. Its result is advisory, so the adapter records the handoff without emitting steering output.
 - **Compaction:** `PreCompact` runs `codex-pre-compact.sh`, a Codex-native reminder that refers to the active `AGENTS.md` chain, plan, and git state. It does not run Claude's `pre-compact.sh` or `pre-compact-save.sh` payload adapters.
 - **Ownership:** native JSON contains no private `_source` keys. Core handlers carry `AI_TOOLKIT_HOOK_OWNER=ai-toolkit` in their command; plugin and external handlers use exact source-specific command markers.
-- **Preservation:** generation replaces only toolkit-owned handlers and assets. Unrelated user handlers and plugin-owned handlers remain intact.
+- **Preservation:** generation replaces only toolkit-owned handlers and assets. Unrelated user handlers, plugin-owned handlers, an optional top-level `description`, and valid handler-level `additionalContextLimit` values remain intact.
 - **Trust:** installation never bypasses trust. Review the active definitions with `/hooks` after install or update.
 
 ### Devin CLI hooks (`.devin/hooks.v1.json`)
