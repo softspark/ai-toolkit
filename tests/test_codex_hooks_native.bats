@@ -34,17 +34,22 @@ PY
     [ -x "$TEST_ROOT/.codex/hooks/guard-destructive.sh" ]
     [ -f "$TEST_ROOT/.codex/hooks/_hook-io.sh" ]
 
-    run python3 - "$TEST_ROOT/.codex/hooks.json" <<'PY'
+    run python3 - "$TOOLKIT_DIR" "$TEST_ROOT/.codex/hooks.json" <<'PY'
 import json
 import sys
 from pathlib import Path
 
+toolkit = Path(sys.argv[1])
+sys.path.insert(0, str(toolkit / "scripts"))
+from generate_codex_hooks import SUPPORTED_EVENTS
+
 supported = {
     "PreToolUse", "PostToolUse", "PermissionRequest", "PreCompact",
     "PostCompact", "SessionStart", "UserPromptSubmit", "SubagentStart",
-    "SubagentStop", "Stop",
+    "SubagentStop", "Stop", "SessionEnd",
 }
-data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert SUPPORTED_EVENTS == supported, SUPPORTED_EVENTS
+data = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 assert set(data) == {"hooks"}
 assert set(data["hooks"]) <= supported
 assert "PostCompact" not in data["hooks"]
@@ -56,13 +61,79 @@ for event, groups in data["hooks"].items():
         if event in {"UserPromptSubmit", "Stop"}:
             assert "matcher" not in group, (event, group)
         for handler in group["hooks"]:
-            assert set(handler) == {"type", "command"}, handler
+            expected = {"type", "command", "timeout"} if event == "SessionEnd" else {"type", "command"}
+            assert set(handler) == expected, handler
             assert handler["type"] == "command"
             command = handler["command"]
             assert "AI_TOOLKIT_HOOK_OWNER=ai-toolkit" in command
             assert "$(git rev-parse --show-toplevel" in command
             assert "/.codex/hooks/" in command
             assert ".softspark/ai-toolkit/hooks" not in command
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-hooks-native: generates advisory SessionEnd with the documented timeout ceiling" {
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_hooks.py" "$TEST_ROOT" >/dev/null
+
+    run python3 - "$TEST_ROOT/.codex/hooks.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+groups = data["hooks"]["SessionEnd"]
+assert len(groups) == 1, groups
+assert "matcher" not in groups[0], groups[0]
+handler = groups[0]["hooks"][0]
+assert handler["type"] == "command", handler
+assert handler["timeout"] == 3, handler
+assert handler["command"].endswith('/session-end.sh"'), handler
+PY
+    [ "$status" -eq 0 ]
+    [ -x "$TEST_ROOT/.codex/hooks/session-end.sh" ]
+}
+
+@test "codex-hooks-native: SessionEnd writes a Codex handoff without steering output" {
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_hooks.py" "$TEST_ROOT" >/dev/null
+    git init -q "$TEST_ROOT"
+
+    run python3 - "$TEST_ROOT" <<'PY'
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+project = Path(sys.argv[1]).resolve()
+home = project / "test-home"
+home.mkdir()
+data = json.loads((project / ".codex/hooks.json").read_text(encoding="utf-8"))
+handler = data["hooks"]["SessionEnd"][0]["hooks"][0]
+assert handler["command"].endswith('/session-end.sh"'), handler
+
+result = subprocess.run(
+    handler["command"],
+    shell=True,
+    cwd=project,
+    input=json.dumps({
+        "session_id": "codex-session-end",
+        "cwd": str(project),
+        "hook_event_name": "SessionEnd",
+        "reason": "other",
+    }),
+    text=True,
+    capture_output=True,
+    env={**os.environ, "HOME": str(home)},
+    timeout=3,
+)
+assert result.returncode == 0, result
+assert result.stdout == "", result.stdout
+session_key = str(project).replace("/", "-")
+handoff = home / ".softspark/ai-toolkit/sessions" / session_key / "session-end.md"
+content = handoff.read_text(encoding="utf-8")
+assert "AGENTS.md" in content, content
+assert "CLAUDE.md" not in content, content
 PY
     [ "$status" -eq 0 ]
 }
@@ -92,9 +163,10 @@ PY
     mkdir -p "$TEST_ROOT/.codex/hooks"
     cat > "$TEST_ROOT/.codex/hooks.json" <<'JSON'
 {
+  "description": "User lifecycle hooks",
   "hooks": {
     "PreToolUse": [
-      {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo user-pre"}]},
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo user-pre", "additionalContextLimit": 0}]},
       {"matcher": "Bash", "hooks": [{"type": "command", "command": "AI_TOOLKIT_HOOK_QUIET=1 \"$HOME/.softspark/ai-toolkit/hooks/guard-destructive.sh\""}]}
     ],
     "Stop": [
@@ -109,6 +181,10 @@ JSON
         > "$TEST_ROOT/.codex/hooks/user-owned.sh"
 
     run python3 "$TOOLKIT_DIR/scripts/generate_codex_hooks.py" "$TEST_ROOT"
+    [ "$status" -eq 0 ]
+    run python3 -c "import json; assert json.load(open('$TEST_ROOT/.codex/hooks.json'))['description'] == 'User lifecycle hooks'"
+    [ "$status" -eq 0 ]
+    run python3 -c "import json; data=json.load(open('$TEST_ROOT/.codex/hooks.json')); assert data['hooks']['PreToolUse'][0]['hooks'][0]['additionalContextLimit'] == 0"
     [ "$status" -eq 0 ]
     grep -q 'echo user-pre' "$TEST_ROOT/.codex/hooks.json"
     grep -q 'echo user-stop' "$TEST_ROOT/.codex/hooks.json"
@@ -783,7 +859,7 @@ PY
     [ "$status" -eq 0 ]
 }
 
-@test "codex-hooks-native: validator rejects empty commands and invalid timeouts" {
+@test "codex-hooks-native: validator enforces the current command-only schema" {
     run python3 - "$TOOLKIT_DIR" <<'PY'
 import copy
 import sys
@@ -794,11 +870,17 @@ sys.path.insert(0, str(toolkit / "scripts"))
 from generate_codex_hooks import validate_hooks_document
 
 valid = {
+    "description": "Valid user hooks",
     "hooks": {
         "Stop": [
             {
                 "hooks": [
-                    {"type": "command", "command": "echo valid", "timeout": 30}
+                    {
+                        "type": "command",
+                        "command": "echo valid",
+                        "timeout": 30,
+                        "additionalContextLimit": 0,
+                    }
                 ]
             }
         ]
@@ -823,6 +905,46 @@ for field, value in invalid_values:
         pass
     else:
         raise AssertionError((field, value))
+
+for value in (True, -1, 1.5, "1"):
+    document = copy.deepcopy(valid)
+    document["hooks"]["Stop"][0]["hooks"][0]["additionalContextLimit"] = value
+    try:
+        validate_hooks_document(document)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(("additionalContextLimit", value))
+
+for value in (None, True, 1, []):
+    document = copy.deepcopy(valid)
+    document["description"] = value
+    try:
+        validate_hooks_document(document)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(("description", value))
+
+for handler_type in ("mcp_tool", "prompt", "agent"):
+    document = copy.deepcopy(valid)
+    document["hooks"]["Stop"][0]["hooks"][0]["type"] = handler_type
+    try:
+        validate_hooks_document(document)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(("type", handler_type))
+
+session_end = copy.deepcopy(valid)
+session_end["hooks"]["SessionEnd"] = session_end["hooks"].pop("Stop")
+session_end["hooks"]["SessionEnd"][0]["hooks"][0]["timeout"] = 4
+try:
+    validate_hooks_document(session_end)
+except ValueError:
+    pass
+else:
+    raise AssertionError("SessionEnd timeout above 3 seconds was accepted")
 PY
     [ "$status" -eq 0 ]
 }

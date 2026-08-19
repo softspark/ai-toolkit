@@ -61,6 +61,7 @@ SUPPORTED_EVENTS = frozenset(
         "PreCompact",
         "PostCompact",
         "SessionStart",
+        "SessionEnd",
         "UserPromptSubmit",
         "SubagentStart",
         "SubagentStop",
@@ -76,6 +77,7 @@ HANDLER_KEYS = frozenset(
         "commandWindows",
         "timeout",
         "statusMessage",
+        "additionalContextLimit",
         "async",
     }
 )
@@ -112,6 +114,9 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     ],
     "PreCompact": [
         ("", "codex-pre-compact.sh"),
+    ],
+    "SessionEnd": [
+        ("", "session-end.sh"),
     ],
     "Stop": [
         ("", "quality-check.sh"),
@@ -166,6 +171,47 @@ if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/n
 fi
 """
 
+CODEX_SESSION_END_ADAPTER = r"""#!/usr/bin/env bash
+# Native Codex SessionEnd handoff. SessionEnd output is advisory, so stay
+# silent and persist the snapshot without attempting to steer the closed thread.
+# The generated asset always ships these helpers beside this script.
+# shellcheck disable=SC1091,SC2034,SC2153
+# shellcheck source=_session-paths.sh
+source "$(dirname "$0")/_session-paths.sh"
+# shellcheck source=_hook-io.sh
+source "$(dirname "$0")/_hook-io.sh"
+
+INPUT=$(cat)
+SESSION_ID=$(hook_session_id)
+SESSION_STATE_CLI="${AI_TOOLKIT_SESSION_STATE_CLI:-$HOME/.softspark/ai-toolkit/scripts/session_state.py}"
+if [ "$SESSION_ID" != "default" ] &&
+   [ -f "$SESSION_STATE_CLI" ] &&
+   [ ! -L "$SESSION_STATE_CLI" ] &&
+   command -v python3 >/dev/null 2>&1; then
+    python3 -S "$SESSION_STATE_CLI" clean \
+        --session-id "$SESSION_ID" >/dev/null 2>&1 || true
+fi
+
+# shellcheck source=_profile-check.sh
+source "$(dirname "$0")/_profile-check.sh"
+
+STAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date)"
+mkdir -p "$SESSION_DIR"
+{
+    echo "# Session End Snapshot"
+    echo ""
+    echo "- ended_at: $STAMP"
+    if [ -f "$SESSION_CONTEXT_FILE" ]; then
+        echo "- session_context: present"
+    else
+        echo "- session_context: missing"
+    fi
+    echo "- next_start: re-read AGENTS.md, open tasks, and validation state"
+} > "$SESSION_END_FILE"
+
+exit 0
+"""
+
 CODEX_MCP_HEALTH_ADAPTER = r"""#!/usr/bin/env bash
 # Check documented Codex MCP config layers without starting any MCP server.
 cat >/dev/null || true
@@ -210,6 +256,7 @@ PY
 GENERATED_ADAPTERS = {
     "codex-stop-search-check.sh": CODEX_STOP_SEARCH_ADAPTER,
     "codex-session-start.sh": CODEX_SESSION_START_ADAPTER,
+    "session-end.sh": CODEX_SESSION_END_ADAPTER,
     "codex-pre-compact.sh": CODEX_PRE_COMPACT_ADAPTER,
     "codex-mcp-health.sh": CODEX_MCP_HEALTH_ADAPTER,
 }
@@ -248,13 +295,14 @@ def build_hooks_json(*, global_install: bool = False) -> dict[str, Any]:
     for event, entries in CODEX_HOOKS.items():
         groups: list[dict[str, Any]] = []
         for matcher, script in entries:
+            handler: dict[str, Any] = {
+                "type": "command",
+                "command": _command_for(script, global_install),
+            }
+            if event == "SessionEnd":
+                handler["timeout"] = 3
             group: dict[str, Any] = {
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": _command_for(script, global_install),
-                    }
-                ]
+                "hooks": [handler]
             }
             if matcher:
                 group["matcher"] = matcher
@@ -266,8 +314,12 @@ def build_hooks_json(*, global_install: bool = False) -> dict[str, Any]:
 
 
 def _validate_hooks_document(data: Any) -> None:
-    if not isinstance(data, dict) or set(data) - {"hooks"}:
-        raise ValueError("Codex hooks.json must contain only the top-level hooks key")
+    if not isinstance(data, dict) or set(data) - {"description", "hooks"}:
+        raise ValueError(
+            "Codex hooks.json supports only description and hooks at the top level"
+        )
+    if "description" in data and not isinstance(data["description"], str):
+        raise ValueError("Codex hooks.json description must be a string")
     hooks = data.get("hooks", {})
     if not isinstance(hooks, dict):
         raise ValueError("Codex hooks.json hooks must be an object")
@@ -320,6 +372,14 @@ def _validate_handler(event: str, handler: Any) -> None:
         timeout = handler["timeout"]
         if type(timeout) is not int or timeout <= 0:
             raise ValueError(f"Codex {event} timeout must be a positive integer")
+        if event == "SessionEnd" and timeout > 3:
+            raise ValueError("Codex SessionEnd timeout cannot exceed 3 seconds")
+    if "additionalContextLimit" in handler:
+        context_limit = handler["additionalContextLimit"]
+        if type(context_limit) is not int or context_limit < 0:
+            raise ValueError(
+                f"Codex {event} additionalContextLimit must be a non-negative integer"
+            )
     for key in ("commandWindows", "statusMessage"):
         if key in handler and not isinstance(handler[key], str):
             raise ValueError(f"Codex {event} {key} must be a string")
@@ -414,6 +474,8 @@ def _is_managed_handler(handler: dict[str, Any]) -> bool:
 
 def _merge_hooks(existing: dict[str, Any], generated: dict[str, Any]) -> dict[str, Any]:
     merged: dict[str, Any] = {"hooks": {}}
+    if "description" in existing:
+        merged["description"] = existing["description"]
     for event, groups in existing.get("hooks", {}).items():
         retained_groups: list[dict[str, Any]] = []
         for group in groups:

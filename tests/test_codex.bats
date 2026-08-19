@@ -298,12 +298,13 @@ PY
     [ "$status" -eq 0 ]
 }
 
-@test "codex: hooks.json uses only upstream-supported event names (10 events)" {
+@test "codex: hooks.json uses only upstream-supported event names (11 events)" {
     # Per codex-rs/config/src/hook_config.rs HookEventName the accepted keys
-    # are the 10 below. Verify no unsupported event sneaks in.
+    # are the 11 below. Verify no unsupported event sneaks in.
     run python3 -c "
 import json
-supported = {'PreToolUse','PostToolUse','PermissionRequest','PreCompact','PostCompact','SessionStart','UserPromptSubmit','SubagentStart','SubagentStop','Stop'}
+supported = {'PreToolUse','PostToolUse','PermissionRequest','PreCompact','PostCompact','SessionStart','SessionEnd','UserPromptSubmit','SubagentStart','SubagentStop','Stop'}
+assert len(supported) == 11
 data = json.load(open('$CX_DIR/.codex/hooks.json'))
 events = set(data['hooks'].keys())
 extra = events - supported
@@ -315,11 +316,11 @@ print('ok')
 }
 
 @test "codex: hooks.json wires the full lifecycle (compaction + subagent events)" {
-    # Regression: earlier versions wired only 5 of 10 events. All native+default.
+    # Regression: earlier versions wired only 5 events and omitted SessionEnd.
     run python3 -c "
 import json
 data = json.load(open('$CX_DIR/.codex/hooks.json'))
-for evt in ('PostToolUse','SubagentStart','SubagentStop','PreCompact'):
+for evt in ('PostToolUse','SubagentStart','SubagentStop','PreCompact','SessionEnd'):
     assert evt in data['hooks'], f'{evt} missing'
 print('ok')
 "

@@ -3,9 +3,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.0.4"
+version: "1.1.0"
 created: "2026-04-12"
-last_updated: "2026-07-14"
+last_updated: "2026-08-19"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -123,9 +123,8 @@ even when its tool list is otherwise portable. Examples include:
 
 ## Hook Compatibility
 
-Codex does not expose the full Claude hook event surface. Codex's
-`HookEventName` enum defines 10 events; the Codex hook generator wires 9 of
-them:
+Codex does not expose the full Claude hook event surface. The current native
+contract defines 11 events; the Codex hook generator wires 10 of them:
 
 - `SessionStart`
 - `PreToolUse`
@@ -135,13 +134,34 @@ them:
 - `SubagentStart`
 - `SubagentStop`
 - `PreCompact`
+- `SessionEnd`
 - `Stop`
 
 `PostCompact` is the one enum event left unwired (its only hook was the removed
 environment-snapshot probe). Claude-only events such as `TaskCompleted`,
-`TeammateIdle`, `SessionEnd`, and `Notification` have no Codex equivalent and
-are not available in `.codex/hooks.json`. Handler types: only `command` runs;
-`prompt` and `agent` are parsed by Codex but not yet executed.
+`TeammateIdle`, and `Notification` have no Codex equivalent and are not
+available in `.codex/hooks.json`.
+
+The generated `SessionEnd` handler runs the self-contained `session-end.sh`
+asset with `timeout: 3`, Codex's documented maximum. It runs only for the main
+thread, always synchronously, and is advisory: its output cannot steer Codex or
+keep the thread open. The asset therefore stays silent, cleans the session's
+toolkit state when available, and writes the handoff snapshot outside the
+repository with Codex-native `AGENTS.md` restart guidance.
+
+Existing native hook documents may include an optional top-level string
+`description`; merges preserve it unchanged. Command handlers may include a
+non-negative integer `additionalContextLimit`, including zero, and valid user
+values are also preserved. Booleans, negative values, and non-integers are
+rejected before any file is changed. `SessionEnd` timeouts above three seconds
+are rejected.
+
+Only executable `type: "command"` handlers are accepted. The current official
+hooks page says `prompt` and `agent` handlers are parsed but skipped, and does
+not establish an executable `mcp_tool` handler schema. Codex CLI 0.148.0 release
+notes mention MCP hooks, which conflicts with that page. Toolkit support stays
+command-only until OpenAI confirms the native config schema and execution
+semantics in the canonical hooks documentation.
 
 The generator merges these Codex-compatible events into project or user
 `hooks.json`, preserving unrelated user handlers and replacing only commands
@@ -159,10 +179,12 @@ After installation or any hook change, open `/hooks` in Codex and review/trust
 the exact definitions. Project hooks additionally require a trusted `.codex`
 project layer. The installer never bypasses hook trust.
 
+Source: [Codex hooks](https://learn.chatgpt.com/docs/hooks).
+
 Generated Codex hook commands include `AI_TOOLKIT_HOOK_QUIET=1`. Native
-`SessionStart`, `PreCompact`, and MCP-health adapters use Codex instruction and
-config terminology (`AGENTS.md`, `.codex/config.toml`) instead of Claude-only
-paths. The generated
+`SessionStart`, `SessionEnd`, `PreCompact`, and MCP-health adapters use Codex
+instruction and config terminology (`AGENTS.md`, `.codex/config.toml`) instead
+of Claude-only paths. The generated
 `UserPromptSubmit` governance hook does not set `AI_TOOLKIT_HOOK_FORMAT=json`
 by default because Codex currently renders `additionalContext` as visible hook
 context in the TUI. This keeps prompt-submit output quiet while preserving hook
