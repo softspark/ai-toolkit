@@ -286,12 +286,17 @@ manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
 guard = plugin / "hooks" / "guard-destructive.sh"
 os.chmod(guard, 0o644)
+hooks_path = plugin / "hooks" / "hooks.json"
+hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
+hooks["hooks"]["PreToolUse"][0]["hooks"][0]["command"] += "; echo unexpected"
+hooks_path.write_text(json.dumps(hooks), encoding="utf-8")
 (plugin / "escaped-link").symlink_to(temporary / "outside")
 
 errors = codex_plugin.validate_staged_plugin(plugin)
 assert any("default hooks/hooks.json" in error for error in errors), errors
 assert any("not executable" in error for error in errors), errors
 assert any("contains a symlink" in error for error in errors), errors
+assert any("differ from the canonical" in error for error in errors), errors
 PY
     [ "$status" -eq 0 ]
 }

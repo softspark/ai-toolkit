@@ -16,7 +16,6 @@ import io
 import json
 import os
 import re
-import subprocess
 import stat
 import sys
 import tempfile
@@ -587,6 +586,8 @@ def _validate_hooks(plugin_dir: Path, errors: list[str]) -> None:
     except ValueError as error:
         errors.append(str(error))
         return
+    if hooks != build_plugin_hooks():
+        errors.append("plugin hooks differ from the canonical ai-toolkit definition")
     expected_events = set(CODEX_HOOKS)
     actual_events = set(hooks.get("hooks", {}))
     if actual_events != expected_events:
@@ -647,44 +648,6 @@ def validate_staged_plugin(plugin_dir: Path) -> list[str]:
     return errors
 
 
-def _shared_validator_path() -> Path | None:
-    override = os.environ.get("CODEX_PLUGIN_VALIDATOR")
-    candidates = []
-    if override:
-        candidates.append(Path(override).expanduser())
-    candidates.append(
-        Path.home()
-        / ".codex"
-        / "skills"
-        / ".system"
-        / "plugin-creator"
-        / "scripts"
-        / "validate_plugin.py"
-    )
-    for candidate in candidates:
-        if not candidate.is_symlink() and candidate.is_file():
-            return candidate
-    return None
-
-
-def _run_shared_validator(plugin_dir: Path) -> bool:
-    validator = _shared_validator_path()
-    if validator is None:
-        return True
-    result = subprocess.run(
-        [sys.executable, str(validator), str(plugin_dir)],
-        check=False,
-        text=True,
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        print(result.stdout.rstrip(), file=sys.stderr)
-        print(result.stderr.rstrip(), file=sys.stderr)
-        return False
-    print("Shared Codex plugin validator passed")
-    return True
-
-
 def verify_plugin() -> bool:
     with tempfile.TemporaryDirectory(prefix="ai-toolkit-codex-plugin-") as tmp:
         staged = Path(tmp) / PLUGIN_NAME
@@ -692,7 +655,7 @@ def verify_plugin() -> bool:
         errors = validate_staged_plugin(staged)
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
-        if errors or not _run_shared_validator(staged):
+        if errors:
             return False
     print("Codex plugin validation passed")
     return True

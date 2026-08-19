@@ -114,10 +114,11 @@ source-toolkit references; unclassified paths fail validation. The skill-audit
 command uses the staged helper, whose local imports are bundled at plugin root.
 
 `verify` stages a clean plugin under a temporary directory and checks the
-manifest, component paths, skills, exact command-only hook schema, executable
-assets, `SessionEnd` timeout, and symlink safety. It also runs the shared Codex
-plugin validator when that validator is installed. It does not add a
-marketplace, install a plugin, or write under `~/.agents` or `~/.codex`.
+manifest, component paths, skills, exact canonical command-only hooks,
+executable assets, `SessionEnd` timeout, and symlink safety. The check is
+self-contained: it does not execute mutable validators selected from `$HOME`
+or environment-provided paths, add a marketplace, install a plugin, or write
+under `~/.agents` or `~/.codex`.
 Archive output uses the shared pinned-directory transaction and rejects a
 symlink at the destination or in any requested ancestor, so a redirected path
 cannot write outside the lexical destination.
