@@ -105,6 +105,22 @@ teardown() {
     grep -q "My agent" "$TEST_PROJECT/.claude/agents/my-agent.md"
 }
 
+@test "uninstall.py removes managed Gemini agents and preserves user agents" {
+    (cd "$TEST_PROJECT" && python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        --editors gemini --profile full) >/dev/null 2>&1
+    printf '%s\n' 'user Gemini agent' > "$TEST_PROJECT/.gemini/agents/team.md"
+    printf '%s\n' 'user Gemini collision' \
+        > "$TEST_PROJECT/.gemini/agents/ai-toolkit-debugger.md"
+
+    python3 "$TOOLKIT_DIR/scripts/uninstall.py" --local \
+        --target "$TEST_PROJECT" --yes >/dev/null 2>&1
+
+    grep -q '^user Gemini agent$' "$TEST_PROJECT/.gemini/agents/team.md"
+    grep -q '^user Gemini collision$' \
+        "$TEST_PROJECT/.gemini/agents/ai-toolkit-debugger.md"
+    [ ! -e "$TEST_PROJECT/.gemini/agents/ai-toolkit-backend-specialist.md" ]
+}
+
 @test "uninstall.py preserves user-owned skill directories" {
     mkdir -p "$TEST_PROJECT/.claude/skills/my-skill"
     echo "# My skill" > "$TEST_PROJECT/.claude/skills/my-skill/SKILL.md"

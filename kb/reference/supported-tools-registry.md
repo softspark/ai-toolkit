@@ -3,7 +3,7 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.12.0"
+version: "1.13.0"
 created: "2026-04-23"
 last_updated: "2026-08-19"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code, Claude Chat/Cowork, and 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
@@ -113,12 +113,13 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `gemini-cli` |
 | Docs | https://github.com/google-gemini/gemini-cli/tree/main/docs |
 | Release notes | https://github.com/google-gemini/gemini-cli/releases |
-| Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md`, `~/.gemini/skills/*/SKILL.md`, `~/.agents/skills/*/SKILL.md` (the `.agents/skills` alias wins over `.gemini/skills` within the same tier), `.gemini/extensions/gemini-extension.json` |
-| Our generators | `scripts/generate_gemini.py`, `scripts/generate_gemini_hooks.py` (profile>=standard), `scripts/generate_gemini_commands.py` (profile=full), `scripts/generate_gemini_skills.py` (profile=full) |
-| Global install | `ai-toolkit install --editors gemini` writes `~/.gemini/GEMINI.md` **plus** hooks at `~/.gemini/settings.json` (profile ≥ standard) and `~/.gemini/commands/` + `~/.gemini/skills/` pointer (profile=full) — all documented user-tier surfaces. A global-only Gemini user previously got zero hooks. |
+| Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.gemini/agents/*.md`, `.agents/skills/*/SKILL.md`, `~/.gemini/skills/*/SKILL.md`, `~/.gemini/agents/*.md`, `~/.agents/skills/*/SKILL.md` (the `.agents/skills` alias wins over `.gemini/skills` within the same tier). Extension packages keep `gemini-extension.json` at the package root and install below `~/.gemini/extensions/<name>/`. |
+| Our generators | `scripts/generate_gemini.py`, `scripts/generate_gemini_hooks.py` (profile>=standard), `scripts/generate_gemini_commands.py` (profile=full), `scripts/generate_gemini_skills.py` (profile=full), `scripts/generate_gemini_agents.py` (profile=full) |
+| Global install | `ai-toolkit install --editors gemini` writes `~/.gemini/GEMINI.md` **plus** hooks at `~/.gemini/settings.json` (profile ≥ standard) and `~/.gemini/{commands,skills,agents}/` (profile=full). Agents use native `name`, `description`, and `kind: local` metadata; incompatible Claude `model` and `tools` fields are omitted. |
 | Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeToolSelection`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `Notification`, `PreCompress`, `SessionStart`, `SessionEnd`, `SKILL.md`, `activate_skill`, custom commands, `.gemini/agents/*.md` subagents, `gemini-extension.json` (no native `Stop` event — generator maps Stop-equivalent to `AfterAgent`; 11 documented hook events total) |
 | Version probe | `gemini --version` |
-| Latest upstream | v0.49.0 (2026-06-25; the stable line skipped v0.48.0 — its preview content was promoted into v0.49.0). NOTE: Gemini CLI dropped free/paid individual tiers on 2026-06-18 in favor of Antigravity CLI (we ship `generate_antigravity.py`); enterprise Code Assist and paid API keys keep Gemini CLI, so the integration stays. The 11 hook events are unchanged. v0.49.0 completed the `coreTools` → `tools.core` migration (auto-migrated; `tools.exclude` deprecated) — both are tool-allowlist keys we do not emit, so no generator change. Watch item: `.gemini/agents/*.md` / `~/.gemini/agents/*.md` native subagents are documented but we do not yet emit them (candidate `generate_gemini_agents.py`). |
+| Extension coverage | Current Gemini extensions can bundle root `GEMINI.md`, `commands/`, `hooks/hooks.json`, `skills/`, `agents/`, and `policies/`. ai-toolkit does not export a Gemini extension package; this distribution surface is class C / not adopted. |
+| Latest upstream | v0.49.0 (2026-06-25; the stable line skipped v0.48.0 — its preview content was promoted into v0.49.0). NOTE: Gemini CLI dropped free/paid individual tiers on 2026-06-18 in favor of Antigravity CLI (we ship `generate_antigravity.py`); enterprise Code Assist and paid API keys keep Gemini CLI, so the integration stays. The 11 hook events are unchanged. v0.49.0 completed the `coreTools` → `tools.core` migration (auto-migrated; `tools.exclude` deprecated) — both are tool-allowlist keys we do not emit, so no generator change. Native project and user-tier subagents are now emitted by `generate_gemini_agents.py` for profile `full`. |
 
 ### Cline
 

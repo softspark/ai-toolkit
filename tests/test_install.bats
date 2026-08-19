@@ -462,6 +462,7 @@ MD
     [ -f "$TMP_HOME/.gemini/settings.json" ]
     [ -d "$TMP_HOME/.gemini/commands" ]
     [ -d "$TMP_HOME/.gemini/skills" ]
+    [ -f "$TMP_HOME/.gemini/agents/ai-toolkit-debugger.md" ]
 
     # Augment: hooks + sub-agents + commands under ~/.augment
     [ -f "$TMP_HOME/.augment/settings.json" ]
@@ -495,7 +496,7 @@ MD
     grep -q '"AI_TOOLKIT_HOOK_OWNER": "ai-toolkit"' \
         "$TMP_HOME/.copilot/hooks/ai-toolkit.json"
 
-    # Antigravity: canonical config skills/hooks/agents plus legacy CLI pointer.
+    # Antigravity: current canonical CLI and IDE/shared-product skill roots.
     [ -f "$TMP_HOME/.gemini/config/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
     [ -f "$TMP_HOME/.gemini/antigravity-cli/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
     [ -f "$TMP_HOME/.gemini/config/hooks.json" ]

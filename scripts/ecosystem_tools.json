@@ -289,16 +289,20 @@
         "~/.gemini/settings.json",
         ".gemini/commands/*.toml",
         ".gemini/skills/*/SKILL.md",
+        ".gemini/agents/*.md",
         ".agents/skills/*/SKILL.md",
         "~/.gemini/skills/*/SKILL.md",
+        "~/.gemini/agents/*.md",
         "~/.agents/skills/*/SKILL.md",
-        ".gemini/extensions/gemini-extension.json"
+        "<extension-package>/gemini-extension.json",
+        "~/.gemini/extensions/<name>/gemini-extension.json"
       ],
       "our_generators": [
         "scripts/generate_gemini.py",
         "scripts/generate_gemini_hooks.py",
         "scripts/generate_gemini_commands.py",
-        "scripts/generate_gemini_skills.py"
+        "scripts/generate_gemini_skills.py",
+        "scripts/generate_gemini_agents.py"
       ],
       "capability_markers": [
         "GEMINI.md",
@@ -319,9 +323,10 @@
         "SKILL.md",
         "activate_skill",
         "custom commands",
+        ".gemini/agents/*.md",
         "gemini-extension.json"
       ],
-      "status_note": "Gemini CLI drops free + paid (AI Pro/Ultra) tiers on 2026-06-18 in favor of the new Antigravity CLI (we ship generate_antigravity.py); enterprise Gemini Code Assist Standard/Enterprise keeps full Gemini CLI support. The .gemini/* generators remain valid for the enterprise audience.",
+      "status_note": "Gemini CLI drops free + paid (AI Pro/Ultra) tiers on 2026-06-18 in favor of the new Antigravity CLI (we ship generate_antigravity.py); enterprise Gemini Code Assist Standard/Enterprise keeps full Gemini CLI support. Profile full now emits project and user-tier native agents. Gemini extension export remains class C / not adopted; extension manifests live at the package root and installed extensions live under ~/.gemini/extensions/<name>/.",
       "version_probe": {
         "kind": "command",
         "command": "gemini --version"

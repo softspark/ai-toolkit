@@ -14,10 +14,10 @@ Gemini CLI hook events (per docs/hooks/reference.md, google-gemini/gemini-cli):
     BeforeToolSelection, AfterModel, SessionStart, SessionEnd,
     Notification, PreCompress
 
-The ai-toolkit registry nominally includes `Stop`, but the upstream Gemini CLI
-does not implement it; `AfterAgent` is the closest equivalent (fires once per
-turn after the model's final response) and we wire our `save-session.sh` /
-`quality-check.sh` there.
+Claude Code's source lifecycle includes `Stop`, but Gemini CLI does not
+implement it. `AfterAgent` is the closest equivalent (fires once per turn
+after the model's final response), so we wire our `save-session.sh` and
+`quality-check.sh` there without advertising a non-existent Gemini event.
 
 Hook scripts are shared with Claude Code / Codex and live under
 `~/.softspark/ai-toolkit/hooks/`. This generator does NOT duplicate shell code.
@@ -37,6 +37,19 @@ from pathlib import Path
 
 HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_FORMAT=json "$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
+GEMINI_SUPPORTED_HOOK_EVENTS = (
+    "BeforeTool",
+    "AfterTool",
+    "BeforeToolSelection",
+    "BeforeAgent",
+    "AfterAgent",
+    "BeforeModel",
+    "AfterModel",
+    "Notification",
+    "PreCompress",
+    "SessionStart",
+    "SessionEnd",
+)
 
 # Event -> list of (matcher, script) pairs. Matcher semantics:
 #   - Tool events (BeforeTool/AfterTool): regex over tool_name
@@ -76,6 +89,13 @@ GEMINI_HOOKS: dict[str, list[tuple[str, str]]] = {
         ("", "session-end.sh"),
     ],
 }
+
+_unsupported_events = set(GEMINI_HOOKS) - set(GEMINI_SUPPORTED_HOOK_EVENTS)
+if _unsupported_events:
+    raise RuntimeError(
+        "Unsupported Gemini hook event mapping(s): "
+        + ", ".join(sorted(_unsupported_events))
+    )
 
 
 def build_hook_entry(matcher: str, script: str) -> dict:

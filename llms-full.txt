@@ -8863,6 +8863,7 @@ ai-toolkit/
     generate_copilot.py      # Generates Copilot instructions, agents, and portable skills
     generate_copilot_hooks.py # Generates native Copilot hooks + self-contained runtime
     generate_gemini.py       # Generates GEMINI.md (sources _common.py)
+    generate_gemini_agents.py # Generates native .gemini/agents/*.md definitions
     generate_cline.py        # Generates .clinerules (sources _common.py)
     generate_roo_modes.py    # Generates .roomodes
     generate_aider_conf.py   # Generates .aider.conf.yml
@@ -8925,7 +8926,8 @@ also emits `.github/instructions`, `.github/prompts`, and native
 `.github/hooks`. The user target writes the supported personal surfaces below
 `$COPILOT_HOME` (default `~/.copilot`) and does not generate prompt files there.
 Full-profile installs also emit native skill pointer catalogues for Cursor,
-Windsurf, and Cline. Codex local install generates `AGENTS.md`,
+Windsurf, and Cline, plus Gemini commands, a skill pointer, and native
+`.gemini/agents/*.md` definitions. Codex local install generates `AGENTS.md`,
 `.agents/skills/*`, `.codex/agents/*.toml`, `.codex/hooks.json`, and
 self-contained `.codex/hooks/*`. Global Codex install writes its user-owned
 surfaces below `$CODEX_HOME` (default `~/.codex`) while user skills remain in
@@ -9679,7 +9681,7 @@ to another destination. Codex IDE does not support plugins.
 | `augment-rules` | Generate `.augment/rules/ai-toolkit.md` (legacy) |
 | `augment-dir-rules` | Generate `.augment/rules/ai-toolkit-*.md` (recommended) |
 | `antigravity-rules` | Generate `.agents/rules/` and `.agents/workflows/` |
-| `antigravity-plugin export [output]` | Export deterministic native Antigravity plugin ZIP |
+| `antigravity-plugin export [output]` | Export deterministic native Antigravity plugin ZIP for `.agents/plugins/<name>/`, `~/.gemini/antigravity-cli/plugins/<name>/` (CLI), or `~/.gemini/config/plugins/<name>/` (IDE/shared product) |
 | `antigravity-plugin verify <archive-or-dir>` | Verify Antigravity plugin schema, paths, hooks, modes, and self-containment offline |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
 
@@ -11781,7 +11783,7 @@ store, so toolkit updates require re-export and re-upload.
 with documented, file-based config surfaces:
 
 - `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md` plus `~/.config/devin/AGENTS.md` (Devin CLI global rules — the Desktop `global_rules.md` path is not imported by `read_config_from.windsurf`)
-- `gemini`: `~/.gemini/GEMINI.md`; hooks at `~/.gemini/settings.json` (profile ≥ standard); `~/.gemini/commands/` and `~/.gemini/skills/` pointer (profile full)
+- `gemini`: `~/.gemini/GEMINI.md`; hooks at `~/.gemini/settings.json` (profile ≥ standard); `~/.gemini/commands/`, `~/.gemini/skills/` pointer, and native `~/.gemini/agents/*.md` (profile full)
 - `augment`: `~/.augment/rules/ai-toolkit.md`; `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` (profile full)
 - `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `roo`: `~/.roo/rules/ai-toolkit-*.md` plus `~/.agents/skills/*` (Roo/Zoo native skill discovery; skipped when `codex` is also selected, which fills the same dir)
@@ -11794,7 +11796,7 @@ scoped to whatever documented HOME file surface each exposes:
 
 - `cursor`: `~/.cursor/hooks.json` (safety/quality hooks; profile ≥ standard). Cursor RULES stay project-local — their only global surface is the Settings UI.
 - `copilot`: instructions, native agents, portable skills, and native hooks under `$COPILOT_HOME` when set or `~/.copilot` otherwise. The hook config is `hooks/ai-toolkit.json`; its self-contained runtime is `hooks/ai-toolkit/copilot_hook.py`. VS Code and GitHub.com still use repo `.github/` files, which local install emits.
-- `antigravity`: canonical skill pointer at `~/.gemini/config/skills/`; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. `~/.gemini/antigravity-cli/skills/` is compatibility-only. Antigravity rules stay project-local. Native plugins are opt-in exports installed manually under `~/.gemini/config/plugins/`.
+- `antigravity`: current canonical skill pointers at `~/.gemini/antigravity-cli/skills/` for CLI and `~/.gemini/config/skills/` for the IDE/shared product; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. Only workspace `.agent/skills/` is legacy. Antigravity rules stay project-local. Native plugins are opt-in exports installed manually under `~/.gemini/antigravity-cli/plugins/<name>/` for CLI or `~/.gemini/config/plugins/<name>/` for the IDE/shared product.
 
 Their global MCP support, where available, is handled by `ai-toolkit mcp
 install`, not by the rule installer.
@@ -12730,7 +12732,7 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 |--------|------|-----------|--------|
 | Cursor | `.cursor/hooks.json` | `generate_cursor_hooks.py` | Cursor hooks schema |
 | Devin CLI | `.devin/hooks.v1.json` | `generate_devin_hooks.py` | Claude-compatible (the replacement for Cascade) |
-| Gemini CLI | `.gemini/settings.json` (hooks block) | `generate_gemini_hooks.py` | Gemini `BeforeTool`/`AfterTool` events |
+| Gemini CLI | `.gemini/settings.json` (hooks block) | `generate_gemini_hooks.py` | Native 11-event contract: `BeforeTool`, `AfterTool`, `BeforeToolSelection`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `Notification`, `PreCompress`, `SessionStart`, `SessionEnd`; toolkit handlers use the applicable subset and never emit `Stop` |
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
 | GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
 | Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
@@ -12749,8 +12751,10 @@ The adjacent Python runtime maps `.toolCall.name` and
 `.toolCall.args.CommandLine` to native camelCase responses. `PreToolUse`
 returns `allow`, `deny`, or `ask`; `PostToolUse` returns `{}`; invocation events
 use object-shaped `injectSteps` and a native `terminationBehavior`; `Stop`
-returns `decision: continue` only for an explicit factual block and refuses
-re-entry when `stopHookActive` is true or `executionNum` shows a repeat.
+reads the official `executionNum`, `terminationReason`, optional `error`, and
+`fullyIdle` inputs. It returns `decision: continue` only when the invocation is
+not fully idle and has not passed its first execution; later executions and
+fully idle invocations stop, which bounds re-entry.
 Project commands use `.agents/hooks/`; exported plugin commands resolve through
 `${extensionPath}`.
 
@@ -13512,7 +13516,7 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds Copilot-required `type` and `tools` fields |
 | Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Merges `mcpServers` into settings JSON |
-| Google Antigravity | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits current `command` or `serverUrl` transports; normalizes legacy input `url` to `serverUrl`, rejects `httpUrl`, and preserves optional authentication, disablement, and tool-filter fields |
+| Google Antigravity | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits current `command` or `serverUrl` transports; consumes portable `transport` metadata, normalizes legacy input `url` to `serverUrl`, rejects `httpUrl`, and preserves optional authentication, disablement, and tool-filter fields |
 | Roo Code | project | `.roo/mcp.json` | Mirrors `mcpServers` into the documented project-level MCP file |
 | Windsurf | global | `~/.codeium/windsurf/mcp_config.json` | Global-only JSON config |
 | Cline | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only JSON config |
@@ -13629,7 +13633,7 @@ When `install` runs with `--scope project`, ai-toolkit also updates the project'
 | `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
 | `copilot` | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds `type` and `tools: ["*"]` automatically |
 | `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
-| `antigravity` | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits `serverUrl` for remote transports, normalizes legacy input `url`, rejects `httpUrl`, and preserves Antigravity authentication/tool-control fields |
+| `antigravity` | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits `serverUrl` for remote transports, consumes portable `transport` metadata, normalizes legacy input `url`, rejects `httpUrl`, and preserves Antigravity authentication/tool-control fields |
 | `roo` | project | `.roo/mcp.json` | Mirrors canonical `mcpServers` into Roo's project MCP file |
 | `windsurf` | global | `~/.codeium/windsurf/mcp_config.json` | Global-only official config |
 | `cline` | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only official config |
@@ -15357,7 +15361,7 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.12.0"
+version: "1.13.0"
 created: "2026-04-23"
 last_updated: "2026-08-19"
 description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code, Claude Chat/Cowork, and 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
@@ -15467,12 +15471,13 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `gemini-cli` |
 | Docs | https://github.com/google-gemini/gemini-cli/tree/main/docs |
 | Release notes | https://github.com/google-gemini/gemini-cli/releases |
-| Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md`, `~/.gemini/skills/*/SKILL.md`, `~/.agents/skills/*/SKILL.md` (the `.agents/skills` alias wins over `.gemini/skills` within the same tier), `.gemini/extensions/gemini-extension.json` |
-| Our generators | `scripts/generate_gemini.py`, `scripts/generate_gemini_hooks.py` (profile>=standard), `scripts/generate_gemini_commands.py` (profile=full), `scripts/generate_gemini_skills.py` (profile=full) |
-| Global install | `ai-toolkit install --editors gemini` writes `~/.gemini/GEMINI.md` **plus** hooks at `~/.gemini/settings.json` (profile ≥ standard) and `~/.gemini/commands/` + `~/.gemini/skills/` pointer (profile=full) — all documented user-tier surfaces. A global-only Gemini user previously got zero hooks. |
+| Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.gemini/agents/*.md`, `.agents/skills/*/SKILL.md`, `~/.gemini/skills/*/SKILL.md`, `~/.gemini/agents/*.md`, `~/.agents/skills/*/SKILL.md` (the `.agents/skills` alias wins over `.gemini/skills` within the same tier). Extension packages keep `gemini-extension.json` at the package root and install below `~/.gemini/extensions/<name>/`. |
+| Our generators | `scripts/generate_gemini.py`, `scripts/generate_gemini_hooks.py` (profile>=standard), `scripts/generate_gemini_commands.py` (profile=full), `scripts/generate_gemini_skills.py` (profile=full), `scripts/generate_gemini_agents.py` (profile=full) |
+| Global install | `ai-toolkit install --editors gemini` writes `~/.gemini/GEMINI.md` **plus** hooks at `~/.gemini/settings.json` (profile ≥ standard) and `~/.gemini/{commands,skills,agents}/` (profile=full). Agents use native `name`, `description`, and `kind: local` metadata; incompatible Claude `model` and `tools` fields are omitted. |
 | Tracked capabilities | `GEMINI.md`, `mcpServers`, tools, `settings.json`, `BeforeTool`, `AfterTool`, `BeforeToolSelection`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `Notification`, `PreCompress`, `SessionStart`, `SessionEnd`, `SKILL.md`, `activate_skill`, custom commands, `.gemini/agents/*.md` subagents, `gemini-extension.json` (no native `Stop` event — generator maps Stop-equivalent to `AfterAgent`; 11 documented hook events total) |
 | Version probe | `gemini --version` |
-| Latest upstream | v0.49.0 (2026-06-25; the stable line skipped v0.48.0 — its preview content was promoted into v0.49.0). NOTE: Gemini CLI dropped free/paid individual tiers on 2026-06-18 in favor of Antigravity CLI (we ship `generate_antigravity.py`); enterprise Code Assist and paid API keys keep Gemini CLI, so the integration stays. The 11 hook events are unchanged. v0.49.0 completed the `coreTools` → `tools.core` migration (auto-migrated; `tools.exclude` deprecated) — both are tool-allowlist keys we do not emit, so no generator change. Watch item: `.gemini/agents/*.md` / `~/.gemini/agents/*.md` native subagents are documented but we do not yet emit them (candidate `generate_gemini_agents.py`). |
+| Extension coverage | Current Gemini extensions can bundle root `GEMINI.md`, `commands/`, `hooks/hooks.json`, `skills/`, `agents/`, and `policies/`. ai-toolkit does not export a Gemini extension package; this distribution surface is class C / not adopted. |
+| Latest upstream | v0.49.0 (2026-06-25; the stable line skipped v0.48.0 — its preview content was promoted into v0.49.0). NOTE: Gemini CLI dropped free/paid individual tiers on 2026-06-18 in favor of Antigravity CLI (we ship `generate_antigravity.py`); enterprise Code Assist and paid API keys keep Gemini CLI, so the integration stays. The 11 hook events are unchanged. v0.49.0 completed the `coreTools` → `tools.core` migration (auto-migrated; `tools.exclude` deprecated) — both are tool-allowlist keys we do not emit, so no generator change. Native project and user-tier subagents are now emitted by `generate_gemini_agents.py` for profile `full`. |
 
 ### Cline
 
@@ -15536,12 +15541,12 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Docs | https://antigravity.google/docs (JavaScript SPA — use bundle strings / sitemap to verify) |
 | Changelog | https://antigravity.google/changelog (SPA; changelog entries embedded in main-*.js) |
 | Config paths | Rules/workflows: `.agents/rules/*.md`, `.agents/workflows/*.md`. Skills: canonical `.agents/skills/*/SKILL.md`; `.agent/skills/*/SKILL.md` is compatibility-only. Agents: `.agents/agents/ai-toolkit-*/agent.md`. Hooks: `.agents/hooks.json` plus `.agents/hooks/ai-toolkit-antigravity-hook.py`. Plugins: `.agents/plugins/<plugin>/plugin.json`. MCP: `.agents/mcp_config.json`. Cross-tool instructions: `AGENTS.md`, `GEMINI.md`. |
-| Global config paths | Canonical skills `~/.gemini/config/skills/*/SKILL.md`, agents `~/.gemini/config/agents/ai-toolkit-*/agent.md`, hooks `~/.gemini/config/hooks.json` plus adjacent runtime, plugins `~/.gemini/config/plugins/<plugin>/plugin.json`, MCP `~/.gemini/config/mcp_config.json`. `~/.gemini/antigravity-cli/skills/*/SKILL.md` is emitted only for compatibility. Rules stay project-local; `~/.gemini/GEMINI.md` remains the Gemini-CLI-shared instruction surface. |
+| Global config paths | CLI skills `~/.gemini/antigravity-cli/skills/*/SKILL.md` and CLI plugins `~/.gemini/antigravity-cli/plugins/<plugin>/plugin.json` are current canonical CLI surfaces. IDE/shared-product skills use `~/.gemini/config/skills/*/SKILL.md`; agents use `~/.gemini/config/agents/ai-toolkit-*/agent.md`; hooks use `~/.gemini/config/hooks.json` plus adjacent runtime; IDE/shared plugins use `~/.gemini/config/plugins/<plugin>/plugin.json`; MCP uses `~/.gemini/config/mcp_config.json`. Rules stay project-local; only workspace `.agent/skills/` is legacy. `~/.gemini/GEMINI.md` remains the Gemini-CLI-shared instruction surface. |
 | Our generators | `scripts/generate_antigravity.py` (rules, workflows, canonical + compatibility skill pointer), `scripts/generate_antigravity_hooks.py` (exact five-event schema and self-contained adapter), `scripts/generate_antigravity_agents.py` (native subagents and explicit tool mapping), `scripts/antigravity_plugin.py` (deterministic opt-in export/verify), and `scripts/mcp_editors.py` (transactional project/global MCP adapter). |
 | Install profiles | `minimal`: rules/workflows/skills only. `standard` and `strict`: add native hooks. `full`: additionally adds native agents. Global install follows the same gates under `~/.gemini/config/`; it never auto-installs the plugin. |
-| Plugin flow | `ai-toolkit antigravity-plugin export [output]` creates a self-contained ZIP with exact manifest fields `$schema`, `name`, `description`, rules, skills, agents, hooks, runtime, and LICENSE. Verify offline with `ai-toolkit antigravity-plugin verify <archive-or-dir>`, then install manually under `.agents/plugins/` or `~/.gemini/config/plugins/`. Hook commands resolve from `${extensionPath}`. |
+| Plugin flow | `ai-toolkit antigravity-plugin export [output]` creates a self-contained ZIP with exact manifest fields `$schema`, `name`, `description`, rules, skills, agents, hooks, runtime, and LICENSE. Verify offline with `ai-toolkit antigravity-plugin verify <archive-or-dir>`, then install manually under `.agents/plugins/<plugin>/` for a workspace, `~/.gemini/antigravity-cli/plugins/<plugin>/` for CLI, or `~/.gemini/config/plugins/<plugin>/` for the IDE/shared product. Hook commands resolve from `${extensionPath}`. |
 | Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, hooks, five native hook events, subagents, agent permissions, plugins, global skills/hooks/agents, `AGENTS.md`, `GEMINI.md`, `serverUrl` |
-| Current versions / notes | Antigravity 2.0 v2.8.1, Antigravity CLI v1.1.14, IDE v2.5.5 (verified 2026-08-19). Hooks use `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. The adapter returns native camelCase payloads, object-shaped `injectSteps`, empty default `terminationBehavior`, and a `decision` string for Stop while preventing re-entry loops. MCP input `url` is accepted only as migration input and emitted as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
+| Current versions / notes | Antigravity 2.0 v2.8.1, Antigravity CLI v1.1.14, IDE v2.5.5 (verified 2026-08-19). Hooks use `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. The adapter returns native camelCase payloads, object-shaped `injectSteps`, empty default `terminationBehavior`, and a `decision` string for Stop while preventing re-entry loops. MCP consumes portable `transport` metadata, accepts input `url` only for migration and emits it as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
 | Doc access note | Docs are a JavaScript SPA, but the official search index exposes the current MCP guide and changelog text. Verify changelog claims against the dated official entry because the MCP guide's warning can lag schema releases. |
 
 ### Codex CLI

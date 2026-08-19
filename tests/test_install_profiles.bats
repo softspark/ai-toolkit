@@ -88,6 +88,7 @@ run_install() {
     fi
     [ ! -d "$TEST_PROJECT/.gemini/commands" ]
     [ ! -d "$TEST_PROJECT/.gemini/skills" ]
+    [ ! -d "$TEST_PROJECT/.gemini/agents" ]
 }
 
 @test "profiles: gemini + standard DOES emit hooks (v3.0.0 breaking change)" {
@@ -97,14 +98,73 @@ run_install() {
     # standard must NOT emit commands/skills (that's full-only)
     [ ! -d "$TEST_PROJECT/.gemini/commands" ]
     [ ! -d "$TEST_PROJECT/.gemini/skills" ]
+    [ ! -d "$TEST_PROJECT/.gemini/agents" ]
 }
 
-@test "profiles: gemini + full emits hooks AND commands" {
+@test "profiles: gemini + full emits hooks, commands, skills, and agents" {
     run_install --editors gemini --profile full >/dev/null 2>&1
     [ -f "$TEST_PROJECT/.gemini/settings.json" ]
     grep -q '"_source": "ai-toolkit"' "$TEST_PROJECT/.gemini/settings.json"
     [ -d "$TEST_PROJECT/.gemini/commands" ]
     compgen -G "$TEST_PROJECT/.gemini/commands/ai-toolkit-*.toml" >/dev/null
+    [ -f "$TEST_PROJECT/.gemini/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ -f "$TEST_PROJECT/.gemini/agents/ai-toolkit-debugger.md" ]
+}
+
+@test "profiles: gemini downgrade removes managed agents and preserves user files" {
+    run_install --editors gemini --profile full >/dev/null 2>&1
+    printf '%s\n' 'user agent' > "$TEST_PROJECT/.gemini/agents/team.md"
+    printf '%s\n' 'user collision' \
+        > "$TEST_PROJECT/.gemini/agents/ai-toolkit-debugger.md"
+
+    run_install --editors gemini --profile standard >/dev/null 2>&1
+
+    grep -q '^user agent$' "$TEST_PROJECT/.gemini/agents/team.md"
+    grep -q '^user collision$' \
+        "$TEST_PROJECT/.gemini/agents/ai-toolkit-debugger.md"
+    [ ! -e "$TEST_PROJECT/.gemini/agents/ai-toolkit-backend-specialist.md" ]
+}
+
+@test "profiles: gemini minimal downgrade removes managed hooks only" {
+    run_install --editors gemini --profile full >/dev/null 2>&1
+    python3 - "$TEST_PROJECT/.gemini/settings.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+settings = json.loads(path.read_text(encoding="utf-8"))
+settings["theme"] = "user-theme"
+settings["hooks"]["BeforeTool"].append(
+    {
+        "matcher": "user-tool",
+        "hooks": [{"type": "command", "command": "echo user-hook"}],
+    }
+)
+path.write_text(json.dumps(settings), encoding="utf-8")
+PY
+
+    run_install --editors gemini --profile minimal >/dev/null 2>&1
+
+    run python3 - "$TEST_PROJECT/.gemini/settings.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+settings = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert settings["theme"] == "user-theme"
+assert "ai-toolkit" not in json.dumps(settings)
+assert "echo user-hook" in json.dumps(settings)
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "profiles: gemini full dry-run reports native agents" {
+    run bash -c \
+        'cd "$1" && python3 "$2/scripts/install.py" --local --dry-run --editors gemini --profile full' \
+        _ "$TEST_PROJECT" "$TOOLKIT_DIR"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *".gemini/agents/"* ]]
 }
 
 # ── Antigravity × profile matrix ──────────────────────────────────────────

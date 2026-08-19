@@ -98,7 +98,7 @@ store, so toolkit updates require re-export and re-upload.
 with documented, file-based config surfaces:
 
 - `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md` plus `~/.config/devin/AGENTS.md` (Devin CLI global rules — the Desktop `global_rules.md` path is not imported by `read_config_from.windsurf`)
-- `gemini`: `~/.gemini/GEMINI.md`; hooks at `~/.gemini/settings.json` (profile ≥ standard); `~/.gemini/commands/` and `~/.gemini/skills/` pointer (profile full)
+- `gemini`: `~/.gemini/GEMINI.md`; hooks at `~/.gemini/settings.json` (profile ≥ standard); `~/.gemini/commands/`, `~/.gemini/skills/` pointer, and native `~/.gemini/agents/*.md` (profile full)
 - `augment`: `~/.augment/rules/ai-toolkit.md`; `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` (profile full)
 - `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
 - `roo`: `~/.roo/rules/ai-toolkit-*.md` plus `~/.agents/skills/*` (Roo/Zoo native skill discovery; skipped when `codex` is also selected, which fills the same dir)

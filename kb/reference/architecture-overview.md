@@ -61,6 +61,7 @@ ai-toolkit/
     generate_copilot.py      # Generates Copilot instructions, agents, and portable skills
     generate_copilot_hooks.py # Generates native Copilot hooks + self-contained runtime
     generate_gemini.py       # Generates GEMINI.md (sources _common.py)
+    generate_gemini_agents.py # Generates native .gemini/agents/*.md definitions
     generate_cline.py        # Generates .clinerules (sources _common.py)
     generate_roo_modes.py    # Generates .roomodes
     generate_aider_conf.py   # Generates .aider.conf.yml
@@ -123,7 +124,8 @@ also emits `.github/instructions`, `.github/prompts`, and native
 `.github/hooks`. The user target writes the supported personal surfaces below
 `$COPILOT_HOME` (default `~/.copilot`) and does not generate prompt files there.
 Full-profile installs also emit native skill pointer catalogues for Cursor,
-Windsurf, and Cline. Codex local install generates `AGENTS.md`,
+Windsurf, and Cline, plus Gemini commands, a skill pointer, and native
+`.gemini/agents/*.md` definitions. Codex local install generates `AGENTS.md`,
 `.agents/skills/*`, `.codex/agents/*.toml`, `.codex/hooks.json`, and
 self-contained `.codex/hooks/*`. Global Codex install writes its user-owned
 surfaces below `$CODEX_HOME` (default `~/.codex`) while user skills remain in

@@ -11,11 +11,13 @@
 #   - .gemini/settings.json (+ ~/.gemini/settings.json)
 #   - .gemini/commands/*.toml (custom slash commands)
 #   - .gemini/skills/  or  .agents/skills/  (SKILL.md per agentskills.io)
-#   - .gemini/extensions/ (gemini-extension.json)
-#   - hooks in settings.json: BeforeTool, AfterTool, BeforeAgent, AfterAgent,
-#     BeforeModel, AfterModel, SessionStart, SessionEnd, Stop
-# Currently the generator only emits GEMINI.md; other surfaces are tracked as
-# registry capability markers and handled by other generators (or deferred).
+#   - .gemini/agents/*.md (native local subagents)
+#   - extensions/<name>/gemini-extension.json (extension package root)
+#   - hooks in settings.json: BeforeTool, AfterTool, BeforeToolSelection,
+#     BeforeAgent, AfterAgent, BeforeModel, AfterModel, Notification,
+#     PreCompress, SessionStart, SessionEnd (11 documented events; no Stop)
+# Gemini surfaces are split across dedicated generators so each native schema
+# can be validated independently.
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
@@ -77,4 +79,167 @@ teardown_file() {
 
 @test "generate_gemini.py references ai-toolkit attribution" {
     grep -qiE 'ai.?toolkit' "$GEM_OUT"
+}
+
+# ── Native subagents ───────────────────────────────────────────────────────────────
+
+@test "gemini agents: emits native local-agent schema and source body" {
+    tmp="$(mktemp -d)"
+    run python3 "$TOOLKIT_DIR/scripts/generate_gemini_agents.py" "$tmp"
+    [ "$status" -eq 0 ]
+
+    agent="$tmp/.gemini/agents/ai-toolkit-debugger.md"
+    [ -f "$agent" ]
+    expected=$(find "$TOOLKIT_DIR/app/agents" -maxdepth 1 -name '*.md' -type f | wc -l | xargs)
+    actual=$(find "$tmp/.gemini/agents" -maxdepth 1 -name 'ai-toolkit-*.md' -type f | wc -l | xargs)
+    [ "$actual" -eq "$expected" ]
+    grep -q '^name: debugger$' "$agent"
+    grep -q '^description: ' "$agent"
+    grep -q '^kind: local$' "$agent"
+    grep -q '<!-- ai-toolkit-managed: gemini-agent -->' "$agent"
+    grep -q 'Root cause analysis' "$agent"
+    ! grep -qE '^(model|tools):' "$agent"
+
+    rm -rf "$tmp"
+}
+
+@test "gemini agents: preserves user files and removes only stale managed files" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/.gemini/agents"
+    printf '%s\n' 'user-owned' > "$tmp/.gemini/agents/user-agent.md"
+    printf '%s\n' 'user-owned collision' > "$tmp/.gemini/agents/ai-toolkit-debugger.md"
+    printf '%s\n' '<!-- ai-toolkit-managed: gemini-agent -->' \
+        > "$tmp/.gemini/agents/ai-toolkit-stale.md"
+
+    run python3 "$TOOLKIT_DIR/scripts/generate_gemini_agents.py" "$tmp"
+    [ "$status" -eq 0 ]
+    grep -q '^user-owned$' "$tmp/.gemini/agents/user-agent.md"
+    grep -q '^user-owned collision$' "$tmp/.gemini/agents/ai-toolkit-debugger.md"
+    [ ! -e "$tmp/.gemini/agents/ai-toolkit-stale.md" ]
+
+    rm -rf "$tmp"
+}
+
+@test "gemini agents: rejects symlinked output ancestors without external writes" {
+    tmp="$(mktemp -d)"
+    project="$tmp/project"
+    external="$tmp/external"
+    mkdir -p "$project/.gemini" "$external"
+    ln -s "$external" "$project/.gemini/agents"
+
+    run python3 "$TOOLKIT_DIR/scripts/generate_gemini_agents.py" "$project"
+    [ "$status" -ne 0 ]
+    [ -z "$(find "$external" -mindepth 1 -print -quit)" ]
+
+    rm -rf "$tmp"
+}
+
+@test "gemini agents: invalid source fails before any output mutation" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/source"
+    cat > "$tmp/source/good.md" <<'MD'
+---
+name: good
+description: good agent
+model: opus
+tools: Read, Bash
+---
+good system prompt
+MD
+    cat > "$tmp/source/bad.md" <<'MD'
+---
+name: ../bad
+description: bad agent
+---
+bad system prompt
+MD
+
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import generate_gemini_agents as generator
+try:
+    generator.generate(Path(sys.argv[2]), source_dir=Path(sys.argv[2]) / "source")
+except ValueError as error:
+    assert "Invalid Gemini agent name" in str(error), error
+else:
+    raise AssertionError("invalid Gemini agent source was accepted")
+PY
+    [ "$status" -eq 0 ]
+    [ ! -e "$tmp/.gemini/agents/ai-toolkit-good.md" ]
+
+    rm -rf "$tmp"
+}
+
+@test "gemini agents: duplicate source names fail during preflight" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/source"
+    for file in one two; do
+        cat > "$tmp/source/$file.md" <<'MD'
+---
+name: duplicate
+description: duplicate agent
+---
+system prompt
+MD
+    done
+
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import generate_gemini_agents as generator
+try:
+    generator.generate(Path(sys.argv[2]), source_dir=Path(sys.argv[2]) / "source")
+except ValueError as error:
+    assert "Duplicate Gemini agent name" in str(error), error
+else:
+    raise AssertionError("duplicate Gemini agent names were accepted")
+PY
+    [ "$status" -eq 0 ]
+    [ ! -e "$tmp/.gemini/agents/ai-toolkit-duplicate.md" ]
+
+    rm -rf "$tmp"
+}
+
+@test "gemini agents: generate:all includes the native agent generator" {
+    run python3 - "$TOOLKIT_DIR/package.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+scripts = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))["scripts"]
+assert scripts["generate:gemini-agents"] == (
+    "python3 scripts/generate_gemini_agents.py ."
+)
+assert "generate:gemini-agents" in scripts["generate:all"]
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "gemini hooks: supported event contract stays at the documented 11 events" {
+    run python3 - "$TOOLKIT_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_gemini_hooks import GEMINI_SUPPORTED_HOOK_EVENTS
+
+assert GEMINI_SUPPORTED_HOOK_EVENTS == (
+    "BeforeTool",
+    "AfterTool",
+    "BeforeToolSelection",
+    "BeforeAgent",
+    "AfterAgent",
+    "BeforeModel",
+    "AfterModel",
+    "Notification",
+    "PreCompress",
+    "SessionStart",
+    "SessionEnd",
+)
+assert "Stop" not in GEMINI_SUPPORTED_HOOK_EVENTS
+PY
+    [ "$status" -eq 0 ]
 }

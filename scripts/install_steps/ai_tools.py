@@ -88,17 +88,29 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
             if add_hooks:
                 print("  Would generate: ~/.gemini/settings.json (hooks)")
             if add_native_surfaces:
-                print("  Would generate: ~/.gemini/commands/, ~/.gemini/skills/")
+                print(
+                    "  Would generate: ~/.gemini/commands/, ~/.gemini/skills/, "
+                    "~/.gemini/agents/"
+                )
         else:
             inject_with_rules("generate-gemini.sh", gemini_file, rules_dir)
-            # Hooks (~/.gemini/settings.json), commands (~/.gemini/commands/),
-            # and the skills pointer (~/.gemini/skills/) are documented user-tier
-            # surfaces — install them globally, gated like the local install.
+            # Hooks (~/.gemini/settings.json), commands, the skills pointer,
+            # and native agents are documented user-tier surfaces. Install
+            # them globally with the same profile gates as the local install.
             if add_hooks:
                 _try_generator("generate_gemini_hooks", target_dir)
+            else:
+                from generate_gemini_hooks import cleanup as cleanup_gemini_hooks
+
+                cleanup_gemini_hooks(target_dir)
             if add_native_surfaces:
                 _try_generator("generate_gemini_commands", target_dir)
                 _try_generator("generate_gemini_skills", target_dir)
+                _try_generator("generate_gemini_agents", target_dir)
+            else:
+                from generate_gemini_agents import cleanup as cleanup_gemini_agents
+
+                cleanup_gemini_agents(target_dir)
         installed.append("gemini")
 
     if "augment" in eds:
@@ -211,11 +223,11 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         installed.append("copilot")
 
     if "antigravity" in eds:
-        # Antigravity rules stay project-local. Global config owns canonical
-        # skills and hooks; full additionally installs native subagents.
+        # Antigravity rules stay project-local. CLI and IDE/shared product each
+        # own a canonical skill root; full additionally installs subagents.
         if dry_run:
-            print("  Would generate: ~/.gemini/config/skills/ (skill pointer)")
-            print("  Would generate: ~/.gemini/antigravity-cli/skills/ (legacy pointer)")
+            print("  Would generate: ~/.gemini/antigravity-cli/skills/ (CLI pointer)")
+            print("  Would generate: ~/.gemini/config/skills/ (IDE/shared pointer)")
             if add_hooks:
                 print("  Would generate: ~/.gemini/config/hooks.json + hooks runtime")
             if add_native_surfaces:
@@ -1117,7 +1129,10 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
             print("  Would generate: .augment/agents/ + .augment/commands/ + "
                   "$HOME/.augment/settings.json + .augment/skills/ (profile=full)")
         if "gemini" in eds:
-            print("  Would generate: .gemini/commands/ + .gemini/skills/ (profile=full)")
+            print(
+                "  Would generate: .gemini/commands/ + .gemini/skills/ + "
+                ".gemini/agents/ (profile=full)"
+            )
         if "antigravity" in eds:
             print("  Would generate: .agents/agents/ (profile=full)")
     if "codex" in eds:
@@ -1483,9 +1498,18 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         )
         if add_gemini_hooks:
             _try_generator("generate_gemini_hooks", cwd)
+        else:
+            from generate_gemini_hooks import cleanup as cleanup_gemini_hooks
+
+            cleanup_gemini_hooks(cwd)
         if add_native_surfaces:
             _try_generator("generate_gemini_commands", cwd)
             _try_generator("generate_gemini_skills", cwd)
+            _try_generator("generate_gemini_agents", cwd)
+        else:
+            from generate_gemini_agents import cleanup as cleanup_gemini_agents
+
+            cleanup_gemini_agents(cwd)
 
     if "opencode" in eds:
         # AGENTS.md — shared with Codex via marker injection (opencode reads same file)

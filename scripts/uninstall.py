@@ -1329,15 +1329,16 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return args
 
 
-def _remove_editor_hook_configs(target: Path) -> None:
-    """Strip toolkit hook entries from editor configs that have no other cleanup.
+def _remove_editor_managed_surfaces(target: Path) -> None:
+    """Strip managed editor surfaces that have no primary uninstall path.
 
     Best effort by design: a missing generator or an unreadable config must not
     abort an uninstall that has already removed the primary surfaces.
     """
-    for module_name, label in (
-        ("generate_cursor_hooks", "Cursor"),
-        ("generate_gemini_hooks", "Gemini"),
+    for module_name, label, surface in (
+        ("generate_cursor_hooks", "Cursor", "hook entries"),
+        ("generate_gemini_hooks", "Gemini", "hook entries"),
+        ("generate_gemini_agents", "Gemini", "agents"),
     ):
         try:
             module = importlib.import_module(module_name)
@@ -1346,9 +1347,9 @@ def _remove_editor_hook_configs(target: Path) -> None:
                 continue
             cleanup(target)
         except (ImportError, OSError, RuntimeError, ValueError) as error:
-            print(f"  WARN could not clean {label} hooks: {error}")
+            print(f"  WARN could not clean {label} {surface}: {error}")
         else:
-            print(f"  Cleaned: {label} hook entries")
+            print(f"  Cleaned: {label} {surface}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -1439,12 +1440,10 @@ def main(argv: list[str] | None = None) -> None:
         for surface in copilot:
             _preflight(target, claude, [], [surface])
             _remove_copilot(surface)
-        # Cursor and Gemini hook configs were never cleaned: uninstall knew
-        # only Codex and Copilot, so `.cursor/hooks.json` and the hooks block in
-        # `.gemini/settings.json` survived an uninstall. Both cleanups strip
-        # only entries tagged `ai-toolkit`, leaving user-authored and
-        # plugin-pack entries and any unrelated settings in place.
-        _remove_editor_hook_configs(target)
+        # Cursor and Gemini configs have no primary uninstall branch. These
+        # cleanups strip only managed hook entries and Gemini agent files,
+        # leaving user-authored, plugin-owned, and unrelated settings intact.
+        _remove_editor_managed_surfaces(target)
         if recovery_root is not None and recovery_components:
             # The recovery API preflights its complete tree before the first
             # unlink. A later I/O fault can still leave recovery partially
