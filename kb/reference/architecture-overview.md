@@ -62,7 +62,9 @@ ai-toolkit/
     generate_copilot_hooks.py # Generates native Copilot hooks + self-contained runtime
     generate_gemini.py       # Generates GEMINI.md (sources _common.py)
     generate_gemini_agents.py # Generates native .gemini/agents/*.md definitions
-    generate_cline.py        # Generates .clinerules (sources _common.py)
+    generate_cline.py        # Generates legacy .clinerules (sources _common.py)
+    generate_cline_rules.py  # Dual-emits .cline/rules + .clinerules compatibility
+    generate_cline_hooks.py  # Dual-emits .cline/hooks + .clinerules/hooks
     generate_roo_modes.py    # Generates .roomodes
     generate_aider_conf.py   # Generates .aider.conf.yml
     generate_llms_txt.py     # Generates llms.txt
@@ -124,7 +126,10 @@ also emits `.github/instructions`, `.github/prompts`, and native
 `.github/hooks`. The user target writes the supported personal surfaces below
 `$COPILOT_HOME` (default `~/.copilot`) and does not generate prompt files there.
 Full-profile installs also emit native skill pointer catalogues for Cursor,
-Windsurf, and Cline, plus Gemini commands, a skill pointer, and native
+Windsurf, and Cline. Cline rules dual-emit to `.cline/rules/` and `.clinerules/`;
+profiles `standard`, `strict`, and `full` add executable hooks under both
+`.cline/hooks/<Event>` and `.clinerules/hooks/<Event>`. Gemini receives
+commands, a skill pointer, and native
 `.gemini/agents/*.md` definitions. Codex local install generates `AGENTS.md`,
 `.agents/skills/*`, `.codex/agents/*.toml`, `.codex/hooks.json`, and
 self-contained `.codex/hooks/*`. Global Codex install writes its user-owned
@@ -164,7 +169,8 @@ project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
 | `copilot-instructions` | `./` | Generates `.github/copilot-instructions.md` |
 | `gemini-md` | `./` | Generates `GEMINI.md` |
 | `cline-rules` | `./` | Generates `.clinerules` (legacy) |
-| `cline-dir-rules` | `./` | Generates `.clinerules/*.md` |
+| `cline-dir-rules` | `./` | Generates `.cline/rules/*.md` plus `.clinerules/*.md` compatibility |
+| `cline-hooks` | `./` | Generates eight executable files under `.cline/hooks/` and `.clinerules/hooks/` |
 | `roo-modes` | `./` | Generates `.roomodes` |
 | `roo-dir-rules` | `./` | Generates `.roo/rules/*.md` |
 | `aider-conf` | `./` | Generates `.aider.conf.yml` |

@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-08-06T05:13:55Z",
+  "last_run": "2026-08-19T11:40:23Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -166,7 +166,7 @@
       "version": "2.1.223 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "e4409c39f56583e8",
+      "docs_hash": "bf058b01d03e0455",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -456,7 +456,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "f09f3fbe98570961",
+      "docs_hash": "b112229db465d2e4",
       "headings": [
         "Add features",
         "Ask questions",
@@ -479,6 +479,7 @@
         "opencode.json": false,
         "permission.skill": false,
         "plugin event: command.executed": false,
+        "plugin event: message.part.updated": false,
         "plugin event: message.updated": false,
         "plugin event: permission.asked": false,
         "plugin event: session.compacted": false,
@@ -491,6 +492,7 @@
         "rules": true,
         "skills (native .opencode/skills)": false,
         "skills (via .claude/skills fallback)": false,
+        "skills array (local paths + HTTP URLs)": false,
         "subagent mode": false
       }
     },

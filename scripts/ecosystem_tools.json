@@ -348,13 +348,16 @@
         ".clinerules/hooks/",
         ".cline/rules/*.md",
         ".cline/hooks/",
+        ".cline/agents/",
         ".cline/plugins/",
         ".cline/skills/*/SKILL.md",
         "~/.cline/rules/",
         "~/.cline/hooks/",
+        "~/.cline/agents/",
         "~/.cline/plugins/",
         "~/.cline/skills/*/SKILL.md",
-        "~/Documents/Cline/Rules/Hooks/",
+        "~/Documents/Cline/Rules/",
+        "~/Documents/Cline/Hooks/",
         "~/.cline/data/settings/cline_mcp_settings.json",
         ".claude/skills/*/SKILL.md",
         "AGENTS.md",
@@ -363,7 +366,8 @@
       "our_generators": [
         "scripts/generate_cline.py",
         "scripts/generate_cline_rules.py",
-        "scripts/generate_cline_skills.py"
+        "scripts/generate_cline_skills.py",
+        "scripts/generate_cline_hooks.py"
       ],
       "capability_markers": [
         "clinerules",
@@ -658,6 +662,7 @@
       },
       "config_paths": [
         "opencode.json",
+        "opencode.jsonc",
         ".opencode/agents/*.md",
         ".opencode/commands/*.md",
         ".opencode/plugins/*",
@@ -667,15 +672,18 @@
         ".agents/skills/*/SKILL.md",
         "~/.config/opencode/skills/*/SKILL.md",
         "~/.claude/skills/*/SKILL.md",
-        "~/.agents/skills/*/SKILL.md"
+        "~/.agents/skills/*/SKILL.md",
+        "skills/*.md",
+        "skills/**/SKILL.md"
       ],
-      "status_note": "opencode v1.16.0 (2026-06-05) ships an experimental v2 skill registry with flat-file skills and a 'slash' frontmatter key; undocumented as of 2026-06-09. Watch item: re-check next sync whether the v2 format reaches the documented SKILL.md spec before touching generate_opencode*.py. Note sst/opencode redirects to anomalyco/opencode.",
+      "status_note": "OpenCode's v2 plugin API is beta. Root plugin packages can expose flat skills/*.md and nested skills/**/SKILL.md entries, and config can add local paths or HTTP URLs through the skills array. No migration: the stable JS plugin generator remains unchanged until v2 stabilizes. Note sst/opencode redirects to anomalyco/opencode.",
       "our_generators": [
         "scripts/generate_opencode.py",
         "scripts/generate_opencode_agents.py",
         "scripts/generate_opencode_commands.py",
         "scripts/generate_opencode_json.py",
-        "scripts/generate_opencode_plugin.py"
+        "scripts/generate_opencode_plugin.py",
+        "scripts/generate_opencode_skills.py"
       ],
       "capability_markers": [
         "opencode.json",
@@ -697,7 +705,9 @@
         "plugin event: tool.execute.after",
         "plugin event: permission.asked",
         "plugin event: command.executed",
-        "plugin event: message.updated"
+        "plugin event: message.updated",
+        "plugin event: message.part.updated",
+        "skills array (local paths + HTTP URLs)"
       ],
       "version_probe": {
         "kind": "command",

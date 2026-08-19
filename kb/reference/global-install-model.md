@@ -100,11 +100,11 @@ with documented, file-based config surfaces:
 - `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md` plus `~/.config/devin/AGENTS.md` (Devin CLI global rules — the Desktop `global_rules.md` path is not imported by `read_config_from.windsurf`)
 - `gemini`: `~/.gemini/GEMINI.md`; hooks at `~/.gemini/settings.json` (profile ≥ standard); `~/.gemini/commands/`, `~/.gemini/skills/` pointer, and native `~/.gemini/agents/*.md` (profile full)
 - `augment`: `~/.augment/rules/ai-toolkit.md`; `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` (profile full)
-- `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
+- `cline`: `~/.cline/rules/ai-toolkit-*.md` plus `~/Documents/Cline/Rules/ai-toolkit-*.md` compatibility; profiles `standard`, `strict`, and `full` add the exact eight executable hooks under both `~/.cline/hooks/` and `~/Documents/Cline/Hooks/`; a `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md` pointer is used only when Cline cannot discover real Claude skills
 - `roo`: `~/.roo/rules/ai-toolkit-*.md` plus `~/.agents/skills/*` (Roo/Zoo native skill discovery; skipped when `codex` is also selected, which fills the same dir)
 - `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
 - `codex`: `$CODEX_HOME/AGENTS.md`, `$CODEX_HOME/agents/*.toml`, `$CODEX_HOME/hooks.json`, `$CODEX_HOME/ai-toolkit-hooks/*`, plus `$HOME/.agents/skills/*`; `CODEX_HOME` defaults to `~/.codex`, and `~/AGENTS.md` is not Codex's user-instruction file
-- `opencode`: `~/.config/opencode/*`
+- `opencode`: `~/.config/opencode/{AGENTS.md,agents/,commands/,plugins/,opencode.json}`; `profile=full` also copies complete native skills to `~/.config/opencode/skills/<name>/`
 
 Cursor, GitHub Copilot, and Google Antigravity now have partial global support,
 scoped to whatever documented HOME file surface each exposes:
@@ -146,7 +146,9 @@ These files still stay local to a repository as part of the core install model:
 - `.github/agents/ai-toolkit-*.agent.md`
 - `.github/skills/ai-toolkit-*/SKILL.md` plus required assets and helper scripts
 - `.github/hooks/ai-toolkit.json` plus `.github/hooks/ai-toolkit/copilot_hook.py` (profile ≥ `standard`)
-- `.clinerules`
+- `.cline/rules/ai-toolkit-*.md` plus `.clinerules/ai-toolkit-*.md` compatibility
+- `.cline/hooks/<Event>` plus `.clinerules/hooks/<Event>` compatibility for Cline profiles `standard`, `strict`, and `full`
+- `.clinerules/workflows/ai-toolkit-*.md`
 - `.roomodes`
 - `.aider.conf.yml`
 - `.augment/rules/ai-toolkit-*.md`

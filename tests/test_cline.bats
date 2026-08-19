@@ -45,6 +45,13 @@ teardown_file() {
 
 # ── Modern .clinerules/ directory ──────────────────────────────────────────
 
+@test "generate_cline_rules.py emits native .cline/rules as primary plus compatibility rules" {
+    [ -f "$CLINE_TMP/.cline/rules/ai-toolkit-security.md" ]
+    [ -f "$CLINE_TMP/.clinerules/ai-toolkit-security.md" ]
+    cmp "$CLINE_TMP/.cline/rules/ai-toolkit-security.md" \
+        "$CLINE_TMP/.clinerules/ai-toolkit-security.md"
+}
+
 @test "generate_cline_rules.py creates .clinerules/ directory" {
     [ -d "$CLINE_TMP/.clinerules" ]
 }
@@ -140,14 +147,150 @@ generate(Path('$tmp'), language_modules=['rules-python'])
     rm -rf "$tmp"
 }
 
-@test "generate_cline_rules.py migrates legacy .clinerules file to directory" {
+@test "generate_cline_rules.py preserves a user-owned legacy .clinerules file" {
     local tmp; tmp="$(mktemp -d)"
-    # Pre-3.7 layout: single file
-    echo "# legacy" > "$tmp/.clinerules"
+    printf '%s\n' '# Team Cline rules' 'Keep this byte-identical.' \
+        > "$tmp/.clinerules"
+    cp "$tmp/.clinerules" "$tmp/before.clinerules"
     [ -f "$tmp/.clinerules" ]
-    python3 "$TOOLKIT_DIR/scripts/generate_cline_rules.py" "$tmp" >/dev/null 2>&1
-    # Old file should be gone; directory exists
-    [ -d "$tmp/.clinerules" ]
-    [ -f "$tmp/.clinerules/ai-toolkit-security.md" ]
+    run python3 "$TOOLKIT_DIR/scripts/generate_cline_rules.py" "$tmp"
+    [ "$status" -eq 0 ]
+    [ -f "$tmp/.clinerules" ]
+    cmp "$tmp/before.clinerules" "$tmp/.clinerules"
+    [ -f "$tmp/.cline/rules/ai-toolkit-security.md" ]
     rm -rf "$tmp"
+}
+
+@test "generate_cline_rules.py rejects a symlinked Documents ancestor without mutation" {
+    local tmp outside before
+    tmp="$(mktemp -d)"
+    outside="$(mktemp -d)"
+    mkdir -p "$outside/Cline/Rules"
+    printf '%s\n' 'outside rule bytes' \
+        > "$outside/Cline/Rules/ai-toolkit-security.md"
+    before="$(cksum "$outside/Cline/Rules/ai-toolkit-security.md")"
+    ln -s "$outside" "$tmp/Documents"
+
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_cline_rules import generate
+
+target = Path(sys.argv[2])
+generate(
+    target,
+    output_root=target / "Documents" / "Cline" / "Rules",
+    emit_workflows=False,
+)
+PY
+
+    [ "$status" -ne 0 ]
+    [ "$(cksum "$outside/Cline/Rules/ai-toolkit-security.md")" = "$before" ]
+    rm -rf "$tmp" "$outside"
+}
+
+@test "generate_cline_skills.py rejects a symlinked .cline ancestor without mutation" {
+    local tmp outside before
+    tmp="$(mktemp -d)"
+    outside="$(mktemp -d)"
+    mkdir -p "$outside/skills/ai-toolkit-skill-catalogue"
+    printf '%s\n' 'outside skill bytes' \
+        > "$outside/skills/ai-toolkit-skill-catalogue/SKILL.md"
+    before="$(cksum "$outside/skills/ai-toolkit-skill-catalogue/SKILL.md")"
+    ln -s "$outside" "$tmp/.cline"
+
+    run python3 "$TOOLKIT_DIR/scripts/generate_cline_skills.py" "$tmp"
+
+    [ "$status" -ne 0 ]
+    [ "$(cksum "$outside/skills/ai-toolkit-skill-catalogue/SKILL.md")" = "$before" ]
+    rm -rf "$tmp" "$outside"
+}
+
+@test "Cline skill discovery rejects a symlinked ancestor before reading outside" {
+    local tmp outside before
+    tmp="$(mktemp -d)"
+    outside="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_cline_skills.py" "$outside" >/dev/null
+    before="$(cksum "$outside/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")"
+    ln -s "$outside/.cline" "$tmp/.cline"
+
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_cline_skills import discover
+
+try:
+    discover(Path(sys.argv[2]))
+except RuntimeError:
+    pass
+else:
+    raise AssertionError("symlinked Cline skill ancestry was accepted")
+PY
+
+    [ "$status" -eq 0 ]
+    [ "$(cksum "$outside/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")" = "$before" ]
+    rm -rf "$tmp" "$outside"
+}
+
+@test "Cline skill cleanup rejects a symlinked ancestor without deleting outside" {
+    local tmp outside before
+    tmp="$(mktemp -d)"
+    outside="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_cline_skills.py" "$outside" >/dev/null
+    before="$(cksum "$outside/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")"
+    ln -s "$outside/.cline" "$tmp/.cline"
+
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_cline_skills import cleanup
+
+try:
+    cleanup(Path(sys.argv[2]))
+except RuntimeError:
+    pass
+else:
+    raise AssertionError("symlinked Cline skill ancestry was accepted")
+PY
+
+    [ "$status" -eq 0 ]
+    [ -f "$outside/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md" ]
+    [ "$(cksum "$outside/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")" = "$before" ]
+    rm -rf "$tmp" "$outside"
+}
+
+@test "Cline rule discovery and cleanup reject symlink ancestry without outside mutation" {
+    local tmp outside before
+    tmp="$(mktemp -d)"
+    outside="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_cline_rules.py" "$outside" >/dev/null
+    before="$(cksum "$outside/.cline/rules/ai-toolkit-security.md")"
+    ln -s "$outside/.cline" "$tmp/.cline"
+
+    run python3 - "$TOOLKIT_DIR" "$tmp" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_cline_rules import cleanup, managed_files
+
+target = Path(sys.argv[2])
+for operation in (managed_files, cleanup):
+    try:
+        operation(target)
+    except RuntimeError:
+        continue
+    raise AssertionError(f"{operation.__name__} accepted symlink ancestry")
+PY
+
+    [ "$status" -eq 0 ]
+    [ -f "$outside/.cline/rules/ai-toolkit-security.md" ]
+    [ "$(cksum "$outside/.cline/rules/ai-toolkit-security.md")" = "$before" ]
+    rm -rf "$tmp" "$outside"
 }

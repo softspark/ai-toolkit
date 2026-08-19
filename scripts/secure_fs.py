@@ -438,6 +438,41 @@ class SecureTransaction:
     def unlink(self, destination: SecureDestination) -> None:
         self._unlink(destination, enforce_snapshot=True)
 
+    def rmdir_empty(
+        self,
+        anchor: SecureDestination,
+        relative: Path,
+    ) -> bool:
+        """Remove an empty directory below a pinned parent without following links.
+
+        This is a post-commit pruning helper. It deliberately returns ``False``
+        for missing, non-empty, or unsafe paths instead of widening a completed
+        file transaction's rollback surface.
+        """
+        if relative.is_absolute() or not relative.parts or ".." in relative.parts:
+            raise RuntimeError(f"Invalid relative directory path: {relative}")
+        pinned = self._get(anchor)
+        if not pinned.materialized:
+            raise RuntimeError(
+                f"Anchor parent was not materialized: {pinned.destination.path}"
+            )
+        directory_fd = os.dup(pinned.parent_fd)
+        try:
+            for part in relative.parts[:-1]:
+                next_fd = os.open(part, _DIRECTORY_FLAGS, dir_fd=directory_fd)
+                os.close(directory_fd)
+                directory_fd = next_fd
+            os.rmdir(relative.parts[-1], dir_fd=directory_fd)
+            os.fsync(directory_fd)
+            return True
+        except OSError:
+            return False
+        finally:
+            try:
+                os.close(directory_fd)
+            except OSError:
+                pass
+
     def _unlink(
         self,
         destination: SecureDestination,

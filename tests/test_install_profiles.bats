@@ -167,6 +167,162 @@ PY
     [[ "$output" == *".gemini/agents/"* ]]
 }
 
+# OpenCode profile matrix
+
+@test "profiles: opencode + full emits complete native skills" {
+    run_install --editors opencode --profile full >/dev/null 2>&1
+
+    [ -f "$TEST_PROJECT/.opencode/skills/clean-code/SKILL.md" ]
+    [ -f "$TEST_PROJECT/.opencode/skills/clean-code/reference/python.md" ]
+    [ -f "$TEST_PROJECT/.opencode/commands/ai-toolkit-debug.md" ]
+}
+
+@test "profiles: opencode downgrade removes managed skills and preserves user files" {
+    run_install --editors opencode --profile full >/dev/null 2>&1
+    echo user-extra > "$TEST_PROJECT/.opencode/skills/clean-code/user-notes.md"
+    mkdir -p "$TEST_PROJECT/.opencode/skills/custom"
+    cat > "$TEST_PROJECT/.opencode/skills/custom/SKILL.md" <<'EOF'
+---
+name: custom
+description: User skill
+---
+user skill
+EOF
+
+    run_install --editors opencode --profile standard >/dev/null 2>&1
+
+    [ ! -e "$TEST_PROJECT/.opencode/skills/clean-code/SKILL.md" ]
+    [ "$(cat "$TEST_PROJECT/.opencode/skills/clean-code/user-notes.md")" = user-extra ]
+    grep -q 'user skill' "$TEST_PROJECT/.opencode/skills/custom/SKILL.md"
+    [ -f "$TEST_PROJECT/.opencode/commands/ai-toolkit-debug.md" ]
+}
+
+@test "profiles: opencode dry-run reports native skills only for full" {
+    run bash -c \
+        'cd "$1" && python3 "$2/scripts/install.py" --local --dry-run --editors opencode --profile full' \
+        _ "$TEST_PROJECT" "$TOOLKIT_DIR"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *".opencode/skills/ (profile=full)"* ]] || return 1
+
+    run bash -c \
+        'cd "$1" && python3 "$2/scripts/install.py" --local --dry-run --editors opencode --profile standard' \
+        _ "$TEST_PROJECT" "$TOOLKIT_DIR"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *".opencode/skills/ (profile=full)"* ]] || return 1
+
+    run env HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --dry-run --editors opencode --profile full
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"~/.config/opencode/skills/ (profile=full)"* ]] || return 1
+
+    run env HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --dry-run --editors opencode --profile standard
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"~/.config/opencode/skills/ (profile=full)"* ]] || return 1
+}
+
+# Cline profile matrix
+
+@test "profiles: cline rules are always dual-emitted and hooks gate at standard" {
+    run_install --editors cline --profile minimal >/dev/null 2>&1
+    [ -f "$TEST_PROJECT/.cline/rules/ai-toolkit-security.md" ]
+    [ -f "$TEST_PROJECT/.clinerules/ai-toolkit-security.md" ]
+    [ ! -e "$TEST_PROJECT/.cline/hooks/PreToolUse" ]
+    [ ! -e "$TEST_PROJECT/.clinerules/hooks/PreToolUse" ]
+
+    run_install --editors cline --profile standard >/dev/null 2>&1
+    [ -x "$TEST_PROJECT/.cline/hooks/PreToolUse" ]
+    [ -x "$TEST_PROJECT/.cline/hooks/PreCompact" ]
+    [ -x "$TEST_PROJECT/.clinerules/hooks/PreToolUse" ]
+    [ -x "$TEST_PROJECT/.clinerules/hooks/PreCompact" ]
+    printf '%s\n' '#!/bin/sh' '# user hook' \
+        > "$TEST_PROJECT/.cline/hooks/TeamPolicy"
+    printf '%s\n' '#!/bin/sh' '# extension user hook' \
+        > "$TEST_PROJECT/.clinerules/hooks/TeamPolicy"
+
+    run_install --editors cline --profile minimal >/dev/null 2>&1
+    [ ! -e "$TEST_PROJECT/.cline/hooks/PreToolUse" ]
+    [ ! -e "$TEST_PROJECT/.clinerules/hooks/PreToolUse" ]
+    grep -q '^# user hook$' "$TEST_PROJECT/.cline/hooks/TeamPolicy"
+    grep -q '^# extension user hook$' \
+        "$TEST_PROJECT/.clinerules/hooks/TeamPolicy"
+
+    for profile in strict full; do
+        run_install --editors cline --profile "$profile" >/dev/null 2>&1
+        [ -x "$TEST_PROJECT/.cline/hooks/PreToolUse" ]
+        [ -x "$TEST_PROJECT/.cline/hooks/TaskComplete" ]
+        [ -x "$TEST_PROJECT/.clinerules/hooks/PreToolUse" ]
+        [ -x "$TEST_PROJECT/.clinerules/hooks/TaskComplete" ]
+        python3 - "$TOOLKIT_DIR" "$TEST_PROJECT" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_cline_hooks import cleanup
+
+cleanup(Path(sys.argv[2]))
+PY
+    done
+}
+
+@test "profiles: cline local install preserves a user-owned legacy rules file" {
+    printf '%s\n' '# Team Cline rules' 'Keep this byte-identical.' \
+        > "$TEST_PROJECT/.clinerules"
+    cp "$TEST_PROJECT/.clinerules" "$TEST_PROJECT/before.clinerules"
+
+    run bash -c \
+        'cd "$1" && python3 "$2/scripts/install.py" --local --editors cline --profile standard' \
+        _ "$TEST_PROJECT" "$TOOLKIT_DIR"
+
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_PROJECT/.clinerules" ]
+    cmp "$TEST_PROJECT/before.clinerules" "$TEST_PROJECT/.clinerules"
+    [ -f "$TEST_PROJECT/.cline/rules/ai-toolkit-security.md" ]
+    [ -x "$TEST_PROJECT/.cline/hooks/PreToolUse" ]
+    [ ! -e "$TEST_PROJECT/.clinerules/hooks/PreToolUse" ]
+}
+
+@test "profiles: cline global rules and hooks cover CLI primary plus extension compatibility" {
+    run env HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors cline --profile standard
+    [ "$status" -eq 0 ]
+    [ -f "$TMP_HOME/.cline/rules/ai-toolkit-security.md" ]
+    [ -f "$TMP_HOME/Documents/Cline/Rules/ai-toolkit-security.md" ]
+    [ -x "$TMP_HOME/.cline/hooks/PreToolUse" ]
+    [ -x "$TMP_HOME/Documents/Cline/Hooks/PreToolUse" ]
+    printf '%s\n' '#!/bin/sh' '# user CLI hook' \
+        > "$TMP_HOME/.cline/hooks/TeamPolicy"
+    printf '%s\n' '#!/bin/sh' '# user extension hook' \
+        > "$TMP_HOME/Documents/Cline/Hooks/TeamPolicy"
+
+    run env HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors cline --profile minimal
+    [ "$status" -eq 0 ]
+    [ ! -e "$TMP_HOME/.cline/hooks/PreToolUse" ]
+    [ ! -e "$TMP_HOME/Documents/Cline/Hooks/PreToolUse" ]
+    grep -q '^# user CLI hook$' "$TMP_HOME/.cline/hooks/TeamPolicy"
+    grep -q '^# user extension hook$' \
+        "$TMP_HOME/Documents/Cline/Hooks/TeamPolicy"
+}
+
+@test "profiles: cline dry-run reports native rules and profile-gated hooks" {
+    run bash -c \
+        'cd "$1" && python3 "$2/scripts/install.py" --local --dry-run --editors cline --profile standard' \
+        _ "$TEST_PROJECT" "$TOOLKIT_DIR"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *".cline/rules/"* ]] || return 1
+    [[ "$output" == *".cline/hooks/<Event>"* ]] || return 1
+    [[ "$output" == *".clinerules/hooks/<Event>"* ]] || return 1
+
+    run bash -c \
+        'cd "$1" && python3 "$2/scripts/install.py" --local --dry-run --editors cline --profile minimal' \
+        _ "$TEST_PROJECT" "$TOOLKIT_DIR"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *".cline/rules/"* ]] || return 1
+    [[ "$output" != *".cline/hooks/<Event>"* ]] || return 1
+    [[ "$output" != *".clinerules/hooks/<Event>"* ]] || return 1
+}
+
 # ── Antigravity × profile matrix ──────────────────────────────────────────
 
 @test "profiles: antigravity + minimal does not emit native hooks or agents" {

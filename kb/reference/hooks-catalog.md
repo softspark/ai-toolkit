@@ -609,10 +609,25 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 | Devin CLI | `.devin/hooks.v1.json` | `generate_devin_hooks.py` | Claude-compatible (the replacement for Cascade) |
 | Gemini CLI | `.gemini/settings.json` (hooks block) | `generate_gemini_hooks.py` | Native 11-event contract: `BeforeTool`, `AfterTool`, `BeforeToolSelection`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `Notification`, `PreCompress`, `SessionStart`, `SessionEnd`; toolkit handlers use the applicable subset and never emit `Stop` |
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
+| Cline | `.cline/hooks/<Event>` plus `.clinerules/hooks/<Event>`; user `~/.cline/hooks/<Event>`; extension compatibility `~/Documents/Cline/Hooks/<Event>` | `generate_cline_hooks.py` | Eight extensionless executable files using Cline's native stdin/stdout contract (profile ≥ `standard`) |
 | GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
 | Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
 | Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native five-event schema plus adjacent Python adapter |
 | OpenCode | `.opencode/plugins/ai-toolkit-hooks.js`; user `~/.config/opencode/plugins/ai-toolkit-hooks.js` | `generate_opencode_plugin.py` | Native JavaScript plugin hooks |
+
+### Cline hooks (`.cline/hooks/<Event>` and `.clinerules/hooks/<Event>`)
+
+Cline CLI/SDK loads `.cline/hooks`, while the VS Code and JetBrains extension
+loads project hooks from `.clinerules/hooks`; project generation emits both.
+Cline loads extensionless executable files named `TaskStart`, `TaskResume`,
+`TaskCancel`, `TaskComplete`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`,
+and `PreCompact`. The toolkit adapter is self-contained, reads bounded JSON
+from stdin, and emits only Cline's documented `cancel`, `contextModification`,
+and `errorMessage` keys. `PreToolUse` validates the documented
+`preToolUse.toolName` plus `parameters` shape and cancels recognized destructive
+shell operations, including `run_commands` arrays; start, resume, prompt, and compaction events may inject safe
+context. Input size and runtime are bounded, and regeneration replaces only
+marked toolkit files while preserving user-owned hooks.
 
 ### Google Antigravity hooks (`.agents/hooks.json`)
 

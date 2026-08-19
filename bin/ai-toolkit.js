@@ -98,7 +98,8 @@ const COMMANDS = {
   'copilot-instructions': 'Generate .github/copilot-instructions.md',
   'gemini-md': 'Generate GEMINI.md for Gemini CLI',
   'cline-rules': 'Generate .clinerules for Cline (legacy)',
-  'cline-dir-rules': 'Generate .clinerules/*.md for Cline (recommended)',
+  'cline-dir-rules': 'Generate .cline/rules/*.md plus .clinerules/*.md compatibility for Cline',
+  'cline-hooks': 'Generate .cline/hooks/<Event> plus .clinerules/hooks/<Event> compatibility',
   'roo-modes': 'Generate .roomodes for Roo Code',
   'roo-dir-rules': 'Generate .roo/rules/*.md shared rules for Roo Code',
   'aider-conf': 'Generate .aider.conf.yml for Aider',
@@ -111,6 +112,7 @@ const COMMANDS = {
   'opencode-md': 'Generate AGENTS.md for opencode',
   'opencode-agents': 'Generate .opencode/agents/ for opencode (subagents)',
   'opencode-commands': 'Generate .opencode/commands/ for opencode (slash commands)',
+  'opencode-skills': 'Generate .opencode/skills/ for opencode (Agent Skills)',
   'opencode-plugin': 'Generate .opencode/plugins/ai-toolkit-hooks.js (lifecycle bridge)',
   'opencode-json': 'Merge .mcp.json servers into opencode.json',
   'agents-md': 'Regenerate AGENTS.md from agent definitions',
@@ -517,8 +519,9 @@ function handleGenerateAll(_args) {
   for (const [name, gen] of Object.entries(GENERATORS)) {
     // Skip codex-md and opencode-md — they inject into AGENTS.md via markers
     // (used by install --local --editors codex|opencode), not as standalone files.
-    // agents-md generates the full agent list which is the standalone AGENTS.md.
-    if (name === 'codex-md' || name === 'opencode-md') continue;
+    // The native Cline generator below emits both current and compatibility rules;
+    // generating the retired single-file surface first would block that directory.
+    if (name === 'codex-md' || name === 'opencode-md' || name === 'cline-rules') continue;
     writeGeneratorOutput(gen);
   }
   // Directory-based generators (multi-file output)
@@ -528,11 +531,13 @@ function handleGenerateAll(_args) {
   run(scriptPath('generate_cursor_mdc.py'), [CWD]);
   run(scriptPath('generate_windsurf_rules.py'), [CWD]);
   run(scriptPath('generate_cline_rules.py'), [CWD]);
+  run(scriptPath('generate_cline_hooks.py'), [CWD]);
   run(scriptPath('generate_roo_rules.py'), [CWD]);
   run(scriptPath('generate_augment_rules.py'), [CWD]);
   run(scriptPath('generate_codex_hooks.py'), [CWD]);
   run(scriptPath('generate_opencode_agents.py'), [CWD]);
   run(scriptPath('generate_opencode_commands.py'), [CWD]);
+  run(scriptPath('generate_opencode_skills.py'), [CWD]);
   run(scriptPath('generate_opencode_plugin.py'), [CWD]);
   run(scriptPath('generate_opencode_json.py'), [CWD]);
   // Single-file generators
@@ -666,12 +671,14 @@ const SPECIAL_HANDLERS = {
   'cursor-mdc':   (_args) => run(scriptPath('generate_cursor_mdc.py'), [CWD]),
   'windsurf-dir-rules': (_args) => run(scriptPath('generate_windsurf_rules.py'), [CWD]),
   'cline-dir-rules': (_args) => run(scriptPath('generate_cline_rules.py'), [CWD]),
+  'cline-hooks': (_args) => run(scriptPath('generate_cline_hooks.py'), [CWD]),
   'roo-dir-rules': (_args) => run(scriptPath('generate_roo_rules.py'), [CWD]),
   'conventions-md': (_args) => { const out = runGenerator('generate_conventions.py'); fs.writeFileSync(path.join(CWD, 'CONVENTIONS.md'), out); console.log('Generated: CONVENTIONS.md'); },
   'augment-dir-rules': (_args) => run(scriptPath('generate_augment_rules.py'), [CWD]),
   'codex-hooks': (_args) => run(scriptPath('generate_codex_hooks.py'), [CWD]),
   'opencode-agents': (_args) => run(scriptPath('generate_opencode_agents.py'), [CWD]),
   'opencode-commands': (_args) => run(scriptPath('generate_opencode_commands.py'), [CWD]),
+  'opencode-skills': (_args) => run(scriptPath('generate_opencode_skills.py'), [CWD]),
   'opencode-plugin': (_args) => run(scriptPath('generate_opencode_plugin.py'), [CWD]),
   'opencode-json': (_args) => run(scriptPath('generate_opencode_json.py'), [CWD]),
   'generate-all': handleGenerateAll,

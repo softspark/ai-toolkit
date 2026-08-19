@@ -1249,6 +1249,9 @@ def _transaction_specs(
     claude: Path,
     codex: list[CodexSurface],
     copilot: list[CopilotSurface],
+    *,
+    target: Path,
+    scope: str,
 ) -> list[tuple[Path, bool, Path]]:
     specs: dict[Path, tuple[bool, Path]] = {}
 
@@ -1299,6 +1302,11 @@ def _transaction_specs(
             (root / "hooks", True),
         ):
             add(path, recursive, trusted_root)
+    for config_root in _opencode_config_roots(target, scope):
+        root = config_root if config_root is not None else target / ".opencode"
+        add(root / "skills", True, target)
+    for root in _cline_transaction_roots(target, scope):
+        add(root, True, target)
     return [
         (path, recursive, trusted_root)
         for path, (recursive, trusted_root) in specs.items()
@@ -1308,8 +1316,9 @@ def _transaction_specs(
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Remove only ai-toolkit-managed Claude, Codex, Copilot, and "
-            "leftover v4.16.x recovery data while preserving user-owned content."
+            "Remove only ai-toolkit-managed Claude, Codex, Copilot, Cline, OpenCode, "
+            "and leftover v4.16.x recovery data while preserving user-owned "
+            "content."
         ),
         epilog=(
             "Global Codex and Copilot locations honor CODEX_HOME and "
@@ -1329,11 +1338,126 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return args
 
 
-def _remove_editor_managed_surfaces(target: Path) -> None:
+def _opencode_config_roots(target: Path, scope: str) -> list[Path | None]:
+    roots: list[Path | None] = []
+    if scope in {"local", "both"}:
+        roots.append(None)
+    if scope in {"global", "both"}:
+        roots.append(target / ".config" / "opencode")
+    return roots
+
+
+def _cline_transaction_roots(target: Path, scope: str) -> list[Path]:
+    roots = {target / ".cline" / "skills"}
+    if scope in {"local", "both"}:
+        roots.update(
+            {
+                target / ".cline" / "rules",
+                target / ".cline" / "hooks",
+                target / ".clinerules",
+            }
+        )
+    if scope in {"global", "both"}:
+        roots.update(
+            {
+                target / ".cline" / "rules",
+                target / ".cline" / "hooks",
+                target / "Documents" / "Cline" / "Rules",
+                target / "Documents" / "Cline" / "Hooks",
+            }
+        )
+    return sorted(roots)
+
+
+def _discover_opencode_skills(
+    target: Path,
+    scope: str,
+) -> list[tuple[str, str]]:
+    from generate_opencode_skills import discover
+
+    found: list[tuple[str, str]] = []
+    for config_root in _opencode_config_roots(target, scope):
+        count = discover(target, config_root=config_root)
+        if count:
+            location = config_root or target / ".opencode"
+            found.append(
+                (f"Managed: {location / 'skills'} ({count} OpenCode skills)",
+                 "opencode-skills")
+            )
+    return found
+
+
+def _discover_cline_surfaces(target: Path, scope: str) -> list[tuple[str, str]]:
+    from generate_cline_hooks import discover as discover_cline_hooks
+    from generate_cline_rules import managed_files as managed_cline_rules
+    from generate_cline_skills import discover as discover_cline_skills
+
+    count = 0
+    if scope in {"local", "both"}:
+        count += len(managed_cline_rules(target))
+        count += discover_cline_hooks(target)
+    if scope in {"global", "both"}:
+        global_rules = (
+            target / ".cline" / "rules",
+            target / "Documents" / "Cline" / "Rules",
+        )
+        count += len(
+            managed_cline_rules(
+                target,
+                output_roots=global_rules,
+                include_workflows=False,
+            )
+        )
+        if scope == "global":
+            count += discover_cline_hooks(
+                target,
+                hooks_root=target / ".cline" / "hooks",
+            )
+        count += discover_cline_hooks(
+            target,
+            hooks_root=target / "Documents" / "Cline" / "Hooks",
+        )
+    count += discover_cline_skills(target)
+    if not count:
+        return []
+    return [(f"Managed: Cline native surfaces ({count} artifacts)", "cline")]
+
+
+def _cleanup_cline_surfaces(target: Path, scope: str) -> None:
+    from generate_cline_hooks import cleanup as cleanup_cline_hooks
+    from generate_cline_rules import cleanup as cleanup_cline_rules
+    from generate_cline_skills import cleanup as cleanup_cline_skills
+
+    if scope in {"local", "both"}:
+        cleanup_cline_rules(target)
+        cleanup_cline_hooks(target)
+    if scope in {"global", "both"}:
+        global_rule_roots = [target / "Documents" / "Cline" / "Rules"]
+        if scope == "global":
+            global_rule_roots.insert(0, target / ".cline" / "rules")
+        cleanup_cline_rules(
+            target,
+            output_roots=tuple(global_rule_roots),
+            include_workflows=False,
+        )
+        if scope == "global":
+            cleanup_cline_hooks(
+                target,
+                hooks_root=target / ".cline" / "hooks",
+            )
+        cleanup_cline_hooks(
+            target,
+            hooks_root=target / "Documents" / "Cline" / "Hooks",
+        )
+    cleanup_cline_skills(target)
+
+
+def _remove_editor_managed_surfaces(target: Path, scope: str) -> None:
     """Strip managed editor surfaces that have no primary uninstall path.
 
-    Best effort by design: a missing generator or an unreadable config must not
-    abort an uninstall that has already removed the primary surfaces.
+    Cursor, Gemini, and OpenCode compatibility cleanup remains best effort.
+    Cline cleanup is transactional and fail-closed so the outer uninstall can
+    roll every managed Cline root back after a partial failure.
     """
     for module_name, label, surface in (
         ("generate_cursor_hooks", "Cursor", "hook entries"),
@@ -1350,6 +1474,19 @@ def _remove_editor_managed_surfaces(target: Path) -> None:
             print(f"  WARN could not clean {label} {surface}: {error}")
         else:
             print(f"  Cleaned: {label} {surface}")
+
+    from generate_opencode_skills import cleanup as cleanup_opencode_skills
+
+    for config_root in _opencode_config_roots(target, scope):
+        try:
+            cleanup_opencode_skills(target, config_root=config_root)
+        except (OSError, RuntimeError, ValueError) as error:
+            print(f"  WARN could not clean OpenCode skills: {error}")
+        else:
+            print("  Cleaned: OpenCode skills")
+
+    _cleanup_cline_surfaces(target, scope)
+    print("  Cleaned: Cline native surfaces")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -1381,6 +1518,8 @@ def main(argv: list[str] | None = None) -> None:
             components.extend(_discover_codex(surface))
         for surface in copilot:
             components.extend(_discover_copilot(surface))
+        components.extend(_discover_opencode_skills(target, scope))
+        components.extend(_discover_cline_surfaces(target, scope))
         recovery_root = (
             target / ".softspark" / "ai-toolkit" / "sessions"
             if scope in {"global", "both"}
@@ -1430,7 +1569,13 @@ def main(argv: list[str] | None = None) -> None:
     transaction: _UninstallTransaction | None = None
     try:
         transaction = _UninstallTransaction(
-            _transaction_specs(claude, codex, copilot)
+            _transaction_specs(
+                claude,
+                codex,
+                copilot,
+                target=target,
+                scope=scope,
+            )
         )
         _preflight(target, claude, codex, copilot)
         remove_components(claude, target)
@@ -1443,7 +1588,7 @@ def main(argv: list[str] | None = None) -> None:
         # Cursor and Gemini configs have no primary uninstall branch. These
         # cleanups strip only managed hook entries and Gemini agent files,
         # leaving user-authored, plugin-owned, and unrelated settings intact.
-        _remove_editor_managed_surfaces(target)
+        _remove_editor_managed_surfaces(target, scope)
         if recovery_root is not None and recovery_components:
             # The recovery API preflights its complete tree before the first
             # unlink. A later I/O fault can still leave recovery partially

@@ -127,7 +127,8 @@ to another destination. Codex IDE does not support plugins.
 | `copilot-instructions` | Generate `.github/copilot-instructions.md` |
 | `gemini-md` | Generate `GEMINI.md` for Gemini CLI |
 | `cline-rules` | Generate `.clinerules` (legacy) |
-| `cline-dir-rules` | Generate `.clinerules/*.md` (recommended) |
+| `cline-dir-rules` | Generate `.cline/rules/*.md` plus `.clinerules/*.md` compatibility |
+| `cline-hooks` | Generate eight executable `.cline/hooks/<Event>` files plus `.clinerules/hooks/<Event>` extension compatibility |
 | `roo-modes` | Generate `.roomodes` |
 | `roo-dir-rules` | Generate `.roo/rules/*.md` |
 | `aider-conf` | Generate `.aider.conf.yml` |

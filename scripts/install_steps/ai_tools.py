@@ -132,13 +132,21 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
 
     if "cline" in eds:
         if dry_run:
-            print("  Would generate: ~/Documents/Cline/Rules/ai-toolkit-*.md")
+            print(
+                "  Would generate: ~/.cline/rules/ai-toolkit-*.md + "
+                "~/Documents/Cline/Rules/ai-toolkit-*.md"
+            )
+            if add_hooks:
+                print(
+                    "  Would generate: ~/.cline/hooks/<Event> + "
+                    "~/Documents/Cline/Hooks/<Event>"
+                )
             if _claude_skills_discoverable(target_dir):
                 print("  Would reuse: ~/.claude/skills/ (Cline-compatible discovery)")
             else:
                 print("  Would generate: ~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md")
         else:
-            _install_cline_global(target_dir, rules_dir)
+            _install_cline_global(target_dir, rules_dir, add_hooks=add_hooks)
         installed.append("cline")
 
     if "roo" in eds:
@@ -175,8 +183,14 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         if dry_run:
             print("  Would inject: ~/.config/opencode/{AGENTS.md, agents/, "
                   "commands/, plugins/ai-toolkit-hooks.js, opencode.json}")
+            if add_native_surfaces:
+                print("  Would generate: ~/.config/opencode/skills/ (profile=full)")
         else:
-            _install_opencode_global(target_dir, rules_dir)
+            _install_opencode_global(
+                target_dir,
+                rules_dir,
+                add_native_surfaces=add_native_surfaces,
+            )
         installed.append("opencode")
 
     if "cursor" in eds:
@@ -461,21 +475,46 @@ def _cleanup_retired_output_filter_policy(cwd: Path) -> None:
     print(f"  Migrated: removed retired .claude/{PROJECT_POLICY_NAME}")
 
 
-def _install_cline_global(target_dir: Path, rules_dir: Path) -> None:
-    """Install Cline global rules in the documented ~/.cline directory."""
+def _install_cline_global(
+    target_dir: Path,
+    rules_dir: Path,
+    *,
+    add_hooks: bool,
+) -> None:
+    """Install native Cline CLI surfaces plus extension compatibility."""
     from generate_cline_rules import generate as gen_cline_rules
 
-    # Cline reads GLOBAL rules from ~/Documents/Cline/Rules/ (docs.cline.bot);
-    # ~/.cline/rules/ is not a Cline-read path.
-    rules_root = target_dir / "Documents" / "Cline" / "Rules"
-    gen_cline_rules(
-        target_dir,
-        rules_dir=rules_dir,
-        output_root=rules_root,
-        emit_workflows=False,
-        managed_scopes=("standard", "custom"),
+    for rules_root, label in (
+        (target_dir / ".cline" / "rules", "~/.cline/rules"),
+        (
+            target_dir / "Documents" / "Cline" / "Rules",
+            "~/Documents/Cline/Rules",
+        ),
+    ):
+        gen_cline_rules(
+            target_dir,
+            rules_dir=rules_dir,
+            output_root=rules_root,
+            emit_workflows=False,
+            managed_scopes=("standard", "custom"),
+        )
+        print(f"  Created: {label}/ai-toolkit-*.md")
+
+    from generate_cline_hooks import (
+        cleanup as cleanup_cline_hooks,
+        generate_extension_global,
+        generate_global,
     )
-    print("  Created: ~/Documents/Cline/Rules/ai-toolkit-*.md")
+
+    extension_hooks = target_dir / "Documents" / "Cline" / "Hooks"
+    if add_hooks:
+        generate_global(target_dir)
+        generate_extension_global(target_dir)
+        print("  Created: ~/.cline/hooks/<Event>")
+        print("  Created: ~/Documents/Cline/Hooks/<Event>")
+    else:
+        cleanup_cline_hooks(target_dir)
+        cleanup_cline_hooks(target_dir, hooks_root=extension_hooks)
 
     from generate_cline_skills import generate as gen_cline_skills
     gen_cline_skills(target_dir, emit_skill_pointer=not _claude_skills_discoverable(target_dir))
@@ -537,13 +576,19 @@ def _aider_default_model() -> str:
     return DEFAULT_CLAUDE_MODELS["sonnet"]
 
 
-def _install_opencode_global(target_dir: Path, rules_dir: Path) -> None:
+def _install_opencode_global(
+    target_dir: Path,
+    rules_dir: Path,
+    *,
+    add_native_surfaces: bool,
+) -> None:
     """Install opencode at the global level (~/.config/opencode/).
 
     Creates:
       - ~/.config/opencode/AGENTS.md (marker injection with rules)
       - ~/.config/opencode/agents/ai-toolkit-*.md (subagents)
       - ~/.config/opencode/commands/ai-toolkit-*.md (slash commands)
+      - ~/.config/opencode/skills/*/SKILL.md (native skills, profile=full)
       - ~/.config/opencode/plugins/ai-toolkit-hooks.js (hook bridge)
       - ~/.config/opencode/opencode.json (MCP merge, preserves user keys)
     """
@@ -569,6 +614,32 @@ def _install_opencode_global(target_dir: Path, rules_dir: Path) -> None:
         msg += f", {removed} stale removed"
     msg += ")"
     print(msg)
+
+    if add_native_surfaces:
+        from generate_opencode_skills import generate as gen_opencode_skills
+
+        written, removed, preserved = gen_opencode_skills(
+            target_dir,
+            config_root=opencode_home,
+        )
+        msg = f"  Created: ~/.config/opencode/skills/ ({written} skills"
+        if removed:
+            msg += f", {removed} stale removed"
+        if preserved:
+            msg += f", {preserved} user-owned preserved"
+        print(msg + ")")
+    else:
+        from generate_opencode_skills import cleanup as cleanup_opencode_skills
+
+        removed, _ = cleanup_opencode_skills(
+            target_dir,
+            config_root=opencode_home,
+        )
+        if removed:
+            print(
+                "  Removed: ~/.config/opencode/skills/ "
+                f"({removed} managed skills)"
+            )
 
     from generate_opencode_plugin import generate as gen_opencode_plugin
     gen_opencode_plugin(target_dir, config_root=opencode_home)
@@ -703,6 +774,9 @@ _EDITOR_MARKERS: dict[str, str] = {
     # .windsurf/ markers stay to detect legacy installs.
     ".devin/rules": "windsurf",
     ".clinerules": "cline",
+    ".cline/rules": "cline",
+    ".cline/hooks": "cline",
+    ".cline/agents": "cline",
     ".roomodes": "roo",
     ".roo/rules": "roo",
     ".aider.conf.yml": "aider",
@@ -1083,6 +1157,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
 
     add_copilot_dir = profile in {"standard", "strict", "full"}
     add_gemini_hooks = profile in {"standard", "strict", "full"}
+    add_cline_hooks = profile in {"standard", "strict", "full"}
     add_native_surfaces = profile == "full"
 
     # Editor-specific dry-run messages
@@ -1090,7 +1165,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         "copilot":      "  Would inject: .github/copilot-instructions.md + AGENTS.md",
         "cursor":       "  Would generate: .cursorrules + .cursor/rules/*.mdc",
         "windsurf":     "  Would generate: .windsurfrules + .devin/rules/*.md + .windsurf/rules/*.md",
-        "cline":        "  Would generate: .clinerules/*.md",
+        "cline":        "  Would generate: .cline/rules/*.md + .clinerules/*.md",
         "roo":          "  Would generate: .roomodes + .roo/rules/*.md",
         "aider":        "  Would generate: .aider.conf.yml + CONVENTIONS.md",
         "augment":      "  Would generate: .augment/rules/ai-toolkit-*.md",
@@ -1124,6 +1199,11 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         print("  Would generate: .gemini/settings.json hooks (profile >= standard)")
     if "antigravity" in eds and add_gemini_hooks:
         print("  Would generate: .agents/hooks.json + hooks runtime (profile >= standard)")
+    if "cline" in eds and add_cline_hooks:
+        print(
+            "  Would generate: .cline/hooks/<Event> + "
+            ".clinerules/hooks/<Event> (profile >= standard)"
+        )
     if add_native_surfaces:
         if "cursor" in eds:
             print("  Would generate: .cursor/hooks.json + .cursor/agents/ + .cursor/skills/ (profile=full)")
@@ -1141,6 +1221,8 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
             )
         if "antigravity" in eds:
             print("  Would generate: .agents/agents/ (profile=full)")
+        if "opencode" in eds:
+            print("  Would generate: .opencode/skills/ (profile=full)")
     if "codex" in eds:
         print("  Would generate: .codex/agents/ native agents")
         print("  Would generate: .agents/skills/ Codex skills")
@@ -1340,6 +1422,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
     _profile = profile if profile in {"minimal", "standard", "strict", "full"} else "standard"
     add_copilot_dir = _profile in {"standard", "strict", "full"}
     add_gemini_hooks = _profile in {"standard", "strict", "full"}
+    add_cline_hooks = _profile in {"standard", "strict", "full"}
     add_native_surfaces = _profile == "full"
     # Skip the editor skill-catalogue pointer when real skills are already
     # discoverable at .claude/skills (project or ~/.claude/skills global):
@@ -1414,11 +1497,6 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             _try_generator("generate_windsurf_skills", cwd)
 
     if "cline" in eds:
-        # Migrate: remove legacy .clinerules single file (replaced by directory)
-        legacy_clinerules = cwd / ".clinerules"
-        if legacy_clinerules.is_file():
-            legacy_clinerules.unlink()
-            print("  Migrated: .clinerules file → .clinerules/ directory")
         from generate_cline_rules import generate as gen_cline_rules
         gen_cline_rules(
             cwd,
@@ -1426,8 +1504,18 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             rules_dir=rules_dir,
             managed_scopes=("standard", "lang", "custom"),
         )
+        if add_cline_hooks:
+            _try_generator("generate_cline_hooks", cwd)
+        else:
+            from generate_cline_hooks import cleanup as cleanup_cline_hooks
+
+            cleanup_cline_hooks(cwd)
         if add_native_surfaces:
             _try_generator("generate_cline_skills", cwd, emit_skill_pointer=emit_pointer)
+        else:
+            from generate_cline_skills import cleanup as cleanup_cline_skills
+
+            cleanup_cline_skills(cwd)
 
     if "roo" in eds:
         roo_output = run_script("generate-roo-modes.sh", capture=True)
@@ -1541,6 +1629,22 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             msg += f", {removed} stale removed"
         msg += ")"
         print(msg)
+        if add_native_surfaces:
+            from generate_opencode_skills import generate as gen_opencode_skills
+
+            written, removed, preserved = gen_opencode_skills(cwd)
+            msg = f"  Created: .opencode/skills/ ({written} skills"
+            if removed:
+                msg += f", {removed} stale removed"
+            if preserved:
+                msg += f", {preserved} user-owned preserved"
+            print(msg + ")")
+        else:
+            from generate_opencode_skills import cleanup as cleanup_opencode_skills
+
+            removed, _ = cleanup_opencode_skills(cwd)
+            if removed:
+                print(f"  Removed: .opencode/skills/ ({removed} managed skills)")
         # .opencode/plugins/ai-toolkit-hooks.js — lifecycle hook bridge
         from generate_opencode_plugin import generate as gen_opencode_plugin
         gen_opencode_plugin(cwd)

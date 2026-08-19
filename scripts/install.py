@@ -18,7 +18,7 @@ Claude Code (~/.claude/):
 Other tools (global config locations):
   - Windsurf: ~/.codeium/windsurf/memories/global_rules.md + ~/.codeium/windsurf/skills/
   - Gemini:   ~/.gemini/GEMINI.md
-  - Cline:    ~/Documents/Cline/Rules/ + ~/.cline/skills/
+  - Cline:    ~/.cline/{rules,hooks,skills}/ + ~/Documents/Cline/{Rules,Hooks}/
   - Roo Code: ~/.roo/rules/
   - Aider:    ~/.aider.conf.yml (created only if absent)
   - Augment:  ~/.augment/rules/ai-toolkit.md
@@ -59,10 +59,7 @@ from install_steps.hooks import cleanup_retired_output_filter, install_hooks
 from install_steps.markers import install_marker_files, inject_rules, refresh_url_hooks, refresh_url_mcp
 from install_steps.ai_tools import install_ai_tools, install_local_project, run_script
 from install_steps.install_state import (
-    load_state,
     record_install,
-    get_installed_modules,
-    get_installed_profile,
     get_global_editors,
     record_global_editors,
     print_status,
@@ -347,10 +344,10 @@ def validate_args(cfg: dict) -> None:
 
     # Validate --lang
     if cfg["lang"]:
-        for l in cfg["lang"].split(","):
-            l = l.strip()
-            if l and l.lower() not in VALID_LANGS:
-                errors.append(f"Unknown language: '{l}' (valid: {', '.join(sorted(VALID_LANGS - {'c++', 'c#', 'cs', 'go', 'common'}))})")
+        for language in cfg["lang"].split(","):
+            language = language.strip()
+            if language and language.lower() not in VALID_LANGS:
+                errors.append(f"Unknown language: '{language}' (valid: {', '.join(sorted(VALID_LANGS - {'c++', 'c#', 'cs', 'go', 'common'}))})")
 
     if errors:
         for e in errors:
@@ -688,8 +685,12 @@ def main() -> None:
     # --lang <list> → merge into --modules as rules-<lang> entries
     _LANG_ALIASES = {"go": "golang", "c++": "cpp", "c#": "csharp", "cs": "csharp"}
     if lang_arg:
-        langs = [_LANG_ALIASES.get(l.strip(), l.strip()) for l in lang_arg.split(",") if l.strip()]
-        lang_modules = ",".join(f"rules-{l}" for l in langs)
+        langs = [
+            _LANG_ALIASES.get(language.strip(), language.strip())
+            for language in lang_arg.split(",")
+            if language.strip()
+        ]
+        lang_modules = ",".join(f"rules-{language}" for language in langs)
         modules_arg = f"{modules_arg},{lang_modules}" if modules_arg else lang_modules
         auto_detect = False  # explicit --lang overrides auto-detect
         if not local:

@@ -477,6 +477,38 @@ MD
     [ -f "$TMP_HOME/.config/devin/AGENTS.md" ]
 }
 
+@test "install --editors opencode --profile full writes global native skills" {
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors opencode --profile full >/dev/null 2>&1
+
+    [ -f "$TMP_HOME/.config/opencode/skills/clean-code/SKILL.md" ]
+    [ -f "$TMP_HOME/.config/opencode/skills/clean-code/reference/python.md" ]
+    [ -f "$TMP_HOME/.config/opencode/commands/ai-toolkit-debug.md" ]
+}
+
+@test "install opencode global downgrade removes managed skills and keeps user files" {
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors opencode --profile full >/dev/null 2>&1
+    echo user-extra \
+        > "$TMP_HOME/.config/opencode/skills/clean-code/user-notes.md"
+    mkdir -p "$TMP_HOME/.config/opencode/skills/custom"
+    cat > "$TMP_HOME/.config/opencode/skills/custom/SKILL.md" <<'EOF'
+---
+name: custom
+description: User skill
+---
+user skill
+EOF
+
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors opencode --profile standard >/dev/null 2>&1
+
+    [ ! -e "$TMP_HOME/.config/opencode/skills/clean-code/SKILL.md" ]
+    [ "$(cat "$TMP_HOME/.config/opencode/skills/clean-code/user-notes.md")" = user-extra ]
+    grep -q 'user skill' "$TMP_HOME/.config/opencode/skills/custom/SKILL.md"
+    [ -f "$TMP_HOME/.config/opencode/commands/ai-toolkit-debug.md" ]
+}
+
 @test "install --editors cursor,copilot,antigravity (global) writes documented HOME surfaces, keeps rules local" {
     HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
         --editors cursor,copilot,antigravity --profile full >/dev/null 2>&1

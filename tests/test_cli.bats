@@ -175,6 +175,16 @@ teardown() {
     [ -f "$TEST_TMP/.codex/hooks.json" ]
 }
 
+@test "cli: opencode-skills generates complete native skills without commands" {
+    cd "$TEST_TMP"
+    run $CLI opencode-skills
+
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/.opencode/skills/clean-code/SKILL.md" ]
+    [ -f "$TEST_TMP/.opencode/skills/clean-code/reference/python.md" ]
+    [ ! -d "$TEST_TMP/.opencode/commands" ]
+}
+
 # ── llms-txt (merged: generates files + size comparison) ─────────────────────
 
 @test "cli: llms-txt generates llms.txt and llms-full.txt with correct sizes" {
@@ -201,12 +211,16 @@ teardown() {
     [ -f "$TEST_TMP/.github/copilot-instructions.md" ]
     [ -f "$TEST_TMP/GEMINI.md" ]
     [ -d "$TEST_TMP/.clinerules" ]
+    [ -f "$TEST_TMP/.cline/rules/ai-toolkit-security.md" ]
+    [ -x "$TEST_TMP/.cline/hooks/PreToolUse" ]
     [ -f "$TEST_TMP/.roomodes" ]
     [ -f "$TEST_TMP/.aider.conf.yml" ]
     [ -f "$TEST_TMP/llms.txt" ]
     [ -f "$TEST_TMP/llms-full.txt" ]
     [ -f "$TEST_TMP/.agents/hooks.json" ]
     [ -f "$TEST_TMP/.agents/agents/ai-toolkit-debugger/agent.md" ]
+    [ -f "$TEST_TMP/.opencode/skills/clean-code/SKILL.md" ]
+    [ -f "$TEST_TMP/.opencode/skills/clean-code/reference/python.md" ]
 }
 
 @test "cli: antigravity-plugin help and export dispatch" {
@@ -262,6 +276,15 @@ teardown() {
     run $CLI cline-rules
     [ "$status" -eq 0 ]
     [ -f "$TEST_TMP/.clinerules" ]
+}
+
+@test "cli: cline-hooks generates exact native executable event files" {
+    cd "$TEST_TMP"
+    run $CLI cline-hooks
+    [ "$status" -eq 0 ]
+    [ -x "$TEST_TMP/.cline/hooks/PreToolUse" ]
+    [ -x "$TEST_TMP/.cline/hooks/PreCompact" ]
+    [ "$(find "$TEST_TMP/.cline/hooks" -type f | wc -l | xargs)" -eq 8 ]
 }
 
 # ── roo-modes (merged: generates + valid JSON) ──────────────────────────────
@@ -694,8 +717,10 @@ required = [
     'generate:augment-rules',
     'generate:antigravity',
     'generate:cline',
+    'generate:cline-hooks',
     'generate:opencode-agents',
     'generate:opencode-commands',
+    'generate:opencode-skills',
 ]
 missing = [name for name in required if name not in gen_all]
 assert not missing, f'generate:all missing generators: {missing}'

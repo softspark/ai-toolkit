@@ -3,11 +3,11 @@
 # Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
 # Source: https://github.com/softspark/ai-toolkit
 
-"""Generate ``.clinerules/*.md`` files and companion workflows for Cline.
+"""Generate native Cline rules plus extension-compatible rule files.
 
-Cline reads rules from the ``.clinerules/`` directory (since Cline 3.7).
-Each ``.md`` file inside is automatically loaded. The legacy single-file
-``.clinerules`` format is replaced by this directory.
+Cline CLI/SDK reads ``.cline/rules/*.md``. The IDE extension also reads the
+``.clinerules/*.md`` compatibility surface. A user-owned legacy single-file
+``.clinerules`` is preserved byte-identically while native rules are emitted.
 
 This generator also produces:
   * ``.clinerules/workflows/*.md`` — project-local workflow files that
@@ -36,9 +36,15 @@ from dir_rules_shared import (
     STANDARD_WORKFLOWS,
     build_language_rules,
     build_registered_rules,
-    cleanup_stale,
+    rule_scope,
     rule_testing,
-    write_rules,
+)
+from secure_fs import (
+    SecureDestination,
+    SecureTransaction,
+    lexical_absolute,
+    nearest_existing_root,
+    run_secure_transaction,
 )
 
 
@@ -78,25 +84,114 @@ def _wrap_language_rule(raw: str, lang: str) -> str:
     return _conditional(raw, globs)
 
 
-def generate(target_dir: Path, *,
-             language_modules: list[str] | None = None,
-             rules_dir: Path | None = None,
-             cleanup: bool = True,
-             emit_workflows: bool = True,
-             managed_scopes: tuple[str, ...] = (STANDARD_SCOPE,),
-             output_root: Path | None = None) -> None:
+def _trusted_target(target_dir: Path) -> tuple[Path, Path]:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Cline target directory: {target}")
+    return target, nearest_existing_root(target)
+
+
+def _output_root(target: Path, root: Path) -> Path:
+    output = lexical_absolute(root)
+    try:
+        output.relative_to(target)
+    except ValueError as error:
+        raise RuntimeError(f"Cline rules root escapes target: {output}") from error
+    return output
+
+
+def _preflight_roots(target: Path, roots: list[Path], trusted_root: Path) -> None:
+    probes = [
+        SecureDestination(
+            root / ".ai-toolkit-secure-probe",
+            trusted_root,
+            f"Cline {root.relative_to(target)} ancestry",
+        )
+        for root in roots
+    ]
+    transaction = SecureTransaction(probes)
+    transaction.close()
+
+
+def _managed_paths(root: Path, scopes: set[str]) -> list[Path]:
+    if not root.exists():
+        return []
+    if root.is_symlink() or not root.is_dir():
+        raise RuntimeError(f"Unsafe Cline rules directory: {root}")
+    return sorted(
+        path for path in root.iterdir() if rule_scope(path.name) in scopes
+    )
+
+
+def _render_rules(rules: dict[str, callable]) -> dict[str, bytes]:
+    return {
+        filename: content_fn().encode("utf-8")
+        for filename, content_fn in rules.items()
+    }
+
+
+def _write_transaction(
+    target: Path,
+    trusted_root: Path,
+    outputs: dict[Path, dict[str, bytes]],
+    *,
+    cleanup: bool,
+    managed_scopes: tuple[str, ...],
+) -> None:
+    active = [
+        SecureDestination(root / name, trusted_root, f"Cline {name}")
+        for root, files in outputs.items()
+        for name in files
+    ]
+    stale: list[SecureDestination] = []
+    if cleanup:
+        scopes = set(managed_scopes)
+        for root, files in outputs.items():
+            for path in _managed_paths(root, scopes):
+                if path.name not in files:
+                    stale.append(
+                        SecureDestination(path, trusted_root, f"Cline stale {path.name}")
+                    )
+
+    def apply(transaction: SecureTransaction) -> None:
+        for destination in active:
+            root_files = outputs[destination.path.parent]
+            transaction.atomic_write(
+                destination,
+                root_files[destination.path.name],
+                0o644,
+            )
+        for destination in stale:
+            transaction.unlink(destination)
+
+    run_secure_transaction(active + stale, apply)
+    for root, files in outputs.items():
+        for name in files:
+            print(f"  Generated: {(root / name).relative_to(target)}")
+
+
+def generate(
+    target_dir: Path,
+    *,
+    language_modules: list[str] | None = None,
+    rules_dir: Path | None = None,
+    cleanup: bool = True,
+    emit_workflows: bool = True,
+    managed_scopes: tuple[str, ...] = (STANDARD_SCOPE,),
+    output_root: Path | None = None,
+) -> None:
     """Write Cline rule files.
 
-    By default writes project-local ``target_dir/.clinerules/*.md``. When
-    ``output_root`` is provided, writes directly into that directory; this is
-    used for Cline's documented global rules directory.
+    By default writes project-local ``target_dir/.cline/rules/*.md`` and the
+    extension-compatible ``target_dir/.clinerules/*.md``. When ``output_root``
+    is provided, writes only into that directory so installers can target one
+    documented global rules root at a time.
     """
-    # Migrate: if .clinerules exists as a single file, remove it so the
-    # directory can be created (Cline 3.7+ uses directory format).
-    if output_root is None:
-        clinerules = target_dir / ".clinerules"
-        if clinerules.is_file():
-            clinerules.unlink()
+    target, trusted_root = _trusted_target(target_dir)
+    legacy_clinerules = target / ".clinerules"
+    if legacy_clinerules.is_symlink():
+        raise RuntimeError(f"Unsafe symlinked Cline rules root: {legacy_clinerules}")
+    preserve_legacy_file = output_root is None and legacy_clinerules.is_file()
 
     rules: dict[str, callable] = dict(STANDARD_RULES)
     # Replace the testing rule with a conditional variant so it only
@@ -112,38 +207,110 @@ def generate(target_dir: Path, *,
             # "common" spans all languages — apply unconditionally.
             rules[filename] = content_fn
             continue
-        rules[filename] = (lambda fn, l: lambda: _wrap_language_rule(fn(), l))(
-            content_fn, lang,
-        )
+        rules[filename] = (
+            lambda fn, language: lambda: _wrap_language_rule(fn(), language)
+        )(content_fn, lang)
 
     rules.update(build_registered_rules(rules_dir))
 
-    root = output_root.parent if output_root is not None else target_dir
-    subdir = output_root.name if output_root is not None else ".clinerules"
-    write_rules(
-        root,
-        rules,
-        subdir,
+    rendered_rules = _render_rules(rules)
+    if output_root is None:
+        rule_roots = [target / ".cline" / "rules"]
+        if not preserve_legacy_file:
+            rule_roots.append(target / ".clinerules")
+    else:
+        rule_roots = [_output_root(target, output_root)]
+    outputs = {root: rendered_rules for root in rule_roots}
+    if emit_workflows and output_root is None and not preserve_legacy_file:
+        outputs[target / ".clinerules" / "workflows"] = _render_rules(
+            dict(STANDARD_WORKFLOWS)
+        )
+    _preflight_roots(target, list(outputs), trusted_root)
+    _write_transaction(
+        target,
+        trusted_root,
+        outputs,
         cleanup=cleanup,
         managed_scopes=managed_scopes,
     )
 
-    if emit_workflows and output_root is None:
-        _write_workflows(target_dir, cleanup=cleanup)
+
+def _managed_roots(
+    target: Path,
+    output_roots: tuple[Path, ...] | None,
+    include_workflows: bool,
+) -> list[Path]:
+    if output_roots is not None:
+        return [_output_root(target, root) for root in output_roots]
+    roots = [target / ".cline" / "rules"]
+    legacy = target / ".clinerules"
+    if legacy.is_symlink():
+        raise RuntimeError(f"Unsafe symlinked Cline rules root: {legacy}")
+    if not legacy.is_file():
+        roots.append(legacy)
+        if include_workflows:
+            roots.append(legacy / "workflows")
+    return roots
 
 
-def _write_workflows(target_dir: Path, *, cleanup: bool = True) -> None:
-    """Write ``.clinerules/workflows/*.md`` files (Cline slash-invocable)."""
-    workflows_dir = target_dir / ".clinerules" / "workflows"
-    workflows_dir.mkdir(parents=True, exist_ok=True)
+def managed_files(
+    target_dir: Path,
+    *,
+    output_roots: tuple[Path, ...] | None = None,
+    include_workflows: bool = True,
+) -> list[Path]:
+    """List Cline rule artifacts owned by ai-toolkit."""
+    target, trusted_root = _trusted_target(target_dir)
+    roots = _managed_roots(target, output_roots, include_workflows)
+    _preflight_roots(target, roots, trusted_root)
+    paths = [
+        path
+        for root in roots
+        for path in _managed_paths(root, {STANDARD_SCOPE, "lang", "custom"})
+    ]
+    destinations = [
+        SecureDestination(path, trusted_root, f"Cline managed {path.name}")
+        for path in paths
+    ]
+    if not destinations:
+        return []
+    transaction = SecureTransaction(destinations)
+    try:
+        return [
+            destination.path
+            for destination in destinations
+            if transaction.initial_content(destination) is not None
+        ]
+    finally:
+        transaction.close()
 
-    if cleanup:
-        # Only touch ai-toolkit-* files; never remove user workflows.
-        cleanup_stale(workflows_dir, set(STANDARD_WORKFLOWS.keys()))
 
-    for filename, content_fn in STANDARD_WORKFLOWS.items():
-        (workflows_dir / filename).write_text(content_fn(), encoding="utf-8")
-        print(f"  Generated: .clinerules/workflows/{filename}")
+def cleanup(
+    target_dir: Path,
+    *,
+    output_roots: tuple[Path, ...] | None = None,
+    include_workflows: bool = True,
+) -> int:
+    """Remove only ai-toolkit-managed Cline rule and workflow files."""
+    files = managed_files(
+        target_dir,
+        output_roots=output_roots,
+        include_workflows=include_workflows,
+    )
+    if not files:
+        return 0
+    _, trusted_root = _trusted_target(target_dir)
+    destinations = [
+        SecureDestination(path, trusted_root, f"Cline managed {path.name}")
+        for path in files
+    ]
+
+    def apply(transaction: SecureTransaction) -> None:
+        for destination in destinations:
+            transaction.unlink(destination)
+
+    run_secure_transaction(destinations, apply)
+    return len(files)
 
 
 def main() -> None:

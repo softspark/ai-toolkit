@@ -3,17 +3,17 @@ title: "AI Toolkit - opencode Compatibility"
 category: reference
 service: ai-toolkit
 tags: [opencode, compatibility, install, skills, hooks, mcp, plugins]
-version: "1.0.1"
+version: "1.1.0"
 created: "2026-04-16"
-last_updated: "2026-07-14"
-description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, subagents, slash commands, JS plugin hook bridge, and MCP merge into opencode.json."
+last_updated: "2026-08-19"
+description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, Agent Skills, subagents, slash commands, JS plugin hooks, and MCP config."
 ---
 
 # AI Toolkit - opencode Compatibility
 
 ## Summary
 
-opencode (https://opencode.ai) is the 11th supported editor. `ai-toolkit install --editors opencode` (or `--editors all`) lays down a full native integration: shared `AGENTS.md`, per-agent `.opencode/agents/` files, per-command `.opencode/commands/` files, a JS plugin bridging toolkit Bash hooks to opencode lifecycle events, and MCP server merge into `opencode.json`.
+opencode (https://opencode.ai) is the 11th supported editor. `ai-toolkit install --editors opencode` (or `--editors all`) lays down shared `AGENTS.md`, per-agent `.opencode/agents/` files, per-command `.opencode/commands/` files, a JS plugin bridging toolkit Bash hooks to opencode lifecycle events, and MCP server merge into `opencode.json`. The `full` profile also installs complete native Agent Skills.
 
 opencode also reads `CLAUDE.md` as a fallback, so a user without the native integration still gets baseline rules. The native path adds subagents, slash commands, hooks, and MCP.
 
@@ -24,6 +24,7 @@ opencode also reads `CLAUDE.md` as a fallback, so a user without the native inte
 - `AGENTS.md` (shared with Codex CLI via distinct marker sections)
 - `.opencode/agents/ai-toolkit-*.md` (one per ai-toolkit agent, `mode: subagent`)
 - `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill; the prompt lives in the markdown body)
+- `.opencode/skills/<name>/SKILL.md` plus its resources (`profile=full`)
 - `.opencode/plugins/ai-toolkit-hooks.js` (JS plugin bridging Bash hooks)
 - `opencode.json` (MCP key merged from `.mcp.json`, user keys preserved)
 
@@ -34,6 +35,7 @@ opencode also reads `CLAUDE.md` as a fallback, so a user without the native inte
 - `~/.config/opencode/AGENTS.md`
 - `~/.config/opencode/agents/ai-toolkit-*.md`
 - `~/.config/opencode/commands/ai-toolkit-*.md`
+- `~/.config/opencode/skills/<name>/SKILL.md` plus resources (`profile=full`)
 - `~/.config/opencode/plugins/ai-toolkit-hooks.js`
 - `~/.config/opencode/opencode.json` (MCP merge, user keys preserved)
 
@@ -46,6 +48,7 @@ Files land directly under `~/.config/opencode/` (no `.opencode/` nesting) becaus
 | Rules file         | `CLAUDE.md` | `AGENTS.md`     | `AGENTS.md` + `CLAUDE.md` fallback        |
 | Subagents          | Yes         | Yes (`.codex/agents/*.toml`) | Yes (`mode: subagent`)          |
 | Slash commands     | Skills      | Adapted skills  | Native commands with frontmatter          |
+| Agent Skills       | Yes         | Yes             | Yes (`.opencode/skills/*/SKILL.md`)        |
 | MCP                | Yes         | Yes             | Yes (`opencode.json`)                     |
 | Lifecycle hooks    | JSON config | `.codex/hooks`  | JS/TS plugins (~30+ events)               |
 | Global config dir  | `~/.claude` | `$CODEX_HOME` (default `~/.codex`) | `~/.config/opencode`       |
@@ -78,6 +81,31 @@ through `$9` in command bodies. The renderer preserves those placeholders for
 OpenCode while translating Claude-only skill-directory variables and runtime
 APIs. Codex output uses a separate renderer and converts prompt placeholders to
 durable user-input prose.
+
+## Native Agent Skills
+
+OpenCode's stable Agent Skills surface discovers one directory per skill at
+`.opencode/skills/<name>/SKILL.md` or
+`~/.config/opencode/skills/<name>/SKILL.md`. The `full` profile copies each
+complete ai-toolkit skill directory so relative scripts, references,
+templates, and assets remain available. Lower profiles use OpenCode's
+documented `.claude/skills/` and `.agents/skills/` compatibility discovery and
+remove only toolkit-managed native copies when downgrading.
+
+`generate_opencode_skills.py` preserves the stable portable fields `name`,
+`description`, `license`, `compatibility`, and `metadata`. Claude-only runtime
+fields and orchestration primitives are not emitted. The adapter maps
+`user-invocable: false` to the v2-compatible `slash: false` hint and
+`disable-model-invocation: true` to metadata
+`opencode/autoinvoke: false`. Stable OpenCode ignores unknown frontmatter and
+loads Agent Skills on demand through the `skill` tool; slash commands continue
+to come only from `.opencode/commands/`.
+
+Managed manifests let profile downgrade and uninstall remove generated files
+while preserving user-owned skill directories and files added beside managed
+resources. Source and destination symlinks are rejected before writes. Pinned
+destination descriptors remain active through generation, cleanup, and
+rollback, so an ancestor swap cannot redirect mutations outside the target.
 
 ## Hook Bridge (JS Plugin)
 
@@ -126,11 +154,30 @@ The installer detects opencode as configured when any of these markers exist:
 
 - Generated `.opencode/agents/ai-toolkit-*.md`
 - Generated `.opencode/commands/ai-toolkit-*.md`
+- Manifest-owned files under generated `.opencode/skills/<name>/` directories
 - Generated `.opencode/plugins/ai-toolkit-hooks.js`
 - Managed markers from `AGENTS.md`
 - `mcp` key entries injected by the toolkit (user keys preserved)
 
 User-authored opencode files and user-authored `opencode.json` keys are never deleted.
+
+Native skill cleanup removes only manifest-owned files. A user-owned skill or
+an extra file inside a formerly managed directory is preserved. The native
+skills tree participates in the uninstall transaction, so a later cleanup
+failure restores managed files without discarding those user additions.
+
+## Current Config and v2 Beta Surfaces
+
+Stable OpenCode supports both `opencode.json` and `opencode.jsonc`. Its current
+config directory uses plural `agents/`, `commands/`, `plugins/`, and `skills/`
+subdirectories. The v2 plugin API is still beta and additionally recognizes
+root-package `skills/*.md`, nested `skills/**/SKILL.md`, and a `skills` config
+array containing local paths or HTTP URLs.
+
+There is no migration in ai-toolkit for v2 yet. The existing stable JavaScript
+plugin generator remains the supported path until the v2 API stabilizes; the
+beta surfaces are tracked in the ecosystem registry so a later sync cannot
+silently miss their promotion.
 
 ## Behavioral Limits
 
@@ -141,7 +188,7 @@ User-authored opencode files and user-authored `opencode.json` keys are never de
 
 The opencode integration is verified by:
 
-1. Generator contract tests for the five `generate_opencode*.py` scripts (bats)
+1. Generator contract tests for the six `generate_opencode*.py` scripts (bats)
 2. MCP merge idempotency and user-key preservation tests
 3. Plugin export shape and event coverage tests
 4. Auto-detection tests for install / update flow
@@ -154,6 +201,7 @@ The opencode integration is verified by:
 | `ai-toolkit opencode-md` | Generate `AGENTS.md` body for opencode |
 | `ai-toolkit opencode-agents` | Generate `.opencode/agents/ai-toolkit-*.md` |
 | `ai-toolkit opencode-commands` | Generate `.opencode/commands/ai-toolkit-*.md` |
+| `ai-toolkit opencode-skills` | Generate complete `.opencode/skills/<name>/` directories |
 | `ai-toolkit opencode-plugin` | Generate `.opencode/plugins/ai-toolkit-hooks.js` |
 | `ai-toolkit opencode-json` | Merge MCP servers into `opencode.json` |
 

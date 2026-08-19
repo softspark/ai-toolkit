@@ -8864,7 +8864,9 @@ ai-toolkit/
     generate_copilot_hooks.py # Generates native Copilot hooks + self-contained runtime
     generate_gemini.py       # Generates GEMINI.md (sources _common.py)
     generate_gemini_agents.py # Generates native .gemini/agents/*.md definitions
-    generate_cline.py        # Generates .clinerules (sources _common.py)
+    generate_cline.py        # Generates legacy .clinerules (sources _common.py)
+    generate_cline_rules.py  # Dual-emits .cline/rules + .clinerules compatibility
+    generate_cline_hooks.py  # Dual-emits .cline/hooks + .clinerules/hooks
     generate_roo_modes.py    # Generates .roomodes
     generate_aider_conf.py   # Generates .aider.conf.yml
     generate_llms_txt.py     # Generates llms.txt
@@ -8926,7 +8928,10 @@ also emits `.github/instructions`, `.github/prompts`, and native
 `.github/hooks`. The user target writes the supported personal surfaces below
 `$COPILOT_HOME` (default `~/.copilot`) and does not generate prompt files there.
 Full-profile installs also emit native skill pointer catalogues for Cursor,
-Windsurf, and Cline, plus Gemini commands, a skill pointer, and native
+Windsurf, and Cline. Cline rules dual-emit to `.cline/rules/` and `.clinerules/`;
+profiles `standard`, `strict`, and `full` add executable hooks under both
+`.cline/hooks/<Event>` and `.clinerules/hooks/<Event>`. Gemini receives
+commands, a skill pointer, and native
 `.gemini/agents/*.md` definitions. Codex local install generates `AGENTS.md`,
 `.agents/skills/*`, `.codex/agents/*.toml`, `.codex/hooks.json`, and
 self-contained `.codex/hooks/*`. Global Codex install writes its user-owned
@@ -8966,7 +8971,8 @@ project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
 | `copilot-instructions` | `./` | Generates `.github/copilot-instructions.md` |
 | `gemini-md` | `./` | Generates `GEMINI.md` |
 | `cline-rules` | `./` | Generates `.clinerules` (legacy) |
-| `cline-dir-rules` | `./` | Generates `.clinerules/*.md` |
+| `cline-dir-rules` | `./` | Generates `.cline/rules/*.md` plus `.clinerules/*.md` compatibility |
+| `cline-hooks` | `./` | Generates eight executable files under `.cline/hooks/` and `.clinerules/hooks/` |
 | `roo-modes` | `./` | Generates `.roomodes` |
 | `roo-dir-rules` | `./` | Generates `.roo/rules/*.md` |
 | `aider-conf` | `./` | Generates `.aider.conf.yml` |
@@ -9673,7 +9679,8 @@ to another destination. Codex IDE does not support plugins.
 | `copilot-instructions` | Generate `.github/copilot-instructions.md` |
 | `gemini-md` | Generate `GEMINI.md` for Gemini CLI |
 | `cline-rules` | Generate `.clinerules` (legacy) |
-| `cline-dir-rules` | Generate `.clinerules/*.md` (recommended) |
+| `cline-dir-rules` | Generate `.cline/rules/*.md` plus `.clinerules/*.md` compatibility |
+| `cline-hooks` | Generate eight executable `.cline/hooks/<Event>` files plus `.clinerules/hooks/<Event>` extension compatibility |
 | `roo-modes` | Generate `.roomodes` |
 | `roo-dir-rules` | Generate `.roo/rules/*.md` |
 | `aider-conf` | Generate `.aider.conf.yml` |
@@ -11785,11 +11792,11 @@ with documented, file-based config surfaces:
 - `windsurf`: `~/.codeium/windsurf/memories/global_rules.md` plus `~/.codeium/windsurf/skills/ai-toolkit-skill-catalogue/SKILL.md` plus `~/.config/devin/AGENTS.md` (Devin CLI global rules — the Desktop `global_rules.md` path is not imported by `read_config_from.windsurf`)
 - `gemini`: `~/.gemini/GEMINI.md`; hooks at `~/.gemini/settings.json` (profile ≥ standard); `~/.gemini/commands/`, `~/.gemini/skills/` pointer, and native `~/.gemini/agents/*.md` (profile full)
 - `augment`: `~/.augment/rules/ai-toolkit.md`; `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` (profile full)
-- `cline`: `~/Documents/Cline/Rules/ai-toolkit-*.md` plus `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md`
+- `cline`: `~/.cline/rules/ai-toolkit-*.md` plus `~/Documents/Cline/Rules/ai-toolkit-*.md` compatibility; profiles `standard`, `strict`, and `full` add the exact eight executable hooks under both `~/.cline/hooks/` and `~/Documents/Cline/Hooks/`; a `~/.cline/skills/ai-toolkit-skill-catalogue/SKILL.md` pointer is used only when Cline cannot discover real Claude skills
 - `roo`: `~/.roo/rules/ai-toolkit-*.md` plus `~/.agents/skills/*` (Roo/Zoo native skill discovery; skipped when `codex` is also selected, which fills the same dir)
 - `aider`: `~/.aider.conf.yml` plus `~/.aider-ai-toolkit-CONVENTIONS.md` when the YAML file does not already exist
 - `codex`: `$CODEX_HOME/AGENTS.md`, `$CODEX_HOME/agents/*.toml`, `$CODEX_HOME/hooks.json`, `$CODEX_HOME/ai-toolkit-hooks/*`, plus `$HOME/.agents/skills/*`; `CODEX_HOME` defaults to `~/.codex`, and `~/AGENTS.md` is not Codex's user-instruction file
-- `opencode`: `~/.config/opencode/*`
+- `opencode`: `~/.config/opencode/{AGENTS.md,agents/,commands/,plugins/,opencode.json}`; `profile=full` also copies complete native skills to `~/.config/opencode/skills/<name>/`
 
 Cursor, GitHub Copilot, and Google Antigravity now have partial global support,
 scoped to whatever documented HOME file surface each exposes:
@@ -11831,7 +11838,9 @@ These files still stay local to a repository as part of the core install model:
 - `.github/agents/ai-toolkit-*.agent.md`
 - `.github/skills/ai-toolkit-*/SKILL.md` plus required assets and helper scripts
 - `.github/hooks/ai-toolkit.json` plus `.github/hooks/ai-toolkit/copilot_hook.py` (profile ≥ `standard`)
-- `.clinerules`
+- `.cline/rules/ai-toolkit-*.md` plus `.clinerules/ai-toolkit-*.md` compatibility
+- `.cline/hooks/<Event>` plus `.clinerules/hooks/<Event>` compatibility for Cline profiles `standard`, `strict`, and `full`
+- `.clinerules/workflows/ai-toolkit-*.md`
 - `.roomodes`
 - `.aider.conf.yml`
 - `.augment/rules/ai-toolkit-*.md`
@@ -12734,10 +12743,25 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 | Devin CLI | `.devin/hooks.v1.json` | `generate_devin_hooks.py` | Claude-compatible (the replacement for Cascade) |
 | Gemini CLI | `.gemini/settings.json` (hooks block) | `generate_gemini_hooks.py` | Native 11-event contract: `BeforeTool`, `AfterTool`, `BeforeToolSelection`, `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `Notification`, `PreCompress`, `SessionStart`, `SessionEnd`; toolkit handlers use the applicable subset and never emit `Stop` |
 | Augment | `.augment/settings.json` (hooks block) | `generate_augment_hooks.py` | Claude-style events |
+| Cline | `.cline/hooks/<Event>` plus `.clinerules/hooks/<Event>`; user `~/.cline/hooks/<Event>`; extension compatibility `~/Documents/Cline/Hooks/<Event>` | `generate_cline_hooks.py` | Eight extensionless executable files using Cline's native stdin/stdout contract (profile ≥ `standard`) |
 | GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
 | Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
 | Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native five-event schema plus adjacent Python adapter |
 | OpenCode | `.opencode/plugins/ai-toolkit-hooks.js`; user `~/.config/opencode/plugins/ai-toolkit-hooks.js` | `generate_opencode_plugin.py` | Native JavaScript plugin hooks |
+
+### Cline hooks (`.cline/hooks/<Event>` and `.clinerules/hooks/<Event>`)
+
+Cline CLI/SDK loads `.cline/hooks`, while the VS Code and JetBrains extension
+loads project hooks from `.clinerules/hooks`; project generation emits both.
+Cline loads extensionless executable files named `TaskStart`, `TaskResume`,
+`TaskCancel`, `TaskComplete`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`,
+and `PreCompact`. The toolkit adapter is self-contained, reads bounded JSON
+from stdin, and emits only Cline's documented `cancel`, `contextModification`,
+and `errorMessage` keys. `PreToolUse` validates the documented
+`preToolUse.toolName` plus `parameters` shape and cancels recognized destructive
+shell operations, including `run_commands` arrays; start, resume, prompt, and compaction events may inject safe
+context. Input size and runtime are bounded, and regeneration replaces only
+marked toolkit files while preserving user-owned hooks.
 
 ### Google Antigravity hooks (`.agents/hooks.json`)
 
@@ -14338,17 +14362,17 @@ title: "AI Toolkit - opencode Compatibility"
 category: reference
 service: ai-toolkit
 tags: [opencode, compatibility, install, skills, hooks, mcp, plugins]
-version: "1.0.1"
+version: "1.1.0"
 created: "2026-04-16"
-last_updated: "2026-07-14"
-description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, subagents, slash commands, JS plugin hook bridge, and MCP merge into opencode.json."
+last_updated: "2026-08-19"
+description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, Agent Skills, subagents, slash commands, JS plugin hooks, and MCP config."
 ---
 
 # AI Toolkit - opencode Compatibility
 
 ## Summary
 
-opencode (https://opencode.ai) is the 11th supported editor. `ai-toolkit install --editors opencode` (or `--editors all`) lays down a full native integration: shared `AGENTS.md`, per-agent `.opencode/agents/` files, per-command `.opencode/commands/` files, a JS plugin bridging toolkit Bash hooks to opencode lifecycle events, and MCP server merge into `opencode.json`.
+opencode (https://opencode.ai) is the 11th supported editor. `ai-toolkit install --editors opencode` (or `--editors all`) lays down shared `AGENTS.md`, per-agent `.opencode/agents/` files, per-command `.opencode/commands/` files, a JS plugin bridging toolkit Bash hooks to opencode lifecycle events, and MCP server merge into `opencode.json`. The `full` profile also installs complete native Agent Skills.
 
 opencode also reads `CLAUDE.md` as a fallback, so a user without the native integration still gets baseline rules. The native path adds subagents, slash commands, hooks, and MCP.
 
@@ -14359,6 +14383,7 @@ opencode also reads `CLAUDE.md` as a fallback, so a user without the native inte
 - `AGENTS.md` (shared with Codex CLI via distinct marker sections)
 - `.opencode/agents/ai-toolkit-*.md` (one per ai-toolkit agent, `mode: subagent`)
 - `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill; the prompt lives in the markdown body)
+- `.opencode/skills/<name>/SKILL.md` plus its resources (`profile=full`)
 - `.opencode/plugins/ai-toolkit-hooks.js` (JS plugin bridging Bash hooks)
 - `opencode.json` (MCP key merged from `.mcp.json`, user keys preserved)
 
@@ -14369,6 +14394,7 @@ opencode also reads `CLAUDE.md` as a fallback, so a user without the native inte
 - `~/.config/opencode/AGENTS.md`
 - `~/.config/opencode/agents/ai-toolkit-*.md`
 - `~/.config/opencode/commands/ai-toolkit-*.md`
+- `~/.config/opencode/skills/<name>/SKILL.md` plus resources (`profile=full`)
 - `~/.config/opencode/plugins/ai-toolkit-hooks.js`
 - `~/.config/opencode/opencode.json` (MCP merge, user keys preserved)
 
@@ -14381,6 +14407,7 @@ Files land directly under `~/.config/opencode/` (no `.opencode/` nesting) becaus
 | Rules file         | `CLAUDE.md` | `AGENTS.md`     | `AGENTS.md` + `CLAUDE.md` fallback        |
 | Subagents          | Yes         | Yes (`.codex/agents/*.toml`) | Yes (`mode: subagent`)          |
 | Slash commands     | Skills      | Adapted skills  | Native commands with frontmatter          |
+| Agent Skills       | Yes         | Yes             | Yes (`.opencode/skills/*/SKILL.md`)        |
 | MCP                | Yes         | Yes             | Yes (`opencode.json`)                     |
 | Lifecycle hooks    | JSON config | `.codex/hooks`  | JS/TS plugins (~30+ events)               |
 | Global config dir  | `~/.claude` | `$CODEX_HOME` (default `~/.codex`) | `~/.config/opencode`       |
@@ -14413,6 +14440,31 @@ through `$9` in command bodies. The renderer preserves those placeholders for
 OpenCode while translating Claude-only skill-directory variables and runtime
 APIs. Codex output uses a separate renderer and converts prompt placeholders to
 durable user-input prose.
+
+## Native Agent Skills
+
+OpenCode's stable Agent Skills surface discovers one directory per skill at
+`.opencode/skills/<name>/SKILL.md` or
+`~/.config/opencode/skills/<name>/SKILL.md`. The `full` profile copies each
+complete ai-toolkit skill directory so relative scripts, references,
+templates, and assets remain available. Lower profiles use OpenCode's
+documented `.claude/skills/` and `.agents/skills/` compatibility discovery and
+remove only toolkit-managed native copies when downgrading.
+
+`generate_opencode_skills.py` preserves the stable portable fields `name`,
+`description`, `license`, `compatibility`, and `metadata`. Claude-only runtime
+fields and orchestration primitives are not emitted. The adapter maps
+`user-invocable: false` to the v2-compatible `slash: false` hint and
+`disable-model-invocation: true` to metadata
+`opencode/autoinvoke: false`. Stable OpenCode ignores unknown frontmatter and
+loads Agent Skills on demand through the `skill` tool; slash commands continue
+to come only from `.opencode/commands/`.
+
+Managed manifests let profile downgrade and uninstall remove generated files
+while preserving user-owned skill directories and files added beside managed
+resources. Source and destination symlinks are rejected before writes. Pinned
+destination descriptors remain active through generation, cleanup, and
+rollback, so an ancestor swap cannot redirect mutations outside the target.
 
 ## Hook Bridge (JS Plugin)
 
@@ -14461,11 +14513,30 @@ The installer detects opencode as configured when any of these markers exist:
 
 - Generated `.opencode/agents/ai-toolkit-*.md`
 - Generated `.opencode/commands/ai-toolkit-*.md`
+- Manifest-owned files under generated `.opencode/skills/<name>/` directories
 - Generated `.opencode/plugins/ai-toolkit-hooks.js`
 - Managed markers from `AGENTS.md`
 - `mcp` key entries injected by the toolkit (user keys preserved)
 
 User-authored opencode files and user-authored `opencode.json` keys are never deleted.
+
+Native skill cleanup removes only manifest-owned files. A user-owned skill or
+an extra file inside a formerly managed directory is preserved. The native
+skills tree participates in the uninstall transaction, so a later cleanup
+failure restores managed files without discarding those user additions.
+
+## Current Config and v2 Beta Surfaces
+
+Stable OpenCode supports both `opencode.json` and `opencode.jsonc`. Its current
+config directory uses plural `agents/`, `commands/`, `plugins/`, and `skills/`
+subdirectories. The v2 plugin API is still beta and additionally recognizes
+root-package `skills/*.md`, nested `skills/**/SKILL.md`, and a `skills` config
+array containing local paths or HTTP URLs.
+
+There is no migration in ai-toolkit for v2 yet. The existing stable JavaScript
+plugin generator remains the supported path until the v2 API stabilizes; the
+beta surfaces are tracked in the ecosystem registry so a later sync cannot
+silently miss their promotion.
 
 ## Behavioral Limits
 
@@ -14476,7 +14547,7 @@ User-authored opencode files and user-authored `opencode.json` keys are never de
 
 The opencode integration is verified by:
 
-1. Generator contract tests for the five `generate_opencode*.py` scripts (bats)
+1. Generator contract tests for the six `generate_opencode*.py` scripts (bats)
 2. MCP merge idempotency and user-key preservation tests
 3. Plugin export shape and event coverage tests
 4. Auto-detection tests for install / update flow
@@ -14489,6 +14560,7 @@ The opencode integration is verified by:
 | `ai-toolkit opencode-md` | Generate `AGENTS.md` body for opencode |
 | `ai-toolkit opencode-agents` | Generate `.opencode/agents/ai-toolkit-*.md` |
 | `ai-toolkit opencode-commands` | Generate `.opencode/commands/ai-toolkit-*.md` |
+| `ai-toolkit opencode-skills` | Generate complete `.opencode/skills/<name>/` directories |
 | `ai-toolkit opencode-plugin` | Generate `.opencode/plugins/ai-toolkit-hooks.js` |
 | `ai-toolkit opencode-json` | Merge MCP servers into `opencode.json` |
 
@@ -15486,12 +15558,12 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `cline` |
 | Docs | https://docs.cline.bot |
 | Release notes | https://github.com/cline/cline/releases |
-| Config paths | **Extension:** `.clinerules/*.md`, `.clinerules/workflows/*.md`, `.clinerules/skills/*/SKILL.md`, `.clinerules/hooks/` (project), `~/Documents/Cline/Rules/Hooks/` (global hooks), `~/.cline/data/settings/cline_mcp_settings.json`. **CLI/SDK unified layout** (docs.cline.bot/getting-started/config; `.clinerules` is deprecated there): `.cline/{rules,hooks,plugins,skills}/`, `~/.cline/{rules,hooks,plugins,skills}/`, `CLINE_HOOKS_DIR` env var. **Cross-tool:** `AGENTS.md` + `~/.agents/AGENTS.md` (first-class rules sources), `.claude/skills/*/SKILL.md` (native discovery, always-on since v3.57.0). |
-| Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py`, `scripts/generate_cline_skills.py` |
+| Config paths | **Extension compatibility:** `.clinerules/*.md`, `.clinerules/workflows/*.md`, `.clinerules/skills/*/SKILL.md`, `.clinerules/hooks/` (project), `~/Documents/Cline/Rules/` (global rules), `~/Documents/Cline/Hooks/` (global hooks), `~/.cline/data/settings/cline_mcp_settings.json`. **CLI/SDK primary layout:** `.cline/{rules,hooks,agents,plugins,skills}/`, `~/.cline/{rules,hooks,agents,plugins,skills}/`; CLI `--hooks-dir` defaults to `~/.cline/hooks`. **Cross-tool:** `AGENTS.md` + `~/.agents/AGENTS.md` (rules sources), `.claude/skills/*/SKILL.md` (native skill discovery). |
+| Our generators | `scripts/generate_cline.py`, `scripts/generate_cline_rules.py` (native + compatibility rules), `scripts/generate_cline_skills.py`, `scripts/generate_cline_hooks.py` (exact eight extensionless events with a self-contained adapter) |
 | Tracked capabilities | `clinerules`, Plan Mode, Act Mode, MCP, custom modes, workflows, hooks, skills, subagents, conditional rules, `AGENTS.md`, plugins |
-| Plugins | `.cline/plugins/` + `~/.cline/plugins/` (JS/TS), `package.json` `cline.plugins` manifest; plugins can bundle skills. Not adopted as a distribution channel yet — candidate for shipping toolkit skills to CLI/SDK users. |
-| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules since 2026-04. Project rules still use `.clinerules/` for compatibility; global rules are written to `~/Documents/Cline/Rules/` (the documented Cline global rules dir — `~/.cline/rules/` is not a Cline-read path). Skills are emitted as a pointer catalogue in `profile=full` and global installs. |
-| Global install | `ai-toolkit install --editors cline` writes documented global rules under `~/Documents/Cline/Rules/` and a skill pointer under `~/.cline/skills/`; MCP remains managed by `ai-toolkit mcp install --editor cline`. |
+| Plugins | `.cline/plugins/` + `~/.cline/plugins/` and the `package.json` `cline.plugins` manifest belong to Cline CLI/SDK and Kanban plugin flows. They are not a plugin-loading surface for the VS Code or JetBrains extension, so ai-toolkit does not auto-package or install a Cline plugin. |
+| Notes | Conditional rules (`paths:` YAML frontmatter) are emitted for testing and language-specific rules. Project installs write `.cline/rules/` as the native primary plus `.clinerules/` compatibility, and dual-emit hooks to `.cline/hooks/` plus extension-native `.clinerules/hooks/`. The documented `.cline/agents/` and `~/.cline/agents/` paths are tracked, but ai-toolkit does not emit agents until a portable file schema is verified. Hook input validates `preToolUse.toolName` and command parameters, including CLI `run_commands`; output uses only `cancel`, `contextModification`, and `errorMessage`, with bounded input and runtime. |
+| Global install | `ai-toolkit install --editors cline` writes `~/.cline/{rules,hooks}/` as the CLI primary and `~/Documents/Cline/{Rules,Hooks}/` for extension compatibility. Hooks are absent in `minimal` and present in `standard`, `strict`, and `full`. A skill pointer is emitted under `~/.cline/skills/` only when real Claude skills are not already discoverable. MCP remains managed by `ai-toolkit mcp install --editor cline`. |
 
 ### Roo Code
 
@@ -15572,13 +15644,14 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `opencode` |
 | Docs | https://opencode.ai/docs |
 | Release notes | https://github.com/sst/opencode/releases (redirects to anomalyco/opencode) |
-| Config paths | `opencode.json`, `.opencode/agents/*.md`, `.opencode/commands/*.md`, `.opencode/plugins/*`, `.opencode/skills/*/SKILL.md` (v1.14+), `AGENTS.md`; skill fallback discovery: `.claude/skills/`, `.agents/skills/`, `~/.config/opencode/skills/`, `~/.claude/skills/`, `~/.agents/skills/` |
-| Our generators | `scripts/generate_opencode.py`, `scripts/generate_opencode_agents.py`, `scripts/generate_opencode_commands.py`, `scripts/generate_opencode_json.py`, `scripts/generate_opencode_plugin.py` |
+| Config paths | `opencode.json`, `opencode.jsonc`, `.opencode/agents/*.md`, `.opencode/commands/*.md`, `.opencode/plugins/*`, `.opencode/skills/*/SKILL.md`, `AGENTS.md`; skill fallback discovery: `.claude/skills/`, `.agents/skills/`, `~/.config/opencode/skills/`, `~/.claude/skills/`, `~/.agents/skills/`; v2 beta package/config surfaces: `skills/*.md`, `skills/**/SKILL.md`, `skills` array with local paths or HTTP URLs |
+| Our generators | `scripts/generate_opencode.py`, `scripts/generate_opencode_agents.py`, `scripts/generate_opencode_commands.py`, `scripts/generate_opencode_json.py`, `scripts/generate_opencode_plugin.py`, `scripts/generate_opencode_skills.py` |
+| Native skills delivery | `profile=full` copies complete skill directories to the native project/global roots. Lower profiles use compatibility discovery and remove only toolkit-managed native copies. |
 | Hook isolation | Tool hooks preserve native `sessionID` as normalized `session_id`; exit code 2 from a blocking pre-tool guard is raised back to OpenCode instead of being ignored. |
-| Tracked plugin events | `session.created`, `session.compacted`, `session.deleted`, `message.updated`, `tool.execute.before`, `tool.execute.after`, `permission.asked`, `command.executed` |
+| Tracked plugin events | `session.created`, `session.compacted`, `session.deleted`, `message.updated`, `message.part.updated`, `tool.execute.before`, `tool.execute.after`, `permission.asked`, `command.executed` |
 | Other capabilities | `opencode.json` config, primary + subagent modes, `@`-mention subagents, `/`-invocation commands, MCP (local + remote), plugin hooks in JS/TS, native `SKILL.md` discovery with Claude-compatible fallback, `permission.skill.*` matrix |
 | Version probe | `opencode --version` |
-| Watch item | v1.16.0 (2026-06-05) shipped an experimental v2 skill registry (flat-file skills, `slash` frontmatter key). As of the 2026-06-23 sync (upstream v1.17.9) it is still undocumented and not stabilized: the skills docs show only the nested `SKILL.md` layout with no `slash` key, so `generate_opencode*.py` is unchanged. Re-check next sync. |
+| Watch item | The v2 plugin API is beta. It adds root-package skill files and configurable local/HTTP skill sources, but there is no migration: keep the stable JavaScript plugin generator until v2 stabilizes. |
 
 ---
 

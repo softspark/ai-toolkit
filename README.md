@@ -6,7 +6,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1578%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1636%20passing-success)](tests/)
 
 ## What's New in v4.24.1
 
@@ -138,13 +138,13 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Windsurf (Devin Desktop) | `~/.config/devin/AGENTS.md` + `.devin/rules/*.md` + `.devin/hooks.v1.json` + `.windsurf/skills/*` | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` + `.gemini/settings.json` + `.gemini/{commands,skills,agents}/` | ✅ | project + user |
 | GitHub Copilot | Project: `AGENTS.md` + `.github/copilot-instructions.md` + `.github/{instructions,prompts,agents,skills,hooks}/` + `.github/mcp.json`; user: `$COPILOT_HOME/copilot-instructions.md` + `$COPILOT_HOME/{instructions,agents,skills,hooks}/` + `$COPILOT_HOME/mcp-config.json` | ✅ | project + user |
-| Cline | `~/Documents/Cline/Rules/*.md` + `~/.cline/skills/*` + `.clinerules/*.md` | — | global + project |
+| Cline | Project: `.cline/{rules,hooks,skills}/` + `.clinerules/{hooks,workflows}/`; user: `~/.cline/{rules,hooks,skills}/` + `~/Documents/Cline/{Rules,Hooks}/` compatibility | ✅ | global + project |
 | Roo Code / [Zoo Code](https://zoocode.dev/) | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
 | Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | ✅ | global + project |
 | Google Antigravity | Project `.agents/{rules,workflows,skills,agents,hooks}/`; user `~/.gemini/config/{skills,agents,hooks}/`; opt-in native plugin export | ✅ | project + user |
 | Codex CLI | Project: `AGENTS.md` + `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
-| opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins}/*` + `opencode.json` | ✅ | project + global (`~/.config/opencode/`) |
+| opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins,skills}/*` + `opencode.{json,jsonc}` | ✅ | project + global (`~/.config/opencode/`) |
 
 > Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
 
