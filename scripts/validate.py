@@ -91,8 +91,11 @@ PROMPT_AGENT_HOOK_EVENTS = frozenset({
     "UserPromptSubmit",
 })
 
+HTTP_HOOK_EVENTS = VALID_HOOK_EVENTS - {"SessionStart", "Setup"}
+
 HOOK_TYPE_EVENTS = {
     "agent": PROMPT_AGENT_HOOK_EVENTS,
+    "http": HTTP_HOOK_EVENTS,
     "prompt": PROMPT_AGENT_HOOK_EVENTS,
 }
 

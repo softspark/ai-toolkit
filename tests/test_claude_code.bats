@@ -142,6 +142,39 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
+@test "claude-code: http hooks are rejected only for SessionStart and Setup" {
+    run python3 -c "
+import contextlib
+import io
+import sys
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from validate import (
+    HOOK_TYPE_EVENTS,
+    HTTP_HOOK_EVENTS,
+    VALID_HOOK_EVENTS,
+    ValidationResult,
+    _validate_hook_handler,
+)
+
+expected = VALID_HOOK_EVENTS - {'SessionStart', 'Setup'}
+assert HTTP_HOOK_EVENTS == expected
+assert HOOK_TYPE_EVENTS['http'] == expected
+
+valid = ValidationResult()
+_validate_hook_handler('PreToolUse', {'type': 'http', 'url': 'https://hooks.example.test'}, valid)
+assert valid.errors == 0
+
+for event in ('SessionStart', 'Setup'):
+    invalid = ValidationResult()
+    with contextlib.redirect_stdout(io.StringIO()):
+        _validate_hook_handler(event, {'type': 'http', 'url': 'https://hooks.example.test'}, invalid)
+    assert invalid.errors == 1
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
 # ── skill-creator frontmatter reference ─────────────────────────────────────
 
 @test "skill-creator SKILL.md references the new frontmatter fields Claude Code accepts" {
