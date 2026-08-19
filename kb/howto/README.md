@@ -4,6 +4,7 @@ service: ai-toolkit
 category: howto
 tags: [howto, guides]
 last_updated: "2026-03-25"
+description: "Section index for ai-toolkit howto. No documents are filed here yet; new ones follow the howto template."
 ---
 
 # How-To Guides
