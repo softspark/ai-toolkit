@@ -214,11 +214,15 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"export"* ]]
     [[ "$output" == *"verify"* ]]
+    [[ "$output" == *".gemini/antigravity-cli/plugins"* ]] || return 1
+    [[ "$output" == *".gemini/config/plugins"* ]] || return 1
 
     archive="$TEST_TMP/antigravity-plugin.zip"
     run $CLI antigravity-plugin export --output "$archive"
     [ "$status" -eq 0 ]
     [ -f "$archive" ]
+    [[ "$output" == *".gemini/antigravity-cli/plugins/ai-toolkit"* ]] || return 1
+    [[ "$output" == *".gemini/config/plugins/ai-toolkit"* ]] || return 1
     run $CLI antigravity-plugin verify "$archive"
     [ "$status" -eq 0 ]
 }

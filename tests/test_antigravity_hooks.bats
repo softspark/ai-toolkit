@@ -92,16 +92,17 @@ PY
     run bash -c "printf '%s' '{}' | python3 '$adapter' Stop"
     [ "$status" -eq 0 ]
     [ "$output" = '{"decision":"stop"}' ]
-    run bash -c "printf '%s' '{\"factualBlock\":true}' | python3 '$adapter' Stop"
+    run bash -c "printf '%s' '{\"executionNum\":1,\"terminationReason\":\"agent_stopped\",\"error\":\"pending validation\",\"fullyIdle\":false}' | python3 '$adapter' Stop"
     [ "$status" -eq 0 ]
     run python3 -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["decision"] == "continue" and d["reason"]' "$output"
     [ "$status" -eq 0 ]
-    run bash -c "printf '%s' '{\"factualBlock\":true,\"stopHookActive\":true}' | python3 '$adapter' Stop"
+    run bash -c "printf '%s' '{\"executionNum\":1,\"terminationReason\":\"completed\",\"fullyIdle\":true}' | python3 '$adapter' Stop"
     [ "$status" -eq 0 ]
     [ "$output" = '{"decision":"stop"}' ]
-    run bash -c "printf '%s' '{\"factualBlock\":true,\"executionNum\":2}' | python3 '$adapter' Stop"
+    run bash -c "printf '%s' '{\"executionNum\":2,\"terminationReason\":\"agent_stopped\",\"fullyIdle\":false}' | python3 '$adapter' Stop"
     [ "$status" -eq 0 ]
     [ "$output" = '{"decision":"stop"}' ]
+    ! grep -qE 'factualBlock|stopHookActive' "$adapter"
 }
 
 @test "antigravity hooks: rejects symlinked config root without touching target" {

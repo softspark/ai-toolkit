@@ -81,6 +81,10 @@ PY
 @test "antigravity plugin: verify rejects tampered hooks and path traversal" {
     archive="$AG_PLUGIN_TMP/plugin.zip"
     expanded="$AG_PLUGIN_TMP/expanded"
+    runtime_expanded="$AG_PLUGIN_TMP/runtime-expanded"
+    extra_expanded="$AG_PLUGIN_TMP/extra-expanded"
+    missing_expanded="$AG_PLUGIN_TMP/missing-expanded"
+    member_expanded="$AG_PLUGIN_TMP/member-expanded"
     python3 "$TOOLKIT_DIR/scripts/antigravity_plugin.py" export --output "$archive" >/dev/null
     mkdir "$expanded"
     (cd "$expanded" && unzip -q "$archive")
@@ -91,6 +95,27 @@ d=json.load(open(p)); d["ai-toolkit"]["Stop"][0]["command"]="python3 /tmp/evil.p
 json.dump(d, open(p,"w"))
 PY
     run python3 "$TOOLKIT_DIR/scripts/antigravity_plugin.py" verify "$expanded/ai-toolkit"
+    [ "$status" -ne 0 ]
+
+    mkdir "$runtime_expanded" "$extra_expanded" "$missing_expanded" "$member_expanded"
+    (cd "$runtime_expanded" && unzip -q "$archive")
+    printf '\n# tampered runtime\n' >> "$runtime_expanded/ai-toolkit/runtime/ai-toolkit-antigravity-hook.py"
+    run python3 "$TOOLKIT_DIR/scripts/antigravity_plugin.py" verify "$runtime_expanded/ai-toolkit"
+    [ "$status" -ne 0 ]
+
+    (cd "$extra_expanded" && unzip -q "$archive")
+    mkdir "$extra_expanded/ai-toolkit/unexpected-dir"
+    run python3 "$TOOLKIT_DIR/scripts/antigravity_plugin.py" verify "$extra_expanded/ai-toolkit"
+    [ "$status" -ne 0 ]
+
+    (cd "$missing_expanded" && unzip -q "$archive")
+    mv "$missing_expanded/ai-toolkit/LICENSE" "$AG_PLUGIN_TMP/LICENSE.missing"
+    run python3 "$TOOLKIT_DIR/scripts/antigravity_plugin.py" verify "$missing_expanded/ai-toolkit"
+    [ "$status" -ne 0 ]
+
+    (cd "$member_expanded" && unzip -q "$archive")
+    printf '\nmodified\n' >> "$member_expanded/ai-toolkit/LICENSE"
+    run python3 "$TOOLKIT_DIR/scripts/antigravity_plugin.py" verify "$member_expanded/ai-toolkit"
     [ "$status" -ne 0 ]
 
     run python3 - "$TOOLKIT_DIR" "$AG_PLUGIN_TMP/traversal.zip" <<'PY'
@@ -134,7 +159,7 @@ PY
     python3 "$TOOLKIT_DIR/scripts/antigravity_plugin.py" export --output "$AG_PLUGIN_TMP/plugin.zip" >/dev/null
     mkdir "$plugin"
     (cd "$plugin" && unzip -q "$AG_PLUGIN_TMP/plugin.zip")
-    chmod 777 "$plugin/ai-toolkit/hooks.json"
+    chmod 744 "$plugin/ai-toolkit/hooks.json"
     run python3 "$TOOLKIT_DIR/scripts/antigravity_plugin.py" verify "$plugin/ai-toolkit"
     [ "$status" -ne 0 ]
 }

@@ -130,15 +130,16 @@ def respond(event: str, payload: dict[str, Any]) -> dict[str, Any]:
     if event == "PostInvocation":
         return {"injectSteps": [], "terminationBehavior": ""}
     if event == "Stop":
-        # Never reawaken a Stop hook that Antigravity already re-entered.
-        factual_block = payload.get("factualBlock") is True
-        loop_active = payload.get("stopHookActive") is True
-        execution_num = payload.get("executionNum", 0)
-        repeated = isinstance(execution_num, int) and execution_num > 1
-        if factual_block and not loop_active and not repeated:
+        execution_num = payload.get("executionNum")
+        is_first_execution = (
+            isinstance(execution_num, int)
+            and not isinstance(execution_num, bool)
+            and 0 <= execution_num <= 1
+        )
+        if payload.get("fullyIdle") is False and is_first_execution:
             return {
                 "decision": "continue",
-                "reason": "A factual completion block still requires resolution.",
+                "reason": "The invocation is not fully idle; finish pending work.",
             }
         return {"decision": "stop"}
     raise ValueError(f"unsupported Antigravity hook event: {event}")

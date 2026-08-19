@@ -135,7 +135,7 @@ to another destination. Codex IDE does not support plugins.
 | `augment-rules` | Generate `.augment/rules/ai-toolkit.md` (legacy) |
 | `augment-dir-rules` | Generate `.augment/rules/ai-toolkit-*.md` (recommended) |
 | `antigravity-rules` | Generate `.agents/rules/` and `.agents/workflows/` |
-| `antigravity-plugin export [output]` | Export deterministic native Antigravity plugin ZIP |
+| `antigravity-plugin export [output]` | Export deterministic native Antigravity plugin ZIP for `.agents/plugins/<name>/`, `~/.gemini/antigravity-cli/plugins/<name>/` (CLI), or `~/.gemini/config/plugins/<name>/` (IDE/shared product) |
 | `antigravity-plugin verify <archive-or-dir>` | Verify Antigravity plugin schema, paths, hooks, modes, and self-containment offline |
 | `llms-txt` | Generate `llms.txt` and `llms-full.txt` |
 

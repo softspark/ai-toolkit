@@ -526,6 +526,7 @@ def _normalize_antigravity_server(server: dict) -> dict:
 
     data = copy.deepcopy(server)
     data.pop("_source", None)
+    data.pop("transport", None)
     if "httpUrl" in data:
         raise ValueError("Antigravity MCP does not support the legacy 'httpUrl' field")
 

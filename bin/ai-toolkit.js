@@ -302,7 +302,9 @@ function showHelp() {
   console.log('\nOptions for antigravity-plugin:');
   console.log('  export [output|--output FILE]  Build a deterministic Antigravity plugin ZIP');
   console.log('  verify <archive-or-dir>        Validate schema, paths, hooks, and self-containment');
-  console.log('                  Install under .agents/plugins/ or ~/.gemini/config/plugins/');
+  console.log('                  Install under .agents/plugins/<name>/ (workspace),');
+  console.log('                  ~/.gemini/antigravity-cli/plugins/<name>/ (CLI), or');
+  console.log('                  ~/.gemini/config/plugins/<name>/ (IDE/shared product)');
   console.log('\nOptions for mcp:');
   console.log('  list                          List available MCP templates');
   console.log('  editors                       List editors with native MCP config adapters');

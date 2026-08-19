@@ -626,8 +626,10 @@ The adjacent Python runtime maps `.toolCall.name` and
 `.toolCall.args.CommandLine` to native camelCase responses. `PreToolUse`
 returns `allow`, `deny`, or `ask`; `PostToolUse` returns `{}`; invocation events
 use object-shaped `injectSteps` and a native `terminationBehavior`; `Stop`
-returns `decision: continue` only for an explicit factual block and refuses
-re-entry when `stopHookActive` is true or `executionNum` shows a repeat.
+reads the official `executionNum`, `terminationReason`, optional `error`, and
+`fullyIdle` inputs. It returns `decision: continue` only when the invocation is
+not fully idle and has not passed its first execution; later executions and
+fully idle invocations stop, which bounds re-entry.
 Project commands use `.agents/hooks/`; exported plugin commands resolve through
 `${extensionPath}`.
 

@@ -23,7 +23,7 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds Copilot-required `type` and `tools` fields |
 | Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Merges `mcpServers` into settings JSON |
-| Google Antigravity | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits current `command` or `serverUrl` transports; normalizes legacy input `url` to `serverUrl`, rejects `httpUrl`, and preserves optional authentication, disablement, and tool-filter fields |
+| Google Antigravity | project + global | `.agents/mcp_config.json`, `~/.gemini/config/mcp_config.json` | Emits current `command` or `serverUrl` transports; consumes portable `transport` metadata, normalizes legacy input `url` to `serverUrl`, rejects `httpUrl`, and preserves optional authentication, disablement, and tool-filter fields |
 | Roo Code | project | `.roo/mcp.json` | Mirrors `mcpServers` into the documented project-level MCP file |
 | Windsurf | global | `~/.codeium/windsurf/mcp_config.json` | Global-only JSON config |
 | Cline | global | `~/.cline/data/settings/cline_mcp_settings.json` | Global-only JSON config |

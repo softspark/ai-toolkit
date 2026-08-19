@@ -111,7 +111,7 @@ scoped to whatever documented HOME file surface each exposes:
 
 - `cursor`: `~/.cursor/hooks.json` (safety/quality hooks; profile ≥ standard). Cursor RULES stay project-local — their only global surface is the Settings UI.
 - `copilot`: instructions, native agents, portable skills, and native hooks under `$COPILOT_HOME` when set or `~/.copilot` otherwise. The hook config is `hooks/ai-toolkit.json`; its self-contained runtime is `hooks/ai-toolkit/copilot_hook.py`. VS Code and GitHub.com still use repo `.github/` files, which local install emits.
-- `antigravity`: canonical skill pointer at `~/.gemini/config/skills/`; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. `~/.gemini/antigravity-cli/skills/` is compatibility-only. Antigravity rules stay project-local. Native plugins are opt-in exports installed manually under `~/.gemini/config/plugins/`.
+- `antigravity`: current canonical skill pointers at `~/.gemini/antigravity-cli/skills/` for CLI and `~/.gemini/config/skills/` for the IDE/shared product; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. Only workspace `.agent/skills/` is legacy. Antigravity rules stay project-local. Native plugins are opt-in exports installed manually under `~/.gemini/antigravity-cli/plugins/<name>/` for CLI or `~/.gemini/config/plugins/<name>/` for the IDE/shared product.
 
 Their global MCP support, where available, is handled by `ai-toolkit mcp
 install`, not by the rule installer.

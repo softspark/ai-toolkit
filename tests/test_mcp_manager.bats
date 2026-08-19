@@ -261,8 +261,9 @@ assert config["theme"] == "user"
 assert config["mcpServers"]["user-owned"] == {"command": "true"}
 expected = dict(servers["remote"])
 expected["serverUrl"] = expected.pop("url")
+expected.pop("transport")
 assert config["mcpServers"]["remote"] == expected
-assert "url" not in config["mcpServers"]["remote"]
+assert not ({"transport", "url", "httpUrl"} & config["mcpServers"]["remote"].keys())
 PY
     [ "$status" -eq 0 ]
 }

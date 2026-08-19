@@ -540,6 +540,7 @@
         ".agent/workflows/*.md",
         ".agent/skills/*/SKILL.md",
         "~/.gemini/antigravity-cli/skills/*/SKILL.md",
+        "~/.gemini/antigravity-cli/plugins/*/plugin.json",
         "AGENTS.md",
         "GEMINI.md"
       ],
@@ -550,7 +551,7 @@
         "scripts/antigravity_plugin.py",
         "scripts/mcp_editors.py"
       ],
-      "status_note": "Antigravity 2.0 v2.8.1, Antigravity CLI v1.1.14, IDE v2.5.5 (verified 2026-08-19). Canonical skills are .agents/skills/ for projects and ~/.gemini/config/skills/ globally; .agent/skills/ and ~/.gemini/antigravity-cli/skills/ are compatibility outputs only. Native hooks use .agents/hooks.json or ~/.gemini/config/hooks.json with exact events PreToolUse, PostToolUse, PreInvocation, PostInvocation, and Stop plus a self-contained adjacent adapter. Full-profile installs add native subagents. antigravity-plugin exports an opt-in deterministic package for .agents/plugins/ or ~/.gemini/config/plugins/. Native MCP output uses serverUrl; legacy url input is normalized and httpUrl is rejected. Unrelated config data is preserved transactionally.",
+      "status_note": "Antigravity 2.0 v2.8.1, Antigravity CLI v1.1.14, IDE v2.5.5 (verified 2026-08-19). Project skills use .agents/skills/; only .agent/skills/ is legacy. Global skills use ~/.gemini/antigravity-cli/skills/ for CLI and ~/.gemini/config/skills/ for the IDE/shared product. Native hooks use .agents/hooks.json or ~/.gemini/config/hooks.json with exact events PreToolUse, PostToolUse, PreInvocation, PostInvocation, and Stop plus a self-contained adjacent adapter. Full-profile installs add native subagents. antigravity-plugin exports an opt-in deterministic package for .agents/plugins/, ~/.gemini/antigravity-cli/plugins/, or ~/.gemini/config/plugins/. Native MCP output consumes portable transport metadata and uses serverUrl; legacy url input is normalized and httpUrl is rejected. Unrelated config data is preserved transactionally.",
       "capability_markers": [
         "agent manager",
         "artifacts",

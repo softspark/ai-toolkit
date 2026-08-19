@@ -230,6 +230,55 @@ def _plugin_files() -> list[tuple[str, bytes, int]]:
     return sorted(files, key=lambda item: item[0])
 
 
+def _canonical_file_map() -> dict[str, tuple[bytes, int]]:
+    return {
+        relative: (content, mode)
+        for relative, content, mode in _plugin_files()
+    }
+
+
+def _validate_canonical_directory(plugin_dir: Path, errors: list[str]) -> None:
+    expected = _canonical_file_map()
+    expected_directories = {
+        parent.as_posix()
+        for relative in expected
+        for parent in Path(relative).parents
+        if parent != Path(".")
+    }
+    actual = {
+        path.relative_to(plugin_dir).as_posix(): path
+        for path in plugin_dir.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    }
+    actual_directories = {
+        path.relative_to(plugin_dir).as_posix()
+        for path in plugin_dir.rglob("*")
+        if path.is_dir() and not path.is_symlink()
+    }
+    missing = sorted(set(expected) - set(actual))
+    extra = sorted(set(actual) - set(expected))
+    if missing:
+        errors.append(f"plugin canonical resources are missing: {missing}")
+    if extra:
+        errors.append(f"plugin has unexpected resources: {extra}")
+    extra_directories = sorted(actual_directories - expected_directories)
+    if extra_directories:
+        errors.append(
+            f"plugin has unexpected directories: {extra_directories}"
+        )
+    for relative in sorted(set(expected) & set(actual)):
+        expected_content, expected_mode = expected[relative]
+        path = actual[relative]
+        if path.read_bytes() != expected_content:
+            errors.append(f"plugin resource bytes differ: {relative}")
+        actual_mode = stat.S_IMODE(path.stat().st_mode)
+        if actual_mode != expected_mode:
+            errors.append(
+                f"plugin resource mode differs: {relative} "
+                f"({actual_mode:o} != {expected_mode:o})"
+            )
+
+
 def _zip_bytes(files: list[tuple[str, bytes, int]]) -> bytes:
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w") as archive:
@@ -307,6 +356,34 @@ def _safe_zip_members(archive: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
     return members
 
 
+def _validate_canonical_archive(archive: zipfile.ZipFile) -> list[str]:
+    errors: list[str] = []
+    members = _safe_zip_members(archive)
+    expected = {
+        f"{PLUGIN_NAME}/{relative}": (content, mode)
+        for relative, (content, mode) in _canonical_file_map().items()
+    }
+    actual = {member.filename: member for member in members}
+    missing = sorted(set(expected) - set(actual))
+    extra = sorted(set(actual) - set(expected))
+    if missing:
+        errors.append(f"plugin archive members are missing: {missing}")
+    if extra:
+        errors.append(f"plugin archive has unexpected members: {extra}")
+    for name in sorted(set(expected) & set(actual)):
+        expected_content, expected_mode = expected[name]
+        member = actual[name]
+        if archive.read(member) != expected_content:
+            errors.append(f"plugin archive member bytes differ: {name}")
+        actual_mode = stat.S_IMODE(member.external_attr >> 16)
+        if actual_mode != expected_mode:
+            errors.append(
+                f"plugin archive member mode differs: {name} "
+                f"({actual_mode:o} != {expected_mode:o})"
+            )
+    return errors
+
+
 def _extract_archive(archive_path: Path, destination: Path) -> Path:
     with zipfile.ZipFile(archive_path) as archive:
         members = _safe_zip_members(archive)
@@ -353,6 +430,7 @@ def validate_plugin(plugin_dir: Path) -> list[str]:
             errors.append(f"plugin contains unsafe mode: {relative}")
         if not path.is_dir() and not path.is_file():
             errors.append(f"plugin contains a special entry: {relative}")
+    _validate_canonical_directory(plugin_dir, errors)
 
     manifest = _load_json(plugin_dir / "plugin.json", "plugin.json", errors)
     expected_manifest = json.loads(render_manifest())
@@ -429,9 +507,11 @@ def verify(source: str | os.PathLike[str]) -> bool:
     if path.is_dir():
         errors = validate_plugin(path)
     elif path.is_file():
+        with zipfile.ZipFile(path) as archive:
+            errors = _validate_canonical_archive(archive)
         with tempfile.TemporaryDirectory(prefix="ai-toolkit-antigravity-verify-") as tmp:
             staged = _extract_archive(path, Path(tmp))
-            errors = validate_plugin(staged)
+            errors.extend(validate_plugin(staged))
     else:
         raise FileNotFoundError(path)
     if errors:
@@ -440,7 +520,16 @@ def verify(source: str | os.PathLike[str]) -> bool:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog=(
+            "Install locations:\n"
+            "  .agents/plugins/ai-toolkit/ (workspace)\n"
+            "  ~/.gemini/antigravity-cli/plugins/ai-toolkit/ (CLI)\n"
+            "  ~/.gemini/config/plugins/ai-toolkit/ (IDE/shared product)"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     subparsers = parser.add_subparsers(dest="action", required=True)
     export_parser = subparsers.add_parser("export", help="build plugin ZIP")
     export_parser.add_argument("output_path", nargs="?")
@@ -463,7 +552,11 @@ def main(argv: list[str] | None = None) -> int:
             )
             path = export(output)
             print(f"Created: {path}")
-            print("Install under .agents/plugins/ or ~/.gemini/config/plugins/.")
+            print(
+                "Install under .agents/plugins/ai-toolkit/ (workspace), "
+                "~/.gemini/antigravity-cli/plugins/ai-toolkit/ (CLI), or "
+                "~/.gemini/config/plugins/ai-toolkit/ (IDE/shared product)."
+            )
         else:
             verify(args.source)
             print("Antigravity plugin validation passed")
