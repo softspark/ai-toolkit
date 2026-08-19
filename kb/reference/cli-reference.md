@@ -82,7 +82,9 @@ Extract the ZIP to `<marketplace-root>/plugins/ai-toolkit/`, add an entry with
 `<marketplace-root>/.agents/plugins/marketplace.json`, then run
 `codex plugin marketplace add <marketplace-root>` for that non-default local
 marketplace. Open `/plugins` in Codex CLI, install the plugin, review/trust the
-bundled hooks, and start a new session. Codex IDE does not support plugins.
+bundled hooks, and start a new session. The ZIP includes plugin-local skill
+runtime resources. Export refuses symlinked output files and ancestors instead
+of resolving them to another destination. Codex IDE does not support plugins.
 
 ## Config Inheritance
 

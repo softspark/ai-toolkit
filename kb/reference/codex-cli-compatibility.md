@@ -89,8 +89,11 @@ The deterministic archive has this root layout:
 ```text
 .codex-plugin/plugin.json
 skills/*/SKILL.md
+skills/persona/personas/*.md
+skills/briefing/scripts/session_token_stats.py
 hooks/hooks.json
 hooks/*
+constitution.md
 LICENSE
 ```
 
@@ -100,12 +103,19 @@ Codex discovers the default `hooks/hooks.json` file. Every bundled hook command
 uses `${PLUGIN_ROOT}/hooks/...`; no command depends on a git root, `CODEX_HOME`,
 or the toolkit's global-install hook directory. Executable modes, archive order,
 and timestamps are fixed so identical sources produce identical ZIP bytes.
+Skill references are adapted to plugin-local paths. Validation covers every
+intentionally bundled cross-skill/runtime dependency, including persona
+definitions, the briefing helper, the documentation standards skill, and the
+constitution referenced by the security skill.
 
 `verify` stages a clean plugin under a temporary directory and checks the
 manifest, component paths, skills, exact command-only hook schema, executable
 assets, `SessionEnd` timeout, and symlink safety. It also runs the shared Codex
 plugin validator when that validator is installed. It does not add a
 marketplace, install a plugin, or write under `~/.agents` or `~/.codex`.
+Archive output uses the shared pinned-directory transaction and rejects a
+symlink at the destination or in any requested ancestor, so a redirected path
+cannot write outside the lexical destination.
 
 To test the exported archive through a non-default local marketplace:
 

@@ -10,6 +10,7 @@ CLI="node $TOOLKIT_DIR/bin/ai-toolkit.js"
 
 setup() {
     TEST_TMP="$(mktemp -d)"
+    TEST_TMP="$(cd "$TEST_TMP" && pwd -P)"
     export HOME="$TEST_TMP/home"
     mkdir -p "$HOME"
 }
@@ -46,6 +47,89 @@ with zipfile.ZipFile(archive) as plugin:
     assert manifest["version"] == package["version"]
     assert manifest["skills"] == "./skills/"
     assert "hooks" not in manifest
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-plugin: export bundles skill runtime resources with plugin-local references" {
+    archive="$TEST_TMP/runtime-resources.zip"
+
+    python3 "$TOOLKIT_DIR/scripts/codex_plugin.py" export --output "$archive" >/dev/null
+
+    run python3 - "$archive" <<'PY'
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1]) as plugin:
+    names = set(plugin.namelist())
+    persona_resources = {
+        "skills/persona/personas/backend-lead.md",
+        "skills/persona/personas/devops-eng.md",
+        "skills/persona/personas/frontend-lead.md",
+        "skills/persona/personas/junior-dev.md",
+    }
+    assert persona_resources <= names
+    assert "skills/briefing/scripts/session_token_stats.py" in names
+
+    persona = plugin.read("skills/persona/SKILL.md").decode()
+    briefing = plugin.read("skills/briefing/SKILL.md").decode()
+    assert "./personas/" in persona
+    assert "app/personas/" not in persona
+    assert "~/.claude/skills/persona" not in persona
+    assert "relative to toolkit root" not in persona
+    assert "globally installed" not in persona
+    assert "./scripts/session_token_stats.py" in briefing
+    assert "python3 scripts/session_token_stats.py" not in briefing
+    assert "app/hooks/ai-toolkit-statusline.sh" not in briefing
+    helper = plugin.getinfo("skills/briefing/scripts/session_token_stats.py")
+    assert (helper.external_attr >> 16) & 0o111
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-plugin: every explicit plugin-local skill dependency resolves" {
+    archive="$TEST_TMP/dependency-audit.zip"
+
+    python3 "$TOOLKIT_DIR/scripts/codex_plugin.py" export --output "$archive" >/dev/null
+
+    run python3 - "$archive" <<'PY'
+import posixpath
+import re
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1]) as plugin:
+    names = set(plugin.namelist())
+    docs = plugin.read("skills/docs/SKILL.md").decode()
+    assert "../documentation-standards/SKILL.md" in docs
+    assert "app/skills/documentation-standards/SKILL.md" not in docs
+
+    for skill_name in sorted(name for name in names if name.endswith("/SKILL.md")):
+        text = plugin.read(skill_name).decode()
+        references = re.findall(r"\]\(([^)#]+)(?:#[^)]*)?\)", text)
+        references += re.findall(
+            r"(?:python3|python|node|bash)\s+(\./[^\s`]+)",
+            text,
+        )
+        for reference in references:
+            plugin_local = reference.startswith(
+                (
+                    "./scripts/",
+                    "./reference/",
+                    "./templates/",
+                    "./personas/",
+                    "./modes/",
+                    "../",
+                    "reference/",
+                    "templates/",
+                )
+            )
+            if not plugin_local:
+                continue
+            resolved = posixpath.normpath(
+                posixpath.join(posixpath.dirname(skill_name), reference)
+            )
+            assert resolved in names, (skill_name, reference, resolved)
 PY
     [ "$status" -eq 0 ]
 }
@@ -169,6 +253,35 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "codex-plugin: validation rejects missing and source-root skill dependencies" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+temporary = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import codex_plugin
+
+plugin = temporary / "invalid-runtime-resources"
+codex_plugin.stage_plugin(plugin)
+(plugin / "skills/persona/personas/backend-lead.md").unlink()
+(plugin / "skills/briefing/scripts/session_token_stats.py").unlink()
+persona_skill = plugin / "skills/persona/SKILL.md"
+persona_skill.write_text(
+    persona_skill.read_text(encoding="utf-8")
+    + "\nRead app/personas/backend-lead.md at runtime.\n",
+    encoding="utf-8",
+)
+
+errors = codex_plugin.validate_staged_plugin(plugin)
+assert any("persona runtime resource is missing" in error for error in errors), errors
+assert any("briefing runtime resource is missing" in error for error in errors), errors
+assert any("source-root runtime reference" in error for error in errors), errors
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "codex-plugin: source and output symlinks are rejected without overwrite" {
     source="$TEST_TMP/source"
     destination="$TEST_TMP/destination"
@@ -198,4 +311,19 @@ PY
     run python3 "$TOOLKIT_DIR/scripts/codex_plugin.py" export --output "$archive"
     [ "$status" -ne 0 ]
     grep -q '^outside sentinel$' "$outside"
+}
+
+@test "codex-plugin: symlinked output ancestors cannot redirect archive writes" {
+    outside="$TEST_TMP/outside-parent"
+    linked_parent="$TEST_TMP/linked-parent"
+    mkdir -p "$outside"
+    printf 'outside archive sentinel\n' > "$outside/plugin.zip"
+    ln -s "$outside" "$linked_parent"
+
+    run python3 "$TOOLKIT_DIR/scripts/codex_plugin.py" \
+        export --output "$linked_parent/plugin.zip"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"symlinked output ancestor"* ]]
+    grep -q '^outside archive sentinel$' "$outside/plugin.zip"
 }

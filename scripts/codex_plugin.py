@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import re
@@ -32,6 +33,7 @@ from generate_codex_hooks import (
     _managed_asset_content,
     validate_hooks_document,
 )
+from secure_fs import SecureDestination, lexical_absolute, run_secure_transaction
 
 
 TOOLKIT_DIR = Path(__file__).resolve().parent.parent
@@ -49,6 +51,67 @@ _SEMVER_RE = re.compile(
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
 _PLUGIN_ASSET_RE = re.compile(r"\$\{PLUGIN_ROOT\}/hooks/([A-Za-z0-9._-]+)")
+_SKILL_TEXT_REWRITES = {
+    "briefing": (
+        ("scripts/session_token_stats.py", "./scripts/session_token_stats.py"),
+        (
+            "app/hooks/ai-toolkit-statusline.sh",
+            "the core-install statusline hook",
+        ),
+    ),
+    "docs": (
+        (
+            "app/skills/documentation-standards/SKILL.md",
+            "../documentation-standards/SKILL.md",
+        ),
+    ),
+    "persona": (
+        (
+            "If file not found, try the installed location: "
+            "`~/.claude/skills/persona/../../../app/personas/{name}.md`",
+            "If the file is missing, report the available filenames from "
+            "`./personas/`; do not search global paths",
+        ),
+        (
+            "relative to the toolkit root. When the toolkit is globally "
+            "installed, that root is at "
+            "`~/.claude/skills/persona/../../../app/personas/` — fallback "
+            "paths matter.",
+            "relative to this installed skill directory.",
+        ),
+        (
+            "(relative to toolkit root)",
+            "(relative to this installed skill directory)",
+        ),
+        (
+            "~/.claude/skills/persona/../../../app/personas/",
+            "./personas/",
+        ),
+        ("app/personas/", "./personas/"),
+    ),
+}
+_SKILL_RESOURCE_SOURCES = {
+    "briefing": (
+        (
+            TOOLKIT_DIR / "scripts" / "session_token_stats.py",
+            Path("scripts/session_token_stats.py"),
+        ),
+    ),
+    "persona": ((APP_DIR / "personas", Path("personas")),),
+}
+# Full-catalog audit: source-workspace paths in authoring/audit skills operate on
+# the user's current checkout. These are the package-owned cross-resource paths
+# that must resolve inside the exported plugin itself.
+_SKILL_RUNTIME_REFERENCES = {
+    "briefing": ("scripts/session_token_stats.py",),
+    "docs": ("../documentation-standards/SKILL.md",),
+    "persona": (
+        "personas/backend-lead.md",
+        "personas/devops-eng.md",
+        "personas/frontend-lead.md",
+        "personas/junior-dev.md",
+    ),
+}
 
 
 def _package_metadata() -> dict[str, Any]:
@@ -127,7 +190,22 @@ def render_manifest() -> str:
 def _plugin_skill_text(source: Path) -> str:
     """Render a Codex-adapted skill accepted by plugin ingestion."""
     rendered = build_codex_skill_text(source)
-    return _TASK_ONLY_FRONTMATTER_RE.sub("", rendered)
+    rendered = _TASK_ONLY_FRONTMATTER_RE.sub("", rendered)
+    for source_path, plugin_path in _SKILL_TEXT_REWRITES.get(
+        source.parent.name,
+        (),
+    ):
+        rendered = rendered.replace(source_path, plugin_path)
+    return rendered
+
+
+def _copy_file_strict(source: Path, destination: Path) -> None:
+    """Copy one regular source file without following links."""
+    if source.is_symlink() or not source.is_file():
+        raise ValueError(f"unsafe source file: {source}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(source.read_bytes())
+    os.chmod(destination, stat.S_IMODE(source.stat().st_mode))
 
 
 def _copy_tree_strict(source: Path, destination: Path) -> None:
@@ -168,6 +246,15 @@ def _stage_skills(destination: Path) -> None:
             _plugin_skill_text(skill_file),
             encoding="utf-8",
         )
+        for source, relative_target in _SKILL_RESOURCE_SOURCES.get(
+            skill_dir.name,
+            (),
+        ):
+            destination_path = target / relative_target
+            if source.is_dir() and not source.is_symlink():
+                _copy_tree_strict(source, destination_path)
+            else:
+                _copy_file_strict(source, destination_path)
 
 
 def build_plugin_hooks() -> dict[str, Any]:
@@ -223,6 +310,10 @@ def stage_plugin(destination: Path) -> None:
     if license_source.is_symlink() or not license_source.is_file():
         raise ValueError("LICENSE must be a regular source file")
     (destination / "LICENSE").write_bytes(license_source.read_bytes())
+    _copy_file_strict(
+        APP_DIR / "constitution.md",
+        destination / "constitution.md",
+    )
 
 
 def _load_json_object(path: Path, label: str, errors: list[str]) -> dict[str, Any] | None:
@@ -324,6 +415,35 @@ def _validate_skills(plugin_dir: Path, errors: list[str]) -> None:
             errors.append(f"plugin skill disables model invocation: {skill.name}")
 
 
+def _validate_skill_runtime_dependencies(
+    plugin_dir: Path,
+    errors: list[str],
+) -> None:
+    """Check every declared cross-resource dependency in bundled skills."""
+    for skill_name, relative_paths in _SKILL_RUNTIME_REFERENCES.items():
+        skill_dir = plugin_dir / "skills" / skill_name
+        for relative_path in relative_paths:
+            resource = skill_dir / relative_path
+            if resource.is_symlink() or not resource.is_file():
+                errors.append(
+                    f"{skill_name} runtime resource is missing: {relative_path}"
+                )
+
+        skill_file = skill_dir / "SKILL.md"
+        if skill_file.is_symlink() or not skill_file.is_file():
+            continue
+        text = skill_file.read_text(encoding="utf-8")
+        for source_path, _plugin_path in _SKILL_TEXT_REWRITES[skill_name]:
+            source_reference = re.compile(
+                rf"(?<![./A-Za-z0-9_-]){re.escape(source_path)}"
+            )
+            if source_reference.search(text):
+                errors.append(
+                    f"{skill_name} contains a source-root runtime reference: "
+                    f"{source_path}"
+                )
+
+
 def _validate_hooks(plugin_dir: Path, errors: list[str]) -> None:
     hooks_path = plugin_dir / "hooks" / "hooks.json"
     hooks = _load_json_object(hooks_path, "hooks/hooks.json", errors)
@@ -382,10 +502,14 @@ def validate_staged_plugin(plugin_dir: Path) -> list[str]:
             errors.append(f"plugin contains a symlink: {path.relative_to(plugin_dir)}")
     _validate_manifest(plugin_dir, errors)
     _validate_skills(plugin_dir, errors)
+    _validate_skill_runtime_dependencies(plugin_dir, errors)
     _validate_hooks(plugin_dir, errors)
     license_path = plugin_dir / "LICENSE"
     if license_path.is_symlink() or not license_path.is_file():
         errors.append("plugin LICENSE is missing")
+    constitution = plugin_dir / "constitution.md"
+    if constitution.is_symlink() or not constitution.is_file():
+        errors.append("plugin constitution runtime resource is missing")
     return errors
 
 
@@ -450,53 +574,67 @@ def _archive_file(archive: zipfile.ZipFile, path: Path, arcname: str) -> None:
 
 
 def _absolute_output(output: Path) -> Path:
-    expanded = output.expanduser()
-    lexical = expanded if expanded.is_absolute() else Path.cwd() / expanded
-    return lexical.parent.resolve() / lexical.name
+    return lexical_absolute(output)
+
+
+def _assert_no_symlinked_output_ancestors(output: Path) -> None:
+    current = Path(output.anchor)
+    for part in output.parts[1:-1]:
+        current /= part
+        if current.is_symlink():
+            raise ValueError(f"refusing symlinked output ancestor: {current}")
+        if current.exists() and not current.is_dir():
+            raise ValueError(f"refusing non-directory output ancestor: {current}")
 
 
 def _assert_safe_output(output: Path) -> None:
+    _assert_no_symlinked_output_ancestors(output)
     if output.exists() and (output.is_symlink() or not output.is_file()):
         raise ValueError(f"refusing unsafe output path: {output}")
     if output.is_symlink():
         raise ValueError(f"refusing symlinked output path: {output}")
 
 
+def _archive_bytes(staged: Path) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        staged_paths = sorted(
+            staged.rglob("*"),
+            key=lambda path: path.relative_to(staged).as_posix(),
+        )
+        for path in staged_paths:
+            if path.is_symlink():
+                raise ValueError(f"staged symlink is not allowed: {path}")
+            if path.is_file():
+                _archive_file(
+                    archive,
+                    path,
+                    path.relative_to(staged).as_posix(),
+                )
+    return buffer.getvalue()
+
+
 def export_plugin(output: Path) -> bool:
     output = _absolute_output(output)
-    output.parent.mkdir(parents=True, exist_ok=True)
     _assert_safe_output(output)
-    temporary_output: Path | None = None
-    try:
-        with tempfile.TemporaryDirectory(prefix="ai-toolkit-codex-plugin-") as tmp:
-            staged = Path(tmp) / PLUGIN_NAME
-            stage_plugin(staged)
-            descriptor, temporary_name = tempfile.mkstemp(
-                prefix=f".{output.name}.",
-                suffix=".tmp",
-                dir=output.parent,
-            )
-            os.close(descriptor)
-            temporary_output = Path(temporary_name)
-            with zipfile.ZipFile(temporary_output, "w") as archive:
-                staged_paths = sorted(
-                    staged.rglob("*"),
-                    key=lambda path: path.relative_to(staged).as_posix(),
-                )
-                for path in staged_paths:
-                    if path.is_symlink():
-                        raise ValueError(f"staged symlink is not allowed: {path}")
-                    if path.is_file():
-                        _archive_file(
-                            archive,
-                            path,
-                            path.relative_to(staged).as_posix(),
-                        )
-            os.replace(temporary_output, output)
-            temporary_output = None
-    finally:
-        if temporary_output is not None:
-            temporary_output.unlink(missing_ok=True)
+    with tempfile.TemporaryDirectory(prefix="ai-toolkit-codex-plugin-") as tmp:
+        staged = Path(tmp) / PLUGIN_NAME
+        stage_plugin(staged)
+        archive_content = _archive_bytes(staged)
+
+    destination = SecureDestination(
+        path=output,
+        trusted_root=Path(output.anchor),
+        label="Codex plugin archive",
+    )
+    run_secure_transaction(
+        [destination],
+        lambda transaction: transaction.atomic_write(
+            destination,
+            archive_content,
+            0o644,
+        ),
+    )
 
     print(f"Created: {output}")
     print(

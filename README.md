@@ -6,7 +6,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1535%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1539%20passing-success)](tests/)
 
 ## What's New in v4.24.1
 
@@ -104,7 +104,9 @@ ai-toolkit codex-plugin verify
 Extract the ZIP into a local marketplace under `plugins/ai-toolkit/`, add that
 marketplace with `codex plugin marketplace add <marketplace-root>`, then install
 from `/plugins` in Codex CLI and start a new session. Review and trust the
-bundled hooks before use. Codex IDE does not support plugins.
+bundled hooks before use. The ZIP includes plugin-local persona definitions,
+the briefing helper, and other referenced skill resources. Export rejects
+symlinked output paths and ancestors. Codex IDE does not support plugins.
 
 ### Install Profiles
 
@@ -179,7 +181,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1535 tests)
+├── tests/               # Bats and Python test suite (1539 tests)
 └── CHANGELOG.md
 ```
 
