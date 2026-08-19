@@ -7,6 +7,33 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.24.1 — a dead link reported itself as installed (2026-08-19)
+
+### Fixed
+
+- **`plugin install` treated a dangling symlink as an installed asset.** The guard
+  was `if path.exists() or path.is_symlink()`, and a link whose target is gone
+  satisfies the second half — so the installer printed `OK agent` / `OK skill`,
+  changed nothing, and left the user with a dead link and a green log. This is the
+  exact state a toolkit upgrade produces: `npm install -g @softspark/ai-toolkit`
+  replaces `app/` wholesale, so every `~/.claude` link into the old package points
+  at nothing, and re-running install could not repair it.
+
+  A dangling link is now dropped before the guard runs and relinked to the
+  resolved source, printing `Dangling agent link removed: <name>`. **Live links and
+  real files are untouched** — those are user content, and the merge-friendly
+  install model keeps them.
+
+  Surfaced while migrating a pack from `app/plugins/` to the v4.24.0 user root:
+  the upgrade broke both links and `plugin install` insisted everything was fine.
+
+### Added
+
+- **Two tests.** One builds the post-upgrade state (links pointing into a path
+  that no longer exists) and asserts install removes and relinks both; the other
+  pins the negative — a real file on the agent name and a live skill link survive
+  a reinstall untouched.
+
 ## v4.24.0 — external packs stop dying on upgrade (2026-08-18)
 
 ### Added

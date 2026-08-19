@@ -603,10 +603,30 @@ def _ensure_claude_settings() -> Path:
     return settings_path
 
 
+def _clear_dangling_link(path: Path, label: str) -> bool:
+    """Drop a symlink whose target no longer exists, so install can relink it.
+
+    A toolkit upgrade replaces app/ wholesale, which leaves every ~/.claude link
+    into the old package pointing at nothing. The install guard treated such a
+    link as installed (`exists() or is_symlink()`), reported OK and repaired
+    nothing — the user was left with a dead link and a green log. Only dangling
+    links are removed: a live link or a real file is user content and stays.
+    """
+    if path.is_symlink() and not path.exists():
+        try:
+            path.unlink()
+        except OSError:
+            return False
+        print(f"    Dangling {label} link removed: {path.name}")
+        return True
+    return False
+
+
 def _install_claude_skills(pack: dict, pack_dir: Path, installed_items: list[str]) -> None:
     for skill in pack.get("includes", {}).get("skills", []):
         skill_dir = CLAUDE_DIR / "skills" / skill
         source_dir = _resolve_skill_source(pack_dir, skill)
+        _clear_dangling_link(skill_dir, "skill")
         if skill_dir.exists() or skill_dir.is_symlink():
             print(f"    OK skill: {skill}")
         elif source_dir:
@@ -622,6 +642,7 @@ def _install_claude_agents(pack: dict, pack_dir: Path, installed_items: list[str
     for agent in pack.get("includes", {}).get("agents", []):
         agent_file = CLAUDE_DIR / "agents" / f"{agent}.md"
         source_file = _resolve_agent_source(pack_dir, agent)
+        _clear_dangling_link(agent_file, "agent")
         if agent_file.exists() or agent_file.is_symlink():
             print(f"    OK agent: {agent}")
         elif source_file is not None:

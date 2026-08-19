@@ -6,18 +6,17 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1522%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1524%20passing-success)](tests/)
 
-## What's New in v4.24.0
+## What's New in v4.24.1
 
-**v4.24.0** — a plugin pack maintained in its own repository had nowhere safe to
-live: the only directory the toolkit scanned was `app/plugins/`, inside the npm
-package, so every `npm install -g` upgrade deleted it. Packs now also load from
-`~/.softspark/ai-toolkit/plugins/`, which the user owns and upgrades never touch.
-The entry can be a symlink to an npm-installed package, so updating an external
-pack is one `npm install -g` with nothing to re-link. Core packs still win a name
-collision. Ships with v4.23.1's fix for pack-shipped agents, which the same
-external-pack workflow depends on.
+**v4.24.1** — `plugin install` accepted a dead symlink as proof of installation.
+The guard asked `exists() or is_symlink()`, and a link with no target still
+answers yes to the second half, so the installer logged `OK` and repaired
+nothing — precisely the state a toolkit upgrade leaves, since replacing `app/`
+breaks every link into it. Dangling links are now dropped and relinked; real
+files and live links stay untouched. Pairs with v4.24.0's user-level pack root,
+which is what stops the breakage happening in the first place.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

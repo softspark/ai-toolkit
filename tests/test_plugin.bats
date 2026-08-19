@@ -685,3 +685,52 @@ print('OK')
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "^OK\$"
 }
+
+@test "plugin install repairs a dangling link left by a toolkit upgrade" {
+    _user_pack >/dev/null
+    export AI_TOOLKIT_HOME="$TEST_TMP/.softspark/ai-toolkit"
+
+    # The state a toolkit upgrade leaves behind: links into the old npm package
+    # path, which the upgrade deleted. The pack now lives somewhere else.
+    mkdir -p "$TEST_TMP/.claude/agents" "$TEST_TMP/.claude/skills"
+    ln -s "$TEST_TMP/gone/plugins/demo-user-pack/agents/demo-user-agent.md" \
+          "$TEST_TMP/.claude/agents/demo-user-agent.md"
+    ln -s "$TEST_TMP/gone/plugins/demo-user-pack/skills/demo-user-skill" \
+          "$TEST_TMP/.claude/skills/demo-user-skill"
+    [ -L "$TEST_TMP/.claude/agents/demo-user-agent.md" ]
+    [ ! -e "$TEST_TMP/.claude/agents/demo-user-agent.md" ]   # dangling
+
+    run $CLI plugin install --editor claude demo-user-pack
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Dangling agent link removed"
+    echo "$output" | grep -q "Dangling skill link removed"
+    echo "$output" | grep -q "Linked agent: demo-user-agent"
+    echo "$output" | grep -q "Linked skill: demo-user-skill"
+
+    # Both links resolve again, into the pack root that actually exists.
+    [ -e "$TEST_TMP/.claude/agents/demo-user-agent.md" ]
+    [ -e "$TEST_TMP/.claude/skills/demo-user-skill/SKILL.md" ]
+    run readlink "$TEST_TMP/.claude/agents/demo-user-agent.md"
+    echo "$output" | grep -q "\.softspark/ai-toolkit/plugins/demo-user-pack/agents/demo-user-agent.md"
+}
+
+@test "plugin install leaves a live link and a real file alone" {
+    _user_pack >/dev/null
+    export AI_TOOLKIT_HOME="$TEST_TMP/.softspark/ai-toolkit"
+
+    # A real file the user owns, sitting on the agent name.
+    mkdir -p "$TEST_TMP/.claude/agents"
+    printf 'user content\n' > "$TEST_TMP/.claude/agents/demo-user-agent.md"
+
+    run $CLI plugin install --editor claude demo-user-pack
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "OK agent: demo-user-agent"
+    [ ! -L "$TEST_TMP/.claude/agents/demo-user-agent.md" ]
+    grep -q "user content" "$TEST_TMP/.claude/agents/demo-user-agent.md"
+
+    # A second run over the now-live skill link reports OK, not a relink.
+    run $CLI plugin install --editor claude demo-user-pack
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "OK skill: demo-user-skill"
+    echo "$output" | grep -qv "Dangling"
+}
