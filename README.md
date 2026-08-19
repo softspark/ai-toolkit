@@ -8,15 +8,18 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1636%20passing-success)](tests/)
 
-## What's New in v4.24.1
+## What's New in v4.25.0
 
-**v4.24.1** — `plugin install` accepted a dead symlink as proof of installation.
-The guard asked `exists() or is_symlink()`, and a link with no target still
-answers yes to the second half, so the installer logged `OK` and repaired
-nothing — precisely the state a toolkit upgrade leaves, since replacing `app/`
-breaks every link into it. Dangling links are now dropped and relinked; real
-files and live links stay untouched. Pairs with v4.24.0's user-level pack root,
-which is what stops the breakage happening in the first place.
+**v4.25.0** brings the editor integrations onto their current native surfaces:
+
+- Codex gets its exact 11-event hook contract and a deterministic native plugin
+  exporter with offline verification.
+- Google Antigravity gets native hooks, agents, plugin packaging, MCP mapping,
+  and local/global install profiles.
+- Gemini gains native agents, OpenCode gains native skill directories, and Cline
+  gains native rules plus its exact 8-event hook lifecycle.
+- Claude Code validation now matches the current prompt, agent, HTTP hook, and
+  plugin contracts, with transactional symlink protections across new writers.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -182,7 +185,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1567 tests)
+├── tests/               # Bats and Python test suite (1636 tests)
 └── CHANGELOG.md
 ```
 

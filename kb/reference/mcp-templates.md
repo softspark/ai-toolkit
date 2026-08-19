@@ -3,9 +3,9 @@ title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
 tags: [mcp, templates, servers, configuration, editors, inject-mcp, external-templates]
-version: "1.4.0"
+version: "1.4.1"
 created: "2026-04-07"
-last_updated: "2026-07-14"
+last_updated: "2026-08-19"
 description: "Reference for 26 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
 ---
 

@@ -3,9 +3,9 @@ title: "AI Toolkit - MCP Editor Compatibility"
 category: reference
 service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor, antigravity]
-version: "1.3.0"
+version: "1.3.1"
 created: "2026-04-12"
-last_updated: "2026-07-14"
+last_updated: "2026-08-19"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 

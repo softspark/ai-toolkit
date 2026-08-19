@@ -7,6 +7,45 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.25.0 — editor-native integrations catch up (2026-08-19)
+
+### Added
+
+- **Codex now has an exact native hook and plugin contract.** The hook generator
+  covers all 11 supported events, including bounded `SessionEnd`, while the new
+  deterministic plugin exporter bundles required runtime resources and verifies
+  the complete archive offline before installation.
+- **Google Antigravity gains native hooks, agents, plugin packaging, MCP mapping,
+  and install profiles.** Generated hooks use the documented five-event schema;
+  project and user installs use the current IDE and CLI paths without conflating
+  legacy compatibility surfaces.
+- **Gemini, OpenCode, and Cline gain native assets.** Gemini receives local agent
+  files, OpenCode receives complete native skill directories, and Cline receives
+  native rules plus all eight current extension and CLI hook events.
+
+### Changed
+
+- **Claude Code validation follows the current hook and plugin schemas.** Prompt
+  and agent handlers share the documented 13-event allowlist, HTTP handlers are
+  restricted to their supported lifecycle, and current plugin surfaces include
+  workflows, output styles, and themes.
+- **Editor installation and removal are transactional.** Profile downgrades and
+  uninstall remove only toolkit-managed assets, preserve user files, and cover
+  the new native Gemini, OpenCode, Antigravity, and Cline paths.
+
+### Security
+
+- **Filesystem writers reject symlink ancestry and ancestor-swap attacks.** New
+  generators and cleanup paths use pinned transactions with rollback, while
+  plugin verification rejects missing, extra, modified, or wrongly-modeled
+  archive members.
+
+### Ecosystem
+
+- Refreshed the 13-tool compatibility registry and upstream snapshot after
+  revalidating Claude Code, Codex CLI, Antigravity, Gemini, OpenCode, and Cline
+  against their current native contracts.
+
 ## v4.24.1 — a dead link reported itself as installed (2026-08-19)
 
 ### Fixed

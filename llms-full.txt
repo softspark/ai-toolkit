@@ -8805,9 +8805,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.7.0"
+version: "1.8.0"
 created: "2026-03-23"
-last_updated: "2026-08-06"
+last_updated: "2026-08-19"
 description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
 ---
 
@@ -11695,9 +11695,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.3.1"
+version: "3.4.0"
 created: "2026-03-26"
-last_updated: "2026-07-15"
+last_updated: "2026-08-19"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -13520,9 +13520,9 @@ title: "AI Toolkit - MCP Editor Compatibility"
 category: reference
 service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor, antigravity]
-version: "1.3.0"
+version: "1.3.1"
 created: "2026-04-12"
-last_updated: "2026-07-14"
+last_updated: "2026-08-19"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -13609,9 +13609,9 @@ title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
 tags: [mcp, templates, servers, configuration, editors, inject-mcp, external-templates]
-version: "1.4.0"
+version: "1.4.1"
 created: "2026-04-07"
-last_updated: "2026-07-14"
+last_updated: "2026-08-19"
 description: "Reference for 26 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
 ---
 
