@@ -7,6 +7,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.27.0 — Doctor sees the Claude app plugin (2026-08-21)
+
+### Added
+
+- **Doctor check 11: plugin double-load.** `ai-toolkit doctor` now reads the
+  Claude Code plugin registry (`~/.claude/plugins/installed_plugins.json`) and
+  `enabledPlugins` in `~/.claude/settings.json`. When an uploaded Claude app
+  plugin is active next to the global install, both feed the same session:
+  Claude Code merges plugin hooks with user hooks without deduplication, so every
+  toolkit hook fires twice per event and skills and agents load twice. The check
+  warns with the hook count, and `--fix` disables the plugin for Claude Code
+  while leaving the global install authoritative. Previously this passed as a
+  healthy install with no signal at all.
+- `kb/troubleshooting/plugin-double-load.md` documents the symptom, the debug-log
+  evidence, and the fix.
+
+---
+
 ## v4.26.0 — Python floor is declared and enforced (2026-08-21)
 
 ### Added

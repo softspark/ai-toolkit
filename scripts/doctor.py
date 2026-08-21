@@ -15,6 +15,8 @@ Checks:
   7. Benchmark freshness
   8. Stale rules
   9. URL hook sources
+  10. Language rules drift (project-local)
+  11. Plugin double-load (Claude app plugin vs global install)
 
 Exit codes:
   0  all checks pass
@@ -44,6 +46,7 @@ HOOKS_DIR = _HOOKS_DIR
 RULES_DIR = _RULES_DIR
 EXTERNAL_HOOKS_DIR = _EXTERNAL_HOOKS_DIR
 BENCHMARK_DASHBOARD = toolkit_dir / "benchmarks" / "ecosystem-dashboard.json"
+PLUGIN_REGISTRY = CLAUDE_DIR / "plugins" / "installed_plugins.json"
 
 VALID_EVENTS = frozenset({
     "SessionStart", "Notification", "PreToolUse", "PostToolUse", "Stop",
@@ -669,6 +672,84 @@ def check_language_drift(dr: DiagResult) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check 11: Plugin Double-Load
+# ---------------------------------------------------------------------------
+
+def _registered_toolkit_plugins(registry: dict) -> list[str]:
+    """Return ai-toolkit plugin keys from the Claude Code plugin registry."""
+    plugins = registry.get("plugins", {})
+    if not isinstance(plugins, dict):
+        return []
+    return [key for key in plugins if str(key).split("@", 1)[0] == "ai-toolkit"]
+
+
+def check_plugin_double_load(dr: DiagResult, fix_mode: bool) -> None:
+    """Warn when the Claude app plugin and the global install both feed Claude Code.
+
+    Uploading the ``claude-app export`` ZIP from the Claude app registers it under
+    ``~/.claude/plugins``, which Claude Code reads as well. The plugin carries the
+    same skills, agents, and hooks as the global install, and Claude Code merges
+    plugin hooks with user hooks without deduplication, so every toolkit hook runs
+    twice per event.
+    """
+    print()
+    print("## 11. Plugin Double-Load")
+
+    if not PLUGIN_REGISTRY.is_file():
+        dr.skip("no Claude Code plugin registry")
+        return
+    try:
+        registry = json.loads(PLUGIN_REGISTRY.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        dr.warn(f"{PLUGIN_REGISTRY} is not valid JSON")
+        return
+
+    keys = _registered_toolkit_plugins(registry)
+    if not keys:
+        dr.ok("no ai-toolkit plugin registered in Claude Code")
+        return
+
+    settings_json = CLAUDE_DIR / "settings.json"
+    try:
+        settings = json.loads(settings_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        settings = {}
+    enabled = settings.get("enabledPlugins", {})
+    if not isinstance(enabled, dict):
+        enabled = {}
+
+    active = [key for key in keys if enabled.get(key, True)]
+    if not active:
+        dr.ok("ai-toolkit plugin registered but disabled for Claude Code")
+        return
+
+    hook_count, _ = _installed_toolkit_hook_count(settings)
+    if hook_count == 0:
+        dr.ok("ai-toolkit plugin active without global hooks (single source)")
+        return
+
+    for key in active:
+        dr.warn(
+            f"{key} is active next to the global install: {hook_count} toolkit hooks "
+            "fire twice per event and skills/agents load twice "
+            "(run: ai-toolkit doctor --fix)"
+        )
+
+    if not fix_mode:
+        return
+
+    enabled.update({key: False for key in active})
+    settings["enabledPlugins"] = enabled
+    try:
+        settings_json.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        dr.fail(f"could not disable plugin in settings.json: {exc}")
+        return
+    for key in active:
+        dr.fixed(f"disabled {key} for Claude Code (global install stays authoritative)")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -691,6 +772,7 @@ def main() -> None:
     check_stale_rules(dr, fix_mode)
     check_url_hooks(dr, fix_mode)
     check_language_drift(dr)
+    check_plugin_double_load(dr, fix_mode)
 
     # Summary
     print("========================")

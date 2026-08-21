@@ -6,19 +6,23 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1640%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1645%20passing-success)](tests/)
 
-## What's New in v4.26.0
+## What's New in v4.27.0
 
-**v4.26.0** declares and enforces the Python floor the scripts already needed:
+**v4.27.0** teaches `doctor` about a collision it used to report as healthy:
 
-- `ai-toolkit` now checks `python3` before running anything and requires 3.11+.
-- macOS `/usr/bin/python3` is 3.9, which used to crash `update --local` with a
-  raw `dataclass() got an unexpected keyword argument 'slots'` traceback. You
-  now get the version, the requirement, and `brew install python@3.13`.
-- `python3 scripts/*.py` run directly fails the same way, via `_common.py`.
-- CI runs the syntax check plus a full import sweep on both 3.11 and 3.13, so a
-  version-gated runtime feature cannot slip through `py_compile` again.
+- Uploading the Claude app plugin ZIP registers it under `~/.claude/plugins`,
+  which Claude Code reads too. The plugin then carries the same skills, agents,
+  and hooks as the global install.
+- Claude Code merges plugin hooks with user hooks without deduplication, so
+  every toolkit hook fired twice per event and skills and agents loaded twice.
+  `doctor` printed `HEALTH CHECK PASSED` through all of it.
+- New check 11 reports the collision with the hook count; `doctor --fix`
+  disables the plugin for Claude Code and leaves the global install
+  authoritative.
+- `kb/troubleshooting/plugin-double-load.md` documents the debug-log evidence
+  and the verification steps.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -188,7 +192,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1640 tests)
+├── tests/               # Bats and Python test suite (1645 tests)
 └── CHANGELOG.md
 ```
 

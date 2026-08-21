@@ -73,3 +73,4 @@
 - [Unique Features & Differentiators](kb/reference/unique-features.md)
 - [Windows Support](kb/reference/windows-support.md)
 - [Troubleshooting](kb/troubleshooting/README.md)
+- [Claude App Plugin Loads Twice in Claude Code](kb/troubleshooting/plugin-double-load.md)
