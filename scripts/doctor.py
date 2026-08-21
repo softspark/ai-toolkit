@@ -683,6 +683,68 @@ def _registered_toolkit_plugins(registry: dict) -> list[str]:
     return [key for key in plugins if str(key).split("@", 1)[0] == "ai-toolkit"]
 
 
+def _registered_plugin_versions(registry: dict, keys: list[str]) -> dict[str, str]:
+    """Map plugin key to the version recorded in the Claude Code registry."""
+    plugins = registry.get("plugins", {})
+    versions: dict[str, str] = {}
+    for key in keys:
+        entries = plugins.get(key)
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if isinstance(entry, dict) and isinstance(entry.get("version"), str):
+                versions[key] = entry["version"]
+                break
+    return versions
+
+
+def _toolkit_package_version() -> str | None:
+    """Version of the installed toolkit package, or None when unreadable."""
+    try:
+        data = json.loads((toolkit_dir / "package.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    version = data.get("version")
+    return version if isinstance(version, str) else None
+
+
+def disable_toolkit_plugins_for_claude_code() -> list[str]:
+    """Disable every enabled ai-toolkit plugin in ``~/.claude/settings.json``.
+
+    Returns the keys that were flipped. Uploading the Claude app plugin re-enables
+    it for Claude Code every time, so this is re-asserted rather than fixed once.
+    Raises OSError when settings.json cannot be written.
+    """
+    if not PLUGIN_REGISTRY.is_file():
+        return []
+    try:
+        registry = json.loads(PLUGIN_REGISTRY.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    keys = _registered_toolkit_plugins(registry)
+    if not keys:
+        return []
+
+    settings_json = CLAUDE_DIR / "settings.json"
+    try:
+        settings = json.loads(settings_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    enabled = settings.get("enabledPlugins", {})
+    if not isinstance(enabled, dict):
+        enabled = {}
+
+    active = [key for key in keys if enabled.get(key, True)]
+    if not active:
+        return []
+
+    enabled.update({key: False for key in active})
+    settings["enabledPlugins"] = enabled
+    settings_json.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    return active
+
+
 def check_plugin_double_load(dr: DiagResult, fix_mode: bool) -> None:
     """Warn when the Claude app plugin and the global install both feed Claude Code.
 
@@ -708,6 +770,22 @@ def check_plugin_double_load(dr: DiagResult, fix_mode: bool) -> None:
     if not keys:
         dr.ok("no ai-toolkit plugin registered in Claude Code")
         return
+
+    # Version drift is independent of whether the plugin is enabled here: a
+    # plugin disabled for Claude Code still feeds Chat and Cowork, and those
+    # runtimes have no other channel for skills, agents, hooks, or rules. Report
+    # it before the enabled/disabled branch, which returns early on the healthy
+    # path and would otherwise let a stale upload pass unnoticed.
+    toolkit_version = _toolkit_package_version()
+    if toolkit_version:
+        for key, plugin_version in _registered_plugin_versions(registry, keys).items():
+            if plugin_version != toolkit_version:
+                dr.warn(
+                    f"{key} is v{plugin_version} but the toolkit is v{toolkit_version}: "
+                    "Chat and Cowork keep running the older skills, agents, hooks, and "
+                    "rules until you re-run `ai-toolkit claude-app export` and upload "
+                    "the ZIP again (--fix cannot do this; the upload is manual)"
+                )
 
     settings_json = CLAUDE_DIR / "settings.json"
     try:
@@ -738,14 +816,12 @@ def check_plugin_double_load(dr: DiagResult, fix_mode: bool) -> None:
     if not fix_mode:
         return
 
-    enabled.update({key: False for key in active})
-    settings["enabledPlugins"] = enabled
     try:
-        settings_json.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+        disabled = disable_toolkit_plugins_for_claude_code()
     except OSError as exc:
         dr.fail(f"could not disable plugin in settings.json: {exc}")
         return
-    for key in active:
+    for key in disabled:
         dr.fixed(f"disabled {key} for Claude Code (global install stays authoritative)")
 
 

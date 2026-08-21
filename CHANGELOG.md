@@ -7,6 +7,44 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.29.0 — Stale plugin uploads stop hiding (2026-08-21)
+
+### Added
+
+- **`doctor` reports Claude app plugin version drift.** Check 11 now compares the
+  `version` recorded for every `ai-toolkit@…` entry in
+  `~/.claude/plugins/installed_plugins.json` against the installed toolkit's
+  `package.json` and warns when they differ. The upload is a point-in-time ZIP:
+  once the toolkit moves on, Chat and Cowork keep running the skills, agents,
+  hooks, and rules from whenever the export was made, with no signal anywhere
+  that they are behind. `--fix` deliberately cannot clear this warning — the
+  export can be regenerated but the upload itself happens by hand in the app's
+  Customize > Plugins panel, so the check names the two steps instead of
+  pretending to do them.
+
+### Changed
+
+- **Version drift is checked before the enabled/disabled branch.** A plugin
+  disabled for Claude Code still feeds Chat and Cowork, which have no other
+  channel for toolkit content. The old flow returned `OK: registered but
+  disabled` and never looked at versions, so the state a user reaches by running
+  `doctor --fix` was also the state where a stale upload passed silently. That
+  was the wrong place to stop looking.
+- **`ai-toolkit install` re-asserts the plugin as disabled for Claude Code.**
+  Uploading the ZIP re-enables the plugin every time, which put the double-load
+  fix back on whoever remembered to run `doctor --fix` afterwards. Global
+  installs and updates now flip enabled toolkit plugins to `false` in
+  `~/.claude/settings.json` and print each key they touched. `--local` and
+  `--dry-run` are untouched, and non-toolkit plugins are never modified. The
+  disable logic moved into `disable_toolkit_plugins_for_claude_code()` in
+  `scripts/doctor.py`, shared by both call sites.
+- Test count: 1659 → 1666.
+- Skill body budget threshold unchanged. The largest body (`medplum-rules`, 16760
+  bytes) sits 1240 bytes under the 18000-byte warn line, short of the 2000-byte
+  margin the ratchet requires, so the threshold stays where it is this release.
+
+---
+
 ## v4.28.0 — MCP servers reach Chat and Cowork (2026-08-21)
 
 ### Added

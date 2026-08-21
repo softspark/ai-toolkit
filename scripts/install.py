@@ -831,6 +831,18 @@ def main() -> None:
             if is_new:
                 print(f"  Registered project in {TOOLKIT_DATA_DIR / 'projects.json'}")
 
+    # A global install is authoritative for Claude Code, so an uploaded Claude
+    # app plugin must not feed it in parallel. Uploading the ZIP re-enables the
+    # plugin every time, so this is re-asserted on every install/update rather
+    # than left to whoever remembers to run `doctor --fix` afterwards.
+    if not local and not dry_run:
+        from doctor import disable_toolkit_plugins_for_claude_code
+        try:
+            for key in disable_toolkit_plugins_for_claude_code():
+                print(f"  Disabled Claude app plugin for Claude Code: {key}")
+        except OSError as error:
+            print(f"  WARNING: could not disable Claude app plugin: {error}")
+
     print_summary(local=local)
 
 

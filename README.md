@@ -6,22 +6,24 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1659%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1666%20passing-success)](tests/)
 
-## What's New in v4.28.0
+## What's New in v4.29.0
 
-**v4.28.0** gives Claude Chat and Cowork their MCP servers:
+**v4.29.0** stops a stale Claude app upload from passing as healthy:
 
-- The Claude app parses `claude_desktop_config.json` on startup and reports bad
-  entries in its own warning dialog, but ai-toolkit never wrote to it. A user
-  with seven servers configured for Claude Code still had an empty `mcpServers`
-  block in Cowork.
-- `ai-toolkit mcp install --editor claude-app --scope global <template>` now
-  writes it, on macOS, Windows, and Linux, honoring `CLAUDE_USER_DATA_DIR` the
-  way the app does. `--editor claude` remains Claude Code -- different runtime,
-  different file.
-- The app accepts stdio entries only, so HTTP/SSE templates are bridged as
-  `npx -y mcp-remote <url>` rather than written verbatim and silently skipped.
+- The plugin ZIP is a point-in-time snapshot. Once the toolkit moves on, Chat and
+  Cowork keep running the skills, agents, hooks, and rules from whenever you
+  exported it, with nothing anywhere saying so.
+- `ai-toolkit doctor` now compares the version recorded in
+  `~/.claude/plugins/installed_plugins.json` against the installed toolkit and
+  warns when they differ -- including when the plugin is disabled for Claude
+  Code, since Chat and Cowork still load it.
+- `--fix` cannot clear that warning. It can regenerate the export; the upload
+  itself is manual, so the check names both steps instead of pretending.
+- `ai-toolkit install` now re-asserts the plugin as disabled for Claude Code.
+  Uploading the ZIP re-enables it every time, which had left the double-load fix
+  to whoever remembered to re-run `doctor --fix`.
 
 ## Table of Contents
 
