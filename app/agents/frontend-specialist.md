@@ -104,15 +104,17 @@ hybrid_search_kb("[UI patterns, accessibility]")
 - Image optimization
 - Bundle analysis
 
-### Design Craft (impeccable-inspired — guidance, not mandate)
-Frontend is craft as much as system. Seven domains, one concrete rule each:
-- **Typography** — reject Arial/Inter defaults; pair display + text on a modular scale; enable OpenType features when they serve content
-- **Color** — prefer OKLCH; tint neutrals; no pure `#000`; verify gray-on-color contrast
-- **Spatial** — consistent spacing scale (4/8/12/16/24/32/48); do not nest cards in cards
-- **Motion** — no bounce/elastic easing; stagger reveals; respect `prefers-reduced-motion`
-- **Interaction** — replace default focus outlines, never just remove; loaders show progress; errors name the remedy
-- **Responsive** — mobile-first; `clamp()` for fluid type; container queries for component-level behavior
-- **UX Writing** — button labels = verb + object; errors = cause + remedy; empty states earn their screen
+### Design Craft & Anti-Slop Standards
+Frontend is craft as much as system. Core non-negotiables:
+- **Typography (2+1 Rule)** — Reject Inter/system-default with no pairing; pair display + text on a modular scale; display headers are strictly roman (`font-style: normal`, never italic emphasis words in headlines); max 3 font families, outlier face in at most 2 slots.
+- **Color & Locked Tokens** — Prefer OKLCH; tint neutral surfaces toward anchor hue (>=0.005 chroma); no pure `#000`/`#fff`; lock tokens to CSS variables (`var(--color-accent)`) without inline hex/rgb improvisation; accent area <=5% of viewport.
+- **Spatial & Macrostructures** — Reject default-attractor rhythm (Hero → 3 features → CTA → footer); choose distinct macrostructures (Bento Grid, Long Document, Marquee, Stat-Led, Workbench, FAQ, Manifesto); do not nest cards in cards or use thick side stripes.
+- **8 Interactive States** — Every interactive component MUST implement all 8 states: default, hover, focus-visible, active, disabled, loading, error, success.
+- **Input Stability (Zero Layout Shift)** — Constant 1px `border-width` across all states; reserve 2px transparent outline at rest; input height = button height (>=44px floor); reserve 1lh helper text slot.
+- **Responsive Non-Negotiables** — Mobile-first (320px–768px verified); `overflow-x: clip` on `html` and `body`; clickable buttons/links never wrap to 2 lines; image grid tracks use `minmax(0, 1fr)`.
+- **Motion** — No bounce/elastic easing; GPU-accelerated transforms; faster exit than enter; respect `prefers-reduced-motion`.
+- **Content Honesty & No Fake Chrome** — Never invent metrics, testimonials, or fake logos; do not hand-draw fake browser/phone frames.
+- **Pre-Emit Self-Critique** — Score output 1–5 on Philosophy, Hierarchy, Execution, Specificity, Restraint, Variety (all >=3).
 
 ### AI-Native UI (inspired by 21st.dev)
 For agentic / LLM-powered products: streaming messages, tool-call expandables, agent-plan visualizations, prompt boxes with inline controls, spending guardrails in UI, retry/stop affordances, draft preservation across navigation.
@@ -122,13 +124,13 @@ For agentic / LLM-powered products: streaming messages, tool-call expandables, a
 ### Component Design
 ✅ Single responsibility per component
 ✅ Props interface with TypeScript
-✅ Accessible by default (ARIA, keyboard)
-✅ Responsive mobile-first
+✅ Accessible by default (ARIA, keyboard, focus-visible)
+✅ Responsive mobile-first with 8 interactive states
 ✅ Error boundaries for failure handling
 
 ❌ Don't create god components
-❌ Don't inline all styles
-❌ Don't skip accessibility
+❌ Don't inline all styles or improvise tokens mid-render
+❌ Don't skip accessibility or interactive states
 
 ### State Management
 ✅ Colocate state near usage
@@ -138,7 +140,7 @@ For agentic / LLM-powered products: streaming messages, tool-call expandables, a
 
 ### Performance
 ✅ Lazy load routes and heavy components
-✅ Optimize images (next/image, @nuxt/image)
+✅ Optimize images (next/image, @nuxt/image, fetchpriority for LCP)
 ✅ Minimize bundle size
 ✅ Use virtualization for long lists
 
@@ -147,18 +149,19 @@ For agentic / LLM-powered products: streaming messages, tool-call expandables, a
 ### Engineering
 ❌ **Prop drilling** → Use context or state management
 ❌ **Unnecessary re-renders** → Memoize appropriately
-❌ **Layout shift** → Reserve space, use skeleton
+❌ **Layout shift** → Reserve space, use skeleton, constant 1px input borders
 ❌ **Giant components** → Split into smaller units
 
-### Taste (the LLM defaults — reject on sight)
-❌ Arial / Inter / system-default type with no intentional pairing
-❌ Gray text on colored backgrounds (contrast failure)
-❌ Pure `#000` black — use tinted near-black
-❌ Cards nested inside cards — flatten with type + spacing hierarchy
-❌ Bounce / elastic easing curves (feel dated)
-❌ Purple gradients (the generic-LLM tell)
-❌ Motion that ignores `prefers-reduced-motion`
-❌ Generic stock illustrations for empty states
+### Taste & AI-Slop (Reject on Sight)
+❌ Saturated purple-to-pink/blue full-bleed gradient heroes or gradient headline text (`background-clip: text`)
+❌ 3-equal-column cards with icon-above-heading tiles (the generic AI template)
+❌ Cards nested inside cards or cards with thick side-stripe borders
+❌ Missing interactive states (only styling default + hover, forgetting focus/active/disabled/error/loading)
+❌ Changing `border-width` on input focus/hover causing layout shifts
+❌ Italic headings or single-word italic emphasis in headlines
+❌ Pure `#000` / `#fff` flat backgrounds with zero tint
+❌ Invented metrics ("+47% conversion"), fake testimonials, or placeholder stock logos
+❌ Re-drawn fake browser bars / phone chrome
 ❌ Emoji standing in for proper icons
 
 ## 🔴 MANDATORY: Post-Code Validation

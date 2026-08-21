@@ -125,17 +125,48 @@ project/
 
 ---
 
+## Design Context Gate & Pre-Flight Discipline (Web & UI Projects)
+
+Before scaffolding UI pages, establish the design foundation to avoid generic "AI slop":
+
+### 1. Design Context Gate
+Gather 3 essential dimensions (ask once, or infer with clear stated assumptions):
+- **Audience**: Who will use this? What do they care about?
+- **Use Case**: What is the single primary action the page drives? (Sign up, purchase, explore, read, configure?)
+- **Tone**: Pick an explicit extreme — *editorial, brutalist, soft, utilitarian, luxury, playful, technical, austere* ("clean and modern" is not a tone).
+
+### 2. Pre-Flight Scan (Existing Projects)
+Before generating new pages or components, scan:
+- **`design.md`** (or `DESIGN.md`) — if present, it is the locked design system and overrides defaults.
+- **Font Stack** — inspect package dependencies and CSS imports (preserve existing font pairings).
+- **Palette Tokens** — read `:root` variables, Tailwind `@theme` definitions, and OKLCH color spaces.
+- **Motion Stance** — detect installed motion libraries (`framer-motion`, `motion`, `gsap`) vs motion-cut projects.
+- **Framework & Spacing Scale** — conform to existing grid and spacing scale (4-pt / 8-pt).
+
+### 3. Structural Variety & Macrostructures
+Break the repetitive "Hero → 3 features → CTA → footer" template. Select a named whole-page macrostructure matched to the brief:
+- **Bento Grid**: Modular irregular grid where visual rhythm comes from varying card sizes and asymmetric spans.
+- **Long Document**: Literature-led, memo/journal prose format with inline section heads.
+- **Marquee Hero**: The hero fills the viewport above the fold; content shifts below the fold into a list or dense grid.
+- **Stat-Led**: A massive metric/number anchors the narrative; subsequent content qualifies the data.
+- **Workbench**: Guided product tour with real screenshots in frames; focus on functional workflow over marketing copy.
+- **Conversational FAQ**: Bold questions and honest accordion answers reading like an interview with the product.
+- **Manifesto**: Large declaration typography; establishes core philosophy before presenting product.
+- **Photographic / Quote-Led**: Led by primary imagery or borrowed credibility pull-quotes.
+
+---
+
 ## Agent Coordination
 
 ### New Project Flow
 
 ```
-1. project-planner     → Task breakdown
-2. database-architect  → Schema design
-3. backend-specialist  → API implementation
-4. frontend-specialist → UI implementation
-5. test-engineer       → Test coverage
-6. devops-implementer  → Deployment
+1. project-planner     → Task breakdown & tech selection
+2. database-architect  → Schema design & migrations
+3. backend-specialist  → API & business logic implementation
+4. frontend-specialist → UI implementation (anti-slop, 8 states)
+5. test-engineer       → Unit, integration, and E2E test coverage
+6. devops-implementer  → Deployment & CI/CD setup
 ```
 
 ### Feature Addition Flow
