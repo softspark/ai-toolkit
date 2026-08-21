@@ -63,12 +63,23 @@ teardown() {
 }
 
 @test "doctor --fix regenerates missing llms-full.txt" {
-    [ -f "$TOOLKIT_DIR/llms-full.txt" ] && cp "$TOOLKIT_DIR/llms-full.txt" "$TOOLKIT_DIR/llms-full.txt.test-bak"
-    rm -f "$TOOLKIT_DIR/llms-full.txt"
-    run python3 "$TOOLKIT_DIR/scripts/doctor.py" --fix
+    # Runs against a private copy of the toolkit, not the shared checkout.
+    # doctor resolves its toolkit root from its own file path, so deleting
+    # llms-full.txt in the checkout and asserting on the FIXED line is a race:
+    # bats parallelizes across files, test_doctor_plugin_double_load.bats also
+    # runs doctor --fix, and that run regenerates the artifact between this
+    # test's delete and its assertion. The old version also left a
+    # llms-full.txt.test-bak behind in the repo whenever it lost that race,
+    # because the restoring mv never ran.
+    local tk="$TEST_TMP/toolkit-copy"
+    mkdir -p "$tk"
+    tar -cf - -C "$TOOLKIT_DIR" --exclude=.git --exclude=node_modules . | tar -xf - -C "$tk"
+    [ -f "$tk/llms-full.txt" ]
+    rm -f "$tk/llms-full.txt"
+    run python3 "$tk/scripts/doctor.py" --fix
     echo "$output" | grep -q "FIXED.*llms-full.txt"
-    [ -f "$TOOLKIT_DIR/llms-full.txt" ]
-    [ -f "$TOOLKIT_DIR/llms-full.txt.test-bak" ] && mv "$TOOLKIT_DIR/llms-full.txt.test-bak" "$TOOLKIT_DIR/llms-full.txt"
+    [ -f "$tk/llms-full.txt" ]
+    [ ! -e "$TOOLKIT_DIR/llms-full.txt.test-bak" ]
 }
 
 @test "doctor without --fix does not modify anything" {

@@ -6,24 +6,21 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1666%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1671%20passing-success)](tests/)
 
-## What's New in v4.29.0
+## What's New in v4.29.1
 
-**v4.29.0** stops a stale Claude app upload from passing as healthy:
+**v4.29.1** stops the destructive-command guard from blocking a safe branch delete:
 
-- The plugin ZIP is a point-in-time snapshot. Once the toolkit moves on, Chat and
-  Cowork keep running the skills, agents, hooks, and rules from whenever you
-  exported it, with nothing anywhere saying so.
-- `ai-toolkit doctor` now compares the version recorded in
-  `~/.claude/plugins/installed_plugins.json` against the installed toolkit and
-  warns when they differ -- including when the plugin is disabled for Claude
-  Code, since Chat and Cowork still load it.
-- `--fix` cannot clear that warning. It can regenerate the export; the upload
-  itself is manual, so the check names both steps instead of pretending.
-- `ai-toolkit install` now re-asserts the plugin as disabled for Claude Code.
-  Uploading the ZIP re-enables it every time, which had left the double-load fix
-  to whoever remembered to re-run `doctor --fix`.
+- `guard-destructive.sh` matched every pattern with one case-insensitive grep, so
+  the force-delete pattern also caught the lowercase safe delete -- the variant
+  that refuses to drop an unmerged branch, and exactly the post-merge cleanup the
+  toolkit's own git-workflow rules prescribe.
+- Patterns are now matched in two passes. Command names and flags are matched
+  case-sensitively, because short flags that differ only in case are different
+  flags. SQL keywords and the Windows `format` command stay case-insensitive, so
+  lowercase SQL still blocks.
+- Force delete still blocks. Test count: 1666 -> 1671.
 
 ## Table of Contents
 

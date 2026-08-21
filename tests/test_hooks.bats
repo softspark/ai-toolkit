@@ -172,6 +172,34 @@ run_hook_with_input() {
     [ "$status" -eq 2 ]
 }
 
+@test "guard-destructive: allows git branch -d (safe delete)" {
+    # The regression this closes: patterns were matched with a single
+    # case-insensitive grep, so -d folded onto the -D pattern and the guard
+    # blocked the post-merge cleanup our own git-workflow rules prescribe.
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"git branch -d feature-branch"}}'
+    [ "$status" -eq 0 ]
+}
+
+@test "guard-destructive: command flags stay case-sensitive" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"git clean -Fd"}}'
+    [ "$status" -eq 0 ]
+}
+
+@test "guard-destructive: blocks lowercase drop table" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"psql -c \"drop table users\""}}'
+    [ "$status" -eq 2 ]
+}
+
+@test "guard-destructive: blocks mixed-case Truncate" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"psql -c \"Truncate users\""}}'
+    [ "$status" -eq 2 ]
+}
+
+@test "guard-destructive: blocks lowercase delete from" {
+    run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"mysql -e \"delete from orders;\""}}'
+    [ "$status" -eq 2 ]
+}
+
 @test "guard-destructive: blocks chmod 777" {
     run_hook_with_input "guard-destructive.sh" '{"tool_input":{"command":"chmod 777 /var/www"}}'
     [ "$status" -eq 2 ]

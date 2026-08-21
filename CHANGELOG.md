@@ -7,6 +7,53 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.29.1 — The guard stops blocking the safe branch delete (2026-08-21)
+
+### Fixed
+
+- **`guard-destructive.sh` no longer folds `-d` onto `-D`.** Every pattern was
+  matched by a single `grep -qEi`, so the `git\s+branch\s+-D\b` pattern also
+  caught `git branch -d`. Those are different operations: `-D` discards an
+  unmerged branch, `-d` refuses to. The safe one is what
+  `.claude/rules/ai-toolkit-git-workflow.md` tells users to run after every
+  merge, and the guard blocked it — a false positive on the toolkit's own
+  advice, in the toolkit's own safety hook.
+- **Patterns are matched in two passes, split by whether case carries meaning.**
+  Command names and flags go through a case-sensitive `grep -qE`; POSIX flags
+  that differ only in case are different flags, and folding them together can
+  only lose information. SQL keywords and the Windows `format` command go
+  through a case-insensitive `grep -qEi`, because their casing genuinely varies
+  in the wild — `drop table`, `Truncate`, and `delete from` all still block.
+  The `-i` was presumably there for the SQL patterns all along; it was the
+  flag patterns that paid for it.
+
+- **A cross-file race in the test suite.** `doctor --fix regenerates missing
+  llms-full.txt` deleted the artifact from the shared checkout and asserted on
+  doctor's `FIXED` line. `npm test` runs `bats --jobs 4
+  --no-parallelize-within-files`, so files run concurrently, and
+  `test_doctor_plugin_double_load.bats` also runs `doctor --fix` — which
+  regenerates that artifact. When it won, the assertion saw a present file, no
+  `FIXED` line, and a red suite; the test also left a `llms-full.txt.test-bak`
+  in the repo, because the restoring `mv` never ran. v4.29.0 added a second
+  `doctor --fix` call to the plugin test file, which is what made a latent race
+  start firing. The test now runs doctor against a private copy of the toolkit,
+  so it mutates no shared state at all.
+
+### Changed
+
+- `kb/reference/hooks-catalog.md` documents the two-pass matching and lists the
+  safe branch delete among the guard's exemptions.
+- Test count: 1666 → 1671. The new cases pin both directions: the safe delete
+  and an uppercase non-flag pass, lowercase and mixed-case SQL block.
+
+### Known gap (not addressed here)
+
+- The guard matches `git branch -D` but not its long form, `git branch --delete
+  --force`. That gap predates this fix and closing it is a coverage change
+  rather than a case-sensitivity one, so it is left for a separate decision.
+
+---
+
 ## v4.29.0 — Stale plugin uploads stop hiding (2026-08-21)
 
 ### Added

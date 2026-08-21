@@ -12244,8 +12244,15 @@ for debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
 - `git push --force`
 - `chmod -R 777`
 
+**Case sensitivity:** patterns are matched in two passes. Command names and flags
+are matched case-**sensitively**, because `-d` and `-D` are different flags —
+`git branch -D` blocks, `git branch -d` does not. SQL keywords and the Windows
+`format` command are matched case-**insensitively**, so `drop table` blocks the
+same as `DROP TABLE`.
+
 **Exemptions (avoid false positives):**
 - `git push --force-with-lease` / `--force-if-includes` — the safe force-push variants are allowed.
+- `git branch -d` — the safe delete refuses unmerged branches and is the post-merge cleanup the git-workflow rules prescribe. `git branch -D` still blocks.
 - A single, non-chained `echo`/`printf`/`git commit`/`git tag` carrying a destructive token as *data* (e.g. a commit message mentioning `DROP TABLE`) is allowed. Chained commands (`&&`, `;`, `|`) are still inspected in full.
 
 ### PreToolUse (file ops) — `guard-path.sh`
