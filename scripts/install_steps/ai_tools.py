@@ -173,7 +173,7 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
     if "codex" in eds:
         if dry_run:
             print("  Would inject: $CODEX_HOME/AGENTS.md, $CODEX_HOME/agents/, "
-                  "$CODEX_HOME/hooks.json")
+                  "$CODEX_HOME/hooks.json + $CODEX_HOME/ai-toolkit-hooks/")
             print("  Would generate: ~/.agents/skills/ (shared Codex skill discovery)")
         else:
             _install_codex_global(target_dir, rules_dir)
@@ -1224,6 +1224,12 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         if "opencode" in eds:
             print("  Would generate: .opencode/skills/ (profile=full)")
     if "codex" in eds:
+        # Hooks are not profile-gated: the live path runs gen_codex_hooks
+        # unconditionally whenever codex is selected, so the preview must say so
+        # at every profile. Announcing the asset directory as well as the
+        # manifest matters here — the hook scripts are what a user reviews and
+        # trusts with /hooks before Codex will run them.
+        print("  Would generate: .codex/hooks.json + .codex/hooks/ (hook scripts)")
         print("  Would generate: .codex/agents/ native agents")
         print("  Would generate: .agents/skills/ Codex skills")
         if codex_skills:

@@ -6,21 +6,21 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1671%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1675%20passing-success)](tests/)
 
-## What's New in v4.29.1
+## What's New in v4.29.2
 
-**v4.29.1** stops the destructive-command guard from blocking a safe branch delete:
+**v4.29.2** makes `install --dry-run` tell the truth about Codex hooks:
 
-- `guard-destructive.sh` matched every pattern with one case-insensitive grep, so
-  the force-delete pattern also caught the lowercase safe delete -- the variant
-  that refuses to drop an unmerged branch, and exactly the post-merge cleanup the
-  toolkit's own git-workflow rules prescribe.
-- Patterns are now matched in two passes. Command names and flags are matched
-  case-sensitively, because short flags that differ only in case are different
-  flags. SQL keywords and the Windows `format` command stay case-insensitive, so
-  lowercase SQL still blocks.
-- Force delete still blocks. Test count: 1666 -> 1671.
+- Selecting `codex` always installs Codex lifecycle hooks -- `.codex/hooks.json`
+  plus the scripts under `.codex/hooks/` -- at every profile. The dry-run branch
+  listed only agents and skills, so the preview silently omitted a whole surface,
+  and the one you are asked to review and trust with `/hooks`.
+- Both previews now name it: project installs announce
+  `.codex/hooks.json + .codex/hooks/`, global installs add
+  `$CODEX_HOME/ai-toolkit-hooks/` next to `$CODEX_HOME/hooks.json`.
+- Four tests pin the preview against what the live install actually writes, so a
+  surface cannot go missing from the dry-run again. Test count: 1671 -> 1675.
 
 ## Table of Contents
 

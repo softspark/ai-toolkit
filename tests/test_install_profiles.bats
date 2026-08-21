@@ -450,3 +450,38 @@ MD
     [ -d "$TEST_PROJECT/.agents/skills" ]
     [ ! -d "$TEST_PROJECT/.codex/skills" ]
 }
+
+# ── Dry-run previews the Codex hook surfaces the live install creates ───────
+
+@test "profiles: codex dry-run announces the hook surfaces it will create" {
+    # The regression this closes: the live path runs gen_codex_hooks whenever
+    # codex is selected, but the dry-run branch listed only agents and skills.
+    # A preview that omits a whole surface is worse than no preview.
+    run run_install --editors codex --profile full --dry-run
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "\.codex/hooks\.json"
+    echo "$output" | grep -q "\.codex/hooks/"
+}
+
+@test "profiles: codex dry-run announces hooks at every profile" {
+    for profile in minimal standard full; do
+        run run_install --editors codex --profile "$profile" --dry-run
+        [ "$status" -eq 0 ]
+        echo "$output" | grep -q "\.codex/hooks\.json"
+    done
+}
+
+@test "profiles: codex dry-run matches what the live install writes" {
+    run run_install --editors codex --profile full --dry-run
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "\.codex/hooks\.json"
+    run_install --editors codex --profile full >/dev/null 2>&1
+    [ -f "$TEST_PROJECT/.codex/hooks.json" ]
+    [ -d "$TEST_PROJECT/.codex/hooks" ]
+}
+
+@test "profiles: codex dry-run writes nothing" {
+    run_install --editors codex --profile full --dry-run >/dev/null 2>&1
+    [ ! -e "$TEST_PROJECT/.codex" ]
+    [ ! -e "$TEST_PROJECT/.agents" ]
+}

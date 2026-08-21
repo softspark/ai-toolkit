@@ -7,6 +7,39 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.29.2 — The Codex dry-run stops hiding a surface (2026-08-21)
+
+### Fixed
+
+- **`install --dry-run` never mentioned the Codex hook surfaces.** Selecting
+  `codex` runs `gen_codex_hooks()` unconditionally, at every profile, writing
+  `.codex/hooks.json` and the hook scripts under `.codex/hooks/` (23 files). The
+  dry-run branch in `scripts/install_steps/ai_tools.py` printed only
+  `.codex/agents/` and `.agents/skills/`. A preview that omits a whole surface is
+  worse than no preview, and this is the surface a user is asked to review and
+  trust with `/hooks` before Codex will run any of it.
+- **The global preview named the manifest but not its scripts.** It listed
+  `$CODEX_HOME/hooks.json` and stopped there, leaving out
+  `$CODEX_HOME/ai-toolkit-hooks/`. Same defect, other branch.
+
+### Added
+
+- Four tests in `tests/test_install_profiles.bats`: the preview names both hook
+  paths, it names them at `minimal`/`standard`/`full` alike, the preview matches
+  what a live install then writes to disk, and `--dry-run` still writes nothing.
+  All four fail against v4.29.1.
+
+### Changed
+
+- Test count: 1671 → 1675.
+
+**Found by:** running the Release Verification SOP against the published
+v4.29.1. Phase 9.1 checks dry-run output for each native surface, and the Codex
+hook lines were missing — so that SOP check would have produced a false negative
+on a build where the surface really was gone.
+
+---
+
 ## v4.29.1 — The guard stops blocking the safe branch delete (2026-08-21)
 
 ### Fixed
