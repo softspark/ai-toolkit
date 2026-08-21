@@ -6,18 +6,19 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1637%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1640%20passing-success)](tests/)
 
-## What's New in v4.25.1
+## What's New in v4.26.0
 
-**v4.25.1** fixes the CVE scanner path exercised by the published-package smoke test:
+**v4.26.0** declares and enforces the Python floor the scripts already needed:
 
-- Legacy npm audit `advisories` are normalized alongside the modern
-  `vulnerabilities` response.
-- HIGH advisories now produce findings and the documented non-zero exit code
-  instead of a false clean result.
-- The post-release scanner fixture now exercises accessibility, SEO, HIPAA, and
-  a deliberately vulnerable npm dependency with their real CLI flags.
+- `ai-toolkit` now checks `python3` before running anything and requires 3.11+.
+- macOS `/usr/bin/python3` is 3.9, which used to crash `update --local` with a
+  raw `dataclass() got an unexpected keyword argument 'slots'` traceback. You
+  now get the version, the requirement, and `brew install python@3.13`.
+- `python3 scripts/*.py` run directly fails the same way, via `_common.py`.
+- CI runs the syntax check plus a full import sweep on both 3.11 and 3.13, so a
+  version-gated runtime feature cannot slip through `py_compile` again.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -39,6 +40,10 @@ See [CHANGELOG.md](CHANGELOG.md) for full history.
 ---
 
 ## Install
+
+**Requirements:** Node.js >= 18 and Python >= 3.11.
+
+> **macOS:** `/usr/bin/python3` is Python 3.9 and will not run the toolkit. Install a supported one with `brew install python@3.13` and make sure `which python3` no longer points at `/usr/bin/python3`.
 
 ```bash
 # Option A: install globally (once per machine)
@@ -183,7 +188,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1637 tests)
+├── tests/               # Bats and Python test suite (1640 tests)
 └── CHANGELOG.md
 ```
 

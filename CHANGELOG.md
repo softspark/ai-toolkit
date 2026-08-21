@@ -7,6 +7,57 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.26.0 — Python floor is declared and enforced (2026-08-21)
+
+### Added
+
+- **Python preflight in the CLI.** `bin/ai-toolkit.js` now verifies `python3`
+  exists and reports at least 3.11 before spawning any script, and prints a
+  platform-specific fix (`brew install python@3.13` on macOS) instead of a
+  traceback from deep inside `scripts/`. The check is lazy and memoized, so
+  `help` and `--version` still run without a Python interpreter.
+- **Matching floor check in `scripts/_common.py`.** Every entry point imports
+  `_common` first, so `python3 scripts/install.py` run directly fails with the
+  same message rather than a `TypeError` from whichever module happens to use
+  3.11+ syntax.
+- **CI import sweep.** The `python-syntax` job now runs on a `['3.11', '3.13']`
+  matrix and imports every module under `scripts/` on each. `py_compile` only
+  catches syntax, which is exactly why a 3.10-only construct shipped: version-
+  gated runtime features surface on import, not on compile.
+
+### Fixed
+
+- **`ai-toolkit update --local` crashed on macOS system Python.** `/usr/bin/python3`
+  is 3.9 on every Mac, and `scripts/mcp_editors.py` uses
+  `@dataclass(frozen=True, slots=True)` (3.10+), so the install path died with
+  `TypeError: dataclass() got an unexpected keyword argument 'slots'` while
+  importing `install_steps/ai_tools.py`. The interpreter is now rejected up
+  front with instructions.
+
+### Changed
+
+- **`scripts/check_deps.py` declares Python >= 3.11**, up from a `min_version`
+  of `3.8` that never matched what the scripts actually needed, and its reason
+  string calls out the macOS 3.9 trap.
+- **Requirements are documented.** README gained a Requirements note above the
+  install snippet; `CLAUDE.md` records the three places the floor is declared
+  (`bin/ai-toolkit.js`, `scripts/_common.py`, `scripts/check_deps.py`) and the
+  CI matrix that guards it.
+
+### Ecosystem
+
+- Snapshot refreshed: 11 tools drifted, all class A (content reworded, no
+  heading delta). Claude Code 2.1.235 → 2.1.238 and Codex CLI 0.147.0 → 0.148.0
+  are upstream patch bumps with no new surface, so no generator changed.
+
+### Tests
+
+- Three CLI regression tests: a stale `python3` shim exits 1 with the version
+  message, a missing `python3` exits 1 instead of crashing, and `help` still
+  works with no interpreter on PATH. Test count: 1637 → 1640.
+
+---
+
 ## v4.25.1 — npm advisories count again (2026-08-19)
 
 ### Fixed

@@ -33,7 +33,7 @@ REQUIRED = [
     {
         "name": "python3",
         "check": "python3",
-        "min_version": "3.8",
+        "min_version": "3.11",
         "packages": {
             "brew": "python3",
             "apt": "python3",
@@ -45,7 +45,7 @@ REQUIRED = [
             "choco": "python",
             "scoop": "python",
         },
-        "reason": "All toolkit scripts run on Python 3 (stdlib only, no pip needed)",
+        "reason": "All toolkit scripts run on Python 3.11+ (stdlib only, no pip needed). macOS /usr/bin/python3 is 3.9 and will not work.",
     },
     {
         "name": "git",

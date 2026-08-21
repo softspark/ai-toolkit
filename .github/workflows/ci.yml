@@ -21,13 +21,45 @@ jobs:
         run: shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh
 
   python-syntax:
-    name: Python syntax check
+    name: Python ${{ matrix.python-version }} syntax + import check
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.11 is the declared floor (PYTHON_MIN in bin/ai-toolkit.js and
+        # scripts/_common.py); 3.13 guards against the opposite drift.
+        python-version: ['3.11', '3.13']
     steps:
       - uses: actions/checkout@v6
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Compile all Python scripts
         run: python3 -m py_compile scripts/*.py app/skills/*/scripts/*.py
+
+      # py_compile only catches syntax. Version-gated *runtime* features
+      # (dataclass slots=, tomllib, ...) surface only on import, which is how
+      # a 3.10-only construct reached users on macOS system Python 3.9.
+      - name: Import every scripts/ module
+        run: |
+          python3 - <<'PY'
+          import importlib, pathlib, sys, traceback
+          root = pathlib.Path("scripts")
+          sys.path[:0] = [str(root), str(root / "install_steps")]
+          failed = []
+          for path in sorted(root.rglob("*.py")):
+              if "__pycache__" in path.parts:
+                  continue
+              module = ".".join(path.relative_to(root).with_suffix("").parts)
+              try:
+                  importlib.import_module(module)
+              except Exception:
+                  failed.append(module)
+                  print(f"::error::{module} failed to import on Python {sys.version.split()[0]}")
+                  traceback.print_exc()
+          sys.exit(1 if failed else 0)
+          PY
 
   validate:
     name: Validate toolkit integrity

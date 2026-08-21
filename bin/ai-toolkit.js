@@ -12,6 +12,9 @@ const fs = require('fs');
 const TOOLKIT_DIR = path.dirname(__dirname);
 const CWD = process.cwd();
 
+/** Minimum Python the toolkit scripts require: [major, minor]. */
+const PYTHON_MIN = [3, 11];
+
 if (!process.env.HOME) {
   console.error('Error: HOME environment variable is not set');
   process.exit(1);
@@ -139,6 +142,60 @@ function scriptPath(scriptName) {
   return path.join(TOOLKIT_DIR, 'scripts', scriptName);
 }
 
+/** Memoized result of requirePython(); null until the first check runs. */
+let pythonOk = null;
+
+/**
+ * Verify `python3` exists and is >= PYTHON_MIN before any script is spawned.
+ * Without this the caller sees a raw traceback from deep inside scripts/
+ * (e.g. `dataclass() got an unexpected keyword argument 'slots'` on Python
+ * 3.9, which is what macOS ships as /usr/bin/python3).
+ * Exits with an actionable message when the interpreter is missing or too old.
+ */
+function requirePython() {
+  if (pythonOk) return;
+  const probe = spawnSync('python3', ['-c', 'import sys; sys.stdout.write("%d.%d.%d" % sys.version_info[:3])'], {
+    encoding: 'utf8',
+  });
+  const want = PYTHON_MIN.join('.');
+
+  if (probe.error || probe.status !== 0) {
+    console.error(`Error: python3 not found on PATH — ai-toolkit requires Python >= ${want}`);
+    console.error(pythonHint());
+    process.exit(1);
+  }
+
+  const found = probe.stdout.trim();
+  const [major, minor] = found.split('.').map(Number);
+  if (major < PYTHON_MIN[0] || (major === PYTHON_MIN[0] && minor < PYTHON_MIN[1])) {
+    console.error(`Error: ai-toolkit requires Python >= ${want}, found ${found}`);
+    console.error(pythonHint());
+    process.exit(1);
+  }
+  pythonOk = true;
+}
+
+/**
+ * Platform-specific instructions for installing a supported Python.
+ * @returns {string} Multi-line hint text
+ */
+function pythonHint() {
+  const lines = [];
+  if (process.platform === 'darwin') {
+    lines.push('macOS ships Python 3.9 as /usr/bin/python3. Install a newer one:');
+    lines.push('  brew install python@3.13');
+    lines.push('Then make sure it comes first on PATH (`which python3` should not be /usr/bin/python3).');
+  } else if (process.platform === 'win32') {
+    lines.push('Install Python 3.11+ and make sure `python3` resolves to it:');
+    lines.push('  winget install Python.Python.3.13');
+  } else {
+    lines.push('Install Python 3.11+ via your package manager, e.g.:');
+    lines.push('  sudo apt install python3.13    # Debian/Ubuntu');
+    lines.push('  sudo dnf install python3.13    # Fedora/RHEL');
+  }
+  return lines.join('\n');
+}
+
 /**
  * Execute a generator script synchronously via python3, returning its stdout.
  * Exits the process on failure.
@@ -147,6 +204,7 @@ function scriptPath(scriptName) {
  * @returns {Buffer} stdout output
  */
 function runGenerator(scriptName, extraArgs = []) {
+  requirePython();
   try {
     return execFileSync('python3', [scriptPath(scriptName), ...extraArgs], { cwd: TOOLKIT_DIR });
   } catch (err) {
@@ -162,6 +220,7 @@ function runGenerator(scriptName, extraArgs = []) {
  * @param {{ cwd?: string }} [opts={}] - Options (cwd override)
  */
 function run(script, args = [], opts = {}) {
+  requirePython();
   const result = spawnSync('python3', [script, ...args], {
     stdio: 'inherit',
     cwd: opts.cwd || CWD,
@@ -178,6 +237,7 @@ function run(script, args = [], opts = {}) {
  * @param {...string} flags - Flags to pass: --rules, --hooks, --mcp
  */
 function propagateGlobal(...flags) {
+  requirePython();
   const result = spawnSync('python3', [scriptPath('propagate_global.py'), ...flags], {
     stdio: 'inherit',
     cwd: CWD,

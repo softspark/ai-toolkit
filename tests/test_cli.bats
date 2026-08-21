@@ -60,6 +60,33 @@ teardown() {
     echo "$output" | grep -q 'ai-toolkit'
 }
 
+# ── Python preflight ─────────────────────────────────────────────────────────
+
+@test "cli: rejects python3 older than 3.11 with an actionable message" {
+    mkdir -p "$TEST_TMP/shim"
+    printf '#!/bin/sh\nprintf 3.9.6\n' > "$TEST_TMP/shim/python3"
+    chmod +x "$TEST_TMP/shim/python3"
+    run env PATH="$TEST_TMP/shim:$PATH" node "$TOOLKIT_DIR/bin/ai-toolkit.js" validate
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q 'requires Python >= 3.11'
+    echo "$output" | grep -q '3.9.6'
+}
+
+@test "cli: reports a missing python3 instead of crashing" {
+    mkdir -p "$TEST_TMP/empty"
+    node_bin="$(command -v node)"
+    run env PATH="$TEST_TMP/empty" "$node_bin" "$TOOLKIT_DIR/bin/ai-toolkit.js" validate
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q 'python3 not found'
+}
+
+@test "cli: help does not require python3" {
+    mkdir -p "$TEST_TMP/empty"
+    node_bin="$(command -v node)"
+    run env PATH="$TEST_TMP/empty" "$node_bin" "$TOOLKIT_DIR/bin/ai-toolkit.js" help
+    [ "$status" -eq 0 ]
+}
+
 @test "cli: help lists install command" {
     run $CLI help
     echo "$output" | grep -q 'install'

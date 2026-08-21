@@ -20,7 +20,34 @@ from __future__ import annotations
 import os
 import platform
 import shutil
+import sys
 from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Python version floor
+# ---------------------------------------------------------------------------
+# Kept in sync with PYTHON_MIN in bin/ai-toolkit.js and the python3 entry in
+# scripts/check_deps.py. Checked here because _common is imported first by
+# every entry point, so a stale interpreter fails with this message instead of
+# a traceback from whichever module happens to use 3.11+ syntax.
+PYTHON_MIN = (3, 11)
+
+if sys.version_info < PYTHON_MIN:
+    _want = ".".join(str(n) for n in PYTHON_MIN)
+    _found = ".".join(str(n) for n in sys.version_info[:3])
+    sys.stderr.write(
+        "Error: ai-toolkit requires Python >= {}, found {} ({})\n".format(
+            _want, _found, sys.executable
+        )
+    )
+    if sys.platform == "darwin":
+        sys.stderr.write(
+            "macOS ships Python 3.9 as /usr/bin/python3. Install a newer one:\n"
+            "  brew install python@3.13\n"
+        )
+    else:
+        sys.stderr.write("Install Python 3.11+ via your package manager.\n")
+    sys.exit(1)
 
 # ---------------------------------------------------------------------------
 # Re-exports from frontmatter module

@@ -18,7 +18,8 @@ When you touch any `app/hooks/*.sh`, ALSO run `shellcheck --severity=warning app
 Stale counts = broken user trust. This is non-negotiable.
 
 ## Tech Stack
-- **Language**: Python (scripts, stdlib-only), Bash (hooks only), Node.js (CLI wrapper + visual-server.cjs)
+- **Language**: Python >= 3.11 (scripts, stdlib-only), Bash (hooks only), Node.js >= 18 (CLI wrapper + visual-server.cjs)
+- **Python floor**: declared in three places that must stay in sync — `PYTHON_MIN` in `bin/ai-toolkit.js`, `PYTHON_MIN` in `scripts/_common.py`, and the `python3` `min_version` in `scripts/check_deps.py`. Raising it requires bumping the `python-syntax` matrix floor in `.github/workflows/ci.yml` and the Requirements note in README.md.
 - **Framework**: Claude Code Agent Skills standard
 - **Database**: —
 
