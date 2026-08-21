@@ -6,25 +6,22 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1645%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1659%20passing-success)](tests/)
 
-## What's New in v4.27.0
+## What's New in v4.28.0
 
-**v4.27.0** teaches `doctor` about a collision it used to report as healthy:
+**v4.28.0** gives Claude Chat and Cowork their MCP servers:
 
-- Uploading the Claude app plugin ZIP registers it under `~/.claude/plugins`,
-  which Claude Code reads too. The plugin then carries the same skills, agents,
-  and hooks as the global install.
-- Claude Code merges plugin hooks with user hooks without deduplication, so
-  every toolkit hook fired twice per event and skills and agents loaded twice.
-  `doctor` printed `HEALTH CHECK PASSED` through all of it.
-- New check 11 reports the collision with the hook count; `doctor --fix`
-  disables the plugin for Claude Code and leaves the global install
-  authoritative.
-- `kb/troubleshooting/plugin-double-load.md` documents the debug-log evidence
-  and the verification steps.
-
-See [CHANGELOG.md](CHANGELOG.md) for full history.
+- The Claude app parses `claude_desktop_config.json` on startup and reports bad
+  entries in its own warning dialog, but ai-toolkit never wrote to it. A user
+  with seven servers configured for Claude Code still had an empty `mcpServers`
+  block in Cowork.
+- `ai-toolkit mcp install --editor claude-app --scope global <template>` now
+  writes it, on macOS, Windows, and Linux, honoring `CLAUDE_USER_DATA_DIR` the
+  way the app does. `--editor claude` remains Claude Code -- different runtime,
+  different file.
+- The app accepts stdio entries only, so HTTP/SSE templates are bridged as
+  `npx -y mcp-remote <url>` rather than written verbatim and silently skipped.
 
 ## Table of Contents
 
@@ -143,7 +140,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Platform | Config Files | Hooks | Scope |
 |----------|-------------|:-----:|-------|
 | Claude Code | `~/.claude/agents`, `~/.claude/skills`, `~/.claude/rules/*.md`, `~/.claude/settings.json` | ✅ | global |
-| Claude Chat / Cowork | uploaded plugin ZIP + UI global/folder instructions | Cowork only | account/app |
+| Claude Chat / Cowork | uploaded plugin ZIP + UI global/folder instructions + `claude_desktop_config.json` (MCP) | Cowork only | account/app |
 | Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
 | Windsurf (Devin Desktop) | `~/.config/devin/AGENTS.md` + `.devin/rules/*.md` + `.devin/hooks.v1.json` + `.windsurf/skills/*` | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` + `.gemini/settings.json` + `.gemini/{commands,skills,agents}/` | ✅ | project + user |
@@ -156,7 +153,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Codex CLI | Project: `AGENTS.md` + `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
 | opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins,skills}/*` + `opencode.{json,jsonc}` | ✅ | project + global (`~/.config/opencode/`) |
 
-> Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
+> Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed, except for MCP servers, which `ai-toolkit mcp install --editor claude-app --scope global` writes straight to `claude_desktop_config.json`. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
 
 ---
 
@@ -192,7 +189,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1645 tests)
+├── tests/               # Bats and Python test suite (1659 tests)
 └── CHANGELOG.md
 ```
 

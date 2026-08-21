@@ -177,6 +177,33 @@ assert '_source' not in data['mcpServers']['rag-mcp'], data
 "
 }
 
+@test "inject_mcp_cli.py bridges the HTTP template into the Claude app config" {
+    # Per-editor propagation failures are downgraded to warnings, so a silent
+    # regression here would not fail any other test. Assert the bridge shape.
+    _make_template_file "$TEST_DIR/rag-mcp.json" "rag-mcp"
+    python3 "$TOOLKIT_DIR/scripts/inject_mcp_cli.py" "$TEST_DIR/rag-mcp.json" "$TEST_DIR"
+
+    config="$(python3 -c "
+import sys
+from pathlib import Path
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from mcp_editors import resolve_editor_path
+print(resolve_editor_path('claude-app', 'global', home=Path('$TEST_DIR')))
+")"
+    [ -f "$config" ]
+    python3 -c "
+import json, sys
+data = json.load(open(sys.argv[1]))
+server = data['mcpServers']['rag-mcp']
+assert server['command'] == 'npx', server
+assert server['args'] == [
+    '-y', 'mcp-remote', 'http://localhost:9999/mcp/sse'
+], server
+assert '_source' not in server, server
+assert 'url' not in server and 'type' not in server, server
+" "$config"
+}
+
 @test "inject_mcp_cli.py propagates to codex global TOML" {
     _make_template_file "$TEST_DIR/rag-mcp.json" "rag-mcp"
     python3 "$TOOLKIT_DIR/scripts/inject_mcp_cli.py" "$TEST_DIR/rag-mcp.json" "$TEST_DIR"

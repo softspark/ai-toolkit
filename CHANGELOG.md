@@ -7,6 +7,65 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.28.0 — MCP servers reach Chat and Cowork (2026-08-21)
+
+### Added
+
+- **`claude-app` MCP adapter.** `ai-toolkit mcp install --editor claude-app
+  --scope global <template>` writes `claude_desktop_config.json` — macOS
+  `~/Library/Application Support/Claude/`, Windows `%APPDATA%/Claude/`, Linux
+  `~/.config/Claude/`, with `CLAUDE_USER_DATA_DIR` overriding the root the same
+  way the app itself honors it. Until now the Claude app was reachable only
+  through an uploaded plugin ZIP, so a user with seven MCP servers configured for
+  Claude Code still had an empty `mcpServers` block in Chat and Cowork. The app
+  parses this file on startup and reports invalid entries in its own warning
+  dialog, so it was always a supported surface — ai-toolkit just never wrote to
+  it. Note that `--editor claude` targets Claude Code (`.mcp.json`,
+  `~/.claude.json`); the two are different runtimes and different files.
+- **HTTP and SSE templates are bridged through `mcp-remote`.** The app validates
+  each entry as `{command, args, env}`; remote endpoints live in a separate
+  `remoteMcpServers` surface managed from its Connectors UI and are not
+  file-configurable. Writing a portable `{"type":"http","url":…}` entry verbatim
+  would produce a config the app silently skips, so the adapter wraps remote
+  servers as `npx -y mcp-remote <url>`, forwarding `headers` as `--header`
+  arguments. `mcp-remote` negotiates the transport itself, so one bridge shape
+  covers both the `http` and `sse` spellings. This also applies to
+  `ai-toolkit inject-mcp`, which propagates to every editor exposing a global
+  path and therefore now reaches the Claude app too.
+
+### Changed
+
+- `_resolve_global_config_root` gained a `_validate_configured_config_root`
+  helper, shared with the new adapter. `COPILOT_HOME` and `CODEX_HOME` keep
+  their existing semantics; the Claude app root is validated only when set
+  explicitly, because its platform default need not exist yet.
+
+### Fixed
+
+- **Two docs described the `claude` adapter's config path wrongly.**
+  `kb/reference/mcp-editor-compatibility.md` and `kb/reference/mcp-templates.md`
+  both claimed it writes `.claude/settings.local.json` and
+  `~/.claude/settings.json`. It writes `.mcp.json` and `~/.claude.json`, and has
+  for as long as the adapter has existed. Both scopes were wrong in both files.
+
+### Ecosystem
+
+- `claude-app` gains three `config_paths`, the `scripts/mcp_editors.py`
+  generator, and an `MCP` capability marker. Re-baseline with
+  `python3 scripts/ecosystem_doctor.py --update --tool claude-app`.
+
+### Tests
+
+- 1645 → 1659. Thirteen cover the adapter (path resolution, parent-tree
+  creation, preservation of `preferences`/`coworkUserFilesPath`/user-owned
+  servers, byte-identical re-install, the bridge shape, rejection of entries
+  with neither or both transports, four `CLAUDE_USER_DATA_DIR` validation cases,
+  removal, and transactional rollback). One covers `inject-mcp` propagation,
+  where per-editor failures are downgraded to warnings and a regression would
+  otherwise be silent.
+
+---
+
 ## v4.27.0 — Doctor sees the Claude app plugin (2026-08-21)
 
 ### Added

@@ -13,6 +13,7 @@ import json
 import math
 import os
 import re
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +22,18 @@ try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python 3.11+ should have tomllib
     tomllib = None
+
+
+def _claude_app_config_relpath() -> str:
+    """Home-relative Claude app MCP config path for the running platform."""
+    if sys.platform == "darwin":
+        return "Library/Application Support/Claude/claude_desktop_config.json"
+    if os.name == "nt":
+        return "AppData/Roaming/Claude/claude_desktop_config.json"
+    return ".config/Claude/claude_desktop_config.json"
+
+
+CLAUDE_APP_CONFIG_RELPATH = _claude_app_config_relpath()
 
 
 EDITOR_SPECS: dict[str, dict[str, str | None]] = {
@@ -93,6 +106,13 @@ EDITOR_SPECS: dict[str, dict[str, str | None]] = {
         "global_path": ".codex/config.toml",
         "format": "toml",
         "doc_scope": "project + global",
+    },
+    "claude-app": {
+        "label": "Claude Chat / Cowork",
+        "project_path": None,
+        "global_path": CLAUDE_APP_CONFIG_RELPATH,
+        "format": "json",
+        "doc_scope": "global",
     },
 }
 
@@ -202,6 +222,11 @@ def _resolve_global_config_root(
     if not configured:
         return (Path.home() / default_dir).absolute()
 
+    return _validate_configured_config_root(env_name, configured)
+
+
+def _validate_configured_config_root(env_name: str, configured: str) -> Path:
+    """Validate an operator-supplied config root without resolving symlinks."""
     config_root = Path(configured).expanduser()
     if not config_root.is_absolute():
         raise ValueError(f"Configured {env_name} must be absolute: {configured}")
@@ -217,6 +242,30 @@ def _resolve_global_config_root(
             f"Configured {env_name} is not a directory: {config_root}"
         )
     return config_root
+
+
+def _resolve_claude_app_config_path(*, home: Path | None) -> Path:
+    """Resolve ``claude_desktop_config.json`` for the Claude app.
+
+    The Claude app honors ``CLAUDE_USER_DATA_DIR`` for its user-data root, so we
+    honor it too. Unlike ``COPILOT_HOME``/``CODEX_HOME`` the default directory is
+    platform-specific and need not exist yet -- ``_atomic_write_bytes`` creates it
+    -- so only an explicitly configured root is validated.
+    """
+    if home is not None:
+        return (home / CLAUDE_APP_CONFIG_RELPATH).expanduser().absolute()
+
+    configured = os.environ.get("CLAUDE_USER_DATA_DIR", "").strip()
+    if configured:
+        root = _validate_configured_config_root("CLAUDE_USER_DATA_DIR", configured)
+        return root / "claude_desktop_config.json"
+
+    if os.name == "nt":  # pragma: no cover - exercised on Windows only
+        appdata = os.environ.get("APPDATA", "").strip()
+        if appdata:
+            return (Path(appdata) / "Claude" / "claude_desktop_config.json").absolute()
+
+    return (Path.home() / CLAUDE_APP_CONFIG_RELPATH).absolute()
 
 
 def resolve_editor_path(
@@ -256,6 +305,8 @@ def resolve_editor_path(
                 default_dir=".codex",
             )
             return codex_home / "config.toml"
+        if editor == "claude-app":
+            return _resolve_claude_app_config_path(home=home)
         return (home or Path.home()) / str(rel)
     raise ValueError(f"Unsupported scope: {scope}")
 
@@ -509,6 +560,8 @@ def _rollback_config_update(update: ConfigUpdate) -> None:
 def _normalize_server(editor: str, server: dict) -> dict:
     if editor == "antigravity":
         return _normalize_antigravity_server(server)
+    if editor == "claude-app":
+        return _normalize_claude_app_server(server)
     data = copy.deepcopy(server)
     if editor == "copilot":
         if "url" in data:
@@ -517,6 +570,65 @@ def _normalize_server(editor: str, server: dict) -> dict:
             data.setdefault("type", "local")
         data.setdefault("tools", ["*"])
     return data
+
+
+MCP_REMOTE_PACKAGE = "mcp-remote"
+
+
+def _normalize_claude_app_server(server: dict) -> dict:
+    """Emit the Claude app's stdio-only MCP schema, bridging remote endpoints.
+
+    ``claude_desktop_config.json`` validates each entry as ``{command, args,
+    env}``; remote servers live in a separate app-managed ``remoteMcpServers``
+    surface that is not file-configurable. Portable HTTP/SSE templates are
+    therefore wrapped in ``mcp-remote``, which negotiates the transport itself,
+    so one bridge shape covers both the ``http`` and ``sse`` spellings.
+    """
+    if not isinstance(server, dict):
+        raise ValueError("Claude app MCP server configuration must be an object")
+
+    data = copy.deepcopy(server)
+    for key in ("_source", "transport", "type", "tools"):
+        data.pop(key, None)
+
+    url = data.pop("url", None)
+    server_url = data.pop("serverUrl", None)
+    if url is not None and server_url is not None:
+        raise ValueError(
+            "Claude app MCP server requires exactly one of 'url' or 'serverUrl'"
+        )
+    url = url if url is not None else server_url
+
+    if "command" in data and url is not None:
+        raise ValueError(
+            "Claude app MCP server requires either 'command' or a URL, not both"
+        )
+
+    if url is not None:
+        if not isinstance(url, str) or not url.strip():
+            raise ValueError("Claude app MCP server URL must be a non-empty string")
+        headers = data.pop("headers", None)
+        args = ["-y", MCP_REMOTE_PACKAGE, url.strip()]
+        if headers is not None:
+            if not isinstance(headers, dict):
+                raise ValueError("Claude app MCP 'headers' must be an object")
+            for name, value in headers.items():
+                if not isinstance(name, str) or not isinstance(value, str):
+                    raise ValueError(
+                        "Claude app MCP 'headers' must map strings to strings"
+                    )
+                args.extend(["--header", f"{name}: {value}"])
+        bridged: dict = {"command": "npx", "args": args}
+        if "env" in data:
+            bridged["env"] = data["env"]
+        return bridged
+
+    command = data.get("command")
+    if not isinstance(command, str) or not command.strip():
+        raise ValueError(
+            "Claude app MCP server requires a non-empty 'command' or a URL"
+        )
+    return {key: data[key] for key in ("command", "args", "env") if key in data}
 
 
 def _normalize_antigravity_server(server: dict) -> dict:

@@ -49,11 +49,12 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `claude-app` |
 | Docs | https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork |
 | Plugin docs | https://support.claude.com/en/articles/13837440-use-plugins-in-claude |
-| Config surfaces | `Settings > Cowork > Global instructions`, Cowork folder instructions, `Customize > Skills`, and `Customize > Plugins` |
+| Config surfaces | `Settings > Cowork > Global instructions`, Cowork folder instructions, `Customize > Skills`, `Customize > Plugins`, plus the one file-based surface: `claude_desktop_config.json` (macOS `~/Library/Application Support/Claude/`, Windows `%APPDATA%/Claude/`, Linux `~/.config/Claude/`; `CLAUDE_USER_DATA_DIR` overrides the root) |
 | Plugin layout | `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`; ai-toolkit uses manifest paths under `claude-app/` for its generated app-only rules and hooks |
-| Our generator | `scripts/claude_app.py` (`ai-toolkit claude-app export`) |
+| Our generator | `scripts/claude_app.py` (`ai-toolkit claude-app export`); `scripts/mcp_editors.py` for the `claude-app` MCP adapter |
 | Runtime split | Skills work in Chat (web/Desktop) and Cowork. Hooks and sub-agents run only in Cowork. Claude app does **not** scan Claude Code's `~/.claude/rules/`, `CLAUDE.md`, or `~/.claude/settings.json`. |
-| Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. |
+| MCP | `ai-toolkit mcp install --editor claude-app --scope global <template>` writes `claude_desktop_config.json` directly -- no plugin involved. Entries are validated by the app as `{command, args, env}`; remote endpoints belong to the separate UI-managed `remoteMcpServers` surface, so HTTP/SSE templates are bridged through `mcp-remote`. Restart the app to load a change. |
+| Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. MCP config is the exception -- it updates from the CLI like any other editor. |
 
 ---
 

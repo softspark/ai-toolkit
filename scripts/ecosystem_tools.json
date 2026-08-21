@@ -110,18 +110,23 @@
         "UI: Customize > Plugins",
         ".claude-plugin/plugin.json",
         "claude-app/hooks/hooks.json",
-        "claude-app/skills/*/SKILL.md"
+        "claude-app/skills/*/SKILL.md",
+        "~/Library/Application Support/Claude/claude_desktop_config.json",
+        "%APPDATA%/Claude/claude_desktop_config.json",
+        "~/.config/Claude/claude_desktop_config.json"
       ],
       "our_generators": [
-        "scripts/claude_app.py"
+        "scripts/claude_app.py",
+        "scripts/mcp_editors.py"
       ],
-      "status_note": "Claude Chat/Desktop/Cowork does not scan ~/.claude/rules, CLAUDE.md, or Claude Code's user settings. ai-toolkit exports an uploadable plugin ZIP plus Cowork global instructions. Skills work in Chat and Cowork; plugin hooks and sub-agents run only in Cowork.",
+      "status_note": "Claude Chat/Desktop/Cowork does not scan ~/.claude/rules, CLAUDE.md, or Claude Code's user settings, so skills, agents, hooks, and rules ship only as an uploadable plugin ZIP plus Cowork global instructions. Local MCP servers are the exception: the app reads claude_desktop_config.json directly, so `ai-toolkit mcp install --editor claude-app --scope global` configures them without a plugin. That file accepts stdio entries only; HTTP/SSE templates are bridged through mcp-remote. Skills work in Chat and Cowork; plugin hooks and sub-agents run only in Cowork.",
       "capability_markers": [
         "Global instructions",
         "Folder instructions",
         "plugins",
         "skills",
-        "sub-agents"
+        "sub-agents",
+        "MCP"
       ],
       "version_probe": null
     },

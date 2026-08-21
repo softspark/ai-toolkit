@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-08-21T15:52:27Z",
+  "last_run": "2026-08-21T18:54:11Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "516d8db28cb3ec63",
+      "docs_hash": "fda8f5ca2c114b30",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "cacc8b579baa5e86",
+      "docs_hash": "73b44d89c7b771d9",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -101,13 +101,14 @@
       "markers": {
         "Folder instructions": true,
         "Global instructions": true,
+        "MCP": true,
         "plugins": true,
         "skills": true,
         "sub-agents": true
       }
     },
     "claude-code": {
-      "docs_hash": "2b3d6b11c4be766f",
+      "docs_hash": "1666675fbb24aaad",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -176,7 +177,7 @@
       "version": "2.1.238 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "f93d3a8437c1165f",
+      "docs_hash": "a0753bb220f610ba",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -223,7 +224,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "df3b133739abfa24",
+      "docs_hash": "61d85bae5c0cf885",
       "headings": [
         "API",
         "API Reference",
@@ -365,7 +366,7 @@
       "version": "codex-cli 0.148.0"
     },
     "cursor": {
-      "docs_hash": "2abfadb030c12d07",
+      "docs_hash": "189e666436c73107",
       "headings": [
         "Agent",
         "CLI",
@@ -397,7 +398,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "c66bb0647b70c7cf",
+      "docs_hash": "547969f433375d0c",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -438,7 +439,7 @@
       "version": "0.55.1"
     },
     "github-copilot": {
-      "docs_hash": "2e595a058e906644",
+      "docs_hash": "a313606be316fada",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -564,7 +565,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "b08c4f883c276129",
+      "docs_hash": "8bf9d2e8b6d36350",
       "headings": [
         "Accounts",
         "Advanced",

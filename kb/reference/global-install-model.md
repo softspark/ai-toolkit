@@ -26,8 +26,11 @@ active `CODEX_HOME` (default `~/.codex`) and shared user skills use
 Codex user surface.
 
 Claude Chat/Desktop/Cowork is a separate runtime. It does not read the
-filesystem surfaces under `~/.claude`; it receives ai-toolkit through an
-uploaded plugin plus app-managed global/folder instructions.
+filesystem surfaces under `~/.claude`; it receives ai-toolkit skills, agents,
+hooks, and rules through an uploaded plugin plus app-managed global/folder
+instructions. Its one file-based surface is `claude_desktop_config.json`, which
+the app parses for local MCP servers -- `ai-toolkit mcp install --editor
+claude-app --scope global` targets it directly, without a plugin.
 
 ## Command Responsibilities
 

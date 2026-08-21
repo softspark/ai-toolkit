@@ -3,9 +3,9 @@ title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
 tags: [mcp, templates, servers, configuration, editors, inject-mcp, external-templates]
-version: "1.4.1"
+version: "1.5.0"
 created: "2026-04-07"
-last_updated: "2026-08-19"
+last_updated: "2026-08-21"
 description: "Reference for 26 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
 ---
 
@@ -39,6 +39,7 @@ The `add` command merges the `mcpServers` block from the template into `.mcp.jso
 The `install` command renders the same canonical template into an editor-native config format:
 - JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Google Antigravity, Roo Code, Windsurf, Cline, Augment
 - JSON clients with additional transport metadata: GitHub Copilot
+- JSON clients restricted to stdio: Claude Chat/Cowork (`claude-app`) -- remote servers are bridged through `mcp-remote`
 - TOML clients: Codex CLI (`[mcp_servers.<name>]`)
 
 When `install` runs with `--scope project`, ai-toolkit also updates the project's `.mcp.json` so it remains the source of truth for later syncs.
@@ -47,7 +48,8 @@ When `install` runs with `--scope project`, ai-toolkit also updates the project'
 
 | Editor | Scope | Native Config Path | Notes |
 |--------|-------|--------------------|-------|
-| `claude` | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` | Preserves existing hooks and env keys |
+| `claude` | project + global | `.mcp.json`, `~/.claude.json` | Preserves unrelated top-level keys |
+| `claude-app` | global | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `%APPDATA%/Claude/claude_desktop_config.json` (Windows), `~/.config/Claude/claude_desktop_config.json` (Linux) | Claude Chat/Cowork; stdio-only schema, bridges HTTP/SSE through `mcp-remote`, preserves `preferences` and `coworkUserFilesPath`; `CLAUDE_USER_DATA_DIR` overrides the root |
 | `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
 | `copilot` | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds `type` and `tools: ["*"]` automatically |
 | `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
