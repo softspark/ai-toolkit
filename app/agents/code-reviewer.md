@@ -59,6 +59,13 @@ Before reviewing, gather context using available tools:
 - Secrets management
 - IAM/permissions scope
 
+### 5. Frontend & UI Craft (Anti-Slop Audit)
+- Generic AI tells: gradient text headlines, purple/blue washes, 3-column card clichés, nested cards
+- Missing interactive states: lacking focus-visible, active, disabled, loading, error, success
+- Input stability: layout shifts caused by changing border-widths
+- Mobile responsiveness: horizontal scroll risk, clickable affordance text wrapping
+- Fabricated content: invented metrics, fake testimonials, mock OS/browser chrome
+
 ## Review Checklist
 
 ### Security (check first)
@@ -77,6 +84,13 @@ Before reviewing, gather context using available tools:
 - [ ] Code is readable and maintainable
 - [ ] Tests cover critical paths
 - [ ] Documentation is accurate
+
+### Frontend & UI Craft
+- [ ] No gradient headlines (`background-clip: text`) or purple/blue gradient heroes
+- [ ] Interactive elements implement all 8 states
+- [ ] Inputs maintain constant 1px border-width (zero layout shift)
+- [ ] Mobile responsive: `overflow-x: clip`, single-line button text
+- [ ] No invented metrics, fake testimonials, or mock chrome
 
 ### Performance
 - [ ] No obvious N+1 queries

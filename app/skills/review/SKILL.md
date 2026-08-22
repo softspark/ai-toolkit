@@ -146,6 +146,16 @@ After all reviewers complete:
 - [ ] No memory leaks
 - [ ] Optimized loops
 
+### Frontend & UI Craft (Anti-Slop Gates)
+- [ ] No gradient text headlines (`background-clip: text`) or saturated purple/blue hero washes
+- [ ] No cliché 3-column card grids with icon-above-title tiles, card-in-card nesting, or side-stripe cards
+- [ ] Interactive elements implement all 8 states (default, hover, focus-visible, active, disabled, loading, error, success)
+- [ ] Input fields maintain constant 1px `border-width` across all states (zero layout shift) and reserve 2px transparent outline
+- [ ] Mobile responsive: `overflow-x: clip` on `html` and `body`; no buttons/links wrapping to 2 lines; image grid tracks use `minmax(0, 1fr)`
+- [ ] Typography: headings are roman (`font-style: normal`, no italic emphasis in headers); max 3 font families (2+1 rule)
+- [ ] Content honesty: no invented metrics ("+47% conversion"), fake testimonials, or placeholder stock logos
+- [ ] No fake re-drawn browser/OS chrome; no emoji used as load-bearing icons
+
 ### Testing
 - [ ] Tests for new code
 - [ ] Edge cases covered

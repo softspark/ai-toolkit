@@ -8,26 +8,34 @@
 - Names specific failure modes; rejects vague advice like "use good design"
 
 ## Design Craft Priorities
-Impeccable frontend covers seven domains. One concrete rule per domain (guidance, not mandate):
+Core frontend craft covers eight domains (guidance, not mandate):
 
-1. **Typography** — Reject Arial/Inter as defaults. Pair display + text faces on a modular scale (e.g., 1.125 / 1.25 / 1.333). Enable OpenType features (tabular figures, ligatures, stylistic sets) when they serve the content.
-2. **Color & Contrast** — Prefer OKLCH over HSL/RGB for perceptual uniformity. Tint neutrals toward the brand hue (pure grays feel sterile). Never pure `#000` — use tinted near-black. Gray-on-color frequently fails contrast; verify.
-3. **Spatial** — Consistent spacing scale (e.g., 4/8/12/16/24/32/48), not ad-hoc pixel values. Do not nest cards inside cards — promote to flat sections with hierarchy via type and spacing.
-4. **Motion** — Easing conveys mass and intent. Avoid bounce/elastic curves (feel dated). Stagger sequential reveals. Always respect `prefers-reduced-motion`.
-5. **Interaction** — Replace default focus outlines; never just remove them. Loading states show progress, not just spinners. Errors name the remedy, not just the failure.
-6. **Responsive** — Mobile-first. Use `clamp()` for fluid typography where fixed breakpoints would fight content. Container queries for component-level responsiveness, not only viewport.
-7. **UX Writing** — Button labels = verb + object ("Save changes", not "OK"). Error messages = cause + remedy. Empty states earn their screen with value, not apologies.
+1. **Typography (2+1 Rule)** — Reject Arial/Inter as unconsidered defaults. Pair display + text faces on a modular scale. Display headers are strictly roman (`font-style: normal`, never single-word italic emphasis in headlines). Max 3 font families; outlier face used in at most 2 slots.
+2. **Color & Locked Tokens** — Prefer OKLCH over HSL/RGB for perceptual uniformity. Tint neutrals toward the brand hue (pure grays feel sterile; minimum 0.005 chroma). Never pure `#000` or `#fff`. Lock tokens to CSS variables (`var(--color-accent)`) without mid-render inline hex/rgb improvisation. Keep accent area <=5% of viewport.
+3. **Spatial & Macrostructures** — Consistent spacing scale (e.g., 4/8/12/16/24/32/48), not ad-hoc pixel values. Break the repetitive Hero → 3 features → CTA → footer template by choosing intentional macrostructures (Bento Grid, Long Document, Marquee, Stat-Led, Workbench, FAQ, Manifesto). Do not nest cards inside cards or use thick side stripes.
+4. **Motion** — Easing conveys mass and intent. Avoid bounce/elastic curves (feel dated). Stagger sequential reveals. Exit faster than enter. Always respect `prefers-reduced-motion`.
+5. **Interaction & 8 States** — Every interactive element implements all 8 states: default, hover, focus-visible, active, disabled, loading, error, success. Maintain constant 1px `border-width` on inputs across all states (zero layout shift) with a reserved 2px transparent outline. Input height equals button height (>=44px floor).
+6. **Responsive Non-Negotiables** — Mobile-first (320px–768px verified). Apply `overflow-x: clip` on `html` and `body` (never `hidden`). Buttons, nav links, and CTAs never wrap to 2 lines. Use `minmax(0, 1fr)` for image grid tracks.
+7. **UX Writing** — Button labels = verb + object ("Save changes", not "OK"). Error messages = cause + remedy. Empty states earn their screen with value, not apologies. Never invent fake metrics or testimonials.
+8. **Pre-Emit Self-Critique** — Score output 1–5 on Philosophy, Hierarchy, Execution, Specificity, Restraint, Variety (all >=3).
 
-## Anti-Patterns (Taste Failures)
+## Anti-Patterns (Taste & AI-Slop Failures)
 The LLM defaults — reject on sight:
+- Saturated purple-to-pink/blue full-bleed gradient heroes or gradient headline text (`background-clip: text`)
+- Cliché 3-equal-column cards with icon-above-heading tiles
+- Cards nested inside cards or cards with thick side-stripe borders
 - Arial / Inter / system-default typography with no intentional pairing
+- Italic headings or single-word italic emphasis in headlines
+- Changing `border-width` on input focus/hover causing layout shifts
+- Missing interactive states (only styling default + hover)
+- Buttons or links wrapping to two lines on mobile
 - Gray text on colored backgrounds (contrast failure)
-- Pure `#000` black (use tinted near-black instead)
-- Cards nested inside cards
+- Pure `#000` black or `#fff` flat surfaces (use tinted neutrals)
 - Bounce / elastic easing curves
-- Purple gradients (the generic-LLM tell)
 - Motion that ignores `prefers-reduced-motion`
 - Generic stock illustrations for empty states
+- Fake re-drawn browser bars or phone chrome
+- Invented metrics ("+47% conversion"), fake testimonials, or placeholder stock logos
 - Emoji standing in for proper icons (outside branded contexts)
 - Everything centered because no layout opinion was formed
 
