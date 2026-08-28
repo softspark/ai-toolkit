@@ -259,25 +259,36 @@ def _fm_has(lines: list[str], field: str) -> bool:
 def _validate_invocation_metadata(label: str, fm_lines: list[str],
                                   vr: ValidationResult) -> None:
     """Reject metadata spellings that DSH interprets differently or ignores."""
+    entries: list[tuple[str, str]] = []
+    for line_number, line in enumerate(fm_lines, start=2):
+        if not line.strip() or line.lstrip().startswith("#") or line[0].isspace():
+            continue
+        parsed = _parse_supported_top_level_entry(
+            line,
+            label=label,
+            line_number=line_number,
+            vr=vr,
+        )
+        if parsed is not None:
+            entries.append(parsed)
+
     for field in CAMEL_CASE_INVOCATION_FIELDS:
-        if _fm_has(fm_lines, field):
+        if any(key == field for key, _ in entries):
             vr.error(
                 f"{label}: camel-case field '{field}' is forbidden; "
                 "use kebab-case invocation metadata"
             )
 
     for field in INVOCATION_BOOLEAN_FIELDS:
-        occurrences = sum(
-            1 for line in fm_lines if line.startswith(f"{field}:")
-        )
+        occurrences = sum(1 for key, _ in entries if key == field)
         if occurrences > 1:
             vr.error(
                 f"{label}: duplicate canonical invocation key '{field}'"
             )
-        for line in fm_lines:
-            if not line.startswith(f"{field}:"):
+        for key, raw_value in entries:
+            if key != field:
                 continue
-            value = _frontmatter_scalar(line.split(":", 1)[1]).lower()
+            value = _frontmatter_scalar(raw_value).lower()
             if value not in INVOCATION_BOOLEAN_VALUES:
                 vr.error(
                     f"{label}: field '{field}' has invalid boolean value"
@@ -293,6 +304,48 @@ def _frontmatter_scalar(raw_value: str) -> str:
     if quoted:
         return quoted.group(2).strip()
     return re.split(r"\s+#", value, maxsplit=1)[0].strip()
+
+
+def _parse_supported_top_level_entry(
+    line: str,
+    *,
+    label: str,
+    line_number: int,
+    vr: ValidationResult,
+) -> tuple[str, str] | None:
+    """Parse one scalar-mapping entry without YAML indirection features."""
+    if line.startswith(("'", '"')):
+        vr.error(
+            f"{label}:{line_number} - quoted frontmatter keys are unsupported"
+        )
+        return None
+    if re.match(r"^<<\s*:", line):
+        vr.error(f"{label}:{line_number} - YAML merge key '<<' is unsupported")
+        return None
+    if re.match(r"^[A-Za-z][A-Za-z0-9-]*\s+:", line):
+        vr.error(f"{label}:{line_number} - whitespace before ':' is unsupported")
+        return None
+    match = re.fullmatch(r"(?P<key>[A-Za-z][A-Za-z0-9-]*):(?P<value>.*)", line)
+    if match is None:
+        feature = "YAML anchors" if line.startswith("&") else "YAML aliases"
+        if line.startswith(("&", "*")):
+            vr.error(f"{label}:{line_number} - {feature} are unsupported")
+        else:
+            vr.error(
+                f"{label}:{line_number} - unsupported top-level key syntax; "
+                "use an unquoted key immediately followed by ':'"
+            )
+        return None
+
+    raw_value = match.group("value")
+    value = raw_value.strip()
+    if value.startswith("&"):
+        vr.error(f"{label}:{line_number} - YAML anchors are unsupported")
+        return None
+    if value.startswith("*"):
+        vr.error(f"{label}:{line_number} - YAML aliases are unsupported")
+        return None
+    return match.group("key"), raw_value
 
 
 def _emitted_quoted_scalar(
@@ -409,17 +462,15 @@ def _parse_emitted_frontmatter(
         if line[0].isspace():
             vr.error(f"{label}:{line_number} - unexpected indentation")
             continue
-        if ":" not in line:
-            vr.error(
-                f"{label}:{line_number} - top-level frontmatter entry must "
-                "use 'key: value'"
-            )
+        parsed = _parse_supported_top_level_entry(
+            line,
+            label=label,
+            line_number=line_number,
+            vr=vr,
+        )
+        if parsed is None:
             continue
-        key, raw_value = line.split(":", 1)
-        key = key.strip()
-        if not key:
-            vr.error(f"{label}:{line_number} - empty frontmatter key")
-            continue
+        key, raw_value = parsed
         if key in seen_keys:
             vr.error(f"{label}:{line_number} - duplicate top-level key '{key}'")
             continue

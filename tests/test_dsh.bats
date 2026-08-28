@@ -201,6 +201,31 @@ SH
     [ "$after" = "$before" ]
 }
 
+@test "dsh: every noncanonical regular owner marker blocks install unchanged" {
+    for variant in reversed duplicate unknown leading-space trailing-space blank-line; do
+        project="$TEST_PROJECT/$variant"
+        marker="$project/.agents/.ai-toolkit-skill-owners"
+        mkdir -p "$project/.agents/skills/user-skill"
+        printf '%s\n' 'user content' > "$project/.agents/skills/user-skill/notes.txt"
+        case "$variant" in
+            reversed) printf '%s\n' 'dsh' 'codex' > "$marker" ;;
+            duplicate) printf '%s\n' 'codex' 'codex' > "$marker" ;;
+            unknown) printf '%s\n' 'codex' 'user-runtime' > "$marker" ;;
+            leading-space) printf ' codex\n' > "$marker" ;;
+            trailing-space) printf 'codex \n' > "$marker" ;;
+            blank-line) printf 'codex\n\n' > "$marker" ;;
+        esac
+        before=$(surface_fingerprint "$project/.agents")
+
+        run bash -c "cd '$project' && HOME='$TEST_HOME' \
+            python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors dsh"
+        [ "$status" -ne 0 ]
+        echo "$output" | grep -q 'invalid skill-surface owner marker'
+        after=$(surface_fingerprint "$project/.agents")
+        [ "$after" = "$before" ]
+    done
+}
+
 @test "dsh: symlink owner marker is rejected before managed bytes change" {
     run bash -c "cd '$TEST_PROJECT' && HOME='$TEST_HOME' \
         python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"
@@ -496,6 +521,70 @@ PY
     echo "$output" | grep -Eq '^validated=[1-9][0-9]*$'
 }
 
+@test "dsh: adapted renderer preserves exact quoted invocation metadata" {
+    run env PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$TEST_PROJECT" <<'PY'
+import sys
+from pathlib import Path
+
+from codex_skill_adapter import build_dsh_skill_text
+
+root = Path(sys.argv[1])
+fixtures = {
+    "quoted-lower": (
+        'user-invocable: "false"',
+        "disable-model-invocation: 'true'",
+    ),
+    "quoted-alternate": (
+        "user-invocable: 'YES'",
+        'disable-model-invocation: "OFF"',
+    ),
+}
+
+for name, invocation_lines in fixtures.items():
+    source = root / f"{name}.md"
+    source.write_text(
+        "---\n"
+        f"name: {name}\n"
+        f"description: Exact metadata for {name}.\n"
+        "allowed-tools: Agent, Bash\n"
+        "argument-hint: unsupported output field\n"
+        f"{invocation_lines[0]}\n"
+        f"{invocation_lines[1]}\n"
+        "---\n"
+        "Agent(prompt=\"delegate\")\n",
+        encoding="utf-8",
+    )
+    rendered = build_dsh_skill_text(source)
+    frontmatter = rendered.split("---", 2)[1].splitlines()
+    for line in invocation_lines:
+        assert frontmatter.count(line) == 1, (name, line, frontmatter)
+    assert not any(line.startswith("allowed-tools:") for line in frontmatter)
+    assert not any(line.startswith("argument-hint:") for line in frontmatter)
+    assert "Codex Translation Layer" not in rendered
+    assert "Codex-native" not in rendered
+
+duplicate = root / "duplicate.md"
+duplicate.write_text(
+    "---\n"
+    "name: duplicate\n"
+    "description: Duplicate invocation metadata.\n"
+    "allowed-tools: Agent\n"
+    "user-invocable: true\n"
+    "user-invocable: false\n"
+    "---\n"
+    "Agent(prompt=\"delegate\")\n",
+    encoding="utf-8",
+)
+try:
+    build_dsh_skill_text(duplicate)
+except ValueError as error:
+    assert "Duplicate invocation metadata field: user-invocable" in str(error)
+else:
+    raise AssertionError("duplicate invocation metadata must not be rendered")
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "dsh: codex and dsh share one deterministic portable skill surface" {
     first="$TEST_PROJECT/codex-dsh"
     second="$TEST_PROJECT/dsh-codex"
@@ -749,6 +838,61 @@ MD
     echo "$output" | grep -q "field 'user-invocable' has invalid boolean value"
 }
 
+@test "dsh: emitted-skill validator fails closed on YAML key indirection" {
+    fixture="$TEST_PROJECT/emitted"
+    for name in quoted-key spaced-key anchored-value aliased-value merged-key; do
+        mkdir -p "$fixture/.agents/skills/$name"
+    done
+    cat > "$fixture/.agents/skills/quoted-key/SKILL.md" <<'MD'
+---
+name: quoted-key
+description: Quoted invocation key.
+"userInvocable": false
+---
+Body.
+MD
+    cat > "$fixture/.agents/skills/spaced-key/SKILL.md" <<'MD'
+---
+name: spaced-key
+description: Spaced invocation key.
+userInvocable : false
+---
+Body.
+MD
+    cat > "$fixture/.agents/skills/anchored-value/SKILL.md" <<'MD'
+---
+name: anchored-value
+description: Anchored invocation value.
+user-invocable: &invocation.flag false
+---
+Body.
+MD
+    cat > "$fixture/.agents/skills/aliased-value/SKILL.md" <<'MD'
+---
+name: aliased-value
+description: Aliased invocation value.
+disable-model-invocation: *invocation.flag
+---
+Body.
+MD
+    cat > "$fixture/.agents/skills/merged-key/SKILL.md" <<'MD'
+---
+name: merged-key
+description: Merged invocation metadata.
+<<: *invocation-defaults
+---
+Body.
+MD
+
+    run validate_emitted "$fixture"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q 'quoted-key/SKILL.md:4 - quoted frontmatter keys are unsupported'
+    echo "$output" | grep -q "spaced-key/SKILL.md:4 - whitespace before ':' is unsupported"
+    echo "$output" | grep -q 'anchored-value/SKILL.md:4 - YAML anchors are unsupported'
+    echo "$output" | grep -q 'aliased-value/SKILL.md:4 - YAML aliases are unsupported'
+    echo "$output" | grep -q "merged-key/SKILL.md:4 - YAML merge key '<<' is unsupported"
+}
+
 @test "dsh: emitted-skill validator enforces kebab-case one-level layout" {
     fixture="$TEST_PROJECT/emitted"
     mkdir -p "$fixture/.agents/skills/Bad_Name"
@@ -985,6 +1129,41 @@ PY
     [ "$status" -ne 0 ]
     echo "$output" | grep -q "duplicate canonical invocation key 'user-invocable'"
     echo "$output" | grep -q "duplicate canonical invocation key 'disable-model-invocation'"
+}
+
+@test "dsh: canonical validator fails closed on YAML invocation indirection" {
+    fixture="$TEST_PROJECT/toolkit"
+    mkdir -p "$fixture"
+    tar -cf - -C "$TOOLKIT_DIR" --exclude=.git --exclude=node_modules . | \
+        tar -xf - -C "$fixture"
+
+    python3 - "$fixture/app/skills/clean-code/SKILL.md" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+closing = text.index("\n---\n", 4)
+indirection = """
+"userInvocable": false
+disableModelInvocation : true
+user-invocable: &enabled.flag true
+disable-model-invocation: *enabled.flag
+<<: *invocation-defaults
+""".rstrip()
+path.write_text(
+    text[:closing] + "\n" + indirection + text[closing:],
+    encoding="utf-8",
+)
+PY
+
+    run python3 "$fixture/scripts/validate.py" --strict "$fixture"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q 'quoted frontmatter keys are unsupported'
+    echo "$output" | grep -q "whitespace before ':' is unsupported"
+    echo "$output" | grep -q 'YAML anchors are unsupported'
+    echo "$output" | grep -q 'YAML aliases are unsupported'
+    echo "$output" | grep -q "YAML merge key '<<' is unsupported"
 }
 
 @test "dsh: emitted-skill traversal bounds one directory before sorting" {

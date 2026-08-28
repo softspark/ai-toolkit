@@ -75,6 +75,85 @@ setup() {
     [ -f "$orphaned/.agents/.ai-toolkit-skill-owners" ]
 }
 
+@test "uninstall preserves every noncanonical agent-skill owner marker" {
+    for variant in reversed duplicate unknown leading-space trailing-space blank-line; do
+        local project="$TEST_ROOT/owner-$variant"
+        local marker="$project/.agents/.ai-toolkit-skill-owners"
+        mkdir -p "$project/.agents"
+        case "$variant" in
+            reversed) printf '%s\n' 'dsh' 'codex' > "$marker" ;;
+            duplicate) printf '%s\n' 'codex' 'codex' > "$marker" ;;
+            unknown) printf '%s\n' 'codex' 'user-runtime' > "$marker" ;;
+            leading-space) printf ' codex\n' > "$marker" ;;
+            trailing-space) printf 'codex \n' > "$marker" ;;
+            blank-line) printf 'codex\n\n' > "$marker" ;;
+        esac
+        cp "$marker" "$project/marker.before"
+
+        HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+            --local --yes --target "$project"
+        [ "$status" -eq 0 ]
+        [ -f "$marker" ]
+        cmp "$project/marker.before" "$marker"
+    done
+}
+
+@test "uninstall preserves non-file and unreadable owner-marker collisions" {
+    local symlinked="$TEST_ROOT/symlinked-owner"
+    local external="$TEST_ROOT/external-owner"
+    mkdir -p "$symlinked/.agents"
+    printf '%s\n' 'codex' > "$external"
+    ln -s "$external" "$symlinked/.agents/.ai-toolkit-skill-owners"
+
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$symlinked"
+    [ "$status" -eq 0 ]
+    [ -L "$symlinked/.agents/.ai-toolkit-skill-owners" ]
+    [ "$(cat "$external")" = 'codex' ]
+
+    local directory="$TEST_ROOT/directory-owner"
+    mkdir -p "$directory/.agents/.ai-toolkit-skill-owners"
+    printf '%s\n' 'user content' > \
+        "$directory/.agents/.ai-toolkit-skill-owners/keep.txt"
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$directory"
+    [ "$status" -eq 0 ]
+    [ -f "$directory/.agents/.ai-toolkit-skill-owners/keep.txt" ]
+
+    local unreadable="$TEST_ROOT/unreadable-owner"
+    mkdir -p "$unreadable/.agents/skills"
+    printf '%s\n' 'codex' > \
+        "$unreadable/.agents/.ai-toolkit-skill-owners"
+    run env PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$unreadable" <<'PY'
+import sys
+from pathlib import Path
+
+import uninstall
+
+project = Path(sys.argv[1])
+marker = project / ".agents" / ".ai-toolkit-skill-owners"
+skills = project / ".agents" / "skills"
+real_read_bytes = Path.read_bytes
+
+
+def deny_marker_read(path):
+    if path == marker:
+        raise PermissionError("injected unreadable owner marker")
+    return real_read_bytes(path)
+
+
+Path.read_bytes = deny_marker_read
+try:
+    removed = uninstall._remove_skill_surface_owners_marker(skills, project)
+finally:
+    Path.read_bytes = real_read_bytes
+assert not removed
+assert marker.is_file()
+PY
+    [ "$status" -eq 0 ]
+    [ -f "$unreadable/.agents/.ai-toolkit-skill-owners" ]
+}
+
 @test "uninstall --local removes generated Codex and Copilot surfaces but preserves user data" {
     mkdir -p "$TEST_PROJECT/.claude" "$TEST_PROJECT/.github"
 

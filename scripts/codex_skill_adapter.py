@@ -274,12 +274,11 @@ def _build_portable_skill_text(skill_file: Path, platform: str) -> str:
             ("name", str(name)),
             ("description", json.dumps(description, ensure_ascii=False)),
         ]
-        if platform == "dsh":
-            for field in ("user-invocable", "disable-model-invocation"):
-                value = frontmatter_field(skill_file, field)
-                if value:
-                    rendered_entries.append((field, value))
         rendered_frontmatter = _render_frontmatter(rendered_entries)
+        if platform == "dsh":
+            invocation_lines = _invocation_metadata_lines(match.group("frontmatter"))
+            if invocation_lines:
+                rendered_frontmatter += "\n" + "\n".join(invocation_lines)
     else:
         frontmatter = _parse_frontmatter(match.group("frontmatter"))
         rendered_frontmatter = _render_frontmatter(frontmatter)
@@ -359,20 +358,12 @@ def _read_owner_marker_state(marker: Path) -> _OwnerMarkerState:
         )
     try:
         data = marker.read_bytes()
-        content = data.decode("utf-8")
     except (OSError, UnicodeError) as error:
         raise RuntimeError(
             f"Refusing invalid skill-surface owner marker {marker}: "
             f"cannot read regular marker ({error})"
         ) from error
-    owners = content.splitlines()
-    canonical = "\n".join(sorted(set(owners))) + "\n"
-    if (
-        not owners
-        or len(owners) != len(set(owners))
-        or set(owners) - SKILL_SURFACE_OWNERS
-        or content != canonical
-    ):
+    if parse_skill_surface_owners(data) is None:
         raise RuntimeError(
             f"Refusing invalid skill-surface owner marker {marker}: expected "
             "one canonical owner per line (codex and/or dsh)"
@@ -385,6 +376,29 @@ def _read_owner_marker_state(marker: Path) -> _OwnerMarkerState:
         metadata.st_mtime_ns,
     )
     return _OwnerMarkerState(data=data, signature=signature)
+
+
+def serialize_skill_surface_owners(owners: set[str]) -> bytes:
+    """Serialize one non-empty known owner set into its only managed form."""
+    if not owners or not owners <= SKILL_SURFACE_OWNERS:
+        raise ValueError(f"Invalid .agents/skills owners: {sorted(owners)}")
+    return ("\n".join(sorted(owners)) + "\n").encode("utf-8")
+
+
+def parse_skill_surface_owners(data: bytes) -> set[str] | None:
+    """Return owners only when bytes exactly match the canonical serialization."""
+    try:
+        lines = data.decode("utf-8").splitlines()
+    except UnicodeError:
+        return None
+    owners = set(lines)
+    if len(lines) != len(owners):
+        return None
+    try:
+        canonical = serialize_skill_surface_owners(owners)
+    except ValueError:
+        return None
+    return owners if data == canonical else None
 
 
 def _assert_owner_marker_state(marker: Path, expected: _OwnerMarkerState) -> None:
@@ -573,12 +587,10 @@ def set_skill_surface_owners(
     expected_state: _OwnerMarkerState | None = None,
 ) -> None:
     """Record explicit owners for the otherwise ambiguous shared directory."""
-    if not owners or not owners <= SKILL_SURFACE_OWNERS:
-        raise ValueError(f"Invalid .agents/skills owners: {sorted(owners)}")
     _assert_safe_skill_roots(skills_dst.parent, skills_dst)
     marker = skills_dst.parent / SKILL_SURFACE_OWNERS_MARKER
     previous = expected_state or _read_owner_marker_state(marker)
-    temp_path = _stage_text(marker, "\n".join(sorted(owners)) + "\n")
+    temp_path = _stage_bytes(marker, serialize_skill_surface_owners(owners))
     try:
         _assert_owner_marker_state(marker, previous)
         os.replace(temp_path, marker)
@@ -590,19 +602,14 @@ def set_skill_surface_owners(
 def skill_surface_owners(skills_dst: Path) -> set[str] | None:
     """Return declared owners, ``None`` for a legacy unowned surface."""
     marker = skills_dst.parent / SKILL_SURFACE_OWNERS_MARKER
-    if not marker.exists() and not marker.is_symlink():
-        return None
-    if marker.is_symlink() or not marker.is_file():
-        return set()
     try:
-        owners = {
-            line.strip()
-            for line in marker.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        }
-    except (OSError, UnicodeError):
+        state = _read_owner_marker_state(marker)
+    except RuntimeError:
         return set()
-    return owners if owners <= SKILL_SURFACE_OWNERS else set()
+    if state.data is None:
+        return None
+    owners = parse_skill_surface_owners(state.data)
+    return owners if owners is not None else set()
 
 
 class _SkillSurfaceTransaction:
@@ -1113,6 +1120,22 @@ def _parse_frontmatter(frontmatter_text: str) -> list[tuple[str, str]]:
         key, value = line.split(":", 1)
         entries.append((key.strip(), value.strip()))
     return entries
+
+
+def _invocation_metadata_lines(frontmatter_text: str) -> list[str]:
+    """Return exact canonical invocation lines, rejecting duplicate fields."""
+    fields = ("user-invocable", "disable-model-invocation")
+    lines: list[str] = []
+    seen: set[str] = set()
+    for line in frontmatter_text.splitlines():
+        field = next((name for name in fields if line.startswith(f"{name}:")), None)
+        if field is None:
+            continue
+        if field in seen:
+            raise ValueError(f"Duplicate invocation metadata field: {field}")
+        seen.add(field)
+        lines.append(line)
+    return lines
 
 
 def _render_frontmatter(entries: list[tuple[str, str]]) -> str:

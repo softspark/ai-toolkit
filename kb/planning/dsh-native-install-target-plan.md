@@ -16,7 +16,7 @@ created: "2026-08-27"
 last_updated: "2026-08-28"
 approved: "2026-08-28"
 started: "2026-08-28"
-completion: "0%"
+completion: "Phase 1 of 3 complete"
 predecessor: "kb/history/completed/dsh-integration-plan-superseded.md"
 description: "Implementation plan for an explicit ai-toolkit DSH target that emits project skills and safely manages the published dsh-codex and dsh-orchestrator packages without handling vendor credentials."
 ---
@@ -79,11 +79,11 @@ This split preserves the meaning of `--local`. It also makes global DSH changes 
 
 ## Global Success Criteria
 
-- [ ] `ai-toolkit install --local --editors dsh` emits the complete managed skill catalog and makes no write under `$DSH_HOME`.
+- [x] `ai-toolkit install --local --editors dsh` emits the complete managed skill catalog and makes no write under `$DSH_HOME`.
 - [ ] `ai-toolkit dsh install --profile web` installs both exact 1.0.0 packages and the released preset without manual file editing.
 - [ ] Install, update, doctor, and uninstall preserve user-authored presets and unrelated DSH plugins.
 - [ ] No command accepts, reads, copies, logs, or forwards provider credentials.
-- [ ] `dsh` remains excluded from `--editors all`, auto-detection, default profiles, and default global editors.
+- [x] `dsh` remains excluded from `--editors all`, auto-detection, default profiles, and default global editors.
 - [ ] Offline, missing-runtime, collision, partial-install, and interrupted-update paths fail without leaving untracked artifacts.
 - [ ] The full repository test, validation, skill-audit, and documentation gates pass.
 
@@ -95,12 +95,23 @@ Size: **M (1 to 2 days)**.
 
 ### Phase 1 Success Criteria
 
-- [ ] CLI help and validation accept `dsh` only when named explicitly.
-- [ ] `--editors all` resolves to the existing stable editor set and excludes `dsh`.
-- [ ] Dry-run lists `.agents/skills` changes but writes nothing.
-- [ ] Project installation emits every managed skill at one discovery level.
-- [ ] Validation rejects camel-case invocation fields, non-boolean invocation values, invalid skill directory names, and nested `SKILL.md` locations.
-- [ ] A read-only doctor check reports DSH, Codex, Claude Code, and Copilot executable availability without opening credential stores.
+- [x] CLI help and validation accept `dsh` only when named explicitly.
+- [x] `--editors all` resolves to the existing stable editor set and excludes `dsh`.
+- [x] Dry-run lists `.agents/skills` changes but writes nothing.
+- [x] Project installation emits every managed skill at one discovery level.
+- [x] Validation rejects camel-case invocation fields, non-boolean invocation values, invalid skill directory names, and nested `SKILL.md` locations.
+- [x] A read-only doctor check reports DSH, Codex, Claude Code, and Copilot executable availability without opening credential stores.
+
+### Phase 1 Completion Evidence
+
+Completed on 2026-08-28 after sequential TDD, three spec review passes, and four quality-review repair cycles.
+
+- Full repository suite: 1726/1726 tests.
+- Final spec review: 10/10 requirements approved.
+- Final quality review: 0 Critical, 0 Important.
+- Strict validator: 0 errors, 0 warnings.
+- Skill audit: 0 HIGH, 0 WARN.
+- DSH remains explicit-only, project-local, credential-blind, transactionally owned, and outside Phase 2 profile lifecycle behavior.
 
 ### Phase 1 Tasks
 

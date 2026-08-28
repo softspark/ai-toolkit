@@ -30,6 +30,38 @@ teardown_file() {
     rm -rf "$B3_GEMINI" "$B3_AUGMENT" "$B3_CODEX_OFF" "$B3_CODEX_ON"
 }
 
+surface_fingerprint() {
+    python3 - "$1" <<'PY'
+import hashlib
+import os
+import stat
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+pending = [root]
+records = []
+while pending:
+    path = pending.pop()
+    relative = "." if path == root else path.relative_to(root).as_posix()
+    metadata = path.lstat()
+    mode = stat.S_IFMT(metadata.st_mode)
+    if stat.S_ISLNK(mode):
+        records.append((relative, "link", os.readlink(path)))
+    elif stat.S_ISDIR(mode):
+        records.append((relative, "dir", ""))
+        pending.extend(sorted(path.iterdir(), reverse=True))
+    elif stat.S_ISREG(mode):
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        records.append((relative, "file", digest))
+    else:
+        records.append((relative, "other", oct(mode)))
+
+for record in sorted(records):
+    print("\t".join(record))
+PY
+}
+
 # ── Gemini pointer ────────────────────────────────────────────────────────
 
 @test "gemini-skills: .gemini/skills/ directory is created" {
@@ -157,6 +189,7 @@ PY
     [ -d "$B3_CODEX_ON/.agents/skills" ]
     count=$(ls "$B3_CODEX_ON/.agents/skills" | wc -l | xargs)
     [ "$count" -ge 50 ]
+    [ "$(cat "$B3_CODEX_ON/.agents/.ai-toolkit-skill-owners")" = 'codex' ]
 }
 
 @test "codex-skills: each mirrored entry exposes SKILL.md" {
@@ -479,6 +512,52 @@ PY
     rm -rf "$tmp"
 }
 
+@test "codex-skills: standalone catalog sync rolls back a failed DSH transition" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/home" "$tmp/project"
+    (cd "$tmp/project" && HOME="$tmp/home" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors dsh >/dev/null)
+    printf '%s\n' 'preserve user addition' > \
+        "$tmp/project/.agents/skills/orchestrate/user-added.txt"
+    before=$(surface_fingerprint "$tmp/project/.agents")
+
+    run env PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$tmp/project" <<'PY'
+import sys
+from pathlib import Path
+
+import generate_codex_skills as module
+
+project = Path(sys.argv[1])
+real_sync = module.sync_codex_skill
+calls = 0
+
+
+def fail_mid_catalog(*args, **kwargs):
+    global calls
+    calls += 1
+    if calls == 5:
+        raise OSError("injected standalone catalog failure")
+    return real_sync(*args, **kwargs)
+
+
+module.sync_codex_skill = fail_mid_catalog
+try:
+    module.generate(project, enable_codex_skills=True)
+finally:
+    module.sync_codex_skill = real_sync
+assert calls == 5, calls
+PY
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q 'injected standalone catalog failure'
+    after=$(surface_fingerprint "$tmp/project/.agents")
+    [ "$after" = "$before" ]
+    [ "$(cat "$tmp/project/.agents/.ai-toolkit-skill-owners")" = 'dsh' ]
+    grep -q 'preserve user addition' \
+        "$tmp/project/.agents/skills/orchestrate/user-added.txt"
+    rm -rf "$tmp"
+}
+
 @test "codex-skills: directory fsync is portable and narrows ignored errors" {
     run python3 - "$TOOLKIT_DIR" <<'PY'
 import errno
@@ -573,4 +652,18 @@ PY
     count=$(ls "$tmp/.agents/skills" | wc -l | xargs)
     [ "$count" -ge 50 ]
     rm -rf "$tmp"
+}
+
+@test "codex-skills: legacy CLI target ordering remains compatible" {
+    before_enable="$(mktemp -d)"
+    after_enable="$(mktemp -d)"
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" \
+        "$before_enable" --enable >/dev/null
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" \
+        --enable "$after_enable" >/dev/null
+    [ "$(cat "$before_enable/.agents/.ai-toolkit-skill-owners")" = 'codex' ]
+    [ "$(cat "$after_enable/.agents/.ai-toolkit-skill-owners")" = 'codex' ]
+    [ "$(find "$before_enable/.agents/skills" -mindepth 1 -maxdepth 1 | wc -l | xargs)" = \
+      "$(find "$after_enable/.agents/skills" -mindepth 1 -maxdepth 1 | wc -l | xargs)" ]
+    rm -rf "$before_enable" "$after_enable"
 }

@@ -41,8 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from codex_skill_adapter import (
     cleanup_codex_skills,
-    prepare_codex_skills_dir,
-    set_skill_surface_owners,
+    managed_skill_surface_transaction,
     sync_codex_skill,
     unmanaged_codex_skill_names,
 )
@@ -106,28 +105,28 @@ def generate(target_dir: Path, enable_codex_skills: bool = False) -> None:
     if not enable_codex_skills:
         return
 
-    codex_skills_dir = prepare_codex_skills_dir(target_dir)
-
     sources = _iter_source_skills()
-    user_names = unmanaged_codex_skill_names(codex_skills_dir, skills_dir)
-
     linked = 0
     adapted = 0
     skipped = 0
-    for skill in sources:
-        if skill.name in user_names:
-            skipped += 1
-            continue
-        mode = sync_codex_skill(skill, codex_skills_dir)
-        if mode == "linked":
-            linked += 1
-        elif mode == "adapted":
-            adapted += 1
-        else:
-            skipped += 1
+    with managed_skill_surface_transaction(target_dir, skills_dir) as transaction:
+        codex_skills_dir = transaction.skills_dst
+        user_names = unmanaged_codex_skill_names(codex_skills_dir, skills_dir)
 
-    cleanup_codex_skills(codex_skills_dir, skills_dir, user_names)
-    set_skill_surface_owners(codex_skills_dir, {"codex"})
+        for skill in sources:
+            if skill.name in user_names:
+                skipped += 1
+                continue
+            mode = sync_codex_skill(skill, codex_skills_dir)
+            if mode == "linked":
+                linked += 1
+            elif mode == "adapted":
+                adapted += 1
+            else:
+                skipped += 1
+
+        cleanup_codex_skills(codex_skills_dir, skills_dir, user_names)
+        transaction.commit({"codex"})
 
     print(
         f"  Codex skill mirror: {_count_entries(codex_skills_dir)} skills "
