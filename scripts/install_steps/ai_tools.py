@@ -5,6 +5,7 @@
 """Install global and project-local AI tool configs."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 import os
 import shutil
 import subprocess
@@ -13,8 +14,10 @@ from pathlib import Path
 from _common import app_dir, inject_section, toolkit_dir
 from codex_skill_adapter import (
     cleanup_codex_skills,
-    prepare_codex_skills_dir,
+    managed_skill_surface_transaction,
+    skill_surface_owners,
     sync_codex_skill,
+    sync_dsh_skill,
     unmanaged_codex_skill_names,
 )
 from mcp_editors import sync_project_mcp_to_editors
@@ -751,11 +754,40 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
     return result.stdout if capture else ""
 
 
-# All known editor identifiers for --editors flag
+@dataclass(frozen=True, slots=True)
+class EditorCapability:
+    """Selection policy for one ``--editors`` target."""
+
+    include_in_all: bool = True
+    requires_local: bool = False
+
+
+EDITOR_CAPABILITIES = {
+    "copilot": EditorCapability(),
+    "cursor": EditorCapability(),
+    "windsurf": EditorCapability(),
+    "cline": EditorCapability(),
+    "roo": EditorCapability(),
+    "aider": EditorCapability(),
+    "augment": EditorCapability(),
+    "antigravity": EditorCapability(),
+    "codex": EditorCapability(),
+    "gemini": EditorCapability(),
+    "opencode": EditorCapability(),
+    "dsh": EditorCapability(include_in_all=False, requires_local=True),
+}
+
+SELECTABLE_EDITORS = list(EDITOR_CAPABILITIES)
 ALL_EDITORS = [
-    "copilot", "cursor", "windsurf", "cline", "roo",
-    "aider", "augment", "antigravity", "codex", "gemini", "opencode",
+    editor
+    for editor, capability in EDITOR_CAPABILITIES.items()
+    if capability.include_in_all
 ]
+LOCAL_ONLY_EDITORS = {
+    editor
+    for editor, capability in EDITOR_CAPABILITIES.items()
+    if capability.requires_local
+}
 
 # Map of project files/dirs → editor names for auto-detection
 _EDITOR_MARKERS: dict[str, str] = {
@@ -812,6 +844,10 @@ def _detect_editors(cwd: Path) -> list[str]:
             # The canonical workspace Antigravity pointer also lives in
             # .agents/skills/; only materialized skills indicate Codex.
             continue
+        if marker == ".agents/skills":
+            owners = skill_surface_owners(p)
+            if owners is not None and "codex" not in owners:
+                continue
         found.add(editor)
     return sorted(found)
 
@@ -1234,7 +1270,8 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         print("  Would generate: .agents/skills/ Codex skills")
         if codex_skills:
             print("  Would refresh: .agents/skills/ via --codex-skills")
-
+    if "dsh" in eds:
+        print("  Would generate: .agents/skills/ DSH-compatible managed skills")
     if not eds:
         print("  No editors selected (use --editors <list> or --editors all)")
 
@@ -1330,47 +1367,68 @@ def _create_local_settings(cwd: Path, reset: bool) -> None:
         print("  Kept: .claude/settings.local.json (already exists)")
 
 
-def _install_codex_skills(cwd: Path) -> None:
-    """Install all skills to `.agents/skills/` for Codex.
+def _install_agent_skills(cwd: Path, *, target: str) -> None:
+    """Install all skills to the managed ``.agents/skills`` surface.
 
-    Native Codex-compatible skills are symlinked directly. Skills that rely on
-    Claude-only orchestration primitives are rendered into generated wrappers
-    with Codex-native delegation guidance.
+    Codex-only installs retain Codex-specific wrappers. DSH-only and shared
+    Codex/DSH installs use portable wrappers that retain DSH invocation fields.
     """
+    if target not in {"codex", "dsh", "shared"}:
+        raise ValueError(f"Unsupported agent skill target: {target}")
     skills_src = app_dir / "skills"
     if not skills_src.is_dir():
         return
 
-    skills_dst = prepare_codex_skills_dir(cwd)
-    user_names = unmanaged_codex_skill_names(skills_dst, skills_src)
-
     linked = 0
     adapted = 0
     skipped = 0
-    for skill_dir in sorted(skills_src.iterdir()):
-        if not skill_dir.is_dir() or skill_dir.name.startswith("_"):
-            continue
-        skill_md = skill_dir / "SKILL.md"
-        if not skill_md.is_file():
-            continue
-        if skill_dir.name in user_names:
-            skipped += 1
-            continue
+    with managed_skill_surface_transaction(cwd, skills_src) as transaction:
+        skills_dst = transaction.skills_dst
+        user_names = unmanaged_codex_skill_names(skills_dst, skills_src)
 
-        mode = sync_codex_skill(skill_dir, skills_dst)
-        if mode == "linked":
-            linked += 1
-        elif mode == "adapted":
-            adapted += 1
-        else:
-            skipped += 1
+        for skill_dir in sorted(skills_src.iterdir()):
+            if not skill_dir.is_dir() or skill_dir.name.startswith("_"):
+                continue
+            skill_md = skill_dir / "SKILL.md"
+            if not skill_md.is_file():
+                continue
+            if skill_dir.name in user_names:
+                skipped += 1
+                continue
 
-    cleanup_codex_skills(skills_dst, skills_src, user_names)
+            if target == "codex":
+                mode = sync_codex_skill(skill_dir, skills_dst)
+            else:
+                mode = sync_dsh_skill(
+                    skill_dir,
+                    skills_dst,
+                    shared=target == "shared",
+                )
+            if mode == "linked":
+                linked += 1
+            elif mode == "adapted":
+                adapted += 1
+            else:
+                skipped += 1
+
+        cleanup_codex_skills(skills_dst, skills_src, user_names)
+        owners = {"codex", "dsh"} if target == "shared" else {target}
+        transaction.commit(owners)
 
     print(
         f"  Installed: {linked + adapted} skills to .agents/skills/"
         f" ({linked} linked, {adapted} adapted, {skipped} skipped)"
     )
+
+
+def _install_codex_skills(cwd: Path) -> None:
+    """Install the Codex-specific managed skill surface."""
+    _install_agent_skills(cwd, target="codex")
+
+
+def _install_dsh_skills(cwd: Path, *, shared: bool = False) -> None:
+    """Install DSH-portable skills, optionally shared with Codex."""
+    _install_agent_skills(cwd, target="shared" if shared else "dsh")
 
 
 def _install_codex_agents(cwd: Path, *, config_root: Path | None = None) -> None:
@@ -1581,13 +1639,19 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         print("  Created: .codex/hooks.json")
         # .codex/agents/ -- native Codex custom-agent definitions
         _install_codex_agents(cwd)
-        # .agents/skills/ — Codex discovery path for repo-local skills
+    if {"codex", "dsh"}.issubset(eds):
+        # The clients share one discovery directory. A joint install therefore
+        # converges on one portable rendering instead of depending on list order.
+        _install_dsh_skills(cwd, shared=True)
+    elif "codex" in eds:
         _install_codex_skills(cwd)
         # --codex-skills explicitly re-runs the same Codex skill sync path.
-        # Codex upstream discovers skills from .agents/skills/, not .codex/skills/.
         if codex_skills:
             _try_generator("generate_codex_skills", cwd,
                            enable_codex_skills=True)
+    elif "dsh" in eds:
+        # DSH receives only the shared skill surface, without Codex config.
+        _install_dsh_skills(cwd)
 
     if "gemini" in eds:
         # GEMINI.md — marker injection from the shared generator output

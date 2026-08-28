@@ -22,6 +22,7 @@ import json
 import re
 import sys
 import tempfile
+from itertools import islice
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -129,6 +130,14 @@ VALID_KB_CATEGORIES = frozenset({
     "reference", "howto", "procedures", "troubleshooting", "best-practices",
     "decisions", "runbooks", "planning", "business", "templates",
 })
+
+SKILL_DIRECTORY_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+INVOCATION_BOOLEAN_FIELDS = ("user-invocable", "disable-model-invocation")
+CAMEL_CASE_INVOCATION_FIELDS = ("userInvocable", "disableModelInvocation")
+INVOCATION_BOOLEAN_VALUES = frozenset({
+    "true", "false", "yes", "no", "on", "off", "1", "0",
+})
+MAX_EMITTED_SKILL_NODES = 10_000
 
 # Skill body budget, in bytes after the frontmatter block.
 #
@@ -245,6 +254,217 @@ def _fm_field(lines: list[str], field: str) -> str:
 def _fm_has(lines: list[str], field: str) -> bool:
     """Check if frontmatter has a field."""
     return any(line.startswith(f"{field}:") for line in lines)
+
+
+def _validate_invocation_metadata(label: str, fm_lines: list[str],
+                                  vr: ValidationResult) -> None:
+    """Reject metadata spellings that DSH interprets differently or ignores."""
+    for field in CAMEL_CASE_INVOCATION_FIELDS:
+        if _fm_has(fm_lines, field):
+            vr.error(
+                f"{label}: camel-case field '{field}' is forbidden; "
+                "use kebab-case invocation metadata"
+            )
+
+    for field in INVOCATION_BOOLEAN_FIELDS:
+        occurrences = sum(
+            1 for line in fm_lines if line.startswith(f"{field}:")
+        )
+        if occurrences > 1:
+            vr.error(
+                f"{label}: duplicate canonical invocation key '{field}'"
+            )
+        for line in fm_lines:
+            if not line.startswith(f"{field}:"):
+                continue
+            value = _frontmatter_scalar(line.split(":", 1)[1]).lower()
+            if value not in INVOCATION_BOOLEAN_VALUES:
+                vr.error(
+                    f"{label}: field '{field}' has invalid boolean value"
+                )
+
+
+def _frontmatter_scalar(raw_value: str) -> str:
+    """Decode the simple scalar forms used by emitted skill metadata."""
+    value = raw_value.strip()
+    if not value:
+        return ""
+    quoted = re.fullmatch(r'''(["'])(.*?)\1(?:\s+#.*)?''', value)
+    if quoted:
+        return quoted.group(2).strip()
+    return re.split(r"\s+#", value, maxsplit=1)[0].strip()
+
+
+def _emitted_quoted_scalar(
+    value: str,
+    *,
+    quote: str,
+    label: str,
+    line_number: int,
+    vr: ValidationResult,
+) -> str | None:
+    """Decode one supported quoted scalar and reject trailing YAML nodes."""
+    characters: list[str] = []
+    closing_index: int | None = None
+    index = 1
+    while index < len(value):
+        character = value[index]
+        if quote == "'" and character == "'" and index + 1 < len(value):
+            if value[index + 1] == "'":
+                characters.append("'")
+                index += 2
+                continue
+        if quote == '"' and character == "\\" and index + 1 < len(value):
+            characters.extend((character, value[index + 1]))
+            index += 2
+            continue
+        if character == quote:
+            closing_index = index
+            break
+        characters.append(character)
+        index += 1
+
+    quote_name = "single" if quote == "'" else "double"
+    if closing_index is None:
+        vr.error(
+            f"{label}:{line_number} - unterminated {quote_name}-quoted scalar"
+        )
+        return None
+
+    trailing = value[closing_index + 1:].strip()
+    if trailing and not trailing.startswith("#"):
+        vr.error(
+            f"{label}:{line_number} - unsupported content after quoted scalar"
+        )
+        return None
+
+    if quote == "'":
+        return "".join(characters).strip()
+    token = value[:closing_index + 1]
+    try:
+        decoded = json.loads(token)
+    except json.JSONDecodeError:
+        vr.error(f"{label}:{line_number} - invalid double-quoted scalar")
+        return None
+    return decoded.strip()
+
+
+def _parse_emitted_scalar(
+    raw_value: str,
+    *,
+    label: str,
+    line_number: int,
+    vr: ValidationResult,
+) -> str | None:
+    """Parse the supported single-line scalar subset of emitted YAML."""
+    value = raw_value.strip()
+    if not value:
+        return ""
+    if value.startswith(("|", ">")):
+        vr.error(f"{label}:{line_number} - unsupported block scalar")
+        return None
+    if value.startswith(("[", "{")) or value == "-" or value.startswith("- "):
+        vr.error(f"{label}:{line_number} - unsupported collection value")
+        return None
+    if value[0] in {"'", '"'}:
+        return _emitted_quoted_scalar(
+            value,
+            quote=value[0],
+            label=label,
+            line_number=line_number,
+            vr=vr,
+        )
+    return re.split(r"\s+#", value, maxsplit=1)[0].strip()
+
+
+def _parse_emitted_frontmatter(
+    skill_file: Path,
+    label: str,
+    vr: ValidationResult,
+) -> dict[str, str] | None:
+    """Parse a complete top-level frontmatter mapping and reject ambiguity."""
+    try:
+        lines = skill_file.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as error:
+        vr.error(f"{label} - cannot read SKILL.md: {error}")
+        return None
+    if not lines or lines[0] != "---":
+        vr.error(f"{label} - missing opening frontmatter delimiter")
+        return None
+
+    closing_index = next(
+        (index for index, line in enumerate(lines[1:], start=1)
+         if line == "---"),
+        None,
+    )
+    if closing_index is None:
+        vr.error(f"{label} - missing closing frontmatter delimiter")
+        return None
+
+    fields: dict[str, str] = {}
+    seen_keys: set[str] = set()
+    for line_number, line in enumerate(lines[1:closing_index], start=2):
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if line[0].isspace():
+            vr.error(f"{label}:{line_number} - unexpected indentation")
+            continue
+        if ":" not in line:
+            vr.error(
+                f"{label}:{line_number} - top-level frontmatter entry must "
+                "use 'key: value'"
+            )
+            continue
+        key, raw_value = line.split(":", 1)
+        key = key.strip()
+        if not key:
+            vr.error(f"{label}:{line_number} - empty frontmatter key")
+            continue
+        if key in seen_keys:
+            vr.error(f"{label}:{line_number} - duplicate top-level key '{key}'")
+            continue
+        seen_keys.add(key)
+        value = _parse_emitted_scalar(
+            raw_value,
+            label=label,
+            line_number=line_number,
+            vr=vr,
+        )
+        if value is not None:
+            fields[key] = value
+    return fields
+
+
+def _validate_emitted_frontmatter(
+    entry: Path,
+    fields: dict[str, str],
+    label: str,
+    vr: ValidationResult,
+) -> None:
+    """Validate the DSH Agent Skills frontmatter contract."""
+    for field in CAMEL_CASE_INVOCATION_FIELDS:
+        if field in fields:
+            vr.error(
+                f"{label}: camel-case field '{field}' is forbidden; "
+                "use kebab-case invocation metadata"
+            )
+    for field in INVOCATION_BOOLEAN_FIELDS:
+        if field in fields and fields[field].lower() not in INVOCATION_BOOLEAN_VALUES:
+            vr.error(f"{label}: field '{field}' has invalid boolean value")
+
+    name = fields.get("name", "").strip()
+    description = fields.get("description", "").strip()
+    if not name:
+        vr.error(f"{label} - required field 'name' must be non-empty")
+    elif not SKILL_DIRECTORY_NAME.fullmatch(name):
+        vr.error(f"{label} - name must be kebab-case")
+    elif name != entry.name:
+        vr.error(
+            f"{label} - declared name '{name}' does not match directory "
+            f"'{entry.name}'"
+        )
+    if not description:
+        vr.error(f"{label} - required field 'description' must be non-empty")
 
 
 def _body_line_count(filepath: Path) -> int:
@@ -367,6 +587,11 @@ def _validate_skill_frontmatter(tk_dir: Path, skill_path: Path,
     """Validate frontmatter fields for a single skill."""
     name = skill_path.name
     skill_file = skill_path / "SKILL.md"
+
+    if not SKILL_DIRECTORY_NAME.fullmatch(name):
+        vr.error(f"skills/{name} - invalid skill directory name")
+
+    _validate_invocation_metadata(f"skills/{name}/SKILL.md", fm_lines, vr)
 
     if not _fm_has(fm_lines, "name"):
         vr.error(f"{name} - Missing name field")
@@ -551,6 +776,150 @@ def validate_skills(tk_dir: Path, vr: ValidationResult) -> int:
         )
     print()
     return skill_count
+
+
+def _validate_emitted_skill_layout(
+    entry: Path,
+    label: str,
+    vr: ValidationResult,
+) -> None:
+    """Reject hidden skills and unsafe links within one emitted bundle."""
+    try:
+        bundle_root = entry.resolve(strict=True)
+    except RuntimeError:
+        vr.error(f"{label} - symlink cycle detected at bundle root")
+        return
+    except OSError as error:
+        vr.error(f"{label} - cannot resolve emitted skill bundle: {error}")
+        return
+
+    visited = {bundle_root}
+    pending = [(entry, frozenset({bundle_root}))]
+    observed_nodes = 0
+
+    while pending:
+        logical_dir, ancestors = pending.pop()
+        try:
+            remaining = MAX_EMITTED_SKILL_NODES - observed_nodes
+            children, is_overflow = _bounded_sorted_directory(
+                logical_dir,
+                remaining,
+            )
+        except OSError as error:
+            relative = logical_dir.relative_to(entry)
+            location = label if relative == Path(".") else f"{label}/{relative}"
+            vr.error(f"{location} - cannot inspect skill bundle: {error}")
+            continue
+        if is_overflow:
+            vr.error(
+                f"{label} - traversal exceeded {MAX_EMITTED_SKILL_NODES} "
+                "entries; reduce the emitted skill bundle or remove cycles"
+            )
+            return
+
+        for child in children:
+            observed_nodes += 1
+
+            relative = child.relative_to(entry)
+            child_label = f"{label}/{relative.as_posix()}"
+            is_symlink = child.is_symlink()
+            if child.name == "SKILL.md" and relative != Path("SKILL.md"):
+                vr.error(
+                    f"{child_label} - nested SKILL.md is not discoverable; "
+                    "place it at .agents/skills/<name>/SKILL.md"
+                )
+            try:
+                resolved_child = child.resolve(strict=True)
+            except RuntimeError:
+                vr.error(
+                    f"{child_label} - symlink cycle detected; remove the "
+                    "cycle from the emitted skill bundle"
+                )
+                continue
+            except OSError as error:
+                kind = "symlink" if is_symlink else "path"
+                vr.error(f"{child_label} - cannot resolve {kind}: {error}")
+                continue
+
+            if is_symlink:
+                try:
+                    resolved_child.relative_to(bundle_root)
+                except ValueError:
+                    continue
+
+            if not resolved_child.is_dir():
+                continue
+            if resolved_child in ancestors:
+                vr.error(
+                    f"{child_label} - symlink cycle detected; remove the "
+                    "cycle from the emitted skill bundle"
+                )
+                continue
+            if resolved_child in visited:
+                continue
+            visited.add(resolved_child)
+            pending.append((child, ancestors | {resolved_child}))
+
+
+def _bounded_sorted_directory(
+    directory: Path,
+    limit: int,
+) -> tuple[list[Path], bool]:
+    """Materialize at most ``limit + 1`` children before sorting."""
+    children = list(islice(directory.iterdir(), limit + 1))
+    is_overflow = len(children) > limit
+    if is_overflow:
+        children.pop()
+    children.sort(key=lambda path: path.name)
+    return children, is_overflow
+
+
+def validate_emitted_agent_skills(tk_dir: Path, vr: ValidationResult) -> None:
+    """Validate the one-level ``.agents/skills`` discovery contract."""
+    print("## Emitted Agent Skills")
+    skills_root = tk_dir / ".agents" / "skills"
+    if not skills_root.is_dir():
+        print("  SKIP: .agents/skills not present")
+        print()
+        return
+
+    try:
+        root_entries, is_overflow = _bounded_sorted_directory(
+            skills_root,
+            MAX_EMITTED_SKILL_NODES,
+        )
+    except OSError as error:
+        vr.error(f".agents/skills - cannot inspect skill root: {error}")
+        print()
+        return
+    if is_overflow:
+        vr.error(
+            f".agents/skills - directory exceeds {MAX_EMITTED_SKILL_NODES} "
+            "entries; reduce the emitted skill catalogue"
+        )
+        print()
+        return
+    entries = [
+        entry for entry in root_entries
+        if not entry.name.startswith(".") and (entry.is_dir() or entry.is_symlink())
+    ]
+    for entry in entries:
+        label = f".agents/skills/{entry.name}"
+        if not SKILL_DIRECTORY_NAME.fullmatch(entry.name):
+            vr.error(f"{label} - invalid skill directory name")
+
+        _validate_emitted_skill_layout(entry, label, vr)
+        skill_file = entry / "SKILL.md"
+        if not skill_file.is_file():
+            vr.error(f"{label} - missing top-level SKILL.md")
+            continue
+        skill_label = f"{label}/SKILL.md"
+        fields = _parse_emitted_frontmatter(skill_file, skill_label, vr)
+        if fields is not None:
+            _validate_emitted_frontmatter(entry, fields, skill_label, vr)
+
+    print(f"  Found: {len(entries)} emitted skill entries")
+    print()
 
 
 def validate_legacy_commands(tk_dir: Path, vr: ValidationResult) -> None:
@@ -1251,6 +1620,7 @@ def _run_all_checks(tk_dir: Path, vr: ValidationResult) -> tuple[int, int, str]:
     """Run all validation checks. Returns (agent_count, skill_count, actual_tests)."""
     agent_count = validate_agents(tk_dir, vr)
     skill_count = validate_skills(tk_dir, vr)
+    validate_emitted_agent_skills(tk_dir, vr)
     validate_legacy_commands(tk_dir, vr)
     validate_hook_events(tk_dir, vr)
     validate_language_rules(tk_dir, vr)

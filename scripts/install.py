@@ -317,7 +317,7 @@ VALID_LANGS = {"python", "typescript", "golang", "go", "rust", "java", "kotlin",
 
 def validate_args(cfg: dict) -> None:
     """Validate parsed arguments — exit non-zero on invalid values."""
-    from install_steps.ai_tools import ALL_EDITORS
+    from install_steps.ai_tools import LOCAL_ONLY_EDITORS, SELECTABLE_EDITORS
 
     errors: list[str] = []
 
@@ -339,8 +339,13 @@ def validate_args(cfg: dict) -> None:
     if cfg["editors"] and cfg["editors"] != "all":
         for e in cfg["editors"].split(","):
             e = e.strip()
-            if e and e not in ALL_EDITORS:
-                errors.append(f"Unknown editor: '{e}' (valid: {', '.join(ALL_EDITORS)}, all)")
+            if e and e not in SELECTABLE_EDITORS:
+                errors.append(
+                    f"Unknown editor: '{e}' "
+                    f"(valid: {', '.join(SELECTABLE_EDITORS)}, all)"
+                )
+            if e in LOCAL_ONLY_EDITORS and not cfg["local"]:
+                errors.append(f"Editor '{e}' is project-local and requires --local")
 
     # Validate --lang
     if cfg["lang"]:

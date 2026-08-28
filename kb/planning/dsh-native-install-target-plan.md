@@ -11,9 +11,11 @@ tags:
   - lifecycle
   - security
 doc_type: plan
-status: proposed
+status: in-progress
 created: "2026-08-27"
-last_updated: "2026-08-27"
+last_updated: "2026-08-28"
+approved: "2026-08-28"
+started: "2026-08-28"
 completion: "0%"
 predecessor: "kb/history/completed/dsh-integration-plan-superseded.md"
 description: "Implementation plan for an explicit ai-toolkit DSH target that emits project skills and safely manages the published dsh-codex and dsh-orchestrator packages without handling vendor credentials."
@@ -23,7 +25,7 @@ description: "Implementation plan for an explicit ai-toolkit DSH target that emi
 
 ## Status
 
-Proposed on 2026-08-27. This document requires user approval before implementation.
+Approved and started on 2026-08-28.
 
 Estimated size: **L (3 to 5 days)**. The runtime integrations already exist. The remaining work is installer ownership, lifecycle safety, validation, tests, and documentation.
 

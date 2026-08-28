@@ -3,7 +3,7 @@
 # Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
 # Source: https://github.com/softspark/ai-toolkit
 
-"""Mirror the ai-toolkit skill catalogue into Codex ``.agents/skills/``.
+"""Mirror the ai-toolkit skill catalogue into ``.agents/skills/``.
 
 OpenAI Codex CLI discovers Agent Skills from ``.agents/skills/`` in the
 repository tree, plus user/admin/system skill locations. Unlike the Augment
@@ -13,7 +13,8 @@ on disk, so this generator syncs every skill in ``app/skills/`` into
 
 The standalone generator keeps ``enable_codex_skills=False`` as a compatibility
 default. Selecting Codex in the main installer installs this catalog
-automatically; ``--codex-skills`` remains an explicit refresh option.
+automatically; ``--codex-skills`` remains an explicit refresh option. DSH
+reuses the same one-level managed surface without receiving other Codex config.
 
 Implementation:
   * Native Codex-compatible skills are symlinked to canonical ``app/skills``.
@@ -41,6 +42,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from codex_skill_adapter import (
     cleanup_codex_skills,
     prepare_codex_skills_dir,
+    set_skill_surface_owners,
     sync_codex_skill,
     unmanaged_codex_skill_names,
 )
@@ -125,6 +127,7 @@ def generate(target_dir: Path, enable_codex_skills: bool = False) -> None:
             skipped += 1
 
     cleanup_codex_skills(codex_skills_dir, skills_dir, user_names)
+    set_skill_surface_owners(codex_skills_dir, {"codex"})
 
     print(
         f"  Codex skill mirror: {_count_entries(codex_skills_dir)} skills "

@@ -307,6 +307,7 @@ function showHelp() {
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
   console.log('  --lang <list>   Explicitly select language rules (e.g. typescript, go,python)');
   console.log('  --editors <list> Install editor configs: cursor,windsurf,cline,roo,aider,augment,copilot,antigravity,codex,opencode (or "all")');
+  console.log('                  dsh (explicit project target; requires --local; excluded from "all")');
   console.log('                  Default with --local: auto-detect from existing project files');
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
