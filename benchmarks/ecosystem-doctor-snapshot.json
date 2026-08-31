@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-08-21T18:54:11Z",
+  "last_run": "2026-08-31T11:51:16Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -395,6 +395,17 @@
         "plugins": true,
         "skills": true,
         "subagents": true
+      }
+    },
+    "dsh": {
+      "docs_hash": "a296fd745f590f4e",
+      "headings": [],
+      "markers": {
+        "Agent Preset": false,
+        "Developer preview": false,
+        "dsh plugin": false,
+        "profiles": false,
+        "skills": true
       }
     },
     "gemini-cli": {

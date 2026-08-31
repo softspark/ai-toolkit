@@ -2,8 +2,8 @@
 title: "Manifest-Driven Install System"
 category: reference
 service: ai-toolkit
-tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
-version: "1.8.1"
+tags: [install, manifest, modules, profiles, auto-detect, state-tracking, dsh]
+version: "1.10.0"
 created: "2026-04-07"
 last_updated: "2026-08-31"
 description: "Reference for manifest-driven project installation, explicit DSH profile lifecycle management, and ownership state in ~/.softspark/ai-toolkit/state.json."
@@ -124,8 +124,11 @@ Re-applies installed modules, skipping files whose content hash has not changed 
 The DSH project target and the DSH profile lifecycle are separate operations:
 
 ```bash
-# Project-owned skills only. This never changes a DSH profile.
+# Generic local outputs plus DSH-specific project skills. No DSH profile change.
 ai-toolkit install --local --editors dsh
+
+# Read-only project plan, including extends resolution.
+ai-toolkit install --local --editors dsh --dry-run
 
 # Explicit global DSH profile mutation. The default profile is web.
 ai-toolkit dsh install --profile web
@@ -134,9 +137,13 @@ ai-toolkit dsh doctor --profile web
 ai-toolkit dsh uninstall --profile web --yes
 ```
 
+The project command is explicit-only. DSH is excluded from `--editors all`, auto-detection, default profiles, and default editor selection. Its DSH-specific output is `.agents/skills`; the generic `--local` Claude files, detected language rules, and other project outputs still apply. It never writes below `DSH_HOME`.
+
+Project `--dry-run` resolves and validates `extends` without persisting `.softspark-toolkit.lock.json`, then plans every generic and DSH-specific project output without changing the project tree. Existing lock bytes and metadata remain unchanged. It also makes no DSH package, profile, state, or authentication change.
+
 `DSH_HOME` selects the DSH root. The default is `~/.dsh`. It must resolve to an absolute, non-symlink managed root. Profile identifiers accept 1 to 64 lowercase letters, digits, periods, underscores, or hyphens.
 
-The lifecycle supports exactly DSH `0.1.1-rc.2` and invokes its plugin manager with bounded argv-array subprocesses:
+The lifecycle supports exactly DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.0`. It invokes the plugin manager with bounded argv-array subprocesses:
 
 ```text
 dsh plugin --profile web add @softspark/dsh-codex@1.0.0 --save-exact
@@ -160,11 +167,11 @@ Each stored package inventory uses a domain-separated SHA-256 over stable, lengt
 
 Rollback gives every package-manager recovery command an explicit target derived from the immutable pre-operation snapshot. The target contains the managed package inventory, the exact target package tree, the unchanged non-target package trees, and the pre-operation unrelated dependencies. A successful child exit is accepted only when all four match. A post-command observation is evidence, never a new target. Target drift or unreadable state blocks every later package-manager recovery call, preserves the current bytes, creates a transaction-unique doctor-visible recovery marker, and prints `ai-toolkit dsh doctor --profile <name>` plus deterministic manual inspection paths. This rule applies to install, update, and uninstall rollback.
 
-`--dry-run` performs read-only runtime and ownership preflight. It prints the exact planned argv and paths. It does not acquire a lifecycle or state lock, create a directory, write state, or start a package-manager process. Mutating install, update, and uninstall operations hold `$DSH_HOME/.ai-toolkit-lifecycle.lock` from preflight through mutation, rollback, cleanup, and recovery. Lock acquisition pins the exact lexical `DSH_HOME` parent and root directory descriptors and passes that one resolved home through the full operation. Every internal mutation and each external DSH command verifies that the lexical path still names the pinned device, inode, and directory kind. Preset parents, staging trees, recovery containers, copied children, and recovery markers are opened by walking from that root descriptor with no-follow operations. Creation, copy, cleanup, and recovery use descriptor-relative system calls and retain the parent and child device and inode identities through postcondition checks. A mismatch blocks state success and later package commands, preserves both roots, and reports recovery. The child process receives only the verified canonical path. The lock is claimed as a regular non-symlink with exclusive descriptor-relative creation and waits for at most one second. A write, `fsync`, close, or interruption during lock initialization removes only the captured lock inode. If that cleanup cannot complete, the command reports a doctor-visible lock recovery artifact and the next lifecycle command remains fail-closed. Release uses the pinned root descriptor, atomically relocates the lock without replacement, and deletes it only after its device and inode still match the transaction. A displaced root never redirects lock cleanup into its replacement. `doctor` is read-only and does not acquire the lifecycle lock.
+Profile lifecycle `--dry-run` performs read-only runtime and ownership preflight. It prints the exact planned argv and paths. It does not acquire a lifecycle or state lock, create a directory, write state, or start a package-manager process. Mutating install, update, and uninstall operations hold `$DSH_HOME/.ai-toolkit-lifecycle.lock` from preflight through mutation, rollback, cleanup, and recovery. Lock acquisition pins the exact lexical `DSH_HOME` parent and root directory descriptors and passes that one resolved home through the full operation. Every internal mutation and each external DSH command verifies that the lexical path still names the pinned device, inode, and directory kind. Preset parents, staging trees, recovery containers, copied children, and recovery markers are opened by walking from that root descriptor with no-follow operations. Creation, copy, cleanup, and recovery use descriptor-relative system calls and retain the parent and child device and inode identities through postcondition checks. A mismatch blocks state success and later package commands, preserves both roots, and reports recovery. The child process receives only the verified canonical path. The lock is claimed as a regular non-symlink with exclusive descriptor-relative creation and waits for at most one second. A write, `fsync`, close, or interruption during lock initialization removes only the captured lock inode. If that cleanup cannot complete, the command reports a doctor-visible lock recovery artifact and the next lifecycle command remains fail-closed. Release uses the pinned root descriptor, atomically relocates the lock without replacement, and deletes it only after its device and inode still match the transaction. A displaced root never redirects lock cleanup into its replacement. `doctor` is read-only and does not acquire the lifecycle lock.
 
 Doctor reports runtime compatibility, installed package versions, complete package-tree ownership, preset ownership and hash drift, state consistency, legacy recovery collisions, transaction-unique recovery containers, preserved staging, and whether recovery is required.
 
-The lifecycle never runs login commands, reads vendor credential stores, or forwards provider and registry secret environment variables. Failed child-process stdout and stderr are never included in user-facing errors. Errors expose only the safe command outcome, such as exit status, timeout, or interruption. Recovery argv contains only the validated DSH executable, profile, fixed package names, and exact pinned versions.
+The lifecycle never runs login commands, reads vendor credential stores, accepts provider API keys, or forwards provider and registry secret environment variables. Codex, Claude Code, and GitHub Copilot own login state. GitHub AI credits apply to Copilot Gemini delegation. Direct Google AI Pro or Ultra, Gemini CLI OAuth, Antigravity, and Gemini API-key routes are unsupported. Failed child-process stdout and stderr are never included in user-facing errors. Errors expose only the safe command outcome, such as exit status, timeout, or interruption. Recovery argv contains only the validated DSH executable, profile, fixed package names, and exact pinned versions.
 
 ## State Tracking
 
@@ -231,6 +238,8 @@ Update and uninstall revalidate the owned preset identity and content immediatel
 
 If byte-identical rollback cannot finish, the command returns nonzero and prints every exact safely quoted residual path plus deterministic recovery steps. One failed package recovery command does not authorize the next package command: the loop immediately rechecks the rollback-blocked flag and complete package identity after success or failure, records doctor and inspection actions, and stops package mutation on drift. Independent preset cleanup and state restoration still run, so their failures are aggregated without replacing the original error. Every surviving staging or recovery path remains listed and doctor-visible, so no operation reports success while its owned recovery data survives. Update staging cleanup removes only transaction-owned entries and reports every surviving staging path, including concurrent additions. Package-filesystem and cleanup residuals create transaction-unique `.softspark-orchestrator.ai-toolkit-package.<token>` containers. `ai-toolkit dsh doctor --profile <name>` reports `Recovery needed: yes` until manual recovery is complete.
 
+Real-profile qualification with the published packages and native subscription logins remains pending Phase 3. Static, fixture, and dry-run success is not evidence that this qualification has completed.
+
 ## Implementation Files
 
 | File | Purpose |
@@ -256,3 +265,4 @@ No existing install scripts or CI configurations need changes.
 - [PATH: kb/reference/language-rules.md] — language rules structure and auto-detection detail
 - [PATH: kb/reference/mcp-templates.md] — MCP server templates (the `mcp-templates` module)
 - [PATH: kb/reference/architecture-overview.md] — overall install model
+- [PATH: kb/reference/dsh-compatibility.md] - DSH commands, topology, authentication, and preview limits

@@ -76,7 +76,7 @@ from config_resolver import (
 )
 from config_merger import ConfigMergeError, merge_config_chain
 from config_validator import validate_project_config
-from config_lock import save_lock_file
+from config_lock import LOCK_FILENAME, save_lock_file
 
 
 # ---------------------------------------------------------------------------
@@ -541,6 +541,8 @@ def resolve_extends_config(
     project_dir: Path,
     config_path: str = "",
     refresh: bool = False,
+    *,
+    persist_lock: bool = True,
 ) -> dict | None:
     """Resolve .softspark-toolkit.json extends and return merged config.
 
@@ -579,7 +581,12 @@ def resolve_extends_config(
     print(f"  Resolving extends: {extends}...")
 
     try:
-        result = resolve_extends(extends, config_root, refresh=refresh)
+        result = resolve_extends(
+            extends,
+            config_root,
+            refresh=refresh,
+            persistent=persist_lock,
+        )
     except ConfigResolverError as e:
         print(f"  ✗ Resolution failed: {e}")
         sys.exit(1)
@@ -616,13 +623,15 @@ def resolve_extends_config(
         "overrides_applied": merge_result.overrides_applied,
     }
 
-    # Generate lock file
-    lock_path = save_lock_file(
-        config_root,
-        config_metas,
-        ai_toolkit_version=_get_toolkit_version(),
-    )
-    print(f"  Saved: {lock_path.name}")
+    if persist_lock:
+        lock_path = save_lock_file(
+            config_root,
+            config_metas,
+            ai_toolkit_version=_get_toolkit_version(),
+        )
+        print(f"  Saved: {lock_path.name}")
+    else:
+        print(f"  Would save: {LOCK_FILENAME} (dry-run)")
 
     return merge_result.merged
 
@@ -741,7 +750,10 @@ def main() -> None:
         config_path_arg: str = cfg["config"]
         refresh_base: bool = cfg["refresh_base"]
         merged_config = resolve_extends_config(
-            project_dir, config_path=config_path_arg, refresh=refresh_base,
+            project_dir,
+            config_path=config_path_arg,
+            refresh=refresh_base,
+            persist_lock=not dry_run,
         )
         if merged_config:
             cfg = _apply_merged_config(merged_config, cfg)

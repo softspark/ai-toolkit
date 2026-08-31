@@ -180,8 +180,8 @@ Size: **S to M (1 day)**.
 
 ### Phase 3 Success Criteria
 
-- [ ] DSH has one opt-in registry entry with pinned docs and release-note sources.
-- [ ] Compatibility documentation distinguishes project emission, explicit profile mutation, vendor authentication, and unsupported Google routes.
+- [x] DSH has one opt-in registry entry with pinned docs and release-note sources.
+- [x] Compatibility documentation distinguishes project emission, explicit profile mutation, vendor authentication, and unsupported Google routes.
 - [ ] README, CLI help, architecture, supported-tools registry, manifest install reference, and `llms.txt` describe the same commands and boundaries.
 - [ ] An isolated real-profile qualification installs the two published packages, selects the released preset, and completes Codex-to-Claude plus Codex-to-Copilot-Gemini delegation.
 - [ ] No release is tagged while focused tests, full tests, validation, skill audit, ShellCheck, or generated-document checks are red.

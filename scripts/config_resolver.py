@@ -91,6 +91,7 @@ def resolve_extends(
     project_root: str | Path,
     *,
     refresh: bool = False,
+    persistent: bool = True,
 ) -> ResolutionResult:
     """Resolve an extends chain into an ordered list of base configs.
 
@@ -98,6 +99,9 @@ def resolve_extends(
         extends_value: The extends string from .softspark-toolkit.json.
         project_root: The project directory (for resolving relative paths).
         refresh: Force re-fetch ignoring cache.
+        persistent: Allow remote sources to populate the config cache. When
+            false, cached sources remain readable and cache misses resolve in
+            an isolated staging directory that is removed before return.
 
     Returns:
         ResolutionResult with ordered configs (deepest ancestor first).
@@ -106,7 +110,26 @@ def resolve_extends(
         ConfigResolverError: On resolution failure.
     """
     result = ResolutionResult()
-    _resolve_chain(extends_value, Path(project_root), set(), result, refresh=refresh)
+    if persistent:
+        _resolve_chain(
+            extends_value,
+            Path(project_root),
+            set(),
+            result,
+            refresh=refresh,
+            staging_root=None,
+        )
+        return result
+
+    with tempfile.TemporaryDirectory(prefix="ai-toolkit-config-preview-") as tmp:
+        _resolve_chain(
+            extends_value,
+            Path(project_root),
+            set(),
+            result,
+            refresh=refresh,
+            staging_root=Path(tmp),
+        )
     return result
 
 
@@ -148,6 +171,7 @@ def _resolve_chain(
     result: ResolutionResult,
     *,
     refresh: bool = False,
+    staging_root: Path | None,
 ) -> None:
     """Recursively resolve extends chain with cycle + depth detection."""
     # Cycle detection
@@ -169,7 +193,13 @@ def _resolve_chain(
     visited.add(canonical)
 
     # Resolve this source
-    base_config = _resolve_source(extends_value, project_root, result, refresh=refresh)
+    base_config = _resolve_source(
+        extends_value,
+        project_root,
+        result,
+        refresh=refresh,
+        staging_root=staging_root,
+    )
     _validate_resolved_base(base_config)
 
     # Recurse if this base also extends something
@@ -180,6 +210,7 @@ def _resolve_chain(
             visited,
             result,
             refresh=refresh,
+            staging_root=staging_root,
         )
 
     # Append after recursion (deepest ancestor first)
@@ -205,14 +236,25 @@ def _resolve_source(
     result: ResolutionResult,
     *,
     refresh: bool = False,
+    staging_root: Path | None,
 ) -> BaseConfig:
     """Resolve a single extends source."""
     if source.startswith("git+"):
-        return _resolve_git(source, result, refresh=refresh)
+        return _resolve_git(
+            source,
+            result,
+            refresh=refresh,
+            staging_root=staging_root,
+        )
     if source.startswith(".") or source.startswith("/") or source.startswith("~"):
         return _resolve_local(source, project_root)
     # Default: npm package
-    return _resolve_npm(source, result, refresh=refresh)
+    return _resolve_npm(
+        source,
+        result,
+        refresh=refresh,
+        staging_root=staging_root,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +266,7 @@ def _resolve_npm(
     result: ResolutionResult,
     *,
     refresh: bool = False,
+    staging_root: Path | None,
 ) -> BaseConfig:
     """Resolve from npm registry via npm pack."""
     package_name, version_spec = _parse_npm_source(source)
@@ -270,8 +313,13 @@ def _resolve_npm(
         tarball = tarballs[0]
         version = _extract_version_from_tarball(tarball.name, package_name)
 
-        # Extract to cache
-        dest = cache_dir / version
+        dest = _remote_destination(
+            cache_dir / version,
+            staging_root,
+            "npm",
+            pack_source,
+            version,
+        )
         dest.mkdir(parents=True, exist_ok=True)
         _extract_tarball(tarball, dest)
 
@@ -366,6 +414,7 @@ def _resolve_git(
     result: ResolutionResult,
     *,
     refresh: bool = False,
+    staging_root: Path | None,
 ) -> BaseConfig:
     """Resolve from git URL (git+https://...)."""
     url = source.removeprefix("git+")
@@ -379,16 +428,19 @@ def _resolve_git(
     if not refresh and cache_dir.is_dir() and (cache_dir / CONFIG_FILENAME).is_file():
         return _load_cached_config(cache_dir, source)
 
-    # Clone (shallow)
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    destination = _remote_destination(
+        cache_dir,
+        staging_root,
+        "git",
+        url,
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
     try:
-        # Clean previous clone if refreshing
-        if cache_dir.is_dir():
-            shutil.rmtree(cache_dir)
-            cache_dir.mkdir(parents=True)
+        if destination.is_dir():
+            shutil.rmtree(destination)
 
         proc = subprocess.run(
-            ["git", "clone", "--depth", "1", url, str(cache_dir)],
+            ["git", "clone", "--depth", "1", url, str(destination)],
             capture_output=True,
             text=True,
             timeout=120,
@@ -404,7 +456,7 @@ def _resolve_git(
             f"git clone failed: {proc.stderr.strip()}"
         )
 
-    return _load_cached_config(cache_dir, source)
+    return _load_cached_config(destination, source)
 
 
 # ---------------------------------------------------------------------------
@@ -430,6 +482,20 @@ def _resolve_local(source: str, project_root: Path) -> BaseConfig:
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
+def _remote_destination(
+    persistent_path: Path,
+    staging_root: Path | None,
+    source_kind: str,
+    source: str,
+    version: str = "",
+) -> Path:
+    """Choose a persistent cache path or an isolated preview path."""
+    if staging_root is None:
+        return persistent_path
+    source_key = hashlib.sha256(source.encode()).hexdigest()[:16]
+    destination = staging_root / source_kind / source_key
+    return destination / version if version else destination
 
 def _load_cached_config(
     config_dir: Path,

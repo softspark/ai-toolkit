@@ -74,6 +74,61 @@ for record in sorted(records):
 PY
 }
 
+project_tree_fingerprint() {
+    python3 - "$1" <<'PY'
+import hashlib
+import os
+import stat
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+pending = [root]
+records = []
+while pending:
+    path = pending.pop()
+    relative = "." if path == root else path.relative_to(root).as_posix()
+    metadata = path.lstat()
+    kind = stat.S_IFMT(metadata.st_mode)
+    common = (
+        relative,
+        stat.S_IMODE(metadata.st_mode),
+        metadata.st_mtime_ns,
+    )
+    if stat.S_ISLNK(kind):
+        records.append((*common, "link", os.readlink(path)))
+        continue
+    if stat.S_ISDIR(kind):
+        records.append((*common, "dir", ""))
+        pending.extend(sorted(path.iterdir(), reverse=True))
+        continue
+    if stat.S_ISREG(kind):
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        records.append((*common, "file", metadata.st_size, digest))
+        continue
+    records.append((*common, "other", oct(kind)))
+
+for record in sorted(records):
+    print(repr(record))
+PY
+}
+
+write_extends_fixture() {
+    mkdir -p "$TEST_PROJECT/base-config"
+    cat > "$TEST_PROJECT/base-config/ai-toolkit.config.json" <<'EOF'
+{
+  "name": "@test/dsh-base",
+  "version": "1.0.0",
+  "profile": "standard"
+}
+EOF
+    cat > "$TEST_PROJECT/.softspark-toolkit.json" <<'EOF'
+{
+  "extends": "./base-config"
+}
+EOF
+}
+
 assert_uninstall_post_relocation_package_race() {
     local variant="$1"
     local fake_bin
@@ -202,6 +257,193 @@ PY
         python3 "$TOOLKIT_DIR/scripts/install.py" --editors dsh --dry-run
     [ "$status" -ne 0 ]
     echo "$output" | grep -q "Editor 'dsh' is project-local and requires --local"
+}
+
+@test "dsh project dry-run with extends leaves a lock-free project byte-for-byte unchanged" {
+    write_extends_fixture
+    before="$(project_tree_fingerprint "$TEST_PROJECT")"
+
+    cd "$TEST_PROJECT"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors dsh --dry-run
+
+    [ "$status" -eq 0 ]
+    [ ! -e "$TEST_PROJECT/.softspark-toolkit.lock.json" ]
+    after="$(project_tree_fingerprint "$TEST_PROJECT")"
+    [ "$after" = "$before" ]
+}
+
+@test "dsh project dry-run with extends preserves an existing lock byte-for-byte and mtime" {
+    write_extends_fixture
+    cat > "$TEST_PROJECT/.softspark-toolkit.lock.json" <<'EOF'
+{"sentinel": true}
+EOF
+    python3 - "$TEST_PROJECT/.softspark-toolkit.lock.json" <<'PY'
+import os
+import sys
+
+timestamp_ns = 1_600_000_000_123_456_789
+os.utime(sys.argv[1], ns=(timestamp_ns, timestamp_ns))
+PY
+    before="$(project_tree_fingerprint "$TEST_PROJECT")"
+
+    cd "$TEST_PROJECT"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors dsh --dry-run
+
+    [ "$status" -eq 0 ]
+    after="$(project_tree_fingerprint "$TEST_PROJECT")"
+    [ "$after" = "$before" ]
+}
+
+@test "dsh project real install and local update persist the current extends lock" {
+    write_extends_fixture
+    cd "$TEST_PROJECT"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors dsh
+    [ "$status" -eq 0 ]
+    python3 - "$TEST_PROJECT/.softspark-toolkit.lock.json" "1.0.0" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+lock = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert lock["resolved"]["@test/dsh-base"]["version"] == sys.argv[2]
+PY
+
+    python3 - "$TEST_PROJECT/base-config/ai-toolkit.config.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+config = json.loads(config_path.read_text(encoding="utf-8"))
+config["version"] = "1.0.1"
+config_path.write_text(json.dumps(config) + "\n", encoding="utf-8")
+PY
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" update --local --editors dsh
+    [ "$status" -eq 0 ]
+    python3 - "$TEST_PROJECT/.softspark-toolkit.lock.json" "1.0.1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+lock = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert lock["resolved"]["@test/dsh-base"]["version"] == sys.argv[2]
+PY
+}
+
+@test "dsh project dry-run resolves npm extends without mutating empty or existing config cache" {
+    fake_bin="$TEST_PROJECT/fake-npm-bin"
+    mkdir -p "$fake_bin"
+    cat > "$fake_bin/npm" <<'PY'
+#!/usr/bin/env python3
+import io
+import sys
+import tarfile
+from pathlib import Path
+
+destination = Path(sys.argv[sys.argv.index("--pack-destination") + 1])
+tarball = destination / "test-dsh-remote-1.2.3.tgz"
+payload = b'{"name":"@test/dsh-remote","version":"1.2.3","profile":"standard"}\n'
+with tarfile.open(tarball, "w:gz") as archive:
+    member = tarfile.TarInfo("package/ai-toolkit.config.json")
+    member.size = len(payload)
+    member.mtime = 1_600_000_000
+    archive.addfile(member, io.BytesIO(payload))
+print(tarball.name)
+PY
+    chmod +x "$fake_bin/npm"
+
+    for cache_state in empty existing; do
+        case_root="$TEST_PROJECT/npm-$cache_state"
+        case_project="$case_root/project"
+        case_data="$case_root/toolkit-data"
+        cache_root="$case_data/config-cache"
+        mkdir -p "$case_project" "$cache_root"
+        cat > "$case_project/.softspark-toolkit.json" <<'EOF'
+{"extends":"@test/dsh-remote@1.2.3"}
+EOF
+        if [ "$cache_state" = existing ]; then
+            cached="$cache_root/@test/dsh-remote/1.2.3"
+            mkdir -p "$cached"
+            cat > "$cached/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/dsh-remote","version":"1.2.3","profile":"standard"}
+EOF
+        fi
+
+        cache_before="$(project_tree_fingerprint "$cache_root")"
+        project_before="$(project_tree_fingerprint "$case_project")"
+        cd "$case_project"
+        run env HOME="$TEST_HOME" AI_TOOLKIT_HOME="$case_data" \
+            PATH="$fake_bin:$PATH" \
+            python3 "$TOOLKIT_DIR/scripts/install.py" \
+            --local --editors dsh --dry-run
+
+        [ "$status" -eq 0 ]
+        cache_after="$(project_tree_fingerprint "$cache_root")"
+        project_after="$(project_tree_fingerprint "$case_project")"
+        [ "$cache_after" = "$cache_before" ]
+        [ "$project_after" = "$project_before" ]
+    done
+}
+
+@test "dsh project dry-run resolves git extends without mutating empty or existing config cache" {
+    fake_bin="$TEST_PROJECT/fake-git-bin"
+    mkdir -p "$fake_bin"
+    cat > "$fake_bin/git" <<'PY'
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+if sys.argv[1:] == ["--version"]:
+    print("git version 2.0.0-test")
+    raise SystemExit
+
+destination = Path(sys.argv[-1])
+destination.mkdir(parents=True, exist_ok=True)
+(destination / "ai-toolkit.config.json").write_text(
+    '{"name":"@test/dsh-git","version":"2.0.0","profile":"standard"}\n',
+    encoding="utf-8",
+)
+PY
+    chmod +x "$fake_bin/git"
+
+    source_url="https://example.invalid/dsh-config.git"
+    cache_key="$(python3 -c 'import hashlib, sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' "$source_url")"
+    for cache_state in empty existing; do
+        case_root="$TEST_PROJECT/git-$cache_state"
+        case_project="$case_root/project"
+        case_data="$case_root/toolkit-data"
+        cache_root="$case_data/config-cache"
+        mkdir -p "$case_project" "$cache_root"
+        cat > "$case_project/.softspark-toolkit.json" <<EOF
+{"extends":"git+$source_url"}
+EOF
+        if [ "$cache_state" = existing ]; then
+            cached="$cache_root/git/$cache_key"
+            mkdir -p "$cached"
+            cat > "$cached/ai-toolkit.config.json" <<'EOF'
+{"name":"@test/dsh-git","version":"2.0.0","profile":"standard"}
+EOF
+        fi
+
+        cache_before="$(project_tree_fingerprint "$cache_root")"
+        project_before="$(project_tree_fingerprint "$case_project")"
+        cd "$case_project"
+        run env HOME="$TEST_HOME" AI_TOOLKIT_HOME="$case_data" \
+            PATH="$fake_bin:$PATH" \
+            python3 "$TOOLKIT_DIR/scripts/install.py" \
+            --local --editors dsh --dry-run
+
+        [ "$status" -eq 0 ]
+        cache_after="$(project_tree_fingerprint "$cache_root")"
+        project_after="$(project_tree_fingerprint "$case_project")"
+        [ "$cache_after" = "$cache_before" ]
+        [ "$project_after" = "$project_before" ]
+    done
 }
 
 @test "dsh lifecycle: clean install uses exact plugin argv and owns the released preset" {

@@ -3,10 +3,10 @@ title: "SOP: Ecosystem Sync"
 category: procedures
 service: ai-toolkit
 tags: [sop, ecosystem, editors, generators, drift-detection, sync]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-04-23"
-last_updated: "2026-07-10"
-description: "Quarterly (or event-triggered) sync procedure that detects documentation and capability drift in supported tools (Claude Code, Claude app, and 11 editors), analyses our generators and skills for missing features, and walks through the migration + generator-update workflow."
+last_updated: "2026-08-31"
+description: "Quarterly or event-triggered sync procedure for the 14 registry tools: Claude Code, Claude app, explicit-preview DSH, and 11 default editor integrations."
 ---
 
 # SOP: Ecosystem Sync
@@ -26,7 +26,7 @@ Keeps ai-toolkit aligned with the tools it integrates with. When an editor adds 
 ## Quick Reference
 
 ```bash
-# Full check (all 13 tools, online)
+# Full check (all 14 registry tools, online)
 python3 scripts/ecosystem_doctor.py --format text
 
 # Single tool
@@ -48,10 +48,12 @@ python3 scripts/ecosystem_doctor.py --offline --format text
 
 | File | Purpose |
 |------|---------|
-| `scripts/ecosystem_tools.json` | Authoritative registry: 13 tools with doc URLs, config paths, our generators, capability markers |
+| `scripts/ecosystem_tools.json` | Authoritative registry: 14 tools with doc URLs, config paths, our generators, capability markers |
 | `benchmarks/ecosystem-doctor-snapshot.json` | Last-seen state (headings, content hash, markers, version) — updated via `--update` |
 | `scripts/ecosystem_doctor.py` | Drift detector |
 | `kb/reference/supported-tools-registry.md` | Human-readable view of the registry |
+
+DSH is counted because the ecosystem doctor tracks its upstream documentation and reviewed version. It remains an explicit developer-preview target, not a default editor integration, and stays outside `--editors all` and auto-detection.
 
 ---
 

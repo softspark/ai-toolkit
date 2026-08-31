@@ -3,17 +3,17 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.8.0"
+version: "1.9.0"
 created: "2026-03-23"
-last_updated: "2026-08-19"
-description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
+last_updated: "2026-08-31"
+description: "Architecture of ai-toolkit: install ownership, runtime adapters, the explicit DSH target, skill tiers, and project integration."
 ---
 
 # AI Toolkit Architecture
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, and compatible assistants such as Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, and Google Antigravity. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
+Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, compatible assistants, and the explicit developer-preview DSH target. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
 
 ## Design Principles
 
@@ -117,6 +117,7 @@ Machine (global)                              Project (local)
 **`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, constitution.md, language rules). Editor configs are opt-in via `--editors`:
 - `--editors all` — install all 11 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex, Gemini, opencode)
 - `--editors cursor,aider` — install only selected editors
+- `--editors dsh` requires explicit selection. Its DSH-specific output is project `.agents/skills`; the normal `--local` Claude files, detected language rules, and generic project outputs still apply. DSH is excluded from `all`, auto-detection, and defaults.
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
 Each editor gets its documented directory-based format. Copilot receives root
@@ -139,6 +140,10 @@ packs can layer their rules, skills, and hooks onto that Codex user target.
 
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
 
+DSH profile mutation is also outside generic installation. `ai-toolkit dsh install|update|doctor|uninstall --profile web` names both the integration and profile. It manages only `@softspark/dsh-codex@1.0.0`, `@softspark/dsh-orchestrator@1.0.0`, the released preset, and their ownership record. Vendor CLIs own login and credentials. DSH `0.1.1-rc.2` is the only reviewed host version.
+
+Both DSH preview paths are read-only. Project `--dry-run` resolves `extends` without persisting its lockfile and changes no project or `DSH_HOME` entry. Profile lifecycle `--dry-run` changes no package, preset, state, profile, or authentication surface.
+
 If a project already has `.mcp.json`, local install mirrors its `mcpServers`
 entries into `.claude/settings.local.json` plus any selected editors with
 project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
@@ -150,6 +155,10 @@ project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
 |---------|--------|-------------|
 | `install` | `~/.claude/` | First-time: per-file symlinks + JSON merge + marker injection + rules |
 | `install --local` | `./` | Claude Code configs + editors via `--editors` (auto-detect or explicit) |
+| `install --local --editors dsh` | `./` | Generic local outputs plus the shared `.agents/skills` catalog; no DSH profile writes |
+| `dsh install|update --profile <name>` | `$DSH_HOME/profiles/<name>` | Exact SoftSpark package and preset lifecycle |
+| `dsh doctor --profile <name>` | DSH profile and ai-toolkit state | Read-only runtime, ownership, drift, and recovery diagnostics |
+| `dsh uninstall --profile <name>` | Managed DSH package, preset, and state entries | Ownership-checked removal that preserves unrelated profile content |
 | `claude-app export` | output ZIP + Markdown | Uploadable Claude Chat/Cowork plugin and global instructions |
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
@@ -245,6 +254,16 @@ surface or tmux-backed Agent Teams lifecycle. Plugin packs reuse the same
 translation and hook-compatibility model when targeting the global Codex layer.
 
 See `kb/reference/codex-cli-compatibility.md` for the detailed mapping.
+
+### DSH Explicit Target
+
+The DSH target reuses the Codex `.agents/skills` emitter. Canonical skill ownership stays under `app/skills`. DSH invocation metadata is validated before emission because invalid camel-case fields, non-boolean invocation values, and nested discovery entries fail closed upstream.
+
+The profile lifecycle is a separate transaction boundary. It stores exact package-tree and preset identity under the shared ai-toolkit state path selected by `AI_TOOLKIT_HOME`, `SOFTSPARK_HOME`, or the default `~/.softspark/ai-toolkit`. A DSH lifecycle lock plus state compare-and-swap checks protect concurrent writers. Collision or rollback ambiguity preserves user data and reports doctor-visible recovery paths.
+
+Codex remains the parent model through its local app server. The released preset adds one-shot Claude Code and GitHub Copilot Gemini delegation tools. ai-toolkit does not handle provider API keys or login state. GitHub Copilot policy and AI credits apply to the Gemini route. Direct Google, Antigravity, and Gemini API-key routes are unsupported.
+
+See `kb/reference/dsh-compatibility.md` for the exact command, version, authentication, and recovery contract. Real-profile Phase 3 qualification is pending.
 
 ## MCP Rendering Layer
 
