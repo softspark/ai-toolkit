@@ -14,6 +14,35 @@ setup() {
     mkdir -p "$TEST_HOME" "$TEST_PROJECT"
 }
 
+@test "generic uninstall leaves explicit DSH profile lifecycle untouched" {
+    local dsh_home="$TEST_ROOT/dsh-home"
+    local fake_bin="$TEST_ROOT/fake-bin"
+    mkdir -p "$dsh_home" "$fake_bin" "$TEST_HOME/.codex/agents"
+    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
+    chmod +x "$fake_bin/dsh"
+    HOME="$TEST_HOME" DSH_HOME="$dsh_home" PATH="$fake_bin:$PATH" \
+        run node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+    [ "$status" -eq 0 ]
+    printf '%s\n' '# ai-toolkit-managed: codex-agent' > \
+        "$TEST_HOME/.codex/agents/ai-toolkit-owned.toml"
+    local before_profile before_preset before_state
+    before_profile="$(find "$dsh_home/profiles/web" -type f -exec shasum {} \; | sort)"
+    before_preset="$(find "$dsh_home/.agent-presets/softspark-orchestrator" \
+        -type f -exec shasum {} \; | sort)"
+    before_state="$(shasum "$TEST_HOME/.softspark/ai-toolkit/state.json")"
+
+    HOME="$TEST_HOME" DSH_HOME="$dsh_home" PATH="$fake_bin:$PATH" \
+        run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+
+    [ "$status" -eq 0 ]
+    [ ! -e "$TEST_HOME/.codex/agents/ai-toolkit-owned.toml" ]
+    [ "$(find "$dsh_home/profiles/web" -type f -exec shasum {} \; | sort)" = \
+        "$before_profile" ]
+    [ "$(find "$dsh_home/.agent-presets/softspark-orchestrator" \
+        -type f -exec shasum {} \; | sort)" = "$before_preset" ]
+    [ "$(shasum "$TEST_HOME/.softspark/ai-toolkit/state.json")" = "$before_state" ]
+}
+
 @test "uninstall --local removes every managed agent-skill variant and its owner marker" {
     for spec in 'dsh:dsh-only' 'codex,dsh:shared' 'codex:codex-only'; do
         local editors=${spec%%:*}

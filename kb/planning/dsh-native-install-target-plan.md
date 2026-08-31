@@ -13,10 +13,10 @@ tags:
 doc_type: plan
 status: in-progress
 created: "2026-08-27"
-last_updated: "2026-08-28"
+last_updated: "2026-08-31"
 approved: "2026-08-28"
 started: "2026-08-28"
-completion: "Phase 1 of 3 complete"
+completion: "Phase 2 of 3 complete"
 predecessor: "kb/history/completed/dsh-integration-plan-superseded.md"
 description: "Implementation plan for an explicit ai-toolkit DSH target that emits project skills and safely manages the published dsh-codex and dsh-orchestrator packages without handling vendor credentials."
 ---
@@ -80,11 +80,11 @@ This split preserves the meaning of `--local`. It also makes global DSH changes 
 ## Global Success Criteria
 
 - [x] `ai-toolkit install --local --editors dsh` emits the complete managed skill catalog and makes no write under `$DSH_HOME`.
-- [ ] `ai-toolkit dsh install --profile web` installs both exact 1.0.0 packages and the released preset without manual file editing.
-- [ ] Install, update, doctor, and uninstall preserve user-authored presets and unrelated DSH plugins.
-- [ ] No command accepts, reads, copies, logs, or forwards provider credentials.
+- [x] `ai-toolkit dsh install --profile web` installs both exact 1.0.0 packages and the released preset without manual file editing.
+- [x] Install, update, doctor, and uninstall preserve user-authored presets and unrelated DSH plugins.
+- [x] No command accepts, reads, copies, logs, or forwards provider credentials.
 - [x] `dsh` remains excluded from `--editors all`, auto-detection, default profiles, and default global editors.
-- [ ] Offline, missing-runtime, collision, partial-install, and interrupted-update paths fail without leaving untracked artifacts.
+- [x] Offline, missing-runtime, collision, partial-install, and interrupted-update paths fail without leaving untracked artifacts.
 - [ ] The full repository test, validation, skill-audit, and documentation gates pass.
 
 ## Phase 1: Project Target and Fail-Closed Gates
@@ -135,14 +135,27 @@ Size: **M (1 to 2 days)**.
 
 ### Phase 2 Success Criteria
 
-- [ ] `ai-toolkit dsh install --profile web` performs preflight before the first mutation.
-- [ ] The command installs exact reviewed package versions through the DSH plugin manager.
-- [ ] The preset is copied from the installed orchestrator package, not reconstructed by ai-toolkit.
-- [ ] Existing user-owned preset or plugin collisions stop the command with an actionable error.
-- [ ] State records the DSH home, profile, package versions, preset path, and managed content hash without recording credentials.
-- [ ] Update replaces only artifacts whose ownership and previous hash match state.
-- [ ] Uninstall removes only ai-toolkit-managed DSH artifacts and leaves unrelated profile content unchanged.
-- [ ] Interrupted or failed installation restores the pre-operation state or reports a deterministic recovery command.
+- [x] `ai-toolkit dsh install --profile web` performs preflight before the first mutation.
+- [x] The command installs exact reviewed package versions through the DSH plugin manager.
+- [x] The preset is copied from the installed orchestrator package, not reconstructed by ai-toolkit.
+- [x] Existing user-owned preset or plugin collisions stop the command with an actionable error.
+- [x] State records the DSH home, profile, package versions, preset path, and managed content hash without recording credentials.
+- [x] Update replaces only artifacts whose ownership and previous hash match state.
+- [x] Uninstall removes only ai-toolkit-managed DSH artifacts and leaves unrelated profile content unchanged.
+- [x] Interrupted or failed installation restores the pre-operation state or reports a deterministic recovery command.
+
+### Phase 2 Completion Evidence
+
+Completed on 2026-08-31 after adversarial transaction, concurrency, rollback, path-swap, state-CAS, and credential-boundary testing.
+
+- Full repository suite on the final isolated DSH scope: 1846/1846 tests.
+- Phase 2 spec review: approved with zero must-fix gaps.
+- Defensive security review: approved with zero findings.
+- Code quality review: 0 Critical, 0 Important, 0 Suggestions.
+- Strict validator: 0 errors, 0 warnings on the verified DSH tree.
+- Skill audit: 0 HIGH, 0 WARN.
+- Exact reviewed pins remain DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, and dsh-orchestrator `1.0.0`.
+- Lifecycle state stores canonical package and preset ownership metadata without credentials or package contents.
 
 ### Phase 2 Tasks
 

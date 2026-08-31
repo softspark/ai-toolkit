@@ -3,10 +3,10 @@ title: "Manifest-Driven Install System"
 category: reference
 service: ai-toolkit
 tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
-version: "1.0.0"
+version: "1.8.1"
 created: "2026-04-07"
-last_updated: "2026-04-07"
-description: "Reference for the manifest-driven install system: 17 modules, 4 profiles, auto-detection, and state tracking in ~/.softspark/ai-toolkit/state.json."
+last_updated: "2026-08-31"
+description: "Reference for manifest-driven project installation, explicit DSH profile lifecycle management, and ownership state in ~/.softspark/ai-toolkit/state.json."
 ---
 
 # Manifest-Driven Install System
@@ -119,6 +119,53 @@ ai-toolkit status
 
 Re-applies installed modules, skipping files whose content hash has not changed since last install. Implemented in `scripts/install_steps/install_state.py`.
 
+## Explicit DSH Profile Lifecycle
+
+The DSH project target and the DSH profile lifecycle are separate operations:
+
+```bash
+# Project-owned skills only. This never changes a DSH profile.
+ai-toolkit install --local --editors dsh
+
+# Explicit global DSH profile mutation. The default profile is web.
+ai-toolkit dsh install --profile web
+ai-toolkit dsh update --profile web
+ai-toolkit dsh doctor --profile web
+ai-toolkit dsh uninstall --profile web --yes
+```
+
+`DSH_HOME` selects the DSH root. The default is `~/.dsh`. It must resolve to an absolute, non-symlink managed root. Profile identifiers accept 1 to 64 lowercase letters, digits, periods, underscores, or hyphens.
+
+The lifecycle supports exactly DSH `0.1.1-rc.2` and invokes its plugin manager with bounded argv-array subprocesses:
+
+```text
+dsh plugin --profile web add @softspark/dsh-codex@1.0.0 --save-exact
+dsh plugin --profile web add @softspark/dsh-orchestrator@1.0.0 --save-exact
+```
+
+The orchestrator preset is copied from the installed package:
+
+```text
+$DSH_HOME/profiles/web/node_modules/@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator
+  -> $DSH_HOME/.agent-presets/softspark-orchestrator
+```
+
+The lifecycle refuses unowned same-name plugins and presets. An unchanged owned install is idempotent. Update and uninstall require every recorded package-tree entry and the preset tree to match current bytes, types, paths, links, and POSIX modes. Generic `ai-toolkit uninstall` does not mutate DSH profiles or remove their ownership state. Use `ai-toolkit dsh uninstall` explicitly.
+
+The persisted `packages` map is the ownership baseline, not the desired version target. Its key set must contain exactly the two managed package names, each value must be an exact version, and its keys must match the stored package-tree inventories. After a reviewed pin bump, `update` verifies the on-disk manifest and trees against those recorded versions, installs the current reviewed pins, and replaces the state record only after all postconditions pass. `uninstall` verifies and removes the recorded owned package names even when the current reviewed pins are newer. Rollback always restores the exact versions captured before the operation.
+
+A zero exit status from DSH is not sufficient to commit a lifecycle operation. Immediately before and after every plugin add or remove, ai-toolkit rereads the profile manifest and the complete managed package trees under the lifecycle lock. A changed, malformed, unexpected, or newly introduced managed entry stops the next external mutation and preserves the concurrent bytes. The managed packages must have the exact recorded pins or be fully absent for uninstall. Dependency entries outside the two managed package names must remain unchanged. A false-success postcondition leaves ownership state uncommitted.
+
+Each stored package inventory uses a domain-separated SHA-256 over stable, length-prefixed records. A record contains the entry type, relative path, POSIX mode, and type-specific metadata. Regular-file metadata contains the byte length and per-file SHA-256. Symlink metadata contains the target text. Traversal is bounded to 100,000 entries and 128 levels, never follows symlinks, and rejects special files. The state stores hashes and metadata only. It stores no package contents, credentials, authentication paths, or child-process environment.
+
+Rollback gives every package-manager recovery command an explicit target derived from the immutable pre-operation snapshot. The target contains the managed package inventory, the exact target package tree, the unchanged non-target package trees, and the pre-operation unrelated dependencies. A successful child exit is accepted only when all four match. A post-command observation is evidence, never a new target. Target drift or unreadable state blocks every later package-manager recovery call, preserves the current bytes, creates a transaction-unique doctor-visible recovery marker, and prints `ai-toolkit dsh doctor --profile <name>` plus deterministic manual inspection paths. This rule applies to install, update, and uninstall rollback.
+
+`--dry-run` performs read-only runtime and ownership preflight. It prints the exact planned argv and paths. It does not acquire a lifecycle or state lock, create a directory, write state, or start a package-manager process. Mutating install, update, and uninstall operations hold `$DSH_HOME/.ai-toolkit-lifecycle.lock` from preflight through mutation, rollback, cleanup, and recovery. Lock acquisition pins the exact lexical `DSH_HOME` parent and root directory descriptors and passes that one resolved home through the full operation. Every internal mutation and each external DSH command verifies that the lexical path still names the pinned device, inode, and directory kind. Preset parents, staging trees, recovery containers, copied children, and recovery markers are opened by walking from that root descriptor with no-follow operations. Creation, copy, cleanup, and recovery use descriptor-relative system calls and retain the parent and child device and inode identities through postcondition checks. A mismatch blocks state success and later package commands, preserves both roots, and reports recovery. The child process receives only the verified canonical path. The lock is claimed as a regular non-symlink with exclusive descriptor-relative creation and waits for at most one second. A write, `fsync`, close, or interruption during lock initialization removes only the captured lock inode. If that cleanup cannot complete, the command reports a doctor-visible lock recovery artifact and the next lifecycle command remains fail-closed. Release uses the pinned root descriptor, atomically relocates the lock without replacement, and deletes it only after its device and inode still match the transaction. A displaced root never redirects lock cleanup into its replacement. `doctor` is read-only and does not acquire the lifecycle lock.
+
+Doctor reports runtime compatibility, installed package versions, complete package-tree ownership, preset ownership and hash drift, state consistency, legacy recovery collisions, transaction-unique recovery containers, preserved staging, and whether recovery is required.
+
+The lifecycle never runs login commands, reads vendor credential stores, or forwards provider and registry secret environment variables. Failed child-process stdout and stderr are never included in user-facing errors. Errors expose only the safe command outcome, such as exit status, timeout, or interruption. Recovery argv contains only the validated DSH executable, profile, fixed package names, and exact pinned versions.
+
 ## State Tracking
 
 Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
@@ -131,13 +178,58 @@ Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
   "last_updated": "2026-04-07T10:00:00Z",
   "file_hashes": {
     "app/hooks/session-start.sh": "abc123..."
+  },
+  "dsh": {
+    "profiles": {
+      "web": {
+        "dsh_home": "/Users/example/.dsh",
+        "profile": "web",
+        "packages": {
+          "@softspark/dsh-codex": "1.0.0",
+          "@softspark/dsh-orchestrator": "1.0.0"
+        },
+        "package_trees": {
+          "@softspark/dsh-codex": {
+            "digest": "<canonical-tree-sha256>",
+            "entries": [
+              {"type": "directory", "path": ".", "mode": 493},
+              {"type": "file", "path": "package.json", "mode": 420, "size": 53, "sha256": "<file-sha256>"}
+            ]
+          },
+          "@softspark/dsh-orchestrator": {
+            "digest": "<canonical-tree-sha256>",
+            "entries": [
+              {"type": "directory", "path": ".", "mode": 493}
+            ]
+          }
+        },
+        "preset_path": "/Users/example/.dsh/.agent-presets/softspark-orchestrator",
+        "preset_hash": "<sha256>",
+        "owned": true,
+        "installed_at": "2026-08-29T08:00:00Z",
+        "last_updated": "2026-08-29T08:00:00Z"
+      }
+    }
   }
 }
 ```
 
 - `installed_modules` — used by `update` to know which modules to re-apply
 - `file_hashes` — used to skip unchanged files during `update`
+- `dsh.profiles` records the DSH home, profile, exact package versions, canonical package-tree inventories, preset path and hash, ownership, and timestamps
 - The file is written after every successful install or update
+
+Every shared state writer uses the canonical path from `AI_TOOLKIT_HOME`, `SOFTSPARK_HOME`, or the default `~/.softspark/ai-toolkit/state.json` and cooperates through the same bounded `.state.lock`. Where the host provides descriptor-relative atomic primitives, the lock context pins the state parent device and inode. Transaction reads, snapshots, compare-and-swap merges, private temporary creation, writes, `fsync`, publication, mode changes, cleanup, and lock release then address entries relative to that same open parent descriptor. A DSH lifecycle snapshot also records this parent identity and requires the final install, update, uninstall, and rollback state transaction to reopen that exact lexical path and match the same device and inode. The lexical parent binding is checked before publication and release. Replacing the state directory therefore fails without publishing into the replacement or losing either root. Generic install, MCP, and editor state writers retain the portable state contract on every supported Python platform. They use this pinned atomic publisher when available and otherwise publish a private temporary with the platform's atomic replacement primitive while holding the shared lock.
+
+DSH ownership mutation has a stricter platform gate. It requires Linux, WSL, or macOS support for pinned-directory, no-follow, no-replace, and atomic-exchange operations. The lifecycle checks both its DSH filesystem primitives and the state publisher before it creates the state root, state lock, lifecycle lock, temporary, or profile artifact. Secure state lock creation addresses `.state.lock` relative to a pinned no-follow parent descriptor and keeps that descriptor open through release. DSH state publication uses an atomic exchange for an existing file or a no-replace rename for first creation. The writer validates the displaced device, inode, and content digest before cleanup. A mismatched inode is restored or preserved for manual recovery instead of being overwritten or deleted. A bounded retry merges unrelated concurrent state keys. A concurrent change to the same DSH profile is preserved and reported as a recovery conflict.
+
+Records created before package-tree inventories were introduced are intentionally not migrated by assumption. `doctor` reports the invalid ownership state. Reinstall the explicit DSH integration after inspecting or removing the old record. Update and uninstall never claim unknown package bytes as owned.
+
+DSH mutations snapshot the profile manifest, managed package trees, base-directory existence, prior state, and preset before the first external mutation. Interruption and cleanup failure run the same rollback as package failure. Cleanup uses an entry-level inventory of device, inode, kind, digest, and symlink target. Snapshot recreation walks every ancestor without following symlinks, pins the destination parent, and uses descriptor-relative no-clobber creation for files, directories, and symlinks. File and directory modes are restored with `fchmod` only after pinning the exact inode. Post-creation and post-mode checks bind type, inode, mode, digest, and link target to the pinned parent. Unsupported primitives fail before any write, and an inode or ancestor mismatch remains untouched and doctor-visible. Manifest removal, manifest restoration, and transaction-created profile-directory pruning first relocate the candidate without replacement through pinned parent descriptors, then validate the moved inode and content before cleanup. A mismatch remains at its concurrent path or in a reported recovery container. Cleanup never unlinks, replaces, or removes a concurrently substituted file, symlink, or directory. A transaction-created `.agent-presets` parent is removed only when its identity is unchanged and it remains empty.
+
+Update and uninstall revalidate the owned preset identity and content immediately before relocation. The transaction atomically claims a private mode-0700 recovery container with a cryptographically random suffix, then moves the preset to its previously absent `managed-preset` child. It never replaces a caller-provided recovery path. The relocated payload remains bound to the captured device, inode, kind, digest, and symlink target; that same identity is checked immediately and again before every restore or removal. A byte-identical replacement is therefore preserved and reported instead of being treated as transaction-owned. Managed dependency entries must contain exact semantic versions; malformed or non-string values fail before DSH is invoked. A clean-profile rollback removes transaction-created manifest and base directories when they remain unchanged. Existing profile manifests are restored byte-for-byte, and missing pre-existing package entries are recreated without overwriting collisions.
+
+If byte-identical rollback cannot finish, the command returns nonzero and prints every exact safely quoted residual path plus deterministic recovery steps. One failed package recovery command does not authorize the next package command: the loop immediately rechecks the rollback-blocked flag and complete package identity after success or failure, records doctor and inspection actions, and stops package mutation on drift. Independent preset cleanup and state restoration still run, so their failures are aggregated without replacing the original error. Every surviving staging or recovery path remains listed and doctor-visible, so no operation reports success while its owned recovery data survives. Update staging cleanup removes only transaction-owned entries and reports every surviving staging path, including concurrent additions. Package-filesystem and cleanup residuals create transaction-unique `.softspark-orchestrator.ai-toolkit-package.<token>` containers. `ai-toolkit dsh doctor --profile <name>` reports `Recovery needed: yes` until manual recovery is complete.
 
 ## Implementation Files
 
@@ -146,6 +238,7 @@ Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
 | `manifest.json` | Module and profile definitions |
 | `scripts/install_steps/detect_language.py` | Auto-detect project language from marker files |
 | `scripts/install_steps/install_state.py` | Read/write `~/.softspark/ai-toolkit/state.json` |
+| `scripts/install_steps/dsh.py` | Explicit DSH install, update, doctor, uninstall, and recovery lifecycle |
 
 ## Backward Compatibility
 
