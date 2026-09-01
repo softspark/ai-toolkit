@@ -7,6 +7,44 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.30.0 - Managed DSH and plugin-owned MCP (2026-09-01)
+
+### Added
+
+- **Explicit DSH project target.** Added `install --local --editors dsh` for the
+  managed `.agents/skills` surface without implicit selection or `$DSH_HOME`
+  mutation.
+- **Managed DSH profile lifecycle.** Added `ai-toolkit dsh
+  install|update|doctor|uninstall --profile web` with exact DSH `0.1.1-rc.2`,
+  dsh-codex `1.0.0`, dsh-orchestrator `1.0.1`, preset ownership, dry-run, and
+  read-only diagnostics.
+- **Plugin-owned MCP and native rules.** Plugin packs can deliver MCP templates
+  and owned rule surfaces to Claude, Codex, Cursor, and Gemini.
+- **RAG MCP templates.** Added `rag-mcp` and `rag-mcp-legal` with concrete
+  localhost defaults and unauthenticated-endpoint warnings. The built-in MCP
+  catalogue now contains 28 templates.
+
+### Changed
+
+- **DSH remains explicit-only.** It stays outside editor defaults,
+  auto-detection, and `--editors all`; vendor CLIs retain authentication
+  ownership and no provider API key is accepted.
+- **Plugin lifecycle is transactional.** Install, update, and removal coordinate
+  MCP settings, rules, hook/script assets, and ownership state with pinned-path
+  CAS and last-consumer cleanup.
+- **Test count.** Increased from 1675 to 1920.
+
+### Fixed
+
+- **Cold DSH installs fail safely.** Added pnpm preflight, bounded probe and
+  mutation timeouts, full process-tree termination, exact executable identity,
+  directory-level lifecycle locking, and durable recovery gates.
+- **Concurrent plugin edits are preserved.** Atomic quarantine and rollback no
+  longer overwrite concurrent bytes, modes, inodes, marker sections, or
+  user-added assets.
+
+---
+
 ## v4.29.2 — The Codex dry-run stops hiding a surface (2026-08-21)
 
 ### Fixed

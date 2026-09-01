@@ -18,7 +18,7 @@ created: "2026-08-25"
 last_updated: "2026-08-27"
 closed: "2026-08-27"
 completion: "Functional objective delivered through standalone 1.0.0 modules; native ai-toolkit install target moved to a replacement plan"
-superseded_by: "kb/planning/dsh-native-install-target-plan.md"
+superseded_by: "kb/history/completed/dsh-native-install-target-plan.md"
 description: "Superseded DSH integration plan retained as the historical record of the subscription-backed runtime validation and the architecture split into dsh-codex and dsh-orchestrator."
 ---
 
@@ -29,7 +29,7 @@ description: "Superseded DSH integration plan retained as the historical record 
 **Created:** 2026-08-25
 **Origin:** Requirement for a single window driving three already-owned subscriptions (Claude Max, ChatGPT Plus, Gemini) without buying API credits
 **Upstream reviewed:** `deepseek-ai/deepseek-harness` @ `b150a55` (2026-08-21), package version `0.1.1-rc.2`, MIT, developer preview
-**Replacement:** [`kb/planning/dsh-native-install-target-plan.md`](../../planning/dsh-native-install-target-plan.md)
+**Replacement:** [`dsh-native-install-target-plan.md`](dsh-native-install-target-plan.md)
 
 ## Closure Record
 
@@ -183,7 +183,7 @@ compositions (expect 2-3 of them). The 44 agents belong on the subagent surface.
   `experimentalDynamicTools` bridge. Dynamic-tool threads remain non-replayable after restart.
 
 Evidence and release gates live in the standalone repository:
-`/Users/lukaszkrzemien/External/WorkspaceSoftSpark/dsh-codex`.
+the public [softspark/dsh-codex](https://github.com/softspark/dsh-codex) repository.
 
 ### Phase 0 checkpoint: SoftSpark orchestrator composition (2026-08-26)
 
@@ -302,7 +302,7 @@ Follow the opencode precedent exactly:
 
 ## 11. Archived Next Actions
 
-No work should continue from this archived document. Implement only the scoped native install target in [`kb/planning/dsh-native-install-target-plan.md`](../../planning/dsh-native-install-target-plan.md). Reopen this record only if evidence about the 2026-08-26 validation needs correction.
+No work should continue from this archived document. The scoped native install target is complete in [`dsh-native-install-target-plan.md`](dsh-native-install-target-plan.md). Reopen this record only if evidence about the 2026-08-26 validation needs correction.
 
 ## Sources
 

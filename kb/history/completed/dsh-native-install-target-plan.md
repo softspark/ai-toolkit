@@ -11,12 +11,13 @@ tags:
   - lifecycle
   - security
 doc_type: plan
-status: in-progress
+status: completed
 created: "2026-08-27"
 last_updated: "2026-09-01"
 approved: "2026-08-28"
 started: "2026-08-28"
-completion: "Phase 2 of 3 complete"
+completion: "Phase 3 of 3 complete"
+completed: "2026-09-01"
 predecessor: "kb/history/completed/dsh-integration-plan-superseded.md"
 description: "Implementation plan for an explicit ai-toolkit DSH target that emits project skills and safely manages the published dsh-codex and dsh-orchestrator packages without handling vendor credentials."
 ---
@@ -25,22 +26,22 @@ description: "Implementation plan for an explicit ai-toolkit DSH target that emi
 
 ## Status
 
-Approved and started on 2026-08-28.
+Approved on 2026-08-28 and completed on 2026-09-01.
 
 Estimated size: **L (3 to 5 days)**. The runtime integrations already exist. The remaining work is installer ownership, lifecycle safety, validation, tests, and documentation.
 
-Predecessor: [`kb/history/completed/dsh-integration-plan-superseded.md`](../history/completed/dsh-integration-plan-superseded.md).
+Predecessor: [`dsh-integration-plan-superseded.md`](dsh-integration-plan-superseded.md).
 
 ## Context
 
 The subscription-backed runtime is already delivered in two standalone Apache-2.0 packages:
 
-- `@softspark/dsh-codex@1.0.0` registers the DSH `codex` provider and delegates authentication, tools, thread state, and model execution to the locally installed Codex app server. [PATH: ../dsh-codex/package.json:3]
-- `@softspark/dsh-orchestrator@1.0.1` registers bounded Claude Code and GitHub Copilot Gemini delegation through native vendor logins. It accepts no provider API keys. [PATH: ../dsh-orchestrator/README.md:7]
+- `@softspark/dsh-codex@1.0.0` registers the DSH `codex` provider and delegates authentication, tools, thread state, and model execution to the locally installed Codex app server. See <https://github.com/softspark/dsh-codex>.
+- `@softspark/dsh-orchestrator@1.0.1` registers bounded Claude Code and GitHub Copilot Gemini delegation through native vendor logins. It accepts no provider API keys. See <https://github.com/softspark/dsh-orchestrator>.
 
 ai-toolkit does not expose `dsh` in its editor list, does not track DSH profile artifacts, and has no DSH-specific install, doctor, update, or uninstall contract. [PATH: bin/ai-toolkit.js:309]
 
-The published packages currently require two explicit operations: install exact plugins into a named DSH profile, then copy `softspark-orchestrator` from the installed package into `$DSH_HOME/.agent-presets`. [PATH: ../dsh-orchestrator/README.md:75]
+The published packages currently require two explicit operations: install exact plugins into a named DSH profile, then copy `softspark-orchestrator` from the installed package into `$DSH_HOME/.agent-presets`. See the orchestrator setup guide at <https://github.com/softspark/dsh-orchestrator>.
 
 ## Decision
 
@@ -85,7 +86,7 @@ This split preserves the meaning of `--local`. It also makes global DSH changes 
 - [x] No command accepts, reads, copies, logs, or forwards provider credentials.
 - [x] `dsh` remains excluded from `--editors all`, auto-detection, default profiles, and default global editors.
 - [x] Offline, missing-runtime, collision, partial-install, and interrupted-update paths fail without leaving untracked artifacts.
-- [ ] The full repository test, validation, skill-audit, and documentation gates pass.
+- [x] The full repository test, validation, skill-audit, and documentation gates pass.
 
 ## Phase 1: Project Target and Fail-Closed Gates
 
@@ -182,9 +183,20 @@ Size: **S to M (1 day)**.
 
 - [x] DSH has one opt-in registry entry with pinned docs and release-note sources.
 - [x] Compatibility documentation distinguishes project emission, explicit profile mutation, vendor authentication, and unsupported Google routes.
-- [ ] README, CLI help, architecture, supported-tools registry, manifest install reference, and `llms.txt` describe the same commands and boundaries.
-- [ ] An isolated real-profile qualification installs the two published packages, selects the released preset, and completes Codex-to-Claude plus Codex-to-Copilot-Gemini delegation.
-- [ ] No release is tagged while focused tests, full tests, validation, skill audit, ShellCheck, or generated-document checks are red.
+- [x] README, CLI help, architecture, supported-tools registry, manifest install reference, and `llms.txt` describe the same commands and boundaries.
+- [x] An isolated real-profile qualification installs the two published packages, selects the released preset, and completes Codex-to-Claude plus Codex-to-Copilot-Gemini delegation.
+- [x] No release is tagged while focused tests, full tests, validation, skill audit, ShellCheck, or generated-document checks are red.
+
+### Phase 3 Completion Evidence
+
+Completed on 2026-09-01 after exact-package pre-tag and post-release qualification.
+
+- Full repository suite: 1920/1920 tests.
+- Strict validator: 0 errors and 0 warnings; skill audit: 0 HIGH and 0 WARN.
+- ShellCheck, Apache-2.0 licensing, SARIF, public-surface, ecosystem, npm audit, and package dry-run gates passed.
+- `@softspark/dsh-orchestrator@1.0.1` published with SLSA provenance after both native-login marker tools completed through a Codex parent.
+- The exact npm registry package repeated both Claude Code and Copilot Gemini child/parent marker roundtrips, with no provider API key handling.
+- The isolated DSH process stopped cleanly and the unrelated profile fixture remained intact.
 
 ### Phase 3 Tasks
 
@@ -314,6 +326,6 @@ Implementation starts only after the user approves:
 - `scripts/install_steps/ai_tools.py`
 - `scripts/install_steps/install_state.py`
 - `scripts/ecosystem_tools.json`
-- `/Users/lukaszkrzemien/External/WorkspaceSoftSpark/dsh-codex`
-- `/Users/lukaszkrzemien/External/WorkspaceSoftSpark/dsh-orchestrator`
+- <https://github.com/softspark/dsh-codex>
+- <https://github.com/softspark/dsh-orchestrator>
 - <https://github.com/deepseek-ai/deepseek-harness>

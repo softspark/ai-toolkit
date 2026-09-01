@@ -19,7 +19,8 @@ setup() {
     local fake_bin="$TEST_ROOT/fake-bin"
     mkdir -p "$dsh_home" "$fake_bin" "$TEST_HOME/.codex/agents"
     cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
-    chmod +x "$fake_bin/dsh"
+    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/pnpm"
+    chmod +x "$fake_bin/dsh" "$fake_bin/pnpm"
     HOME="$TEST_HOME" DSH_HOME="$dsh_home" PATH="$fake_bin:$PATH" \
         run node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
     [ "$status" -eq 0 ]

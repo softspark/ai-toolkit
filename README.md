@@ -6,21 +6,23 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1854%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1920%20passing-success)](tests/)
 
-## What's New in v4.29.2
+## What's New in v4.30.0
 
-**v4.29.2** makes `install --dry-run` tell the truth about Codex hooks:
+**v4.30.0** adds an explicit, subscription-backed DSH target and plugin-owned MCP/rule delivery:
 
-- Selecting `codex` always installs Codex lifecycle hooks -- `.codex/hooks.json`
-  plus the scripts under `.codex/hooks/` -- at every profile. The dry-run branch
-  listed only agents and skills, so the preview silently omitted a whole surface,
-  and the one you are asked to review and trust with `/hooks`.
-- Both previews now name it: project installs announce
-  `.codex/hooks.json + .codex/hooks/`, global installs add
-  `$CODEX_HOME/ai-toolkit-hooks/` next to `$CODEX_HOME/hooks.json`.
-- Four tests pin the preview against what the live install actually writes, so a
-  surface cannot go missing from the dry-run again. Test count: 1671 -> 1675.
+- `install --local --editors dsh` emits the managed `.agents/skills` surface,
+  while `ai-toolkit dsh install|update|doctor|uninstall --profile web` owns the
+  exact DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, dsh-orchestrator `1.0.1`, and preset
+  lifecycle. DSH remains explicit-only and never handles vendor credentials.
+- Plugin packs can ship MCP templates and native rules for Claude, Codex, Cursor,
+  and Gemini. Two localhost RAG templates are included, bringing the built-in MCP
+  catalogue to 28.
+- Cross-file plugin operations and DSH package mutations now use ownership CAS,
+  pinned paths, process-tree teardown, durable recovery gates, and conservative
+  rollback that preserves concurrent or user-authored data.
+- Test count: 1675 -> 1920.
 
 ## Table of Contents
 
@@ -89,7 +91,7 @@ ai-toolkit dsh doctor --profile web
 ai-toolkit dsh uninstall --profile web --yes
 ```
 
-DSH is excluded from `--editors all`, auto-detection, and defaults. Its only DSH-specific project output is `.agents/skills`; the normal `--local` Claude files, detected language rules, and other generic project outputs still apply. Project and profile `--dry-run` commands are read-only. The reviewed pins are DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. Codex, Claude Code, and GitHub Copilot own their logins. ai-toolkit accepts no provider API keys, and GitHub AI credits apply to the Copilot Gemini route. Real-profile Phase 3 qualification is pending. See [DSH Compatibility](kb/reference/dsh-compatibility.md).
+DSH is excluded from `--editors all`, auto-detection, and defaults. Its only DSH-specific project output is `.agents/skills`; the normal `--local` Claude files, detected language rules, and other generic project outputs still apply. Project and profile `--dry-run` commands are read-only. The reviewed pins are DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. Codex, Claude Code, and GitHub Copilot own their logins. ai-toolkit accepts no provider API keys, and GitHub AI credits apply to the Copilot Gemini route. Isolated pre-tag and exact-registry post-release qualification completed both Claude Code and Copilot Gemini marker roundtrips through the Codex parent. See [DSH Compatibility](kb/reference/dsh-compatibility.md).
 
 ### Plugin Management
 

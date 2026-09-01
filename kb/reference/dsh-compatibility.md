@@ -15,7 +15,7 @@ description: "Compatibility contract for project skills and the explicit SoftSpa
 
 ai-toolkit supports DeepSeek Harness as an explicit developer-preview target. The integration is maintained by SoftSpark as a community compatibility layer. DeepSeek AI has not endorsed it.
 
-The reviewed runtime is DSH `0.1.1-rc.2`. Newer upstream prereleases are not covered until they pass the Phase 3 qualification. The isolated real-profile qualification is still pending and this document does not claim it has completed.
+The reviewed runtime is DSH `0.1.1-rc.2`. Newer upstream prereleases are not covered until they pass the same qualification. Isolated pre-tag and exact-registry post-release profiles completed the Claude Code and Copilot Gemini marker roundtrips through a Codex parent on 2026-09-01.
 
 ## Project vs Profile Outputs
 
@@ -163,7 +163,7 @@ ai-toolkit dsh doctor --profile web
 ai-toolkit dsh uninstall --profile web --dry-run --yes
 ```
 
-Phase 3 real-profile qualification remains pending. It must use a task-specific `DSH_HOME`, the published package artifacts, native vendor logins, one Codex-to-Claude marker task, one Codex-to-Copilot-Gemini marker task, and a final ownership-safe uninstall. Do not use a regular profile for that qualification.
+Phase 3 real-profile qualification completed with a task-specific `DSH_HOME`, exact published package artifacts, and native vendor logins. The pre-tag candidate and exact npm registry package both produced successful child and parent markers through `subagent_claude_code` and `subagent_gemini_copilot`; no provider API key was supplied or handled. The isolated DSH processes stopped cleanly and the unrelated profile fixture remained intact.
 
 ## Preview and Upstream Drift
 
@@ -180,4 +180,4 @@ Use the registry doctor to detect documentation, capability-marker, and local ve
 - [Reviewed DSH CLI profile and plugin contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md)
 - [Reviewed DSH skill discovery contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md)
 - [PATH: kb/reference/manifest-install.md]
-- [PATH: kb/planning/dsh-native-install-target-plan.md]
+- [PATH: kb/history/completed/dsh-native-install-target-plan.md]
