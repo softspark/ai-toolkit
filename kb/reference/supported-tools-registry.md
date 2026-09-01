@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.14.0"
+version: "1.15.0"
 created: "2026-04-23"
-last_updated: "2026-08-31"
+last_updated: "2026-09-01"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, 11 editors, and the explicit developer-preview DSH target."
 ---
 
@@ -66,7 +66,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 |-------|-------|
 | ID | `dsh` |
 | Status | `developer-preview`, `explicit-only`. This is a SoftSpark-maintained community compatibility target. DeepSeek AI has not endorsed it. |
-| Reviewed version | DSH `0.1.1-rc.2`. `@softspark/dsh-codex` and `@softspark/dsh-orchestrator` are pinned to `1.0.0`. |
+| Reviewed version | DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. |
 | Docs | https://deepseek-harness.github.io/deepseek-harness/ |
 | Release sources | https://github.com/deepseek-ai/deepseek-harness/releases and the reviewed [DSH 0.1.1-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2) |
 | Reviewed contracts | Tagged [CLI profile and plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md) and [skill discovery reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md) |

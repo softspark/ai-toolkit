@@ -239,6 +239,7 @@ PY
 }
 
 @test "install_state: DSH ownership schema rejects unknown credential-shaped fields" {
+    # Deliberately models a legacy 1.0.0 profile before package-tree inventories.
     mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
     cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'JSON'
 {
@@ -279,6 +280,7 @@ else:
 }
 
 @test "install_state: legacy DSH state without package inventories fails actionable" {
+    # Deliberately models a legacy 1.0.0 profile that cannot prove byte ownership.
     mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
     cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'JSON'
 {
@@ -423,7 +425,7 @@ home = Path.home() / ".dsh"
 preset = home / ".agent-presets" / "softspark-orchestrator"
 packages = {
     "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
 }
 package_trees = {
     package: {
@@ -494,7 +496,8 @@ PY
     custom_toolkit_home="$TEST_TMP/custom-ai-toolkit-home"
     mkdir -p "$fake_bin" "$dsh_home"
     cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
-    chmod +x "$fake_bin/dsh"
+    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/pnpm"
+    chmod +x "$fake_bin/dsh" "$fake_bin/pnpm"
     command=(env HOME="$TEST_TMP" AI_TOOLKIT_HOME="$custom_toolkit_home" \
         DSH_HOME="$dsh_home" PATH="$fake_bin:$PATH" \
         node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh)
@@ -538,7 +541,7 @@ def inject_concurrent_creation(state, revision, **kwargs):
 install_state._save_state_cas = inject_concurrent_creation
 packages = {
     "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
 }
 install_state.record_dsh_profile(
     dsh_home=Path.home() / ".dsh",
@@ -601,7 +604,7 @@ def write_dsh():
     try:
         packages = {
             "@softspark/dsh-codex": "1.0.0",
-            "@softspark/dsh-orchestrator": "1.0.0",
+            "@softspark/dsh-orchestrator": "1.0.1",
         }
         install_state.record_dsh_profile(
             dsh_home=Path.home() / ".dsh",
@@ -819,7 +822,7 @@ def observe_open(path, flags, mode=0o777, *, dir_fd=None):
 install_state.os.open = observe_open
 packages = {
     "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
 }
 try:
     install_state.record_dsh_profile(

@@ -3,9 +3,9 @@ title: "Manifest-Driven Install System"
 category: reference
 service: ai-toolkit
 tags: [install, manifest, modules, profiles, auto-detect, state-tracking, dsh]
-version: "1.10.0"
+version: "1.16.0"
 created: "2026-04-07"
-last_updated: "2026-08-31"
+last_updated: "2026-09-01"
 description: "Reference for manifest-driven project installation, explicit DSH profile lifecycle management, and ownership state in ~/.softspark/ai-toolkit/state.json."
 ---
 
@@ -39,7 +39,7 @@ Modules are defined in `manifest.json` at the repository root. There are 17 modu
 | `rules-php` | PHP-specific rules (5 files) | auto-detect |
 | `rules-cpp` | C++-specific rules (5 files) | auto-detect |
 | `rules-ruby` | Ruby-specific rules (5 files) | auto-detect |
-| `mcp-templates` | 26 MCP server config templates | strict, full |
+| `mcp-templates` | 28 MCP server config templates | strict, full |
 
 ## Profiles
 
@@ -143,11 +143,11 @@ Project `--dry-run` resolves and validates `extends` without persisting `.softsp
 
 `DSH_HOME` selects the DSH root. The default is `~/.dsh`. It must resolve to an absolute, non-symlink managed root. Profile identifiers accept 1 to 64 lowercase letters, digits, periods, underscores, or hyphens.
 
-The lifecycle supports exactly DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.0`. It invokes the plugin manager with bounded argv-array subprocesses:
+The lifecycle supports DSH `0.1.1-rc.2`, stable pnpm `>=11.7.0,<12.0.0`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. The DSH tag declares `pnpm@11.7.0`, while isolated cold-install qualification used Corepack pnpm `11.24.0`. It invokes the plugin manager with bounded argv-array subprocesses:
 
 ```text
 dsh plugin --profile web add @softspark/dsh-codex@1.0.0 --save-exact
-dsh plugin --profile web add @softspark/dsh-orchestrator@1.0.0 --save-exact
+dsh plugin --profile web add @softspark/dsh-orchestrator@1.0.1 --save-exact
 ```
 
 The orchestrator preset is copied from the installed package:
@@ -167,11 +167,15 @@ Each stored package inventory uses a domain-separated SHA-256 over stable, lengt
 
 Rollback gives every package-manager recovery command an explicit target derived from the immutable pre-operation snapshot. The target contains the managed package inventory, the exact target package tree, the unchanged non-target package trees, and the pre-operation unrelated dependencies. A successful child exit is accepted only when all four match. A post-command observation is evidence, never a new target. Target drift or unreadable state blocks every later package-manager recovery call, preserves the current bytes, creates a transaction-unique doctor-visible recovery marker, and prints `ai-toolkit dsh doctor --profile <name>` plus deterministic manual inspection paths. This rule applies to install, update, and uninstall rollback.
 
-Profile lifecycle `--dry-run` performs read-only runtime and ownership preflight. It prints the exact planned argv and paths. It does not acquire a lifecycle or state lock, create a directory, write state, or start a package-manager process. Mutating install, update, and uninstall operations hold `$DSH_HOME/.ai-toolkit-lifecycle.lock` from preflight through mutation, rollback, cleanup, and recovery. Lock acquisition pins the exact lexical `DSH_HOME` parent and root directory descriptors and passes that one resolved home through the full operation. Every internal mutation and each external DSH command verifies that the lexical path still names the pinned device, inode, and directory kind. Preset parents, staging trees, recovery containers, copied children, and recovery markers are opened by walking from that root descriptor with no-follow operations. Creation, copy, cleanup, and recovery use descriptor-relative system calls and retain the parent and child device and inode identities through postcondition checks. A mismatch blocks state success and later package commands, preserves both roots, and reports recovery. The child process receives only the verified canonical path. The lock is claimed as a regular non-symlink with exclusive descriptor-relative creation and waits for at most one second. A write, `fsync`, close, or interruption during lock initialization removes only the captured lock inode. If that cleanup cannot complete, the command reports a doctor-visible lock recovery artifact and the next lifecycle command remains fail-closed. Release uses the pinned root descriptor, atomically relocates the lock without replacement, and deletes it only after its device and inode still match the transaction. A displaced root never redirects lock cleanup into its replacement. `doctor` is read-only and does not acquire the lifecycle lock.
+Before the first mutation, the lifecycle resolves exact DSH and pnpm command paths from the minimal child `PATH`. It records each command path, resolved path, device, inode, type, mode, size, timestamps, and symlink target when applicable. It runs both version probes with a five-second bound and requires pnpm to parse inside the supported range. Missing, nonzero, timed-out, malformed, or unsupported pnpm probes fail before the lifecycle lock and leave no package, preset, state, or lock artifact.
 
-Doctor reports runtime compatibility, installed package versions, complete package-tree ownership, preset ownership and hash drift, state consistency, legacy recovery collisions, transaction-unique recovery containers, preserved staging, and whether recovery is required.
+Profile lifecycle `--dry-run` performs read-only runtime, package-manager, and ownership preflight. It prints the exact planned argv and paths. It does not acquire a lifecycle or state lock, create a directory, write state, or start a package-manager mutation. Mutating install, update, and uninstall operations first acquire a nonblocking exclusive POSIX `flock` on the pinned `DSH_HOME` directory descriptor, then hold `$DSH_HOME/.ai-toolkit-lifecycle.lock` from preflight through mutation, rollback, cleanup, and recovery. The directory lock is independent of that replaceable filename. It remains held while a recovery sentinel is created with `O_EXCL` and while both its file and parent directory are synced; release occurs only after normal canonical-lock release or durable sentinel publication. Every competing lifecycle must acquire the same directory lock before sentinel scans and canonical claim. Lock acquisition pins the exact lexical `DSH_HOME` parent and root directory descriptors and passes that one resolved home through the full operation. The prerequisite record is revalidated after the lock and before every package mutation or rollback. Replacement, removal, in-place identity drift, and a new earlier PATH shadow fail closed. The verified pnpm command directory leads the child PATH. Every internal mutation and each external DSH command verifies that the lexical path still names the pinned device, inode, and directory kind. Preset parents, staging trees, recovery containers, copied children, and recovery markers are opened by walking from that root descriptor with no-follow operations. Creation, copy, cleanup, and recovery use descriptor-relative system calls and retain the parent and child device and inode identities through postcondition checks. A mismatch blocks state success and later package commands, preserves both roots, and reports recovery. The child process receives only the verified canonical path. The canonical lock is claimed as a regular non-symlink with exclusive descriptor-relative creation and waits for at most one second. A write, `fsync`, close, or interruption during lock initialization removes only the captured lock inode. If that cleanup cannot complete, the command reports a doctor-visible lock recovery artifact and the next lifecycle command remains fail-closed. Release uses the pinned root descriptor, atomically relocates the lock without replacement, and deletes it only after its device and inode still match the transaction. A displaced root never redirects lock cleanup into its replacement. `doctor` is read-only and does not acquire the lifecycle lock.
 
-The lifecycle never runs login commands, reads vendor credential stores, accepts provider API keys, or forwards provider and registry secret environment variables. Codex, Claude Code, and GitHub Copilot own login state. GitHub AI credits apply to Copilot Gemini delegation. Direct Google AI Pro or Ultra, Gemini CLI OAuth, Antigravity, and Gemini API-key routes are unsupported. Failed child-process stdout and stderr are never included in user-facing errors. Errors expose only the safe command outcome, such as exit status, timeout, or interruption. Recovery argv contains only the validated DSH executable, profile, fixed package names, and exact pinned versions.
+If process-tree termination cannot be confirmed, the lifecycle does not enter package rollback or normal lock release. Before writing recovery metadata it verifies that the canonical lock still names the held device and inode, then creates and syncs a transaction-unique `unconfirmed-process-tree` sentinel in the pinned DSH root. It rewrites the held inode only after a second canonical identity check. A removed or renamed canonical lock therefore leaves the recognized sentinel, while a foreign replacement remains byte-identical. Lock acquisition checks process-tree sentinels before and after claiming the canonical name, and every later install, update, or uninstall fails before DSH invocation. `doctor` prints the recorded process group, original profile path, and every exact gate file. Recovery is deliberately manual: verify that the process group has exited, inspect the preserved profile, and only then remove every named gate. Group signaling is permitted only while the unreaped DSH supervisor still binds the group identifier; after that identity is lost, the command preserves the gate rather than risk signaling a reused PGID. Repeated `SIGINT` is deferred or retried through the bounded TERM, KILL, and wait sequence.
+
+Doctor reports runtime compatibility, pnpm availability and version, installed package versions, complete package-tree ownership, preset ownership and hash drift, state consistency, legacy recovery collisions, transaction-unique recovery containers, preserved staging, and whether recovery is required.
+
+The lifecycle never runs login commands, reads vendor credential stores, accepts provider API keys, or forwards provider and registry secret environment variables. Codex, Claude Code, and GitHub Copilot own login state. GitHub AI credits apply to Copilot Gemini delegation. Direct Google AI Pro or Ultra, Gemini CLI OAuth, Antigravity, and Gemini API-key routes are unsupported. Prerequisite probes have a five-second bound. DSH plugin mutations and package rollback commands have a separate 300-second bound suitable for cold resolution, without promising registry or network latency. Each mutation uses a dedicated POSIX session and process group on Linux, WSL, or macOS. The calling thread blocks `SIGINT` with `pthread_sigmask` before `Popen`, restores its previous mask inside one catchable region covering communication and final PGID checks, and restores the mask in `finally`. Every `BaseException` after spawn triggers complete process-tree teardown before propagation. Timeout and interruption require confirmed group exit before rollback; an unconfirmed exit blocks rollback. POSIX directory `flock`, process groups, and thread signal masks are mandatory mutation primitives. Native Windows mutation is unsupported and fails before lifecycle writes. Failed child-process stdout and stderr are never included in user-facing errors. Errors expose only the safe command outcome, such as exit status, timeout, or interruption. Recovery argv contains only the validated DSH executable, profile, fixed package names, and exact pinned versions.
 
 ## State Tracking
 
@@ -193,7 +197,7 @@ Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
         "profile": "web",
         "packages": {
           "@softspark/dsh-codex": "1.0.0",
-          "@softspark/dsh-orchestrator": "1.0.0"
+          "@softspark/dsh-orchestrator": "1.0.1"
         },
         "package_trees": {
           "@softspark/dsh-codex": {

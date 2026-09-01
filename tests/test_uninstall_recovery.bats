@@ -15,6 +15,12 @@ setup() {
     TEST_PROJECT="$TEST_ROOT/project"
     unset CODEX_HOME COPILOT_HOME
     mkdir -p "$TEST_HOME" "$TEST_PROJECT"
+    local fake_pnpm_bin="$TEST_ROOT/fake-pnpm-bin"
+    mkdir -p "$fake_pnpm_bin"
+    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_pnpm_bin/pnpm"
+    chmod +x "$fake_pnpm_bin/pnpm"
+    PATH="$fake_pnpm_bin:$PATH"
+    export PATH
 }
 
 profile_fingerprint() {
@@ -454,7 +460,7 @@ if boundary in {"first_add", "second_add"}:
     target = (
         "@softspark/dsh-codex@1.0.0"
         if boundary == "first_add"
-        else "@softspark/dsh-orchestrator@1.0.0"
+        else "@softspark/dsh-orchestrator@1.0.1"
     )
 
     def injected(argv, *, dsh_home):
@@ -551,7 +557,7 @@ JSON
 
     [ "$status" -ne 0 ]
     [[ "$output" == *"Recovery required"* ]]
-    [[ "$output" == *"@softspark/dsh-orchestrator@1.0.0"* ]]
+    [[ "$output" == *"@softspark/dsh-orchestrator@1.0.1"* ]]
     [ "$(shasum "$preset")" = "$before_preset" ]
     [ "$(shasum "$state")" = "$before_state" ]
 
@@ -595,7 +601,7 @@ home = Path(sys.argv[1])
 manifest = json.loads((home / "profiles/web/package.json").read_text())
 assert manifest["dependencies"] == {
     "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
 }, manifest
 PY
 }
@@ -800,7 +806,7 @@ home = Path(sys.argv[1])
 manifest = json.loads((home / "profiles/web/package.json").read_text())
 assert manifest["dependencies"] == {
     "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
 }, manifest
 PY
 }
@@ -2120,6 +2126,20 @@ for lifecycle, (before, current, force_reinstall) in orders.items():
         executable = case_root / "dsh"
         executable.write_text(fake_source)
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+        execution_path = str(case_root) + os.pathsep + os.environ["PATH"]
+        dsh._ACTIVE_PREREQUISITES = dsh._PrerequisiteRecord(
+            execution_path=execution_path,
+            dsh=dsh._capture_executable_prerequisite(
+                "dsh",
+                execution_path=execution_path,
+                missing_error="missing test DSH",
+            ),
+            pnpm=dsh._capture_executable_prerequisite(
+                "pnpm",
+                execution_path=execution_path,
+                missing_error="missing test pnpm",
+            ),
+        )
         (dsh_home / "recovery-control.json").write_text(
             json.dumps({"boundary": boundary, "packages": list(packages)})
         )

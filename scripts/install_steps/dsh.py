@@ -14,16 +14,22 @@ import json
 import os
 import re
 import secrets
+import signal
 import shutil
 import stat
 import subprocess
 import sys
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - native Windows is rejected before mutation
+    fcntl = None  # type: ignore[assignment]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -39,14 +45,21 @@ from install_steps.install_state import (
 )
 
 SUPPORTED_DSH_VERSION = "0.1.1-rc.2"
+MINIMUM_PNPM_VERSION = (11, 7, 0)
+MAXIMUM_PNPM_VERSION_EXCLUSIVE = (12, 0, 0)
+SUPPORTED_PNPM_RANGE = ">=11.7.0,<12.0.0"
 DEFAULT_PROFILE = "web"
 PRESET_NAME = "softspark-orchestrator"
 PACKAGES = {
     "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
 }
 MANAGED_PACKAGE_NAMES = tuple(PACKAGES)
-COMMAND_TIMEOUT_SECONDS = 30
+PROBE_TIMEOUT_SECONDS = 5
+PACKAGE_MUTATION_TIMEOUT_SECONDS = 300
+PROCESS_TERMINATION_GRACE_SECONDS = 1.0
+PROCESS_GROUP_POLL_SECONDS = 0.01
+MAX_TEARDOWN_INTERRUPT_RETRIES = 8
 LIFECYCLE_LOCK_TIMEOUT_SECONDS = 1.0
 LIFECYCLE_LOCK_POLL_SECONDS = 0.05
 PROFILE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
@@ -55,9 +68,13 @@ EXACT_VERSION_PATTERN = re.compile(
     r"(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?"
     r"(?:\+[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$"
 )
+PNPM_VERSION_PATTERN = re.compile(
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
+)
 RECOVERY_SUFFIXES = ("new", "backup", "uninstall", "package", "cleanup")
 RECOVERY_TOKEN_BYTES = 12
 RECOVERY_CLAIM_ATTEMPTS = 8
+PROCESS_TREE_RECOVERY_PREFIX = ".ai-toolkit-lifecycle-tree-recovery-"
 TREE_IDENTITY_DOMAIN = b"ai-toolkit-tree-identity-v1\0"
 TREE_MAX_ENTRIES = 100_000
 TREE_MAX_DEPTH = 128
@@ -65,6 +82,15 @@ TREE_MAX_DEPTH = 128
 
 class DshLifecycleError(RuntimeError):
     """A fail-closed DSH lifecycle error safe to show to the user."""
+
+
+class _ProcessTreeTerminationError(DshLifecycleError):
+    """The mutation process group could not be confirmed stopped."""
+
+    def __init__(self, message: str, *, process_group: int, profile: str) -> None:
+        super().__init__(message)
+        self.process_group = process_group
+        self.profile = profile
 
 
 def _secure_mutation_supported() -> bool:
@@ -219,7 +245,25 @@ class _LifecycleLock:
     home: _PinnedDshHome
 
 
+@dataclass(frozen=True)
+class _ExecutablePrerequisite:
+    name: str
+    command_path: Path
+    resolved_path: Path
+    command_signature: tuple[int, ...]
+    command_link_target: str | None
+    resolved_signature: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class _PrerequisiteRecord:
+    execution_path: str
+    dsh: _ExecutablePrerequisite
+    pnpm: _ExecutablePrerequisite
+
+
 _ACTIVE_DSH_HOME: _PinnedDshHome | None = None
+_ACTIVE_PREREQUISITES: _PrerequisiteRecord | None = None
 
 
 def _pin_dsh_home(path: Path) -> _PinnedDshHome:
@@ -314,6 +358,46 @@ def _close_pinned_dsh_home(home: _PinnedDshHome) -> None:
     os.close(home.parent_descriptor)
 
 
+def _directory_lifecycle_lock_supported() -> bool:
+    return (
+        os.name == "posix"
+        and fcntl is not None
+        and hasattr(fcntl, "flock")
+        and hasattr(fcntl, "LOCK_EX")
+        and hasattr(fcntl, "LOCK_NB")
+        and hasattr(fcntl, "LOCK_UN")
+    )
+
+
+def _acquire_dsh_home_directory_lock(home: _PinnedDshHome) -> None:
+    if not _directory_lifecycle_lock_supported():
+        raise DshLifecycleError(
+            "DSH home directory lifecycle locking is unsupported; "
+            "use Linux, WSL, or macOS"
+        )
+    try:
+        fcntl.flock(home.root_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as error:
+        raise DshLifecycleError(
+            "DSH home directory lifecycle lock is busy"
+        ) from error
+    except OSError as error:
+        raise DshLifecycleError(
+            "unable to acquire DSH home directory lifecycle lock"
+        ) from error
+
+
+def _release_dsh_home_directory_lock(home: _PinnedDshHome) -> None:
+    if fcntl is None:
+        return
+    try:
+        fcntl.flock(home.root_descriptor, fcntl.LOCK_UN)
+    except OSError as error:
+        raise DshLifecycleError(
+            "unable to release DSH home directory lifecycle lock"
+        ) from error
+
+
 def _cleanup_failed_lifecycle_lock(
     path: Path,
     home: _PinnedDshHome,
@@ -370,6 +454,7 @@ def _lifecycle_lock_recovery_artifacts(dsh_home: Path) -> tuple[Path, ...]:
     try:
         candidates.update(dsh_home.glob(".ai-toolkit-lifecycle-lock-init-*"))
         candidates.update(dsh_home.glob(".ai-toolkit-lifecycle-lock-release-*"))
+        candidates.update(dsh_home.glob(f"{PROCESS_TREE_RECOVERY_PREFIX}*"))
     except OSError:
         pass
     return tuple(
@@ -384,10 +469,100 @@ def _lifecycle_lock_recovery_artifacts(dsh_home: Path) -> tuple[Path, ...]:
     )
 
 
+def _process_tree_recovery_artifacts_at(
+    home: _PinnedDshHome,
+) -> tuple[Path, ...]:
+    _assert_dsh_home_binding(home)
+    try:
+        names = os.listdir(home.root_descriptor)
+    except OSError as error:
+        raise DshLifecycleError(
+            "unable to inspect DSH process-tree recovery gates"
+        ) from error
+    return tuple(
+        sorted(
+            (
+                home.path / name
+                for name in names
+                if name.startswith(PROCESS_TREE_RECOVERY_PREFIX)
+            ),
+            key=str,
+        )
+    )
+
+
+def _assert_no_process_tree_recovery_gate(home: _PinnedDshHome) -> None:
+    artifacts = _process_tree_recovery_artifacts_at(home)
+    if artifacts:
+        raise DshLifecycleError(
+            "DSH lifecycle recovery gate blocks mutation; run "
+            f"'ai-toolkit dsh doctor' and inspect: {artifacts[0]}"
+        )
+
+
+def _read_lifecycle_lock_fields(descriptor: int) -> dict[str, str]:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    payload = os.read(descriptor, 4096).decode("ascii", errors="replace")
+    fields: dict[str, str] = {}
+    for line in payload.splitlines():
+        name, separator, value = line.partition("=")
+        if separator and name:
+            fields[name] = value
+    return fields
+
+
+def _read_lifecycle_lock_fields_at(
+    home: _PinnedDshHome,
+    path: Path,
+    identity: tuple[int, int],
+) -> dict[str, str]:
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(path.name, flags, dir_fd=home.root_descriptor)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or (
+            metadata.st_dev,
+            metadata.st_ino,
+        ) != identity:
+            raise DshLifecycleError(
+                f"DSH lifecycle lock identity changed while reading: {path}"
+            )
+        return _read_lifecycle_lock_fields(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _read_lifecycle_recovery_gate(path: Path) -> dict[str, str] | None:
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError:
+        return None
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            return None
+        fields = _read_lifecycle_lock_fields(descriptor)
+        return fields if fields.get("state") == "recovery" else None
+    except OSError:
+        return None
+    finally:
+        os.close(descriptor)
+
+
 def _acquire_lifecycle_lock(dsh_home: Path) -> _LifecycleLock:
     """Claim one DSH home without following or deleting an existing lock."""
     path = dsh_home / ".ai-toolkit-lifecycle.lock"
     home = _pin_dsh_home(dsh_home)
+    try:
+        _acquire_dsh_home_directory_lock(home)
+    except (DshLifecycleError, OSError, KeyboardInterrupt):
+        _close_pinned_dsh_home(home)
+        raise
     deadline = time.monotonic() + LIFECYCLE_LOCK_TIMEOUT_SECONDS
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
@@ -395,6 +570,7 @@ def _acquire_lifecycle_lock(dsh_home: Path) -> _LifecycleLock:
     while True:
         try:
             _assert_dsh_home_binding(home)
+            _assert_no_process_tree_recovery_gate(home)
             descriptor = os.open(
                 path.name,
                 flags,
@@ -425,6 +601,17 @@ def _acquire_lifecycle_lock(dsh_home: Path) -> _LifecycleLock:
                 raise DshLifecycleError(
                     f"DSH lifecycle lock is not a regular file: {path}"
                 )
+            fields = _read_lifecycle_lock_fields_at(
+                home,
+                path,
+                (metadata.st_dev, metadata.st_ino),
+            )
+            if fields.get("state") == "recovery":
+                _close_pinned_dsh_home(home)
+                raise DshLifecycleError(
+                    "DSH lifecycle recovery gate blocks mutation; run "
+                    f"'ai-toolkit dsh doctor' and inspect: {path}"
+                )
             if time.monotonic() >= deadline:
                 _close_pinned_dsh_home(home)
                 raise DshLifecycleError(
@@ -449,6 +636,7 @@ def _acquire_lifecycle_lock(dsh_home: Path) -> _LifecycleLock:
                         f"DSH lifecycle lock is not a regular file: {path}"
                     )
                 identity = metadata.st_dev, metadata.st_ino
+                _assert_no_process_tree_recovery_gate(home)
                 os.write(descriptor, f"pid={os.getpid()}\n".encode("ascii"))
                 os.fsync(descriptor)
                 return _LifecycleLock(
@@ -562,19 +750,138 @@ def _release_lifecycle_lock(lock: _LifecycleLock) -> None:
         ) from error
     finally:
         os.close(lock.descriptor)
-        _close_pinned_dsh_home(lock.home)
+        try:
+            _release_dsh_home_directory_lock(lock.home)
+        finally:
+            _close_pinned_dsh_home(lock.home)
+
+
+def _find_process_tree_termination(
+    error: BaseException,
+) -> _ProcessTreeTerminationError | None:
+    current: BaseException | None = error
+    visited: set[int] = set()
+    while current is not None and id(current) not in visited:
+        visited.add(id(current))
+        if isinstance(current, _ProcessTreeTerminationError):
+            return current
+        current = current.__cause__ or current.__context__
+    return None
+
+
+def _preserve_lifecycle_recovery_gate(
+    lock: _LifecycleLock,
+    termination: _ProcessTreeTerminationError,
+) -> None:
+    """Close the lock while preserving its inode as a durable recovery gate."""
+    payload = (
+        "state=recovery\n"
+        "reason=unconfirmed-process-tree\n"
+        f"owner_pid={os.getpid()}\n"
+        f"process_group={termination.process_group}\n"
+        f"profile={termination.profile}\n"
+    ).encode("ascii")
+    write_error: BaseException | None = None
+    try:
+        canonical_matches = _lifecycle_lock_binding_matches(lock)
+        _create_process_tree_recovery_gate(lock.home, payload)
+        if canonical_matches and _lifecycle_lock_binding_matches(lock):
+            os.ftruncate(lock.descriptor, 0)
+            os.lseek(lock.descriptor, 0, os.SEEK_SET)
+            _write_all(lock.descriptor, payload)
+            os.fsync(lock.descriptor)
+    except BaseException as error:
+        write_error = error
+    finally:
+        close_error: BaseException | None = None
+        try:
+            os.close(lock.descriptor)
+        except BaseException as error:
+            close_error = error
+        try:
+            _release_dsh_home_directory_lock(lock.home)
+        except BaseException as error:
+            close_error = close_error or error
+        try:
+            _close_pinned_dsh_home(lock.home)
+        except BaseException as error:
+            close_error = close_error or error
+    if write_error is not None or close_error is not None:
+        raise DshLifecycleError(
+            "DSH process-tree recovery gate was preserved but its metadata "
+            f"could not be finalized; inspect: {lock.path}"
+        ) from (write_error or close_error)
+
+
+def _lifecycle_lock_binding_matches(lock: _LifecycleLock) -> bool:
+    try:
+        descriptor = os.fstat(lock.descriptor)
+        canonical = os.stat(
+            lock.path.name,
+            dir_fd=lock.home.root_descriptor,
+            follow_symlinks=False,
+        )
+    except OSError:
+        return False
+    expected = lock.device, lock.inode
+    return (
+        _dsh_home_binding_matches(lock.home)
+        and stat.S_ISREG(descriptor.st_mode)
+        and stat.S_ISREG(canonical.st_mode)
+        and (descriptor.st_dev, descriptor.st_ino) == expected
+        and (canonical.st_dev, canonical.st_ino) == expected
+    )
+
+
+def _create_process_tree_recovery_gate(
+    home: _PinnedDshHome,
+    payload: bytes,
+) -> Path:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    for _ in range(RECOVERY_CLAIM_ATTEMPTS):
+        name = (
+            f"{PROCESS_TREE_RECOVERY_PREFIX}{os.getpid()}-"
+            f"{secrets.token_hex(RECOVERY_TOKEN_BYTES)}"
+        )
+        path = home.path / name
+        try:
+            descriptor = os.open(name, flags, 0o600, dir_fd=home.root_descriptor)
+        except FileExistsError:
+            continue
+        try:
+            metadata = os.fstat(descriptor)
+            if not stat.S_ISREG(metadata.st_mode):
+                raise DshLifecycleError(
+                    f"DSH process-tree recovery gate is not regular: {path}"
+                )
+            _write_all(descriptor, payload)
+            os.fsync(descriptor)
+            os.fsync(home.root_descriptor)
+            return path
+        finally:
+            os.close(descriptor)
+    raise DshLifecycleError("unable to claim DSH process-tree recovery gate")
 
 
 @contextmanager
-def _locked_lifecycle(dsh_home: Path):
-    global _ACTIVE_DSH_HOME
+def _locked_lifecycle(dsh_home: Path, prerequisites: _PrerequisiteRecord):
+    global _ACTIVE_DSH_HOME, _ACTIVE_PREREQUISITES
     lock = _acquire_lifecycle_lock(dsh_home)
-    previous = _ACTIVE_DSH_HOME
+    previous_home = _ACTIVE_DSH_HOME
+    previous_prerequisites = _ACTIVE_PREREQUISITES
     _ACTIVE_DSH_HOME = lock.home
+    _ACTIVE_PREREQUISITES = prerequisites
     try:
         _assert_dsh_home_binding(lock.home)
+        _assert_prerequisites_unchanged(prerequisites)
         yield lock.home
     except (DshLifecycleError, OSError, ValueError, KeyboardInterrupt) as error:
+        termination = _find_process_tree_termination(error)
+        if termination is not None:
+            _preserve_lifecycle_recovery_gate(lock, termination)
+            raise
         try:
             _release_lifecycle_lock(lock)
         except (DshLifecycleError, OSError, KeyboardInterrupt) as release_error:
@@ -586,7 +893,8 @@ def _locked_lifecycle(dsh_home: Path):
     else:
         _release_lifecycle_lock(lock)
     finally:
-        _ACTIVE_DSH_HOME = previous
+        _ACTIVE_PREREQUISITES = previous_prerequisites
+        _ACTIVE_DSH_HOME = previous_home
 
 
 def _regular_file_signature(metadata: os.stat_result) -> tuple[int, ...]:
@@ -873,6 +1181,9 @@ def _run_profile_command(
         )
     try:
         result = _run(argv, dsh_home=dsh_home)
+    except _ProcessTreeTerminationError:
+        transaction.rollback_blocked = True
+        raise
     except (DshLifecycleError, OSError, ValueError, KeyboardInterrupt) as error:
         try:
             after = _capture_package_mutation_identity(transaction.profile_root)
@@ -2453,7 +2764,330 @@ def _minimal_environment(dsh_home: Path) -> dict[str, str]:
     return environment
 
 
+def _mutation_process_groups_supported() -> bool:
+    return (
+        os.name == "posix"
+        and hasattr(os, "killpg")
+        and hasattr(os, "setsid")
+        and hasattr(signal, "pthread_sigmask")
+        and hasattr(signal, "SIG_BLOCK")
+        and hasattr(signal, "SIG_SETMASK")
+    )
+
+
+def _mutation_environment(
+    dsh_home: Path,
+    prerequisites: _PrerequisiteRecord,
+) -> dict[str, str]:
+    environment = _minimal_environment(dsh_home)
+    verified_directory = str(prerequisites.pnpm.command_path.parent)
+    environment["PATH"] = (
+        verified_directory + os.pathsep + prerequisites.execution_path
+    )
+    selected = shutil.which("pnpm", path=environment["PATH"])
+    if selected is None or _absolute_command_path(selected) != prerequisites.pnpm.command_path:
+        raise DshLifecycleError("pnpm prerequisite PATH binding changed")
+    return environment
+
+
+def _process_group_exists(process_group: int) -> bool:
+    try:
+        os.killpg(process_group, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _wait_for_process_group_exit(process_group: int, timeout: float) -> bool:
+    deadline = time.monotonic() + timeout
+    while _process_group_exists(process_group):
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(PROCESS_GROUP_POLL_SECONDS)
+    return True
+
+
+def _signal_process_group(process_group: int, signal_number: int) -> None:
+    try:
+        os.killpg(process_group, signal_number)
+    except ProcessLookupError:
+        pass
+
+
+@contextmanager
+def _defer_sigint_during_process_teardown():
+    previous_handler: object | None = None
+    try:
+        previous_handler = signal.getsignal(signal.SIGINT)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    except (OSError, ValueError):
+        previous_handler = None
+    try:
+        yield
+    finally:
+        if previous_handler is not None:
+            signal.signal(signal.SIGINT, previous_handler)
+
+
+def _retry_teardown_interrupts(
+    operation: Callable[[], bool],
+    *,
+    process_group: int,
+    profile: str,
+) -> bool:
+    for _ in range(MAX_TEARDOWN_INTERRUPT_RETRIES):
+        try:
+            return operation()
+        except KeyboardInterrupt:
+            continue
+    raise _ProcessTreeTerminationError(
+        "DSH process tree teardown was repeatedly interrupted; "
+        "package recovery is blocked",
+        process_group=process_group,
+        profile=profile,
+    )
+
+
+def _signal_bound_process_group(
+    process: subprocess.Popen[str],
+    signal_number: int,
+    *,
+    profile: str,
+) -> bool:
+    """Signal only while the unreaped child still binds its PID and PGID."""
+    process_group = process.pid
+
+    def signal_if_bound() -> bool:
+        if process.poll() is not None:
+            return False
+        _signal_process_group(process_group, signal_number)
+        return True
+
+    return bool(
+        _retry_teardown_interrupts(
+            signal_if_bound,
+            process_group=process_group,
+            profile=profile,
+        )
+    )
+
+
+def _communicate_during_teardown(
+    process: subprocess.Popen[str],
+    timeout: float,
+    *,
+    profile: str,
+) -> bool:
+    """Wait through repeated interrupts; return whether the child was reaped."""
+    deadline = time.monotonic() + timeout
+
+    def communicate_once() -> bool:
+        remaining = max(0.0, deadline - time.monotonic())
+        try:
+            process.communicate(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            return False
+        return True
+
+    return bool(
+        _retry_teardown_interrupts(
+            communicate_once,
+            process_group=process.pid,
+            profile=profile,
+        )
+    )
+
+
+def _wait_for_process_group_exit_during_teardown(
+    process_group: int,
+    timeout: float,
+    *,
+    profile: str,
+) -> bool:
+    return bool(
+        _retry_teardown_interrupts(
+            lambda: _wait_for_process_group_exit(process_group, timeout),
+            process_group=process_group,
+            profile=profile,
+        )
+    )
+
+
+def _terminate_mutation_process_tree(
+    process: subprocess.Popen[str],
+    *,
+    profile: str,
+) -> None:
+    process_group = process.pid
+    with _defer_sigint_during_process_teardown():
+        _signal_bound_process_group(process, signal.SIGTERM, profile=profile)
+        child_reaped = _communicate_during_teardown(
+            process,
+            PROCESS_TERMINATION_GRACE_SECONDS,
+            profile=profile,
+        )
+        if not child_reaped:
+            _signal_bound_process_group(process, signal.SIGKILL, profile=profile)
+            child_reaped = _communicate_during_teardown(
+                process,
+                PROCESS_TERMINATION_GRACE_SECONDS,
+                profile=profile,
+            )
+        group_stopped = _wait_for_process_group_exit_during_teardown(
+            process_group,
+            PROCESS_TERMINATION_GRACE_SECONDS,
+            profile=profile,
+        )
+    if not child_reaped or not group_stopped:
+        raise _ProcessTreeTerminationError(
+            "DSH process tree termination could not be confirmed; "
+            "package recovery is blocked",
+            process_group=process_group,
+            profile=profile,
+        )
+
+
 def _run(argv: list[str], *, dsh_home: Path) -> subprocess.CompletedProcess[str]:
+    _assert_active_dsh_home_binding()
+    prerequisites = _active_prerequisites()
+    if Path(argv[0]) != prerequisites.dsh.resolved_path:
+        raise DshLifecycleError("DSH prerequisite executable binding changed")
+    if not _mutation_process_groups_supported():
+        raise DshLifecycleError(
+            "DSH mutation process-group termination is unsupported; "
+            "use Linux, WSL, or macOS"
+        )
+    try:
+        profile = argv[argv.index("--profile") + 1]
+    except (ValueError, IndexError) as error:
+        raise DshLifecycleError("DSH mutation profile argument is missing") from error
+    _validate_profile(profile)
+    previous_signal_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT})
+    try:
+        try:
+            process = subprocess.Popen(
+                argv,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                start_new_session=True,
+                text=True,
+                shell=False,
+                env=_mutation_environment(dsh_home, prerequisites),
+            )
+        except OSError as error:
+            _assert_active_dsh_home_binding()
+            raise DshLifecycleError("unable to execute DSH command") from error
+        try:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_signal_mask)
+            stdout, stderr = process.communicate(
+                timeout=PACKAGE_MUTATION_TIMEOUT_SECONDS
+            )
+            if _process_group_exists(process.pid):
+                raise DshLifecycleError(
+                    "DSH command left a descendant process running"
+                )
+            _assert_active_dsh_home_binding()
+            _active_prerequisites()
+            if process.returncode in {-2, 130}:
+                raise DshLifecycleError("DSH command was interrupted")
+            if process.returncode != 0:
+                raise DshLifecycleError(
+                    f"DSH command failed with exit status {process.returncode}"
+                )
+            return subprocess.CompletedProcess(
+                argv,
+                process.returncode,
+                stdout,
+                stderr,
+            )
+        except BaseException as error:
+            _terminate_mutation_process_tree(process, profile=profile)
+            _assert_active_dsh_home_binding()
+            _active_prerequisites()
+            if isinstance(error, subprocess.TimeoutExpired):
+                raise DshLifecycleError(
+                    f"DSH command timed out after {PACKAGE_MUTATION_TIMEOUT_SECONDS}s"
+                ) from error
+            if isinstance(error, KeyboardInterrupt):
+                raise DshLifecycleError("DSH command was interrupted") from error
+            raise
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_signal_mask)
+
+
+def _absolute_command_path(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else (Path.cwd() / path).absolute()
+
+
+def _capture_executable_prerequisite(
+    name: str,
+    *,
+    execution_path: str,
+    missing_error: str,
+) -> _ExecutablePrerequisite:
+    executable = shutil.which(name, path=execution_path)
+    if executable is None:
+        raise DshLifecycleError(missing_error)
+    command_path = _absolute_command_path(executable)
+    try:
+        command_metadata = command_path.lstat()
+        command_link_target = (
+            os.readlink(command_path) if stat.S_ISLNK(command_metadata.st_mode) else None
+        )
+        resolved_path = command_path.resolve(strict=True)
+        resolved_metadata = resolved_path.stat(follow_symlinks=False)
+    except OSError as error:
+        raise DshLifecycleError(f"{name} executable path cannot be resolved") from error
+    if (
+        not resolved_path.is_absolute()
+        or not stat.S_ISREG(resolved_metadata.st_mode)
+        or not os.access(command_path, os.X_OK)
+    ):
+        raise DshLifecycleError(
+            f"{name} executable path is not an absolute executable regular file"
+        )
+    return _ExecutablePrerequisite(
+        name=name,
+        command_path=command_path,
+        resolved_path=resolved_path,
+        command_signature=_regular_file_signature(command_metadata),
+        command_link_target=command_link_target,
+        resolved_signature=_regular_file_signature(resolved_metadata),
+    )
+
+
+def _assert_executable_prerequisite(
+    expected: _ExecutablePrerequisite,
+    *,
+    execution_path: str,
+) -> None:
+    try:
+        current = _capture_executable_prerequisite(
+            expected.name,
+            execution_path=execution_path,
+            missing_error=f"{expected.name} prerequisite executable disappeared",
+        )
+    except DshLifecycleError as error:
+        raise DshLifecycleError(
+            f"{expected.name} prerequisite identity changed: {error}"
+        ) from error
+    if current != expected:
+        raise DshLifecycleError(
+            f"{expected.name} prerequisite identity or PATH resolution changed"
+        )
+
+
+def _run_version_probe(
+    argv: list[str],
+    *,
+    dsh_home: Path,
+    label: str,
+    remediation: str,
+) -> subprocess.CompletedProcess[str]:
     _assert_active_dsh_home_binding()
     try:
         result = subprocess.run(
@@ -2462,7 +3096,7 @@ def _run(argv: list[str], *, dsh_home: Path) -> subprocess.CompletedProcess[str]
             capture_output=True,
             text=True,
             shell=False,
-            timeout=COMMAND_TIMEOUT_SECONDS,
+            timeout=PROBE_TIMEOUT_SECONDS,
             env=_minimal_environment(dsh_home),
         )
         _assert_active_dsh_home_binding()
@@ -2470,40 +3104,40 @@ def _run(argv: list[str], *, dsh_home: Path) -> subprocess.CompletedProcess[str]
     except subprocess.TimeoutExpired as error:
         _assert_active_dsh_home_binding()
         raise DshLifecycleError(
-            f"DSH command timed out after {COMMAND_TIMEOUT_SECONDS}s"
+            f"{label} prerequisite probe timed out after {PROBE_TIMEOUT_SECONDS}s; "
+            f"{remediation}"
         ) from error
     except subprocess.CalledProcessError as error:
         _assert_active_dsh_home_binding()
         if error.returncode in {-2, 130}:
-            raise DshLifecycleError("DSH command was interrupted") from error
+            detail = "was interrupted"
+        else:
+            detail = f"failed with exit status {error.returncode}"
         raise DshLifecycleError(
-            f"DSH command failed with exit status {error.returncode}"
+            f"{label} prerequisite probe {detail}; {remediation}"
         ) from error
     except KeyboardInterrupt as error:
         _assert_active_dsh_home_binding()
-        raise DshLifecycleError("DSH command was interrupted") from error
+        raise DshLifecycleError(
+            f"{label} prerequisite probe was interrupted; {remediation}"
+        ) from error
     except OSError as error:
         _assert_active_dsh_home_binding()
-        raise DshLifecycleError("unable to execute DSH command") from error
-
-
-def _find_supported_dsh(dsh_home: Path) -> str:
-    executable = shutil.which("dsh")
-    if executable is None:
-        raise DshLifecycleError("DSH executable not found on PATH")
-    try:
-        executable_path = Path(executable).resolve(strict=True)
-    except OSError as error:
-        raise DshLifecycleError("DSH executable path cannot be resolved") from error
-    if (
-        not executable_path.is_absolute()
-        or not executable_path.is_file()
-        or not os.access(executable_path, os.X_OK)
-    ):
         raise DshLifecycleError(
-            "DSH executable path is not an absolute executable regular file"
-        )
-    result = _run([str(executable_path), "--version"], dsh_home=dsh_home)
+            f"unable to execute {label} prerequisite probe; {remediation}"
+        ) from error
+
+
+def _probe_supported_dsh(
+    dsh_home: Path,
+    executable: _ExecutablePrerequisite,
+) -> None:
+    result = _run_version_probe(
+        [str(executable.resolved_path), "--version"],
+        dsh_home=dsh_home,
+        label="DSH runtime",
+        remediation=f"install DSH {SUPPORTED_DSH_VERSION} and ensure it is on PATH",
+    )
     match = re.search(
         r"(?<![0-9])([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)", result.stdout
     )
@@ -2513,7 +3147,104 @@ def _find_supported_dsh(dsh_home: Path) -> str:
         raise DshLifecycleError(
             f"unsupported DSH version {found}; required {SUPPORTED_DSH_VERSION}"
         )
-    return str(executable_path)
+
+
+def _discover_supported_dsh(
+    dsh_home: Path,
+    execution_path: str,
+) -> _ExecutablePrerequisite:
+    executable = _capture_executable_prerequisite(
+        "dsh",
+        execution_path=execution_path,
+        missing_error="DSH executable not found on PATH",
+    )
+    _probe_supported_dsh(dsh_home, executable)
+    _assert_executable_prerequisite(executable, execution_path=execution_path)
+    return executable
+
+
+def _find_supported_dsh(dsh_home: Path) -> str:
+    execution_path = _minimal_environment(dsh_home)["PATH"]
+    executable = _discover_supported_dsh(dsh_home, execution_path)
+    return str(executable.resolved_path)
+
+
+def _probe_supported_pnpm(
+    dsh_home: Path,
+    executable: _ExecutablePrerequisite,
+) -> str:
+    remediation = f"install pnpm {SUPPORTED_PNPM_RANGE} and ensure it is on PATH"
+    result = _run_version_probe(
+        [str(executable.resolved_path), "--version"],
+        dsh_home=dsh_home,
+        label="pnpm",
+        remediation=remediation,
+    )
+    version = result.stdout.strip()
+    match = PNPM_VERSION_PATTERN.fullmatch(version)
+    if match is None:
+        raise DshLifecycleError(
+            f"pnpm prerequisite version is unparseable; {remediation}"
+        )
+    parsed = tuple(int(part) for part in match.groups())
+    if not MINIMUM_PNPM_VERSION <= parsed < MAXIMUM_PNPM_VERSION_EXCLUSIVE:
+        raise DshLifecycleError(
+            f"pnpm prerequisite version {version} is unsupported; "
+            f"required {SUPPORTED_PNPM_RANGE}"
+        )
+    return version
+
+
+def _discover_supported_pnpm(
+    dsh_home: Path,
+    execution_path: str,
+) -> tuple[_ExecutablePrerequisite, str]:
+    remediation = f"install pnpm {SUPPORTED_PNPM_RANGE} and ensure it is on PATH"
+    executable = _capture_executable_prerequisite(
+        "pnpm",
+        execution_path=execution_path,
+        missing_error=f"pnpm executable not found on PATH; {remediation}",
+    )
+    version = _probe_supported_pnpm(dsh_home, executable)
+    _assert_executable_prerequisite(executable, execution_path=execution_path)
+    return executable, version
+
+
+def _find_supported_pnpm(dsh_home: Path) -> tuple[str, str]:
+    execution_path = _minimal_environment(dsh_home)["PATH"]
+    executable, version = _discover_supported_pnpm(dsh_home, execution_path)
+    return str(executable.resolved_path), version
+
+
+def _assert_prerequisites_unchanged(prerequisites: _PrerequisiteRecord) -> None:
+    _assert_executable_prerequisite(
+        prerequisites.dsh,
+        execution_path=prerequisites.execution_path,
+    )
+    _assert_executable_prerequisite(
+        prerequisites.pnpm,
+        execution_path=prerequisites.execution_path,
+    )
+
+
+def _preflight_prerequisites(dsh_home: Path) -> _PrerequisiteRecord:
+    execution_path = _minimal_environment(dsh_home)["PATH"]
+    dsh = _discover_supported_dsh(dsh_home, execution_path)
+    pnpm, _ = _discover_supported_pnpm(dsh_home, execution_path)
+    return _PrerequisiteRecord(execution_path, dsh, pnpm)
+
+
+def _active_prerequisites() -> _PrerequisiteRecord:
+    if _ACTIVE_PREREQUISITES is None:
+        raise DshLifecycleError("DSH mutation prerequisites are not pinned")
+    _assert_prerequisites_unchanged(_ACTIVE_PREREQUISITES)
+    return _ACTIVE_PREREQUISITES
+
+
+def _current_dsh_executable(dsh_home: Path) -> str:
+    if _ACTIVE_PREREQUISITES is None:
+        return _find_supported_dsh(dsh_home)
+    return str(_active_prerequisites().dsh.resolved_path)
 
 
 def _frame_bytes(value: bytes) -> bytes:
@@ -3035,6 +3766,8 @@ def _restore_packages(
                     transaction=transaction,
                     recovery_target=recovery_target,
                 )
+        except _ProcessTreeTerminationError:
+            raise
         except (DshLifecycleError, OSError, ValueError, KeyboardInterrupt):
             failed.append(repr(command))
             if recovery_target is not None and not transaction.rollback_blocked:
@@ -3186,6 +3919,36 @@ def _raise_with_recovery(error: DshLifecycleError, failed_commands: list[str]) -
     ) from error
 
 
+def _raise_package_recovery_tree_error(
+    primary_error: DshLifecycleError,
+    recovery_error: _ProcessTreeTerminationError,
+) -> None:
+    """Preserve safe primary context while propagating an unconfirmed tree."""
+    raise _ProcessTreeTerminationError(
+        f"{primary_error}\nDSH package recovery stopped: {recovery_error}",
+        process_group=recovery_error.process_group,
+        profile=recovery_error.profile,
+    ) from primary_error
+
+
+def _block_rollback_for_live_process_tree(
+    error: DshLifecycleError,
+    *,
+    profile: str,
+    transaction: _ProfileTransaction,
+) -> None:
+    if not isinstance(error, _ProcessTreeTerminationError):
+        return
+    transaction.rollback_blocked = True
+    _raise_with_recovery(
+        error,
+        [
+            f"run 'ai-toolkit dsh doctor --profile {profile}'",
+            f"inspect preserved recovery path {str(transaction.profile_root)!r}",
+        ],
+    )
+
+
 def _validate_owned_record(
     record: dict,
     *,
@@ -3265,7 +4028,7 @@ def _install(
         source_hash = _tree_hash(_package_source(dsh_home, profile))
         if source_hash != current_hash:
             raise DshLifecycleError("installed DSH package preset source has drifted")
-        _find_supported_dsh(dsh_home)
+        _current_dsh_executable(dsh_home)
         return f"DSH profile integration already installed and unchanged: {profile}"
     if preset_destination.exists() or preset_destination.is_symlink():
         raise DshLifecycleError(
@@ -3277,7 +4040,7 @@ def _install(
         raise DshLifecycleError(
             "plugin collision, refusing to overwrite: " + ", ".join(collisions)
         )
-    executable = _find_supported_dsh(dsh_home)
+    executable = _current_dsh_executable(dsh_home)
     commands = [
         [
             executable,
@@ -3403,19 +4166,26 @@ def _install(
                 if isinstance(error, DshLifecycleError)
                 else DshLifecycleError(f"DSH install failed: {error}")
             )
+        _block_rollback_for_live_process_tree(
+            lifecycle_error,
+            profile=profile,
+            transaction=profile_transaction,
+        )
         failed: list[str] = []
         cleanup_residuals = _safe_cleanup_owned(destination_owned, failed)
         cleanup_residuals.extend(_safe_cleanup_owned(staging_owned, failed))
         cleanup_residuals.extend(_safe_cleanup_owned(preset_parent_owned, failed))
-        failed.extend(
-            _restore_packages(
+        try:
+            package_recovery = _restore_packages(
                 executable=executable,
                 dsh_home=dsh_home,
                 profile=profile,
                 before=present_packages,
                 transaction=profile_transaction,
             )
-        )
+        except _ProcessTreeTerminationError as recovery_error:
+            _raise_package_recovery_tree_error(lifecycle_error, recovery_error)
+        failed.extend(package_recovery)
         _safe_restore_profile_prestate(profile_transaction, preset_destination, failed)
         if cleanup_residuals:
             _record_profile_recovery(preset_destination, cleanup_residuals, failed)
@@ -3558,7 +4328,7 @@ def _update(
     if _tree_hash(_package_source(dsh_home, profile)) != record["preset_hash"]:
         raise DshLifecycleError("installed DSH package preset source has drifted")
     _assert_no_recovery_paths(destination)
-    executable = _find_supported_dsh(dsh_home)
+    executable = _current_dsh_executable(dsh_home)
     commands = [
         [
             executable,
@@ -3677,16 +4447,24 @@ def _update(
                 if isinstance(error, DshLifecycleError)
                 else DshLifecycleError(f"DSH update failed: {error}")
             )
-        preset_recovery: list[str] = []
-        recovery_backup = backup or (recovery_owned[-1] if recovery_owned else None)
-        failed = _restore_packages(
-            executable=executable,
-            dsh_home=dsh_home,
+        _block_rollback_for_live_process_tree(
+            lifecycle_error,
             profile=profile,
-            before=present_packages,
-            force_reinstall=True,
             transaction=profile_transaction,
         )
+        preset_recovery: list[str] = []
+        recovery_backup = backup or (recovery_owned[-1] if recovery_owned else None)
+        try:
+            failed = _restore_packages(
+                executable=executable,
+                dsh_home=dsh_home,
+                profile=profile,
+                before=present_packages,
+                force_reinstall=True,
+                transaction=profile_transaction,
+            )
+        except _ProcessTreeTerminationError as recovery_error:
+            _raise_package_recovery_tree_error(lifecycle_error, recovery_error)
         _safe_restore_profile_prestate(profile_transaction, destination, failed)
         try:
             source_restored = (
@@ -3799,12 +4577,41 @@ def _doctor(*, profile: str) -> int:
     healthy = True
     destination = dsh_home / ".agent-presets" / PRESET_NAME
     for artifact in _lifecycle_lock_recovery_artifacts(dsh_home):
-        print(f"Lifecycle lock recovery artifact: {str(artifact)!r}")
+        gate = _read_lifecycle_recovery_gate(artifact)
+        if gate is not None and gate.get("reason") == "unconfirmed-process-tree":
+            process_group = gate.get("process_group", "unknown")
+            gate_profile = gate.get("profile", "")
+            inspection_path = (
+                dsh_home / "profiles" / gate_profile
+                if PROFILE_PATTERN.fullmatch(gate_profile)
+                else dsh_home / "profiles"
+            )
+            print(
+                "Recovery gate: unconfirmed DSH process tree "
+                f"(process group {process_group})"
+            )
+            print(
+                "Recovery guidance: verify that process group "
+                f"{process_group} has exited and inspect "
+                f"{str(inspection_path)!r}"
+            )
+            print(
+                "Recovery guidance: remove only after manual verification: "
+                f"{str(artifact)!r}"
+            )
+        else:
+            print(f"Lifecycle lock recovery artifact: {str(artifact)!r}")
         healthy = False
     for recovery_path in _recovery_artifacts(destination):
         if recovery_path.exists() or recovery_path.is_symlink():
             print(f"Recovery artifact: {str(recovery_path)!r}")
             healthy = False
+    try:
+        _, pnpm_version = _find_supported_pnpm(dsh_home)
+        print(f"Package manager: supported (pnpm {pnpm_version})")
+    except DshLifecycleError as error:
+        print(f"Package manager: unsupported or missing ({error})")
+        healthy = False
     try:
         _find_supported_dsh(dsh_home)
         print(f"Runtime: supported ({SUPPORTED_DSH_VERSION})")
@@ -3921,7 +4728,7 @@ def _uninstall(
     ):
         raise DshLifecycleError("managed DSH preset drift detected; refusing uninstall")
     _assert_no_recovery_paths(destination)
-    executable = _find_supported_dsh(dsh_home)
+    executable = _current_dsh_executable(dsh_home)
     commands = [
         [executable, "plugin", "--profile", profile, "remove", package]
         for package in reversed(recorded_packages)
@@ -4036,18 +4843,25 @@ def _uninstall(
                 if isinstance(error, DshLifecycleError)
                 else DshLifecycleError(f"DSH uninstall failed: {error}")
             )
+        _block_rollback_for_live_process_tree(
+            lifecycle_error,
+            profile=profile,
+            transaction=profile_transaction,
+        )
         preset_recovery: list[str] = []
         failed: list[str] = []
         if package_mutation_started:
-            failed.extend(
-                _restore_packages(
+            try:
+                package_recovery = _restore_packages(
                     executable=executable,
                     dsh_home=dsh_home,
                     profile=profile,
                     before=packages,
                     transaction=profile_transaction,
                 )
-            )
+            except _ProcessTreeTerminationError as recovery_error:
+                _raise_package_recovery_tree_error(lifecycle_error, recovery_error)
+            failed.extend(package_recovery)
             _safe_restore_profile_prestate(profile_transaction, destination, failed)
         try:
             source_restored = (
@@ -4152,6 +4966,7 @@ def main(argv: list[str] | None = None) -> int:
             return _doctor(profile=profile)
         dsh_home = _dsh_home()
         _assert_no_symlink_ancestry(dsh_home, "DSH home")
+        prerequisites = _preflight_prerequisites(dsh_home)
         if args.dry_run:
             if args.command == "install":
                 result = _install(profile=profile, dry_run=True)
@@ -4176,7 +4991,17 @@ def main(argv: list[str] | None = None) -> int:
                 "secure ai-toolkit state mutation is unsupported on this platform; "
                 "use Linux, WSL, or macOS"
             )
-        with _locked_lifecycle(dsh_home) as pinned_home:
+        if not _directory_lifecycle_lock_supported():
+            raise DshLifecycleError(
+                "DSH home directory lifecycle locking is unsupported; "
+                "use Linux, WSL, or macOS"
+            )
+        if not _mutation_process_groups_supported():
+            raise DshLifecycleError(
+                "DSH mutation process-group termination is unsupported; "
+                "use Linux, WSL, or macOS"
+            )
+        with _locked_lifecycle(dsh_home, prerequisites) as pinned_home:
             if args.command == "install":
                 result = _install(
                     profile=profile,

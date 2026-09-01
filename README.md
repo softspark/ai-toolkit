@@ -89,7 +89,7 @@ ai-toolkit dsh doctor --profile web
 ai-toolkit dsh uninstall --profile web --yes
 ```
 
-DSH is excluded from `--editors all`, auto-detection, and defaults. Its only DSH-specific project output is `.agents/skills`; the normal `--local` Claude files, detected language rules, and other generic project outputs still apply. Project and profile `--dry-run` commands are read-only. The reviewed pins are DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.0`. Codex, Claude Code, and GitHub Copilot own their logins. ai-toolkit accepts no provider API keys, and GitHub AI credits apply to the Copilot Gemini route. Real-profile Phase 3 qualification is pending. See [DSH Compatibility](kb/reference/dsh-compatibility.md).
+DSH is excluded from `--editors all`, auto-detection, and defaults. Its only DSH-specific project output is `.agents/skills`; the normal `--local` Claude files, detected language rules, and other generic project outputs still apply. Project and profile `--dry-run` commands are read-only. The reviewed pins are DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. Codex, Claude Code, and GitHub Copilot own their logins. ai-toolkit accepts no provider API keys, and GitHub AI credits apply to the Copilot Gemini route. Real-profile Phase 3 qualification is pending. See [DSH Compatibility](kb/reference/dsh-compatibility.md).
 
 ### Plugin Management
 

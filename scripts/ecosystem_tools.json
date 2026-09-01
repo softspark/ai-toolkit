@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-08-31",
+  "last_updated": "2026-09-01",
   "tools": [
     {
       "id": "claude-code",
@@ -167,7 +167,7 @@
         "ai-toolkit dsh doctor --profile web",
         "ai-toolkit dsh uninstall --profile web"
       ],
-      "status_note": "Community compatibility target maintained by SoftSpark. DeepSeek AI has not endorsed this integration. ai-toolkit reuses its native skill generator for project .agents/skills output and manages the exact dsh-codex and dsh-orchestrator 1.0.0 packages only through explicit profile lifecycle commands. Upstream has newer prereleases, but this entry remains pinned to the reviewed DSH 0.1.1-rc.2 contract pending qualification.",
+      "status_note": "Community compatibility target maintained by SoftSpark. DeepSeek AI has not endorsed this integration. ai-toolkit reuses its native skill generator for project .agents/skills output and manages exact @softspark/dsh-codex@1.0.0 and @softspark/dsh-orchestrator@1.0.1 packages only through explicit profile lifecycle commands. Upstream has newer prereleases, but this entry remains pinned to the reviewed DSH 0.1.1-rc.2 contract pending qualification.",
       "capability_markers": [
         "Developer preview",
         "profiles",

@@ -13,7 +13,7 @@ tags:
 doc_type: plan
 status: in-progress
 created: "2026-08-27"
-last_updated: "2026-08-31"
+last_updated: "2026-09-01"
 approved: "2026-08-28"
 started: "2026-08-28"
 completion: "Phase 2 of 3 complete"
@@ -36,7 +36,7 @@ Predecessor: [`kb/history/completed/dsh-integration-plan-superseded.md`](../hist
 The subscription-backed runtime is already delivered in two standalone Apache-2.0 packages:
 
 - `@softspark/dsh-codex@1.0.0` registers the DSH `codex` provider and delegates authentication, tools, thread state, and model execution to the locally installed Codex app server. [PATH: ../dsh-codex/package.json:3]
-- `@softspark/dsh-orchestrator@1.0.0` registers bounded Claude Code and GitHub Copilot Gemini delegation through native vendor logins. It accepts no provider API keys. [PATH: ../dsh-orchestrator/README.md:7]
+- `@softspark/dsh-orchestrator@1.0.1` registers bounded Claude Code and GitHub Copilot Gemini delegation through native vendor logins. It accepts no provider API keys. [PATH: ../dsh-orchestrator/README.md:7]
 
 ai-toolkit does not expose `dsh` in its editor list, does not track DSH profile artifacts, and has no DSH-specific install, doctor, update, or uninstall contract. [PATH: bin/ai-toolkit.js:309]
 
@@ -61,7 +61,7 @@ This split preserves the meaning of `--local`. It also makes global DSH changes 
 - Reuse of the existing `.agents/skills/<name>/SKILL.md` emission path.
 - DSH-specific validation for fail-closed skill metadata and one-level discovery depth.
 - Explicit `ai-toolkit dsh install`, `update`, `doctor`, and `uninstall` lifecycle commands.
-- Exact installation of `@softspark/dsh-codex@1.0.0` and `@softspark/dsh-orchestrator@1.0.0` into a named DSH profile.
+- Exact installation of `@softspark/dsh-codex@1.0.0` and `@softspark/dsh-orchestrator@1.0.1` into a named DSH profile.
 - Ownership-safe copy and update of `$DSH_HOME/.agent-presets/softspark-orchestrator`.
 - State tracking through `~/.softspark/ai-toolkit/state.json`.
 - Dry-run output, collision refusal, rollback, tests, registry metadata, and public documentation.
@@ -80,7 +80,7 @@ This split preserves the meaning of `--local`. It also makes global DSH changes 
 ## Global Success Criteria
 
 - [x] `ai-toolkit install --local --editors dsh` emits the complete managed skill catalog and makes no write under `$DSH_HOME`.
-- [x] `ai-toolkit dsh install --profile web` installs both exact 1.0.0 packages and the released preset without manual file editing.
+- [x] `ai-toolkit dsh install --profile web` installs exact `@softspark/dsh-codex@1.0.0` and `@softspark/dsh-orchestrator@1.0.1` packages plus the released preset without manual file editing.
 - [x] Install, update, doctor, and uninstall preserve user-authored presets and unrelated DSH plugins.
 - [x] No command accepts, reads, copies, logs, or forwards provider credentials.
 - [x] `dsh` remains excluded from `--editors all`, auto-detection, default profiles, and default global editors.
@@ -154,7 +154,7 @@ Completed on 2026-08-31 after adversarial transaction, concurrency, rollback, pa
 - Code quality review: 0 Critical, 0 Important, 0 Suggestions.
 - Strict validator: 0 errors, 0 warnings on the verified DSH tree.
 - Skill audit: 0 HIGH, 0 WARN.
-- Exact reviewed pins remain DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, and dsh-orchestrator `1.0.0`.
+- Exact reviewed pins are DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, and dsh-orchestrator `1.0.1`.
 - Lifecycle state stores canonical package and preset ownership metadata without credentials or package contents.
 
 ### Phase 2 Tasks
@@ -198,7 +198,7 @@ Size: **S to M (1 day)**.
 
 ### Phase 3 Rollback and Scope Cut
 
-Do not tag or publish the ai-toolkit release. Keep the already published standalone 1.0.0 packages as the supported installation route. If upstream DSH drifts during qualification, retain the registry entry as unsupported-preview metadata and remove the user-facing install command until compatibility is restored.
+Do not tag or publish the ai-toolkit release. Keep the published standalone `@softspark/dsh-codex@1.0.0` and `@softspark/dsh-orchestrator@1.0.1` packages as the supported installation route. If upstream DSH drifts during qualification, retain the registry entry as unsupported-preview metadata and remove the user-facing install command until compatibility is restored.
 
 ## Dependencies
 
@@ -303,7 +303,7 @@ Implementation starts only after the user approves:
 
 1. The two-command split between project emission and explicit DSH profile mutation.
 2. Excluding DSH from `--editors all` and auto-detection while upstream remains a developer preview.
-3. Pinning the first native target to DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, and dsh-orchestrator `1.0.0`.
+3. Pinning the native target to DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, and dsh-orchestrator `1.0.1`.
 4. Deferring 44-agent mapping, MCP bridging, and hook bridging outside this plan.
 
 ## Sources

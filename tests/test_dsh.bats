@@ -19,8 +19,29 @@ install_fake_dsh() {
     local fake_bin="$TEST_PROJECT/fake-bin"
     mkdir -p "$fake_bin"
     cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
+    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/pnpm"
+    chmod +x "$fake_bin/dsh"
+    chmod +x "$fake_bin/pnpm"
+    printf '%s\n' "$fake_bin"
+}
+
+install_fake_dsh_without_pnpm() {
+    local fake_bin="$TEST_PROJECT/fake-bin-without-pnpm"
+    mkdir -p "$fake_bin"
+    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
+    ln -s "$(command -v python3)" "$fake_bin/python3"
     chmod +x "$fake_bin/dsh"
     printf '%s\n' "$fake_bin"
+}
+
+assert_no_dsh_lifecycle_artifacts() {
+    [ ! -e "$TEST_DSH_HOME/.ai-toolkit-lifecycle.lock" ]
+    [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
+    [ ! -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-codex" ]
+    [ ! -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-orchestrator" ]
+    [ ! -e "$TEST_DSH_HOME/.agent-presets/softspark-orchestrator" ]
+    [ ! -e "$TEST_DSH_HOME/fake-argv.jsonl" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
 }
 
 validate_emitted() {
@@ -280,6 +301,7 @@ PY
 EOF
     python3 - "$TEST_PROJECT/.softspark-toolkit.lock.json" <<'PY'
 import os
+import subprocess
 import sys
 
 timestamp_ns = 1_600_000_000_123_456_789
@@ -463,7 +485,7 @@ state_path = Path(sys.argv[2])
 calls = [json.loads(line) for line in (dsh_home / "fake-argv.jsonl").read_text().splitlines()]
 assert calls == [
     ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
 ], calls
 preset = dsh_home / ".agent-presets" / "softspark-orchestrator"
 assert (preset / "preset.md").read_text() == "softspark orchestrator\n"
@@ -472,8 +494,9 @@ assert state["dsh_home"] == str(dsh_home.resolve())
 assert state["profile"] == "web"
 assert state["packages"] == {
     "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
 }
+
 assert set(state["package_trees"]) == set(state["packages"])
 
 assert state["preset_path"] == str(preset.resolve())
@@ -484,6 +507,949 @@ assert set(state) == {
     "owned", "installed_at", "last_updated",
 }
 PY
+}
+
+@test "dsh lifecycle: missing pnpm fails before every lifecycle mutation" {
+    fake_bin="$(install_fake_dsh_without_pnpm)"
+    python_bin="$(command -v python3)"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" "$python_bin" - <<'PY'
+from install_steps import dsh
+
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"pnpm executable not found on PATH"* ]] || false
+    [[ "$output" == *"install pnpm >=11.7.0,<12.0.0"* ]] || false
+    assert_no_dsh_lifecycle_artifacts
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" "$python_bin" - <<'PY'
+from install_steps import dsh
+
+raise SystemExit(dsh.main(["install", "--profile", "web", "--dry-run"]))
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"pnpm executable not found on PATH"* ]] || false
+    assert_no_dsh_lifecycle_artifacts
+}
+
+@test "dsh lifecycle: broken pnpm probes fail closed without mutation" {
+    python_bin="$(command -v python3)"
+    python_dir="$(dirname "$python_bin")"
+    for fixture in nonzero malformed below-minimum next-major timeout; do
+        fake_bin="$(install_fake_dsh)"
+        case "$fixture" in
+            nonzero)
+                printf '%s\n' \
+                    '{"pnpm_fail_code":23,"pnpm_stderr":"NPM_TOKEN=PROBE_SECRET"}' \
+                    > "$TEST_DSH_HOME/fake-control.json"
+                ;;
+            malformed)
+                printf '%s\n' '{"pnpm_stdout":"pnpm eleven"}' \
+                    > "$TEST_DSH_HOME/fake-control.json"
+                ;;
+            below-minimum)
+                printf '%s\n' '{"pnpm_version":"11.6.9"}' \
+                    > "$TEST_DSH_HOME/fake-control.json"
+                ;;
+            next-major)
+                printf '%s\n' '{"pnpm_version":"12.0.0"}' \
+                    > "$TEST_DSH_HOME/fake-control.json"
+                ;;
+            timeout)
+                printf '%s\n' '{"pnpm_sleep_seconds":1}' \
+                    > "$TEST_DSH_HOME/fake-control.json"
+                ;;
+        esac
+
+        run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" \
+            PATH="$fake_bin:$python_dir:/usr/bin:/bin" \
+            PYTHONPATH="$TOOLKIT_DIR/scripts" "$python_bin" - "$fixture" <<'PY'
+import sys
+
+from install_steps import dsh
+
+if sys.argv[1] == "timeout":
+    dsh.PROBE_TIMEOUT_SECONDS = 0.2
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+        [ "$status" -ne 0 ]
+        if [[ "$output" != *"pnpm prerequisite"* ]]; then
+            echo "fixture=$fixture output=$output" >&2
+            false
+        fi
+        [[ "$output" != *"PROBE_SECRET"* ]] || false
+        assert_no_dsh_lifecycle_artifacts
+    done
+}
+
+@test "dsh lifecycle: doctor reports pnpm prerequisite without writing" {
+    fake_bin="$(install_fake_dsh)"
+    before_dsh="$(surface_fingerprint "$TEST_DSH_HOME")"
+    before_home="$(surface_fingerprint "$TEST_HOME")"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh doctor --profile web
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Package manager: supported (pnpm 11.24.0)"* ]] || false
+    [ "$(surface_fingerprint "$TEST_DSH_HOME")" = "$before_dsh" ]
+    [ "$(surface_fingerprint "$TEST_HOME")" = "$before_home" ]
+
+    missing_bin="$(install_fake_dsh_without_pnpm)"
+    python_bin="$(command -v python3)"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$missing_bin" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" "$python_bin" - <<'PY'
+from install_steps import dsh
+
+raise SystemExit(dsh.main(["doctor", "--profile", "web"]))
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Package manager: unsupported or missing"* ]] || false
+    [[ "$output" == *"pnpm executable not found on PATH"* ]] || false
+    [ "$(surface_fingerprint "$TEST_DSH_HOME")" = "$before_dsh" ]
+    [ "$(surface_fingerprint "$TEST_HOME")" = "$before_home" ]
+}
+
+@test "dsh lifecycle: pnpm probe uses its resolved path and minimal environment" {
+    fake_bin="$(install_fake_dsh)"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        OPENAI_API_KEY=do-not-forward NPM_TOKEN=do-not-forward \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$fake_bin/pnpm" <<'PY'
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from install_steps import dsh
+
+expected = Path(sys.argv[1]).resolve()
+real_run = subprocess.run
+captured = {}
+
+
+def inspect_probe(argv, **kwargs):
+    captured["argv"] = argv
+    captured["env"] = kwargs["env"]
+    captured["shell"] = kwargs["shell"]
+    return real_run(argv, **kwargs)
+
+
+dsh.subprocess.run = inspect_probe
+executable, version = dsh._find_supported_pnpm(Path(os.environ["DSH_HOME"]))
+assert Path(executable) == expected
+assert captured["argv"] == [str(expected), "--version"]
+assert captured["shell"] is False
+assert version == "11.24.0"
+assert "OPENAI_API_KEY" not in captured["env"]
+assert "NPM_TOKEN" not in captured["env"]
+assert {"HOME", "DSH_HOME", "PATH"}.issubset(captured["env"])
+PY
+
+    [ "$status" -eq 0 ]
+    assert_no_dsh_lifecycle_artifacts
+}
+
+@test "dsh lifecycle: prerequisite drift after lock fails before plugin mutation" {
+    for race in replacement removal path-shadow; do
+        case_root="$TEST_PROJECT/prerequisite-$race"
+        case_home="$case_root/home"
+        case_dsh="$case_root/dsh"
+        fake_bin="$case_root/fake-bin"
+        shadow_bin="$case_root/shadow-bin"
+        mkdir -p "$case_home" "$case_dsh" "$fake_bin" "$shadow_bin"
+        cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
+        cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/pnpm"
+        chmod +x "$fake_bin/dsh" "$fake_bin/pnpm"
+
+        run env HOME="$case_home" DSH_HOME="$case_dsh" \
+            PATH="$shadow_bin:$fake_bin:$PATH" PYTHONPATH="$TOOLKIT_DIR/scripts" \
+            python3 - "$race" "$fake_bin/pnpm" "$shadow_bin/pnpm" <<'PY'
+import shutil
+import sys
+from pathlib import Path
+
+from install_steps import dsh
+
+race = sys.argv[1]
+pnpm = Path(sys.argv[2])
+shadow = Path(sys.argv[3])
+preserved = pnpm.with_name("pnpm.preflight")
+real_acquire = dsh._acquire_lifecycle_lock
+
+
+def acquire_then_race(dsh_home):
+    lock = real_acquire(dsh_home)
+    if race == "replacement":
+        pnpm.rename(preserved)
+        pnpm.write_text("#!/bin/sh\nprintf '11.24.0\\n'\n", encoding="utf-8")
+        pnpm.chmod(0o755)
+    elif race == "removal":
+        pnpm.rename(preserved)
+    elif race == "path-shadow":
+        shutil.copy2(pnpm, shadow)
+        shadow.chmod(0o755)
+    else:
+        raise AssertionError(race)
+    return lock
+
+
+dsh._acquire_lifecycle_lock = acquire_then_race
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+        [ "$status" -ne 0 ]
+        [[ "$output" == *"prerequisite"* ]] || false
+        [ ! -e "$case_dsh/fake-argv.jsonl" ]
+        [ ! -e "$case_dsh/.ai-toolkit-lifecycle.lock" ]
+        [ ! -e "$case_dsh/profiles/web/package.json" ]
+        [ ! -e "$case_home/.softspark/ai-toolkit/state.json" ]
+    done
+}
+
+@test "dsh lifecycle: verified pnpm directory leads the mutation PATH" {
+    fake_bin="$(install_fake_dsh)"
+    shadow_bin="$TEST_PROJECT/empty-shadow-bin"
+    mkdir -p "$shadow_bin"
+    printf '%s\n' '{"record_path":true}' > "$TEST_DSH_HOME/fake-control.json"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" \
+        PATH="$shadow_bin:$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+
+    [ "$status" -eq 0 ]
+    python3 - "$TEST_DSH_HOME/fake-path.jsonl" "$fake_bin" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+paths = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines()]
+expected = Path(sys.argv[2]).resolve()
+assert len(paths) == 2, paths
+assert all(Path(value.split(os.pathsep)[0]).resolve() == expected for value in paths), paths
+PY
+}
+
+@test "dsh lifecycle: pnpm drift before the next mutation also blocks rollback" {
+    fake_bin="$(install_fake_dsh)"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$fake_bin/pnpm" <<'PY'
+import sys
+from pathlib import Path
+
+from install_steps import dsh
+
+pnpm = Path(sys.argv[1])
+preserved = pnpm.with_name("pnpm.after-first-add")
+real_run = dsh._run
+injected = [False]
+
+
+def drift_after_first_add(argv, *, dsh_home):
+    result = real_run(argv, dsh_home=dsh_home)
+    if "@softspark/dsh-codex@1.0.0" in argv and not injected[0]:
+        injected[0] = True
+        pnpm.rename(preserved)
+    return result
+
+
+dsh._run = drift_after_first_add
+status = dsh.main(["install", "--profile", "web"])
+assert injected[0]
+raise SystemExit(status)
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"pnpm prerequisite"* ]] || false
+    [[ "$output" == *"Recovery required"* ]] || false
+    python3 - "$TEST_DSH_HOME/fake-argv.jsonl" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+calls = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines()]
+assert calls == [[
+    "plugin", "--profile", "web", "add",
+    "@softspark/dsh-codex@1.0.0", "--save-exact",
+]], calls
+PY
+    [ -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-codex" ]
+    [ ! -e "$TEST_DSH_HOME/.agent-presets/softspark-orchestrator" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh lifecycle: unsupported process groups fail before lifecycle writes" {
+    fake_bin="$(install_fake_dsh)"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+dsh._mutation_process_groups_supported = lambda: False
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"process-group termination is unsupported"* ]] || false
+    assert_no_dsh_lifecycle_artifacts
+}
+
+@test "dsh lifecycle: timeout kills delayed child and grandchild before rollback" {
+    fake_bin="$(install_fake_dsh)"
+    cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
+{
+  "spawn_delayed_descendant_tree_before":"add:@softspark/dsh-codex",
+  "descendant_delay_seconds":0.4,
+  "descendant_host_sleep_seconds":5,
+  "descendant_parent_sleep_seconds":5
+}
+JSON
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"timed out after 0.2s"* ]] || false
+    sleep 0.7
+    [ ! -e "$TEST_DSH_HOME/late-descendant-marker.txt" ] || false
+    [ ! -e "$TEST_DSH_HOME/profiles/web/late-descendant-profile-write.txt" ] || false
+    [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
+    [ ! -e "$TEST_DSH_HOME/.ai-toolkit-lifecycle.lock" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh lifecycle: interruption kills delayed child and grandchild before rollback" {
+    fake_bin="$(install_fake_dsh)"
+    cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
+{
+  "spawn_delayed_descendant_tree_before":"add:@softspark/dsh-codex",
+  "descendant_delay_seconds":0.4,
+  "descendant_host_sleep_seconds":5,
+  "descendant_parent_sleep_seconds":5
+}
+JSON
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+import os
+import signal
+import threading
+
+from install_steps import dsh
+
+real_run = dsh._run
+injected = [False]
+
+
+def interrupt_first_mutation(argv, *, dsh_home):
+    if injected[0]:
+        return real_run(argv, dsh_home=dsh_home)
+    injected[0] = True
+    timer = threading.Timer(0.2, lambda: os.kill(os.getpid(), signal.SIGINT))
+    timer.start()
+    try:
+        return real_run(argv, dsh_home=dsh_home)
+    finally:
+        timer.cancel()
+
+
+dsh._run = interrupt_first_mutation
+status = dsh.main(["install", "--profile", "web"])
+assert injected[0]
+raise SystemExit(status)
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"interrupted"* ]] || false
+    sleep 0.7
+    [ ! -e "$TEST_DSH_HOME/late-descendant-marker.txt" ] || false
+    [ ! -e "$TEST_DSH_HOME/profiles/web/late-descendant-profile-write.txt" ] || false
+    [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
+    [ ! -e "$TEST_DSH_HOME/.ai-toolkit-lifecycle.lock" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh lifecycle: repeated SIGINT cannot escape process-tree teardown" {
+    fake_bin="$(install_fake_dsh)"
+    cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
+{
+  "spawn_delayed_descendant_tree_before":"add:@softspark/dsh-codex",
+  "descendant_delay_seconds":0.4,
+  "descendant_host_sleep_seconds":5,
+  "descendant_parent_sleep_seconds":5
+}
+JSON
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+import os
+import signal
+import threading
+
+from install_steps import dsh
+
+real_signal_group = dsh._signal_process_group
+real_wait_group = dsh._wait_for_process_group_exit
+real_run = dsh._run
+signal_interrupts = [2]
+wait_interrupts = [2]
+mutation_started = [False]
+
+
+def repeatedly_interrupt_signal(process_group, signal_number):
+    if signal_interrupts[0]:
+        signal_interrupts[0] -= 1
+        raise KeyboardInterrupt
+    return real_signal_group(process_group, signal_number)
+
+
+def repeatedly_interrupt_wait(process_group, timeout):
+    if wait_interrupts[0]:
+        wait_interrupts[0] -= 1
+        raise KeyboardInterrupt
+    return real_wait_group(process_group, timeout)
+
+
+def interrupt_first_mutation(argv, *, dsh_home):
+    if mutation_started[0]:
+        return real_run(argv, dsh_home=dsh_home)
+    mutation_started[0] = True
+    timer = threading.Timer(0.2, lambda: os.kill(os.getpid(), signal.SIGINT))
+    timer.start()
+    try:
+        return real_run(argv, dsh_home=dsh_home)
+    finally:
+        timer.cancel()
+
+
+dsh._signal_process_group = repeatedly_interrupt_signal
+dsh._wait_for_process_group_exit = repeatedly_interrupt_wait
+dsh._run = interrupt_first_mutation
+status = dsh.main(["install", "--profile", "web"])
+assert mutation_started == [True]
+assert signal_interrupts == [0]
+assert wait_interrupts == [0]
+print("teardown-retried-sigint")
+raise SystemExit(status)
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"interrupted"* ]] || false
+    [[ "$output" == *"teardown-retried-sigint"* ]] || false
+    [[ "$output" != *"Traceback"* ]] || false
+    sleep 0.7
+    [ ! -e "$TEST_DSH_HOME/late-descendant-marker.txt" ] || false
+    [ ! -e "$TEST_DSH_HOME/profiles/web/late-descendant-profile-write.txt" ] || false
+    [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
+    [ ! -e "$TEST_DSH_HOME/.ai-toolkit-lifecycle.lock" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh lifecycle: SIGINT after Popen return cannot escape process-tree teardown" {
+    fake_bin="$(install_fake_dsh)"
+    printf '%s\n' \
+        '{"sleep_before":"add:@softspark/dsh-codex","sleep_seconds":5}' \
+        > "$TEST_DSH_HOME/fake-control.json"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+import os
+import signal
+
+from install_steps import dsh
+
+real_run = dsh._run
+real_popen = dsh.subprocess.Popen
+spawned = []
+boundary_reached = [False]
+
+
+def interrupting_popen(*args, **kwargs):
+    process = real_popen(*args, **kwargs)
+    spawned.append(process)
+    boundary_reached[0] = True
+    os.kill(os.getpid(), signal.SIGINT)
+    return process
+
+
+def run_with_spawn_boundary(argv, *, dsh_home):
+    dsh.subprocess.Popen = interrupting_popen
+    try:
+        return real_run(argv, dsh_home=dsh_home)
+    finally:
+        dsh.subprocess.Popen = real_popen
+
+
+dsh._run = run_with_spawn_boundary
+status = dsh.main(["install", "--profile", "web"])
+assert boundary_reached == [True]
+assert len(spawned) == 1
+process = spawned[0]
+survived = process.poll() is None
+if survived:
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    process.communicate(timeout=2)
+assert not survived, "spawned DSH process escaped teardown"
+print("post-popen-sigint-teardown-confirmed")
+raise SystemExit(status)
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"interrupted"* ]] || false
+    [[ "$output" == *"post-popen-sigint-teardown-confirmed"* ]] || false
+    [[ "$output" != *"Traceback"* ]] || false
+    [ ! -e "$TEST_DSH_HOME/.ai-toolkit-lifecycle.lock" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh lifecycle: SIGINT after communicate cannot bypass final PGID teardown" {
+    fake_bin="$(install_fake_dsh)"
+    printf '%s\n' \
+        '{"success_noop":"add:@softspark/dsh-codex"}' \
+        > "$TEST_DSH_HOME/fake-control.json"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+import os
+import signal
+
+from install_steps import dsh
+
+real_group_exists = dsh._process_group_exists
+real_terminate = dsh._terminate_mutation_process_tree
+boundary_reached = [False]
+teardown_calls = [0]
+
+
+def interrupt_before_final_group_check(process_group):
+    if not boundary_reached[0]:
+        boundary_reached[0] = True
+        os.kill(os.getpid(), signal.SIGINT)
+    return real_group_exists(process_group)
+
+
+def record_teardown(process, *, profile):
+    teardown_calls[0] += 1
+    return real_terminate(process, profile=profile)
+
+
+dsh._process_group_exists = interrupt_before_final_group_check
+dsh._terminate_mutation_process_tree = record_teardown
+status = dsh.main(["install", "--profile", "web"])
+assert boundary_reached == [True]
+assert teardown_calls == [1]
+print("post-communicate-sigint-teardown-confirmed")
+raise SystemExit(status)
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"interrupted"* ]] || false
+    [[ "$output" == *"post-communicate-sigint-teardown-confirmed"* ]] || false
+    [[ "$output" != *"Traceback"* ]] || false
+    [ ! -e "$TEST_DSH_HOME/.ai-toolkit-lifecycle.lock" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh lifecycle: unconfirmed process-tree exit blocks package rollback" {
+    fake_bin="$(install_fake_dsh)"
+    cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
+{"sleep_before":"add:@softspark/dsh-orchestrator","sleep_seconds":5}
+JSON
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+dsh.PROCESS_TERMINATION_GRACE_SECONDS = 0.05
+dsh._wait_for_process_group_exit = lambda process_group, timeout: False
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"process tree termination could not be confirmed"* ]] || false
+    [[ "$output" == *"package recovery is blocked"* ]] || false
+    python3 - "$TEST_DSH_HOME/fake-argv.jsonl" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+calls = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines()]
+assert calls == [
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
+], calls
+PY
+    [ -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-codex" ]
+    [ ! -e "$TEST_DSH_HOME/.agent-presets/softspark-orchestrator" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh lifecycle: unconfirmed rollback tree aborts all later restoration" {
+    fake_bin="$(install_fake_dsh)"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from pathlib import Path
+
+from install_steps import dsh
+
+home = Path(dsh._dsh_home())
+profile_restore_marker = home / "unexpected-profile-restore"
+state_restore_marker = home / "unexpected-state-restore"
+recovery_calls = []
+real_claim = dsh._claim_directory
+real_run = dsh._run
+
+
+def fail_after_packages(path, owned, *, mode=0o700):
+    if path == home / ".agent-presets":
+        raise dsh.DshLifecycleError("injected primary preset failure")
+    return real_claim(path, owned, mode=mode)
+
+
+def unconfirmed_first_recovery(argv, *, dsh_home):
+    if "remove" in argv:
+        recovery_calls.append(list(argv))
+        raise dsh._ProcessTreeTerminationError(
+            "DSH recovery process tree termination could not be confirmed; "
+            "package recovery is blocked",
+            process_group=424242,
+            profile="web",
+        )
+    return real_run(argv, dsh_home=dsh_home)
+
+
+def unexpected_profile_restore(*args, **kwargs):
+    profile_restore_marker.write_text("called\n", encoding="utf-8")
+
+
+def unexpected_state_restore(*args, **kwargs):
+    state_restore_marker.write_text("called\n", encoding="utf-8")
+
+
+dsh._claim_directory = fail_after_packages
+dsh._run = unconfirmed_first_recovery
+dsh._safe_restore_profile_prestate = unexpected_profile_restore
+dsh._safe_restore_state = unexpected_state_restore
+status = dsh.main(["install", "--profile", "web"])
+assert len(recovery_calls) == 1, recovery_calls
+assert recovery_calls[0][1:] == [
+    "plugin", "--profile", "web", "remove", "@softspark/dsh-orchestrator",
+], recovery_calls
+print("rollback-tree-boundary-reached")
+raise SystemExit(status)
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"rollback-tree-boundary-reached"* ]] || false
+    [[ "$output" == *"injected primary preset failure"* ]] || false
+    [[ "$output" == *"recovery process tree termination could not be confirmed"* ]] \
+        || false
+    [[ "$output" != *"CHILD_SECRET"* ]] || false
+    [ ! -e "$TEST_DSH_HOME/unexpected-profile-restore" ]
+    [ ! -e "$TEST_DSH_HOME/unexpected-state-restore" ]
+
+    recovery_gate="$(find "$TEST_DSH_HOME" -mindepth 1 -maxdepth 1 -type f \
+        -name '.ai-toolkit-lifecycle-tree-recovery-*' -print -quit)"
+    [ -n "$recovery_gate" ]
+    grep -q '^reason=unconfirmed-process-tree$' "$recovery_gate"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh doctor --profile web
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Recovery gate: unconfirmed DSH process tree"* ]] || false
+    [[ "$output" == *"$recovery_gate"* ]] || false
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"lifecycle recovery gate blocks mutation"* ]] || false
+}
+
+@test "dsh lifecycle: unconfirmed process-tree exit leaves a durable recovery gate" {
+    fake_bin="$(install_fake_dsh)"
+    cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
+{"sleep_before":"add:@softspark/dsh-orchestrator","sleep_seconds":5}
+JSON
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+dsh.PROCESS_TERMINATION_GRACE_SECONDS = 0.05
+dsh._wait_for_process_group_exit = lambda process_group, timeout: False
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+    [ "$status" -ne 0 ]
+    gate="$TEST_DSH_HOME/.ai-toolkit-lifecycle.lock"
+    [ -f "$gate" ]
+    grep -q '^state=recovery$' "$gate"
+    grep -q '^reason=unconfirmed-process-tree$' "$gate"
+    grep -Eq '^process_group=[1-9][0-9]*$' "$gate"
+    grep -q '^profile=web$' "$gate"
+    recovery_sentinel="$(find "$TEST_DSH_HOME" -mindepth 1 -maxdepth 1 -type f \
+        -name '.ai-toolkit-lifecycle-tree-recovery-*' -print -quit)"
+    [ -n "$recovery_sentinel" ]
+    grep -q '^reason=unconfirmed-process-tree$' "$recovery_sentinel"
+    calls_before="$(wc -l < "$TEST_DSH_HOME/fake-argv.jsonl" | tr -d ' ')"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+dsh.LIFECYCLE_LOCK_TIMEOUT_SECONDS = 0.05
+commands = [
+    ["install", "--profile", "web"],
+    ["update", "--profile", "web"],
+    ["uninstall", "--profile", "web", "--yes"],
+]
+for command in commands:
+    assert dsh.main(command) == 1
+    print(f"blocked:{command[0]}")
+PY
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"lifecycle recovery gate blocks mutation"* ]] || false
+    [[ "$output" == *"blocked:install"* ]] || false
+    [[ "$output" == *"blocked:update"* ]] || false
+    [[ "$output" == *"blocked:uninstall"* ]] || false
+    [ "$(wc -l < "$TEST_DSH_HOME/fake-argv.jsonl" | tr -d ' ')" = "$calls_before" ]
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh doctor --profile alternate
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Recovery gate: unconfirmed DSH process tree"* ]] || false
+    [[ "$output" == *"verify that process group"* ]] || false
+    [[ "$output" == *"$TEST_DSH_HOME/profiles/web"* ]] || false
+    [[ "$output" != *"$TEST_DSH_HOME/profiles/alternate"* ]] || false
+    [[ "$output" == *"remove only after manual verification"* ]] || false
+    [ -f "$gate" ]
+}
+
+@test "dsh lifecycle: canonical lock loss preserves a recognized recovery gate" {
+    for race in removed renamed replaced; do
+        case_root="$TEST_PROJECT/process-tree-gate-$race"
+        case_home="$case_root/home"
+        case_dsh="$case_root/dsh"
+        fake_bin="$case_root/fake-bin"
+        mkdir -p "$case_home" "$case_dsh" "$fake_bin"
+        cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
+        cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/pnpm"
+        chmod +x "$fake_bin/dsh" "$fake_bin/pnpm"
+        printf '%s\n' \
+            '{"sleep_before":"add:@softspark/dsh-orchestrator","sleep_seconds":5}' \
+            > "$case_dsh/fake-control.json"
+
+        run env HOME="$case_home" DSH_HOME="$case_dsh" PATH="$fake_bin:$PATH" \
+            PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$race" <<'PY'
+import sys
+from pathlib import Path
+
+from install_steps import dsh
+
+race = sys.argv[1]
+real_preserve = dsh._preserve_lifecycle_recovery_gate
+
+
+def race_canonical_lock(lock, termination):
+    if race == "removed":
+        lock.path.unlink()
+    elif race == "renamed":
+        lock.path.rename(lock.path.with_name("renamed-original-lock"))
+    elif race == "replaced":
+        lock.path.rename(lock.path.with_name("replaced-original-lock"))
+        lock.path.write_text("foreign concurrent lock\n", encoding="utf-8")
+    else:
+        raise AssertionError(race)
+    return real_preserve(lock, termination)
+
+
+dsh._preserve_lifecycle_recovery_gate = race_canonical_lock
+dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+dsh.PROCESS_TERMINATION_GRACE_SECONDS = 0.05
+dsh._wait_for_process_group_exit = lambda process_group, timeout: False
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+        [ "$status" -ne 0 ]
+        recovery_gate="$(find "$case_dsh" -mindepth 1 -maxdepth 1 -type f \
+            -name '.ai-toolkit-lifecycle-tree-recovery-*' -print -quit)"
+        [ -n "$recovery_gate" ]
+        grep -q '^state=recovery$' "$recovery_gate"
+        grep -q '^reason=unconfirmed-process-tree$' "$recovery_gate"
+        grep -q '^profile=web$' "$recovery_gate"
+
+        case "$race" in
+            removed)
+                [ ! -e "$case_dsh/.ai-toolkit-lifecycle.lock" ]
+                ;;
+            renamed)
+                grep -Eq '^pid=[1-9][0-9]*$' "$case_dsh/renamed-original-lock"
+                [ ! -e "$case_dsh/.ai-toolkit-lifecycle.lock" ]
+                ;;
+            replaced)
+                [ "$(cat "$case_dsh/.ai-toolkit-lifecycle.lock")" = \
+                    "foreign concurrent lock" ]
+                grep -Eq '^pid=[1-9][0-9]*$' "$case_dsh/replaced-original-lock"
+                ;;
+        esac
+
+        calls_before="$(wc -l < "$case_dsh/fake-argv.jsonl" | tr -d ' ')"
+        run env HOME="$case_home" DSH_HOME="$case_dsh" PATH="$fake_bin:$PATH" \
+            PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+dsh.LIFECYCLE_LOCK_TIMEOUT_SECONDS = 0.05
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+        [ "$status" -ne 0 ]
+        [[ "$output" == *"lifecycle recovery gate blocks mutation"* ]] || false
+        [ "$(wc -l < "$case_dsh/fake-argv.jsonl" | tr -d ' ')" = "$calls_before" ]
+
+        run env HOME="$case_home" DSH_HOME="$case_dsh" PATH="$fake_bin:$PATH" \
+            node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh doctor --profile alternate
+
+        [ "$status" -ne 0 ]
+        [[ "$output" == *"Recovery gate: unconfirmed DSH process tree"* ]] || false
+        [[ "$output" == *"$recovery_gate"* ]] || false
+        [[ "$output" == *"$case_dsh/profiles/web"* ]] || false
+    done
+}
+
+@test "dsh lifecycle: pinned directory lock closes the pre-sentinel race" {
+    fake_bin="$(install_fake_dsh)"
+    ready="$TEST_PROJECT/pre-sentinel-ready"
+    release="$TEST_PROJECT/pre-sentinel-release"
+    process_a_output="$TEST_PROJECT/process-a-output"
+    printf '%s\n' \
+        '{"sleep_before":"add:@softspark/dsh-orchestrator","sleep_seconds":5}' \
+        > "$TEST_DSH_HOME/fake-control.json"
+
+    env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$ready" "$release" \
+        > "$process_a_output" 2>&1 <<'PY' &
+import sys
+import time
+from pathlib import Path
+
+from install_steps import dsh
+
+ready = Path(sys.argv[1])
+release = Path(sys.argv[2])
+canonical = Path(dsh._dsh_home()) / ".ai-toolkit-lifecycle.lock"
+displaced = canonical.with_name("paused-original-lock")
+real_create_gate = dsh._create_process_tree_recovery_gate
+
+
+def pause_before_sentinel(home, payload):
+    canonical.rename(displaced)
+    ready.write_text("ready\n", encoding="utf-8")
+    deadline = time.monotonic() + 10
+    while not release.exists():
+        if time.monotonic() >= deadline:
+            raise AssertionError("barrier release timed out")
+        time.sleep(0.01)
+    return real_create_gate(home, payload)
+
+
+dsh._create_process_tree_recovery_gate = pause_before_sentinel
+dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+dsh.PROCESS_TERMINATION_GRACE_SECONDS = 0.05
+dsh._wait_for_process_group_exit = lambda process_group, timeout: False
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+    process_a_pid=$!
+
+    for _ in $(seq 1 500); do
+        [ -e "$ready" ] && break
+        sleep 0.01
+    done
+    [ -e "$ready" ]
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+dsh.LIFECYCLE_LOCK_TIMEOUT_SECONDS = 0.05
+dsh._install = lambda **kwargs: "SECOND_LIFECYCLE_ENTERED"
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+    process_b_status="$status"
+    process_b_output="$output"
+
+    printf '%s\n' 'release' > "$release"
+    if wait "$process_a_pid"; then
+        process_a_status=0
+    else
+        process_a_status=$?
+    fi
+
+    [ "$process_b_status" -ne 0 ]
+    [[ "$process_b_output" == *"DSH home directory lifecycle lock is busy"* ]] \
+        || false
+    [[ "$process_b_output" != *"SECOND_LIFECYCLE_ENTERED"* ]] || false
+    [ "$process_a_status" -ne 0 ]
+
+    recovery_gate="$(find "$TEST_DSH_HOME" -mindepth 1 -maxdepth 1 -type f \
+        -name '.ai-toolkit-lifecycle-tree-recovery-*' -print -quit)"
+    [ -n "$recovery_gate" ]
+    grep -q '^reason=unconfirmed-process-tree$' "$recovery_gate"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+dsh._install = lambda **kwargs: "THIRD_LIFECYCLE_ENTERED"
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"lifecycle recovery gate blocks mutation"* ]] || false
+    [[ "$output" != *"THIRD_LIFECYCLE_ENTERED"* ]] || false
+}
+
+@test "dsh lifecycle: cold add can exceed the legacy scaled timeout below the mutation bound" {
+    fake_bin="$(install_fake_dsh)"
+    printf '%s\n' \
+        '{"sleep_before":"add:@softspark/dsh-codex","sleep_seconds":0.08}' \
+        > "$TEST_DSH_HOME/fake-control.json"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+from install_steps import dsh
+
+assert dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS == 300
+dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+raise SystemExit(dsh.main(["install", "--profile", "web"]))
+PY
+
+    [ "$status" -eq 0 ]
+    [ -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-codex" ]
+    [ -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-orchestrator" ]
 }
 
 @test "dsh lifecycle: lock is bounded, rejects nonregular entries, and releases only its inode" {
@@ -665,7 +1631,6 @@ PY
         run env HOME="$case_home" DSH_HOME="$case_dsh" PATH="$fake_bin:$PATH" \
             PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - \
             "$boundary" "$case_dsh" "$displaced" <<'PY'
-import subprocess
 import sys
 from pathlib import Path
 
@@ -685,16 +1650,15 @@ def swap_home():
 
 
 if boundary == "after_external":
-    real_run = subprocess.run
+    real_run = dsh._run
 
-    def run_then_swap(*args, **kwargs):
-        result = real_run(*args, **kwargs)
-        argv = args[0] if args else kwargs["args"]
+    def run_then_swap(argv, *, dsh_home):
+        result = real_run(argv, dsh_home=dsh_home)
         if "plugin" in argv and not injected[0]:
             swap_home()
         return result
 
-    dsh.subprocess.run = run_then_swap
+    dsh._run = run_then_swap
 else:
     real_claim = dsh._claim_directory
 
@@ -1019,7 +1983,7 @@ PY
     echo "$output" | grep -Fq \
         "'plugin', '--profile', 'web', 'add', '@softspark/dsh-codex@1.0.0', '--save-exact'"
     echo "$output" | grep -Fq \
-        "'plugin', '--profile', 'web', 'add', '@softspark/dsh-orchestrator@1.0.0', '--save-exact'"
+        "'plugin', '--profile', 'web', 'add', '@softspark/dsh-orchestrator@1.0.1', '--save-exact'"
     echo "$output" | grep -Fq \
         "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator"
     echo "$output" | grep -Fq \
@@ -1187,7 +2151,7 @@ home = Path(sys.argv[1])
 calls = [json.loads(line) for line in (home / "fake-argv.jsonl").read_text().splitlines()]
 assert calls == [
     ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
     ["plugin", "--profile", "web", "remove", "@softspark/dsh-codex"],
 ], calls
 PY
@@ -1327,7 +2291,7 @@ if boundary == "second_add":
 
     def injected(argv, *, dsh_home):
         result = real(argv, dsh_home=dsh_home)
-        if "add" in argv and "@softspark/dsh-orchestrator@1.0.0" in argv:
+        if "add" in argv and "@softspark/dsh-orchestrator@1.0.1" in argv:
             raise KeyboardInterrupt
         return result
 
@@ -1516,22 +2480,51 @@ PY
 @test "dsh lifecycle: bounded command timeout leaves the clean prestate" {
     fake_bin="$(install_fake_dsh)"
     cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
-{"sleep_before":"add:@softspark/dsh-codex","sleep_seconds":1}
+{"sleep_before":"add:@softspark/dsh-orchestrator","sleep_seconds":1}
 JSON
 
     run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
         PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
 from install_steps import dsh
 
-dsh.COMMAND_TIMEOUT_SECONDS = 0.05
+real_run = dsh._run
+dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.5
+
+
+def timeout_only_cold_add(argv, *, dsh_home):
+    is_cold_target = (
+        "add" in argv
+        and "@softspark/dsh-orchestrator@1.0.1" in argv
+    )
+    if is_cold_target:
+        dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+    try:
+        return real_run(argv, dsh_home=dsh_home)
+    finally:
+        dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.5
+
+
+dsh._run = timeout_only_cold_add
 raise SystemExit(dsh.main(["install", "--profile", "web"]))
 PY
 
     [ "$status" -ne 0 ]
-    echo "$output" | grep -q 'timed out after 0.05s'
+    echo "$output" | grep -q 'timed out after 0.2s'
     [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
     [ ! -e "$TEST_DSH_HOME/.agent-presets/softspark-orchestrator" ]
     [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+    python3 - "$TEST_DSH_HOME/fake-argv.jsonl" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+calls = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines()]
+assert calls == [
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
+    ["plugin", "--profile", "web", "remove", "@softspark/dsh-codex"],
+], calls
+PY
 }
 
 @test "dsh lifecycle: update replaces only the unchanged owned preset from the package" {
@@ -1818,7 +2811,10 @@ from install_steps import dsh
 assert dsh.main(["install", "--profile", "web"]) == 0
 state_path = Path(os.environ["HOME"]) / ".softspark/ai-toolkit/state.json"
 old_record = json.loads(state_path.read_text())["dsh"]["profiles"]["web"]
-assert set(old_record["packages"].values()) == {"1.0.0"}
+assert old_record["packages"] == {
+    "@softspark/dsh-codex": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
+}
 
 dsh.PACKAGES = {
     "@softspark/dsh-codex": "1.1.0",
@@ -1974,9 +2970,16 @@ assert dsh.main(["update", "--profile", "web"]) == 1
 profile = dsh_home / "profiles/web"
 assert state_path.read_bytes() == old_state
 assert dsh._tree_hash(dsh_home / ".agent-presets/softspark-orchestrator") == old_preset
+expected_recorded_versions = {
+    "@softspark/dsh-codex": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
+}
 for package in dsh.MANAGED_PACKAGE_NAMES:
     package_manifest = profile / "node_modules" / Path(package) / "package.json"
-    assert json.loads(package_manifest.read_text())["version"] == "1.0.0"
+    assert (
+        json.loads(package_manifest.read_text())["version"]
+        == expected_recorded_versions[package]
+    )
 calls = [
     json.loads(line)
     for line in (dsh_home / "fake-argv.jsonl").read_text().splitlines()
@@ -1984,7 +2987,7 @@ calls = [
 assert calls[-4:] == [
     ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.1.0", "--save-exact"],
     ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.1.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
     ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
 ]
 PY
@@ -2021,9 +3024,16 @@ assert dsh.main(["uninstall", "--profile", "web", "--yes"]) == 1
 profile = dsh_home / "profiles/web"
 assert state_path.read_bytes() == old_state
 assert dsh._tree_hash(dsh_home / ".agent-presets/softspark-orchestrator") == old_preset
+expected_recorded_versions = {
+    "@softspark/dsh-codex": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
+}
 for package in dsh.MANAGED_PACKAGE_NAMES:
     package_manifest = profile / "node_modules" / Path(package) / "package.json"
-    assert json.loads(package_manifest.read_text())["version"] == "1.0.0"
+    assert (
+        json.loads(package_manifest.read_text())["version"]
+        == expected_recorded_versions[package]
+    )
 calls = [
     json.loads(line)
     for line in (dsh_home / "fake-argv.jsonl").read_text().splitlines()
@@ -2031,7 +3041,7 @@ calls = [
 assert calls[-3:] == [
     ["plugin", "--profile", "web", "remove", "@softspark/dsh-orchestrator"],
     ["plugin", "--profile", "web", "remove", "@softspark/dsh-codex"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
 ]
 PY
 
@@ -2059,7 +3069,7 @@ real_run = dsh._run
 
 def interrupt_after_orchestrator_add(argv, *, dsh_home):
     result = real_run(argv, dsh_home=dsh_home)
-    if "add" in argv and "@softspark/dsh-orchestrator@1.0.0" in argv:
+    if "add" in argv and "@softspark/dsh-orchestrator@1.0.1" in argv:
         raise KeyboardInterrupt
     return result
 
@@ -2087,7 +3097,7 @@ PY
     [ "$status" -eq 0 ]
     echo "$output" | grep -q 'Runtime: supported (0.1.1-rc.2)'
     echo "$output" | grep -q '@softspark/dsh-codex: 1.0.0 (expected 1.0.0)'
-    echo "$output" | grep -q '@softspark/dsh-orchestrator: 1.0.0 (expected 1.0.0)'
+    echo "$output" | grep -q '@softspark/dsh-orchestrator: 1.0.1 (expected 1.0.1)'
     echo "$output" | grep -q 'Preset: owned, hash matches'
     echo "$output" | grep -q 'State: consistent'
     echo "$output" | grep -q 'Recovery needed: no'

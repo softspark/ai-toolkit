@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.9.0"
+version: "1.10.0"
 created: "2026-03-23"
-last_updated: "2026-08-31"
+last_updated: "2026-09-01"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, the explicit DSH target, skill tiers, and project integration."
 ---
 
@@ -140,7 +140,7 @@ packs can layer their rules, skills, and hooks onto that Codex user target.
 
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
 
-DSH profile mutation is also outside generic installation. `ai-toolkit dsh install|update|doctor|uninstall --profile web` names both the integration and profile. It manages only `@softspark/dsh-codex@1.0.0`, `@softspark/dsh-orchestrator@1.0.0`, the released preset, and their ownership record. Vendor CLIs own login and credentials. DSH `0.1.1-rc.2` is the only reviewed host version.
+DSH profile mutation is also outside generic installation. `ai-toolkit dsh install|update|doctor|uninstall --profile web` names both the integration and profile. It manages only `@softspark/dsh-codex@1.0.0`, `@softspark/dsh-orchestrator@1.0.1`, the released preset, and their ownership record. Vendor CLIs own login and credentials. DSH `0.1.1-rc.2` is the only reviewed host version.
 
 Both DSH preview paths are read-only. Project `--dry-run` resolves `extends` without persisting its lockfile and changes no project or `DSH_HOME` entry. Profile lifecycle `--dry-run` changes no package, preset, state, profile, or authentication surface.
 

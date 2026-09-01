@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
 
 
 SUPPORTED_VERSION = "0.1.1-rc.2"
+SUPPORTED_PNPM_VERSION = "11.24.0"
 
 
 def _home() -> Path:
@@ -58,6 +60,55 @@ def _append_argv(argv: list[str]) -> None:
     (home / "fake-env-keys.json").write_text(
         json.dumps(sorted(os.environ)) + "\n",
         encoding="utf-8",
+    )
+    if _control().get("record_path"):
+        with (home / "fake-path.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(os.environ.get("PATH", "")) + "\n")
+
+
+def _spawn_delayed_descendant_tree(profile_root: Path) -> None:
+    control = _control()
+    delay = float(control.get("descendant_delay_seconds", 0.4))
+    marker = _home() / "late-descendant-marker.txt"
+    profile_marker = profile_root / "late-descendant-profile-write.txt"
+    grandchild = """
+import sys
+import time
+from pathlib import Path
+
+time.sleep(float(sys.argv[1]))
+marker = Path(sys.argv[2])
+profile_marker = Path(sys.argv[3])
+marker.write_text("late descendant survived\\n", encoding="utf-8")
+profile_marker.parent.mkdir(parents=True, exist_ok=True)
+profile_marker.write_text("late profile mutation\\n", encoding="utf-8")
+"""
+    child = """
+import subprocess
+import sys
+import time
+
+subprocess.Popen([
+    sys.executable,
+    "-c",
+    sys.argv[1],
+    sys.argv[2],
+    sys.argv[3],
+    sys.argv[4],
+])
+time.sleep(float(sys.argv[5]))
+"""
+    subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            child,
+            grandchild,
+            str(delay),
+            str(marker),
+            str(profile_marker),
+            str(control.get("descendant_parent_sleep_seconds", 5)),
+        ]
     )
 
 
@@ -171,7 +222,27 @@ def _remove(profile_root: Path, package: str) -> int:
     return 0
 
 
+def _pnpm_main(argv: list[str]) -> int:
+    if argv != ["--version"]:
+        print("unsupported fake pnpm invocation", file=sys.stderr)
+        return 64
+    control = _control()
+    if sleep_seconds := control.get("pnpm_sleep_seconds"):
+        time.sleep(float(sleep_seconds))
+    if stdout := control.get("pnpm_stdout"):
+        print(str(stdout))
+    if stderr := control.get("pnpm_stderr"):
+        print(str(stderr), file=sys.stderr)
+    if failure_code := control.get("pnpm_fail_code"):
+        return int(failure_code)
+    if "pnpm_stdout" not in control:
+        print(str(control.get("pnpm_version", SUPPORTED_PNPM_VERSION)))
+    return 0
+
+
 def main(argv: list[str]) -> int:
+    if Path(sys.argv[0]).name == "pnpm":
+        return _pnpm_main(argv)
     if argv == ["--version"]:
         print(f"dsh {_control().get('version', SUPPORTED_VERSION)}")
         return 0
@@ -183,6 +254,12 @@ def main(argv: list[str]) -> int:
     profile_root = _home() / "profiles" / profile
     package = _package_parts(operand)[0] if operation == "add" else operand
     failure_key = f"{operation}:{package}"
+    if _matches_control(
+        failure_key,
+        _control().get("spawn_delayed_descendant_tree_before"),
+    ):
+        _spawn_delayed_descendant_tree(profile_root)
+        time.sleep(float(_control().get("descendant_host_sleep_seconds", 5)))
     if _matches_control(failure_key, _control().get("sleep_before")):
         time.sleep(float(_control().get("sleep_seconds", 1)))
     if _consume_control_match("fail_before_once", failure_key) or _matches_control(
