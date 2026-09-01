@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.30.1 - Linux-portable DSH recovery diagnostics (2026-09-01)
+
+### Fixed
+
+- **Interrupted preset relocation keeps an actionable error.** A
+  `KeyboardInterrupt` has an empty string representation on Linux; recovery
+  output now normalizes it to an explicit interrupted message before naming the
+  preserved path.
+- **Recovery verification failures are never silent.** Package-preset hash
+  failures are included in deterministic recovery diagnostics while ownership
+  state restoration still runs.
+- **Recovery tests use platform-independent seams.** Backup restore and package
+  source verification injections now exercise the same secure helpers on macOS
+  and Linux.
+
+### Changed
+
+- **First published release of the 4.30 feature set.** The public `v4.30.0` tag
+  failed its GitHub Actions gate before npm publication. Version `4.30.1`
+  contains the same DSH and MCP features plus this cross-platform correction;
+  no `4.30.0` npm artifact exists.
+
+---
+
 ## v4.30.0 - Managed DSH and plugin-owned MCP (2026-09-01)
 
 ### Added
