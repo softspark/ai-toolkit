@@ -2287,8 +2287,13 @@ def _relocate_owned_preset(
                 residuals.append(location.root.path)
         if residuals:
             paths = ", ".join(repr(str(path)) for path in residuals)
+            detail = (
+                "managed preset relocation was interrupted"
+                if isinstance(error, KeyboardInterrupt)
+                else str(error) or type(error).__name__
+            )
             raise DshLifecycleError(
-                f"{error}; preserved recovery path: {paths}"
+                f"{detail}; preserved recovery path: {paths}"
             ) from error
         raise
 
@@ -4470,8 +4475,19 @@ def _update(
             source_restored = (
                 _tree_hash(_package_source(dsh_home, profile)) == record["preset_hash"]
             )
-        except (DshLifecycleError, OSError, ValueError, KeyboardInterrupt):
+        except (
+            DshLifecycleError,
+            OSError,
+            ValueError,
+            KeyboardInterrupt,
+        ) as recovery_error:
             source_restored = False
+            failed.append(
+                _recovery_error(
+                    "verify restored package preset failed",
+                    recovery_error,
+                )
+            )
         backup_collision = False
         backup_is_complete = False
         if recovery_backup is not None:
@@ -4867,8 +4883,19 @@ def _uninstall(
             source_restored = (
                 _tree_hash(_package_source(dsh_home, profile)) == record["preset_hash"]
             )
-        except (DshLifecycleError, OSError, ValueError, KeyboardInterrupt):
+        except (
+            DshLifecycleError,
+            OSError,
+            ValueError,
+            KeyboardInterrupt,
+        ) as recovery_error:
             source_restored = False
+            failed.append(
+                _recovery_error(
+                    "verify restored package preset failed",
+                    recovery_error,
+                )
+            )
         backup_complete = False
         backup_collision = False
         recovery_backup = backup or (recovery_owned[-1] if recovery_owned else None)

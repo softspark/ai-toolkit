@@ -1173,18 +1173,21 @@ operation = sys.argv[2]
 sys.path.insert(0, str(toolkit / "scripts"))
 from install_steps import dsh
 
-real_replace = dsh.os.replace
+real_rename = dsh._secure_rename_noreplace
 
 def fail_backup_restore(source, destination):
     source_path = Path(source)
     destination_path = Path(destination)
-    if source_path.name.endswith(
-        ".ai-toolkit-backup" if operation == "update" else ".ai-toolkit-uninstall"
-    ) and destination_path.name == dsh.PRESET_NAME:
+    suffix = ".ai-toolkit-backup" if operation == "update" else ".ai-toolkit-uninstall"
+    if (
+        source_path.name == "managed-preset"
+        and suffix in source_path.parent.name
+        and destination_path.name == dsh.PRESET_NAME
+    ):
         raise OSError("injected backup restore rename failure")
-    return real_replace(source, destination)
+    return real_rename(source, destination)
 
-dsh.os.replace = fail_backup_restore
+dsh._secure_rename_noreplace = fail_backup_restore
 if operation == "update":
     real_state = dsh.record_dsh_profile
 
@@ -1222,7 +1225,7 @@ PY
     done
 }
 
-@test "DSH recovery hash and copy failures do not prevent state restoration" {
+@test "DSH recovery hash and backup restore failures do not prevent state restoration" {
     local fake_bin="$TEST_ROOT/fake-bin"
     mkdir -p "$fake_bin"
     cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
@@ -1252,29 +1255,43 @@ sys.path.insert(0, str(toolkit / "scripts"))
 from install_steps import dsh
 
 real_hash = dsh._tree_hash
-real_copy = dsh._copy_tree_exclusive
+real_rename = dsh._secure_rename_noreplace
+recovering = False
 
 def fail_recovery_hash(path):
     path = Path(path)
-    suffix = ".ai-toolkit-backup" if operation == "update" else ".ai-toolkit-uninstall"
-    if path.name.endswith(suffix):
-        if failure == "hash":
-            raise OSError("injected recovery hash failure")
-        return "0" * 64
+    is_package_source = (
+        "node_modules" in path.parts
+        and "@softspark" in path.parts
+        and "dsh-orchestrator" in path.parts
+        and path.name == dsh.PRESET_NAME
+    )
+    if recovering and failure == "hash" and is_package_source:
+        raise OSError("injected recovery hash failure")
     return real_hash(path)
 
-def fail_recovery_copy(source, destination, owned):
-    if failure == "copy" and Path(destination).name == dsh.PRESET_NAME:
+def fail_recovery_restore(source, destination):
+    source_path = Path(source)
+    destination_path = Path(destination)
+    if (
+        recovering
+        and failure == "copy"
+        and source_path.name == "managed-preset"
+        and ".ai-toolkit-" in source_path.parent.name
+        and destination_path.name == dsh.PRESET_NAME
+    ):
         raise OSError("injected recovery copy failure")
-    return real_copy(source, destination, owned)
+    return real_rename(source, destination)
 
 dsh._tree_hash = fail_recovery_hash
-dsh._copy_tree_exclusive = fail_recovery_copy
+dsh._secure_rename_noreplace = fail_recovery_restore
 if operation == "update":
     real_state = dsh.record_dsh_profile
 
     def fail_after_state(**kwargs):
+        global recovering
         real_state(**kwargs)
+        recovering = True
         raise OSError("injected primary state failure")
 
     dsh.record_dsh_profile = fail_after_state
@@ -1283,7 +1300,9 @@ else:
     real_state = dsh.remove_dsh_profile
 
     def fail_after_state(profile, **kwargs):
+        global recovering
         real_state(profile, **kwargs)
+        recovering = True
         raise OSError("injected primary state failure")
 
     dsh.remove_dsh_profile = fail_after_state
@@ -1294,7 +1313,13 @@ PY
 
             [ "$status" -ne 0 ]
             [[ "$output" == *"injected primary state failure"* ]]
-            [[ "$output" == *"Recovery required"* ]]
+            [[ "$output" == *"Recovery required"* ]] || {
+                echo "missing recovery diagnostics for $operation/$failure: $output"
+                false
+            }
+            if [ "$failure" = hash ]; then
+                [[ "$output" == *"verify restored package preset failed: injected recovery hash failure"* ]]
+            fi
             python3 - "$case_home/.softspark/ai-toolkit/state.json" <<'PY'
 import json
 import sys
