@@ -18,6 +18,16 @@ teardown() {
     rm -rf "$TEST_TMP"
 }
 
+portable_mode() {
+    python3 - "$1" <<'PY'
+import os
+import stat
+import sys
+
+print(f"{stat.S_IMODE(os.stat(sys.argv[1]).st_mode):o}")
+PY
+}
+
 _make_mcp_fixture_pack() {
     local name="${1:-legal-mcp-pack}"
     local server="${2:-rag-mcp-legal}"
@@ -1973,7 +1983,7 @@ PY
     [ "$status" -eq 0 ]
     echo "$output" | grep -q 'preserved changed or user-owned plugin asset'
     [ -f "$hook" ]
-    [ "$(stat -f '%Lp' "$hook")" = "600" ]
+    [ "$(portable_mode "$hook")" = "600" ]
     [ -f "$scripts/helper.sh" ]
     grep -q 'owned helper' "$scripts/helper.sh"
     grep -q 'preserve user file' "$scripts/user-added.txt"

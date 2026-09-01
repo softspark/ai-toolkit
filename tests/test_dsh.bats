@@ -34,6 +34,16 @@ install_fake_dsh_without_pnpm() {
     printf '%s\n' "$fake_bin"
 }
 
+portable_mode() {
+    python3 - "$1" <<'PY'
+import os
+import stat
+import sys
+
+print(f"{stat.S_IMODE(os.stat(sys.argv[1]).st_mode):o}")
+PY
+}
+
 assert_no_dsh_lifecycle_artifacts() {
     [ ! -e "$TEST_DSH_HOME/.ai-toolkit-lifecycle.lock" ]
     [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
@@ -2933,7 +2943,10 @@ PY
                 node "$TOOLKIT_DIR/bin/ai-toolkit.js" "${arguments[@]}"
 
             [ "$status" -ne 0 ]
-            [[ "$output" == *"invalid DSH ownership state"* ]]
+            [[ "$output" == *"invalid DSH ownership state"* ]] || {
+                echo "unexpected ownership diagnostic for $operation/$variant: $output"
+                false
+            }
             [[ "$output" != *"Traceback"* ]]
             [ "$(shasum "$state")" = "$before_state" ]
             [ "$(surface_fingerprint "$case_dsh")" = "$before_dsh" ]
@@ -3204,7 +3217,7 @@ PY
     [ "$status" -ne 0 ]
     [[ "$output" == *"managed DSH package tree drift detected"* ]]
     [ "$(wc -l < "$calls" | xargs)" = "$before_calls" ]
-    [ "$(stat -f '%Lp' "$codex/package.json")" = "600" ]
+    [ "$(portable_mode "$codex/package.json")" = "600" ]
 
     chmod 644 "$codex/package.json"
     ln -s '../outside-user-target' "$orchestrator/user-link"

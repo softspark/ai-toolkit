@@ -154,7 +154,10 @@ def _validate_dsh_profiles(dsh: object) -> dict[str, dict]:
                 for package, version in packages.items()
             )
         ):
-            raise ValueError(f"invalid DSH lifecycle state for profile '{name}'")
+            raise ValueError(
+                "invalid DSH ownership state for 'packages' "
+                f"in profile '{name}'"
+            )
         package_trees = record.get("package_trees")
         if (
             not isinstance(package_trees, dict)
@@ -165,7 +168,8 @@ def _validate_dsh_profiles(dsh: object) -> dict[str, dict]:
             )
         ):
             raise ValueError(
-                f"invalid DSH package inventory for profile '{name}'; "
+                "invalid DSH ownership state for 'package_trees' "
+                f"in profile '{name}'; "
                 "run 'ai-toolkit dsh doctor' and reinstall"
             )
         if record.get("owned") is not True:
