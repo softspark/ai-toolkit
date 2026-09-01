@@ -313,7 +313,7 @@ python3 scripts/validate.py --strict
 ai-toolkit plugin list                             # show available packs
 ai-toolkit plugin install --editor claude <name>  # install for Claude Code global target
 ai-toolkit plugin install --editor codex <name>   # install for Codex global target
-ai-toolkit plugin install --editor all --all      # install all 12 packs for both runtimes
+ai-toolkit plugin install --editor all --all      # install all available packs for all supported editors
 ai-toolkit plugin update --editor all --all       # re-apply all installed packs after toolkit updates
 ai-toolkit plugin clean <name>                    # prune data older than 90 days
 ai-toolkit plugin clean <name> --days 30  # custom retention

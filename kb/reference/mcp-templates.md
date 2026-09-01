@@ -3,17 +3,17 @@ title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
 tags: [mcp, templates, servers, configuration, editors, inject-mcp, external-templates]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-04-07"
-last_updated: "2026-08-21"
-description: "Reference for 26 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
+last_updated: "2026-08-31"
+description: "Reference for 28 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
 ---
 
 # MCP Server Templates
 
 ## Overview
 
-ai-toolkit ships 26 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
+ai-toolkit ships 28 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
 
 **External templates:** Tools outside the toolkit (MCP servers, plugins, custom integrations) can register their own MCP templates via `ai-toolkit inject-mcp <file|url>` -- the toolkit caches the template, tags every server with a `_source` field, and propagates the config to every editor that exposes a `global_path`. URL-sourced templates are auto-refreshed on every `ai-toolkit update`. See [PATH: kb/reference/extension-api.md] for the inject-mcp / remove-mcp reference.
 
@@ -79,6 +79,7 @@ loads `.codex/config.toml` only for trusted project layers.
 | `filesystem` | Local filesystem access for reading, writing, and searching files | — |
 | `git` | Git repository inspection: diffs, logs, branches | — |
 | `github` | GitHub API: issues, PRs, repos, code search | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| `jira` | Jira multi-instance routing, ADF, caching, and comment templates | — |
 | `google-drive` | Google Drive file search, reading, and management | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` |
 | `google-maps` | Google Maps geocoding, directions, place search | `GOOGLE_MAPS_API_KEY` |
 | `grafana` | Grafana dashboard queries, alerting, and data source management | `GRAFANA_URL`, `GRAFANA_API_KEY` |
@@ -87,6 +88,8 @@ loads `.codex/config.toml` only for trusted project layers.
 | `notion` | Notion workspace: pages, databases, content management | `NOTION_API_KEY` |
 | `postgres` | PostgreSQL database access, schema inspection, analysis | — |
 | `puppeteer` | Browser automation: screenshots, navigation, web scraping | — |
+| `rag-mcp` | General knowledge-base RAG over HTTP MCP (localhost port 8081 by default) | — |
+| `rag-mcp-legal` | Polish legal RAG over HTTP MCP (localhost port 8082 by default) | — |
 | `redis` | Redis cache inspection, data management, and monitoring | `REDIS_URL` |
 | `sentry` | Sentry error tracking: issue search, event details, alerting | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` |
 | `sequential-thinking` | Step-by-step reasoning and problem decomposition | — |
@@ -119,6 +122,10 @@ Each template is a JSON file with the following structure:
 - `description` — shown by `mcp list` and `mcp show`
 - `mcpServers` — the block merged verbatim into `.mcp.json`
 - `env` values use `${VAR_NAME}` placeholders that must be set in the shell environment or `.env` file before Claude Code starts
+
+`rag-mcp` and `rag-mcp-legal` expose unauthenticated HTTP MCP endpoints by
+design. Keep the default localhost binding, use a VPN, or protect remote access
+with a restricted reverse proxy.
 
 ## Example: Adding GitHub and PostgreSQL
 

@@ -235,7 +235,7 @@
       ]
     },
     "mcp-templates": {
-      "description": "26 MCP server config templates",
+      "description": "28 MCP server config templates",
       "default": false
     }
   },

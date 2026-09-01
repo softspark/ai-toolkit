@@ -21,7 +21,7 @@ from pathlib import Path
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python 3.11+ should have tomllib
-    tomllib = None
+    tomllib = None  # type: ignore[assignment]
 
 
 def _claude_app_config_relpath() -> str:
@@ -504,7 +504,10 @@ def apply_config_updates(updates: list[ConfigUpdate]) -> None:
         for update in pending:
             _verify_config_snapshot(update)
             attempted.append(update)
-            _atomic_write_bytes(update.path, update.content)
+            content = update.content
+            if content is None:  # pragma: no cover - filtered by pending above
+                continue
+            _atomic_write_bytes(update.path, content)
     except Exception as error:
         rollback_errors: list[str] = []
         for update in reversed(attempted):

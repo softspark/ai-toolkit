@@ -4,7 +4,7 @@ Ready-to-use MCP (Model Context Protocol) server configurations for Claude Code 
 
 ## What are these?
 
-Each JSON file contains a preconfigured MCP server definition that can be merged into your `.mcp.json` (project-level) or `~/.claude/settings.json` (global). Templates use `${ENV_VAR}` placeholders for secrets -- set the corresponding environment variables before use.
+Each JSON file contains a preconfigured MCP server definition that can be merged into your `.mcp.json` (project-level) or an editor-native global configuration such as `~/.claude.json`. Templates use `${ENV_VAR}` placeholders for secrets -- set the corresponding environment variables before use.
 
 ## Quick start
 
@@ -31,7 +31,7 @@ ai-toolkit mcp remove github
 
 1. Open the template file (e.g., `github.json`)
 2. Copy the `mcpServers` block
-3. Merge it into your `.mcp.json` or `~/.claude/settings.json`
+3. Merge it into your `.mcp.json` or install it through the CLI into the editor-native global configuration
 
 Example -- adding GitHub to `.mcp.json`:
 
@@ -78,7 +78,12 @@ Example -- adding GitHub to `.mcp.json`:
 | `datadog` | Datadog monitoring and metrics |
 | `grafana` | Grafana dashboards and alerting |
 | `jira` | Jira multi-instance routing, ADF, caching, comment templates |
+| `rag-mcp` | General knowledge-base RAG over HTTP MCP (localhost port 8081 by default) |
+| `rag-mcp-legal` | Polish legal RAG over HTTP MCP (localhost port 8082 by default) |
 | `custom-template` | Empty template for custom servers |
+
+The two RAG endpoints are unauthenticated by design. Keep their default
+localhost binding, use a VPN, or place them behind a restricted reverse proxy.
 
 ## Contributing a new template
 
