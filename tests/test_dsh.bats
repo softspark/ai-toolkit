@@ -571,7 +571,7 @@ PY
                     > "$TEST_DSH_HOME/fake-control.json"
                 ;;
             timeout)
-                printf '%s\n' '{"pnpm_sleep_seconds":1}' \
+                printf '%s\n' '{"pnpm_sleep_seconds":2}' \
                     > "$TEST_DSH_HOME/fake-control.json"
                 ;;
         esac
@@ -584,7 +584,7 @@ import sys
 from install_steps import dsh
 
 if sys.argv[1] == "timeout":
-    dsh.PROBE_TIMEOUT_SECONDS = 0.2
+    dsh.PROBE_TIMEOUT_SECONDS = 1.0
 raise SystemExit(dsh.main(["install", "--profile", "web"]))
 PY
 
