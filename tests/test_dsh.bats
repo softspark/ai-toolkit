@@ -1445,7 +1445,7 @@ PY
 @test "dsh lifecycle: cold add can exceed the legacy scaled timeout below the mutation bound" {
     fake_bin="$(install_fake_dsh)"
     printf '%s\n' \
-        '{"sleep_before":"add:@softspark/dsh-codex","sleep_seconds":0.08}' \
+        '{"sleep_before":"add:@softspark/dsh-codex","sleep_seconds":0.2}' \
         > "$TEST_DSH_HOME/fake-control.json"
 
     run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
@@ -1453,7 +1453,9 @@ PY
 from install_steps import dsh
 
 assert dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS == 300
-dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+# The 1.0s bound scales production's 300s timeout. The injected 0.2s delay
+# still exceeds the legacy timeout's scaled 0.1s while leaving runner headroom.
+dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 1.0
 raise SystemExit(dsh.main(["install", "--profile", "web"]))
 PY
 
