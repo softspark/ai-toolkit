@@ -16,15 +16,71 @@ Based on Emil Kowalski's design engineering philosophy — UI polish, component 
 - **Invisible details create love.** Most UI refinements users never consciously register — but combined they produce something stunning.
 - **Beauty differentiates.** When functionality is table stakes, aesthetic excellence becomes genuine leverage.
 
-## Anti-Slop Visual Checklist
+## Anti-Slop Visual & Structural Checklist
 
-Defaults that signal machine-generated UI. Each is a falsifiable thing to avoid:
+Defaults that signal machine-generated UI ("AI slop"). Each is a falsifiable rule to uphold:
 
-- **Avoid** full-bleed saturated gradient backgrounds (purple-to-pink hero washes). A flat surface or a near-flat tonal shift reads as intentional; a loud gradient reads as a template.
-- **Avoid** emoji as load-bearing decoration — emoji standing in for icons, bullet markers, or section badges. Use a real icon set or typographic hierarchy instead.
-- **Avoid** the rounded-card-with-left-accent-border cliche repeated across every block. If three sections share that exact treatment, vary the layout or drop the accent.
+- **Avoid** full-bleed saturated gradient backgrounds (purple-to-pink/blue hero washes) and gradient headlines (`background-clip: text`). Use solid ink or warm neutral tinting.
+- **Avoid** emoji as load-bearing decoration (emoji as icons, bullet markers, or section badges). Use a real icon set (Lucide/Phosphor/Heroicons) or typographic hierarchy.
+- **Avoid** the 3-equal-column card grid with icon-above-heading tiles, nested cards-in-cards, or cards with thick coloured left-edge side stripes.
 - **Avoid** hand-drawn fake imagery in SVG (synthetic "photos", invented logos, faux screenshots). Use a real asset or an honest labeled placeholder.
-- **Avoid** the overused default font stack (Inter/Roboto on system-ui for everything with no scale or weight intent). Pick type with a reason and lift the actual stack from source when one exists.
+- **Avoid** fake re-drawn UI chrome (mock browser bars with traffic-light dots, mock IDE title bars, faux phone frames). Let content stand cleanly or use real screenshots in a `<figure>`.
+- **Avoid** default-attractor sameness (Hero → 3 features → CTA → footer). Pick intentional macrostructures and vary heading placement, column rhythm, and divider language.
+- **Avoid** the overused default font stack (Inter/Roboto on system-ui with no pairing). Apply the **2+1 rule** (display + body + at most 1 outlier face in <=2 slots).
+- **Avoid** italic headers: headings and display type are always roman (`font-style: normal`). Never use single-word italic emphasis inside a headline.
+
+## Pre-Emit Self-Critique (Six Axes)
+
+Before marking any UI output complete, score it 1–5 on these six axes (score <3 on any axis triggers a revision pass):
+
+| # | Axis | Assessment |
+|---|---|---|
+| **P** | **Philosophy** | Clear position and intent ("why"), not just arbitrary decoration |
+| **H** | **Hierarchy** | Clear primary / secondary / tertiary weight distinguishable in 2 seconds |
+| **E** | **Execution** | Exact rule weights, contrast ratios, focus rings, zero layout shifts |
+| **S** | **Specificity** | Tailored specifically to this brief, not a generic interchangeable template |
+| **R** | **Restraint** | Removed anything unearned (decorative bloat, redundant cards, excess padding) |
+| **V** | **Variety** | Structurally distinct from previous layouts in the project (not just a color swap) |
+
+## The 8 Interactive States Discipline
+
+Every interactive element (button, input, select, card, tab, switch) must explicitly handle all 8 states in code. Styling only default + hover is an immediate defect:
+
+| State | Trigger | Required Treatment |
+|---|---|---|
+| **1. Default** | At rest | Clean base styling, defined token bindings |
+| **2. Hover** | Pointer over (`@media (hover: hover)`) | Subtle background shift (4–6%) or 1px translate, no layout jump |
+| **3. Focus** | Keyboard navigation | Visible `:focus-visible` ring (2px solid, 1–2px offset), instant appearance |
+| **4. Active** | Pressed | Pressed-in feel: slight darken, `transform: translateY(1px)` or `scale(0.98)` |
+| **5. Disabled** | Inactive (`disabled`, `aria-disabled`) | 3 channels: `opacity: 0.55`, `cursor: not-allowed`, muted token color |
+| **6. Loading** | Async in-flight (`data-state="loading"`) | Inline spinner replacing icon/badge, label preserved, submit disabled |
+| **7. Error** | Validation failure (`aria-invalid="true"`) | Distinct error token border/message, helper text replaced, error icon |
+| **8. Success** | Operation completed (`data-state="success"`) | Quiet confirmation: subtle green/accent indicator or checkmark, auto-dismiss |
+
+## Input Fields & Zero Layout Shift
+
+Input fields, textareas, and selects are where almost-right UIs break:
+
+- **Constant border width (1px everywhere)**: Never change `border-width` between default, hover, focus, error, or disabled states. State changes go to `background-color`, `outline`, `box-shadow`, or `border-color`.
+- **Reserved transparent outline**: Initialize with `outline: 2px solid transparent; outline-offset: 1px;` so activating `:focus-visible` never shifts layout or thrashes paint.
+- **Matched component heights**: Input height MUST equal adjacent button height (base floor 44px for touch targets).
+- **Reserved helper-text slot**: Allocate `min-height: 1lh` for helper/error text so appearing validation messages do not push downstream page content.
+
+## Responsive Non-Negotiables
+
+Verify every layout at **320px, 375px, 414px, and 768px**:
+
+- **No horizontal scroll**: Apply `overflow-x: clip` (never `hidden`) on **both** `html` and `body`.
+- **Single-line clickable affordances**: Buttons, primary nav links, footer links, and CTAs must never wrap to two lines. Shorten label or reflow parent container.
+- **Image grid tracks**: Always use `minmax(0, 1fr)` instead of bare `1fr` to prevent image intrinsic dimensions from blowing out the grid.
+- **Header wrapping**: Display headers must include `overflow-wrap: anywhere; min-width: 0;`.
+
+## Locked Tokens Discipline
+
+- All colors and typography must bind to declared tokens (`var(--color-accent)`, `var(--font-display)`).
+- Never improvise inline hex / rgb / OKLCH values in components mid-build.
+- Keep accent footprint under **~5%** of viewport area (accent is for focal emphasis, not surface fill).
+- Tint neutral surfaces toward the primary anchor hue (minimum 0.005 chroma in OKLCH) — avoid flat `#000` / `#fff`.
 
 ## Minimum-Scale Floors
 
@@ -38,13 +94,13 @@ Accessibility-grounded hard thresholds. Going below these is a defect, not a sty
 
 Treat these as the lower bound, not the target. Captions and footnotes may approach the floor; primary content should sit comfortably above it.
 
-## Context-First Discipline
+## Context-First & Pre-Flight Discipline
 
-High-fidelity work MUST be rooted in real context before any pixels are produced. This mirrors the toolkit's verify-don't-recall ethos:
+High-fidelity work MUST be rooted in real context before any pixels are produced:
 
-- **Read the source first.** Inspect the codebase, design tokens, UI kit, and screenshots that already exist before generating anything.
-- **Lift exact values.** Copy real hex codes, the spacing scale, the font stack, and radii straight from source. Do NOT reconstruct token values from memory — recalled values drift.
-- **Mock from scratch only as a last resort.** Building a screen with no reference is the fallback when no codebase, kit, or screenshot exists, not the default.
+- **Run Pre-Flight Scan**: Inspect existing `design.md`, package font stacks, palette tokens (`:root`, Tailwind `@theme`), motion libraries (`framer-motion`, `motion`, `gsap`), and spacing scale.
+- **Preserve existing design systems**: Never overwrite established tokens or typography unless explicitly asked.
+- **Lift exact values**: Copy real token variable names and spacing classes straight from source. Do NOT reconstruct token values from memory.
 
 ## Question-Budget Gate
 
@@ -158,66 +214,9 @@ Exception: modals keep centered origin (viewport-anchored, not trigger-anchored)
 
 Initial tooltip includes delay; subsequent hovers skip both delay and animation via `[data-instant]` attribute — perceived speed without defeating accidental activation prevention.
 
-## Transform Mastery
+## Advanced Animation Techniques
 
-### Percentage translations
-
-```css
-/* Moves by own height — perfect for toasts, drawers */
-transform: translateY(100%);
-```
-
-No hardcoded pixel values needed.
-
-### Scale affects children
-
-Unlike `width`/`height`, `scale()` proportionally scales content, icons, and text. Intentional feature, not a bug.
-
-### 3D transforms
-
-```css
-.orbit {
-  transform-style: preserve-3d;
-}
-```
-
-Enables orbit animations and coin flips without JavaScript.
-
-## Clip-path Animation
-
-`clip-path: inset(top right bottom left)` creates rectangular clipping regions:
-
-### Tab color transitions
-
-Stack tab lists, clip the active copy, animate clip-path on change for seamless color shifting.
-
-### Hold-to-delete
-
-```css
-.delete-overlay {
-  clip-path: inset(0 100% 0 0);
-  transition: clip-path 200ms ease-out; /* fast snap-back on release */
-}
-.delete-button:active .delete-overlay {
-  clip-path: inset(0 0 0 0);
-  transition: clip-path 2s linear; /* slow fill while holding */
-}
-```
-
-### Image reveals
-
-```css
-.reveal {
-  clip-path: inset(0 0 100% 0); /* hidden */
-}
-.reveal.visible {
-  clip-path: inset(0 0 0 0); /* revealed */
-}
-```
-
-### Comparison sliders
-
-Overlay images, clip top one by adjusting right inset based on drag position.
+For advanced transform mastery, 3D orbits, and clip-path animation recipes (tabs, hold-to-delete, image reveals, sliders), see [reference/animation-recipes.md](reference/animation-recipes.md).
 
 ## Performance Rules
 
@@ -274,21 +273,7 @@ Touch triggers false hover positives — always gate hover animations.
 
 ## Building Loved Components
 
-Five principles (from Sonner, 13M+ weekly downloads):
-
-1. **Developer experience first** — minimal setup friction, insert once, use globally
-2. **Excellent defaults** — ship beautifully configured out-of-box
-3. **Identity through naming** — a memorable name resonates
-4. **Invisible edge cases** — pause timers when hidden, handle pointer capture during drag
-5. **Transitions over keyframes** — rapid additions cause keyframe restart from zero; transitions retarget smoothly
-
-### Cohesion
-
-Animation personality should match component identity. Playful components can bounce; professional dashboards stay crisp.
-
-### Asymmetric timing
-
-Deliberate actions stay slow (2s linear for hold-to-delete), system responses snap fast (200ms ease-out for release).
+For component craftsmanship principles (developer experience, defaults, edge cases, asymmetric timing), see [reference/component-craft.md](reference/component-craft.md).
 
 ## Review Checklist
 
@@ -326,26 +311,25 @@ Visual work ships through two passes, mirroring the toolkit's verification-befor
 
 - **MUST** specify exact properties in `transition` (`transition: transform 200ms ease-out`) — never `transition: all`
 - **MUST** use `ease-out` (or a custom curve) on UI appearances; `ease-in` delays feedback at the moment the user's attention peaks
-- **NEVER** animate `height`, `width`, `margin`, or `top/left` — animate `transform` and `opacity` only. Layout-triggering properties drop frames under load.
-- **NEVER** add motion for decorative reasons alone — every animation must serve meaning (status change, spatial relationship, progress)
-- **CRITICAL**: exit is faster than enter. A 2s linear enter (hold-to-delete) needs a 200ms ease-out exit. Symmetrical durations feel sluggish.
-- **MANDATORY**: any animation longer than 300ms for UI feedback needs an explicit justification — the user perceives >300ms as "laggy", not "smooth"
-- **MUST** lift exact values (hex, spacing, font stack, radii) from the real codebase, tokens, UI kit, or screenshots before high-fidelity work — never reconstruct token values from memory; mock from scratch only when no source exists
-- **MUST** keep slide body text at ~24px+, print at ~12pt+, and mobile touch targets at 44px+ — these are accessibility floors, not preferences
-- **NEVER** ship the slop defaults — saturated full-bleed gradients, emoji as decoration, repeated rounded-card-with-accent-border, hand-drawn fake imagery in SVG, or the unconsidered default font stack
-- **NEVER** add filler (dummy stats, decorative sections, lorem) to fill space, and never fabricate assets — an honest labeled placeholder beats an invented icon or fake image; ask for the real one
-- **MUST** match the existing UI's vocabulary (palette, states, motion, shadow/density, copy tone) when editing a live surface instead of imposing a new style
-- **MUST** ask about goals, audience, and which dimension to diverge on (UX vs. visuals vs. copy) before building an open-ended ask; skip questions only when context is rich and the ask is bounded
-- **CARVE-OUT**: a sanctioned design audit, accessibility-failure demonstration, or authorized red-team mockup may deliberately reproduce a slop pattern or sub-floor scale to illustrate the defect — label it as such; the bans above target shipped UI, not sanctioned analysis
-- **SHOULD** produce 3+ atomic variations across distinct axes (layout, color, type, interaction), ordered basic → advanced, for any exploratory or open design ask
+- **NEVER** animate `height`, `width`, `margin`, or `top/left` — animate `transform` and `opacity` only
+- **CRITICAL**: exit is faster than enter. A 2s linear enter (hold-to-delete) needs a 200ms ease-out exit
+- **MANDATORY**: any animation longer than 300ms for UI feedback needs an explicit justification
+- **MUST** implement all 8 interactive states (default, hover, focus-visible, active, disabled, loading, error, success) for every interactive element
+- **MUST** keep `border-width: 1px` constant across all input states (default/hover/focus/error/disabled) with a reserved transparent outline to guarantee zero layout shift
+- **MUST** apply `overflow-x: clip` on both `html` and `body` to eliminate horizontal viewport scrolling on mobile (320px–768px)
+- **MUST** ensure clickable affordance text (buttons, nav links, CTAs) remains single-line across all viewports
+- **MUST** keep all display headings roman (`font-style: normal`) — never use single-word italic emphasis inside headlines
+- **MUST** adhere to the 2+1 typography rule (max 3 families, outlier face used in at most 2 slots)
+- **MUST** lock all colors to named CSS variable tokens — never improvise inline hex/rgb/OKLCH values mid-render
+- **MUST** lift exact values (hex, spacing, font stack, radii) from real source — never reconstruct tokens from memory
+- **MUST** keep mobile touch targets at 44px+ minimum floor
+- **NEVER** ship slop defaults (purple/blue gradient hero washes, gradient text headlines, emoji as icons, cards-in-cards, side-stripe cards, centered-everything 100vh heroes)
+- **NEVER** add filler (dummy stats, fake testimonials, invented logos, lorem) — use honest labeled placeholders
+- **MUST** run pre-emit self-critique scoring (P/H/E/S/R/V) before completing UI implementation
 
 ## Gotchas
 
-- `transform: translateX(-50%)` on an element that will animate `opacity` triggers a paint on every frame because the browser cannot composite the layer. Add `will-change: transform, opacity` to hint the compositor — but only during the animation, not permanently (it consumes GPU memory).
-- Framer Motion's `x={100}` prop is a shortcut for `transform: translateX(100px)`, but under load it falls back to the main thread. Use the longhand `style={{ transform: "translateX(100px)" }}` for guaranteed compositor path.
-- `@media (prefers-reduced-motion: reduce)` is widely supported but often forgotten. Users with vestibular disorders or pointer-device sensitivity will notice; include a reduced-motion override for every non-trivial animation.
-- Chrome's Performance tab samples animations, but the sampling rate is 1kHz — sub-millisecond jank is invisible. For micro-animations, prefer `performance.mark` and `measure` with explicit timestamps.
-- CSS keyframe animations re-trigger on every class toggle. On rapidly-updating state (drag, hover), transitions are cheaper and smoother; keyframes are for one-shot entries/exits.
+For compositor edge cases, Framer Motion GPU optimizations, and reduced-motion gotchas, see [reference/animation-recipes.md](reference/animation-recipes.md).
 
 ## When NOT to Load
 
@@ -354,3 +338,4 @@ Visual work ships through two passes, mirroring the toolkit's verification-befor
 - For **information architecture** and user flows — use `/ux-designer` agent
 - For generic CSS patterns without motion — this skill is motion-specific
 - For **brand voice** / content tone — use `/brand-voice`
+
