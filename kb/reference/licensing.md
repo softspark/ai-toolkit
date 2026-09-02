@@ -131,7 +131,7 @@ MIT remnant would need each contributor's agreement.
 
 It is a test rather than a checklist line on purpose. This project has two
 same-day postmortems about SOPs that existed and were skipped; CI does not skip.
-[Release Preparation](../procedures/release-preparation-sop.md) Phase 5c runs the
+[Release Preparation](../procedures/sop-release.md) Phase 5c runs the
 same gate before tagging so a failure surfaces before the tag, not after.
 
 ## If the licence ever changes again
@@ -144,5 +144,5 @@ source, cross-verify against a second independent copy, and only then write
 ## Related
 
 - [`LICENSE`](../../LICENSE), [`NOTICE`](../../NOTICE)
-- [Release Preparation SOP](../procedures/release-preparation-sop.md) — Phase 5c
+- [Release Preparation SOP](../procedures/sop-release.md) — Phase 5c
 - [Distribution Model](distribution-model.md) — what ships and where

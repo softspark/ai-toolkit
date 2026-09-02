@@ -159,7 +159,7 @@ running the generators directly:
 
 - `scripts/generate_copilot.py` / `generate_copilot_hooks.py` contract tests
   (`tests/test_copilot.bats`, `tests/test_copilot_hooks.bats`).
-- Release layout check in `kb/procedures/release-verification-sop.md` asserts the
+- Release layout check in `kb/procedures/sop-release-verification.md` asserts the
   `.github/{agents,skills,instructions,prompts,hooks}` surfaces.
 - `validate.py --strict` + `audit_skills.py --ci` in CI.
 

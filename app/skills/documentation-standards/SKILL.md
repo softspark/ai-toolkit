@@ -47,7 +47,7 @@ and never authoritative on its own.
 |----------|-----------|---------|----------|
 | `reference` | `kb/reference/` | Technical specifications, catalogs, architecture notes, API docs | `agents-catalog.md`, `architecture-overview.md` |
 | `howto` | `kb/howto/` | Step-by-step task guides | `use-corrective-rag.md`, `configure-mcp-server.md` |
-| `procedures` | `kb/procedures/` | SOPs a person follows: release, migration, review | `maintenance-sop.md`, `sop-release.md` |
+| `procedures` | `kb/procedures/` | SOPs a person follows: release, migration, review | `sop-maintenance.md`, `sop-release.md` |
 | `troubleshooting` | `kb/troubleshooting/` | Problem resolution, debugging guides | `database-connection-issues.md` |
 | `best-practices` | `kb/best-practices/` | Guidelines, recommendations, standards | `security-checklist.md` |
 | `decisions` | `kb/decisions/` | Architecture decision records and design rationale | `adr-004-kb-migration.md` |

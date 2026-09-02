@@ -253,5 +253,5 @@ jobs:
 
 - [Supported Tools Registry](../reference/supported-tools-registry.md) — human-readable per-tool breakdown
 - [MCP Editor Compatibility](../reference/mcp-editor-compatibility.md) — MCP-specific adapter table
-- [Maintenance SOP](maintenance-sop.md) — general toolkit upkeep
-- [Release Preparation SOP](release-preparation-sop.md) — run the doctor before tagging
+- [Maintenance SOP](sop-maintenance.md) — general toolkit upkeep
+- [Release Preparation SOP](sop-release.md) — run the doctor before tagging

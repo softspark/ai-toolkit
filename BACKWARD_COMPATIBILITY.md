@@ -97,7 +97,7 @@ both, in the same commit.
 - New skills, agents, packs, hooks, CLI commands, flags, frontmatter fields, or KB
   categories — additive is not breaking, provided defaults preserve current behaviour
 - Validation thresholds, subject to the ratchet rule in
-  `kb/procedures/release-preparation-sop.md`: never lower a threshold in the same
+  `kb/procedures/sop-release.md`: never lower a threshold in the same
   change that violates it, never raise one to green a red build
 - README copy, badges, CI workflows, test internals
 
@@ -130,4 +130,4 @@ npm test 2>&1 | grep "^not ok"           # must be empty; the tail line is a tes
                                          # number, never a pass count
 ```
 
-`kb/procedures/release-preparation-sop.md` carries the full sequence.
+`kb/procedures/sop-release.md` carries the full sequence.

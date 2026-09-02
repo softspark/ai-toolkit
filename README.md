@@ -341,7 +341,7 @@ Need multi-agent coordination?
 | opencode Compatibility | [kb/reference/opencode-compatibility.md](kb/reference/opencode-compatibility.md) |
 | GitHub Copilot Compatibility | [kb/reference/copilot-compatibility.md](kb/reference/copilot-compatibility.md) |
 | DSH Compatibility | [kb/reference/dsh-compatibility.md](kb/reference/dsh-compatibility.md) |
-| Maintenance SOP | [kb/procedures/maintenance-sop.md](kb/procedures/maintenance-sop.md) |
+| Maintenance SOP | [kb/procedures/sop-maintenance.md](kb/procedures/sop-maintenance.md) |
 
 ---
 

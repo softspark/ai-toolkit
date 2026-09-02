@@ -147,7 +147,7 @@ MAX_EMITTED_SKILL_NODES = 10_000
 #
 # Ratchet: lower WARN by 2_000 each release until it reaches 12_000. Never lower a
 # threshold in the same change that something violates it — split the skill first,
-# then tighten. The step lives in kb/procedures/release-preparation-sop.md so it
+# then tighten. The step lives in kb/procedures/sop-release.md so it
 # does not rot as a comment nobody reads.
 SKILL_BODY_BUDGET_ERROR = 20_000
 SKILL_BODY_BUDGET_WARN = 18_000

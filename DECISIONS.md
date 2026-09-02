@@ -37,7 +37,7 @@ reflex.
 it, deleting a skill would delete its manifest entry in the same breath and the
 check would detect nothing — a green build proving only that the evidence was
 destroyed. `--update` is a release-time step in
-`kb/procedures/release-preparation-sop.md`: run it, read the diff, and every line
+`kb/procedures/sop-release.md`: run it, read the diff, and every line
 removed owes an entry here.
 
 **Rejected:** wiring the check into a git hook. It belongs in `npm test`, where a
@@ -120,7 +120,7 @@ still the floor the ratchet walks toward, but adopting it in one step would have
 produced 19 warnings and — because `prepublishOnly` runs `validate.py --strict` —
 a package that could not be published. Thresholds that block the release get
 raised back, and then they mean nothing. So the budget entered at a level nothing
-violated, and `kb/procedures/release-preparation-sop.md` owns lowering it.
+violated, and `kb/procedures/sop-release.md` owns lowering it.
 
 Two rules were written into the SOP rather than left as a source comment, because
 a comment saying "lower this each release" is a comment nobody reads:

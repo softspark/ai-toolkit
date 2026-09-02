@@ -116,9 +116,9 @@ jobs:
                    .github/ISSUE_TEMPLATE/bug_report.md \
                    .github/ISSUE_TEMPLATE/feature_request.md \
                    .github/ISSUE_TEMPLATE/config.yml \
-                   kb/procedures/pre-commit-sop.md \
-                   kb/procedures/release-preparation-sop.md \
-                   kb/procedures/post-release-testing-sop.md; do
+                   kb/procedures/sop-pre-commit.md \
+                   kb/procedures/sop-release.md \
+                   kb/procedures/sop-post-release-testing.md; do
             test -f "$f" || { echo "::error::Missing: $f"; exit 1; }
           done
       - name: Version is in sync across every manifest

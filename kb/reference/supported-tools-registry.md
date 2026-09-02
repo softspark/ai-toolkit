@@ -285,13 +285,13 @@ See [DSH Compatibility](./dsh-compatibility.md) for commands, topology, subscrip
 2. Delete its section from this document.
 3. Delete its snapshot entry from `benchmarks/ecosystem-doctor-snapshot.json` (or let the next `--update` prune it — currently not pruned automatically).
 4. Decide whether to keep the generator (`scripts/generate_<tool>_*.py`) for backwards compatibility or delete it.
-5. Remove references from `README.md`, `manifest.json` `description` field, and `kb/procedures/maintenance-sop.md` `Supported editors` line.
+5. Remove references from `README.md`, `manifest.json` `description` field, and `kb/procedures/sop-maintenance.md` `Supported editors` line.
 
 ---
 
 ## Related
 
-- [Ecosystem Sync SOP](../procedures/ecosystem-sync-sop.md) — how to use the doctor
+- [Ecosystem Sync SOP](../procedures/sop-ecosystem-sync.md) — how to use the doctor
 - [MCP Editor Compatibility](./mcp-editor-compatibility.md) — MCP-specific subset
 - `scripts/ecosystem_tools.json` — source of truth
 - `scripts/ecosystem_doctor.py` — drift detector

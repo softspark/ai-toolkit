@@ -16,10 +16,10 @@ description: "The local gate to run before every commit to ai-toolkit: staged-fi
 CI runs on `main` and on pull requests, but it runs *after* the push. Every
 check below already exists in `.github/workflows/ci.yml`; running them locally
 first is what keeps `main` green and keeps a release from becoming a debug
-session. The v4.5.1 postmortem in `release-preparation-sop.md` is the case
+session. The v4.5.1 postmortem in `sop-release.md` is the case
 where a hook lint failure published while reddening `main` CI.
 
-This gate is not a substitute for `release-preparation-sop.md`. That SOP gates
+This gate is not a substitute for `sop-release.md`. That SOP gates
 a *tag*; this one gates a *commit*.
 
 ## Prerequisites
@@ -68,13 +68,13 @@ and belongs in an issue, not in a retry.
 
 - **Cross-platform.** The suite here runs on your machine only. Both
   `ubuntu-latest` and `macos-latest` must be green before a tag; that gate
-  lives in `release-preparation-sop.md`, Phase 7, and is bound to the exact
+  lives in `sop-release.md`, Phase 7, and is bound to the exact
   release commit.
 - **Required files.** The `required-files` CI job checks that every file the
   module template mandates is present and that the version is in sync across
   all four manifests. It is cheap and runs on every push.
 - **Provenance and SARIF.** Release-time concerns; see
-  `release-preparation-sop.md`.
+  `sop-release.md`.
 
 ## Commit message
 
@@ -91,6 +91,6 @@ suggestion; the scope and the summary are yours.
 
 ## Related
 
-- `release-preparation-sop.md` -- the pre-tag gate, including cross-platform CI
-- `post-release-testing-sop.md` -- what to verify after a release ships
-- `release-verification-sop.md` -- end-to-end smoke test of an installed build
+- `sop-release.md` -- the pre-tag gate, including cross-platform CI
+- `sop-post-release-testing.md` -- what to verify after a release ships
+- `sop-release-verification.md` -- end-to-end smoke test of an installed build
