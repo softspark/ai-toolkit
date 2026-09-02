@@ -102,6 +102,35 @@ jobs:
       - name: Run tests
         run: bats tests/ --jobs 4 --no-parallelize-within-files
 
+  required-files:
+    name: Required files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Every file the module template requires is present
+        run: |
+          for f in LICENSE NOTICE CHANGELOG.md SECURITY.md CODE_OF_CONDUCT.md \
+                   README.md CLAUDE.md .gitignore .npmignore .npmrc \
+                   .github/CONTRIBUTING.md .github/PULL_REQUEST_TEMPLATE.md \
+                   .github/CODEOWNERS .github/FUNDING.yml .github/dependabot.yml \
+                   .github/ISSUE_TEMPLATE/bug_report.md \
+                   .github/ISSUE_TEMPLATE/feature_request.md \
+                   .github/ISSUE_TEMPLATE/config.yml \
+                   kb/procedures/pre-commit-sop.md \
+                   kb/procedures/release-preparation-sop.md \
+                   kb/procedures/post-release-testing-sop.md; do
+            test -f "$f" || { echo "::error::Missing: $f"; exit 1; }
+          done
+      - name: Version is in sync across every manifest
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          for f in manifest.json package-lock.json app/.claude-plugin/plugin.json; do
+            V=$(node -p "require('./$f').version")
+            test "$V" = "$PKG" || { echo "::error::$f is $V, package.json is $PKG"; exit 1; }
+          done
+          grep -q "## v${PKG} " CHANGELOG.md \
+            || { echo "::error::CHANGELOG has no entry for v${PKG}"; exit 1; }
+
   security-audit:
     name: Skill security audit
     runs-on: ubuntu-latest
