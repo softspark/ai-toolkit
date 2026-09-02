@@ -32,11 +32,12 @@
 - [Closed: Tool-Output Token Reduction](kb/history/completed/tool-output-token-reduction-closed-20260727.md)
 - [How-To Guides](kb/howto/README.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
-- [SOP: Ecosystem Sync](kb/procedures/ecosystem-sync-sop.md)
-- [SOP: AI Toolkit Maintenance](kb/procedures/maintenance-sop.md)
-- [SOP: Post-Release Testing](kb/procedures/post-release-testing-sop.md)
-- [SOP: Release Preparation](kb/procedures/release-preparation-sop.md)
-- [SOP: Release Verification](kb/procedures/release-verification-sop.md)
+- [SOP: Ecosystem Sync](kb/procedures/sop-ecosystem-sync.md)
+- [SOP: AI Toolkit Maintenance](kb/procedures/sop-maintenance.md)
+- [SOP: Post-Release Testing](kb/procedures/sop-post-release-testing.md)
+- [SOP: Pre-Commit Gate](kb/procedures/sop-pre-commit.md)
+- [SOP: Release Verification](kb/procedures/sop-release-verification.md)
+- [SOP: Release Preparation](kb/procedures/sop-release.md)
 - [Agents Catalog](kb/reference/agents-catalog.md)
 - [Anti-Pattern Registry Format](kb/reference/anti-pattern-registry-format.md)
 - [AI Toolkit Architecture](kb/reference/architecture-overview.md)
@@ -6929,7 +6930,7 @@ Examples:
 
 ---
 
-## kb/procedures/ecosystem-sync-sop.md
+## kb/procedures/sop-ecosystem-sync.md
 
 ---
 title: "SOP: Ecosystem Sync"
@@ -7186,12 +7187,12 @@ jobs:
 
 - [Supported Tools Registry](../reference/supported-tools-registry.md) — human-readable per-tool breakdown
 - [MCP Editor Compatibility](../reference/mcp-editor-compatibility.md) — MCP-specific adapter table
-- [Maintenance SOP](maintenance-sop.md) — general toolkit upkeep
-- [Release Preparation SOP](release-preparation-sop.md) — run the doctor before tagging
+- [Maintenance SOP](sop-maintenance.md) — general toolkit upkeep
+- [Release Preparation SOP](sop-release.md) — run the doctor before tagging
 
 ---
 
-## kb/procedures/maintenance-sop.md
+## kb/procedures/sop-maintenance.md
 
 ---
 title: "SOP: AI Toolkit Maintenance"
@@ -7705,7 +7706,7 @@ What `uninstall` does:
 
 ---
 
-## kb/procedures/post-release-testing-sop.md
+## kb/procedures/sop-post-release-testing.md
 
 ---
 title: "SOP: Post-Release Testing"
@@ -7725,7 +7726,7 @@ actually install, from npm, rather than the working tree.
 
 Sibling procedures exist for `jira-mcp` and `legal-pl-pack`; this is the
 ai-toolkit equivalent. It complements
-[Release Verification](release-verification-sop.md), which checks the toolkit
+[Release Verification](sop-release-verification.md), which checks the toolkit
 from the maintainer's own installed copy. The difference that matters: this one
 never writes to the maintainer's `~/.claude` or `~/.softspark`.
 
@@ -8019,665 +8020,114 @@ print(f'removed {sb} ({n} files)')
 
 ## Related
 
-- [Release Preparation](release-preparation-sop.md) — run before tagging
-- [Release Verification](release-verification-sop.md) — the maintainer-install checks
+- [Release Preparation](sop-release.md) — run before tagging
+- [Release Verification](sop-release-verification.md) — the maintainer-install checks
 - [rtk-pack Retirement](../history/completed/rtk-pack-retirement-20260727.md) — what happened the one time this SOP was written and not run
 
 ---
 
-## kb/procedures/release-preparation-sop.md
+## kb/procedures/sop-pre-commit.md
 
 ---
-title: "SOP: Release Preparation"
+title: "SOP: Pre-Commit Gate"
 category: procedures
 service: ai-toolkit
-tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.15.0"
-created: "2026-04-10"
+tags: [pre-commit, quality-gate, shellcheck, bats, validation, secrets]
+version: "1.0.0"
+created: "2026-09-02"
 last_updated: "2026-09-02"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
+description: "The local gate to run before every commit to ai-toolkit: staged-file and secret scan, ShellCheck, Python syntax, toolkit validation, and the Bats suite. Runs the same checks CI runs, so main does not go red after a push."
 ---
 
-# SOP: Release Preparation
+# SOP: Pre-Commit Gate
 
-Complete checklist for preparing a new `@softspark/ai-toolkit` release.
-Run this **before** tagging. After tagging and publishing, run the
-[Release Verification SOP](release-verification-sop.md) to smoke-test.
+## Why this exists
 
-**Pipeline:**
-```
-Ecosystem Sync SOP (drift check + generator updates)
-      ↓
-Release Preparation (this SOP)
-      ↓
-git tag → CI publish → Release Verification SOP
-```
+CI runs on `main` and on pull requests, but it runs *after* the push. Every
+check below already exists in `.github/workflows/ci.yml`; running them locally
+first is what keeps `main` green and keeps a release from becoming a debug
+session. The v4.5.1 postmortem in `sop-release.md` is the case
+where a hook lint failure published while reddening `main` CI.
 
-**Time:** 10-20 minutes (includes ecosystem sync review)
+This gate is not a substitute for `sop-release.md`. That SOP gates
+a *tag*; this one gates a *commit*.
 
----
+## Prerequisites
 
-## Quick Checklist (TL;DR)
+`shellcheck`, `python3` and `bats` must be on `PATH`. The suite is the one
+check that silently does nothing when its runner is absent, so install it
+before relying on this gate:
 
 ```bash
-# 0. Ecosystem sync (mandatory for minor/major releases; optional for patch)
-#    Full procedure: kb/procedures/ecosystem-sync-sop.md
-python3 scripts/ecosystem_doctor.py --format text > /tmp/eco-report.txt
-cat /tmp/eco-report.txt
-# If drift detected: stop here, follow ecosystem-sync-sop.md Phase 2-4 to
-# classify each drift (A-F), update generators as needed, refresh snapshot,
-# THEN resume this SOP.
-python3 scripts/ecosystem_doctor.py --update    # after all drift resolved
-
-# 1. Decide version bump
-#    patch (1.4.2 → 1.4.3): bugfix, typo, doc fix
-#    minor (1.4.2 → 1.5.0): new feature, new skill, new flag, any ecosystem-class-B/F change
-#    major (1.4.2 → 2.0.0): breaking change, any ecosystem-class-D removed path
-
-# 2. Sync version across all files
-python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
-
-# 3. Write CHANGELOG.md entry
-# 4. Regenerate artifacts
-python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_llms_txt.py > llms.txt
-python3 scripts/generate_llms_txt.py --full > llms-full.txt
-
-# 5. Validate + audit + SARIF + shellcheck + test + ecosystem check
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && shellcheck --severity=warning app/hooks/*.sh && npm test
-
-# 5a. Supply-chain standard (v2.8.0+) — non-negotiable
-grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --provenance"; exit 1; }
-grep -q 'id-token: write'   .github/workflows/publish.yml || { echo "MISSING id-token: write"; exit 1; }
-python3 scripts/audit_skills.py --permissions   # review Bash/Write/Edit footprint
-
-# 5b. Ecosystem gate — snapshot must be current before tag
-python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem snapshot — re-run doctor"; exit 1; }
-
-# 5c. Licensing gate — SPDX headers, LICENSE, NOTICE, manifest consistency
-npx bats tests/test_licensing.bats || { echo "LICENSING GATE FAILED"; exit 1; }
-
-# 6. Commit, push branch, and wait for the exact commit's full CI
-git add -A && git commit -m "chore: release vX.Y.Z"
-RELEASE_SHA=$(git rev-parse HEAD)
-git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
-RUN_ID=""
-for ATTEMPT in 1 2 3 4 5; do
-  RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
-    --limit 1 --json databaseId --jq '.[0].databaseId')
-  [ -n "$RUN_ID" ] && break
-  echo "Waiting for CI run registration ($ATTEMPT/5)" >&2
-  [ "$ATTEMPT" -eq 5 ] || sleep 60
-done
-test -n "$RUN_ID" || { echo "FAIL: CI run not found for release commit"; exit 1; }
-gh run watch "$RUN_ID" --exit-status \
-  || { echo "FAIL: release commit CI failed"; exit 1; }
-for OS in ubuntu-latest macos-latest; do
-  gh run view "$RUN_ID" --json jobs \
-    --jq ".jobs[] | select(.name == \"Bats test suite ($OS)\") | .conclusion" \
-    | grep -qx success || { echo "FAIL: $OS test job not green"; exit 1; }
-done
-test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || { echo "FAIL: local HEAD changed during CI"; exit 1; }
-git fetch origin main || { echo "FAIL: origin/main refresh failed"; exit 1; }
-test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || { echo "FAIL: origin/main changed during CI"; exit 1; }
-
-# 6a. Only green branch CI authorizes tag creation
-git tag vX.Y.Z "$RELEASE_SHA"
-
-# 6b. Assert the tag before pushing it (v4.19.0 postmortem, Phase 7)
-test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA" || { echo "FAIL: tag not on tested release commit"; exit 1; }
-git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
-
-# 6c. Push the single tag by full ref. Never --tags.
-git push origin refs/tags/vX.Y.Z
+brew install bats-core shellcheck    # macOS
+sudo apt-get install -y bats shellcheck   # Debian / Ubuntu
 ```
+
+## The gate
+
+Run all five from the repository root. Each mirrors a CI job.
+
+```bash
+# 1. Staged files: secrets, large blobs, commit-type suggestion
+python3 app/skills/commit/scripts/pre-commit-check.py
+
+# 2. ShellCheck hooks -- the CI job that has published while red before
+shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh
+
+# 3. Python syntax across every script the toolkit ships
+python3 -m py_compile scripts/*.py app/skills/*/scripts/*.py
+
+# 4. Toolkit integrity: agents, skills, registry drift, content quality
+npm run validate
+
+# 5. The suite. Run it ONCE -- see the single-run discipline below
+npm test
+```
+
+A non-zero exit from any of them is a stop, not a warning to note and push past.
+
+## Single-run discipline
+
+`npm test` runs the Bats suite with `--jobs 4`. Running it repeatedly to see
+whether a failure is "flaky" hides real ordering bugs and wastes minutes. Run
+it once. If it fails, read the failure and fix the cause; if the same test
+passes on a re-run without a code change, that instability is itself the bug
+and belongs in an issue, not in a retry.
+
+## What this gate does not cover
+
+- **Cross-platform.** The suite here runs on your machine only. Both
+  `ubuntu-latest` and `macos-latest` must be green before a tag; that gate
+  lives in `sop-release.md`, Phase 7, and is bound to the exact
+  release commit.
+- **Required files.** The `required-files` CI job checks that every file the
+  module template mandates is present and that the version is in sync across
+  all four manifests. It is cheap and runs on every push.
+- **Provenance and SARIF.** Release-time concerns; see
+  `sop-release.md`.
+
+## Commit message
+
+Conventional Commits, and no AI co-authorship trailer:
+
+```
+feat(scope): summary in the imperative
+fix(scope): summary in the imperative
+docs|refactor|test|chore(scope): ...
+```
+
+`pre-commit-check.py` suggests a type from the staged paths. It is a
+suggestion; the scope and the summary are yours.
+
+## Related
+
+- `sop-release.md` -- the pre-tag gate, including cross-platform CI
+- `sop-post-release-testing.md` -- what to verify after a release ships
+- `sop-release-verification.md` -- end-to-end smoke test of an installed build
 
 ---
 
-## Phase 0: Ecosystem Sync (MANDATORY for minor/major)
-
-Before touching version numbers, confirm the toolkit is aligned with the current state of every editor / platform it integrates with. Skipping this phase ships a release whose generators may lag a month-old CLI refactor, a rename of `.cursorrules` to `.cursor/rules/`, or a new hook event we do not yet emit.
-
-**When this phase is mandatory:**
-- Minor release (X.Y.0) — always
-- Major release (X.0.0) — always
-- Patch release (X.Y.Z) — only if the patch touches a generator or install flow
-
-**When to skip:** pure doc-only patches, SOP edits, internal refactors that do not touch `scripts/generate_*` or `app/skills/*/SKILL.md`.
-
-### 0.1 Run the doctor
-
-```bash
-python3 scripts/ecosystem_doctor.py --format text | tee /tmp/eco-report.txt
-```
-
-Output classifies every registered tool as **Clean**, **Drift**, or **Errored**.
-
-### 0.2 Act on drift
-
-For each drifting tool, follow [ecosystem-sync-sop.md](ecosystem-sync-sop.md) Phase 2-4:
-
-| Drift class | Release impact |
-|-------------|----------------|
-| A (cosmetic reword) | No version impact — refresh snapshot, continue |
-| B (new feature — integrate) | **Minor** version bump at minimum; new generator or extended generator |
-| C (new feature — not adopted) | No impact — note in registry |
-| D (deprecation) | **Minor** or **major** depending on user impact; add migration warning |
-| E (feature promoted to default) | **Minor**; simplify generator, keep fallback comment |
-| F (feature newly globally available) | **Minor**; may require new generator or new config path |
-
-If any B/D/E/F changes land in this preparation pass, mention them explicitly in the CHANGELOG entry (Phase 3) under a `Ecosystem` subsection.
-
-### 0.3 Refresh snapshot
-
-Once every drift is resolved (either by code change or by re-classifying as acceptable):
-
-```bash
-python3 scripts/ecosystem_doctor.py --update
-```
-
-This writes the new baseline to `benchmarks/ecosystem-doctor-snapshot.json`. Commit it as part of the release commit.
-
-### 0.4 Gate
-
-```bash
-python3 scripts/ecosystem_doctor.py --offline --check
-```
-
-Must exit `0`. If it exits `1`, the snapshot is stale — rerun Phase 0.3 or review the remaining drift.
-
----
-
-## Phase 1: Determine Version Bump
-
-Follow [Semantic Versioning](https://semver.org/):
-
-| Change Type | Bump | Examples |
-|-------------|------|---------|
-| Bugfix, typo, doc-only | **patch** | Fix install flag, correct description |
-| New feature, skill, agent, flag | **minor** | Add `/hipaa-validate`, add `--output json` |
-| Breaking CLI change, removed skill, config format change | **major** | Rename `install` to `setup`, remove skill |
-
-**Rule:** When in doubt, bump minor.
-
----
-
-## Phase 2: Sync Version in All Files
-
-The canonical version lives in `package.json`. These files **must** match:
-
-### Mandatory sync (every release)
-
-| File | Field | How to update |
-|------|-------|---------------|
-| `package.json` | `"version": "X.Y.Z"` | Edit directly |
-| `manifest.json` | `"version": "X.Y.Z"` | Edit directly |
-| `app/.claude-plugin/plugin.json` | `"version": "X.Y.Z"` | Edit directly |
-
-### Auto-synced (no manual action)
-
-| File | Mechanism |
-|------|-----------|
-| `package-lock.json` | Regenerated by `npm install --package-lock-only` |
-
-### Conditional sync (only if the doc was modified in this release)
-
-| File | Field | When to update |
-|------|-------|---------------|
-| `kb/procedures/maintenance-sop.md` | frontmatter `version:` | If SOP content changed |
-| `kb/reference/skills-catalog.md` | frontmatter `version:` | If skills added/removed |
-| `kb/reference/agents-catalog.md` | frontmatter `version:` | If agents added/removed |
-| `kb/reference/hooks-catalog.md` | frontmatter `version:` | If hooks changed |
-| `kb/reference/architecture-overview.md` | frontmatter `version:` | If architecture changed |
-| `kb/reference/distribution-model.md` | frontmatter `version:` | If install model changed |
-| `kb/reference/global-install-model.md` | frontmatter `version:` | If install model changed |
-
-> **Note:** KB `version:` fields track the **document version**, not the toolkit version.
-> Only bump them when the document content actually changes in this release.
-
-### Count sync (if skills/agents/hooks changed)
-
-| File | What to check |
-|------|---------------|
-| `package.json` | `"description"` — skill/agent count |
-| `README.md` | Badge counts, "What You Get" table |
-| `app/ARCHITECTURE.md` | Section headings with counts |
-
-> **Tip:** `validate.py --strict` catches count drift AND version mismatches
-> (package.json vs manifest.json vs plugin.json) automatically.
-> If validation passes, counts and versions are correct.
-
-### Verification command
-
-After syncing, verify all mandatory files match:
-
-```bash
-VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
-echo "Target: $VERSION"
-echo "manifest.json:     $(python3 -c "import json; print(json.load(open('manifest.json'))['version'])")"
-echo "plugin.json:       $(python3 -c "import json; print(json.load(open('app/.claude-plugin/plugin.json'))['version'])")"
-echo "package-lock.json: $(python3 -c "import json; print(json.load(open('package-lock.json'))['version'])")"
-```
-
-All four must print the same version. If not, fix before proceeding.
-
-### Public surface review
-
-```bash
-python3 scripts/surface_manifest.py --update
-git diff app/surface.json
-```
-
-**Every line the diff removes is a breaking change.** Restore it, or take the
-deprecation path in `BACKWARD_COMPATIBILITY.md` and add a `DECISIONS.md` entry
-before the tag. Lines added are new surface being adopted into protection — that
-needs no ceremony.
-
-Do not run `--update` to make a red build green. The check fails because something
-users depend on disappeared; regenerating the manifest deletes the evidence, not
-the problem.
-
-### Skill body budget ratchet
-
-`validate.py` prints the largest skill body on every run:
-
-```
-Body budget: largest is <skill> at <N> bytes (warn 18000, error 20000)
-```
-
-Once that number sits at least 2000 bytes under `SKILL_BODY_BUDGET_WARN`, lower
-`SKILL_BODY_BUDGET_WARN` by 2000 in `scripts/validate.py` and ship the tightened
-threshold with the release. Target floor is 12000.
-
-Two rules, both learned the hard way:
-
-- **Never lower a threshold in the same change that something violates it.** Split
-  the offending skill into `SKILL.md` + `reference/` first, prove it with
-  `python3 scripts/check_split.py <skill> --before <pre-split SKILL.md>`, then
-  tighten in a follow-up.
-- **Never raise a threshold to make a red build green.** A body over budget means
-  detail that belongs in `reference/` is loading on every trigger match, including
-  the accidental ones. Raising the number hides the cost, it does not remove it.
-
-If the largest body has not moved since the previous release, leave the threshold
-alone and say so in the release notes. A ratchet that never advances is honest;
-one that advances past reality is not.
-
----
-
-## Phase 3: Write CHANGELOG Entry
-
-Add entry at the top of `CHANGELOG.md` (after the header, before previous release):
-
-```markdown
-## vX.Y.Z — Short Title (YYYY-MM-DD)
-
-### Added
-- **Feature name** — description
-
-### Changed
-- **What changed** — old behavior → new behavior
-
-### Fixed
-- **Bug description** — what was broken and how it's fixed
-
-### Removed
-- **What was removed** — migration path if any
-```
-
-**Rules:**
-- Use **bold** for feature names
-- Start descriptions with a verb (Added, Changed, Fixed, Removed)
-- Reference skill names with backticks and slash: `/hipaa-validate`
-- Include script names: `scripts/hipaa_scan.py`
-- Include count changes: `Skill count: 91 → 92`
-- Date format: `YYYY-MM-DD`
-- Title: short, descriptive, no version number repetition
-
-### Update README "What's New" section
-
-**MANDATORY on every release.** Update the `## What's New in vX.Y.Z` section in `README.md`:
-
-1. Change the heading version: `## What's New in vX.Y.Z`
-2. Replace bullet points with 3-5 highlights from this release
-3. **Keep only the latest version block.** Delete the previous `## What's New in vA.B.C` section(s). README is the shop window, not the archive — users see the current release, full history lives in `CHANGELOG.md`.
-4. Keep the `See [CHANGELOG.md](CHANGELOG.md) for full history.` link directly below the bullet list.
-
-> **Warning:** This section is the first thing users see after the badges.
-> A stale version here (e.g., "What's New in v2.1.3" when shipping v2.3.0)
-> signals an unmaintained project. Do NOT skip this step.
-
-> **Single-version rule:** README.md must contain **exactly one** `## What's New in vX.Y.Z` heading at any time. If you find multiple stacked (e.g. v2.6.1 + v2.6.0 + v2.5.0), that is a SOP drift — collapse to the latest on the next release commit.
-
----
-
-## Phase 4: Regenerate Artifacts
-
-Use the npm scripts, not the generators directly:
-
-```bash
-npm run generate:agents   # AI_TOOLKIT_NO_CUSTOM_RULES=1 python3 scripts/generate_agents_md.py > AGENTS.md
-npm run generate:llms     # llms.txt + llms-full.txt
-```
-
-`generate:agents` sets `AI_TOOLKIT_NO_CUSTOM_RULES=1`. Running
-`generate_agents_md.py` bare picks up whatever is registered in the maintainer's
-own `~/.softspark/ai-toolkit/rules/`, which then ships inside `AGENTS.md`.
-
-Check if anything actually changed:
-
-```bash
-git diff --stat AGENTS.md llms.txt llms-full.txt
-```
-
-If no diff, the artifacts are already current. If there is a diff, stage them.
-
----
-
-## Phase 5: Validate, Audit, Test
-
-Run the full quality gate:
-
-```bash
-python3 scripts/validate.py --strict
-python3 scripts/audit_skills.py --ci
-python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS ingest
-python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
-
-# ShellCheck on hooks (added in 1.11.0). Mirrors the ci.yml "ShellCheck hooks"
-# job. NOT run by validate.py, npm test, OR publish.yml — so a hook with a
-# ShellCheck warning passes every other gate AND still publishes on tag while
-# turning main CI red. Run it here, before tagging.
-shellcheck --severity=warning app/hooks/*.sh && echo "OK: shellcheck clean"
-
-# Registry / generator drift (added in 1.10.0). Meta-generators excluded.
-META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
-diff \
-  <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) \
-  <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) \
-  && echo "OK: registry matches filesystem" \
-  || { echo "DRIFT: update supported-tools-registry.md before tagging"; exit 1; }
-
-# Stage first IF this release adds or deletes a kb/ file. The test
-# "npm package KB files match the tracked release set" compares `git ls-files
-# kb` (the index) against what `npm pack` sees (the working tree), so an
-# unstaged addition reads as "extra" and an unstaged deletion as "missing".
-# Phase 6 stages, and it runs after this one, so the ordering fails the test
-# for any release that touches the KB. Staging early costs nothing.
-git status --porcelain kb/ | grep -qE '^(\?\?| D|\?M)' && git add -A kb/
-
-# Run npm test ONCE, cache output, parse from file. The suite is 1400+ bats
-# cases — rerunning it per check wastes minutes. Do not pipe npm test into
-# tail/grep multiple times in the same session.
-npm test > /tmp/npm-test.log 2>&1
-tail -3 /tmp/npm-test.log
-echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp/npm-test.log)"
-```
-
-**Expected results:**
-- `validate.py`: `Errors: 0 | Warnings: 0 | VALIDATION PASSED`
-- `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
-- `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
-- `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
-- `shellcheck --severity=warning app/hooks/*.sh`: no output, exit 0. A common false positive is `SC2034` on `INPUT` or env vars (e.g. `AI_TOOLKIT_HOOK_FORMAT`) that a *sourced* helper (`_hook-io.sh`) consumes — ShellCheck cannot see cross-file use. Fix with a `# shellcheck disable=SC2034` directive or `export`, matching `guard-destructive.sh`. Never tag with a red ShellCheck.
-- Registry drift: `OK: registry matches filesystem`. If `DRIFT:` appears, add the missing `scripts/generate_*.py` rows to `kb/reference/supported-tools-registry.md` before tagging.
-- `npm test`: `1..N` with zero `not ok` (read from the cached `/tmp/npm-test.log`, do not rerun)
-
-> **Why this matters (v4.5.1 postmortem):** `publish.yml` runs only `validate.py` + `npm test`, so it published v4.5.0 even though the `main` CI `ShellCheck hooks` job was red on two `SC2034` warnings in a new hook. The publish workflow does **not** depend on the CI workflow. Until that is fixed, ShellCheck is a manual pre-tag gate — run it here every time.
-
-**One-liner:**
-```bash
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py' | sort -u) && npm test
-```
-
-**If tests fail:** Fix the issue, do NOT skip. Common failures:
-- Stale counts → re-run `generate:all` or fix README/ARCHITECTURE
-- Missing frontmatter → add to new KB docs
-- Broken symlink → `ai-toolkit doctor --fix`
-
-### Phase 5c: Licensing Gate (v4.20.0+)
-
-The project is Apache-2.0. Attribution only works if the artefact actually
-carries it, and every part of that is mechanically checkable.
-
-```bash
-# The whole gate, enforced in CI. Run it here so a failure is caught before tagging.
-npx bats tests/test_licensing.bats
-```
-
-The seven assertions, and why each exists:
-
-| Check | Fails when |
-|---|---|
-| Every shipped source file carries an SPDX header | A new `.py`/`.sh`/`.js`/`.bats` file was added without one — the common case, and the reason this is a test rather than a habit |
-| Headers name Apache-2.0 and nothing else | A file was copied in from an MIT/GPL source with its own header intact |
-| **No** markdown file carries an SPDX header | Someone "helpfully" ran the header script over `app/skills/` — headers there sit above parsed frontmatter and bill every session for it |
-| `LICENSE` is the complete Apache 2.0 text | The file was truncated or replaced with a summary |
-| `NOTICE` carries attribution, the source URL, §4(d) and the MIT-era notice | The attribution mechanism was gutted |
-| `LICENSE` **and** `NOTICE` ship in the npm package | `package.json` `files` lost an entry — a NOTICE that never reaches the consumer cannot satisfy §4(d) |
-| Every manifest declaring a licence declares Apache-2.0 | `package.json`, `manifest.json`, `plugin.json` and `package-lock.json` drifted apart |
-
-**Adding source files in this release?** The header goes *after* the shebang,
-never before it. Short SPDX form:
-
-```
-# SPDX-License-Identifier: Apache-2.0
-# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
-# Source: https://github.com/softspark/ai-toolkit
-```
-
-`//` for JavaScript. Full convention and the reasoning behind the markdown
-exclusion: [Licensing](../reference/licensing.md).
-
-**Changing the licence itself?** Do not hand-type the licence text. Take it
-verbatim from a published copy and cross-verify against a second independent
-copy before writing `LICENSE` — a rendered or summarised licence is not the
-licence. Prior releases stay under their original terms; a licence change
-applies going forward and revokes nothing already granted.
-
-### Phase 5a: Supply-Chain Hardening Verification (v2.8.0+)
-
-These checks enforce the security standard introduced in v2.8.0. Do NOT tag a release until all pass.
-
-**1. Publish workflow emits provenance:**
-
-```bash
-grep -E '\-\-provenance|id-token: write' .github/workflows/publish.yml
-```
-
-- [ ] Both markers present (`--provenance` flag + `id-token: write` permission)
-- [ ] Any PR that changes `publish.yml` REQUIRES an approved security review
-
-**2. URL-sourced rules and hooks are checksum-pinned:**
-
-```bash
-# On a machine that has consumed URL rules/hooks at least once
-# (schema_version 1: entries live under the .rules / .hooks key):
-jq '.rules | to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/rules/sources.json
-jq '.hooks | to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/hooks/external/sources.json
-```
-
-- [ ] Both queries return empty arrays (every URL entry has a `sha256`)
-- [ ] If not, run `ai-toolkit update` to backfill missing hashes before tagging
-
-**3. Audit SARIF output is well-formed:**
-
-```bash
-python3 scripts/audit_skills.py --sarif | python3 -c "import json, sys; d=json.load(sys.stdin); assert d['version']=='2.1.0' and d['runs'][0]['tool']['driver']['name']; print('SARIF OK')"
-```
-
-- [ ] Prints `SARIF OK`
-- [ ] If the script ever grows new rule classes, extend the SARIF `rules[]` coverage before releasing
-
-**4. Strict-pin mode passes on CI** (optional, recommended for stable branches):
-
-```bash
-AI_TOOLKIT_STRICT_PIN=1 ai-toolkit update --dry-run
-```
-
-- [ ] Exit 0, no `CHECKSUM CHANGED` line
-- [ ] Any unexpected upstream change blocks the release until explicitly approved
-
----
-
-## Phase 6: Commit
-
-Stage all release files:
-
-```bash
-git add package.json manifest.json app/.claude-plugin/plugin.json
-git add package-lock.json
-git add CHANGELOG.md
-git add llms.txt llms-full.txt
-# NOTE: AGENTS.md, GEMINI.md, and .github/copilot-instructions.md are generated
-# editor configs and are gitignored — do NOT commit them. `prepublishOnly` runs
-# `npm run generate:all`, so the shipped package (which lists AGENTS.md in
-# package.json `files`) gets a fresh copy at publish time.
-git add -p  # review and stage any other changes
-```
-
-Commit:
-
-```bash
-git commit -m "chore: release vX.Y.Z"
-```
-
----
-
-## Phase 7: Push Branch, Verify CI, Tag, and Push Tag
-
-```bash
-RELEASE_SHA=$(git rev-parse HEAD)
-git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
-
-# Bind the gate to the exact release commit. GitHub run registration is
-# asynchronous, so retry at most five times and log every attempt.
-RUN_ID=""
-for ATTEMPT in 1 2 3 4 5; do
-  RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
-    --limit 1 --json databaseId --jq '.[0].databaseId')
-  [ -n "$RUN_ID" ] && break
-  echo "Waiting for CI run registration ($ATTEMPT/5)" >&2
-  [ "$ATTEMPT" -eq 5 ] || sleep 60
-done
-test -n "$RUN_ID" || { echo "FAIL: CI run not found for release commit"; exit 1; }
-gh run watch "$RUN_ID" --exit-status \
-  || { echo "FAIL: release commit CI failed"; exit 1; }
-
-# publish.yml is Ubuntu-only. Require both full CI matrix jobs before creating
-# the tag so a green publish job cannot bypass a red macOS test.
-for OS in ubuntu-latest macos-latest; do
-  gh run view "$RUN_ID" --json jobs \
-    --jq ".jobs[] | select(.name == \"Bats test suite ($OS)\") | .conclusion" \
-    | grep -qx success || { echo "FAIL: $OS test job not green"; exit 1; }
-done
-
-# Refuse to tag if either local or remote main moved while CI was running.
-test "$(git rev-parse HEAD)" = "$RELEASE_SHA" \
-  || { echo "FAIL: local HEAD changed during CI"; exit 1; }
-git fetch origin main || { echo "FAIL: origin/main refresh failed"; exit 1; }
-test "$(git rev-parse origin/main)" = "$RELEASE_SHA" \
-  || { echo "FAIL: origin/main changed during CI"; exit 1; }
-
-git tag vX.Y.Z "$RELEASE_SHA"
-
-# Assert the tag before pushing it. Both checks are one line each and both
-# have caught a real broken release.
-test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA" \
-  || { echo "FAIL: tag is not on the tested release commit"; exit 1; }
-git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
-  || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }
-
-# Push the single release tag by its full ref.
-git push origin refs/tags/vX.Y.Z
-```
-
-**Why branch CI comes before the tag (v4.30.2 postmortem).** The publish
-workflow runs only on Ubuntu and can publish while the separate macOS matrix job
-is red. `v4.30.2` exposed this with a macOS-only DSH timing failure. A release
-commit must therefore pass the complete Ubuntu/macOS branch workflow before its
-tag exists; a successful publish workflow is not a substitute for green CI.
-
-**Why the assertions (v4.19.0 postmortem).** v4.19.0 was tagged on a commit
-that contained only a KB document and still carried `package.json` version
-`4.18.0`; the actual release sat in the commit above it under a recycled
-`fix:` message. `publish.yml` fired, tried to publish a version already on
-npm, and failed. Nothing on npm, a tag pointing at the wrong tree, and the
-only way out was rewriting a pushed commit. Both assertions above catch this
-in under a second. Run them.
-
-**Never `git push --tags`.** It pushes every local tag at once, and GitHub
-suppresses tag-triggered workflow runs when many tags arrive in a single push
-— the workflow silently does not fire and nothing publishes. Push the single
-release tag by its full ref, as above. (Sibling evidence: this is exactly how
-rag-mcp's `1.0.3` image build was skipped, when a `--tags` push carried 37
-tags at once.)
-
-This triggers `.github/workflows/publish.yml` which:
-1. Runs `validate.py --strict`
-2. Runs `npm test`
-3. Publishes to npm as `@softspark/ai-toolkit@X.Y.Z` with `--provenance` (SLSA v1 build attestation)
-
-**Provenance is non-negotiable.** If `id-token: write` permission or the `--provenance` flag is missing from `publish.yml`, fix it BEFORE tagging — an unsigned release is a regression against the v2.8.0 standard.
-
-**After CI completes:** Run the [Release Verification SOP](release-verification-sop.md)
-to smoke-test the published package AND verify the provenance attestation landed on npm.
-
----
-
-## Rollback
-
-If a bad release was published:
-
-```bash
-# Unpublish from npm (within 72h)
-npm unpublish @softspark/ai-toolkit@X.Y.Z
-
-# Or deprecate (preferred — doesn't break existing installs)
-npm deprecate @softspark/ai-toolkit@X.Y.Z "Known issue: <description>. Use vA.B.C instead."
-
-# Delete tag
-git tag -d vX.Y.Z
-git push origin --delete vX.Y.Z
-```
-
----
-
-## Checklist Summary
-
-| # | Step | Command / Action | Pass Criteria |
-|---|------|-----------------|---------------|
-| 0a | Ecosystem drift check | `ecosystem_doctor.py --format text` | All tools Clean, or drift classified and resolved |
-| 0b | Ecosystem snapshot refresh | `ecosystem_doctor.py --update` | `benchmarks/ecosystem-doctor-snapshot.json` updated |
-| 0c | Ecosystem gate | `ecosystem_doctor.py --offline --check` | Exit 0 |
-| 1 | Version bump type | Decide patch/minor/major | — |
-| 2 | `package.json` version | Edit `"version"` | Matches target |
-| 3 | `manifest.json` version | Edit `"version"` | Matches target |
-| 4 | `plugin.json` version | Edit `"version"` | Matches target |
-| 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
-| 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
-| 7 | CHANGELOG.md | Add release entry (incl. `Ecosystem` subsection if any B/D/E/F drift) | Entry exists for vX.Y.Z |
-| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_llms_txt.py` | No unexpected diff |
-| 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
-| 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
-| 11 | Security audit (SARIF) | `audit_skills.py --sarif` | Valid SARIF 2.1.0 JSON |
-| 12 | Per-skill permissions | `audit_skills.py --permissions` | New broad-access skills justified in CHANGELOG |
-| 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh` | Exit 0, no output (mirrors ci.yml; publish.yml does NOT run it) |
-| 14 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
-| 15 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
-| 15a | Licensing gate | `npx bats tests/test_licensing.bats` | 7/7 — SPDX headers, LICENSE, NOTICE, npm `files`, manifest consistency |
-| 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
-| 17 | Commit | `git commit` | Clean working tree |
-| 18 | Push branch | `git push origin main` | Exact release commit is on `origin/main` |
-| 18a | Full branch CI | `gh run watch "$RUN_ID" --exit-status` plus matrix job assertions | Ubuntu and macOS Bats jobs both conclude `success` |
-| 19 | Tag | `git tag vX.Y.Z` | Tag exists only after green branch CI |
-| 19a | Tag is on tested SHA | `test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA"` | Exit 0 |
-| 19b | Tag is on the release commit | `git show --no-patch --format=%s vX.Y.Z` | Reads `chore: release vX.Y.Z` |
-| 20 | Push the single tag | `git push origin refs/tags/vX.Y.Z` | Publish CI triggered with `id-token: write`. Never `--tags`. |
-
----
-
-## kb/procedures/release-verification-sop.md
+## kb/procedures/sop-release-verification.md
 
 ---
 title: "SOP: Release Verification"
@@ -9214,6 +8664,658 @@ ai-toolkit eject /tmp/test # retry
 | Idempotence | Second `install` run produces byte-identical output in every managed path |
 | Live JSON | Every generated `.json` file on disk parses as valid JSON |
 | Registry | `supported-tools-registry.md` enumerates every `scripts/generate_*.py` we ship |
+
+---
+
+## kb/procedures/sop-release.md
+
+---
+title: "SOP: Release Preparation"
+category: procedures
+service: ai-toolkit
+tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
+version: "1.15.0"
+created: "2026-04-10"
+last_updated: "2026-09-02"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
+---
+
+# SOP: Release Preparation
+
+Complete checklist for preparing a new `@softspark/ai-toolkit` release.
+Run this **before** tagging. After tagging and publishing, run the
+[Release Verification SOP](sop-release-verification.md) to smoke-test.
+
+**Pipeline:**
+```
+Ecosystem Sync SOP (drift check + generator updates)
+      ↓
+Release Preparation (this SOP)
+      ↓
+git tag → CI publish → Release Verification SOP
+```
+
+**Time:** 10-20 minutes (includes ecosystem sync review)
+
+---
+
+## Quick Checklist (TL;DR)
+
+```bash
+# 0. Ecosystem sync (mandatory for minor/major releases; optional for patch)
+#    Full procedure: kb/procedures/sop-ecosystem-sync.md
+python3 scripts/ecosystem_doctor.py --format text > /tmp/eco-report.txt
+cat /tmp/eco-report.txt
+# If drift detected: stop here, follow sop-ecosystem-sync.md Phase 2-4 to
+# classify each drift (A-F), update generators as needed, refresh snapshot,
+# THEN resume this SOP.
+python3 scripts/ecosystem_doctor.py --update    # after all drift resolved
+
+# 1. Decide version bump
+#    patch (1.4.2 → 1.4.3): bugfix, typo, doc fix
+#    minor (1.4.2 → 1.5.0): new feature, new skill, new flag, any ecosystem-class-B/F change
+#    major (1.4.2 → 2.0.0): breaking change, any ecosystem-class-D removed path
+
+# 2. Sync version across all files
+python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
+
+# 3. Write CHANGELOG.md entry
+# 4. Regenerate artifacts
+python3 scripts/generate_agents_md.py > AGENTS.md
+python3 scripts/generate_llms_txt.py > llms.txt
+python3 scripts/generate_llms_txt.py --full > llms-full.txt
+
+# 5. Validate + audit + SARIF + shellcheck + test + ecosystem check
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && shellcheck --severity=warning app/hooks/*.sh && npm test
+
+# 5a. Supply-chain standard (v2.8.0+) — non-negotiable
+grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --provenance"; exit 1; }
+grep -q 'id-token: write'   .github/workflows/publish.yml || { echo "MISSING id-token: write"; exit 1; }
+python3 scripts/audit_skills.py --permissions   # review Bash/Write/Edit footprint
+
+# 5b. Ecosystem gate — snapshot must be current before tag
+python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem snapshot — re-run doctor"; exit 1; }
+
+# 5c. Licensing gate — SPDX headers, LICENSE, NOTICE, manifest consistency
+npx bats tests/test_licensing.bats || { echo "LICENSING GATE FAILED"; exit 1; }
+
+# 6. Commit, push branch, and wait for the exact commit's full CI
+git add -A && git commit -m "chore: release vX.Y.Z"
+RELEASE_SHA=$(git rev-parse HEAD)
+git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
+RUN_ID=""
+for ATTEMPT in 1 2 3 4 5; do
+  RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
+    --limit 1 --json databaseId --jq '.[0].databaseId')
+  [ -n "$RUN_ID" ] && break
+  echo "Waiting for CI run registration ($ATTEMPT/5)" >&2
+  [ "$ATTEMPT" -eq 5 ] || sleep 60
+done
+test -n "$RUN_ID" || { echo "FAIL: CI run not found for release commit"; exit 1; }
+gh run watch "$RUN_ID" --exit-status \
+  || { echo "FAIL: release commit CI failed"; exit 1; }
+for OS in ubuntu-latest macos-latest; do
+  gh run view "$RUN_ID" --json jobs \
+    --jq ".jobs[] | select(.name == \"Bats test suite ($OS)\") | .conclusion" \
+    | grep -qx success || { echo "FAIL: $OS test job not green"; exit 1; }
+done
+test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || { echo "FAIL: local HEAD changed during CI"; exit 1; }
+git fetch origin main || { echo "FAIL: origin/main refresh failed"; exit 1; }
+test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || { echo "FAIL: origin/main changed during CI"; exit 1; }
+
+# 6a. Only green branch CI authorizes tag creation
+git tag vX.Y.Z "$RELEASE_SHA"
+
+# 6b. Assert the tag before pushing it (v4.19.0 postmortem, Phase 7)
+test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA" || { echo "FAIL: tag not on tested release commit"; exit 1; }
+git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
+
+# 6c. Push the single tag by full ref. Never --tags.
+git push origin refs/tags/vX.Y.Z
+```
+
+---
+
+## Phase 0: Ecosystem Sync (MANDATORY for minor/major)
+
+Before touching version numbers, confirm the toolkit is aligned with the current state of every editor / platform it integrates with. Skipping this phase ships a release whose generators may lag a month-old CLI refactor, a rename of `.cursorrules` to `.cursor/rules/`, or a new hook event we do not yet emit.
+
+**When this phase is mandatory:**
+- Minor release (X.Y.0) — always
+- Major release (X.0.0) — always
+- Patch release (X.Y.Z) — only if the patch touches a generator or install flow
+
+**When to skip:** pure doc-only patches, SOP edits, internal refactors that do not touch `scripts/generate_*` or `app/skills/*/SKILL.md`.
+
+### 0.1 Run the doctor
+
+```bash
+python3 scripts/ecosystem_doctor.py --format text | tee /tmp/eco-report.txt
+```
+
+Output classifies every registered tool as **Clean**, **Drift**, or **Errored**.
+
+### 0.2 Act on drift
+
+For each drifting tool, follow [sop-ecosystem-sync.md](sop-ecosystem-sync.md) Phase 2-4:
+
+| Drift class | Release impact |
+|-------------|----------------|
+| A (cosmetic reword) | No version impact — refresh snapshot, continue |
+| B (new feature — integrate) | **Minor** version bump at minimum; new generator or extended generator |
+| C (new feature — not adopted) | No impact — note in registry |
+| D (deprecation) | **Minor** or **major** depending on user impact; add migration warning |
+| E (feature promoted to default) | **Minor**; simplify generator, keep fallback comment |
+| F (feature newly globally available) | **Minor**; may require new generator or new config path |
+
+If any B/D/E/F changes land in this preparation pass, mention them explicitly in the CHANGELOG entry (Phase 3) under a `Ecosystem` subsection.
+
+### 0.3 Refresh snapshot
+
+Once every drift is resolved (either by code change or by re-classifying as acceptable):
+
+```bash
+python3 scripts/ecosystem_doctor.py --update
+```
+
+This writes the new baseline to `benchmarks/ecosystem-doctor-snapshot.json`. Commit it as part of the release commit.
+
+### 0.4 Gate
+
+```bash
+python3 scripts/ecosystem_doctor.py --offline --check
+```
+
+Must exit `0`. If it exits `1`, the snapshot is stale — rerun Phase 0.3 or review the remaining drift.
+
+---
+
+## Phase 1: Determine Version Bump
+
+Follow [Semantic Versioning](https://semver.org/):
+
+| Change Type | Bump | Examples |
+|-------------|------|---------|
+| Bugfix, typo, doc-only | **patch** | Fix install flag, correct description |
+| New feature, skill, agent, flag | **minor** | Add `/hipaa-validate`, add `--output json` |
+| Breaking CLI change, removed skill, config format change | **major** | Rename `install` to `setup`, remove skill |
+
+**Rule:** When in doubt, bump minor.
+
+---
+
+## Phase 2: Sync Version in All Files
+
+The canonical version lives in `package.json`. These files **must** match:
+
+### Mandatory sync (every release)
+
+| File | Field | How to update |
+|------|-------|---------------|
+| `package.json` | `"version": "X.Y.Z"` | Edit directly |
+| `manifest.json` | `"version": "X.Y.Z"` | Edit directly |
+| `app/.claude-plugin/plugin.json` | `"version": "X.Y.Z"` | Edit directly |
+
+### Auto-synced (no manual action)
+
+| File | Mechanism |
+|------|-----------|
+| `package-lock.json` | Regenerated by `npm install --package-lock-only` |
+
+### Conditional sync (only if the doc was modified in this release)
+
+| File | Field | When to update |
+|------|-------|---------------|
+| `kb/procedures/sop-maintenance.md` | frontmatter `version:` | If SOP content changed |
+| `kb/reference/skills-catalog.md` | frontmatter `version:` | If skills added/removed |
+| `kb/reference/agents-catalog.md` | frontmatter `version:` | If agents added/removed |
+| `kb/reference/hooks-catalog.md` | frontmatter `version:` | If hooks changed |
+| `kb/reference/architecture-overview.md` | frontmatter `version:` | If architecture changed |
+| `kb/reference/distribution-model.md` | frontmatter `version:` | If install model changed |
+| `kb/reference/global-install-model.md` | frontmatter `version:` | If install model changed |
+
+> **Note:** KB `version:` fields track the **document version**, not the toolkit version.
+> Only bump them when the document content actually changes in this release.
+
+### Count sync (if skills/agents/hooks changed)
+
+| File | What to check |
+|------|---------------|
+| `package.json` | `"description"` — skill/agent count |
+| `README.md` | Badge counts, "What You Get" table |
+| `app/ARCHITECTURE.md` | Section headings with counts |
+
+> **Tip:** `validate.py --strict` catches count drift AND version mismatches
+> (package.json vs manifest.json vs plugin.json) automatically.
+> If validation passes, counts and versions are correct.
+
+### Verification command
+
+After syncing, verify all mandatory files match:
+
+```bash
+VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
+echo "Target: $VERSION"
+echo "manifest.json:     $(python3 -c "import json; print(json.load(open('manifest.json'))['version'])")"
+echo "plugin.json:       $(python3 -c "import json; print(json.load(open('app/.claude-plugin/plugin.json'))['version'])")"
+echo "package-lock.json: $(python3 -c "import json; print(json.load(open('package-lock.json'))['version'])")"
+```
+
+All four must print the same version. If not, fix before proceeding.
+
+### Public surface review
+
+```bash
+python3 scripts/surface_manifest.py --update
+git diff app/surface.json
+```
+
+**Every line the diff removes is a breaking change.** Restore it, or take the
+deprecation path in `BACKWARD_COMPATIBILITY.md` and add a `DECISIONS.md` entry
+before the tag. Lines added are new surface being adopted into protection — that
+needs no ceremony.
+
+Do not run `--update` to make a red build green. The check fails because something
+users depend on disappeared; regenerating the manifest deletes the evidence, not
+the problem.
+
+### Skill body budget ratchet
+
+`validate.py` prints the largest skill body on every run:
+
+```
+Body budget: largest is <skill> at <N> bytes (warn 18000, error 20000)
+```
+
+Once that number sits at least 2000 bytes under `SKILL_BODY_BUDGET_WARN`, lower
+`SKILL_BODY_BUDGET_WARN` by 2000 in `scripts/validate.py` and ship the tightened
+threshold with the release. Target floor is 12000.
+
+Two rules, both learned the hard way:
+
+- **Never lower a threshold in the same change that something violates it.** Split
+  the offending skill into `SKILL.md` + `reference/` first, prove it with
+  `python3 scripts/check_split.py <skill> --before <pre-split SKILL.md>`, then
+  tighten in a follow-up.
+- **Never raise a threshold to make a red build green.** A body over budget means
+  detail that belongs in `reference/` is loading on every trigger match, including
+  the accidental ones. Raising the number hides the cost, it does not remove it.
+
+If the largest body has not moved since the previous release, leave the threshold
+alone and say so in the release notes. A ratchet that never advances is honest;
+one that advances past reality is not.
+
+---
+
+## Phase 3: Write CHANGELOG Entry
+
+Add entry at the top of `CHANGELOG.md` (after the header, before previous release):
+
+```markdown
+## vX.Y.Z — Short Title (YYYY-MM-DD)
+
+### Added
+- **Feature name** — description
+
+### Changed
+- **What changed** — old behavior → new behavior
+
+### Fixed
+- **Bug description** — what was broken and how it's fixed
+
+### Removed
+- **What was removed** — migration path if any
+```
+
+**Rules:**
+- Use **bold** for feature names
+- Start descriptions with a verb (Added, Changed, Fixed, Removed)
+- Reference skill names with backticks and slash: `/hipaa-validate`
+- Include script names: `scripts/hipaa_scan.py`
+- Include count changes: `Skill count: 91 → 92`
+- Date format: `YYYY-MM-DD`
+- Title: short, descriptive, no version number repetition
+
+### Update README "What's New" section
+
+**MANDATORY on every release.** Update the `## What's New in vX.Y.Z` section in `README.md`:
+
+1. Change the heading version: `## What's New in vX.Y.Z`
+2. Replace bullet points with 3-5 highlights from this release
+3. **Keep only the latest version block.** Delete the previous `## What's New in vA.B.C` section(s). README is the shop window, not the archive — users see the current release, full history lives in `CHANGELOG.md`.
+4. Keep the `See [CHANGELOG.md](CHANGELOG.md) for full history.` link directly below the bullet list.
+
+> **Warning:** This section is the first thing users see after the badges.
+> A stale version here (e.g., "What's New in v2.1.3" when shipping v2.3.0)
+> signals an unmaintained project. Do NOT skip this step.
+
+> **Single-version rule:** README.md must contain **exactly one** `## What's New in vX.Y.Z` heading at any time. If you find multiple stacked (e.g. v2.6.1 + v2.6.0 + v2.5.0), that is a SOP drift — collapse to the latest on the next release commit.
+
+---
+
+## Phase 4: Regenerate Artifacts
+
+Use the npm scripts, not the generators directly:
+
+```bash
+npm run generate:agents   # AI_TOOLKIT_NO_CUSTOM_RULES=1 python3 scripts/generate_agents_md.py > AGENTS.md
+npm run generate:llms     # llms.txt + llms-full.txt
+```
+
+`generate:agents` sets `AI_TOOLKIT_NO_CUSTOM_RULES=1`. Running
+`generate_agents_md.py` bare picks up whatever is registered in the maintainer's
+own `~/.softspark/ai-toolkit/rules/`, which then ships inside `AGENTS.md`.
+
+Check if anything actually changed:
+
+```bash
+git diff --stat AGENTS.md llms.txt llms-full.txt
+```
+
+If no diff, the artifacts are already current. If there is a diff, stage them.
+
+---
+
+## Phase 5: Validate, Audit, Test
+
+Run the full quality gate:
+
+```bash
+python3 scripts/validate.py --strict
+python3 scripts/audit_skills.py --ci
+python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS ingest
+python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
+
+# ShellCheck on hooks (added in 1.11.0). Mirrors the ci.yml "ShellCheck hooks"
+# job. NOT run by validate.py, npm test, OR publish.yml — so a hook with a
+# ShellCheck warning passes every other gate AND still publishes on tag while
+# turning main CI red. Run it here, before tagging.
+shellcheck --severity=warning app/hooks/*.sh && echo "OK: shellcheck clean"
+
+# Registry / generator drift (added in 1.10.0). Meta-generators excluded.
+META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
+diff \
+  <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) \
+  <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) \
+  && echo "OK: registry matches filesystem" \
+  || { echo "DRIFT: update supported-tools-registry.md before tagging"; exit 1; }
+
+# Stage first IF this release adds or deletes a kb/ file. The test
+# "npm package KB files match the tracked release set" compares `git ls-files
+# kb` (the index) against what `npm pack` sees (the working tree), so an
+# unstaged addition reads as "extra" and an unstaged deletion as "missing".
+# Phase 6 stages, and it runs after this one, so the ordering fails the test
+# for any release that touches the KB. Staging early costs nothing.
+git status --porcelain kb/ | grep -qE '^(\?\?| D|\?M)' && git add -A kb/
+
+# Run npm test ONCE, cache output, parse from file. The suite is 1400+ bats
+# cases — rerunning it per check wastes minutes. Do not pipe npm test into
+# tail/grep multiple times in the same session.
+npm test > /tmp/npm-test.log 2>&1
+tail -3 /tmp/npm-test.log
+echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp/npm-test.log)"
+```
+
+**Expected results:**
+- `validate.py`: `Errors: 0 | Warnings: 0 | VALIDATION PASSED`
+- `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
+- `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
+- `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
+- `shellcheck --severity=warning app/hooks/*.sh`: no output, exit 0. A common false positive is `SC2034` on `INPUT` or env vars (e.g. `AI_TOOLKIT_HOOK_FORMAT`) that a *sourced* helper (`_hook-io.sh`) consumes — ShellCheck cannot see cross-file use. Fix with a `# shellcheck disable=SC2034` directive or `export`, matching `guard-destructive.sh`. Never tag with a red ShellCheck.
+- Registry drift: `OK: registry matches filesystem`. If `DRIFT:` appears, add the missing `scripts/generate_*.py` rows to `kb/reference/supported-tools-registry.md` before tagging.
+- `npm test`: `1..N` with zero `not ok` (read from the cached `/tmp/npm-test.log`, do not rerun)
+
+> **Why this matters (v4.5.1 postmortem):** `publish.yml` runs only `validate.py` + `npm test`, so it published v4.5.0 even though the `main` CI `ShellCheck hooks` job was red on two `SC2034` warnings in a new hook. The publish workflow does **not** depend on the CI workflow. Until that is fixed, ShellCheck is a manual pre-tag gate — run it here every time.
+
+**One-liner:**
+```bash
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py' | sort -u) && npm test
+```
+
+**If tests fail:** Fix the issue, do NOT skip. Common failures:
+- Stale counts → re-run `generate:all` or fix README/ARCHITECTURE
+- Missing frontmatter → add to new KB docs
+- Broken symlink → `ai-toolkit doctor --fix`
+
+### Phase 5c: Licensing Gate (v4.20.0+)
+
+The project is Apache-2.0. Attribution only works if the artefact actually
+carries it, and every part of that is mechanically checkable.
+
+```bash
+# The whole gate, enforced in CI. Run it here so a failure is caught before tagging.
+npx bats tests/test_licensing.bats
+```
+
+The seven assertions, and why each exists:
+
+| Check | Fails when |
+|---|---|
+| Every shipped source file carries an SPDX header | A new `.py`/`.sh`/`.js`/`.bats` file was added without one — the common case, and the reason this is a test rather than a habit |
+| Headers name Apache-2.0 and nothing else | A file was copied in from an MIT/GPL source with its own header intact |
+| **No** markdown file carries an SPDX header | Someone "helpfully" ran the header script over `app/skills/` — headers there sit above parsed frontmatter and bill every session for it |
+| `LICENSE` is the complete Apache 2.0 text | The file was truncated or replaced with a summary |
+| `NOTICE` carries attribution, the source URL, §4(d) and the MIT-era notice | The attribution mechanism was gutted |
+| `LICENSE` **and** `NOTICE` ship in the npm package | `package.json` `files` lost an entry — a NOTICE that never reaches the consumer cannot satisfy §4(d) |
+| Every manifest declaring a licence declares Apache-2.0 | `package.json`, `manifest.json`, `plugin.json` and `package-lock.json` drifted apart |
+
+**Adding source files in this release?** The header goes *after* the shebang,
+never before it. Short SPDX form:
+
+```
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+# Source: https://github.com/softspark/ai-toolkit
+```
+
+`//` for JavaScript. Full convention and the reasoning behind the markdown
+exclusion: [Licensing](../reference/licensing.md).
+
+**Changing the licence itself?** Do not hand-type the licence text. Take it
+verbatim from a published copy and cross-verify against a second independent
+copy before writing `LICENSE` — a rendered or summarised licence is not the
+licence. Prior releases stay under their original terms; a licence change
+applies going forward and revokes nothing already granted.
+
+### Phase 5a: Supply-Chain Hardening Verification (v2.8.0+)
+
+These checks enforce the security standard introduced in v2.8.0. Do NOT tag a release until all pass.
+
+**1. Publish workflow emits provenance:**
+
+```bash
+grep -E '\-\-provenance|id-token: write' .github/workflows/publish.yml
+```
+
+- [ ] Both markers present (`--provenance` flag + `id-token: write` permission)
+- [ ] Any PR that changes `publish.yml` REQUIRES an approved security review
+
+**2. URL-sourced rules and hooks are checksum-pinned:**
+
+```bash
+# On a machine that has consumed URL rules/hooks at least once
+# (schema_version 1: entries live under the .rules / .hooks key):
+jq '.rules | to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/rules/sources.json
+jq '.hooks | to_entries | map(select(.value.url != null and (.value.sha256 // "" | length) == 0))' ~/.softspark/ai-toolkit/hooks/external/sources.json
+```
+
+- [ ] Both queries return empty arrays (every URL entry has a `sha256`)
+- [ ] If not, run `ai-toolkit update` to backfill missing hashes before tagging
+
+**3. Audit SARIF output is well-formed:**
+
+```bash
+python3 scripts/audit_skills.py --sarif | python3 -c "import json, sys; d=json.load(sys.stdin); assert d['version']=='2.1.0' and d['runs'][0]['tool']['driver']['name']; print('SARIF OK')"
+```
+
+- [ ] Prints `SARIF OK`
+- [ ] If the script ever grows new rule classes, extend the SARIF `rules[]` coverage before releasing
+
+**4. Strict-pin mode passes on CI** (optional, recommended for stable branches):
+
+```bash
+AI_TOOLKIT_STRICT_PIN=1 ai-toolkit update --dry-run
+```
+
+- [ ] Exit 0, no `CHECKSUM CHANGED` line
+- [ ] Any unexpected upstream change blocks the release until explicitly approved
+
+---
+
+## Phase 6: Commit
+
+Stage all release files:
+
+```bash
+git add package.json manifest.json app/.claude-plugin/plugin.json
+git add package-lock.json
+git add CHANGELOG.md
+git add llms.txt llms-full.txt
+# NOTE: AGENTS.md, GEMINI.md, and .github/copilot-instructions.md are generated
+# editor configs and are gitignored — do NOT commit them. `prepublishOnly` runs
+# `npm run generate:all`, so the shipped package (which lists AGENTS.md in
+# package.json `files`) gets a fresh copy at publish time.
+git add -p  # review and stage any other changes
+```
+
+Commit:
+
+```bash
+git commit -m "chore: release vX.Y.Z"
+```
+
+---
+
+## Phase 7: Push Branch, Verify CI, Tag, and Push Tag
+
+```bash
+RELEASE_SHA=$(git rev-parse HEAD)
+git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
+
+# Bind the gate to the exact release commit. GitHub run registration is
+# asynchronous, so retry at most five times and log every attempt.
+RUN_ID=""
+for ATTEMPT in 1 2 3 4 5; do
+  RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
+    --limit 1 --json databaseId --jq '.[0].databaseId')
+  [ -n "$RUN_ID" ] && break
+  echo "Waiting for CI run registration ($ATTEMPT/5)" >&2
+  [ "$ATTEMPT" -eq 5 ] || sleep 60
+done
+test -n "$RUN_ID" || { echo "FAIL: CI run not found for release commit"; exit 1; }
+gh run watch "$RUN_ID" --exit-status \
+  || { echo "FAIL: release commit CI failed"; exit 1; }
+
+# publish.yml is Ubuntu-only. Require both full CI matrix jobs before creating
+# the tag so a green publish job cannot bypass a red macOS test.
+for OS in ubuntu-latest macos-latest; do
+  gh run view "$RUN_ID" --json jobs \
+    --jq ".jobs[] | select(.name == \"Bats test suite ($OS)\") | .conclusion" \
+    | grep -qx success || { echo "FAIL: $OS test job not green"; exit 1; }
+done
+
+# Refuse to tag if either local or remote main moved while CI was running.
+test "$(git rev-parse HEAD)" = "$RELEASE_SHA" \
+  || { echo "FAIL: local HEAD changed during CI"; exit 1; }
+git fetch origin main || { echo "FAIL: origin/main refresh failed"; exit 1; }
+test "$(git rev-parse origin/main)" = "$RELEASE_SHA" \
+  || { echo "FAIL: origin/main changed during CI"; exit 1; }
+
+git tag vX.Y.Z "$RELEASE_SHA"
+
+# Assert the tag before pushing it. Both checks are one line each and both
+# have caught a real broken release.
+test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA" \
+  || { echo "FAIL: tag is not on the tested release commit"; exit 1; }
+git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
+  || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }
+
+# Push the single release tag by its full ref.
+git push origin refs/tags/vX.Y.Z
+```
+
+**Why branch CI comes before the tag (v4.30.2 postmortem).** The publish
+workflow runs only on Ubuntu and can publish while the separate macOS matrix job
+is red. `v4.30.2` exposed this with a macOS-only DSH timing failure. A release
+commit must therefore pass the complete Ubuntu/macOS branch workflow before its
+tag exists; a successful publish workflow is not a substitute for green CI.
+
+**Why the assertions (v4.19.0 postmortem).** v4.19.0 was tagged on a commit
+that contained only a KB document and still carried `package.json` version
+`4.18.0`; the actual release sat in the commit above it under a recycled
+`fix:` message. `publish.yml` fired, tried to publish a version already on
+npm, and failed. Nothing on npm, a tag pointing at the wrong tree, and the
+only way out was rewriting a pushed commit. Both assertions above catch this
+in under a second. Run them.
+
+**Never `git push --tags`.** It pushes every local tag at once, and GitHub
+suppresses tag-triggered workflow runs when many tags arrive in a single push
+— the workflow silently does not fire and nothing publishes. Push the single
+release tag by its full ref, as above. (Sibling evidence: this is exactly how
+rag-mcp's `1.0.3` image build was skipped, when a `--tags` push carried 37
+tags at once.)
+
+This triggers `.github/workflows/publish.yml` which:
+1. Runs `validate.py --strict`
+2. Runs `npm test`
+3. Publishes to npm as `@softspark/ai-toolkit@X.Y.Z` with `--provenance` (SLSA v1 build attestation)
+
+**Provenance is non-negotiable.** If `id-token: write` permission or the `--provenance` flag is missing from `publish.yml`, fix it BEFORE tagging — an unsigned release is a regression against the v2.8.0 standard.
+
+**After CI completes:** Run the [Release Verification SOP](sop-release-verification.md)
+to smoke-test the published package AND verify the provenance attestation landed on npm.
+
+---
+
+## Rollback
+
+If a bad release was published:
+
+```bash
+# Unpublish from npm (within 72h)
+npm unpublish @softspark/ai-toolkit@X.Y.Z
+
+# Or deprecate (preferred — doesn't break existing installs)
+npm deprecate @softspark/ai-toolkit@X.Y.Z "Known issue: <description>. Use vA.B.C instead."
+
+# Delete tag
+git tag -d vX.Y.Z
+git push origin --delete vX.Y.Z
+```
+
+---
+
+## Checklist Summary
+
+| # | Step | Command / Action | Pass Criteria |
+|---|------|-----------------|---------------|
+| 0a | Ecosystem drift check | `ecosystem_doctor.py --format text` | All tools Clean, or drift classified and resolved |
+| 0b | Ecosystem snapshot refresh | `ecosystem_doctor.py --update` | `benchmarks/ecosystem-doctor-snapshot.json` updated |
+| 0c | Ecosystem gate | `ecosystem_doctor.py --offline --check` | Exit 0 |
+| 1 | Version bump type | Decide patch/minor/major | — |
+| 2 | `package.json` version | Edit `"version"` | Matches target |
+| 3 | `manifest.json` version | Edit `"version"` | Matches target |
+| 4 | `plugin.json` version | Edit `"version"` | Matches target |
+| 5 | `package-lock.json` | `npm install --package-lock-only` | Matches target |
+| 6 | Count sync | Check `package.json` description, README | `validate.py` passes |
+| 7 | CHANGELOG.md | Add release entry (incl. `Ecosystem` subsection if any B/D/E/F drift) | Entry exists for vX.Y.Z |
+| 8 | Regenerate artifacts | `generate_agents_md.py`, `generate_llms_txt.py` | No unexpected diff |
+| 9 | Validate | `validate.py --strict` | 0 errors, 0 warnings |
+| 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
+| 11 | Security audit (SARIF) | `audit_skills.py --sarif` | Valid SARIF 2.1.0 JSON |
+| 12 | Per-skill permissions | `audit_skills.py --permissions` | New broad-access skills justified in CHANGELOG |
+| 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh` | Exit 0, no output (mirrors ci.yml; publish.yml does NOT run it) |
+| 14 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
+| 15 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
+| 15a | Licensing gate | `npx bats tests/test_licensing.bats` | 7/7 — SPDX headers, LICENSE, NOTICE, npm `files`, manifest consistency |
+| 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
+| 17 | Commit | `git commit` | Clean working tree |
+| 18 | Push branch | `git push origin main` | Exact release commit is on `origin/main` |
+| 18a | Full branch CI | `gh run watch "$RUN_ID" --exit-status` plus matrix job assertions | Ubuntu and macOS Bats jobs both conclude `success` |
+| 19 | Tag | `git tag vX.Y.Z` | Tag exists only after green branch CI |
+| 19a | Tag is on tested SHA | `test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA"` | Exit 0 |
+| 19b | Tag is on the release commit | `git show --no-patch --format=%s vX.Y.Z` | Reads `chore: release vX.Y.Z` |
+| 20 | Push the single tag | `git push origin refs/tags/vX.Y.Z` | Publish CI triggered with `id-token: write`. Never `--tags`. |
 
 ---
 
@@ -11738,7 +11840,7 @@ running the generators directly:
 
 - `scripts/generate_copilot.py` / `generate_copilot_hooks.py` contract tests
   (`tests/test_copilot.bats`, `tests/test_copilot_hooks.bats`).
-- Release layout check in `kb/procedures/release-verification-sop.md` asserts the
+- Release layout check in `kb/procedures/sop-release-verification.md` asserts the
   `.github/{agents,skills,instructions,prompts,hooks}` surfaces.
 - `validate.py --strict` + `audit_skills.py --ci` in CI.
 
@@ -14313,7 +14415,7 @@ MIT remnant would need each contributor's agreement.
 
 It is a test rather than a checklist line on purpose. This project has two
 same-day postmortems about SOPs that existed and were skipped; CI does not skip.
-[Release Preparation](../procedures/release-preparation-sop.md) Phase 5c runs the
+[Release Preparation](../procedures/sop-release.md) Phase 5c runs the
 same gate before tagging so a failure surfaces before the tag, not after.
 
 ## If the licence ever changes again
@@ -14326,7 +14428,7 @@ source, cross-verify against a second independent copy, and only then write
 ## Related
 
 - [`LICENSE`](../../LICENSE), [`NOTICE`](../../NOTICE)
-- [Release Preparation SOP](../procedures/release-preparation-sop.md) — Phase 5c
+- [Release Preparation SOP](../procedures/sop-release.md) — Phase 5c
 - [Distribution Model](distribution-model.md) — what ships and where
 
 ---
@@ -16006,7 +16108,7 @@ Updated baseline docs:
 - `kb/reference/skills-catalog.md`
 - `kb/reference/plugin-pack-conventions.md`
 - `kb/reference/claude-ecosystem-benchmark-snapshot.md`
-- `kb/procedures/maintenance-sop.md`
+- `kb/procedures/sop-maintenance.md`
 
 ## Validation Evidence
 
@@ -16860,13 +16962,13 @@ See [DSH Compatibility](./dsh-compatibility.md) for commands, topology, subscrip
 2. Delete its section from this document.
 3. Delete its snapshot entry from `benchmarks/ecosystem-doctor-snapshot.json` (or let the next `--update` prune it — currently not pruned automatically).
 4. Decide whether to keep the generator (`scripts/generate_<tool>_*.py`) for backwards compatibility or delete it.
-5. Remove references from `README.md`, `manifest.json` `description` field, and `kb/procedures/maintenance-sop.md` `Supported editors` line.
+5. Remove references from `README.md`, `manifest.json` `description` field, and `kb/procedures/sop-maintenance.md` `Supported editors` line.
 
 ---
 
 ## Related
 
-- [Ecosystem Sync SOP](../procedures/ecosystem-sync-sop.md) — how to use the doctor
+- [Ecosystem Sync SOP](../procedures/sop-ecosystem-sync.md) — how to use the doctor
 - [MCP Editor Compatibility](./mcp-editor-compatibility.md) — MCP-specific subset
 - `scripts/ecosystem_tools.json` — source of truth
 - `scripts/ecosystem_doctor.py` — drift detector
@@ -17399,7 +17501,7 @@ Expect `Total plugin skills loaded: 0`, `Total plugin agents loaded: 0`, and the
 ## Related
 
 - `kb/reference/global-install-model.md`
-- `kb/procedures/maintenance-sop.md`
+- `kb/procedures/sop-maintenance.md`
 
 ---
 

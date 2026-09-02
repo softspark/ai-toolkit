@@ -53,7 +53,7 @@ Updated baseline docs:
 - `kb/reference/skills-catalog.md`
 - `kb/reference/plugin-pack-conventions.md`
 - `kb/reference/claude-ecosystem-benchmark-snapshot.md`
-- `kb/procedures/maintenance-sop.md`
+- `kb/procedures/sop-maintenance.md`
 
 ## Validation Evidence
 

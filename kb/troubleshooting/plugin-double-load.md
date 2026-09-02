@@ -94,4 +94,4 @@ Expect `Total plugin skills loaded: 0`, `Total plugin agents loaded: 0`, and the
 ## Related
 
 - `kb/reference/global-install-model.md`
-- `kb/procedures/maintenance-sop.md`
+- `kb/procedures/sop-maintenance.md`

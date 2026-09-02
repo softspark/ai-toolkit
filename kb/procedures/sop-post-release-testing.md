@@ -16,7 +16,7 @@ actually install, from npm, rather than the working tree.
 
 Sibling procedures exist for `jira-mcp` and `legal-pl-pack`; this is the
 ai-toolkit equivalent. It complements
-[Release Verification](release-verification-sop.md), which checks the toolkit
+[Release Verification](sop-release-verification.md), which checks the toolkit
 from the maintainer's own installed copy. The difference that matters: this one
 never writes to the maintainer's `~/.claude` or `~/.softspark`.
 
@@ -310,6 +310,6 @@ print(f'removed {sb} ({n} files)')
 
 ## Related
 
-- [Release Preparation](release-preparation-sop.md) — run before tagging
-- [Release Verification](release-verification-sop.md) — the maintainer-install checks
+- [Release Preparation](sop-release.md) — run before tagging
+- [Release Verification](sop-release-verification.md) — the maintainer-install checks
 - [rtk-pack Retirement](../history/completed/rtk-pack-retirement-20260727.md) — what happened the one time this SOP was written and not run

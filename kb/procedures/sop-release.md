@@ -13,7 +13,7 @@ description: "Step-by-step checklist for preparing a new ai-toolkit release — 
 
 Complete checklist for preparing a new `@softspark/ai-toolkit` release.
 Run this **before** tagging. After tagging and publishing, run the
-[Release Verification SOP](release-verification-sop.md) to smoke-test.
+[Release Verification SOP](sop-release-verification.md) to smoke-test.
 
 **Pipeline:**
 ```
@@ -32,10 +32,10 @@ git tag → CI publish → Release Verification SOP
 
 ```bash
 # 0. Ecosystem sync (mandatory for minor/major releases; optional for patch)
-#    Full procedure: kb/procedures/ecosystem-sync-sop.md
+#    Full procedure: kb/procedures/sop-ecosystem-sync.md
 python3 scripts/ecosystem_doctor.py --format text > /tmp/eco-report.txt
 cat /tmp/eco-report.txt
-# If drift detected: stop here, follow ecosystem-sync-sop.md Phase 2-4 to
+# If drift detected: stop here, follow sop-ecosystem-sync.md Phase 2-4 to
 # classify each drift (A-F), update generators as needed, refresh snapshot,
 # THEN resume this SOP.
 python3 scripts/ecosystem_doctor.py --update    # after all drift resolved
@@ -126,7 +126,7 @@ Output classifies every registered tool as **Clean**, **Drift**, or **Errored**.
 
 ### 0.2 Act on drift
 
-For each drifting tool, follow [ecosystem-sync-sop.md](ecosystem-sync-sop.md) Phase 2-4:
+For each drifting tool, follow [sop-ecosystem-sync.md](sop-ecosystem-sync.md) Phase 2-4:
 
 | Drift class | Release impact |
 |-------------|----------------|
@@ -195,7 +195,7 @@ The canonical version lives in `package.json`. These files **must** match:
 
 | File | Field | When to update |
 |------|-------|---------------|
-| `kb/procedures/maintenance-sop.md` | frontmatter `version:` | If SOP content changed |
+| `kb/procedures/sop-maintenance.md` | frontmatter `version:` | If SOP content changed |
 | `kb/reference/skills-catalog.md` | frontmatter `version:` | If skills added/removed |
 | `kb/reference/agents-catalog.md` | frontmatter `version:` | If agents added/removed |
 | `kb/reference/hooks-catalog.md` | frontmatter `version:` | If hooks changed |
@@ -591,7 +591,7 @@ This triggers `.github/workflows/publish.yml` which:
 
 **Provenance is non-negotiable.** If `id-token: write` permission or the `--provenance` flag is missing from `publish.yml`, fix it BEFORE tagging — an unsigned release is a regression against the v2.8.0 standard.
 
-**After CI completes:** Run the [Release Verification SOP](release-verification-sop.md)
+**After CI completes:** Run the [Release Verification SOP](sop-release-verification.md)
 to smoke-test the published package AND verify the provenance attestation landed on npm.
 
 ---

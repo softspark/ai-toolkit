@@ -18,7 +18,7 @@ Ensure deployments are successful, services are healthy, and rollback procedures
 ```python
 # ALWAYS call this FIRST - NO TEXT BEFORE
 smart_query(query="deployment validation: {service}")
-get_document(path="procedures/maintenance-sop.md")
+get_document(path="procedures/sop-maintenance.md")
 hybrid_search_kb(query="health check {service}", limit=10)
 ```
 
@@ -172,7 +172,7 @@ deployment:
   status: successful
   rollback_tested: yes
 kb_references:
-  - kb/procedures/maintenance-sop.md
+  - kb/procedures/sop-maintenance.md
 next_agent: documenter
 instructions: |
   Update deployment documentation with any changes
