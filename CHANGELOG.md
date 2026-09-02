@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.30.3 - Copilot health-check compatibility (2026-09-02)
+
+### Fixed
+
+- **`doctor` accepts sentence punctuation after runtime SemVer.** The official
+  Copilot CLI output `GitHub Copilot CLI 1.0.80.` now reports version `1.0.80`
+  instead of an invalid-SemVer warning.
+- **Complete-token validation remains strict.** Extra version segments, invalid
+  prerelease identifiers, and leading-zero numeric fields are still rejected.
+- **DSH cold-add timing gate is runner-safe.** The regression still proves a
+  cold package add can outlive the legacy scaled timeout while leaving enough
+  headroom for macOS CI process startup.
+
+### Changed
+
+- **Test count.** Increased from 1920 to 1921 with the exact Copilot output
+  regression.
+- **Release tags require green cross-platform branch CI.** The preparation SOP
+  now binds the gate to the exact release commit and requires both Ubuntu and
+  macOS Bats matrix jobs before creating or pushing a tag.
+
+---
+
 ## v4.30.2 - Portable Linux release gates (2026-09-02)
 
 ### Fixed

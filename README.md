@@ -6,28 +6,27 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1920%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1921%20passing-success)](tests/)
 
-## What's New in v4.30.2
+## What's New in v4.30.3
 
-**v4.30.2** publishes the managed DSH and plugin-owned MCP release with Linux-portable recovery gates:
+**v4.30.3** corrects the post-release health check for the managed DSH and
+plugin-owned MCP release:
 
-- `install --local --editors dsh` emits the managed `.agents/skills` surface,
-  while `ai-toolkit dsh install|update|doctor|uninstall --profile web` owns the
-  exact DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, dsh-orchestrator `1.0.1`, and preset
-  lifecycle. DSH remains explicit-only and never handles vendor credentials.
-- Plugin packs can ship MCP templates and native rules for Claude, Codex, Cursor,
-  and Gemini. Two localhost RAG templates are included, bringing the built-in MCP
-  catalogue to 28.
-- Cross-file plugin operations and DSH package mutations now use ownership CAS,
-  pinned paths, process-tree teardown, durable recovery gates, and conservative
-  rollback that preserves concurrent or user-authored data.
-- Recovery verification and interrupted preset relocation now emit deterministic,
-  non-empty diagnostics on both macOS and Linux. File-mode assertions and malformed
-  ownership diagnostics also use the same portable contract. The public `v4.30.0`
-  and `v4.30.1` workflows stopped before npm publication; neither registry artifact
-  was created.
-- Test count: 1675 -> 1920.
+- `ai-toolkit doctor` now extracts `1.0.80` from the official Copilot CLI output
+  `GitHub Copilot CLI 1.0.80.` instead of treating sentence punctuation as an
+  invalid SemVer suffix.
+- Complete-token validation remains fail closed for malformed versions such as
+  `1.2.3.4`, invalid prerelease identifiers, and leading-zero numeric fields.
+- The DSH cold-add regression keeps its legacy-timeout coverage with macOS CI
+  process-startup headroom, removing the release-blocking timing flake.
+- Release tags now require green Ubuntu and macOS branch CI for the exact commit
+  before the publish workflow can start.
+- The release retains the explicit DSH lifecycle, plugin-owned MCP/rules, portable
+  recovery gates, and the exact DSH package set published in v4.30.2. Test count:
+  1920 -> 1921.
+
+See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ## Table of Contents
 

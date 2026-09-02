@@ -8032,10 +8032,10 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.14.0"
+version: "1.15.0"
 created: "2026-04-10"
-last_updated: "2026-08-06"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5), the pre-push tag assertions added in v1.12.0 after v4.19.0 was tagged on the wrong commit (Phase 7), and the licensing gate added in v1.13.0 with the move to Apache-2.0 (Phase 5c)."
+last_updated: "2026-09-02"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
 # SOP: Release Preparation
@@ -8097,16 +8097,38 @@ python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem
 # 5c. Licensing gate — SPDX headers, LICENSE, NOTICE, manifest consistency
 npx bats tests/test_licensing.bats || { echo "LICENSING GATE FAILED"; exit 1; }
 
-# 6. Commit + tag + push
+# 6. Commit, push branch, and wait for the exact commit's full CI
 git add -A && git commit -m "chore: release vX.Y.Z"
-git tag vX.Y.Z
+RELEASE_SHA=$(git rev-parse HEAD)
+git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
+RUN_ID=""
+for ATTEMPT in 1 2 3 4 5; do
+  RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
+    --limit 1 --json databaseId --jq '.[0].databaseId')
+  [ -n "$RUN_ID" ] && break
+  echo "Waiting for CI run registration ($ATTEMPT/5)" >&2
+  [ "$ATTEMPT" -eq 5 ] || sleep 60
+done
+test -n "$RUN_ID" || { echo "FAIL: CI run not found for release commit"; exit 1; }
+gh run watch "$RUN_ID" --exit-status \
+  || { echo "FAIL: release commit CI failed"; exit 1; }
+for OS in ubuntu-latest macos-latest; do
+  gh run view "$RUN_ID" --json jobs \
+    --jq ".jobs[] | select(.name == \"Bats test suite ($OS)\") | .conclusion" \
+    | grep -qx success || { echo "FAIL: $OS test job not green"; exit 1; }
+done
+test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || { echo "FAIL: local HEAD changed during CI"; exit 1; }
+git fetch origin main || { echo "FAIL: origin/main refresh failed"; exit 1; }
+test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || { echo "FAIL: origin/main changed during CI"; exit 1; }
 
-# 6a. Assert the tag before pushing it (v4.19.0 postmortem, Phase 7)
-test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" || { echo "FAIL: tag not on HEAD"; exit 1; }
+# 6a. Only green branch CI authorizes tag creation
+git tag vX.Y.Z "$RELEASE_SHA"
+
+# 6b. Assert the tag before pushing it (v4.19.0 postmortem, Phase 7)
+test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA" || { echo "FAIL: tag not on tested release commit"; exit 1; }
 git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
 
-# 6b. Branch first, then the single tag by full ref. Never --tags.
-git push origin main
+# 6c. Push the single tag by full ref. Never --tags.
 git push origin refs/tags/vX.Y.Z
 ```
 
@@ -8522,22 +8544,59 @@ git commit -m "chore: release vX.Y.Z"
 
 ---
 
-## Phase 7: Tag and Push
+## Phase 7: Push Branch, Verify CI, Tag, and Push Tag
 
 ```bash
-git tag vX.Y.Z
+RELEASE_SHA=$(git rev-parse HEAD)
+git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
+
+# Bind the gate to the exact release commit. GitHub run registration is
+# asynchronous, so retry at most five times and log every attempt.
+RUN_ID=""
+for ATTEMPT in 1 2 3 4 5; do
+  RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
+    --limit 1 --json databaseId --jq '.[0].databaseId')
+  [ -n "$RUN_ID" ] && break
+  echo "Waiting for CI run registration ($ATTEMPT/5)" >&2
+  [ "$ATTEMPT" -eq 5 ] || sleep 60
+done
+test -n "$RUN_ID" || { echo "FAIL: CI run not found for release commit"; exit 1; }
+gh run watch "$RUN_ID" --exit-status \
+  || { echo "FAIL: release commit CI failed"; exit 1; }
+
+# publish.yml is Ubuntu-only. Require both full CI matrix jobs before creating
+# the tag so a green publish job cannot bypass a red macOS test.
+for OS in ubuntu-latest macos-latest; do
+  gh run view "$RUN_ID" --json jobs \
+    --jq ".jobs[] | select(.name == \"Bats test suite ($OS)\") | .conclusion" \
+    | grep -qx success || { echo "FAIL: $OS test job not green"; exit 1; }
+done
+
+# Refuse to tag if either local or remote main moved while CI was running.
+test "$(git rev-parse HEAD)" = "$RELEASE_SHA" \
+  || { echo "FAIL: local HEAD changed during CI"; exit 1; }
+git fetch origin main || { echo "FAIL: origin/main refresh failed"; exit 1; }
+test "$(git rev-parse origin/main)" = "$RELEASE_SHA" \
+  || { echo "FAIL: origin/main changed during CI"; exit 1; }
+
+git tag vX.Y.Z "$RELEASE_SHA"
 
 # Assert the tag before pushing it. Both checks are one line each and both
 # have caught a real broken release.
-test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" \
-  || { echo "FAIL: tag is not on HEAD"; exit 1; }
+test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA" \
+  || { echo "FAIL: tag is not on the tested release commit"; exit 1; }
 git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
   || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }
 
-# Push the branch, then the single release tag by its full ref.
-git push origin main
+# Push the single release tag by its full ref.
 git push origin refs/tags/vX.Y.Z
 ```
+
+**Why branch CI comes before the tag (v4.30.2 postmortem).** The publish
+workflow runs only on Ubuntu and can publish while the separate macOS matrix job
+is red. `v4.30.2` exposed this with a macOS-only DSH timing failure. A release
+commit must therefore pass the complete Ubuntu/macOS branch workflow before its
+tag exists; a successful publish workflow is not a substitute for green CI.
 
 **Why the assertions (v4.19.0 postmortem).** v4.19.0 was tagged on a commit
 that contained only a KB document and still carried `package.json` version
@@ -8609,10 +8668,12 @@ git push origin --delete vX.Y.Z
 | 15a | Licensing gate | `npx bats tests/test_licensing.bats` | 7/7 — SPDX headers, LICENSE, NOTICE, npm `files`, manifest consistency |
 | 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
 | 17 | Commit | `git commit` | Clean working tree |
-| 18 | Tag | `git tag vX.Y.Z` | Tag exists |
-| 18a | Tag is on HEAD | `test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)"` | Exit 0 |
-| 18b | Tag is on the release commit | `git show --no-patch --format=%s vX.Y.Z` | Reads `chore: release vX.Y.Z` |
-| 19 | Push branch, then the single tag | `git push origin main && git push origin refs/tags/vX.Y.Z` | CI triggered with `id-token: write`. Never `--tags`. |
+| 18 | Push branch | `git push origin main` | Exact release commit is on `origin/main` |
+| 18a | Full branch CI | `gh run watch "$RUN_ID" --exit-status` plus matrix job assertions | Ubuntu and macOS Bats jobs both conclude `success` |
+| 19 | Tag | `git tag vX.Y.Z` | Tag exists only after green branch CI |
+| 19a | Tag is on tested SHA | `test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA"` | Exit 0 |
+| 19b | Tag is on the release commit | `git show --no-patch --format=%s vX.Y.Z` | Reads `chore: release vX.Y.Z` |
+| 20 | Push the single tag | `git push origin refs/tags/vX.Y.Z` | Publish CI triggered with `id-token: write`. Never `--tags`. |
 
 ---
 
