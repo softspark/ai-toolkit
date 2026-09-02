@@ -818,7 +818,7 @@ PY
     cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
 {
   "spawn_delayed_descendant_tree_before":"add:@softspark/dsh-codex",
-  "descendant_delay_seconds":0.4,
+  "descendant_delay_seconds":2.0,
   "descendant_host_sleep_seconds":5,
   "descendant_parent_sleep_seconds":5
 }
@@ -834,7 +834,15 @@ PY
 
     [ "$status" -ne 0 ]
     [[ "$output" == *"timed out after 0.2s"* ]] || false
-    sleep 0.7
+    # The descendant writes its marker descendant_delay_seconds after spawn and
+    # the interrupt fires at 0.2s, so teardown has that difference to kill it.
+    # At 0.4s the budget was 200ms, which a loaded macOS runner misses; the test
+    # then failed for runner load rather than for broken teardown.
+    #
+    # This wait MUST stay longer than descendant_delay_seconds. Raise one without
+    # the other and a descendant that was never killed simply has not written
+    # yet, so the assertion below passes while proving nothing.
+    sleep 3
     [ ! -e "$TEST_DSH_HOME/late-descendant-marker.txt" ] || false
     [ ! -e "$TEST_DSH_HOME/profiles/web/late-descendant-profile-write.txt" ] || false
     [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
@@ -847,7 +855,7 @@ PY
     cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
 {
   "spawn_delayed_descendant_tree_before":"add:@softspark/dsh-codex",
-  "descendant_delay_seconds":0.4,
+  "descendant_delay_seconds":2.0,
   "descendant_host_sleep_seconds":5,
   "descendant_parent_sleep_seconds":5
 }
@@ -885,7 +893,15 @@ PY
 
     [ "$status" -ne 0 ]
     [[ "$output" == *"interrupted"* ]] || false
-    sleep 0.7
+    # The descendant writes its marker descendant_delay_seconds after spawn and
+    # the interrupt fires at 0.2s, so teardown has that difference to kill it.
+    # At 0.4s the budget was 200ms, which a loaded macOS runner misses; the test
+    # then failed for runner load rather than for broken teardown.
+    #
+    # This wait MUST stay longer than descendant_delay_seconds. Raise one without
+    # the other and a descendant that was never killed simply has not written
+    # yet, so the assertion below passes while proving nothing.
+    sleep 3
     [ ! -e "$TEST_DSH_HOME/late-descendant-marker.txt" ] || false
     [ ! -e "$TEST_DSH_HOME/profiles/web/late-descendant-profile-write.txt" ] || false
     [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
@@ -898,7 +914,7 @@ PY
     cat > "$TEST_DSH_HOME/fake-control.json" <<'JSON'
 {
   "spawn_delayed_descendant_tree_before":"add:@softspark/dsh-codex",
-  "descendant_delay_seconds":0.4,
+  "descendant_delay_seconds":2.0,
   "descendant_host_sleep_seconds":5,
   "descendant_parent_sleep_seconds":5
 }
@@ -961,7 +977,15 @@ PY
     [[ "$output" == *"interrupted"* ]] || false
     [[ "$output" == *"teardown-retried-sigint"* ]] || false
     [[ "$output" != *"Traceback"* ]] || false
-    sleep 0.7
+    # The descendant writes its marker descendant_delay_seconds after spawn and
+    # the interrupt fires at 0.2s, so teardown has that difference to kill it.
+    # At 0.4s the budget was 200ms, which a loaded macOS runner misses; the test
+    # then failed for runner load rather than for broken teardown.
+    #
+    # This wait MUST stay longer than descendant_delay_seconds. Raise one without
+    # the other and a descendant that was never killed simply has not written
+    # yet, so the assertion below passes while proving nothing.
+    sleep 3
     [ ! -e "$TEST_DSH_HOME/late-descendant-marker.txt" ] || false
     [ ! -e "$TEST_DSH_HOME/profiles/web/late-descendant-profile-write.txt" ] || false
     [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
