@@ -8,9 +8,9 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1920%20passing-success)](tests/)
 
-## What's New in v4.30.1
+## What's New in v4.30.2
 
-**v4.30.1** publishes the managed DSH and plugin-owned MCP release with Linux-portable recovery diagnostics:
+**v4.30.2** publishes the managed DSH and plugin-owned MCP release with Linux-portable recovery gates:
 
 - `install --local --editors dsh` emits the managed `.agents/skills` surface,
   while `ai-toolkit dsh install|update|doctor|uninstall --profile web` owns the
@@ -23,8 +23,10 @@
   pinned paths, process-tree teardown, durable recovery gates, and conservative
   rollback that preserves concurrent or user-authored data.
 - Recovery verification and interrupted preset relocation now emit deterministic,
-  non-empty diagnostics on both macOS and Linux. The public `v4.30.0` workflow
-  stopped before npm publication; no `4.30.0` registry artifact was created.
+  non-empty diagnostics on both macOS and Linux. File-mode assertions and malformed
+  ownership diagnostics also use the same portable contract. The public `v4.30.0`
+  and `v4.30.1` workflows stopped before npm publication; neither registry artifact
+  was created.
 - Test count: 1675 -> 1920.
 
 ## Table of Contents

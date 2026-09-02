@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.30.2 - Portable Linux release gates (2026-09-02)
+
+### Fixed
+
+- **File-mode checks are cross-platform.** DSH package and plugin asset tests now
+  read POSIX modes through Python `stat.S_IMODE` instead of the macOS-only
+  `stat -f` syntax.
+- **Malformed ownership diagnostics are consistent.** Invalid `packages` and
+  `package_trees` records now fail with ownership-specific errors at the shared
+  state-validation boundary on both macOS and Linux.
+
+### Changed
+
+- **First published release of the 4.30 feature set.** Public tags `v4.30.0` and
+  `v4.30.1` failed their Linux GitHub Actions gates before npm publication.
+  Version `4.30.2` includes both portability corrections; neither earlier npm
+  artifact exists.
+
+---
+
 ## v4.30.1 - Linux-portable DSH recovery diagnostics (2026-09-01)
 
 ### Fixed
