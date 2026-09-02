@@ -124,7 +124,7 @@ SEMVER_OUTPUT = re.compile(
     rf"(?:\.{_SEMVER_PRERELEASE_IDENTIFIER})*)?"
     rf"(?:\+{_SEMVER_BUILD_IDENTIFIER}"
     rf"(?:\.{_SEMVER_BUILD_IDENTIFIER})*)?)"
-    r"(?![0-9A-Za-z.+-])"
+    r"(?![0-9A-Za-z+-]|\.(?!\s|$))"
 )
 VERSION_LIKE_OUTPUT = re.compile(r"(?<![0-9])[0-9]+\.[0-9]+\.[^\s,;()]+")
 

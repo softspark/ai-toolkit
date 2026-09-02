@@ -204,6 +204,19 @@ PY
     echo "$output" | grep -q 'warnings=0 errors=0'
 }
 
+@test "doctor: AI runtime probe accepts SemVer followed by sentence punctuation" {
+    runtime="$TEST_TMP/copilot-stable"
+    printf '%s\n' '#!/bin/sh' \
+        "printf '%s\\n' 'GitHub Copilot CLI 1.0.80.' 'Run copilot update to upgrade.'" \
+        > "$runtime"
+    chmod +x "$runtime"
+
+    run check_single_runtime "$runtime"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'OK: DSH (dsh) 1.0.80'
+    echo "$output" | grep -q 'warnings=0 errors=0'
+}
+
 @test "doctor: AI runtime probe enforces complete SemVer tokens" {
     for version in \
         '1.2.3.4' \
