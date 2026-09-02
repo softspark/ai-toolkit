@@ -105,3 +105,34 @@ print(','.join(result))
     # Output should be empty (no languages detected)
     [ -z "$output" ]
 }
+
+@test "autodetect: legacy and explicitly Codex-owned skill surfaces still detect Codex" {
+    mkdir -p "$TEST_TMP/.agents/skills/example"
+    printf '%s\n' '---' 'name: example' 'description: Example.' '---' 'Body.' \
+        > "$TEST_TMP/.agents/skills/example/SKILL.md"
+
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from install_steps.ai_tools import _detect_editors
+
+print(",".join(_detect_editors(Path(sys.argv[2]))))
+PY
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'codex'
+
+    printf '%s\n' 'codex' > "$TEST_TMP/.agents/.ai-toolkit-skill-owners"
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from install_steps.ai_tools import _detect_editors
+
+print(",".join(_detect_editors(Path(sys.argv[2]))))
+PY
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'codex'
+}

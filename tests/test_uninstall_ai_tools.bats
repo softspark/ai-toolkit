@@ -14,6 +14,176 @@ setup() {
     mkdir -p "$TEST_HOME" "$TEST_PROJECT"
 }
 
+@test "generic uninstall leaves explicit DSH profile lifecycle untouched" {
+    local dsh_home="$TEST_ROOT/dsh-home"
+    local fake_bin="$TEST_ROOT/fake-bin"
+    mkdir -p "$dsh_home" "$fake_bin" "$TEST_HOME/.codex/agents"
+    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
+    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/pnpm"
+    chmod +x "$fake_bin/dsh" "$fake_bin/pnpm"
+    HOME="$TEST_HOME" DSH_HOME="$dsh_home" PATH="$fake_bin:$PATH" \
+        run node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+    [ "$status" -eq 0 ]
+    printf '%s\n' '# ai-toolkit-managed: codex-agent' > \
+        "$TEST_HOME/.codex/agents/ai-toolkit-owned.toml"
+    local before_profile before_preset before_state
+    before_profile="$(find "$dsh_home/profiles/web" -type f -exec shasum {} \; | sort)"
+    before_preset="$(find "$dsh_home/.agent-presets/softspark-orchestrator" \
+        -type f -exec shasum {} \; | sort)"
+    before_state="$(shasum "$TEST_HOME/.softspark/ai-toolkit/state.json")"
+
+    HOME="$TEST_HOME" DSH_HOME="$dsh_home" PATH="$fake_bin:$PATH" \
+        run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+
+    [ "$status" -eq 0 ]
+    [ ! -e "$TEST_HOME/.codex/agents/ai-toolkit-owned.toml" ]
+    [ "$(find "$dsh_home/profiles/web" -type f -exec shasum {} \; | sort)" = \
+        "$before_profile" ]
+    [ "$(find "$dsh_home/.agent-presets/softspark-orchestrator" \
+        -type f -exec shasum {} \; | sort)" = "$before_preset" ]
+    [ "$(shasum "$TEST_HOME/.softspark/ai-toolkit/state.json")" = "$before_state" ]
+}
+
+@test "uninstall --local removes every managed agent-skill variant and its owner marker" {
+    for spec in 'dsh:dsh-only' 'codex,dsh:shared' 'codex:codex-only'; do
+        local editors=${spec%%:*}
+        local name=${spec#*:}
+        local project="$TEST_ROOT/$name"
+        mkdir -p "$project"
+
+        HOME="$TEST_HOME" run bash -c "cd '$project' && \
+            python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors '$editors'"
+        [ "$status" -eq 0 ]
+        [ -f "$project/.agents/.ai-toolkit-skill-owners" ]
+
+        mkdir -p "$project/.agents/skills/user-skill" \
+            "$project/.agent-presets" "$project/user-directory"
+        printf '%s\n' '---' 'name: user-skill' 'description: User owned.' \
+            '---' 'User skill.' > "$project/.agents/skills/user-skill/SKILL.md"
+        printf '%s\n' 'user preset' > "$project/.agent-presets/user-preset.md"
+        printf '%s\n' 'unrelated file' > "$project/user-directory/keep.txt"
+        printf '%s\n' 'user wrapper addition' > \
+            "$project/.agents/skills/orchestrate/user-added.txt"
+
+        HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+            --local --yes --target "$project"
+        [ "$status" -eq 0 ]
+
+        [ ! -e "$project/.agents/.ai-toolkit-skill-owners" ]
+        [ -f "$project/.agents/skills/user-skill/SKILL.md" ]
+        [ -f "$project/.agent-presets/user-preset.md" ]
+        [ -f "$project/user-directory/keep.txt" ]
+        [ -f "$project/.agents/skills/orchestrate/user-added.txt" ]
+        [ ! -e "$project/.agents/skills/orchestrate/SKILL.md" ]
+        [ -z "$(find "$project/.agents/skills" -type f \
+            \( -name '.ai-toolkit-codex-adapted' \
+               -o -name '.ai-toolkit-dsh-adapted' \
+               -o -name '.ai-toolkit-shared-adapted' \) -print -quit)" ]
+        [ -z "$(find "$project/.agents/skills" -type l -print0 | \
+            xargs -0 -I '{}' sh -c \
+                'case "$(readlink "{}")" in *ai-toolkit/app/skills/*) printf managed;; esac' \
+            2>/dev/null)" ]
+    done
+
+    local orphaned="$TEST_ROOT/orphaned-owner"
+    mkdir -p "$orphaned/.agents"
+    printf '%s\n' 'codex' 'dsh' > \
+        "$orphaned/.agents/.ai-toolkit-skill-owners"
+    printf '%s\n' 'user agents data' > "$orphaned/.agents/keep.txt"
+
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$orphaned"
+    [ "$status" -eq 0 ]
+    [ ! -e "$orphaned/.agents/.ai-toolkit-skill-owners" ]
+    [ -f "$orphaned/.agents/keep.txt" ]
+
+    printf '%s\n' 'user-runtime' > \
+        "$orphaned/.agents/.ai-toolkit-skill-owners"
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$orphaned"
+    [ "$status" -eq 0 ]
+    [ -f "$orphaned/.agents/.ai-toolkit-skill-owners" ]
+}
+
+@test "uninstall preserves every noncanonical agent-skill owner marker" {
+    for variant in reversed duplicate unknown leading-space trailing-space blank-line; do
+        local project="$TEST_ROOT/owner-$variant"
+        local marker="$project/.agents/.ai-toolkit-skill-owners"
+        mkdir -p "$project/.agents"
+        case "$variant" in
+            reversed) printf '%s\n' 'dsh' 'codex' > "$marker" ;;
+            duplicate) printf '%s\n' 'codex' 'codex' > "$marker" ;;
+            unknown) printf '%s\n' 'codex' 'user-runtime' > "$marker" ;;
+            leading-space) printf ' codex\n' > "$marker" ;;
+            trailing-space) printf 'codex \n' > "$marker" ;;
+            blank-line) printf 'codex\n\n' > "$marker" ;;
+        esac
+        cp "$marker" "$project/marker.before"
+
+        HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+            --local --yes --target "$project"
+        [ "$status" -eq 0 ]
+        [ -f "$marker" ]
+        cmp "$project/marker.before" "$marker"
+    done
+}
+
+@test "uninstall preserves non-file and unreadable owner-marker collisions" {
+    local symlinked="$TEST_ROOT/symlinked-owner"
+    local external="$TEST_ROOT/external-owner"
+    mkdir -p "$symlinked/.agents"
+    printf '%s\n' 'codex' > "$external"
+    ln -s "$external" "$symlinked/.agents/.ai-toolkit-skill-owners"
+
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$symlinked"
+    [ "$status" -eq 0 ]
+    [ -L "$symlinked/.agents/.ai-toolkit-skill-owners" ]
+    [ "$(cat "$external")" = 'codex' ]
+
+    local directory="$TEST_ROOT/directory-owner"
+    mkdir -p "$directory/.agents/.ai-toolkit-skill-owners"
+    printf '%s\n' 'user content' > \
+        "$directory/.agents/.ai-toolkit-skill-owners/keep.txt"
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$directory"
+    [ "$status" -eq 0 ]
+    [ -f "$directory/.agents/.ai-toolkit-skill-owners/keep.txt" ]
+
+    local unreadable="$TEST_ROOT/unreadable-owner"
+    mkdir -p "$unreadable/.agents/skills"
+    printf '%s\n' 'codex' > \
+        "$unreadable/.agents/.ai-toolkit-skill-owners"
+    run env PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$unreadable" <<'PY'
+import sys
+from pathlib import Path
+
+import uninstall
+
+project = Path(sys.argv[1])
+marker = project / ".agents" / ".ai-toolkit-skill-owners"
+skills = project / ".agents" / "skills"
+real_read_bytes = Path.read_bytes
+
+
+def deny_marker_read(path):
+    if path == marker:
+        raise PermissionError("injected unreadable owner marker")
+    return real_read_bytes(path)
+
+
+Path.read_bytes = deny_marker_read
+try:
+    removed = uninstall._remove_skill_surface_owners_marker(skills, project)
+finally:
+    Path.read_bytes = real_read_bytes
+assert not removed
+assert marker.is_file()
+PY
+    [ "$status" -eq 0 ]
+    [ -f "$unreadable/.agents/.ai-toolkit-skill-owners" ]
+}
+
 @test "uninstall --local removes generated Codex and Copilot surfaces but preserves user data" {
     mkdir -p "$TEST_PROJECT/.claude" "$TEST_PROJECT/.github"
 
@@ -307,7 +477,8 @@ EOF
 
 @test "late Copilot failure rolls back every runtime byte-for-byte" {
     mkdir -p "$TEST_PROJECT/.claude" "$TEST_PROJECT/.codex/agents" \
-        "$TEST_PROJECT/.github/instructions"
+        "$TEST_PROJECT/.github/instructions" \
+        "$TEST_PROJECT/.agents/skills/orchestrate"
     cat > "$TEST_PROJECT/.claude/constitution.md" <<'EOF'
 user claude
 <!-- TOOLKIT:ai-toolkit START -->
@@ -324,6 +495,12 @@ EOF
         "$TEST_PROJECT/.codex/agents/ai-toolkit-managed.toml"
     printf '%s\n' '<!-- ai-toolkit-managed: github-copilot -->' 'managed copilot' > \
         "$TEST_PROJECT/.github/instructions/ai-toolkit-managed.instructions.md"
+    printf '%s\n' 'managed DSH skill' > \
+        "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
+    printf '%s\n' 'generated by ai-toolkit for dsh' > \
+        "$TEST_PROJECT/.agents/skills/orchestrate/.ai-toolkit-dsh-adapted"
+    printf '%s\n' 'dsh' > \
+        "$TEST_PROJECT/.agents/.ai-toolkit-skill-owners"
     chmod 640 "$TEST_PROJECT/.claude/constitution.md"
     chmod 600 "$TEST_PROJECT/.codex/agents/ai-toolkit-managed.toml"
 

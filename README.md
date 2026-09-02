@@ -1,24 +1,30 @@
 # ai-toolkit
 
-> Professional-grade AI coding toolkit with multi-platform support. Machine-enforced safety, 109 skills, 44 agents, expanded lifecycle hooks, persona presets, experimental opt-in plugin packs, and benchmark tooling — works with Claude Code, Claude Chat/Cowork, Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, Google Antigravity, Codex CLI, and opencode.
+> AI coding toolkit with machine-enforced safety, 109 skills, 44 agents, lifecycle hooks, persona presets, opt-in plugin packs, and benchmark tooling. DSH is available as a separate explicit developer-preview target.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1640%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1921%20passing-success)](tests/)
 
-## What's New in v4.26.0
+## What's New in v4.30.3
 
-**v4.26.0** declares and enforces the Python floor the scripts already needed:
+**v4.30.3** corrects the post-release health check for the managed DSH and
+plugin-owned MCP release:
 
-- `ai-toolkit` now checks `python3` before running anything and requires 3.11+.
-- macOS `/usr/bin/python3` is 3.9, which used to crash `update --local` with a
-  raw `dataclass() got an unexpected keyword argument 'slots'` traceback. You
-  now get the version, the requirement, and `brew install python@3.13`.
-- `python3 scripts/*.py` run directly fails the same way, via `_common.py`.
-- CI runs the syntax check plus a full import sweep on both 3.11 and 3.13, so a
-  version-gated runtime feature cannot slip through `py_compile` again.
+- `ai-toolkit doctor` now extracts `1.0.80` from the official Copilot CLI output
+  `GitHub Copilot CLI 1.0.80.` instead of treating sentence punctuation as an
+  invalid SemVer suffix.
+- Complete-token validation remains fail closed for malformed versions such as
+  `1.2.3.4`, invalid prerelease identifiers, and leading-zero numeric fields.
+- The DSH cold-add regression keeps its legacy-timeout coverage with macOS CI
+  process-startup headroom, removing the release-blocking timing flake.
+- Release tags now require green Ubuntu and macOS branch CI for the exact commit
+  before the publish workflow can start.
+- The release retains the explicit DSH lifecycle, plugin-owned MCP/rules, portable
+  recovery gates, and the exact DSH package set published in v4.30.2. Test count:
+  1920 -> 1921.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -73,6 +79,23 @@ ai-toolkit install --local --editors all          # + all editors
 ai-toolkit install --local --editors cursor,aider # + specific editors
 ai-toolkit update --local                         # auto-detects editors
 ```
+
+### DSH Developer Preview
+
+DSH has separate project and profile ownership:
+
+```bash
+# Generic local outputs plus DSH-specific .agents/skills. No DSH_HOME write.
+ai-toolkit install --local --editors dsh
+
+# Explicit profile lifecycle.
+ai-toolkit dsh install --profile web
+ai-toolkit dsh update --profile web
+ai-toolkit dsh doctor --profile web
+ai-toolkit dsh uninstall --profile web --yes
+```
+
+DSH is excluded from `--editors all`, auto-detection, and defaults. Its only DSH-specific project output is `.agents/skills`; the normal `--local` Claude files, detected language rules, and other generic project outputs still apply. Project and profile `--dry-run` commands are read-only. The reviewed pins are DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. Codex, Claude Code, and GitHub Copilot own their logins. ai-toolkit accepts no provider API keys, and GitHub AI credits apply to the Copilot Gemini route. Isolated pre-tag and exact-registry post-release qualification completed both Claude Code and Copilot Gemini marker roundtrips through the Codex parent. See [DSH Compatibility](kb/reference/dsh-compatibility.md).
 
 ### Plugin Management
 
@@ -139,7 +162,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Platform | Config Files | Hooks | Scope |
 |----------|-------------|:-----:|-------|
 | Claude Code | `~/.claude/agents`, `~/.claude/skills`, `~/.claude/rules/*.md`, `~/.claude/settings.json` | ✅ | global |
-| Claude Chat / Cowork | uploaded plugin ZIP + UI global/folder instructions | Cowork only | account/app |
+| Claude Chat / Cowork | uploaded plugin ZIP + UI global/folder instructions + `claude_desktop_config.json` (MCP) | Cowork only | account/app |
 | Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
 | Windsurf (Devin Desktop) | `~/.config/devin/AGENTS.md` + `.devin/rules/*.md` + `.devin/hooks.v1.json` + `.windsurf/skills/*` | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` + `.gemini/settings.json` + `.gemini/{commands,skills,agents}/` | ✅ | project + user |
@@ -151,8 +174,9 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Google Antigravity | Project `.agents/{rules,workflows,skills,agents,hooks}/`; user `~/.gemini/config/{skills,agents,hooks}/`; opt-in native plugin export | ✅ | project + user |
 | Codex CLI | Project: `AGENTS.md` + `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
 | opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins,skills}/*` + `opencode.{json,jsonc}` | ✅ | project + global (`~/.config/opencode/`) |
+| DeepSeek Harness | Project `.agents/skills/*`; explicit profile packages and `$DSH_HOME/.agent-presets/softspark-orchestrator` | no bridge | project + explicit named profile |
 
-> Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
+> Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed, except for MCP servers, which `ai-toolkit mcp install --editor claude-app --scope global` writes straight to `claude_desktop_config.json`. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
 
 ---
 
@@ -188,7 +212,7 @@ ai-toolkit/
 │   └── ARCHITECTURE.md  # Full system design
 ├── kb/                  # Reference docs, procedures, plans
 ├── scripts/             # Validation, install, evaluation scripts
-├── tests/               # Bats and Python test suite (1640 tests)
+├── tests/               # Bats and Python test suite
 └── CHANGELOG.md
 ```
 
@@ -222,7 +246,7 @@ ai-toolkit/
 
 **70 language rules** — 13 languages + common, 5 categories each. Auto-detected or explicit `--lang`. See [Language Rules](kb/reference/language-rules.md).
 
-**26 MCP templates** — Ready-to-use configs for GitHub, PostgreSQL, Slack, Jira, Sentry, and more. See [MCP Templates](kb/reference/mcp-templates.md).
+**28 MCP templates** — Ready-to-use configs for GitHub, PostgreSQL, Slack, Jira, Sentry, general RAG, and Polish legal RAG. See [MCP Templates](kb/reference/mcp-templates.md).
 
 See [Unique Features](kb/reference/unique-features.md) for detailed descriptions of all differentiators.
 
@@ -316,6 +340,7 @@ Need multi-agent coordination?
 | Codex CLI Compatibility | [kb/reference/codex-cli-compatibility.md](kb/reference/codex-cli-compatibility.md) |
 | opencode Compatibility | [kb/reference/opencode-compatibility.md](kb/reference/opencode-compatibility.md) |
 | GitHub Copilot Compatibility | [kb/reference/copilot-compatibility.md](kb/reference/copilot-compatibility.md) |
+| DSH Compatibility | [kb/reference/dsh-compatibility.md](kb/reference/dsh-compatibility.md) |
 | Maintenance SOP | [kb/procedures/maintenance-sop.md](kb/procedures/maintenance-sop.md) |
 
 ---

@@ -107,6 +107,15 @@ teardown() {
     echo "$output" | grep -q 'remove-rule'
 }
 
+@test "cli: help lists the explicit DSH profile lifecycle" {
+    run $CLI help
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'dsh install --profile web'
+    echo "$output" | grep -q 'dsh update --profile web'
+    echo "$output" | grep -q 'dsh doctor --profile web'
+    echo "$output" | grep -q 'dsh uninstall --profile web'
+}
+
 @test "cli: unknown command exits non-zero" {
     run $CLI totally-unknown-command-xyz
     [ "$status" -ne 0 ]

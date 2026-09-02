@@ -83,6 +83,7 @@ const COMMANDS = {
   'remove-mcp': 'Remove injected MCP servers by source name from ~/.mcp.json and all editor configs',
   validate: 'Verify toolkit integrity',
   doctor: 'Check install health, hooks, and artifact drift',
+  dsh: 'Manage the explicit DeepSeek Harness profile integration',
   eject: 'Export standalone config (no symlinks, no toolkit dependency)',
   benchmark: 'Benchmark toolkit (--my-config to compare your setup vs defaults vs ecosystem)',
   'benchmark-ecosystem': 'Generate ecosystem benchmark snapshot (GitHub metadata + offline fallback)',
@@ -307,6 +308,7 @@ function showHelp() {
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
   console.log('  --lang <list>   Explicitly select language rules (e.g. typescript, go,python)');
   console.log('  --editors <list> Install editor configs: cursor,windsurf,cline,roo,aider,augment,copilot,antigravity,codex,opencode (or "all")');
+  console.log('                  dsh (explicit project target; requires --local; excluded from "all")');
   console.log('                  Default with --local: auto-detect from existing project files');
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
@@ -378,6 +380,11 @@ function showHelp() {
   console.log('                                Remove from .mcp.json or native editor configs');
   console.log('\nOptions for doctor:');
   console.log('  --fix           Auto-repair detected issues');
+  console.log('\nOptions for dsh:');
+  console.log('  dsh install --profile web [--dry-run]');
+  console.log('  dsh update --profile web [--dry-run]');
+  console.log('  dsh doctor --profile web');
+  console.log('  dsh uninstall --profile web [--dry-run] [--yes]');
   console.log('\nOptions for stats:');
   console.log('  --summary       Show aggregated product telemetry (usage coverage, top skills, unused catalog)');
   console.log('  --json          Emit raw stats, or machine-readable telemetry when combined with --summary');
@@ -718,6 +725,7 @@ const SPECIAL_HANDLERS = {
   'sync':         handleSync,
   'mcp':          handleMcp,
   'config':       handleConfig,
+  'dsh':          (args) => run(path.join(TOOLKIT_DIR, 'scripts', 'install_steps', 'dsh.py'), args),
   'projects':     (args) => run(scriptPath('projects_cli.py'), args),
   'plugin':       (args) => run(scriptPath('plugin.py'), args),
   'remove-rule':  handleRemoveRule,

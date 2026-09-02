@@ -1,0 +1,11 @@
+{
+  "name": "rag-mcp-legal",
+  "description": "Dedicated Polish legal RAG for statutes, contracts, firm knowledge and matter documents via HTTP MCP",
+  "mcpServers": {
+    "rag-mcp-legal": {
+      "type": "http",
+      "url": "http://localhost:8082/mcp/sse"
+    }
+  },
+  "postInstall": "Run make up-legal from the rag-mcp repository before connecting. The default endpoint is http://localhost:8082/mcp/sse. It is unauthenticated by design: keep it on localhost or behind a trusted VPN/reverse-proxy network boundary, never expose it directly to an untrusted network. Edit the installed editor config for a protected non-default deployment."
+}

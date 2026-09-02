@@ -7,6 +7,306 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.30.3 - Copilot health-check compatibility (2026-09-02)
+
+### Fixed
+
+- **`doctor` accepts sentence punctuation after runtime SemVer.** The official
+  Copilot CLI output `GitHub Copilot CLI 1.0.80.` now reports version `1.0.80`
+  instead of an invalid-SemVer warning.
+- **Complete-token validation remains strict.** Extra version segments, invalid
+  prerelease identifiers, and leading-zero numeric fields are still rejected.
+- **DSH cold-add timing gate is runner-safe.** The regression still proves a
+  cold package add can outlive the legacy scaled timeout while leaving enough
+  headroom for macOS CI process startup.
+
+### Changed
+
+- **Test count.** Increased from 1920 to 1921 with the exact Copilot output
+  regression.
+- **Release tags require green cross-platform branch CI.** The preparation SOP
+  now binds the gate to the exact release commit and requires both Ubuntu and
+  macOS Bats matrix jobs before creating or pushing a tag.
+
+---
+
+## v4.30.2 - Portable Linux release gates (2026-09-02)
+
+### Fixed
+
+- **File-mode checks are cross-platform.** DSH package and plugin asset tests now
+  read POSIX modes through Python `stat.S_IMODE` instead of the macOS-only
+  `stat -f` syntax.
+- **Malformed ownership diagnostics are consistent.** Invalid `packages` and
+  `package_trees` records now fail with ownership-specific errors at the shared
+  state-validation boundary on both macOS and Linux.
+
+### Changed
+
+- **First published release of the 4.30 feature set.** Public tags `v4.30.0` and
+  `v4.30.1` failed their Linux GitHub Actions gates before npm publication.
+  Version `4.30.2` includes both portability corrections; neither earlier npm
+  artifact exists.
+
+---
+
+## v4.30.1 - Linux-portable DSH recovery diagnostics (2026-09-01)
+
+### Fixed
+
+- **Interrupted preset relocation keeps an actionable error.** A
+  `KeyboardInterrupt` has an empty string representation on Linux; recovery
+  output now normalizes it to an explicit interrupted message before naming the
+  preserved path.
+- **Recovery verification failures are never silent.** Package-preset hash
+  failures are included in deterministic recovery diagnostics while ownership
+  state restoration still runs.
+- **Recovery tests use platform-independent seams.** Backup restore and package
+  source verification injections now exercise the same secure helpers on macOS
+  and Linux.
+
+### Changed
+
+- **First published release of the 4.30 feature set.** The public `v4.30.0` tag
+  failed its GitHub Actions gate before npm publication. Version `4.30.1`
+  contains the same DSH and MCP features plus this cross-platform correction;
+  no `4.30.0` npm artifact exists.
+
+---
+
+## v4.30.0 - Managed DSH and plugin-owned MCP (2026-09-01)
+
+### Added
+
+- **Explicit DSH project target.** Added `install --local --editors dsh` for the
+  managed `.agents/skills` surface without implicit selection or `$DSH_HOME`
+  mutation.
+- **Managed DSH profile lifecycle.** Added `ai-toolkit dsh
+  install|update|doctor|uninstall --profile web` with exact DSH `0.1.1-rc.2`,
+  dsh-codex `1.0.0`, dsh-orchestrator `1.0.1`, preset ownership, dry-run, and
+  read-only diagnostics.
+- **Plugin-owned MCP and native rules.** Plugin packs can deliver MCP templates
+  and owned rule surfaces to Claude, Codex, Cursor, and Gemini.
+- **RAG MCP templates.** Added `rag-mcp` and `rag-mcp-legal` with concrete
+  localhost defaults and unauthenticated-endpoint warnings. The built-in MCP
+  catalogue now contains 28 templates.
+
+### Changed
+
+- **DSH remains explicit-only.** It stays outside editor defaults,
+  auto-detection, and `--editors all`; vendor CLIs retain authentication
+  ownership and no provider API key is accepted.
+- **Plugin lifecycle is transactional.** Install, update, and removal coordinate
+  MCP settings, rules, hook/script assets, and ownership state with pinned-path
+  CAS and last-consumer cleanup.
+- **Test count.** Increased from 1675 to 1920.
+
+### Fixed
+
+- **Cold DSH installs fail safely.** Added pnpm preflight, bounded probe and
+  mutation timeouts, full process-tree termination, exact executable identity,
+  directory-level lifecycle locking, and durable recovery gates.
+- **Concurrent plugin edits are preserved.** Atomic quarantine and rollback no
+  longer overwrite concurrent bytes, modes, inodes, marker sections, or
+  user-added assets.
+
+---
+
+## v4.29.2 — The Codex dry-run stops hiding a surface (2026-08-21)
+
+### Fixed
+
+- **`install --dry-run` never mentioned the Codex hook surfaces.** Selecting
+  `codex` runs `gen_codex_hooks()` unconditionally, at every profile, writing
+  `.codex/hooks.json` and the hook scripts under `.codex/hooks/` (23 files). The
+  dry-run branch in `scripts/install_steps/ai_tools.py` printed only
+  `.codex/agents/` and `.agents/skills/`. A preview that omits a whole surface is
+  worse than no preview, and this is the surface a user is asked to review and
+  trust with `/hooks` before Codex will run any of it.
+- **The global preview named the manifest but not its scripts.** It listed
+  `$CODEX_HOME/hooks.json` and stopped there, leaving out
+  `$CODEX_HOME/ai-toolkit-hooks/`. Same defect, other branch.
+
+### Added
+
+- Four tests in `tests/test_install_profiles.bats`: the preview names both hook
+  paths, it names them at `minimal`/`standard`/`full` alike, the preview matches
+  what a live install then writes to disk, and `--dry-run` still writes nothing.
+  All four fail against v4.29.1.
+
+### Changed
+
+- Test count: 1671 → 1675.
+
+**Found by:** running the Release Verification SOP against the published
+v4.29.1. Phase 9.1 checks dry-run output for each native surface, and the Codex
+hook lines were missing — so that SOP check would have produced a false negative
+on a build where the surface really was gone.
+
+---
+
+## v4.29.1 — The guard stops blocking the safe branch delete (2026-08-21)
+
+### Fixed
+
+- **`guard-destructive.sh` no longer folds `-d` onto `-D`.** Every pattern was
+  matched by a single `grep -qEi`, so the `git\s+branch\s+-D\b` pattern also
+  caught `git branch -d`. Those are different operations: `-D` discards an
+  unmerged branch, `-d` refuses to. The safe one is what
+  `.claude/rules/ai-toolkit-git-workflow.md` tells users to run after every
+  merge, and the guard blocked it — a false positive on the toolkit's own
+  advice, in the toolkit's own safety hook.
+- **Patterns are matched in two passes, split by whether case carries meaning.**
+  Command names and flags go through a case-sensitive `grep -qE`; POSIX flags
+  that differ only in case are different flags, and folding them together can
+  only lose information. SQL keywords and the Windows `format` command go
+  through a case-insensitive `grep -qEi`, because their casing genuinely varies
+  in the wild — `drop table`, `Truncate`, and `delete from` all still block.
+  The `-i` was presumably there for the SQL patterns all along; it was the
+  flag patterns that paid for it.
+
+- **A cross-file race in the test suite.** `doctor --fix regenerates missing
+  llms-full.txt` deleted the artifact from the shared checkout and asserted on
+  doctor's `FIXED` line. `npm test` runs `bats --jobs 4
+  --no-parallelize-within-files`, so files run concurrently, and
+  `test_doctor_plugin_double_load.bats` also runs `doctor --fix` — which
+  regenerates that artifact. When it won, the assertion saw a present file, no
+  `FIXED` line, and a red suite; the test also left a `llms-full.txt.test-bak`
+  in the repo, because the restoring `mv` never ran. v4.29.0 added a second
+  `doctor --fix` call to the plugin test file, which is what made a latent race
+  start firing. The test now runs doctor against a private copy of the toolkit,
+  so it mutates no shared state at all.
+
+### Changed
+
+- `kb/reference/hooks-catalog.md` documents the two-pass matching and lists the
+  safe branch delete among the guard's exemptions.
+- Test count: 1666 → 1671. The new cases pin both directions: the safe delete
+  and an uppercase non-flag pass, lowercase and mixed-case SQL block.
+
+### Known gap (not addressed here)
+
+- The guard matches `git branch -D` but not its long form, `git branch --delete
+  --force`. That gap predates this fix and closing it is a coverage change
+  rather than a case-sensitivity one, so it is left for a separate decision.
+
+---
+
+## v4.29.0 — Stale plugin uploads stop hiding (2026-08-21)
+
+### Added
+
+- **`doctor` reports Claude app plugin version drift.** Check 11 now compares the
+  `version` recorded for every `ai-toolkit@…` entry in
+  `~/.claude/plugins/installed_plugins.json` against the installed toolkit's
+  `package.json` and warns when they differ. The upload is a point-in-time ZIP:
+  once the toolkit moves on, Chat and Cowork keep running the skills, agents,
+  hooks, and rules from whenever the export was made, with no signal anywhere
+  that they are behind. `--fix` deliberately cannot clear this warning — the
+  export can be regenerated but the upload itself happens by hand in the app's
+  Customize > Plugins panel, so the check names the two steps instead of
+  pretending to do them.
+
+### Changed
+
+- **Version drift is checked before the enabled/disabled branch.** A plugin
+  disabled for Claude Code still feeds Chat and Cowork, which have no other
+  channel for toolkit content. The old flow returned `OK: registered but
+  disabled` and never looked at versions, so the state a user reaches by running
+  `doctor --fix` was also the state where a stale upload passed silently. That
+  was the wrong place to stop looking.
+- **`ai-toolkit install` re-asserts the plugin as disabled for Claude Code.**
+  Uploading the ZIP re-enables the plugin every time, which put the double-load
+  fix back on whoever remembered to run `doctor --fix` afterwards. Global
+  installs and updates now flip enabled toolkit plugins to `false` in
+  `~/.claude/settings.json` and print each key they touched. `--local` and
+  `--dry-run` are untouched, and non-toolkit plugins are never modified. The
+  disable logic moved into `disable_toolkit_plugins_for_claude_code()` in
+  `scripts/doctor.py`, shared by both call sites.
+- Test count: 1659 → 1666.
+- Skill body budget threshold unchanged. The largest body (`medplum-rules`, 16760
+  bytes) sits 1240 bytes under the 18000-byte warn line, short of the 2000-byte
+  margin the ratchet requires, so the threshold stays where it is this release.
+
+---
+
+## v4.28.0 — MCP servers reach Chat and Cowork (2026-08-21)
+
+### Added
+
+- **`claude-app` MCP adapter.** `ai-toolkit mcp install --editor claude-app
+  --scope global <template>` writes `claude_desktop_config.json` — macOS
+  `~/Library/Application Support/Claude/`, Windows `%APPDATA%/Claude/`, Linux
+  `~/.config/Claude/`, with `CLAUDE_USER_DATA_DIR` overriding the root the same
+  way the app itself honors it. Until now the Claude app was reachable only
+  through an uploaded plugin ZIP, so a user with seven MCP servers configured for
+  Claude Code still had an empty `mcpServers` block in Chat and Cowork. The app
+  parses this file on startup and reports invalid entries in its own warning
+  dialog, so it was always a supported surface — ai-toolkit just never wrote to
+  it. Note that `--editor claude` targets Claude Code (`.mcp.json`,
+  `~/.claude.json`); the two are different runtimes and different files.
+- **HTTP and SSE templates are bridged through `mcp-remote`.** The app validates
+  each entry as `{command, args, env}`; remote endpoints live in a separate
+  `remoteMcpServers` surface managed from its Connectors UI and are not
+  file-configurable. Writing a portable `{"type":"http","url":…}` entry verbatim
+  would produce a config the app silently skips, so the adapter wraps remote
+  servers as `npx -y mcp-remote <url>`, forwarding `headers` as `--header`
+  arguments. `mcp-remote` negotiates the transport itself, so one bridge shape
+  covers both the `http` and `sse` spellings. This also applies to
+  `ai-toolkit inject-mcp`, which propagates to every editor exposing a global
+  path and therefore now reaches the Claude app too.
+
+### Changed
+
+- `_resolve_global_config_root` gained a `_validate_configured_config_root`
+  helper, shared with the new adapter. `COPILOT_HOME` and `CODEX_HOME` keep
+  their existing semantics; the Claude app root is validated only when set
+  explicitly, because its platform default need not exist yet.
+
+### Fixed
+
+- **Two docs described the `claude` adapter's config path wrongly.**
+  `kb/reference/mcp-editor-compatibility.md` and `kb/reference/mcp-templates.md`
+  both claimed it writes `.claude/settings.local.json` and
+  `~/.claude/settings.json`. It writes `.mcp.json` and `~/.claude.json`, and has
+  for as long as the adapter has existed. Both scopes were wrong in both files.
+
+### Ecosystem
+
+- `claude-app` gains three `config_paths`, the `scripts/mcp_editors.py`
+  generator, and an `MCP` capability marker. Re-baseline with
+  `python3 scripts/ecosystem_doctor.py --update --tool claude-app`.
+
+### Tests
+
+- 1645 → 1659. Thirteen cover the adapter (path resolution, parent-tree
+  creation, preservation of `preferences`/`coworkUserFilesPath`/user-owned
+  servers, byte-identical re-install, the bridge shape, rejection of entries
+  with neither or both transports, four `CLAUDE_USER_DATA_DIR` validation cases,
+  removal, and transactional rollback). One covers `inject-mcp` propagation,
+  where per-editor failures are downgraded to warnings and a regression would
+  otherwise be silent.
+
+---
+
+## v4.27.0 — Doctor sees the Claude app plugin (2026-08-21)
+
+### Added
+
+- **Doctor check 11: plugin double-load.** `ai-toolkit doctor` now reads the
+  Claude Code plugin registry (`~/.claude/plugins/installed_plugins.json`) and
+  `enabledPlugins` in `~/.claude/settings.json`. When an uploaded Claude app
+  plugin is active next to the global install, both feed the same session:
+  Claude Code merges plugin hooks with user hooks without deduplication, so every
+  toolkit hook fires twice per event and skills and agents load twice. The check
+  warns with the hook count, and `--fix` disables the plugin for Claude Code
+  while leaving the global install authoritative. Previously this passed as a
+  healthy install with no signal at all.
+- `kb/troubleshooting/plugin-double-load.md` documents the symptom, the debug-log
+  evidence, and the fix.
+
+---
+
 ## v4.26.0 — Python floor is declared and enforced (2026-08-21)
 
 ### Added

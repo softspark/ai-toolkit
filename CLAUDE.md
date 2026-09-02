@@ -1,7 +1,7 @@
 # ai-toolkit
 
 ## Overview
-Shared AI development toolkit for Claude Code, Claude Chat/Cowork, Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, Google Antigravity, and Codex CLI — skills, agents, lifecycle hooks, persona presets, plugin packaging, and safety constitution, distributed as a global npm package.
+Shared AI development toolkit for Claude Code, Claude Chat/Cowork, 11 editor integrations, and an explicit developer-preview DSH target. It distributes skills, agents, lifecycle hooks, persona presets, plugin packaging, and the safety constitution as a global npm package.
 
 ## Claude Code Runtime Rules
 - Claude Code reads `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, settings, and hooks. It does **not** treat `AGENTS.md` as an instruction source.
@@ -41,6 +41,8 @@ Stale counts = broken user trust. This is non-negotiable.
 # Init:     ai-toolkit install --local    (project-local Claude Code configs only)
 # Init:     ai-toolkit install --local --editors all  (+ all editors: cursor, windsurf, cline, roo, aider, augment, copilot, antigravity, codex)
 # Init:     ai-toolkit install --local --editors cursor,aider  (+ specific editors)
+# DSH project: ai-toolkit install --local --editors dsh  (adds .agents/skills; generic local outputs still apply)
+# DSH profile: ai-toolkit dsh install|update|doctor|uninstall --profile web  (explicit profile lifecycle)
 # Doctor:   ai-toolkit doctor --fix       (auto-repair broken symlinks, hooks, artifacts)
 # Claude app: ai-toolkit claude-app export --verify  (uploadable Chat/Cowork plugin + global instructions)
 # Eject:    ai-toolkit eject              (standalone copy, no toolkit dependency)
@@ -66,6 +68,10 @@ Stale counts = broken user trust. This is non-negotiable.
 ## Key Conventions
 - All scripts live in `scripts/` (Python) and `app/hooks/` (Bash) — never at repo root
 - `install` / `update` = global (`~/.claude/`); add `--local` for project-local setup
+- `--editors dsh` requires `--local`; its DSH-specific output is project `.agents/skills`, while generic `--local` outputs still apply. It is excluded from `all`, auto-detection, and defaults
+- `ai-toolkit dsh install|update|doctor|uninstall --profile <name>` is the only DSH profile mutation surface; pins are DSH `0.1.1-rc.2` plus dsh-codex/orchestrator `1.0.0`
+- Project and profile DSH `--dry-run` commands are read-only. They do not persist an extends lock, project output, profile output, package change, state, or authentication change
+- DSH lifecycle code does not accept provider API keys or perform login; Codex, Claude Code, and GitHub Copilot own authentication, and Copilot Gemini consumes GitHub AI credits
 - `inject_rule_cli.py` always writes to `$TARGET_DIR/.claude/CLAUDE.md`
 - `inject_hook_cli.py` injects hooks into `$TARGET_DIR/.claude/settings.json` — supports local files and HTTPS URLs
 - Skill names: lowercase-hyphen, max 64 chars, unique across `app/skills/`

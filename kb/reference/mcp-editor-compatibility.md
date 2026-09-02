@@ -3,9 +3,9 @@ title: "AI Toolkit - MCP Editor Compatibility"
 category: reference
 service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor, antigravity]
-version: "1.3.1"
+version: "1.4.0"
 created: "2026-04-12"
-last_updated: "2026-08-19"
+last_updated: "2026-08-21"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -19,7 +19,8 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 
 | Editor | Scope | Native Config Path | Adapter Behavior |
 |--------|-------|--------------------|------------------|
-| Claude Code | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` | Merges `mcpServers` while preserving other settings keys |
+| Claude Code | project + global | `.mcp.json`, `~/.claude.json` | Merges `mcpServers` while preserving other top-level keys |
+| Claude Chat / Cowork | global | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `%APPDATA%/Claude/claude_desktop_config.json` (Windows), `~/.config/Claude/claude_desktop_config.json` (Linux); `CLAUDE_USER_DATA_DIR` overrides the root | Emits the app's stdio-only `{command, args, env}` schema and bridges HTTP/SSE servers through `mcp-remote`; preserves `preferences`, `coworkUserFilesPath`, and user-owned servers |
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds Copilot-required `type` and `tools` fields |
 | Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Merges `mcpServers` into settings JSON |
@@ -46,8 +47,31 @@ ai-toolkit mcp install --editor cursor --scope project github --target .
 ai-toolkit mcp install --editor antigravity --scope project context7 --target .
 ai-toolkit mcp install --editor codex --scope project context7 --target .
 ai-toolkit mcp install --editor codex context7
+ai-toolkit mcp install --editor claude-app --scope global context7
 ai-toolkit mcp remove github --editor cursor --scope project --target .
 ```
+
+## Claude Chat / Cowork
+
+The Claude app is the one target whose MCP surface is file-based while everything
+else about it is not. Skills, agents, hooks, and rules reach Chat/Cowork only
+through the uploaded plugin ZIP (`ai-toolkit claude-app export`), because the app
+scans no filesystem location for them. Local MCP servers are different: the app
+parses `claude_desktop_config.json` on startup and reports invalid entries in its
+own warning dialog.
+
+Two constraints shape the adapter:
+
+- **stdio only.** Each entry is validated as `{command, args, env}`. Remote
+  endpoints live in a separate `remoteMcpServers` surface that the app manages
+  through its Connectors UI and does not read from this file. Portable HTTP/SSE
+  templates are therefore wrapped in `mcp-remote`, which negotiates the transport
+  itself, so one bridge shape covers both spellings.
+- **The file is not ours.** It also holds `preferences` and `coworkUserFilesPath`,
+  which the app rewrites on its own. The adapter merges only `mcpServers` and
+  leaves every other key untouched.
+
+The app must be restarted for a config change to take effect.
 
 ## Install Flow Integration
 

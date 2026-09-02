@@ -1,0 +1,11 @@
+{
+  "name": "rag-mcp",
+  "description": "Multi-tenant RAG over knowledge bases — semantic, hybrid, CRAG and multi-hop search via HTTP MCP",
+  "mcpServers": {
+    "rag-mcp": {
+      "type": "http",
+      "url": "http://localhost:8081/mcp/sse"
+    }
+  },
+  "postInstall": "Make sure the rag-mcp server is running on the configured URL (default http://localhost:8081). The /mcp/sse endpoint is unauthenticated by design — restrict access at the network/proxy layer (localhost, VPN, or a reverse-proxy IP allowlist). Edit the installed editor config for a protected non-default deployment. See https://github.com/softspark/rag-mcp for setup."
+}

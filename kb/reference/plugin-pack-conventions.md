@@ -3,17 +3,17 @@ title: "Plugin Pack Conventions"
 category: reference
 service: ai-toolkit
 tags: [plugins, plugin-packs, conventions, manifests, hooks, policy-packs]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-03-28"
-last_updated: "2026-08-18"
-description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across Claude Code and Codex runtimes."
+last_updated: "2026-08-31"
+description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across supported editors."
 ---
 
 # Plugin Pack Conventions
 
 ## Purpose
 
-`ai-toolkit` includes experimental plugin packs under `app/plugins/` for Claude Code and optional global Codex layering, and discovers external packs under `~/.softspark/ai-toolkit/plugins/` (see *Where Packs Live*). These internal pack manifests are distinct from the official uploadable Claude app plugin built by `ai-toolkit claude-app export`.
+`ai-toolkit` includes experimental plugin packs under `app/plugins/` for Claude Code, Codex, Cursor, and Gemini global layering, and discovers external packs under `~/.softspark/ai-toolkit/plugins/` (see *Where Packs Live*). These internal pack manifests are distinct from the official uploadable Claude app plugin built by `ai-toolkit claude-app export`.
 
 ## Where Packs Live
 
@@ -69,6 +69,7 @@ app/plugins/<pack-name>/
 ├── plugin.json
 ├── README.md
 ├── hooks/        # optional, executable if present
+├── mcp/          # optional, pack-local MCP templates
 ├── rules/        # optional
 ├── skills/       # optional
 ├── agents/       # optional
@@ -92,6 +93,14 @@ Required keys:
 - `skills`
 - `rules`
 - `hooks`
+- `mcp` (optional MCP template names)
+
+An MCP reference such as `"rag-mcp-legal"` resolves first to the pack-owned
+`mcp/rag-mcp-legal.json`, then to the built-in
+`app/mcp-templates/rag-mcp-legal.json`. Each template must use the same `name`
+as the reference and provide a non-empty `mcpServers` object. A localhost HTTP
+template must also include a `postInstall` warning that the endpoint is
+`unauthenticated`.
 
 ## Naming Rules
 
@@ -111,10 +120,12 @@ Required keys:
 ## CLI Management
 
 ```bash
-ai-toolkit plugin list               # show all 12 packs with install status
+ai-toolkit plugin list               # show all available packs with install status
 ai-toolkit plugin install --editor claude <name>   # Claude Code global target
 ai-toolkit plugin install --editor codex <name>    # Codex global target
-ai-toolkit plugin install --editor all --all       # install all 12 packs for both runtimes
+ai-toolkit plugin install --editor cursor <name>   # Cursor global target
+ai-toolkit plugin install --editor gemini <name>   # Gemini CLI global target
+ai-toolkit plugin install --editor all --all       # install all available packs for all supported editors
 ai-toolkit plugin update --editor all --all        # update all installed packs
 ai-toolkit plugin clean <name>       # prune data older than 90 days (default)
 ai-toolkit plugin clean <name> --days 30  # prune data older than 30 days
@@ -125,21 +136,25 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 
 ### What `plugin install` Does
 
-1. **Parses** `--editor claude|codex|all` (default: `claude`)
+1. **Parses** `--editor claude|codex|cursor|gemini|all` (default: `claude`)
 2. **Copies** plugin-specific hooks to runtime-owned storage: Claude uses `~/.softspark/ai-toolkit/hooks/plugin-<pack>-<hook>.sh`; Codex uses `$CODEX_HOME/ai-toolkit-hooks/plugin-<pack>-<hook>.sh`
 3. **Copies** shared plugin scripts to `~/.softspark/ai-toolkit/plugin-scripts/<pack>/`
 4. **Runs** init scripts if present (e.g. `init_db.py` for memory-pack — safe to re-run, preserves data)
 5. **Claude Code target**: links missing agents/skills into `~/.claude/`, injects plugin-local rules into `~/.claude/CLAUDE.md`, and merges plugin hook entries into `~/.claude/settings.json`
 6. **Codex target**: bootstraps `$CODEX_HOME/AGENTS.md`, `$HOME/.agents/skills`, `$CODEX_HOME/hooks.json`, and self-contained `$CODEX_HOME/ai-toolkit-hooks`, then layers plugin-specific rules and hooks on top; it does not write `~/AGENTS.md` or `.agents/rules/`
-7. **Records** installed state per runtime in `~/.softspark/ai-toolkit/plugins.json`
+7. **Cursor target**: writes each pack-owned rule as `~/.cursor/rules/plugin-<pack>-<rule>.mdc` with `alwaysApply: true`; files are exact-hash owned and collisions are rejected
+8. **Gemini target**: marker-injects each pack-owned rule into `~/.gemini/GEMINI.md` as `plugin-<pack>-<rule>`, preserving all unrelated content
+9. **Records** installed state per runtime in `~/.softspark/ai-toolkit/plugins.json`
+10. **MCP assets**: installs `includes.mcp` into the selected editor's global MCP config, rejects unowned same-name entries, and records the exact normalized server configuration under the plugin's ownership state
 
 ### What `plugin update` Does
 
-1. **Removes** existing plugin runtime entries for the selected editor(s) (same as `remove`)
-2. **Reinstalls** from the current source (same as `install`)
-3. **Preserves plugin data** (e.g. memory-pack SQLite database is never deleted)
-4. Shared plugin scripts/hooks are kept if another runtime still has the same pack installed
-5. `--all` updates only currently installed packs for the selected runtime(s)
+1. **Preflights** MCP and native-rule collisions before changing any plugin state, skill, rule, hook, or script
+2. **Removes** existing plugin runtime entries for the selected editor(s) (same as `remove`)
+3. **Reinstalls** from the current source (same as `install`)
+4. **Preserves plugin data** (e.g. memory-pack SQLite database is never deleted)
+5. Shared plugin scripts/hooks are kept if another runtime still has the same pack installed
+6. `--all` updates only currently installed packs for the selected runtime(s)
 
 ### What `plugin clean` Does
 
@@ -151,10 +166,12 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 
 1. **Claude Code target**: strips plugin hook entries from `~/.claude/settings.json` and removes plugin-local rule sections from `~/.claude/CLAUDE.md`
 2. **Codex target**: strips only command handlers carrying the exact `AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-<pack>` marker from `$CODEX_HOME/hooks.json`, removes owned `$CODEX_HOME/ai-toolkit-hooks/plugin-<pack>-*` assets, and removes the pack's marker-bounded sections from `$CODEX_HOME/AGENTS.md`
-3. **Claude/shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
-4. **Updates** `plugins.json` state per runtime
-5. **Leaves** core agents/skills untouched (they belong to the base install)
-6. **Leaves** plugin data intact (e.g. `memory.db` — use `clean` to prune)
+3. **Cursor/Gemini rules**: removes only exact content recorded in `rule_ownership`; foreign or user-modified files/sections are preserved with a warning
+4. **Claude/shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
+5. **Updates** `plugins.json` state per runtime
+6. **Leaves** core agents/skills untouched (they belong to the base install)
+7. **Leaves** plugin data intact (e.g. `memory.db` — use `clean` to prune)
+8. **MCP cleanup**: removes only unchanged servers recorded as owned by that plugin; user-created, foreign, or manually changed entries are preserved with a warning
 
 ### Data Retention (memory-pack)
 
@@ -178,7 +195,7 @@ time.
 links every core skill and agent, so a manifest naming only core assets resolves
 to nothing: `plugin install` reports `(0 file items)` and no file appears on
 disk. This is not a subtle degradation — it is a complete no-op, identical on
-every profile (`minimal`, `standard`, `strict`) and on both runtimes.
+every profile (`minimal`, `standard`, `strict`) and on every supported editor.
 
 Nine packs were removed in v4.20.0 for failing this: `csharp`, `java`, `kotlin`,
 `ruby`, `rust`, `swift`, `frontend`, `research`, `security`. Every one declared

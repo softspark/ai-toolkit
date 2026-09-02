@@ -12,7 +12,7 @@ MCP_MANAGER="python3 $TOOLKIT_DIR/scripts/mcp_manager.py"
 setup() {
     TEST_TMP="$(mktemp -d)"
     export HOME="$TEST_TMP"
-    unset CODEX_HOME COPILOT_HOME
+    unset CODEX_HOME COPILOT_HOME CLAUDE_USER_DATA_DIR
 }
 
 teardown() {
@@ -26,9 +26,78 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
-@test "mcp list: shows 26 templates" {
+@test "mcp list: shows 28 templates" {
     run $MCP_MANAGER list
-    echo "$output" | grep -q '26 templates available'
+    echo "$output" | grep -q '28 templates available'
+}
+
+@test "mcp list: exposes general and Polish legal RAG templates" {
+    run $MCP_MANAGER list
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q '^rag-mcp '
+    echo "$output" | grep -q '^rag-mcp-legal '
+}
+
+@test "rag MCP templates use separate localhost endpoints and warn about unauthenticated access" {
+    run python3 - <<PY
+import json
+from pathlib import Path
+
+templates = Path("$TOOLKIT_DIR/app/mcp-templates")
+general = json.loads((templates / "rag-mcp.json").read_text(encoding="utf-8"))
+legal = json.loads((templates / "rag-mcp-legal.json").read_text(encoding="utf-8"))
+
+assert general == {
+    "name": "rag-mcp",
+    "description": "Multi-tenant RAG over knowledge bases — semantic, hybrid, CRAG and multi-hop search via HTTP MCP",
+    "mcpServers": {
+        "rag-mcp": {
+            "type": "http",
+            "url": "http://localhost:8081/mcp/sse",
+        },
+    },
+    "postInstall": "Make sure the rag-mcp server is running on the configured URL (default http://localhost:8081). The /mcp/sse endpoint is unauthenticated by design — restrict access at the network/proxy layer (localhost, VPN, or a reverse-proxy IP allowlist). Edit the installed editor config for a protected non-default deployment. See https://github.com/softspark/rag-mcp for setup.",
+}
+assert legal == {
+    "name": "rag-mcp-legal",
+    "description": "Dedicated Polish legal RAG for statutes, contracts, firm knowledge and matter documents via HTTP MCP",
+    "mcpServers": {
+        "rag-mcp-legal": {
+            "type": "http",
+            "url": "http://localhost:8082/mcp/sse",
+        },
+    },
+    "postInstall": "Run make up-legal from the rag-mcp repository before connecting. The default endpoint is http://localhost:8082/mcp/sse. It is unauthenticated by design: keep it on localhost or behind a trusted VPN/reverse-proxy network boundary, never expose it directly to an untrusted network. Edit the installed editor config for a protected non-default deployment.",
+}
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "rag MCP templates render concrete usable URLs for Cursor and Codex" {
+    run $MCP_MANAGER install --editor cursor --scope global rag-mcp
+    [ "$status" -eq 0 ]
+    run $MCP_MANAGER install --editor codex --scope global rag-mcp-legal
+    [ "$status" -eq 0 ]
+
+    run python3 - "$TEST_TMP" <<'PY'
+import json
+import sys
+import tomllib
+from pathlib import Path
+from urllib.parse import urlparse
+
+home = Path(sys.argv[1])
+cursor = json.loads((home / ".cursor" / "mcp.json").read_text(encoding="utf-8"))
+cursor_url = cursor["mcpServers"]["rag-mcp"]["url"]
+assert cursor_url == "http://localhost:8081/mcp/sse", cursor_url
+assert urlparse(cursor_url).hostname == "localhost", cursor_url
+
+codex = tomllib.loads((home / ".codex" / "config.toml").read_text(encoding="utf-8"))
+codex_url = codex["mcp_servers"]["rag-mcp-legal"]["url"]
+assert codex_url == "http://localhost:8082/mcp/sse", codex_url
+assert urlparse(codex_url).hostname == "localhost", codex_url
+PY
+    [ "$status" -eq 0 ]
 }
 
 @test "mcp list: output contains github" {
@@ -828,6 +897,276 @@ with open('$AI_TOOLKIT_HOME/state.json') as f:
     state = json.load(f)
 assert 'jira' not in state.get('mcp_templates', []), f'jira still tracked: {state}'
 "
+    [ "$status" -eq 0 ]
+}
+
+# ── Claude app (Chat / Cowork) ─────────────────────────────────────────────
+
+# The Claude app reads claude_desktop_config.json for local MCP servers and
+# validates each entry as {command, args, env}. Remote endpoints live in a
+# separate app-managed surface, so HTTP/SSE templates must be bridged through
+# mcp-remote rather than written verbatim.
+
+_claude_app_config() {
+    if [ "$(uname -s)" = "Darwin" ]; then
+        printf '%s' "$TEST_TMP/Library/Application Support/Claude/claude_desktop_config.json"
+    else
+        printf '%s' "$TEST_TMP/.config/Claude/claude_desktop_config.json"
+    fi
+}
+
+@test "mcp editors: lists the Claude app adapter as global-only" {
+    run $MCP_MANAGER editors
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'claude-app.*global.*claude_desktop_config.json'
+}
+
+@test "Claude app MCP: global install creates the config and its parent tree" {
+    run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -eq 0 ]
+    config="$(_claude_app_config)"
+    [ -f "$config" ]
+    python3 -c "
+import json, sys
+config = json.load(open(sys.argv[1]))
+assert 'filesystem' in config['mcpServers'], config
+assert config['mcpServers']['filesystem']['command'] == 'npx'
+" "$config"
+}
+
+@test "Claude app MCP: preserves preferences, coworkUserFilesPath and user servers" {
+    config="$(_claude_app_config)"
+    mkdir -p "$(dirname "$config")"
+    printf '%s\n' '{"mcpServers":{"user-owned":{"command":"true"}},"preferences":{"theme":"dark"},"coworkUserFilesPath":"/Users/test/Claude"}' > "$config"
+
+    run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json, sys
+config = json.load(open(sys.argv[1]))
+assert config['preferences'] == {'theme': 'dark'}, config
+assert config['coworkUserFilesPath'] == '/Users/test/Claude', config
+assert config['mcpServers']['user-owned'] == {'command': 'true'}, config
+assert 'filesystem' in config['mcpServers'], config
+" "$config"
+}
+
+@test "Claude app MCP: repeated install is byte-identical" {
+    run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -eq 0 ]
+    config="$(_claude_app_config)"
+    cp "$config" "$TEST_TMP/claude-app.first"
+    run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -eq 0 ]
+    cmp "$TEST_TMP/claude-app.first" "$config"
+}
+
+@test "Claude app MCP: bridges HTTP and SSE servers through mcp-remote" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+sys.path.insert(0, str(toolkit / "scripts"))
+from mcp_editors import _normalize_server
+
+http = _normalize_server(
+    "claude-app", {"type": "http", "url": "http://localhost:8081/mcp/sse"}
+)
+assert http == {
+    "command": "npx",
+    "args": ["-y", "mcp-remote", "http://localhost:8081/mcp/sse"],
+}, http
+
+sse = _normalize_server(
+    "claude-app",
+    {
+        "type": "sse",
+        "serverUrl": "https://example.invalid/mcp",
+        "headers": {"Authorization": "Bearer TEST_TOKEN"},
+    },
+)
+assert sse == {
+    "command": "npx",
+    "args": [
+        "-y",
+        "mcp-remote",
+        "https://example.invalid/mcp",
+        "--header",
+        "Authorization: Bearer TEST_TOKEN",
+    ],
+}, sse
+
+stdio = _normalize_server(
+    "claude-app",
+    {
+        "command": "npx",
+        "args": ["-y", "server"],
+        "env": {"TOKEN": "x"},
+        "_source": "external",
+        "type": "local",
+        "tools": ["*"],
+    },
+)
+assert stdio == {
+    "command": "npx",
+    "args": ["-y", "server"],
+    "env": {"TOKEN": "x"},
+}, stdio
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "Claude app MCP: rejects an entry with neither command nor URL without mutating config" {
+    config="$(_claude_app_config)"
+    mkdir -p "$(dirname "$config")"
+    printf '%s\n' '{"mcpServers":{"user-owned":{"command":"true"}}}' > "$config"
+    cp "$config" "$TEST_TMP/claude-app.before"
+
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+from mcp_editors import install_servers
+
+install_servers(
+    ["claude-app"], {"broken": {"env": {"A": "b"}}}, scope="global", home=target
+)
+PY
+    [ "$status" -ne 0 ]
+    cmp "$TEST_TMP/claude-app.before" "$config"
+}
+
+@test "Claude app MCP: rejects an entry carrying both command and URL" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+from mcp_editors import install_servers
+
+install_servers(
+    ["claude-app"],
+    {"ambiguous": {"command": "npx", "url": "https://example.invalid/mcp"}},
+    scope="global",
+    home=target,
+)
+PY
+    [ "$status" -ne 0 ]
+}
+
+@test "Claude app MCP: CLAUDE_USER_DATA_DIR redirects the config path" {
+    root="$TEST_TMP/custom-user-data"
+    mkdir -p "$root"
+    CLAUDE_USER_DATA_DIR="$root" run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -eq 0 ]
+    [ -f "$root/claude_desktop_config.json" ]
+    [ ! -f "$(_claude_app_config)" ]
+}
+
+@test "Claude app MCP: CLAUDE_USER_DATA_DIR rejects a relative path" {
+    CLAUDE_USER_DATA_DIR="relative/dir" run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -ne 0 ]
+}
+
+@test "Claude app MCP: CLAUDE_USER_DATA_DIR must exist" {
+    CLAUDE_USER_DATA_DIR="$TEST_TMP/missing" run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -ne 0 ]
+}
+
+@test "Claude app MCP: CLAUDE_USER_DATA_DIR rejects a symlinked root" {
+    real="$TEST_TMP/real-user-data"
+    mkdir -p "$real"
+    ln -s "$real" "$TEST_TMP/linked-user-data"
+    CLAUDE_USER_DATA_DIR="$TEST_TMP/linked-user-data" run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -ne 0 ]
+    [ ! -f "$real/claude_desktop_config.json" ]
+}
+
+@test "Claude app MCP: removal keeps user servers and top-level data" {
+    config="$(_claude_app_config)"
+    run $MCP_MANAGER install --editor claude-app --scope global filesystem
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json, sys
+path = sys.argv[1]
+config = json.load(open(path))
+config['preferences'] = {'theme': 'dark'}
+config['mcpServers']['user-owned'] = {'command': 'true'}
+json.dump(config, open(path, 'w'), indent=2)
+" "$config"
+
+    run $MCP_MANAGER remove --editor claude-app --scope global filesystem
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json, sys
+config = json.load(open(sys.argv[1]))
+assert 'filesystem' not in config['mcpServers'], config
+assert config['mcpServers']['user-owned'] == {'command': 'true'}, config
+assert config['preferences'] == {'theme': 'dark'}, config
+" "$config"
+}
+
+@test "Claude app MCP: transaction rolls the canonical config back after late replace failure" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit = Path(sys.argv[1])
+target = Path(sys.argv[2])
+sys.path.insert(0, str(toolkit / "scripts"))
+import mcp_editors
+
+canonical = target / ".mcp.json"
+native = mcp_editors.resolve_editor_path("claude-app", "global", home=target)
+native.parent.mkdir(parents=True)
+canonical.write_text('{"mcpServers":{"canonical-user":{"command":"true"}}}\n')
+native.write_text('{"mcpServers":{"native-user":{"command":"true"}}}\n')
+canonical_before = canonical.read_bytes()
+native_before = native.read_bytes()
+
+updates = mcp_editors.prepare_install_servers(
+    ["claude"],
+    {"github": {"command": "npx", "args": ["-y", "server"]}},
+    scope="project",
+    project_dir=target,
+)
+updates += mcp_editors.prepare_install_servers(
+    ["claude-app"],
+    {"github": {"command": "npx", "args": ["-y", "server"]}},
+    scope="global",
+    home=target,
+)
+real_replace = mcp_editors.os.replace
+failed = False
+
+
+def fail_claude_app_once(source, destination):
+    global failed
+    if Path(destination) == native and not failed:
+        failed = True
+        raise OSError("injected Claude app replace failure")
+    return real_replace(source, destination)
+
+
+mcp_editors.os.replace = fail_claude_app_once
+try:
+    mcp_editors.apply_config_updates(updates)
+except OSError as error:
+    assert "injected Claude app replace failure" in str(error)
+else:
+    raise AssertionError("transaction must surface the injected failure")
+finally:
+    mcp_editors.os.replace = real_replace
+
+assert canonical.read_bytes() == canonical_before
+assert native.read_bytes() == native_before
+PY
     [ "$status" -eq 0 ]
 }
 

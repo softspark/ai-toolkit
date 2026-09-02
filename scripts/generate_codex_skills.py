@@ -3,7 +3,7 @@
 # Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
 # Source: https://github.com/softspark/ai-toolkit
 
-"""Mirror the ai-toolkit skill catalogue into Codex ``.agents/skills/``.
+"""Mirror the ai-toolkit skill catalogue into ``.agents/skills/``.
 
 OpenAI Codex CLI discovers Agent Skills from ``.agents/skills/`` in the
 repository tree, plus user/admin/system skill locations. Unlike the Augment
@@ -13,7 +13,8 @@ on disk, so this generator syncs every skill in ``app/skills/`` into
 
 The standalone generator keeps ``enable_codex_skills=False`` as a compatibility
 default. Selecting Codex in the main installer installs this catalog
-automatically; ``--codex-skills`` remains an explicit refresh option.
+automatically; ``--codex-skills`` remains an explicit refresh option. DSH
+reuses the same one-level managed surface without receiving other Codex config.
 
 Implementation:
   * Native Codex-compatible skills are symlinked to canonical ``app/skills``.
@@ -40,7 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from codex_skill_adapter import (
     cleanup_codex_skills,
-    prepare_codex_skills_dir,
+    managed_skill_surface_transaction,
     sync_codex_skill,
     unmanaged_codex_skill_names,
 )
@@ -104,27 +105,28 @@ def generate(target_dir: Path, enable_codex_skills: bool = False) -> None:
     if not enable_codex_skills:
         return
 
-    codex_skills_dir = prepare_codex_skills_dir(target_dir)
-
     sources = _iter_source_skills()
-    user_names = unmanaged_codex_skill_names(codex_skills_dir, skills_dir)
-
     linked = 0
     adapted = 0
     skipped = 0
-    for skill in sources:
-        if skill.name in user_names:
-            skipped += 1
-            continue
-        mode = sync_codex_skill(skill, codex_skills_dir)
-        if mode == "linked":
-            linked += 1
-        elif mode == "adapted":
-            adapted += 1
-        else:
-            skipped += 1
+    with managed_skill_surface_transaction(target_dir, skills_dir) as transaction:
+        codex_skills_dir = transaction.skills_dst
+        user_names = unmanaged_codex_skill_names(codex_skills_dir, skills_dir)
 
-    cleanup_codex_skills(codex_skills_dir, skills_dir, user_names)
+        for skill in sources:
+            if skill.name in user_names:
+                skipped += 1
+                continue
+            mode = sync_codex_skill(skill, codex_skills_dir)
+            if mode == "linked":
+                linked += 1
+            elif mode == "adapted":
+                adapted += 1
+            else:
+                skipped += 1
+
+        cleanup_codex_skills(codex_skills_dir, skills_dir, user_names)
+        transaction.commit({"codex"})
 
     print(
         f"  Codex skill mirror: {_count_entries(codex_skills_dir)} skills "

@@ -76,7 +76,7 @@ from config_resolver import (
 )
 from config_merger import ConfigMergeError, merge_config_chain
 from config_validator import validate_project_config
-from config_lock import save_lock_file
+from config_lock import LOCK_FILENAME, save_lock_file
 
 
 # ---------------------------------------------------------------------------
@@ -317,7 +317,7 @@ VALID_LANGS = {"python", "typescript", "golang", "go", "rust", "java", "kotlin",
 
 def validate_args(cfg: dict) -> None:
     """Validate parsed arguments — exit non-zero on invalid values."""
-    from install_steps.ai_tools import ALL_EDITORS
+    from install_steps.ai_tools import LOCAL_ONLY_EDITORS, SELECTABLE_EDITORS
 
     errors: list[str] = []
 
@@ -339,8 +339,13 @@ def validate_args(cfg: dict) -> None:
     if cfg["editors"] and cfg["editors"] != "all":
         for e in cfg["editors"].split(","):
             e = e.strip()
-            if e and e not in ALL_EDITORS:
-                errors.append(f"Unknown editor: '{e}' (valid: {', '.join(ALL_EDITORS)}, all)")
+            if e and e not in SELECTABLE_EDITORS:
+                errors.append(
+                    f"Unknown editor: '{e}' "
+                    f"(valid: {', '.join(SELECTABLE_EDITORS)}, all)"
+                )
+            if e in LOCAL_ONLY_EDITORS and not cfg["local"]:
+                errors.append(f"Editor '{e}' is project-local and requires --local")
 
     # Validate --lang
     if cfg["lang"]:
@@ -536,6 +541,8 @@ def resolve_extends_config(
     project_dir: Path,
     config_path: str = "",
     refresh: bool = False,
+    *,
+    persist_lock: bool = True,
 ) -> dict | None:
     """Resolve .softspark-toolkit.json extends and return merged config.
 
@@ -574,7 +581,12 @@ def resolve_extends_config(
     print(f"  Resolving extends: {extends}...")
 
     try:
-        result = resolve_extends(extends, config_root, refresh=refresh)
+        result = resolve_extends(
+            extends,
+            config_root,
+            refresh=refresh,
+            persistent=persist_lock,
+        )
     except ConfigResolverError as e:
         print(f"  ✗ Resolution failed: {e}")
         sys.exit(1)
@@ -611,13 +623,15 @@ def resolve_extends_config(
         "overrides_applied": merge_result.overrides_applied,
     }
 
-    # Generate lock file
-    lock_path = save_lock_file(
-        config_root,
-        config_metas,
-        ai_toolkit_version=_get_toolkit_version(),
-    )
-    print(f"  Saved: {lock_path.name}")
+    if persist_lock:
+        lock_path = save_lock_file(
+            config_root,
+            config_metas,
+            ai_toolkit_version=_get_toolkit_version(),
+        )
+        print(f"  Saved: {lock_path.name}")
+    else:
+        print(f"  Would save: {LOCK_FILENAME} (dry-run)")
 
     return merge_result.merged
 
@@ -736,7 +750,10 @@ def main() -> None:
         config_path_arg: str = cfg["config"]
         refresh_base: bool = cfg["refresh_base"]
         merged_config = resolve_extends_config(
-            project_dir, config_path=config_path_arg, refresh=refresh_base,
+            project_dir,
+            config_path=config_path_arg,
+            refresh=refresh_base,
+            persist_lock=not dry_run,
         )
         if merged_config:
             cfg = _apply_merged_config(merged_config, cfg)
@@ -830,6 +847,18 @@ def main() -> None:
             )
             if is_new:
                 print(f"  Registered project in {TOOLKIT_DATA_DIR / 'projects.json'}")
+
+    # A global install is authoritative for Claude Code, so an uploaded Claude
+    # app plugin must not feed it in parallel. Uploading the ZIP re-enables the
+    # plugin every time, so this is re-asserted on every install/update rather
+    # than left to whoever remembers to run `doctor --fix` afterwards.
+    if not local and not dry_run:
+        from doctor import disable_toolkit_plugins_for_claude_code
+        try:
+            for key in disable_toolkit_plugins_for_claude_code():
+                print(f"  Disabled Claude app plugin for Claude Code: {key}")
+        except OSError as error:
+            print(f"  WARNING: could not disable Claude app plugin: {error}")
 
     print_summary(local=local)
 

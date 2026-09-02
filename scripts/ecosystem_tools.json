@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-08-19",
+  "last_updated": "2026-09-01",
   "tools": [
     {
       "id": "claude-code",
@@ -110,20 +110,75 @@
         "UI: Customize > Plugins",
         ".claude-plugin/plugin.json",
         "claude-app/hooks/hooks.json",
-        "claude-app/skills/*/SKILL.md"
+        "claude-app/skills/*/SKILL.md",
+        "~/Library/Application Support/Claude/claude_desktop_config.json",
+        "%APPDATA%/Claude/claude_desktop_config.json",
+        "~/.config/Claude/claude_desktop_config.json"
       ],
       "our_generators": [
-        "scripts/claude_app.py"
+        "scripts/claude_app.py",
+        "scripts/mcp_editors.py"
       ],
-      "status_note": "Claude Chat/Desktop/Cowork does not scan ~/.claude/rules, CLAUDE.md, or Claude Code's user settings. ai-toolkit exports an uploadable plugin ZIP plus Cowork global instructions. Skills work in Chat and Cowork; plugin hooks and sub-agents run only in Cowork.",
+      "status_note": "Claude Chat/Desktop/Cowork does not scan ~/.claude/rules, CLAUDE.md, or Claude Code's user settings, so skills, agents, hooks, and rules ship only as an uploadable plugin ZIP plus Cowork global instructions. Local MCP servers are the exception: the app reads claude_desktop_config.json directly, so `ai-toolkit mcp install --editor claude-app --scope global` configures them without a plugin. That file accepts stdio entries only; HTTP/SSE templates are bridged through mcp-remote. Skills work in Chat and Cowork; plugin hooks and sub-agents run only in Cowork.",
       "capability_markers": [
         "Global instructions",
         "Folder instructions",
         "plugins",
         "skills",
-        "sub-agents"
+        "sub-agents",
+        "MCP"
       ],
       "version_probe": null
+    },
+    {
+      "id": "dsh",
+      "display_name": "DeepSeek Harness",
+      "kind": "harness",
+      "status": "developer-preview",
+      "selection_policy": "explicit-only",
+      "reviewed_version": "0.1.1-rc.2",
+      "excluded_from": [
+        "editors-all",
+        "auto-detect",
+        "defaults"
+      ],
+      "urls": {
+        "docs": "https://deepseek-harness.github.io/deepseek-harness/",
+        "release_notes": "https://github.com/deepseek-ai/deepseek-harness/releases",
+        "reviewed_release": "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2",
+        "reviewed_cli_docs": "https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md",
+        "reviewed_skill_docs": "https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md"
+      },
+      "config_paths": [
+        ".agents/skills/*/SKILL.md",
+        "$DSH_HOME/profiles/<profile>/package.json",
+        "$DSH_HOME/profiles/<profile>/node_modules/@softspark/dsh-*",
+        "$DSH_HOME/.agent-presets/softspark-orchestrator"
+      ],
+      "our_generators": [
+        "scripts/generate_codex_skills.py"
+      ],
+      "our_lifecycle": [
+        "scripts/install_steps/dsh.py"
+      ],
+      "lifecycle_commands": [
+        "ai-toolkit dsh install --profile web",
+        "ai-toolkit dsh update --profile web",
+        "ai-toolkit dsh doctor --profile web",
+        "ai-toolkit dsh uninstall --profile web"
+      ],
+      "status_note": "Community compatibility target maintained by SoftSpark. DeepSeek AI has not endorsed this integration. ai-toolkit reuses its native skill generator for project .agents/skills output and manages exact @softspark/dsh-codex@1.0.0 and @softspark/dsh-orchestrator@1.0.1 packages only through explicit profile lifecycle commands. Upstream has newer prereleases, but this entry remains pinned to the reviewed DSH 0.1.1-rc.2 contract pending qualification.",
+      "capability_markers": [
+        "Developer preview",
+        "profiles",
+        "dsh plugin",
+        "skills",
+        "Agent Preset"
+      ],
+      "version_probe": {
+        "kind": "command",
+        "command": "dsh --version"
+      }
     },
     {
       "id": "cursor",

@@ -9,8 +9,11 @@ Used by both validate.py and plugin.py.
 
 Stdlib-only.
 """
+
 from __future__ import annotations
 
+import json
+import re
 from pathlib import Path
 
 
@@ -28,27 +31,60 @@ REQUIRED_FIELDS = (
 VALID_STATUSES = frozenset({"stable", "experimental", "deprecated"})
 
 # Valid plugin types
-VALID_TYPES = frozenset({
-    "behavioral",
-    "language",
-    "domain",
-    "integration",
-    "plugin-pack",
-    "policy-pack",
-    "hook-pack",
-})
+VALID_TYPES = frozenset(
+    {
+        "behavioral",
+        "language",
+        "domain",
+        "integration",
+        "plugin-pack",
+        "policy-pack",
+        "hook-pack",
+    }
+)
 
 # Valid hook event names (must match validate.py VALID_HOOK_EVENTS)
-VALID_HOOK_EVENTS = frozenset({
-    "SessionStart", "SessionEnd", "UserPromptSubmit", "Notification",
-    "MessageDisplay", "PreToolUse", "PostToolUse", "PostToolUseFailure",
-    "PostToolBatch", "Stop", "StopFailure", "UserPromptExpansion",
-    "SubagentStart", "SubagentStop", "PreCompact", "PostCompact",
-    "PermissionRequest", "PermissionDenied", "Elicitation", "ElicitationResult",
-    "TaskCreated", "TaskCompleted", "TeammateIdle", "WorktreeCreate",
-    "WorktreeRemove", "CwdChanged", "FileChanged", "ConfigChange",
-    "DirectoryAdded", "Setup", "InstructionsLoaded",
-})
+VALID_HOOK_EVENTS = frozenset(
+    {
+        "SessionStart",
+        "SessionEnd",
+        "UserPromptSubmit",
+        "Notification",
+        "MessageDisplay",
+        "PreToolUse",
+        "PostToolUse",
+        "PostToolUseFailure",
+        "PostToolBatch",
+        "Stop",
+        "StopFailure",
+        "UserPromptExpansion",
+        "SubagentStart",
+        "SubagentStop",
+        "PreCompact",
+        "PostCompact",
+        "PermissionRequest",
+        "PermissionDenied",
+        "Elicitation",
+        "ElicitationResult",
+        "TaskCreated",
+        "TaskCompleted",
+        "TeammateIdle",
+        "WorktreeCreate",
+        "WorktreeRemove",
+        "CwdChanged",
+        "FileChanged",
+        "ConfigChange",
+        "DirectoryAdded",
+        "Setup",
+        "InstructionsLoaded",
+    }
+)
+
+MCP_REFERENCE_PATTERN = re.compile(r"[a-z0-9][a-z0-9-]*")
+LOCAL_ENDPOINT_MARKERS = ("localhost", "127.0.0.1", "[::1]")
+BUILTIN_MCP_TEMPLATES_DIR = (
+    Path(__file__).resolve().parent.parent / "app" / "mcp-templates"
+)
 
 
 def _validate_requires(data: dict) -> list[str]:
@@ -81,11 +117,18 @@ def validate_manifest(data: dict, pack_dir: Path | None = None) -> list[str]:
         if field not in data or not data[field]:
             errors.append(f"Missing required field: {field}")
     errors.extend(_validate_requires(data))
+    name = data.get("name")
+    if name and (
+        not isinstance(name, str) or MCP_REFERENCE_PATTERN.fullmatch(name) is None
+    ):
+        errors.append("name must be a safe lowercase-hyphen identifier")
 
     # Validate status
     status = data.get("status", "")
     if status and status not in VALID_STATUSES:
-        errors.append(f"Invalid status '{status}' (valid: {', '.join(sorted(VALID_STATUSES))})")
+        errors.append(
+            f"Invalid status '{status}' (valid: {', '.join(sorted(VALID_STATUSES))})"
+        )
 
     # Validate type
     plugin_type = data.get("type", "")
@@ -101,20 +144,41 @@ def validate_manifest(data: dict, pack_dir: Path | None = None) -> list[str]:
     elif not isinstance(includes, dict):
         errors.append("'includes' must be a dictionary")
     else:
-        for key in ("agents", "skills", "rules", "hooks"):
+        for key in ("agents", "skills", "rules", "hooks", "mcp"):
             val = includes.get(key, [])
             if not isinstance(val, list):
                 errors.append(f"includes.{key} must be a list")
+
+        mcp_references = includes.get("mcp", [])
+        if isinstance(mcp_references, list):
+            invalid_mcp_name = False
+            for reference in mcp_references:
+                if (
+                    not isinstance(reference, str)
+                    or MCP_REFERENCE_PATTERN.fullmatch(reference) is None
+                ):
+                    invalid_mcp_name = True
+                    continue
+                if pack_dir is not None:
+                    errors.extend(_validate_mcp_reference(reference, pack_dir))
+            if invalid_mcp_name:
+                errors.append(
+                    "includes.mcp entries must be safe lowercase-hyphen names"
+                )
 
     # Validate hook_events if present
     hook_events = data.get("hook_events", {})
     if hook_events:
         if not isinstance(hook_events, dict):
-            errors.append("'hook_events' must be a dictionary mapping hook filenames to event names")
+            errors.append(
+                "'hook_events' must be a dictionary mapping hook filenames to event names"
+            )
         else:
             for hook_file, event in hook_events.items():
                 if event not in VALID_HOOK_EVENTS:
-                    errors.append(f"hook_events['{hook_file}']: invalid event '{event}'")
+                    errors.append(
+                        f"hook_events['{hook_file}']: invalid event '{event}'"
+                    )
 
     # Validate hook files exist (if pack_dir provided)
     # Hooks can come from the plugin's own hooks/ dir OR from core app/hooks/
@@ -134,6 +198,58 @@ def validate_manifest(data: dict, pack_dir: Path | None = None) -> list[str]:
                 errors.append(f"Hook file not found: {hook_file}")
 
     return errors
+
+
+def _validate_mcp_reference(reference: str, pack_dir: Path) -> list[str]:
+    candidates = (
+        pack_dir / "mcp" / f"{reference}.json",
+        BUILTIN_MCP_TEMPLATES_DIR / f"{reference}.json",
+    )
+    template_path = next((path for path in candidates if path.is_file()), None)
+    if template_path is None:
+        return [f"MCP template not found: {reference}"]
+    if template_path.is_symlink():
+        return [f"MCP template must not be symlinked: {reference}"]
+    try:
+        template = json.loads(template_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return [f"Invalid MCP template JSON: {reference}"]
+    if not isinstance(template, dict) or template.get("name") != reference:
+        return [f"MCP template name mismatch: {reference}"]
+    servers = template.get("mcpServers")
+    if not isinstance(servers, dict) or not servers:
+        return [f"MCP template requires non-empty mcpServers: {reference}"]
+    if not all(_is_valid_mcp_server(name, server) for name, server in servers.items()):
+        return [f"MCP template has invalid server entries: {reference}"]
+    local_remote = any(
+        isinstance(server.get("url"), str)
+        and any(marker in server["url"].lower() for marker in LOCAL_ENDPOINT_MARKERS)
+        for server in servers.values()
+    )
+    warning = template.get("postInstall", "")
+    if local_remote and (
+        not isinstance(warning, str) or "unauthenticated" not in warning.lower()
+    ):
+        return [
+            "Local HTTP MCP template must warn that access is unauthenticated: "
+            f"{reference}"
+        ]
+    return []
+
+
+def _is_valid_mcp_server(name: object, server: object) -> bool:
+    if (
+        not isinstance(name, str)
+        or MCP_REFERENCE_PATTERN.fullmatch(name) is None
+        or not isinstance(server, dict)
+    ):
+        return False
+    transports = [key for key in ("command", "url") if key in server]
+    return (
+        len(transports) == 1
+        and isinstance(server[transports[0]], str)
+        and bool(server[transports[0]].strip())
+    )
 
 
 def validate_references(

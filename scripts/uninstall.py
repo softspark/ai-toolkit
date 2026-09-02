@@ -37,6 +37,11 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import app_dir, toolkit_dir
+from codex_skill_adapter import (
+    ADAPTED_MARKERS,
+    SKILL_SURFACE_OWNERS_MARKER,
+    skill_surface_owners,
+)
 from injection import strip_all_sections, strip_section, trim_trailing_blanks
 # Retirement cleanup for the v4.16.x tool-output filter. The runtime package
 # that wrote those files is gone; output_filter_retirement re-states its
@@ -51,7 +56,6 @@ from output_filter_retirement import (
 
 
 CODEX_AGENT_MARKER = "# ai-toolkit-managed: codex-agent"
-CODEX_ADAPTED_SKILL_MARKER = ".ai-toolkit-codex-adapted"
 CODEX_HOOK_ASSET_MARKER = "# ai-toolkit-managed: codex-hook-script"
 COPILOT_MARKER = "<!-- ai-toolkit-managed: github-copilot -->"
 COPILOT_SKILL_MANIFEST = ".ai-toolkit-managed-files"
@@ -712,8 +716,11 @@ def _is_codex_agent(path: Path) -> bool:
 def _is_codex_skill(path: Path) -> bool:
     if path.is_symlink():
         return _is_toolkit_link(path)
-    marker = path / CODEX_ADAPTED_SKILL_MARKER
-    return path.is_dir() and not marker.is_symlink() and marker.is_file()
+    return path.is_dir() and any(
+        not (path / marker_name).is_symlink()
+        and (path / marker_name).is_file()
+        for marker_name in ADAPTED_MARKERS
+    )
 
 
 def _remove_codex_skills(skills_root: Path, trusted_root: Path) -> int:
@@ -729,7 +736,7 @@ def _remove_codex_skills(skills_root: Path, trusted_root: Path) -> int:
         if not _is_codex_skill(skill):
             continue
         for child in sorted(skill.iterdir()):
-            if child.name in {"SKILL.md", CODEX_ADAPTED_SKILL_MARKER}:
+            if child.name in {"SKILL.md", *ADAPTED_MARKERS}:
                 if not child.is_symlink() and child.is_file():
                     _safe_unlink(child, trusted_root)
                 continue
@@ -739,6 +746,25 @@ def _remove_codex_skills(skills_root: Path, trusted_root: Path) -> int:
         removed += 1
     _prune_empty(skills_root, skills_root.parent, trusted_root=trusted_root)
     return removed
+
+
+def _remove_skill_surface_owners_marker(
+    skills_root: Path,
+    trusted_root: Path,
+) -> bool:
+    """Remove a valid owner marker after every managed skill is gone."""
+    marker = skills_root.parent / SKILL_SURFACE_OWNERS_MARKER
+    owners = skill_surface_owners(skills_root)
+    if not owners:
+        return False
+    if skills_root.is_dir() and any(
+        _is_codex_skill(skill) for skill in skills_root.iterdir()
+    ):
+        return False
+    if skill_surface_owners(skills_root) != owners:
+        raise RuntimeError(f"Skill surface ownership changed before removal: {marker}")
+    _safe_unlink(marker, trusted_root)
+    return True
 
 
 def _is_codex_core_handler(handler: Any, group: dict[str, Any]) -> bool:
@@ -838,6 +864,13 @@ def _discover_codex(surface: CodexSurface) -> list[tuple[str, str]]:
         count = sum(1 for path in surface.skills_root.iterdir() if _is_codex_skill(path))
         if count:
             found.append((f"Managed: {surface.skills_root} ({count} Codex skills)", "codex-skills"))
+    owners = skill_surface_owners(surface.skills_root)
+    if owners:
+        marker = surface.skills_root.parent / SKILL_SURFACE_OWNERS_MARKER
+        found.append((
+            f"Managed: {marker} ({', '.join(sorted(owners))})",
+            "agent-skill-owners",
+        ))
     hooks_path = surface.config_root / "hooks.json"
     data = _load_json(hooks_path, "Codex hooks file")
     if data is not None:
@@ -883,6 +916,11 @@ def _remove_codex(surface: CodexSurface) -> None:
     )
     if removed_skills:
         print(f"  Removed: {removed_skills} managed Codex skill(s)")
+    if _remove_skill_surface_owners_marker(
+        surface.skills_root,
+        skills_boundary,
+    ):
+        print("  Removed: managed agent-skill owner marker")
     removed_hooks = _remove_codex_hooks(
         surface.config_root / "hooks.json",
         config_boundary,
@@ -1286,6 +1324,11 @@ def _transaction_specs(
             (surface.config_root / "hooks.json", False, config_boundary),
             (surface.assets_root, True, config_boundary),
             (surface.skills_root.parent, False, skills_boundary),
+            (
+                surface.skills_root.parent / SKILL_SURFACE_OWNERS_MARKER,
+                False,
+                skills_boundary,
+            ),
             (surface.skills_root, True, skills_boundary),
         ):
             add(path, recursive, trusted_root)

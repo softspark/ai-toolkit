@@ -40,7 +40,15 @@ fi
 # --force or -f left behind still blocks.
 SAFE_STRIPPED=$(printf '%s' "$NORMALIZED" | sed -E 's/--force-with-lease(=[^ ]*)?//g; s/--force-if-includes//g')
 
-# Destructive patterns — word-boundary aware where possible
+# Destructive patterns — word-boundary aware where possible.
+#
+# Two buckets, matched by two greps, because case sensitivity is not a uniform
+# property of these patterns. POSIX command names and flags are case-SIGNIFICANT:
+# `-d` and `-D` are different flags, and folding them together made the guard
+# block `git branch -d` — the safe delete that refuses unmerged branches — as if
+# it were `-D`. SQL keywords carry no such distinction and are written in every
+# casing in the wild, so they need folding. One case-insensitive grep over both
+# sets cannot express that, and the flag bucket is the one that loses.
 DESTRUCTIVE_PATTERNS=(
     # rm variants (short flags, long flags, separated flags, sudo, xargs/find piped)
     'rm\s+(-[rRf]{2,}|-r\s+-f|-f\s+-r)'
@@ -54,18 +62,13 @@ DESTRUCTIVE_PATTERNS=(
     'find\s+.*-delete'
     'find\s+.*-exec\s+rm\b'
 
-    # SQL destructive operations
-    'DROP\s+(TABLE|DATABASE|SCHEMA|INDEX)'
-    'TRUNCATE\s+'
-    'DELETE\s+FROM\s+\S+\s*(;|$|WHERE\s+1)'
-
     # Disk/filesystem destructive
-    'format\s+/'
     'dd\s+if='
     'mkfs\b'
     'shred\b'
 
-    # Git destructive operations
+    # Git destructive operations. `-D` only: `git branch -d` refuses to delete an
+    # unmerged branch and is the documented post-merge cleanup, not a hazard.
     'git\s+push\s+(--force|-f)\b'
     'git\s+push\s+.*--force'
     'git\s+reset\s+--hard'
@@ -88,10 +91,25 @@ DESTRUCTIVE_PATTERNS=(
     '>\s*/dev/sd[a-z]'
 )
 
-# Build combined regex
-REGEX=$(IFS='|'; echo "${DESTRUCTIVE_PATTERNS[*]}")
+# Case-insensitive bucket: patterns whose real-world casing genuinely varies.
+# SQL is written DROP TABLE, drop table, and Drop Table with equal frequency;
+# `format` is a Windows command and Windows command names are case-insensitive.
+DESTRUCTIVE_PATTERNS_NOCASE=(
+    # SQL destructive operations
+    'DROP\s+(TABLE|DATABASE|SCHEMA|INDEX)'
+    'TRUNCATE\s+'
+    'DELETE\s+FROM\s+\S+\s*(;|$|WHERE\s+1)'
 
-if echo "$SAFE_STRIPPED" | grep -qEi "($REGEX)"; then
+    # Disk/filesystem destructive
+    'format\s+/'
+)
+
+# Build combined regexes
+REGEX=$(IFS='|'; echo "${DESTRUCTIVE_PATTERNS[*]}")
+REGEX_NOCASE=$(IFS='|'; echo "${DESTRUCTIVE_PATTERNS_NOCASE[*]}")
+
+if echo "$SAFE_STRIPPED" | grep -qE "($REGEX)" \
+    || echo "$SAFE_STRIPPED" | grep -qEi "($REGEX_NOCASE)"; then
     echo "WARNING: Potentially destructive command detected. Please verify." >&2
     exit 2
 fi

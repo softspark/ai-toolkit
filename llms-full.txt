@@ -15,6 +15,8 @@
 - [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
 - [Plan: Deep Coverage v3.0 — 100% Native Surface Utilization](kb/history/completed/deep-coverage-v3-20260423.md)
 - [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/history/completed/drop-cascade-hooks-after-sunset-20260710.md)
+- [Plan: DeepSeek Harness (dsh) Integration (Superseded)](kb/history/completed/dsh-integration-plan-superseded.md)
+- [Plan: Native DSH Install Target](kb/history/completed/dsh-native-install-target-plan.md)
 - [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/history/completed/ecosystem-deep-sweep-20260423.md)
 - [Plan: Enterprise Config Inheritance — Multi-Repo Governance with `extends`](kb/history/completed/enterprise-config-inheritance-plan-20260412.md)
 - [Spike: F2 MCP Context Trim — Hook Feasibility & Path Decision](kb/history/completed/f2-mcp-trim-spike-20260504.md)
@@ -48,6 +50,7 @@
 - [Plan: Competitive Features — ai-toolkit](kb/reference/competitive-features-implementation.md)
 - [AI Toolkit - GitHub Copilot Compatibility](kb/reference/copilot-compatibility.md)
 - [Distribution Model](kb/reference/distribution-model.md)
+- [DSH Compatibility](kb/reference/dsh-compatibility.md)
 - [Enterprise Config Inheritance Guide](kb/reference/enterprise-config-guide.md)
 - [Extension API Reference](kb/reference/extension-api.md)
 - [Global Install Model](kb/reference/global-install-model.md)
@@ -73,6 +76,7 @@
 - [Unique Features & Differentiators](kb/reference/unique-features.md)
 - [Windows Support](kb/reference/windows-support.md)
 - [Troubleshooting](kb/troubleshooting/README.md)
+- [Claude App Plugin Loads Twice in Claude Code](kb/troubleshooting/plugin-double-load.md)
 
 ## Skills
 
@@ -585,6 +589,669 @@ removing it before the sunset breaks Cascade users who are still on the old agen
 - `kb/reference/supported-tools-registry.md` — windsurf entry, hooks-migration row
 - `kb/procedures/ecosystem-sync-sop.md` — class-D deprecation workflow
 - `scripts/ecosystem_tools.json` — windsurf `status_note`
+
+---
+
+## kb/history/completed/dsh-integration-plan-superseded.md
+
+---
+title: "Plan: DeepSeek Harness (dsh) Integration"
+category: planning
+service: ai-toolkit
+tags:
+  - dsh
+  - deepseek-harness
+  - cordis
+  - integration
+  - skills
+  - subagents
+  - multi-model
+  - acp
+  - emission-target
+doc_type: plan
+status: superseded
+created: "2026-08-25"
+last_updated: "2026-08-27"
+closed: "2026-08-27"
+completion: "Functional objective delivered through standalone 1.0.0 modules; native ai-toolkit install target moved to a replacement plan"
+superseded_by: "kb/history/completed/dsh-native-install-target-plan.md"
+description: "Superseded DSH integration plan retained as the historical record of the subscription-backed runtime validation and the architecture split into dsh-codex and dsh-orchestrator."
+---
+
+# Plan: DeepSeek Harness (dsh) Integration (Superseded)
+
+**Status:** Superseded on 2026-08-27
+**Completion:** Functional objective delivered; native ai-toolkit install target moved to a replacement plan
+**Created:** 2026-08-25
+**Origin:** Requirement for a single window driving three already-owned subscriptions (Claude Max, ChatGPT Plus, Gemini) without buying API credits
+**Upstream reviewed:** `deepseek-ai/deepseek-harness` @ `b150a55` (2026-08-21), package version `0.1.1-rc.2`, MIT, developer preview
+**Replacement:** [`dsh-native-install-target-plan.md`](dsh-native-install-target-plan.md)
+
+## Closure Record
+
+This plan mixed two outcomes that now have different ownership:
+
+1. The user-facing runtime objective is complete. `@softspark/dsh-codex@1.0.0` provides the ChatGPT-backed Codex parent, and `@softspark/dsh-orchestrator@1.0.0` delegates bounded tasks to Claude Code and GitHub Copilot Gemini. Both are public Apache-2.0 modules with CI, provenance, security gates, KB, release SOPs, and post-release verification.
+2. Direct Gemini delegation through a personal Google AI Pro/Ultra login is not supported. The delivered route uses GitHub Copilot CLI ACP, GitHub authentication, and GitHub plan credits. No Google credential proxy or Antigravity workaround is part of the system.
+3. The native ai-toolkit emission target was not implemented. `ai-toolkit install --local --editors dsh`, managed preset installation, DSH-specific uninstall, registry metadata, and focused bats coverage move to the replacement plan.
+
+The historical phases below remain useful as the research and validation record. Their status table is updated to show what shipped, what was cut, and what moved.
+
+## 1. Objective
+
+Add dsh as the twelfth emission target so a single harness can delegate to Claude Code, Codex,
+and Gemini CLI while each child authenticates natively against its own vendor subscription.
+
+**Non-goal:** rewriting ai-toolkit on top of dsh. The toolkit stays the control plane and source
+of truth. dsh is a runtime it emits to, exactly like Codex CLI and opencode.
+
+**Hard constraint that shaped this plan:** Anthropic prohibits third-party tools from routing
+Free/Pro/Max OAuth credentials, and enforces it server-side without notice. Any harness that
+speaks the Anthropic API itself therefore requires a separate API key. dsh avoids this by
+spawning the real Claude Code binary instead of routing credentials.
+
+## 2. Why dsh satisfies the subscription constraint
+
+`packages/subagent/subagent-claude-code/README.md` states the provider deliberately omits the SDK
+`settingSources` option, so the official Agent SDK reads the host's normal user, project, and local
+Claude settings relative to the parent session cwd, including native account state. It neither
+copies nor filters those files and does not create or modify login state. Authentication and
+account state remain native; the bundle supplies the CLI but does not create an account, log in,
+or probe an account. Credential-shaped ambient variables are scrubbed before the explicit `env`
+overlay, so `ANTHROPIC_API_KEY` reaches the child only when supplied deliberately. The runtime is
+pinned to `@anthropic-ai/claude-agent-sdk@0.3.220` (Claude Code 2.1.220) and the executable comes
+from the SDK platform package, not from `PATH`.
+
+Consequence: the subscription is exercised by Claude Code authenticating itself, not by dsh
+presenting the user's credentials to Anthropic.
+
+### Subagent providers present in the tree
+
+| Package | Spawns | Subscription exercised |
+|---|---|---|
+| `subagent-claude-code` | Agent SDK to native `claude` | Claude Max |
+| `subagent-codex` | Codex | ChatGPT Plus |
+| `subagent-acp` | any Agent Client Protocol agent (Gemini CLI ships native ACP) | Gemini |
+| `subagent-dsh-sdk` | dsh SDK loop | model provider config |
+| `subagent-fork-in-process` | forked in-process session | inherited |
+| `subagent-spawn-in-process` | fresh in-process session | inherited |
+| `subagent-in-process-driver` | shared driver for the in-process providers | inherited |
+
+## 3. Verified compatibility surface
+
+### 3.1 Skill discovery is already satisfied
+
+`packages/skill/skill-filesystem` resolves roots in rank order:
+
+| Rank | Source | Path |
+|---|---|---|
+| 100 | `project-dsh` | `<projectRoot>/.dsh/skills` |
+| 200 | `project-agents` | `<projectRoot>/.agents/skills` |
+| 300 | `custom` | `Config.customSkillDirs` |
+| 400 | `user-dsh` | `<dshHome>/skills` (`$DSH_HOME`, default `~/.dsh`) |
+| 500 | `user-agents` | `<agentsHome>/skills` (`$DSH_AGENTS_HOME`, default `~/.agents`) |
+
+Skill format: single-level directory bundles `<name>/SKILL.md` or flat `<name>.md`. Frontmatter is
+an open YAML object; the provider interprets required `name` and `description` plus optional
+`whenToUse`, `metadata`, `disable-model-invocation`, and `user-invocable`. Names must be kebab-case.
+
+This is the ai-toolkit skill convention field for field. `scripts/generate_codex_skills.py` already
+mirrors every skill in `app/skills/` into `<target>/.agents/skills/<name>/`, native skills as
+symlinks to canonical `app/skills` and delegation-heavy skills as adapted wrappers through
+`codex_skill_adapter.sync_codex_skill`.
+
+**No new skill generator is required.** Rank 200 is the same directory Codex CLI consumes.
+
+A bare checkout shows only `ai-toolkit-skill-catalogue` under `.agents/skills/` because
+`enable_codex_skills` defaults to `False` for the standalone generator; the installer sets it when
+Codex is selected.
+
+### 3.2 Presets are compositions, not personas
+
+`packages/preset/agent-presets` treats a preset as a plugin composition: the composition file is a
+top-level list of plugin rows, with an optional sibling `preset.yml` carrying display `name` and
+`description` only. The `id` is the directory name and must match `[a-z0-9][a-z0-9-]*`; `trust`
+derives from the discovery root. Authoring is copy-only: `copy()` rejects a non-conforming id, an
+id already supplied by any root, and an unknown source, then re-tightens the copied tree to
+owner-only permissions and dereferences symlinks. A copied `preset.yml` keeps the description but
+drops `name` and roster `order`.
+
+Package-name rows resolve against the host composition rather than the preset directory, because a
+user-home preset cannot reach the harness through Node's upward `node_modules` walk. Relative
+paths resolve from the preset's own directory, so a preset's own plugin files and skill directories
+travel with it.
+
+**Implication:** mapping 44 agents onto 44 presets is architecturally wrong. Presets are session
+compositions (expect 2-3 of them). The 44 agents belong on the subagent surface.
+
+## 4. Gotchas that must become gates
+
+1. **Invocation frontmatter fails closed.** A camel-case spelling (`userInvocable`,
+   `disableModelInvocation`) or a non-boolean invocation value **drops the entire skill from
+   discovery** with a warning rather than falling back to a permissive default. Accepted boolean
+   spellings are YAML booleans plus case-insensitive `true`/`false`, `yes`/`no`, `on`/`off`,
+   `1`/`0`. Current emitters are clean; this must be enforced by `validate.py`, not left to chance.
+2. **Discovery is one level deep.** Only `<root>/<name>/SKILL.md` and `<root>/<name>.md` are
+   recognized. Nested skill trees and package manifests are ignored. Resources under `references`,
+   `scripts`, and `assets` inside a bundle are fine and do not invalidate the catalog.
+3. **Project root is the nearest `.git` ancestor.** Without that marker the provider falls back to
+   the supplied cwd. No alternate project-root marker, no monorepo subproject selection.
+4. **Symlinked skills.** `generate_codex_skills.py` emits symlinks into `app/skills`.
+   `watchFollowSymlinks` defaults to `true`, so this should hold, but it needs empirical
+   confirmation before being relied on.
+5. **Malformed entries disappear silently.** The model catalog receives no per-skill diagnostic and
+   cannot distinguish an absent skill from an invalid one.
+
+## 5. Open questions
+
+| # | Question | How to close |
+|---|---|---|
+| Q1 | Subagent definition format: how a delegatable agent such as `security-auditor` is declared | Moved to the replacement plan; the released orchestrator deliberately exposes two bounded static tools instead of mapping 44 toolkit agents |
+| Q2 | Whether `packages/hooks` ("Claude Code/Codex hook bridges + wire-protocol library") accepts the toolkit's `app/hooks/*.sh` directly | Moved to the replacement plan as an optional compatibility slice, not a prerequisite for the install target |
+| Q3 | Whether `subagent-acp` can drive Gemini CLI end to end on a Google login | Closed negative: individual Gemini CLI access ended; Antigravity has no ACP and prohibits third-party login use |
+| Q4 | Plugin row schema for a composition file | Closed by the released `softspark-orchestrator` preset and `cordis.patch.yml` |
+| Q5 | Whether Claude Max actually authenticates through the spawned CLI in practice | Closed positive by isolated Codex-to-Claude Max verification without an Anthropic API key |
+
+## 6. Progress Tracking
+
+| Phase | Deliverable | Depends on | Status |
+|---|---|---|---|
+| 0 | Empirical validation: dsh sees all 109 skills; subscription-backed providers run | none | completed through standalone modules; direct Google route replaced by Copilot Gemini |
+| 1 | `validate.py` gates for kebab-case invocation fields and one-level `.agents/skills` depth | 0 | moved to replacement Phase 1 |
+| 2 | `scripts/generate_dsh_preset.py` emitting 1-2 compositions | 0, Q4 | replaced by the released `softspark-orchestrator` preset; managed installation moved to the replacement plan |
+| 3 | 44 agents mapped onto the subagent surface | Q1 | cut; the released boundary exposes only Claude Code and Copilot Gemini delegation tools |
+| 4 | MCP servers and hook bridge | Q2 | cut from the runtime deliverable; optional compatibility work moved to the replacement plan |
+| 5 | `ecosystem_tools.json` entry, docs across the nine mandated files, bats coverage | 1-4 | native ai-toolkit registry, docs, tests, and uninstall moved to the replacement plan |
+
+### Phase 0 checkpoint: Codex primary provider verified (2026-08-26)
+
+- The checkpoint began at `@softspark/dsh-codex@0.1.0`; the public `1.0.0` release now bridges DSH to the official local `codex app-server`
+  over JSONL stdio. Codex retains sole ownership of ChatGPT authentication and tokens.
+- The isolated DSH profile loaded provider `codex`, exposed seven models, booted the Web UI
+  on `127.0.0.1:3080`, and completed end-to-end session prompts on Codex models.
+- The live app-server reported authentication kind `chatgpt`; no OpenAI API key was configured.
+- The final local tarball passed 92 tests, typecheck, lint, build, coverage, dependency,
+  signature, SARIF, package, and composition gates. Its SHA-256 is
+  `87db7be9f959de507d708bfa74feb4b5890b9b8a7a33d3520e31d91fcbe673c0`.
+- A persistent DSH session resumed the identical Codex thread after a host restart, and a live
+  cancellation ended with reason `aborted`.
+- The public `1.0.0` release keeps stable mode unchanged and exposes a bounded, opt-in
+  `experimentalDynamicTools` bridge. Dynamic-tool threads remain non-replayable after restart.
+
+Evidence and release gates live in the standalone repository:
+the public [softspark/dsh-codex](https://github.com/softspark/dsh-codex) repository.
+
+### Phase 0 checkpoint: SoftSpark orchestrator composition (2026-08-26)
+
+- `@softspark/dsh-codex@1.0.0` exposes an explicit bounded dynamic-tool bridge while stable mode remains unchanged.
+- `@softspark/dsh-orchestrator@1.0.0` is a separate Apache-2.0 public module with exact DSH dependencies, multi-OS CI, provenance, security gates, tests, KB, and release SOPs.
+- The isolated DSH profile loads `softspark-orchestrator` as its default preset and registers one-shot `subagent_claude_code` plus `subagent_gemini_copilot` tools.
+- A real Codex-to-DSH `todo_write` tool roundtrip completed on the final composition with no provider API keys.
+- Claude Max native login is verified. Google AI Pro/Ultra cannot be delegated through DSH: Gemini CLI ended individual access, Antigravity has no ACP, and its terms prohibit third-party use of account login. No proxy or token workaround will be implemented.
+- The final isolated profile completed both a neutral Codex-to-DSH tool call and a Codex-to-Claude Max delegation with exact markers and no provider API keys.
+
+## 7. Detailed Implementation
+
+### Phase 0 - Empirical validation (no code)
+
+```bash
+ai-toolkit install --local --editors codex     # populates .agents/skills/ with all 109
+npx @deepseek-ai/dsh web                        # UI on 127.0.0.1:3080
+```
+
+Verify, in order:
+
+1. The skill catalog lists 109 entries, not the single `ai-toolkit-skill-catalogue` pointer.
+2. Symlinked skill bodies load (gotcha 4).
+3. A `subagent-claude-code` delegation runs without an `ANTHROPIC_API_KEY` present (Q5).
+4. A `subagent-codex` delegation runs on the ChatGPT login.
+5. A `subagent-acp` delegation reaches Gemini CLI on the Google login (Q3).
+
+If step 3 fails, the entire premise collapses and the plan reverts to the ACP-in-JetBrains
+alternative recorded in section 10.
+
+### Phase 1 - Gates
+
+Extend `scripts/validate.py`:
+
+- Reject any emitted `SKILL.md` whose frontmatter carries `userInvocable` or
+  `disableModelInvocation`, or a non-boolean value for the kebab-case forms.
+- Reject any `SKILL.md` deeper than `<root>/<name>/SKILL.md` under `.agents/skills/`.
+- Reject skill directory names failing `[a-z0-9]+(-[a-z0-9]+)*`.
+
+These protect Codex CLI and opencode as well; the fail-closed behavior is what makes them
+non-optional rather than cosmetic.
+
+### Phase 2 - Presets
+
+`scripts/generate_dsh_preset.py` emits composition directories plus `preset.yml` display metadata.
+Start with `ai-toolkit-standard`; add `ai-toolkit-strict` only if the profile split earns it. Ids
+must satisfy `[a-z0-9][a-z0-9-]*`. Do not attempt to author presets by writing into a shipped
+preset directory. Upstream authoring is copy-only and `remove()` refuses shipped presets.
+
+### Phase 3 - Agents
+
+Blocked on Q1. Expected shape: one subagent declaration per `app/agents/*.md`, carrying
+`description`, tool allowances, and delegation targets, with the model left unset so host settings
+stay authoritative. The `model` alias problem is the same one documented for opencode in
+`kb/reference/opencode-compatibility.md`: the toolkit stores `opus`/`sonnet`/`haiku`, which cannot
+be mapped without assuming a provider.
+
+### Phase 4 - MCP and hooks
+
+`packages/mcp` for server config, `packages/hooks` for the bridge. If the hook bridge speaks the
+Claude Code hook wire protocol, `app/hooks/*.sh` may attach with a thin adapter rather than a
+rewrite. Preserve `exit 2` blocking semantics for `guard-destructive.sh`. This matters most under
+unattended delegation, where nobody is watching the permission prompt.
+
+### Phase 5 - Registry, docs, tests
+
+Follow the opencode precedent exactly:
+
+- `scripts/ecosystem_tools.json` entry with docs and release-notes URLs for drift detection.
+- `kb/reference/dsh-compatibility.md` mirroring the section layout of
+  `kb/reference/opencode-compatibility.md` (Summary, Local/Global Install Outputs, Editor Surface
+  Comparison, translation models, Behavioral Limits, Verification, CLI Commands).
+- Entry in `kb/reference/supported-tools-registry.md`.
+- The nine files mandated by `CLAUDE.md`: README.md, CLAUDE.md, ARCHITECTURE.md, package.json,
+  plugin.json, skills-catalog.md, architecture-overview.md, llms.txt, AGENTS.md.
+- bats generator contract tests, auto-detection tests, idempotency tests.
+- `python3 scripts/validate.py --strict`, `python3 scripts/audit_skills.py --ci`, and
+  `shellcheck --severity=warning app/hooks/*.sh` if any hook is touched.
+
+## 8. Original Success Criteria and Outcome
+
+| Criterion | Outcome |
+|---|---|
+| `ai-toolkit install --local --editors dsh` creates the workspace without manual editing | Not delivered; moved to the replacement plan |
+| One session runs Claude Max, ChatGPT-backed Codex, and Gemini without provider API keys | Delivered with Gemini hosted through GitHub Copilot rather than a Google login |
+| `validate.py --strict` and `audit_skills.py --ci` pass | Delivered for the standalone repositories; native target coverage remains in the replacement plan |
+| Uninstall preserves user-authored files | Not applicable until ai-toolkit owns DSH artifacts; moved to the replacement plan |
+| DSH remains opt-in | Delivered by separate packages and retained as a requirement of the replacement plan |
+
+## 9. Risks and Mitigation
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Upstream breaking changes (declared developer preview) | Generators break for users mid-release | Keep dsh strictly opt-in; never in `--editors all` defaults until it leaves preview |
+| Anthropic changes its stance on spawned-CLI orchestration | Phase 0 premise invalidated | Fall back to ACP in JetBrains/Zed, where each agent owns its own auth by design |
+| Preset schema churn | Phase 2 rework | Emit the minimum viable composition; keep display metadata in `preset.yml` where the contract is narrow and stable |
+| Documentation drift across the nine mandated files | Broken user trust, per CLAUDE.md | Phase 5 is one atomic change with `validate.py --strict` as the gate |
+| Silent skill loss from fail-closed frontmatter | Skills vanish with only a warning | Phase 1 gates land before phase 2 |
+
+## 10. Pre-Mortem
+
+*It is six months out and this failed. What happened?*
+
+1. **We shipped dsh in the default editor set.** An upstream breaking change broke `install` for
+   every toolkit user, not just dsh users. Prevented by success criterion 5.
+2. **Phase 0 was skipped.** Phases 1-5 were built on the assumption that Max authenticates through
+   the spawned CLI, and it turned out to require an API key in practice. Prevented by making Q5 a
+   hard gate.
+3. **We mapped 44 agents onto 44 presets.** The preset surface is a session composition, not a
+   persona, so the emission produced 44 near-identical compositions nobody could maintain.
+   Prevented by section 3.2.
+4. **We became Cordis contributors.** Time went into upstream plugin work instead of the toolkit.
+   Prevented by treating dsh as an emission target with a fixed contract surface, never a fork.
+5. **A frontmatter regression silently dropped skills.** Nobody noticed because discovery only
+   warns. Prevented by phase 1.
+
+## 11. Archived Next Actions
+
+No work should continue from this archived document. The scoped native install target is complete in [`dsh-native-install-target-plan.md`](dsh-native-install-target-plan.md). Reopen this record only if evidence about the 2026-08-26 validation needs correction.
+
+## Sources
+
+- `deepseek-ai/deepseek-harness` @ `b150a55`, `0.1.1-rc.2`, MIT: `packages/skill/skill-filesystem`,
+  `packages/preset/agent-presets`, `packages/subagent/*`, `docs/`
+- https://github.com/deepseek-ai/deepseek-harness
+- https://deepseek.com/harness/en/
+- `kb/reference/opencode-compatibility.md`: precedent for the emission-target contract
+- `kb/reference/codex-cli-compatibility.md`: `.agents/skills` precedent
+- `kb/reference/supported-tools-registry.md`
+
+## Related
+
+- `kb/reference/opencode-compatibility.md`
+- `kb/reference/codex-cli-compatibility.md`
+- `kb/reference/architecture-overview.md`
+- `kb/reference/supported-tools-registry.md`
+
+---
+
+## kb/history/completed/dsh-native-install-target-plan.md
+
+---
+title: "Plan: Native DSH Install Target"
+category: planning
+service: ai-toolkit
+tags:
+  - dsh
+  - deepseek-harness
+  - installer
+  - editor-target
+  - subscriptions
+  - lifecycle
+  - security
+doc_type: plan
+status: completed
+created: "2026-08-27"
+last_updated: "2026-09-01"
+approved: "2026-08-28"
+started: "2026-08-28"
+completion: "Phase 3 of 3 complete"
+completed: "2026-09-01"
+predecessor: "kb/history/completed/dsh-integration-plan-superseded.md"
+description: "Implementation plan for an explicit ai-toolkit DSH target that emits project skills and safely manages the published dsh-codex and dsh-orchestrator packages without handling vendor credentials."
+---
+
+# Plan: Native DSH Install Target
+
+## Status
+
+Approved on 2026-08-28 and completed on 2026-09-01.
+
+Estimated size: **L (3 to 5 days)**. The runtime integrations already exist. The remaining work is installer ownership, lifecycle safety, validation, tests, and documentation.
+
+Predecessor: [`dsh-integration-plan-superseded.md`](dsh-integration-plan-superseded.md).
+
+## Context
+
+The subscription-backed runtime is already delivered in two standalone Apache-2.0 packages:
+
+- `@softspark/dsh-codex@1.0.0` registers the DSH `codex` provider and delegates authentication, tools, thread state, and model execution to the locally installed Codex app server. See <https://github.com/softspark/dsh-codex>.
+- `@softspark/dsh-orchestrator@1.0.1` registers bounded Claude Code and GitHub Copilot Gemini delegation through native vendor logins. It accepts no provider API keys. See <https://github.com/softspark/dsh-orchestrator>.
+
+ai-toolkit does not expose `dsh` in its editor list, does not track DSH profile artifacts, and has no DSH-specific install, doctor, update, or uninstall contract. [PATH: bin/ai-toolkit.js:309]
+
+The published packages currently require two explicit operations: install exact plugins into a named DSH profile, then copy `softspark-orchestrator` from the installed package into `$DSH_HOME/.agent-presets`. See the orchestrator setup guide at <https://github.com/softspark/dsh-orchestrator>.
+
+## Decision
+
+The native target has two separate ownership surfaces:
+
+1. `ai-toolkit install --local --editors dsh` emits project-owned `.agents/skills` and validates DSH compatibility. It must not mutate `$DSH_HOME`, install npm packages, or inspect vendor credentials.
+2. `ai-toolkit dsh install --profile web` is the explicit profile mutation command. It installs exact reviewed package versions, copies the released preset, and records ownership in the existing ai-toolkit state model.
+
+This split preserves the meaning of `--local`. It also makes global DSH changes impossible without a command that names DSH and the target profile.
+
+`dsh` stays out of `--editors all`, auto-detection, default profiles, and global editor defaults while DSH remains a developer preview. Selecting `dsh` must be explicit.
+
+## Scope
+
+### Included
+
+- Explicit project target under `--editors dsh`.
+- Reuse of the existing `.agents/skills/<name>/SKILL.md` emission path.
+- DSH-specific validation for fail-closed skill metadata and one-level discovery depth.
+- Explicit `ai-toolkit dsh install`, `update`, `doctor`, and `uninstall` lifecycle commands.
+- Exact installation of `@softspark/dsh-codex@1.0.0` and `@softspark/dsh-orchestrator@1.0.1` into a named DSH profile.
+- Ownership-safe copy and update of `$DSH_HOME/.agent-presets/softspark-orchestrator`.
+- State tracking through `~/.softspark/ai-toolkit/state.json`.
+- Dry-run output, collision refusal, rollback, tests, registry metadata, and public documentation.
+
+### Excluded
+
+- Direct Google AI Pro/Ultra, Gemini CLI OAuth, Antigravity, or Gemini API integration.
+- Provider API keys, custom OAuth, token copying, credential-file reads, or login automation.
+- Mapping all 44 ai-toolkit agents into DSH subagents.
+- A new DSH skill generator. DSH already consumes `.agents/skills`.
+- Automatic DSH installation from `--editors all`, auto-detection, or default install profiles.
+- Rewriting the released dsh-codex or dsh-orchestrator packages inside ai-toolkit.
+- MCP and hook bridging in the first native-target release.
+- Support for arbitrary DSH prereleases or unpinned community package versions.
+
+## Global Success Criteria
+
+- [x] `ai-toolkit install --local --editors dsh` emits the complete managed skill catalog and makes no write under `$DSH_HOME`.
+- [x] `ai-toolkit dsh install --profile web` installs exact `@softspark/dsh-codex@1.0.0` and `@softspark/dsh-orchestrator@1.0.1` packages plus the released preset without manual file editing.
+- [x] Install, update, doctor, and uninstall preserve user-authored presets and unrelated DSH plugins.
+- [x] No command accepts, reads, copies, logs, or forwards provider credentials.
+- [x] `dsh` remains excluded from `--editors all`, auto-detection, default profiles, and default global editors.
+- [x] Offline, missing-runtime, collision, partial-install, and interrupted-update paths fail without leaving untracked artifacts.
+- [x] The full repository test, validation, skill-audit, and documentation gates pass.
+
+## Phase 1: Project Target and Fail-Closed Gates
+
+Dependency: none.
+
+Size: **M (1 to 2 days)**.
+
+### Phase 1 Success Criteria
+
+- [x] CLI help and validation accept `dsh` only when named explicitly.
+- [x] `--editors all` resolves to the existing stable editor set and excludes `dsh`.
+- [x] Dry-run lists `.agents/skills` changes but writes nothing.
+- [x] Project installation emits every managed skill at one discovery level.
+- [x] Validation rejects camel-case invocation fields, non-boolean invocation values, invalid skill directory names, and nested `SKILL.md` locations.
+- [x] A read-only doctor check reports DSH, Codex, Claude Code, and Copilot executable availability without opening credential stores.
+
+### Phase 1 Completion Evidence
+
+Completed on 2026-08-28 after sequential TDD, three spec review passes, and four quality-review repair cycles.
+
+- Full repository suite: 1726/1726 tests.
+- Final spec review: 10/10 requirements approved.
+- Final quality review: 0 Critical, 0 Important.
+- Strict validator: 0 errors, 0 warnings.
+- Skill audit: 0 HIGH, 0 WARN.
+- DSH remains explicit-only, project-local, credential-blind, transactionally owned, and outside Phase 2 profile lifecycle behavior.
+
+### Phase 1 Tasks
+
+| ID | Outcome | Affected files | Owner | Depends on |
+|---|---|---|---|---|
+| P1.1 | Add an explicit-only DSH editor capability separate from the stable `ALL_EDITORS` expansion | `bin/ai-toolkit.js`, `scripts/install.py`, `scripts/install_steps/ai_tools.py` | `backend-specialist` | none |
+| P1.2 | Reuse the managed Codex skill emitter for the DSH project surface without emitting unrelated Codex configuration | `scripts/generate_codex_skills.py`, `scripts/install_steps/ai_tools.py` | `backend-specialist` | P1.1 |
+| P1.3 | Enforce the DSH fail-closed metadata, name, and depth contract | `scripts/validate.py`, `tests/test_metadata_contracts.bats`, `tests/test_skills_native.bats` | `backend-specialist` | none |
+| P1.4 | Add read-only runtime and version diagnostics with no login automation | `scripts/doctor.py`, `tests/test_doctor_fix.bats`, `tests/test_dsh.bats` | `infrastructure-validator` | P1.1 |
+| P1.5 | Cover explicit selection, `all` exclusion, dry-run, idempotency, and project-only writes | `tests/test_dsh.bats`, `tests/test_install.bats`, `tests/test_install_profiles.bats` | `test-engineer` | P1.1, P1.2, P1.3, P1.4 |
+
+### Phase 1 Rollback and Scope Cut
+
+Remove the explicit `dsh` selector and its focused tests. Existing Codex skill emission and both standalone DSH packages remain unchanged. If the fail-closed metadata gates reveal unrelated invalid skills, fix those skills before shipping rather than weakening the gate.
+
+## Phase 2: Explicit DSH Profile Lifecycle
+
+Dependency: Phase 1 → Phase 2.
+
+Size: **M (1 to 2 days)**.
+
+### Phase 2 Success Criteria
+
+- [x] `ai-toolkit dsh install --profile web` performs preflight before the first mutation.
+- [x] The command installs exact reviewed package versions through the DSH plugin manager.
+- [x] The preset is copied from the installed orchestrator package, not reconstructed by ai-toolkit.
+- [x] Existing user-owned preset or plugin collisions stop the command with an actionable error.
+- [x] State records the DSH home, profile, package versions, preset path, and managed content hash without recording credentials.
+- [x] Update replaces only artifacts whose ownership and previous hash match state.
+- [x] Uninstall removes only ai-toolkit-managed DSH artifacts and leaves unrelated profile content unchanged.
+- [x] Interrupted or failed installation restores the pre-operation state or reports a deterministic recovery command.
+
+### Phase 2 Completion Evidence
+
+Completed on 2026-08-31 after adversarial transaction, concurrency, rollback, path-swap, state-CAS, and credential-boundary testing.
+
+- Full repository suite on the final isolated DSH scope: 1846/1846 tests.
+- Phase 2 spec review: approved with zero must-fix gaps.
+- Defensive security review: approved with zero findings.
+- Code quality review: 0 Critical, 0 Important, 0 Suggestions.
+- Strict validator: 0 errors, 0 warnings on the verified DSH tree.
+- Skill audit: 0 HIGH, 0 WARN.
+- Exact reviewed pins are DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, and dsh-orchestrator `1.0.1`.
+- Lifecycle state stores canonical package and preset ownership metadata without credentials or package contents.
+
+### Phase 2 Tasks
+
+| ID | Outcome | Affected files | Owner | Depends on |
+|---|---|---|---|---|
+| P2.1 | Freeze the pinned DSH plugin add, update, and removal contract against DSH `0.1.1-rc.2` in bounded fixtures | `scripts/install_steps/dsh.py`, `tests/fixtures/dsh/`, `tests/test_dsh.bats` | `backend-specialist` | Phase 1 |
+| P2.2 | Implement explicit profile install, update, doctor, and uninstall dispatch with `web` as the documented default profile | `bin/ai-toolkit.js`, `scripts/install.py`, `scripts/install_steps/dsh.py`, `scripts/uninstall.py` | `command-expert` | P2.1 |
+| P2.3 | Extend state tracking with DSH profile and managed-preset ownership | `scripts/install_steps/install_state.py`, `kb/reference/manifest-install.md`, `tests/test_install_state.bats` | `backend-specialist` | P2.1 |
+| P2.4 | Add atomic preset copy, collision refusal, hash verification, and recovery behavior | `scripts/install_steps/dsh.py`, `tests/test_dsh.bats`, `tests/test_uninstall_recovery.bats` | `backend-specialist` | P2.2, P2.3 |
+| P2.5 | Audit command construction, environment filtering, logs, and state for credential exposure | `scripts/install_steps/dsh.py`, `scripts/uninstall.py`, `tests/test_dsh.bats` | `security-auditor` | P2.2, P2.4 |
+| P2.6 | Exercise clean install, repeat install, update, collision, offline, interruption, and uninstall with fake DSH binaries and isolated roots | `tests/test_dsh.bats`, `tests/test_uninstall_ai_tools.bats`, `tests/fixtures/dsh/` | `test-engineer` | P2.2, P2.3, P2.4, P2.5 |
+
+### Phase 2 Rollback and Scope Cut
+
+Disable the lifecycle subcommand while retaining the Phase 1 project target and read-only doctor output. Users can continue following the standalone package installation guides. Never recover from a lifecycle bug by deleting an unowned preset or profile.
+
+## Phase 3: Registry, Documentation, and Release Qualification
+
+Dependency: Phase 2 → Phase 3.
+
+Size: **S to M (1 day)**.
+
+### Phase 3 Success Criteria
+
+- [x] DSH has one opt-in registry entry with pinned docs and release-note sources.
+- [x] Compatibility documentation distinguishes project emission, explicit profile mutation, vendor authentication, and unsupported Google routes.
+- [x] README, CLI help, architecture, supported-tools registry, manifest install reference, and `llms.txt` describe the same commands and boundaries.
+- [x] An isolated real-profile qualification installs the two published packages, selects the released preset, and completes Codex-to-Claude plus Codex-to-Copilot-Gemini delegation.
+- [x] No release is tagged while focused tests, full tests, validation, skill audit, ShellCheck, or generated-document checks are red.
+
+### Phase 3 Completion Evidence
+
+Completed on 2026-09-01 after exact-package pre-tag and post-release qualification.
+
+- Full repository suite: 1920/1920 tests.
+- Strict validator: 0 errors and 0 warnings; skill audit: 0 HIGH and 0 WARN.
+- ShellCheck, Apache-2.0 licensing, SARIF, public-surface, ecosystem, npm audit, and package dry-run gates passed.
+- `@softspark/dsh-orchestrator@1.0.1` published with SLSA provenance after both native-login marker tools completed through a Codex parent.
+- The exact npm registry package repeated both Claude Code and Copilot Gemini child/parent marker roundtrips, with no provider API key handling.
+- The isolated DSH process stopped cleanly and the unrelated profile fixture remained intact.
+
+### Phase 3 Tasks
+
+| ID | Outcome | Affected files | Owner | Depends on |
+|---|---|---|---|---|
+| P3.1 | Add the opt-in DSH registry and drift-monitoring contract | `scripts/ecosystem_tools.json`, `tests/test_ecosystem_doctor.bats` | `technical-researcher` | Phase 2 |
+| P3.2 | Publish one compatibility contract and synchronize all user-facing command surfaces | `kb/reference/dsh-compatibility.md`, `kb/reference/supported-tools-registry.md`, `kb/reference/architecture-overview.md`, `kb/reference/manifest-install.md`, `README.md`, `CLAUDE.md`, `llms.txt`, `bin/ai-toolkit.js` | `documenter` | P3.1 |
+| P3.3 | Run isolated end-to-end qualification with real DSH and published packages, then record evidence | `kb/reference/dsh-compatibility.md`, `kb/procedures/release-verification-sop.md` | `infrastructure-validator` | P3.2 |
+| P3.4 | Run focused and full repository gates and assess regression blast radius | `tests/test_dsh.bats`, `tests/test_cli.bats`, `tests/test_install.bats`, `tests/test_uninstall_ai_tools.bats`, `scripts/validate.py`, `scripts/audit_skills.py` | `qa-automation-engineer` | P3.2, P3.3 |
+| P3.5 | Review final security boundaries and veto release on credential or ownership regressions | `scripts/install_steps/dsh.py`, `scripts/install_steps/install_state.py`, `scripts/uninstall.py`, `kb/reference/dsh-compatibility.md`, `tests/test_dsh.bats` | `security-architect` | P3.3, P3.4 |
+
+### Phase 3 Rollback and Scope Cut
+
+Do not tag or publish the ai-toolkit release. Keep the published standalone `@softspark/dsh-codex@1.0.0` and `@softspark/dsh-orchestrator@1.0.1` packages as the supported installation route. If upstream DSH drifts during qualification, retain the registry entry as unsupported-preview metadata and remove the user-facing install command until compatibility is restored.
+
+## Dependencies
+
+```text
+Phase 1 → Phase 2 → Phase 3
+```
+
+Within phases:
+
+```text
+P1.1 → P1.2 → P1.5
+P1.3 ─────────→ P1.5
+P1.4 ─────────→ P1.5
+
+P2.1 → P2.2 → P2.4 → P2.5 → P2.6
+             ↘ P2.3 ↗
+
+P3.1 → P3.2 → P3.3 → P3.4 → P3.5
+```
+
+No phase begins until the previous phase meets its success criteria. Phase 1 can ship as project-only compatibility without Phase 2. Phase 2 can remain unreleased if real-profile qualification fails.
+
+## Requirement Traceability
+
+| Requirement | Tasks |
+|---|---|
+| Explicit DSH project target | P1.1, P1.2, P1.5 |
+| DSH excluded from defaults and `all` | P1.1, P1.5 |
+| Fail-closed skill discovery | P1.3, P1.5 |
+| No credential handling | P1.4, P2.5, P3.5 |
+| Exact package installation | P2.1, P2.2, P2.6 |
+| Managed preset lifecycle | P2.3, P2.4, P2.6 |
+| Ownership-safe uninstall | P2.3, P2.4, P2.6 |
+| Registry and documentation parity | P3.1, P3.2 |
+| Real subscription-backed smoke test | P3.3, P3.4 |
+| Release blocked on red gates | P3.4, P3.5 |
+
+## Verification
+
+### Focused gates
+
+```bash
+bats tests/test_dsh.bats
+bats tests/test_install.bats
+bats tests/test_install_profiles.bats
+bats tests/test_install_state.bats
+bats tests/test_uninstall_ai_tools.bats
+bats tests/test_uninstall_recovery.bats
+```
+
+### Repository gates
+
+```bash
+python3 scripts/validate.py --strict
+python3 scripts/audit_skills.py --ci
+python3 scripts/ecosystem_doctor.py
+npm test
+```
+
+Run ShellCheck when a shell fixture, hook, or command wrapper changes. Run the existing generated-document drift checks before commit.
+
+### Isolated runtime qualification
+
+Use a new task-specific `DSH_HOME` and DSH profile. Do not replace `HOME` and do not reuse the maintainer's regular DSH profile.
+
+Verify these observations:
+
+1. Project installation emits the full managed skill catalog and no nested skill entry.
+2. Profile installation records exact package versions and one managed preset.
+3. Codex reports ChatGPT-owned authentication through its own status command.
+4. Claude Code and Copilot own their login state; ai-toolkit state and logs contain no credential values.
+5. A Codex parent delegates one bounded marker task to Claude Code and one to Copilot Gemini.
+6. Uninstall returns the isolated profile to its pre-install inventory while preserving an injected user-owned preset fixture.
+
+## Pre-Mortem
+
+| Failure mode | Probability | Impact | Mitigation |
+|---|---|---|---|
+| Generic `install --local` mutates a global DSH profile | Medium | High | Separate project emission from the explicit `ai-toolkit dsh install` command and test zero `$DSH_HOME` writes in Phase 1 |
+| `--editors all` silently gains a developer-preview runtime | Medium | High | Keep explicit-only editors in a separate registry and assert expansion output in tests |
+| Preset update overwrites user edits or a same-name user preset | Medium | High | Require ownership state plus matching previous hash; refuse every ambiguous collision |
+| Partial DSH plugin installation leaves one provider without the matching preset | Medium | High | Preflight all inputs, snapshot managed state, order mutations, and implement deterministic recovery |
+| Installer logs or state capture vendor credentials | Low | Critical | Never invoke login flows, never read credential files, redact command output, and audit fixtures for secret-shaped data |
+| DSH prerelease changes plugin or preset discovery semantics | High | High | Pin the reviewed DSH version, run ecosystem drift checks, and block release on real-profile qualification failure |
+| Reusing Codex-adapted skills produces incorrect DSH delegation instructions | Medium | Medium | Validate representative delegation-heavy skills in the Codex parent and add a DSH-specific adapter only if evidence requires it |
+| Copilot changes Gemini model availability or credit policy | Medium | Medium | Treat model and credit policy as doctor-visible compatibility data, not a promise hardcoded into ai-toolkit behavior |
+
+## Agent Assignments
+
+| Workstream | Primary agent | Review agent | Reason |
+|---|---|---|---|
+| CLI and installer plumbing | `backend-specialist` | `tech-lead` | Python and Node entry-point integration with existing installer layers |
+| Command UX | `command-expert` | `product-manager` | Explicit mutation semantics, dry-run output, and actionable errors |
+| Runtime preflight and qualification | `infrastructure-validator` | `technical-researcher` | DSH profile behavior, pinned compatibility, and observable smoke evidence |
+| Security and ownership | `security-auditor` | `security-architect` | Credential boundary, collision refusal, state minimization, and release veto |
+| Test automation | `test-engineer` | `qa-automation-engineer` | Fake-runtime fixtures, lifecycle integration tests, and full regression gates |
+| Documentation | `documenter` | `fact-checker` | Cross-file parity and evidence-backed compatibility claims |
+
+## Approval Checkpoint
+
+Implementation starts only after the user approves:
+
+1. The two-command split between project emission and explicit DSH profile mutation.
+2. Excluding DSH from `--editors all` and auto-detection while upstream remains a developer preview.
+3. Pinning the native target to DSH `0.1.1-rc.2`, dsh-codex `1.0.0`, and dsh-orchestrator `1.0.1`.
+4. Deferring 44-agent mapping, MCP bridging, and hook bridging outside this plan.
+
+## Sources
+
+- `kb/history/completed/dsh-integration-plan-superseded.md`
+- `bin/ai-toolkit.js`
+- `scripts/install.py`
+- `scripts/install_steps/ai_tools.py`
+- `scripts/install_steps/install_state.py`
+- `scripts/ecosystem_tools.json`
+- <https://github.com/softspark/dsh-codex>
+- <https://github.com/softspark/dsh-orchestrator>
+- <https://github.com/deepseek-ai/deepseek-harness>
 
 ---
 
@@ -6269,10 +6936,10 @@ title: "SOP: Ecosystem Sync"
 category: procedures
 service: ai-toolkit
 tags: [sop, ecosystem, editors, generators, drift-detection, sync]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-04-23"
-last_updated: "2026-07-10"
-description: "Quarterly (or event-triggered) sync procedure that detects documentation and capability drift in supported tools (Claude Code, Claude app, and 11 editors), analyses our generators and skills for missing features, and walks through the migration + generator-update workflow."
+last_updated: "2026-08-31"
+description: "Quarterly or event-triggered sync procedure for the 14 registry tools: Claude Code, Claude app, explicit-preview DSH, and 11 default editor integrations."
 ---
 
 # SOP: Ecosystem Sync
@@ -6292,7 +6959,7 @@ Keeps ai-toolkit aligned with the tools it integrates with. When an editor adds 
 ## Quick Reference
 
 ```bash
-# Full check (all 13 tools, online)
+# Full check (all 14 registry tools, online)
 python3 scripts/ecosystem_doctor.py --format text
 
 # Single tool
@@ -6314,10 +6981,12 @@ python3 scripts/ecosystem_doctor.py --offline --format text
 
 | File | Purpose |
 |------|---------|
-| `scripts/ecosystem_tools.json` | Authoritative registry: 13 tools with doc URLs, config paths, our generators, capability markers |
+| `scripts/ecosystem_tools.json` | Authoritative registry: 14 tools with doc URLs, config paths, our generators, capability markers |
 | `benchmarks/ecosystem-doctor-snapshot.json` | Last-seen state (headings, content hash, markers, version) — updated via `--update` |
 | `scripts/ecosystem_doctor.py` | Drift detector |
 | `kb/reference/supported-tools-registry.md` | Human-readable view of the registry |
+
+DSH is counted because the ecosystem doctor tracks its upstream documentation and reviewed version. It remains an explicit developer-preview target, not a default editor integration, and stays outside `--editors all` and auto-detection.
 
 ---
 
@@ -6839,7 +7508,7 @@ python3 scripts/validate.py --strict
 ai-toolkit plugin list                             # show available packs
 ai-toolkit plugin install --editor claude <name>  # install for Claude Code global target
 ai-toolkit plugin install --editor codex <name>   # install for Codex global target
-ai-toolkit plugin install --editor all --all      # install all 12 packs for both runtimes
+ai-toolkit plugin install --editor all --all      # install all available packs for all supported editors
 ai-toolkit plugin update --editor all --all       # re-apply all installed packs after toolkit updates
 ai-toolkit plugin clean <name>                    # prune data older than 90 days
 ai-toolkit plugin clean <name> --days 30  # custom retention
@@ -7363,10 +8032,10 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.14.0"
+version: "1.15.0"
 created: "2026-04-10"
-last_updated: "2026-08-06"
-description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, and checksum-pin checks added in v2.8.0, the single-run npm test discipline added in v1.8.0, the ecosystem-sync gate added in v1.9.0, the registry-vs-generators drift gate added in v1.10.0, the mandatory pre-tag ShellCheck gate added in v1.11.0 (publish.yml does not run ShellCheck, so a hook lint failure can publish while reddening main CI — see the v4.5.1 postmortem in Phase 5), the pre-push tag assertions added in v1.12.0 after v4.19.0 was tagged on the wrong commit (Phase 7), and the licensing gate added in v1.13.0 with the move to Apache-2.0 (Phase 5c)."
+last_updated: "2026-09-02"
+description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
 # SOP: Release Preparation
@@ -7428,16 +8097,38 @@ python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem
 # 5c. Licensing gate — SPDX headers, LICENSE, NOTICE, manifest consistency
 npx bats tests/test_licensing.bats || { echo "LICENSING GATE FAILED"; exit 1; }
 
-# 6. Commit + tag + push
+# 6. Commit, push branch, and wait for the exact commit's full CI
 git add -A && git commit -m "chore: release vX.Y.Z"
-git tag vX.Y.Z
+RELEASE_SHA=$(git rev-parse HEAD)
+git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
+RUN_ID=""
+for ATTEMPT in 1 2 3 4 5; do
+  RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
+    --limit 1 --json databaseId --jq '.[0].databaseId')
+  [ -n "$RUN_ID" ] && break
+  echo "Waiting for CI run registration ($ATTEMPT/5)" >&2
+  [ "$ATTEMPT" -eq 5 ] || sleep 60
+done
+test -n "$RUN_ID" || { echo "FAIL: CI run not found for release commit"; exit 1; }
+gh run watch "$RUN_ID" --exit-status \
+  || { echo "FAIL: release commit CI failed"; exit 1; }
+for OS in ubuntu-latest macos-latest; do
+  gh run view "$RUN_ID" --json jobs \
+    --jq ".jobs[] | select(.name == \"Bats test suite ($OS)\") | .conclusion" \
+    | grep -qx success || { echo "FAIL: $OS test job not green"; exit 1; }
+done
+test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || { echo "FAIL: local HEAD changed during CI"; exit 1; }
+git fetch origin main || { echo "FAIL: origin/main refresh failed"; exit 1; }
+test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || { echo "FAIL: origin/main changed during CI"; exit 1; }
 
-# 6a. Assert the tag before pushing it (v4.19.0 postmortem, Phase 7)
-test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" || { echo "FAIL: tag not on HEAD"; exit 1; }
+# 6a. Only green branch CI authorizes tag creation
+git tag vX.Y.Z "$RELEASE_SHA"
+
+# 6b. Assert the tag before pushing it (v4.19.0 postmortem, Phase 7)
+test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA" || { echo "FAIL: tag not on tested release commit"; exit 1; }
 git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
 
-# 6b. Branch first, then the single tag by full ref. Never --tags.
-git push origin main
+# 6c. Push the single tag by full ref. Never --tags.
 git push origin refs/tags/vX.Y.Z
 ```
 
@@ -7853,22 +8544,59 @@ git commit -m "chore: release vX.Y.Z"
 
 ---
 
-## Phase 7: Tag and Push
+## Phase 7: Push Branch, Verify CI, Tag, and Push Tag
 
 ```bash
-git tag vX.Y.Z
+RELEASE_SHA=$(git rev-parse HEAD)
+git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
+
+# Bind the gate to the exact release commit. GitHub run registration is
+# asynchronous, so retry at most five times and log every attempt.
+RUN_ID=""
+for ATTEMPT in 1 2 3 4 5; do
+  RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
+    --limit 1 --json databaseId --jq '.[0].databaseId')
+  [ -n "$RUN_ID" ] && break
+  echo "Waiting for CI run registration ($ATTEMPT/5)" >&2
+  [ "$ATTEMPT" -eq 5 ] || sleep 60
+done
+test -n "$RUN_ID" || { echo "FAIL: CI run not found for release commit"; exit 1; }
+gh run watch "$RUN_ID" --exit-status \
+  || { echo "FAIL: release commit CI failed"; exit 1; }
+
+# publish.yml is Ubuntu-only. Require both full CI matrix jobs before creating
+# the tag so a green publish job cannot bypass a red macOS test.
+for OS in ubuntu-latest macos-latest; do
+  gh run view "$RUN_ID" --json jobs \
+    --jq ".jobs[] | select(.name == \"Bats test suite ($OS)\") | .conclusion" \
+    | grep -qx success || { echo "FAIL: $OS test job not green"; exit 1; }
+done
+
+# Refuse to tag if either local or remote main moved while CI was running.
+test "$(git rev-parse HEAD)" = "$RELEASE_SHA" \
+  || { echo "FAIL: local HEAD changed during CI"; exit 1; }
+git fetch origin main || { echo "FAIL: origin/main refresh failed"; exit 1; }
+test "$(git rev-parse origin/main)" = "$RELEASE_SHA" \
+  || { echo "FAIL: origin/main changed during CI"; exit 1; }
+
+git tag vX.Y.Z "$RELEASE_SHA"
 
 # Assert the tag before pushing it. Both checks are one line each and both
 # have caught a real broken release.
-test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" \
-  || { echo "FAIL: tag is not on HEAD"; exit 1; }
+test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA" \
+  || { echo "FAIL: tag is not on the tested release commit"; exit 1; }
 git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
   || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }
 
-# Push the branch, then the single release tag by its full ref.
-git push origin main
+# Push the single release tag by its full ref.
 git push origin refs/tags/vX.Y.Z
 ```
+
+**Why branch CI comes before the tag (v4.30.2 postmortem).** The publish
+workflow runs only on Ubuntu and can publish while the separate macOS matrix job
+is red. `v4.30.2` exposed this with a macOS-only DSH timing failure. A release
+commit must therefore pass the complete Ubuntu/macOS branch workflow before its
+tag exists; a successful publish workflow is not a substitute for green CI.
 
 **Why the assertions (v4.19.0 postmortem).** v4.19.0 was tagged on a commit
 that contained only a KB document and still carried `package.json` version
@@ -7940,10 +8668,12 @@ git push origin --delete vX.Y.Z
 | 15a | Licensing gate | `npx bats tests/test_licensing.bats` | 7/7 — SPDX headers, LICENSE, NOTICE, npm `files`, manifest consistency |
 | 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
 | 17 | Commit | `git commit` | Clean working tree |
-| 18 | Tag | `git tag vX.Y.Z` | Tag exists |
-| 18a | Tag is on HEAD | `test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)"` | Exit 0 |
-| 18b | Tag is on the release commit | `git show --no-patch --format=%s vX.Y.Z` | Reads `chore: release vX.Y.Z` |
-| 19 | Push branch, then the single tag | `git push origin main && git push origin refs/tags/vX.Y.Z` | CI triggered with `id-token: write`. Never `--tags`. |
+| 18 | Push branch | `git push origin main` | Exact release commit is on `origin/main` |
+| 18a | Full branch CI | `gh run watch "$RUN_ID" --exit-status` plus matrix job assertions | Ubuntu and macOS Bats jobs both conclude `success` |
+| 19 | Tag | `git tag vX.Y.Z` | Tag exists only after green branch CI |
+| 19a | Tag is on tested SHA | `test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA"` | Exit 0 |
+| 19b | Tag is on the release commit | `git show --no-patch --format=%s vX.Y.Z` | Reads `chore: release vX.Y.Z` |
+| 20 | Push the single tag | `git push origin refs/tags/vX.Y.Z` | Publish CI triggered with `id-token: write`. Never `--tags`. |
 
 ---
 
@@ -7953,11 +8683,11 @@ git push origin --delete vX.Y.Z
 title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
-tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.7.0"
+tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif, dsh]
+version: "1.8.0"
 created: "2026-04-08"
-last_updated: "2026-07-14"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
+last_updated: "2026-09-01"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, explicit DSH lifecycle, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
 # SOP: Release Verification
@@ -7982,7 +8712,7 @@ Verifies all critical paths from the user's perspective.
 
 ## Quick Checklist (TL;DR)
 
-14 commands — if all pass, the release is ready:
+The 14 core commands below must pass. Releases that change DSH must also complete Phase 10.
 
 ```bash
 # Pre-commit (Phase 0)
@@ -8392,6 +9122,36 @@ python3 -c "import zipfile; z=zipfile.ZipFile('$D.zip'); assert '.claude-plugin/
 
 **Verify:** the official validator exits 0; the archive contains the manifest,
 app-native rules skill, bundled agents/skills, and plugin-relative Cowork hooks.
+
+---
+
+## Phase 10: Explicit DSH Qualification (v4.30.0+)
+
+Run this phase whenever the release changes the `dsh` target, package pins, preset lifecycle, or DSH compatibility documentation. Use a new task-specific `DSH_HOME`; never replace `HOME` or reuse a regular profile.
+
+Prerequisites: DSH `0.1.1-rc.2`, pnpm `>=11.7.0,<12.0.0`, Codex logged in through ChatGPT, Claude Code logged in natively, and GitHub Copilot CLI logged in natively. Do not supply provider API keys.
+
+```bash
+DSH_SMOKE_ROOT="$(mktemp -d)"
+export DSH_HOME="$DSH_SMOKE_ROOT/dsh-home"
+
+ai-toolkit dsh install --profile web
+ai-toolkit dsh doctor --profile web
+dsh --profile web --host 127.0.0.1 --port 0 --no-open
+```
+
+In a new `softspark-orchestrator` session, select the `codex` provider and run two standalone marker prompts:
+
+1. `subagent_claude_code` returns an exact child marker, then the Codex parent returns its exact completion marker.
+2. `subagent_gemini_copilot` returns an exact child marker, then the Codex parent returns its exact completion marker.
+
+Stop DSH, then remove only the managed profile artifacts:
+
+```bash
+ai-toolkit dsh uninstall --profile web --yes
+```
+
+**Verify:** both tool results have `isError=false`, both turns end as `completed`, `doctor` reports no recovery requirement before uninstall, and an unrelated preset fixture remains unchanged. Preserve only redacted event sequence evidence; never attach credentials, auth files, or full private prompts.
 
 ---
 
@@ -8816,17 +9576,17 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.8.0"
+version: "1.10.0"
 created: "2026-03-23"
-last_updated: "2026-08-19"
-description: "Architecture of ai-toolkit: directory layout, Claude app export, global install model, editor-aware MCP install, Codex translation layer, skill tiers, and integration with projects."
+last_updated: "2026-09-01"
+description: "Architecture of ai-toolkit: install ownership, runtime adapters, the explicit DSH target, skill tiers, and project integration."
 ---
 
 # AI Toolkit Architecture
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, and compatible assistants such as Cursor, Devin, Copilot, Gemini, Cline, Roo/Zoo Code, Aider, Augment, and Google Antigravity. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
+Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, compatible assistants, and the explicit developer-preview DSH target. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
 
 ## Design Principles
 
@@ -8930,6 +9690,7 @@ Machine (global)                              Project (local)
 **`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, constitution.md, language rules). Editor configs are opt-in via `--editors`:
 - `--editors all` — install all 11 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex, Gemini, opencode)
 - `--editors cursor,aider` — install only selected editors
+- `--editors dsh` requires explicit selection. Its DSH-specific output is project `.agents/skills`; the normal `--local` Claude files, detected language rules, and generic project outputs still apply. DSH is excluded from `all`, auto-detection, and defaults.
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
 Each editor gets its documented directory-based format. Copilot receives root
@@ -8952,6 +9713,10 @@ packs can layer their rules, skills, and hooks onto that Codex user target.
 
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
 
+DSH profile mutation is also outside generic installation. `ai-toolkit dsh install|update|doctor|uninstall --profile web` names both the integration and profile. It manages only `@softspark/dsh-codex@1.0.0`, `@softspark/dsh-orchestrator@1.0.1`, the released preset, and their ownership record. Vendor CLIs own login and credentials. DSH `0.1.1-rc.2` is the only reviewed host version.
+
+Both DSH preview paths are read-only. Project `--dry-run` resolves `extends` without persisting its lockfile and changes no project or `DSH_HOME` entry. Profile lifecycle `--dry-run` changes no package, preset, state, profile, or authentication surface.
+
 If a project already has `.mcp.json`, local install mirrors its `mcpServers`
 entries into `.claude/settings.local.json` plus any selected editors with
 project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
@@ -8963,6 +9728,10 @@ project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
 |---------|--------|-------------|
 | `install` | `~/.claude/` | First-time: per-file symlinks + JSON merge + marker injection + rules |
 | `install --local` | `./` | Claude Code configs + editors via `--editors` (auto-detect or explicit) |
+| `install --local --editors dsh` | `./` | Generic local outputs plus the shared `.agents/skills` catalog; no DSH profile writes |
+| `dsh install|update --profile <name>` | `$DSH_HOME/profiles/<name>` | Exact SoftSpark package and preset lifecycle |
+| `dsh doctor --profile <name>` | DSH profile and ai-toolkit state | Read-only runtime, ownership, drift, and recovery diagnostics |
+| `dsh uninstall --profile <name>` | Managed DSH package, preset, and state entries | Ownership-checked removal that preserves unrelated profile content |
 | `claude-app export` | output ZIP + Markdown | Uploadable Claude Chat/Cowork plugin and global instructions |
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
@@ -9058,6 +9827,16 @@ surface or tmux-backed Agent Teams lifecycle. Plugin packs reuse the same
 translation and hook-compatibility model when targeting the global Codex layer.
 
 See `kb/reference/codex-cli-compatibility.md` for the detailed mapping.
+
+### DSH Explicit Target
+
+The DSH target reuses the Codex `.agents/skills` emitter. Canonical skill ownership stays under `app/skills`. DSH invocation metadata is validated before emission because invalid camel-case fields, non-boolean invocation values, and nested discovery entries fail closed upstream.
+
+The profile lifecycle is a separate transaction boundary. It stores exact package-tree and preset identity under the shared ai-toolkit state path selected by `AI_TOOLKIT_HOME`, `SOFTSPARK_HOME`, or the default `~/.softspark/ai-toolkit`. A DSH lifecycle lock plus state compare-and-swap checks protect concurrent writers. Collision or rollback ambiguity preserves user data and reports doctor-visible recovery paths.
+
+Codex remains the parent model through its local app server. The released preset adds one-shot Claude Code and GitHub Copilot Gemini delegation tools. ai-toolkit does not handle provider API keys or login state. GitHub Copilot policy and AI credits apply to the Gemini route. Direct Google, Antigravity, and Gemini API-key routes are unsupported.
+
+See `kb/reference/dsh-compatibility.md` for the exact command, version, authentication, and recovery contract. Real-profile Phase 3 qualification is pending.
 
 ## MCP Rendering Layer
 
@@ -9182,7 +9961,7 @@ Severity levels: HIGH (blocks deployment), WARN (should fix), INFO (best practic
 ## Extension Points
 
 ### MCP Templates
-`app/mcp-templates/` contains 26 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
+`app/mcp-templates/` contains 28 ready-to-use MCP server config templates. Opt-in via `ai-toolkit install --modules mcp-templates` or activated automatically with `--profile strict|full`.
 
 ### Language Rules
 `app/rules/` provides language-specific rule files covering 13 languages (TypeScript, Python, Go, Rust, Java, Kotlin, Swift, Dart, C#, PHP, C++, Ruby, common). Auto-detected from project files via `--auto-detect` or selectable with `--modules rules-<lang>`. See README.md for current count.
@@ -9610,7 +10389,7 @@ Usage: ai-toolkit <command> [options]
 
 | Command | Description |
 |---------|-------------|
-| `mcp list` | List available MCP server templates (26 templates) |
+| `mcp list` | List available MCP server templates (28 templates) |
 | `mcp editors` | List editors with native MCP config adapters and scopes |
 | `mcp add <name> [names...]` | Add MCP server template(s) to `.mcp.json` |
 | `mcp install --editor <name[,..]> [names...]` | Install templates into native editor MCP config |
@@ -11042,6 +11821,194 @@ This model gives:
 
 ---
 
+## kb/reference/dsh-compatibility.md
+
+---
+title: "AI Toolkit - DSH Compatibility"
+category: reference
+service: ai-toolkit
+tags: [dsh, deepseek-harness, subscriptions, lifecycle, compatibility]
+version: "1.7.0"
+created: "2026-08-31"
+last_updated: "2026-09-01"
+description: "Compatibility contract for project skills and the explicit SoftSpark package lifecycle in DeepSeek Harness."
+---
+
+# DSH Compatibility
+
+## Summary
+
+ai-toolkit supports DeepSeek Harness as an explicit developer-preview target. The integration is maintained by SoftSpark as a community compatibility layer. DeepSeek AI has not endorsed it.
+
+The reviewed runtime is DSH `0.1.1-rc.2`. Newer upstream prereleases are not covered until they pass the same qualification. Isolated pre-tag and exact-registry post-release profiles completed the Claude Code and Copilot Gemini marker roundtrips through a Codex parent on 2026-09-01.
+
+## Project vs Profile Outputs
+
+| Surface | Command | Managed output | Explicit non-output |
+|---|---|---|---|
+| Project install | `ai-toolkit install --local --editors dsh` | `CLAUDE.md`, `.claude/settings.local.json`, `.claude/constitution.md`, detected language rules, other generic local outputs, and the DSH-specific one-level `.agents/skills/<name>/SKILL.md` catalog with bundled resources | No `$DSH_HOME` writes, npm package changes, profile changes, preset changes, or credential reads |
+| DSH profile | `ai-toolkit dsh install --profile web` | Two exact npm dependencies in the named profile, the released `softspark-orchestrator` preset, and ai-toolkit ownership state | No project files, provider login, API keys, unrelated plugins, or user presets |
+
+DSH is excluded from `--editors all`, auto-detection, default profiles, and default editor selection. Naming `dsh` without `--local` is not a supported project install route.
+
+Project `--dry-run` resolves and validates `extends`, then plans the generic local outputs and `.agents/skills` catalog without creating, changing, or deleting a project entry. It does not create or update `.softspark-toolkit.lock.json`, and it does not mutate `DSH_HOME`, packages, profiles, state, or authentication.
+
+## Local and Global Commands
+
+```bash
+# Generic local outputs plus DSH-specific project skills
+ai-toolkit install --local --editors dsh
+
+# Read-only project preview
+ai-toolkit install --local --editors dsh --dry-run
+
+# Explicit machine profile lifecycle
+ai-toolkit dsh install --profile web
+ai-toolkit dsh update --profile web
+ai-toolkit dsh doctor --profile web
+ai-toolkit dsh uninstall --profile web --yes
+```
+
+The DSH profile defaults to `web` when `--profile` is omitted. `DSH_HOME` selects the DSH root and defaults to `~/.dsh`. Profile mutation is never an implicit side effect of local installation, global installation, update, or generic uninstall.
+
+## Exact Pins
+
+| Component | Reviewed version | Role |
+|---|---:|---|
+| DeepSeek Harness | `0.1.1-rc.2` | Profile host and plugin manager |
+| pnpm | `>=11.7.0,<12.0.0` | Package manager used by the DSH plugin command |
+| `@softspark/dsh-codex` | `1.0.0` | Codex parent provider through local `codex app-server` |
+| `@softspark/dsh-orchestrator` | `1.0.1` | Claude Code and GitHub Copilot Gemini delegation bundle plus released preset |
+
+Install and update use exact package arguments with `--save-exact`. Arbitrary DSH prereleases and unpinned SoftSpark packages are outside this contract.
+
+The reviewed DSH tag declares `pnpm@11.7.0`. The isolated cold-install environment used Corepack pnpm `11.24.0`, so the lifecycle accepts stable pnpm releases from `11.7.0` through the end of major 11. Before it creates the lifecycle lock or changes a profile, it resolves exact DSH and pnpm command paths from the minimal child `PATH`, records their command and resolved-file identities, and runs their version probes with a five-second bound. Missing, nonzero, timed-out, malformed, or unsupported pnpm probes fail with no package, preset, state, or lifecycle artifact.
+
+## Subscription and Authentication Boundaries
+
+ai-toolkit does not log in to a model provider, accept a provider API key, read a vendor credential store, copy tokens, or add credentials to state. Each vendor CLI owns authentication:
+
+| Route | Login owner | Subscription or billing boundary |
+|---|---|---|
+| Codex parent | `codex login` and `codex login status` | ChatGPT subscription managed by Codex |
+| Claude delegate | `claude auth login` | Claude Max or Pro managed by Claude Code |
+| Gemini delegate | `copilot login` | Active GitHub Copilot plan and GitHub AI credits |
+
+Lifecycle subprocesses receive only `HOME`, the validated `DSH_HOME`, `PATH`, and locale or temporary-directory settings when present. Provider and registry secret environment variables are not forwarded. Vendor CLI output is not copied into lifecycle error messages.
+
+## DSH, Codex, Claude, and Copilot Topology
+
+```text
+DSH session using SoftSpark Orchestrator
+  |
+  +-> @softspark/dsh-codex
+  |     -> local codex app-server
+  |     -> Codex-owned ChatGPT authentication and parent thread
+  |
+  +-> subagent_claude_code
+  |     -> DSH Claude Code provider
+  |     -> Claude Code native login
+  |
+  +-> subagent_gemini_copilot
+        -> GitHub Copilot CLI ACP server
+        -> Gemini 3.6 Flash under GitHub policy and AI credits
+```
+
+Codex is the parent provider. The preset keeps the optional Codex subagent row disabled. Claude Code and Copilot Gemini receive bounded standalone delegation tasks.
+
+## Invocation Metadata and Shared Skill Ownership
+
+DSH and Codex share the project `.agents/skills` output. `app/skills/<name>/` remains canonical. `scripts/generate_codex_skills.py` emits native links or adapted wrappers, so ai-toolkit does not maintain a second DSH-specific skill catalog.
+
+DSH discovers one-level `<name>/SKILL.md` bundles and flat `<name>.md` entries. Names must use lowercase kebab-case. The required fields are `name` and `description`. Optional invocation fields use `user-invocable` and `disable-model-invocation` with boolean values. Camel-case spellings or invalid boolean values fail closed and remove the skill from discovery. Nested `SKILL.md` entries are not supported, but resources inside a valid bundle remain available.
+
+The preset owns the session composition and external delegation tools. It does not copy the 44 ai-toolkit agent definitions into 44 DSH presets or subagents.
+
+## Lifecycle State and Recovery
+
+State resolves in this order:
+
+1. `$AI_TOOLKIT_HOME/state.json` when `AI_TOOLKIT_HOME` is set.
+2. `$SOFTSPARK_HOME/ai-toolkit/state.json` when `SOFTSPARK_HOME` is set.
+3. `~/.softspark/ai-toolkit/state.json` by default.
+
+The DSH record stores the canonical DSH home, profile, exact package versions, package-tree identity, preset path, preset hash, ownership flags, and timestamps. It stores no package contents, prompts, credentials, authentication paths, or child-process environment.
+
+The published npm packages own their installed code. The canonical preset source is `@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator` inside the exact installed package. ai-toolkit copies and verifies that tree. It does not reconstruct the preset.
+
+Mutations first take a nonblocking exclusive POSIX `flock` on the already pinned `DSH_HOME` directory descriptor, then claim the bounded canonical lifecycle lock and use the shared state lock with compare-and-swap publication. Directory locking is independent of the replaceable lock filename. It remains held across sentinel scans, package and preset mutation, normal canonical-lock release, or recovery-sentinel creation plus file and directory `fsync`. A competing lifecycle must acquire the same directory lock before it can scan recovery state or claim the canonical name. The immutable prerequisite record is revalidated after lock acquisition and before every package mutation or package rollback. A replaced or removed executable, or a new earlier `pnpm` PATH shadow, blocks the command. The verified pnpm command directory is placed first in the child PATH so DSH's literal `pnpm` lookup resolves to the probed command. Install, update, and uninstall verify the profile manifest, package trees, preset identity, and unrelated dependencies before and after each external package-manager command. Rollback restores the immutable pre-operation target. It does not reinterpret concurrent bytes as owned data.
+
+Each DSH plugin add, update, remove, or rollback command has a 300-second process bound, separate from the short prerequisite probe. This bound accommodates cold package resolution without promising registry or network latency. Every mutation starts DSH in a dedicated POSIX session and process group. A timeout or interruption signals the complete group, escalates from `SIGTERM` to `SIGKILL` when needed, and waits for confirmed group exit before rollback. If exit cannot be confirmed, package rollback is blocked and deterministic inspection steps are reported. Child stdout and stderr remain suppressed from user-facing errors.
+
+Process-group signals are allowed only while the unreaped DSH supervisor still binds its PID to that group. If the supervisor identity is lost before escalation, the lifecycle fails closed instead of signaling a group identifier that the operating system could reuse. Before `Popen`, the calling thread blocks `SIGINT` with `pthread_sigmask`. It restores the previous mask only inside a catchable region that covers `communicate`, final PGID inspection, and command postconditions, then restores the mask again in `finally`. Any `BaseException` after spawn runs full process-tree teardown before propagation. Repeated `SIGINT` cannot escape the bounded TERM, KILL, and wait sequence.
+
+An unconfirmed process-tree exit first verifies that `$DSH_HOME/.ai-toolkit-lifecycle.lock` still names the held inode, then creates and syncs a transaction-unique process-tree recovery sentinel. It rewrites the canonical lock as a recovery gate only while that identity remains exact. A removed or renamed lock leaves the sentinel as the gate; a foreign replacement is neither overwritten nor deleted. Install, update, and uninstall scan these sentinels before and after claiming the canonical lock, so recovery blocks DSH invocation even when the original lock name was displaced. `doctor` reports every gate's process-group identifier, original profile path, and exact artifact path. ai-toolkit never clears these gates automatically: the operator must verify that the recorded process group has exited, inspect the profile, and only then remove every named recovery artifact.
+
+An identity conflict preserves the conflicting path and creates a doctor-visible recovery marker instead of deleting or replacing it. User plugins, dependencies, presets, profile patches, and unrelated state keys remain outside ai-toolkit ownership. Secure mutation and process-tree termination require POSIX primitives available on Linux, WSL, and macOS. Native Windows mutation is unsupported and fails before the lifecycle lock.
+
+Profile lifecycle `--dry-run` is read-only. It runs the bounded DSH and pnpm prerequisite probes, but it does not create state, acquire a lock, invoke the plugin manager, or create profile paths. It can therefore report a missing or unsupported prerequisite without leaving lifecycle output.
+
+## Unsupported Google, Antigravity, and API-Key Routes
+
+This integration does not provide direct Google AI Pro or Ultra login, Gemini CLI OAuth, Antigravity login, Gemini API keys, DeepSeek API keys, Anthropic API keys, or OpenAI API keys. Gemini is available only through the GitHub Copilot CLI ACP route described above.
+
+The first native target also excludes DSH hook bridging, MCP bridging, arbitrary preset import, automatic profile selection, and full ai-toolkit agent mapping. Generic `ai-toolkit uninstall` does not mutate DSH profiles.
+
+## Behavioral Limits
+
+- Claude Code and Copilot delegation are one-shot child tasks. Each child receives the task and workspace directory, not the parent conversation history.
+- Copilot runs with no available tools, rejects permission requests, disables built-in MCP servers, remote control, custom instructions, and auto-update, and uses a 30-credit session cap.
+- Child effects completed before cancellation are not rolled back.
+- Workspace content selected by a vendor CLI may leave the machine under that vendor's product terms and account policy.
+- Codex owns its built-in tools, sandbox, approval policy, thread state, and model execution. ai-toolkit does not reproduce those controls inside DSH.
+- Existing DSH sessions keep the preset generation with which they started. Restart DSH and open a new session after install or update.
+
+## Uninstall, Update, and Doctor
+
+`ai-toolkit dsh update` changes only a recorded profile whose managed package and preset identities match state. It installs the current reviewed pins, then publishes the new state after all postconditions pass.
+
+`ai-toolkit dsh doctor` is read-only. It reports the DSH runtime version, pnpm availability and version, package pins, package-tree and preset ownership, state consistency, lifecycle lock recovery artifacts, staging paths, and recovery markers. A recovery marker keeps `Recovery needed: yes` visible until the operator resolves the named paths.
+
+`ai-toolkit dsh uninstall --yes` removes only the recorded SoftSpark packages, preset, and profile state. Drift or ownership ambiguity stops removal. Unrelated profile dependencies, patch files, presets, and state keys remain unchanged.
+
+## Verification
+
+Run the static and isolated checks without modifying a regular DSH profile:
+
+```bash
+bats tests/test_ecosystem_doctor.bats
+bats tests/test_dsh.bats
+python3 scripts/ecosystem_doctor.py --tool dsh --offline --format text
+python3 scripts/validate.py --strict
+
+ai-toolkit install --local --editors dsh --dry-run
+ai-toolkit dsh install --profile web --dry-run
+ai-toolkit dsh update --profile web --dry-run
+ai-toolkit dsh doctor --profile web
+ai-toolkit dsh uninstall --profile web --dry-run --yes
+```
+
+Phase 3 real-profile qualification completed with a task-specific `DSH_HOME`, exact published package artifacts, and native vendor logins. The pre-tag candidate and exact npm registry package both produced successful child and parent markers through `subagent_claude_code` and `subagent_gemini_copilot`; no provider API key was supplied or handled. The isolated DSH processes stopped cleanly and the unrelated profile fixture remained intact.
+
+## Preview and Upstream Drift
+
+DeepSeek Harness describes itself as a developer preview with compatibility-breaking changes. The upstream release feed published `0.1.2-alpha.2` after the reviewed `0.1.1-rc.2` line. ai-toolkit does not adopt that prerelease by inference.
+
+Use the registry doctor to detect documentation, capability-marker, and local version changes. A new upstream version requires source review, focused fixture updates, isolated real-profile qualification, and explicit pin changes before support moves.
+
+## Sources
+
+- [DeepSeek Harness documentation](https://deepseek-harness.github.io/deepseek-harness/)
+- [DeepSeek Harness releases](https://github.com/deepseek-ai/deepseek-harness/releases)
+- [Reviewed DSH 0.1.1-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2)
+- [Reviewed DSH package-manager declaration](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/package.json)
+- [Reviewed DSH CLI profile and plugin contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md)
+- [Reviewed DSH skill discovery contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md)
+- [PATH: kb/reference/manifest-install.md]
+- [PATH: kb/history/completed/dsh-native-install-target-plan.md]
+
+---
+
 ## kb/reference/enterprise-config-guide.md
 
 ---
@@ -11729,8 +12696,11 @@ active `CODEX_HOME` (default `~/.codex`) and shared user skills use
 Codex user surface.
 
 Claude Chat/Desktop/Cowork is a separate runtime. It does not read the
-filesystem surfaces under `~/.claude`; it receives ai-toolkit through an
-uploaded plugin plus app-managed global/folder instructions.
+filesystem surfaces under `~/.claude`; it receives ai-toolkit skills, agents,
+hooks, and rules through an uploaded plugin plus app-managed global/folder
+instructions. Its one file-based surface is `claude_desktop_config.json`, which
+the app parses for local MCP servers -- `ai-toolkit mcp install --editor
+claude-app --scope global` targets it directly, without a plugin.
 
 ## Command Responsibilities
 
@@ -12240,8 +13210,15 @@ for debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
 - `git push --force`
 - `chmod -R 777`
 
+**Case sensitivity:** patterns are matched in two passes. Command names and flags
+are matched case-**sensitively**, because `-d` and `-D` are different flags —
+`git branch -D` blocks, `git branch -d` does not. SQL keywords and the Windows
+`format` command are matched case-**insensitively**, so `drop table` blocks the
+same as `DROP TABLE`.
+
 **Exemptions (avoid false positives):**
 - `git push --force-with-lease` / `--force-if-includes` — the safe force-push variants are allowed.
+- `git branch -d` — the safe delete refuses unmerged branches and is the post-merge cleanup the git-workflow rules prescribe. `git branch -D` still blocks.
 - A single, non-chained `echo`/`printf`/`git commit`/`git tag` carrying a destructive token as *data* (e.g. a commit message mentioning `DROP TABLE`) is allowed. Chained commands (`&&`, `;`, `|`) are still inspected in full.
 
 ### PreToolUse (file ops) — `guard-path.sh`
@@ -13360,11 +14337,11 @@ source, cross-verify against a second independent copy, and only then write
 title: "Manifest-Driven Install System"
 category: reference
 service: ai-toolkit
-tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
-version: "1.0.0"
+tags: [install, manifest, modules, profiles, auto-detect, state-tracking, dsh]
+version: "1.16.0"
 created: "2026-04-07"
-last_updated: "2026-04-07"
-description: "Reference for the manifest-driven install system: 17 modules, 4 profiles, auto-detection, and state tracking in ~/.softspark/ai-toolkit/state.json."
+last_updated: "2026-09-01"
+description: "Reference for manifest-driven project installation, explicit DSH profile lifecycle management, and ownership state in ~/.softspark/ai-toolkit/state.json."
 ---
 
 # Manifest-Driven Install System
@@ -13397,7 +14374,7 @@ Modules are defined in `manifest.json` at the repository root. There are 17 modu
 | `rules-php` | PHP-specific rules (5 files) | auto-detect |
 | `rules-cpp` | C++-specific rules (5 files) | auto-detect |
 | `rules-ruby` | Ruby-specific rules (5 files) | auto-detect |
-| `mcp-templates` | 26 MCP server config templates | strict, full |
+| `mcp-templates` | 28 MCP server config templates | strict, full |
 
 ## Profiles
 
@@ -13477,6 +14454,64 @@ ai-toolkit status
 
 Re-applies installed modules, skipping files whose content hash has not changed since last install. Implemented in `scripts/install_steps/install_state.py`.
 
+## Explicit DSH Profile Lifecycle
+
+The DSH project target and the DSH profile lifecycle are separate operations:
+
+```bash
+# Generic local outputs plus DSH-specific project skills. No DSH profile change.
+ai-toolkit install --local --editors dsh
+
+# Read-only project plan, including extends resolution.
+ai-toolkit install --local --editors dsh --dry-run
+
+# Explicit global DSH profile mutation. The default profile is web.
+ai-toolkit dsh install --profile web
+ai-toolkit dsh update --profile web
+ai-toolkit dsh doctor --profile web
+ai-toolkit dsh uninstall --profile web --yes
+```
+
+The project command is explicit-only. DSH is excluded from `--editors all`, auto-detection, default profiles, and default editor selection. Its DSH-specific output is `.agents/skills`; the generic `--local` Claude files, detected language rules, and other project outputs still apply. It never writes below `DSH_HOME`.
+
+Project `--dry-run` resolves and validates `extends` without persisting `.softspark-toolkit.lock.json`, then plans every generic and DSH-specific project output without changing the project tree. Existing lock bytes and metadata remain unchanged. It also makes no DSH package, profile, state, or authentication change.
+
+`DSH_HOME` selects the DSH root. The default is `~/.dsh`. It must resolve to an absolute, non-symlink managed root. Profile identifiers accept 1 to 64 lowercase letters, digits, periods, underscores, or hyphens.
+
+The lifecycle supports DSH `0.1.1-rc.2`, stable pnpm `>=11.7.0,<12.0.0`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. The DSH tag declares `pnpm@11.7.0`, while isolated cold-install qualification used Corepack pnpm `11.24.0`. It invokes the plugin manager with bounded argv-array subprocesses:
+
+```text
+dsh plugin --profile web add @softspark/dsh-codex@1.0.0 --save-exact
+dsh plugin --profile web add @softspark/dsh-orchestrator@1.0.1 --save-exact
+```
+
+The orchestrator preset is copied from the installed package:
+
+```text
+$DSH_HOME/profiles/web/node_modules/@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator
+  -> $DSH_HOME/.agent-presets/softspark-orchestrator
+```
+
+The lifecycle refuses unowned same-name plugins and presets. An unchanged owned install is idempotent. Update and uninstall require every recorded package-tree entry and the preset tree to match current bytes, types, paths, links, and POSIX modes. Generic `ai-toolkit uninstall` does not mutate DSH profiles or remove their ownership state. Use `ai-toolkit dsh uninstall` explicitly.
+
+The persisted `packages` map is the ownership baseline, not the desired version target. Its key set must contain exactly the two managed package names, each value must be an exact version, and its keys must match the stored package-tree inventories. After a reviewed pin bump, `update` verifies the on-disk manifest and trees against those recorded versions, installs the current reviewed pins, and replaces the state record only after all postconditions pass. `uninstall` verifies and removes the recorded owned package names even when the current reviewed pins are newer. Rollback always restores the exact versions captured before the operation.
+
+A zero exit status from DSH is not sufficient to commit a lifecycle operation. Immediately before and after every plugin add or remove, ai-toolkit rereads the profile manifest and the complete managed package trees under the lifecycle lock. A changed, malformed, unexpected, or newly introduced managed entry stops the next external mutation and preserves the concurrent bytes. The managed packages must have the exact recorded pins or be fully absent for uninstall. Dependency entries outside the two managed package names must remain unchanged. A false-success postcondition leaves ownership state uncommitted.
+
+Each stored package inventory uses a domain-separated SHA-256 over stable, length-prefixed records. A record contains the entry type, relative path, POSIX mode, and type-specific metadata. Regular-file metadata contains the byte length and per-file SHA-256. Symlink metadata contains the target text. Traversal is bounded to 100,000 entries and 128 levels, never follows symlinks, and rejects special files. The state stores hashes and metadata only. It stores no package contents, credentials, authentication paths, or child-process environment.
+
+Rollback gives every package-manager recovery command an explicit target derived from the immutable pre-operation snapshot. The target contains the managed package inventory, the exact target package tree, the unchanged non-target package trees, and the pre-operation unrelated dependencies. A successful child exit is accepted only when all four match. A post-command observation is evidence, never a new target. Target drift or unreadable state blocks every later package-manager recovery call, preserves the current bytes, creates a transaction-unique doctor-visible recovery marker, and prints `ai-toolkit dsh doctor --profile <name>` plus deterministic manual inspection paths. This rule applies to install, update, and uninstall rollback.
+
+Before the first mutation, the lifecycle resolves exact DSH and pnpm command paths from the minimal child `PATH`. It records each command path, resolved path, device, inode, type, mode, size, timestamps, and symlink target when applicable. It runs both version probes with a five-second bound and requires pnpm to parse inside the supported range. Missing, nonzero, timed-out, malformed, or unsupported pnpm probes fail before the lifecycle lock and leave no package, preset, state, or lock artifact.
+
+Profile lifecycle `--dry-run` performs read-only runtime, package-manager, and ownership preflight. It prints the exact planned argv and paths. It does not acquire a lifecycle or state lock, create a directory, write state, or start a package-manager mutation. Mutating install, update, and uninstall operations first acquire a nonblocking exclusive POSIX `flock` on the pinned `DSH_HOME` directory descriptor, then hold `$DSH_HOME/.ai-toolkit-lifecycle.lock` from preflight through mutation, rollback, cleanup, and recovery. The directory lock is independent of that replaceable filename. It remains held while a recovery sentinel is created with `O_EXCL` and while both its file and parent directory are synced; release occurs only after normal canonical-lock release or durable sentinel publication. Every competing lifecycle must acquire the same directory lock before sentinel scans and canonical claim. Lock acquisition pins the exact lexical `DSH_HOME` parent and root directory descriptors and passes that one resolved home through the full operation. The prerequisite record is revalidated after the lock and before every package mutation or rollback. Replacement, removal, in-place identity drift, and a new earlier PATH shadow fail closed. The verified pnpm command directory leads the child PATH. Every internal mutation and each external DSH command verifies that the lexical path still names the pinned device, inode, and directory kind. Preset parents, staging trees, recovery containers, copied children, and recovery markers are opened by walking from that root descriptor with no-follow operations. Creation, copy, cleanup, and recovery use descriptor-relative system calls and retain the parent and child device and inode identities through postcondition checks. A mismatch blocks state success and later package commands, preserves both roots, and reports recovery. The child process receives only the verified canonical path. The canonical lock is claimed as a regular non-symlink with exclusive descriptor-relative creation and waits for at most one second. A write, `fsync`, close, or interruption during lock initialization removes only the captured lock inode. If that cleanup cannot complete, the command reports a doctor-visible lock recovery artifact and the next lifecycle command remains fail-closed. Release uses the pinned root descriptor, atomically relocates the lock without replacement, and deletes it only after its device and inode still match the transaction. A displaced root never redirects lock cleanup into its replacement. `doctor` is read-only and does not acquire the lifecycle lock.
+
+If process-tree termination cannot be confirmed, the lifecycle does not enter package rollback or normal lock release. Before writing recovery metadata it verifies that the canonical lock still names the held device and inode, then creates and syncs a transaction-unique `unconfirmed-process-tree` sentinel in the pinned DSH root. It rewrites the held inode only after a second canonical identity check. A removed or renamed canonical lock therefore leaves the recognized sentinel, while a foreign replacement remains byte-identical. Lock acquisition checks process-tree sentinels before and after claiming the canonical name, and every later install, update, or uninstall fails before DSH invocation. `doctor` prints the recorded process group, original profile path, and every exact gate file. Recovery is deliberately manual: verify that the process group has exited, inspect the preserved profile, and only then remove every named gate. Group signaling is permitted only while the unreaped DSH supervisor still binds the group identifier; after that identity is lost, the command preserves the gate rather than risk signaling a reused PGID. Repeated `SIGINT` is deferred or retried through the bounded TERM, KILL, and wait sequence.
+
+Doctor reports runtime compatibility, pnpm availability and version, installed package versions, complete package-tree ownership, preset ownership and hash drift, state consistency, legacy recovery collisions, transaction-unique recovery containers, preserved staging, and whether recovery is required.
+
+The lifecycle never runs login commands, reads vendor credential stores, accepts provider API keys, or forwards provider and registry secret environment variables. Codex, Claude Code, and GitHub Copilot own login state. GitHub AI credits apply to Copilot Gemini delegation. Direct Google AI Pro or Ultra, Gemini CLI OAuth, Antigravity, and Gemini API-key routes are unsupported. Prerequisite probes have a five-second bound. DSH plugin mutations and package rollback commands have a separate 300-second bound suitable for cold resolution, without promising registry or network latency. Each mutation uses a dedicated POSIX session and process group on Linux, WSL, or macOS. The calling thread blocks `SIGINT` with `pthread_sigmask` before `Popen`, restores its previous mask inside one catchable region covering communication and final PGID checks, and restores the mask in `finally`. Every `BaseException` after spawn triggers complete process-tree teardown before propagation. Timeout and interruption require confirmed group exit before rollback; an unconfirmed exit blocks rollback. POSIX directory `flock`, process groups, and thread signal masks are mandatory mutation primitives. Native Windows mutation is unsupported and fails before lifecycle writes. Failed child-process stdout and stderr are never included in user-facing errors. Errors expose only the safe command outcome, such as exit status, timeout, or interruption. Recovery argv contains only the validated DSH executable, profile, fixed package names, and exact pinned versions.
+
 ## State Tracking
 
 Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
@@ -13489,13 +14524,60 @@ Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
   "last_updated": "2026-04-07T10:00:00Z",
   "file_hashes": {
     "app/hooks/session-start.sh": "abc123..."
+  },
+  "dsh": {
+    "profiles": {
+      "web": {
+        "dsh_home": "/Users/example/.dsh",
+        "profile": "web",
+        "packages": {
+          "@softspark/dsh-codex": "1.0.0",
+          "@softspark/dsh-orchestrator": "1.0.1"
+        },
+        "package_trees": {
+          "@softspark/dsh-codex": {
+            "digest": "<canonical-tree-sha256>",
+            "entries": [
+              {"type": "directory", "path": ".", "mode": 493},
+              {"type": "file", "path": "package.json", "mode": 420, "size": 53, "sha256": "<file-sha256>"}
+            ]
+          },
+          "@softspark/dsh-orchestrator": {
+            "digest": "<canonical-tree-sha256>",
+            "entries": [
+              {"type": "directory", "path": ".", "mode": 493}
+            ]
+          }
+        },
+        "preset_path": "/Users/example/.dsh/.agent-presets/softspark-orchestrator",
+        "preset_hash": "<sha256>",
+        "owned": true,
+        "installed_at": "2026-08-29T08:00:00Z",
+        "last_updated": "2026-08-29T08:00:00Z"
+      }
+    }
   }
 }
 ```
 
 - `installed_modules` — used by `update` to know which modules to re-apply
 - `file_hashes` — used to skip unchanged files during `update`
+- `dsh.profiles` records the DSH home, profile, exact package versions, canonical package-tree inventories, preset path and hash, ownership, and timestamps
 - The file is written after every successful install or update
+
+Every shared state writer uses the canonical path from `AI_TOOLKIT_HOME`, `SOFTSPARK_HOME`, or the default `~/.softspark/ai-toolkit/state.json` and cooperates through the same bounded `.state.lock`. Where the host provides descriptor-relative atomic primitives, the lock context pins the state parent device and inode. Transaction reads, snapshots, compare-and-swap merges, private temporary creation, writes, `fsync`, publication, mode changes, cleanup, and lock release then address entries relative to that same open parent descriptor. A DSH lifecycle snapshot also records this parent identity and requires the final install, update, uninstall, and rollback state transaction to reopen that exact lexical path and match the same device and inode. The lexical parent binding is checked before publication and release. Replacing the state directory therefore fails without publishing into the replacement or losing either root. Generic install, MCP, and editor state writers retain the portable state contract on every supported Python platform. They use this pinned atomic publisher when available and otherwise publish a private temporary with the platform's atomic replacement primitive while holding the shared lock.
+
+DSH ownership mutation has a stricter platform gate. It requires Linux, WSL, or macOS support for pinned-directory, no-follow, no-replace, and atomic-exchange operations. The lifecycle checks both its DSH filesystem primitives and the state publisher before it creates the state root, state lock, lifecycle lock, temporary, or profile artifact. Secure state lock creation addresses `.state.lock` relative to a pinned no-follow parent descriptor and keeps that descriptor open through release. DSH state publication uses an atomic exchange for an existing file or a no-replace rename for first creation. The writer validates the displaced device, inode, and content digest before cleanup. A mismatched inode is restored or preserved for manual recovery instead of being overwritten or deleted. A bounded retry merges unrelated concurrent state keys. A concurrent change to the same DSH profile is preserved and reported as a recovery conflict.
+
+Records created before package-tree inventories were introduced are intentionally not migrated by assumption. `doctor` reports the invalid ownership state. Reinstall the explicit DSH integration after inspecting or removing the old record. Update and uninstall never claim unknown package bytes as owned.
+
+DSH mutations snapshot the profile manifest, managed package trees, base-directory existence, prior state, and preset before the first external mutation. Interruption and cleanup failure run the same rollback as package failure. Cleanup uses an entry-level inventory of device, inode, kind, digest, and symlink target. Snapshot recreation walks every ancestor without following symlinks, pins the destination parent, and uses descriptor-relative no-clobber creation for files, directories, and symlinks. File and directory modes are restored with `fchmod` only after pinning the exact inode. Post-creation and post-mode checks bind type, inode, mode, digest, and link target to the pinned parent. Unsupported primitives fail before any write, and an inode or ancestor mismatch remains untouched and doctor-visible. Manifest removal, manifest restoration, and transaction-created profile-directory pruning first relocate the candidate without replacement through pinned parent descriptors, then validate the moved inode and content before cleanup. A mismatch remains at its concurrent path or in a reported recovery container. Cleanup never unlinks, replaces, or removes a concurrently substituted file, symlink, or directory. A transaction-created `.agent-presets` parent is removed only when its identity is unchanged and it remains empty.
+
+Update and uninstall revalidate the owned preset identity and content immediately before relocation. The transaction atomically claims a private mode-0700 recovery container with a cryptographically random suffix, then moves the preset to its previously absent `managed-preset` child. It never replaces a caller-provided recovery path. The relocated payload remains bound to the captured device, inode, kind, digest, and symlink target; that same identity is checked immediately and again before every restore or removal. A byte-identical replacement is therefore preserved and reported instead of being treated as transaction-owned. Managed dependency entries must contain exact semantic versions; malformed or non-string values fail before DSH is invoked. A clean-profile rollback removes transaction-created manifest and base directories when they remain unchanged. Existing profile manifests are restored byte-for-byte, and missing pre-existing package entries are recreated without overwriting collisions.
+
+If byte-identical rollback cannot finish, the command returns nonzero and prints every exact safely quoted residual path plus deterministic recovery steps. One failed package recovery command does not authorize the next package command: the loop immediately rechecks the rollback-blocked flag and complete package identity after success or failure, records doctor and inspection actions, and stops package mutation on drift. Independent preset cleanup and state restoration still run, so their failures are aggregated without replacing the original error. Every surviving staging or recovery path remains listed and doctor-visible, so no operation reports success while its owned recovery data survives. Update staging cleanup removes only transaction-owned entries and reports every surviving staging path, including concurrent additions. Package-filesystem and cleanup residuals create transaction-unique `.softspark-orchestrator.ai-toolkit-package.<token>` containers. `ai-toolkit dsh doctor --profile <name>` reports `Recovery needed: yes` until manual recovery is complete.
+
+Real-profile qualification with the published packages and native subscription logins remains pending Phase 3. Static, fixture, and dry-run success is not evidence that this qualification has completed.
 
 ## Implementation Files
 
@@ -13504,6 +14586,7 @@ Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
 | `manifest.json` | Module and profile definitions |
 | `scripts/install_steps/detect_language.py` | Auto-detect project language from marker files |
 | `scripts/install_steps/install_state.py` | Read/write `~/.softspark/ai-toolkit/state.json` |
+| `scripts/install_steps/dsh.py` | Explicit DSH install, update, doctor, uninstall, and recovery lifecycle |
 
 ## Backward Compatibility
 
@@ -13521,6 +14604,7 @@ No existing install scripts or CI configurations need changes.
 - [PATH: kb/reference/language-rules.md] — language rules structure and auto-detection detail
 - [PATH: kb/reference/mcp-templates.md] — MCP server templates (the `mcp-templates` module)
 - [PATH: kb/reference/architecture-overview.md] — overall install model
+- [PATH: kb/reference/dsh-compatibility.md] - DSH commands, topology, authentication, and preview limits
 
 ---
 
@@ -13531,9 +14615,9 @@ title: "AI Toolkit - MCP Editor Compatibility"
 category: reference
 service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor, antigravity]
-version: "1.3.1"
+version: "1.4.0"
 created: "2026-04-12"
-last_updated: "2026-08-19"
+last_updated: "2026-08-21"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -13547,7 +14631,8 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 
 | Editor | Scope | Native Config Path | Adapter Behavior |
 |--------|-------|--------------------|------------------|
-| Claude Code | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` | Merges `mcpServers` while preserving other settings keys |
+| Claude Code | project + global | `.mcp.json`, `~/.claude.json` | Merges `mcpServers` while preserving other top-level keys |
+| Claude Chat / Cowork | global | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `%APPDATA%/Claude/claude_desktop_config.json` (Windows), `~/.config/Claude/claude_desktop_config.json` (Linux); `CLAUDE_USER_DATA_DIR` overrides the root | Emits the app's stdio-only `{command, args, env}` schema and bridges HTTP/SSE servers through `mcp-remote`; preserves `preferences`, `coworkUserFilesPath`, and user-owned servers |
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds Copilot-required `type` and `tools` fields |
 | Gemini CLI | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Merges `mcpServers` into settings JSON |
@@ -13574,8 +14659,31 @@ ai-toolkit mcp install --editor cursor --scope project github --target .
 ai-toolkit mcp install --editor antigravity --scope project context7 --target .
 ai-toolkit mcp install --editor codex --scope project context7 --target .
 ai-toolkit mcp install --editor codex context7
+ai-toolkit mcp install --editor claude-app --scope global context7
 ai-toolkit mcp remove github --editor cursor --scope project --target .
 ```
+
+## Claude Chat / Cowork
+
+The Claude app is the one target whose MCP surface is file-based while everything
+else about it is not. Skills, agents, hooks, and rules reach Chat/Cowork only
+through the uploaded plugin ZIP (`ai-toolkit claude-app export`), because the app
+scans no filesystem location for them. Local MCP servers are different: the app
+parses `claude_desktop_config.json` on startup and reports invalid entries in its
+own warning dialog.
+
+Two constraints shape the adapter:
+
+- **stdio only.** Each entry is validated as `{command, args, env}`. Remote
+  endpoints live in a separate `remoteMcpServers` surface that the app manages
+  through its Connectors UI and does not read from this file. Portable HTTP/SSE
+  templates are therefore wrapped in `mcp-remote`, which negotiates the transport
+  itself, so one bridge shape covers both spellings.
+- **The file is not ours.** It also holds `preferences` and `coworkUserFilesPath`,
+  which the app rewrites on its own. The adapter merges only `mcpServers` and
+  leaves every other key untouched.
+
+The app must be restarted for a config change to take effect.
 
 ## Install Flow Integration
 
@@ -13620,17 +14728,17 @@ title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
 tags: [mcp, templates, servers, configuration, editors, inject-mcp, external-templates]
-version: "1.4.1"
+version: "1.6.0"
 created: "2026-04-07"
-last_updated: "2026-08-19"
-description: "Reference for 26 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
+last_updated: "2026-08-31"
+description: "Reference for 28 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
 ---
 
 # MCP Server Templates
 
 ## Overview
 
-ai-toolkit ships 26 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
+ai-toolkit ships 28 ready-to-use MCP server configuration templates in `app/mcp-templates/`. Each template is a JSON file that defines the canonical `mcpServers` block for a specific service. Templates can be merged into the project's `.mcp.json` and rendered into editor-native MCP config files via the `ai-toolkit mcp` CLI subcommand.
 
 **External templates:** Tools outside the toolkit (MCP servers, plugins, custom integrations) can register their own MCP templates via `ai-toolkit inject-mcp <file|url>` -- the toolkit caches the template, tags every server with a `_source` field, and propagates the config to every editor that exposes a `global_path`. URL-sourced templates are auto-refreshed on every `ai-toolkit update`. See [PATH: kb/reference/extension-api.md] for the inject-mcp / remove-mcp reference.
 
@@ -13656,6 +14764,7 @@ The `add` command merges the `mcpServers` block from the template into `.mcp.jso
 The `install` command renders the same canonical template into an editor-native config format:
 - JSON clients with `mcpServers` blocks: Claude Code, Cursor, Gemini CLI, Google Antigravity, Roo Code, Windsurf, Cline, Augment
 - JSON clients with additional transport metadata: GitHub Copilot
+- JSON clients restricted to stdio: Claude Chat/Cowork (`claude-app`) -- remote servers are bridged through `mcp-remote`
 - TOML clients: Codex CLI (`[mcp_servers.<name>]`)
 
 When `install` runs with `--scope project`, ai-toolkit also updates the project's `.mcp.json` so it remains the source of truth for later syncs.
@@ -13664,7 +14773,8 @@ When `install` runs with `--scope project`, ai-toolkit also updates the project'
 
 | Editor | Scope | Native Config Path | Notes |
 |--------|-------|--------------------|-------|
-| `claude` | project + global | `.claude/settings.local.json`, `~/.claude/settings.json` | Preserves existing hooks and env keys |
+| `claude` | project + global | `.mcp.json`, `~/.claude.json` | Preserves unrelated top-level keys |
+| `claude-app` | global | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `%APPDATA%/Claude/claude_desktop_config.json` (Windows), `~/.config/Claude/claude_desktop_config.json` (Linux) | Claude Chat/Cowork; stdio-only schema, bridges HTTP/SSE through `mcp-remote`, preserves `preferences` and `coworkUserFilesPath`; `CLAUDE_USER_DATA_DIR` overrides the root |
 | `cursor` | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors canonical `mcpServers` |
 | `copilot` | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds `type` and `tools: ["*"]` automatically |
 | `gemini` | project + global | `.gemini/settings.json`, `~/.gemini/settings.json` | Uses Gemini CLI `mcpServers` format |
@@ -13694,6 +14804,7 @@ loads `.codex/config.toml` only for trusted project layers.
 | `filesystem` | Local filesystem access for reading, writing, and searching files | — |
 | `git` | Git repository inspection: diffs, logs, branches | — |
 | `github` | GitHub API: issues, PRs, repos, code search | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| `jira` | Jira multi-instance routing, ADF, caching, and comment templates | — |
 | `google-drive` | Google Drive file search, reading, and management | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` |
 | `google-maps` | Google Maps geocoding, directions, place search | `GOOGLE_MAPS_API_KEY` |
 | `grafana` | Grafana dashboard queries, alerting, and data source management | `GRAFANA_URL`, `GRAFANA_API_KEY` |
@@ -13702,6 +14813,8 @@ loads `.codex/config.toml` only for trusted project layers.
 | `notion` | Notion workspace: pages, databases, content management | `NOTION_API_KEY` |
 | `postgres` | PostgreSQL database access, schema inspection, analysis | — |
 | `puppeteer` | Browser automation: screenshots, navigation, web scraping | — |
+| `rag-mcp` | General knowledge-base RAG over HTTP MCP (localhost port 8081 by default) | — |
+| `rag-mcp-legal` | Polish legal RAG over HTTP MCP (localhost port 8082 by default) | — |
 | `redis` | Redis cache inspection, data management, and monitoring | `REDIS_URL` |
 | `sentry` | Sentry error tracking: issue search, event details, alerting | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` |
 | `sequential-thinking` | Step-by-step reasoning and problem decomposition | — |
@@ -13734,6 +14847,10 @@ Each template is a JSON file with the following structure:
 - `description` — shown by `mcp list` and `mcp show`
 - `mcpServers` — the block merged verbatim into `.mcp.json`
 - `env` values use `${VAR_NAME}` placeholders that must be set in the shell environment or `.env` file before Claude Code starts
+
+`rag-mcp` and `rag-mcp-legal` expose unauthenticated HTTP MCP endpoints by
+design. Keep the default localhost binding, use a VPN, or protect remote access
+with a restricted reverse proxy.
 
 ## Example: Adding GitHub and PostgreSQL
 
@@ -14594,17 +15711,17 @@ title: "Plugin Pack Conventions"
 category: reference
 service: ai-toolkit
 tags: [plugins, plugin-packs, conventions, manifests, hooks, policy-packs]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-03-28"
-last_updated: "2026-08-18"
-description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across Claude Code and Codex runtimes."
+last_updated: "2026-08-31"
+description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across supported editors."
 ---
 
 # Plugin Pack Conventions
 
 ## Purpose
 
-`ai-toolkit` includes experimental plugin packs under `app/plugins/` for Claude Code and optional global Codex layering, and discovers external packs under `~/.softspark/ai-toolkit/plugins/` (see *Where Packs Live*). These internal pack manifests are distinct from the official uploadable Claude app plugin built by `ai-toolkit claude-app export`.
+`ai-toolkit` includes experimental plugin packs under `app/plugins/` for Claude Code, Codex, Cursor, and Gemini global layering, and discovers external packs under `~/.softspark/ai-toolkit/plugins/` (see *Where Packs Live*). These internal pack manifests are distinct from the official uploadable Claude app plugin built by `ai-toolkit claude-app export`.
 
 ## Where Packs Live
 
@@ -14660,6 +15777,7 @@ app/plugins/<pack-name>/
 ├── plugin.json
 ├── README.md
 ├── hooks/        # optional, executable if present
+├── mcp/          # optional, pack-local MCP templates
 ├── rules/        # optional
 ├── skills/       # optional
 ├── agents/       # optional
@@ -14683,6 +15801,14 @@ Required keys:
 - `skills`
 - `rules`
 - `hooks`
+- `mcp` (optional MCP template names)
+
+An MCP reference such as `"rag-mcp-legal"` resolves first to the pack-owned
+`mcp/rag-mcp-legal.json`, then to the built-in
+`app/mcp-templates/rag-mcp-legal.json`. Each template must use the same `name`
+as the reference and provide a non-empty `mcpServers` object. A localhost HTTP
+template must also include a `postInstall` warning that the endpoint is
+`unauthenticated`.
 
 ## Naming Rules
 
@@ -14702,10 +15828,12 @@ Required keys:
 ## CLI Management
 
 ```bash
-ai-toolkit plugin list               # show all 12 packs with install status
+ai-toolkit plugin list               # show all available packs with install status
 ai-toolkit plugin install --editor claude <name>   # Claude Code global target
 ai-toolkit plugin install --editor codex <name>    # Codex global target
-ai-toolkit plugin install --editor all --all       # install all 12 packs for both runtimes
+ai-toolkit plugin install --editor cursor <name>   # Cursor global target
+ai-toolkit plugin install --editor gemini <name>   # Gemini CLI global target
+ai-toolkit plugin install --editor all --all       # install all available packs for all supported editors
 ai-toolkit plugin update --editor all --all        # update all installed packs
 ai-toolkit plugin clean <name>       # prune data older than 90 days (default)
 ai-toolkit plugin clean <name> --days 30  # prune data older than 30 days
@@ -14716,21 +15844,25 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 
 ### What `plugin install` Does
 
-1. **Parses** `--editor claude|codex|all` (default: `claude`)
+1. **Parses** `--editor claude|codex|cursor|gemini|all` (default: `claude`)
 2. **Copies** plugin-specific hooks to runtime-owned storage: Claude uses `~/.softspark/ai-toolkit/hooks/plugin-<pack>-<hook>.sh`; Codex uses `$CODEX_HOME/ai-toolkit-hooks/plugin-<pack>-<hook>.sh`
 3. **Copies** shared plugin scripts to `~/.softspark/ai-toolkit/plugin-scripts/<pack>/`
 4. **Runs** init scripts if present (e.g. `init_db.py` for memory-pack — safe to re-run, preserves data)
 5. **Claude Code target**: links missing agents/skills into `~/.claude/`, injects plugin-local rules into `~/.claude/CLAUDE.md`, and merges plugin hook entries into `~/.claude/settings.json`
 6. **Codex target**: bootstraps `$CODEX_HOME/AGENTS.md`, `$HOME/.agents/skills`, `$CODEX_HOME/hooks.json`, and self-contained `$CODEX_HOME/ai-toolkit-hooks`, then layers plugin-specific rules and hooks on top; it does not write `~/AGENTS.md` or `.agents/rules/`
-7. **Records** installed state per runtime in `~/.softspark/ai-toolkit/plugins.json`
+7. **Cursor target**: writes each pack-owned rule as `~/.cursor/rules/plugin-<pack>-<rule>.mdc` with `alwaysApply: true`; files are exact-hash owned and collisions are rejected
+8. **Gemini target**: marker-injects each pack-owned rule into `~/.gemini/GEMINI.md` as `plugin-<pack>-<rule>`, preserving all unrelated content
+9. **Records** installed state per runtime in `~/.softspark/ai-toolkit/plugins.json`
+10. **MCP assets**: installs `includes.mcp` into the selected editor's global MCP config, rejects unowned same-name entries, and records the exact normalized server configuration under the plugin's ownership state
 
 ### What `plugin update` Does
 
-1. **Removes** existing plugin runtime entries for the selected editor(s) (same as `remove`)
-2. **Reinstalls** from the current source (same as `install`)
-3. **Preserves plugin data** (e.g. memory-pack SQLite database is never deleted)
-4. Shared plugin scripts/hooks are kept if another runtime still has the same pack installed
-5. `--all` updates only currently installed packs for the selected runtime(s)
+1. **Preflights** MCP and native-rule collisions before changing any plugin state, skill, rule, hook, or script
+2. **Removes** existing plugin runtime entries for the selected editor(s) (same as `remove`)
+3. **Reinstalls** from the current source (same as `install`)
+4. **Preserves plugin data** (e.g. memory-pack SQLite database is never deleted)
+5. Shared plugin scripts/hooks are kept if another runtime still has the same pack installed
+6. `--all` updates only currently installed packs for the selected runtime(s)
 
 ### What `plugin clean` Does
 
@@ -14742,10 +15874,12 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 
 1. **Claude Code target**: strips plugin hook entries from `~/.claude/settings.json` and removes plugin-local rule sections from `~/.claude/CLAUDE.md`
 2. **Codex target**: strips only command handlers carrying the exact `AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-<pack>` marker from `$CODEX_HOME/hooks.json`, removes owned `$CODEX_HOME/ai-toolkit-hooks/plugin-<pack>-*` assets, and removes the pack's marker-bounded sections from `$CODEX_HOME/AGENTS.md`
-3. **Claude/shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
-4. **Updates** `plugins.json` state per runtime
-5. **Leaves** core agents/skills untouched (they belong to the base install)
-6. **Leaves** plugin data intact (e.g. `memory.db` — use `clean` to prune)
+3. **Cursor/Gemini rules**: removes only exact content recorded in `rule_ownership`; foreign or user-modified files/sections are preserved with a warning
+4. **Claude/shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
+5. **Updates** `plugins.json` state per runtime
+6. **Leaves** core agents/skills untouched (they belong to the base install)
+7. **Leaves** plugin data intact (e.g. `memory.db` — use `clean` to prune)
+8. **MCP cleanup**: removes only unchanged servers recorded as owned by that plugin; user-created, foreign, or manually changed entries are preserved with a warning
 
 ### Data Retention (memory-pack)
 
@@ -14769,7 +15903,7 @@ time.
 links every core skill and agent, so a manifest naming only core assets resolves
 to nothing: `plugin install` reports `(0 file items)` and no file appears on
 disk. This is not a subtle degradation — it is a complete no-op, identical on
-every profile (`minimal`, `standard`, `strict`) and on both runtimes.
+every profile (`minimal`, `standard`, `strict`) and on every supported editor.
 
 Nine packs were removed in v4.20.0 for failing this: `csharp`, `java`, `kotlin`,
 `ruby`, `rust`, `swift`, `frontend`, `research`, `security`. Every one declared
@@ -15444,19 +16578,19 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.13.0"
+version: "1.15.0"
 created: "2026-04-23"
-last_updated: "2026-08-19"
-description: "Human-readable view of scripts/ecosystem_tools.json — the canonical list of tools ai-toolkit integrates with (Claude Code, Claude Chat/Cowork, and 11 editors), their documentation URLs, config paths, our generators, and tracked capability markers."
+last_updated: "2026-09-01"
+description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, 11 editors, and the explicit developer-preview DSH target."
 ---
 
 # Supported Tools Registry
 
-The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view — when the JSON changes, update this table too.
+The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view. Update it whenever the JSON changes.
 
-## Tool Count: 13
+## Tool Count: 14
 
-1 primary runtime (Claude Code) + 1 Claude app target + 11 editor integrations.
+1 primary runtime, 1 Claude app target, 11 editor integrations, and 1 explicit developer-preview harness target.
 
 ---
 
@@ -15490,11 +16624,36 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `claude-app` |
 | Docs | https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork |
 | Plugin docs | https://support.claude.com/en/articles/13837440-use-plugins-in-claude |
-| Config surfaces | `Settings > Cowork > Global instructions`, Cowork folder instructions, `Customize > Skills`, and `Customize > Plugins` |
+| Config surfaces | `Settings > Cowork > Global instructions`, Cowork folder instructions, `Customize > Skills`, `Customize > Plugins`, plus the one file-based surface: `claude_desktop_config.json` (macOS `~/Library/Application Support/Claude/`, Windows `%APPDATA%/Claude/`, Linux `~/.config/Claude/`; `CLAUDE_USER_DATA_DIR` overrides the root) |
 | Plugin layout | `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`; ai-toolkit uses manifest paths under `claude-app/` for its generated app-only rules and hooks |
-| Our generator | `scripts/claude_app.py` (`ai-toolkit claude-app export`) |
+| Our generator | `scripts/claude_app.py` (`ai-toolkit claude-app export`); `scripts/mcp_editors.py` for the `claude-app` MCP adapter |
 | Runtime split | Skills work in Chat (web/Desktop) and Cowork. Hooks and sub-agents run only in Cowork. Claude app does **not** scan Claude Code's `~/.claude/rules/`, `CLAUDE.md`, or `~/.claude/settings.json`. |
-| Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. |
+| MCP | `ai-toolkit mcp install --editor claude-app --scope global <template>` writes `claude_desktop_config.json` directly -- no plugin involved. Entries are validated by the app as `{command, args, env}`; remote endpoints belong to the separate UI-managed `remoteMcpServers` surface, so HTTP/SSE templates are bridged through `mcp-remote`. Restart the app to load a change. |
+| Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. MCP config is the exception -- it updates from the CLI like any other editor. |
+
+---
+
+## Explicit Developer-Preview Harness
+
+### DeepSeek Harness
+
+| Field | Value |
+|-------|-------|
+| ID | `dsh` |
+| Status | `developer-preview`, `explicit-only`. This is a SoftSpark-maintained community compatibility target. DeepSeek AI has not endorsed it. |
+| Reviewed version | DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. |
+| Docs | https://deepseek-harness.github.io/deepseek-harness/ |
+| Release sources | https://github.com/deepseek-ai/deepseek-harness/releases and the reviewed [DSH 0.1.1-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2) |
+| Reviewed contracts | Tagged [CLI profile and plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md) and [skill discovery reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md) |
+| Config paths | Project `.agents/skills/*/SKILL.md`; profile `$DSH_HOME/profiles/<profile>/package.json`; installed packages under `$DSH_HOME/profiles/<profile>/node_modules/@softspark/`; preset `$DSH_HOME/.agent-presets/softspark-orchestrator` |
+| Project generator | `scripts/generate_codex_skills.py` emits the shared Codex and DSH `.agents/skills` catalog. `ai-toolkit install --local --editors dsh` makes no `$DSH_HOME` write. |
+| Profile lifecycle | `scripts/install_steps/dsh.py` implements explicit `install`, `update`, `doctor`, and `uninstall` for one named profile. |
+| Selection boundary | Excluded from `--editors all`, auto-detection, defaults, default profiles, and global editor selection. |
+| Authentication | ai-toolkit accepts no provider API key and performs no login. Codex, Claude Code, and GitHub Copilot own authentication. Copilot Gemini usage consumes GitHub AI credits. |
+| State and recovery | State uses `AI_TOOLKIT_HOME`, then `SOFTSPARK_HOME`, then `~/.softspark/ai-toolkit/state.json`. Locks and compare-and-swap publication protect ownership. Doctor reports preserved recovery markers and drift. |
+| Upstream drift | Upstream has newer prereleases, including `0.1.2-alpha.2`. They remain unqualified until source review and isolated real-profile verification complete. Phase 3 real-profile evidence is pending. |
+
+See [DSH Compatibility](./dsh-compatibility.md) for commands, topology, subscription boundaries, lifecycle ownership, and limitations.
 
 ---
 
@@ -16130,13 +17289,117 @@ title: "Troubleshooting"
 service: ai-toolkit
 category: troubleshooting
 tags: [troubleshooting, debugging]
-last_updated: "2026-03-25"
-description: "Section index for ai-toolkit troubleshooting. No documents are filed here yet; new ones follow the troubleshooting template."
+last_updated: "2026-08-21"
+description: "Section index for ai-toolkit troubleshooting, covering the Claude app plugin double-load collision."
 ---
 
 # Troubleshooting
 
-Problem resolution guides. Guides will be added here as they are created.
+Problem resolution guides.
+
+- [Claude App Plugin Loads Twice in Claude Code](plugin-double-load.md) -- hooks fire twice after the plugin ZIP is uploaded next to a global install.
+
+---
+
+## kb/troubleshooting/plugin-double-load.md
+
+---
+title: "Claude App Plugin Loads Twice in Claude Code"
+category: troubleshooting
+service: ai-toolkit
+tags: [plugin, claude-app, hooks, duplication, doctor]
+created: "2026-08-21"
+last_updated: "2026-08-21"
+description: "Every toolkit hook fires twice and skills and agents load twice after the Claude app plugin ZIP is uploaded on a machine that already has the global install. Cause: the app registers the plugin under ~/.claude/plugins, which Claude Code also reads."
+---
+
+# Claude App Plugin Loads Twice in Claude Code
+
+## Symptom
+
+After uploading `ai-toolkit-claude-app.zip` through `Customize > Plugins`, Claude
+Code sessions get slower and every hook side effect appears twice: duplicate rows
+in `governance.log`, duplicate session state writes, two Stop gates per turn.
+`ai-toolkit doctor` reports a healthy install because it only inspected
+`~/.claude` and `app/plugins`.
+
+## Cause
+
+The Claude app writes uploaded plugins into
+`~/.claude/plugins/marketplaces/local-desktop-app-uploads/` and sets
+`enabledPlugins` in `~/.claude/settings.json`. Both paths belong to Claude Code
+as well, so Claude Code loads the plugin on top of the global install. The
+bundle carries the same catalog as `~/.claude`, and plugin hooks merge with user
+hooks without deduplication.
+
+Confirmed in a Claude Code debug log (`claude --debug -p ...`, then read
+`~/.claude/debug/latest`):
+
+```
+Loaded 111 unique skills (... user: 111 ...)
+Total plugin skills loaded: 111 (0 duplicate/user-owned entries skipped)
+Total plugin agents loaded: 44
+Read manifest hooks for plugin ai-toolkit (enabled=true): ./claude-app/hooks/hooks.json
+```
+
+The `skills` manifest field adds to the default `skills/` directory instead of
+replacing it, so the plugin contributes its 109 catalog skills plus the 2
+app-only rule skills.
+
+## Diagnosis
+
+```bash
+ai-toolkit doctor
+```
+
+Check 11 reports the collision:
+
+```
+## 11. Plugin Double-Load
+  WARN: ai-toolkit@local-desktop-app-uploads is active next to the global install: 28 toolkit hooks fire twice per event and skills/agents load twice (run: ai-toolkit doctor --fix)
+```
+
+To see the duplication directly, count hook invocations per source in a fresh
+session log:
+
+```bash
+grep -oE "[^\"' ]*hooks/[a-z0-9._-]+\.sh" ~/.claude/debug/latest | sort | uniq -c
+```
+
+## Fix
+
+```bash
+ai-toolkit doctor --fix
+```
+
+That sets the plugin to `false` in `enabledPlugins` and leaves the global
+install authoritative. Claude Code then logs
+`enabled=false; will NOT register, plugin is disabled`, and plugin skills and
+agents drop to 0.
+
+The global install is the richer surface for Claude Code: it delivers rules as
+real files under `~/.claude/rules/`, which are always in context, while the
+plugin exposes them as an `ai-toolkit-rules` skill the model has to load. The
+plugin also has no `session-context.sh` hook.
+
+Keep the plugin enabled only when Claude Code has no global install, for example
+a machine that runs the Claude app alone. In that case the plugin is the single
+source and check 11 stays quiet.
+
+## Verification
+
+```bash
+claude --debug -p "ok"
+grep -E "Total plugin (skills|agents) loaded|enabled=" ~/.claude/debug/latest
+```
+
+Expect `Total plugin skills loaded: 0`, `Total plugin agents loaded: 0`, and the
+`plugin is disabled` line.
+
+## Related
+
+- `kb/reference/global-install-model.md`
+- `kb/procedures/maintenance-sop.md`
 
 ---
 

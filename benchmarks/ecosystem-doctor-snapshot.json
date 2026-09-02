@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-08-21T08:34:52Z",
+  "last_run": "2026-09-01T07:58:08Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "516d8db28cb3ec63",
+      "docs_hash": "83f1458d1a2060e9",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -51,7 +51,7 @@
         "Auggie CLI": true,
         "MCP": true,
         "Next Edit": false,
-        "Notification": false,
+        "Notification": true,
         "PostToolUse": false,
         "PreToolUse": false,
         "SKILL.md": false,
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "7e06a1985d5bb822",
+      "docs_hash": "273703f5030fd2ab",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -101,13 +101,14 @@
       "markers": {
         "Folder instructions": true,
         "Global instructions": true,
+        "MCP": true,
         "plugins": true,
         "skills": true,
         "sub-agents": true
       }
     },
     "claude-code": {
-      "docs_hash": "2b3d6b11c4be766f",
+      "docs_hash": "eea5867f24e1ed91",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -132,7 +133,7 @@
         "LSP servers": false,
         "MCP server": true,
         "MessageDisplay": false,
-        "Notification": false,
+        "Notification": true,
         "PermissionDenied": false,
         "PermissionRequest": false,
         "PostCompact": false,
@@ -173,10 +174,10 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.238 (Claude Code)"
+      "version": "2.1.252 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "f93d3a8437c1165f",
+      "docs_hash": "13a2b874f0e0173c",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -223,7 +224,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "fc1c7e43bec9f748",
+      "docs_hash": "f7df4a0b9f583a2e",
       "headings": [
         "API",
         "API Reference",
@@ -362,10 +363,10 @@
         "plugin marketplace": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.148.0"
+      "version": "codex-cli 0.151.0"
     },
     "cursor": {
-      "docs_hash": "2abfadb030c12d07",
+      "docs_hash": "8665fb50dce5f322",
       "headings": [
         "Agent",
         "CLI",
@@ -374,6 +375,7 @@
         "Cursor Documentation",
         "Customize",
         "Get Started",
+        "Grok Bot",
         "Integrations",
         "Models",
         "More resources",
@@ -396,8 +398,19 @@
         "subagents": true
       }
     },
+    "dsh": {
+      "docs_hash": "265ff3799848801e",
+      "headings": [],
+      "markers": {
+        "Agent Preset": false,
+        "Developer preview": false,
+        "dsh plugin": false,
+        "profiles": false,
+        "skills": true
+      }
+    },
     "gemini-cli": {
-      "docs_hash": "a2c9759e0296670d",
+      "docs_hash": "02285d342536bdeb",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -435,10 +448,10 @@
         "settings.json": false,
         "tools": true
       },
-      "version": "0.55.1"
+      "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "ab9b7f5b4b692e05",
+      "docs_hash": "fd80b4ec446cec3f",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -502,7 +515,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "4287f7d767dda4a8",
+      "docs_hash": "154885af5c7de582",
       "headings": [
         "Add features",
         "Ask questions",
@@ -564,7 +577,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "60e25f8cb4c381be",
+      "docs_hash": "4a3e8dc19dfdedd6",
       "headings": [
         "Accounts",
         "Advanced",

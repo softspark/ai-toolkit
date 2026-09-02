@@ -7,14 +7,17 @@
 
 Checks:
   1. Environment prerequisites (node, bash, python3, bats) + check_deps
-  2. Global install integrity (symlinks, settings.json hooks)
-  3. Hook scripts (existence, executable)
-  4. Hook configuration (valid event names)
-  5. Generated artifacts (AGENTS.md, llms.txt staleness)
-  6. Planned assets
-  7. Benchmark freshness
-  8. Stale rules
-  9. URL hook sources
+  2. Local AI runtime availability and versions (credential-blind)
+  3. Global install integrity (symlinks, settings.json hooks)
+  4. Hook scripts (existence, executable)
+  5. Hook configuration (valid event names)
+  6. Generated artifacts (AGENTS.md, llms.txt staleness)
+  7. Planned assets
+  8. Benchmark freshness
+  9. Stale rules
+  10. URL hook sources
+  11. Language rules drift (project-local)
+  12. Plugin double-load (Claude app plugin vs global install)
 
 Exit codes:
   0  all checks pass
@@ -22,6 +25,7 @@ Exit codes:
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import os
 import re
@@ -44,6 +48,7 @@ HOOKS_DIR = _HOOKS_DIR
 RULES_DIR = _RULES_DIR
 EXTERNAL_HOOKS_DIR = _EXTERNAL_HOOKS_DIR
 BENCHMARK_DASHBOARD = toolkit_dir / "benchmarks" / "ecosystem-dashboard.json"
+PLUGIN_REGISTRY = CLAUDE_DIR / "plugins" / "installed_plugins.json"
 
 VALID_EVENTS = frozenset({
     "SessionStart", "Notification", "PreToolUse", "PostToolUse", "Stop",
@@ -97,6 +102,32 @@ PLANNED_ASSETS = [
     toolkit_dir / "app" / "skills" / "agent-creator" / "SKILL.md",
 ]
 
+AI_RUNTIME_BINARIES = (
+    ("dsh", "DSH"),
+    ("codex", "Codex"),
+    ("claude", "Claude Code"),
+    ("copilot", "GitHub Copilot"),
+)
+AI_RUNTIME_VERSION_TIMEOUT_SECONDS = 5
+_SEMVER_NUMERIC_IDENTIFIER = r"(?:0|[1-9][0-9]*)"
+_SEMVER_PRERELEASE_IDENTIFIER = (
+    rf"(?:{_SEMVER_NUMERIC_IDENTIFIER}|"
+    r"[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+)
+_SEMVER_BUILD_IDENTIFIER = r"[0-9A-Za-z-]+"
+SEMVER_OUTPUT = re.compile(
+    r"(?<![0-9A-Za-z.+-])v?"
+    rf"(?P<version>{_SEMVER_NUMERIC_IDENTIFIER}\."
+    rf"{_SEMVER_NUMERIC_IDENTIFIER}\."
+    rf"{_SEMVER_NUMERIC_IDENTIFIER}"
+    rf"(?:-{_SEMVER_PRERELEASE_IDENTIFIER}"
+    rf"(?:\.{_SEMVER_PRERELEASE_IDENTIFIER})*)?"
+    rf"(?:\+{_SEMVER_BUILD_IDENTIFIER}"
+    rf"(?:\.{_SEMVER_BUILD_IDENTIFIER})*)?)"
+    r"(?![0-9A-Za-z+-]|\.(?!\s|$))"
+)
+VERSION_LIKE_OUTPUT = re.compile(r"(?<![0-9])[0-9]+\.[0-9]+\.[^\s,;()]+")
+
 
 # ---------------------------------------------------------------------------
 # Status helpers
@@ -131,20 +162,53 @@ class DiagResult:
 # Version extraction
 # ---------------------------------------------------------------------------
 
-def _get_version(binary: str) -> str:
-    """Get a version string from a binary."""
+@dataclass(frozen=True, slots=True)
+class VersionProbe:
+    """Result of a bounded, non-authenticating ``--version`` probe."""
+
+    version: str | None
+    error: str | None
+
+
+def _probe_version(executable: str) -> VersionProbe:
+    """Run the exact discovered executable and parse its SemVer output."""
     try:
         result = subprocess.run(
-            [binary, "--version"],
+            [executable, "--version"],
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=AI_RUNTIME_VERSION_TIMEOUT_SECONDS,
         )
+    except FileNotFoundError:
+        return VersionProbe(None, "executable disappeared before version check")
+    except subprocess.TimeoutExpired:
+        return VersionProbe(None, "version check timed out")
+    except UnicodeError:
+        return VersionProbe(None, "version output is not valid text")
+    except OSError as error:
+        detail = error.strerror or type(error).__name__
+        return VersionProbe(None, f"version check failed: {detail}")
+
+    if result.returncode != 0:
+        return VersionProbe(
+            None,
+            f"version command exited with status {result.returncode}",
+        )
+    try:
         output = result.stdout.strip() or result.stderr.strip()
-        m = re.search(r"(\d+\.\d+\.\d+)", output)
-        return m.group(1) if m else "unknown"
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return ""
+    except UnicodeError:
+        return VersionProbe(None, "version output is not valid text")
+    match = SEMVER_OUTPUT.search(output)
+    if not match:
+        if VERSION_LIKE_OUTPUT.search(output):
+            return VersionProbe(None, "version output contained invalid SemVer")
+        return VersionProbe(None, "version output did not contain SemVer")
+    return VersionProbe(match.group("version"), None)
+
+
+def _get_version(executable: str) -> str:
+    """Compatibility helper for required environment binary reporting."""
+    return _probe_version(executable).version or ""
 
 
 # ---------------------------------------------------------------------------
@@ -162,8 +226,8 @@ def check_environment(dr: DiagResult, fix_mode: bool) -> None:
         ("python3", "python3", False),
         ("bats", "bats", False),
     ]:
-        if shutil.which(binary):
-            version = _get_version(binary)
+        if executable := shutil.which(binary):
+            version = _get_version(executable)
             ver_str = f" {version}" if version else ""
             dr.ok(f"{label}{ver_str}")
         else:
@@ -185,6 +249,22 @@ def check_environment(dr: DiagResult, fix_mode: bool) -> None:
     except ImportError:
         dr.warn("check_deps.py not available for enhanced dependency check")
 
+    print()
+
+
+def check_ai_runtimes(dr: DiagResult) -> None:
+    """Report local AI runtime availability without inspecting login state."""
+    print("## AI Runtimes")
+    for binary, label in AI_RUNTIME_BINARIES:
+        executable = shutil.which(binary)
+        if not executable:
+            dr.skip(f"{label} ({binary}) not found")
+            continue
+        probe = _probe_version(executable)
+        if probe.version:
+            dr.ok(f"{label} ({binary}) {probe.version}")
+        else:
+            dr.warn(f"{label} ({binary}) detected but {probe.error}")
     print()
 
 
@@ -669,6 +749,160 @@ def check_language_drift(dr: DiagResult) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check 11: Plugin Double-Load
+# ---------------------------------------------------------------------------
+
+def _registered_toolkit_plugins(registry: dict) -> list[str]:
+    """Return ai-toolkit plugin keys from the Claude Code plugin registry."""
+    plugins = registry.get("plugins", {})
+    if not isinstance(plugins, dict):
+        return []
+    return [key for key in plugins if str(key).split("@", 1)[0] == "ai-toolkit"]
+
+
+def _registered_plugin_versions(registry: dict, keys: list[str]) -> dict[str, str]:
+    """Map plugin key to the version recorded in the Claude Code registry."""
+    plugins = registry.get("plugins", {})
+    versions: dict[str, str] = {}
+    for key in keys:
+        entries = plugins.get(key)
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if isinstance(entry, dict) and isinstance(entry.get("version"), str):
+                versions[key] = entry["version"]
+                break
+    return versions
+
+
+def _toolkit_package_version() -> str | None:
+    """Version of the installed toolkit package, or None when unreadable."""
+    try:
+        data = json.loads((toolkit_dir / "package.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    version = data.get("version")
+    return version if isinstance(version, str) else None
+
+
+def disable_toolkit_plugins_for_claude_code() -> list[str]:
+    """Disable every enabled ai-toolkit plugin in ``~/.claude/settings.json``.
+
+    Returns the keys that were flipped. Uploading the Claude app plugin re-enables
+    it for Claude Code every time, so this is re-asserted rather than fixed once.
+    Raises OSError when settings.json cannot be written.
+    """
+    if not PLUGIN_REGISTRY.is_file():
+        return []
+    try:
+        registry = json.loads(PLUGIN_REGISTRY.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    keys = _registered_toolkit_plugins(registry)
+    if not keys:
+        return []
+
+    settings_json = CLAUDE_DIR / "settings.json"
+    try:
+        settings = json.loads(settings_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    enabled = settings.get("enabledPlugins", {})
+    if not isinstance(enabled, dict):
+        enabled = {}
+
+    active = [key for key in keys if enabled.get(key, True)]
+    if not active:
+        return []
+
+    enabled.update({key: False for key in active})
+    settings["enabledPlugins"] = enabled
+    settings_json.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    return active
+
+
+def check_plugin_double_load(dr: DiagResult, fix_mode: bool) -> None:
+    """Warn when the Claude app plugin and the global install both feed Claude Code.
+
+    Uploading the ``claude-app export`` ZIP from the Claude app registers it under
+    ``~/.claude/plugins``, which Claude Code reads as well. The plugin carries the
+    same skills, agents, and hooks as the global install, and Claude Code merges
+    plugin hooks with user hooks without deduplication, so every toolkit hook runs
+    twice per event.
+    """
+    print()
+    print("## 11. Plugin Double-Load")
+
+    if not PLUGIN_REGISTRY.is_file():
+        dr.skip("no Claude Code plugin registry")
+        return
+    try:
+        registry = json.loads(PLUGIN_REGISTRY.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        dr.warn(f"{PLUGIN_REGISTRY} is not valid JSON")
+        return
+
+    keys = _registered_toolkit_plugins(registry)
+    if not keys:
+        dr.ok("no ai-toolkit plugin registered in Claude Code")
+        return
+
+    # Version drift is independent of whether the plugin is enabled here: a
+    # plugin disabled for Claude Code still feeds Chat and Cowork, and those
+    # runtimes have no other channel for skills, agents, hooks, or rules. Report
+    # it before the enabled/disabled branch, which returns early on the healthy
+    # path and would otherwise let a stale upload pass unnoticed.
+    toolkit_version = _toolkit_package_version()
+    if toolkit_version:
+        for key, plugin_version in _registered_plugin_versions(registry, keys).items():
+            if plugin_version != toolkit_version:
+                dr.warn(
+                    f"{key} is v{plugin_version} but the toolkit is v{toolkit_version}: "
+                    "Chat and Cowork keep running the older skills, agents, hooks, and "
+                    "rules until you re-run `ai-toolkit claude-app export` and upload "
+                    "the ZIP again (--fix cannot do this; the upload is manual)"
+                )
+
+    settings_json = CLAUDE_DIR / "settings.json"
+    try:
+        settings = json.loads(settings_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        settings = {}
+    enabled = settings.get("enabledPlugins", {})
+    if not isinstance(enabled, dict):
+        enabled = {}
+
+    active = [key for key in keys if enabled.get(key, True)]
+    if not active:
+        dr.ok("ai-toolkit plugin registered but disabled for Claude Code")
+        return
+
+    hook_count, _ = _installed_toolkit_hook_count(settings)
+    if hook_count == 0:
+        dr.ok("ai-toolkit plugin active without global hooks (single source)")
+        return
+
+    for key in active:
+        dr.warn(
+            f"{key} is active next to the global install: {hook_count} toolkit hooks "
+            "fire twice per event and skills/agents load twice "
+            "(run: ai-toolkit doctor --fix)"
+        )
+
+    if not fix_mode:
+        return
+
+    try:
+        disabled = disable_toolkit_plugins_for_claude_code()
+    except OSError as exc:
+        dr.fail(f"could not disable plugin in settings.json: {exc}")
+        return
+    for key in disabled:
+        dr.fixed(f"disabled {key} for Claude Code (global install stays authoritative)")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -682,6 +916,7 @@ def main() -> None:
     dr = DiagResult()
 
     check_environment(dr, fix_mode)
+    check_ai_runtimes(dr)
     check_global_install(dr, fix_mode)
     check_hook_scripts(dr, fix_mode)
     check_hook_configuration(dr)
@@ -691,6 +926,7 @@ def main() -> None:
     check_stale_rules(dr, fix_mode)
     check_url_hooks(dr, fix_mode)
     check_language_drift(dr)
+    check_plugin_double_load(dr, fix_mode)
 
     # Summary
     print("========================")
