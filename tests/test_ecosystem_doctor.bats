@@ -183,6 +183,7 @@ meta_generators = {
     'generate_agents_md.py',
     'generate_llms_txt.py',
     'generate_language_rules_skills.py',
+    'generate_toolkit_rules_skills.py',
 }
 filesystem_generators = {
     'scripts/' + p.name

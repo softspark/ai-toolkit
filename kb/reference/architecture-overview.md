@@ -228,7 +228,7 @@ Three tiers determine how to approach a task:
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 32 |
 | Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
-| Knowledge | `user-invocable: false` | Claude auto-loads | 46 |
+| Knowledge | `user-invocable: false` | Claude auto-loads | 51 |
 
 ## Multi-Agent Execution
 

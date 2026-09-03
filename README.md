@@ -186,7 +186,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 |-----------|-------|-------------|
 | `skills/` (task) | 32 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/mcp-builder`, ... |
 | `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
-| `skills/` (knowledge) | 46 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
+| `skills/` (knowledge) | 51 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
 | `plugins/` | 2 packs | Opt-in packs that install files of their own (memory, enterprise) |
