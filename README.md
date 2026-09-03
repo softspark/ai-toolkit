@@ -1,16 +1,16 @@
 # ai-toolkit
 
-> AI coding toolkit with machine-enforced safety, 109 skills, 44 agents, lifecycle hooks, persona presets, opt-in plugin packs, and benchmark tooling. DSH is available as a separate explicit developer-preview target.
+> AI coding toolkit with machine-enforced safety, 114 skills, 44 agents, lifecycle hooks, persona presets, opt-in plugin packs, and benchmark tooling. DSH is available as a separate explicit developer-preview target.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-109-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-114-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1921%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1931%20passing-success)](tests/)
 
-## What's New in v4.30.3
+## What's New in v4.31.0
 
-**v4.30.3** corrects the post-release health check for the managed DSH and
+**v4.31.0** corrects the post-release health check for the managed DSH and
 plugin-owned MCP release:
 
 - `ai-toolkit doctor` now extracts `1.0.80` from the official Copilot CLI output
@@ -24,7 +24,7 @@ plugin-owned MCP release:
   before the publish workflow can start.
 - The release retains the explicit DSH lifecycle, plugin-owned MCP/rules, portable
   recovery gates, and the exact DSH package set published in v4.30.2. Test count:
-  1920 -> 1921.
+  1920 -> 1931.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -60,7 +60,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 109 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 114 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 **Windows:** WSL is the recommended runtime. Native Windows works when Git Bash is available for hook scripts; dependency hints cover `winget`, Chocolatey, and Scoop. See [Windows Support](kb/reference/windows-support.md).
 
@@ -202,7 +202,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   ├── skills/          # 109 skills (task / hybrid / knowledge)
+│   ├── skills/          # 114 skills (task / hybrid / knowledge)
 │   ├── rules/           # Source rules synced into Claude/editor rule files
 │   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
 │   ├── claude-app/      # Generated Chat/Cowork plugin rules, hooks, instructions

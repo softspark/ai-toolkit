@@ -1,6 +1,6 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "4.30.3",
+  "version": "4.31.0",
   "description": "AI coding toolkit: 109 skills, 44 agents, 14 developer-tool integrations, recoverable native tool-output filtering, Claude Chat/Cowork export, safety constitution, SARIF audit, and signed npm provenance.",
   "keywords": [
     "claude",
@@ -62,6 +62,7 @@
     "generate:roo": "python3 scripts/generate_roo_modes.py > .roomodes",
     "generate:aider": "python3 scripts/generate_aider_conf.py > .aider.conf.yml",
     "generate:language-rules": "python3 scripts/generate_language_rules_skills.py",
+    "generate:toolkit-rules": "python3 scripts/generate_toolkit_rules_skills.py",
     "generate:opencode-agents": "python3 scripts/generate_opencode_agents.py .",
     "generate:opencode-commands": "python3 scripts/generate_opencode_commands.py .",
     "generate:opencode-skills": "python3 scripts/generate_opencode_skills.py .",
