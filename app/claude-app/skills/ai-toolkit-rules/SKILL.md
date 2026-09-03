@@ -23,7 +23,10 @@ Shared AI development toolkit — lifecycle hooks, safety constitution, multi-pl
 
 ## Path Safety
 - NEVER guess or hallucinate user home directory paths
-- Use `~` or `$HOME` instead of hardcoded `/Users/<username>/` or `/home/<username>/`
+- Use `~` or `$HOME` instead of a hardcoded `/Users` or `/home` prefix followed
+  by a user name. The literal prefix is deliberately not written out here: the
+  plugin export scans shipped files for exactly that pattern, so an example of
+  the mistake would be indistinguishable from the mistake.
 - When an absolute path is needed, run `echo $HOME` first to get the correct value
 
 ## User Preferences
