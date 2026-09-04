@@ -31,6 +31,11 @@ sandbox; both defects predate that release (identical on v4.31.0).
   `tests/test_skill_scripts_help.bats` now probes every documented
   `${CLAUDE_SKILL_DIR}` invocation with `--help` (exit 0, no traceback), the
   same check as post-release SOP Phase 4b.
+- **`pre_deploy_check.py` no longer crashes on Linux.** It probed for docker
+  by running the shell builtin `command -v` through `subprocess`, which only
+  works on macOS (a `/usr/bin/command` binary exists there); on Linux it raised
+  `FileNotFoundError` before any check ran. Now `shutil.which`. Caught by the
+  new `--help` probe on the Ubuntu CI runner, which is the point of that test.
 - **Test count.** Bats increased from 1966 to 1972.
 
 ## v4.32.0 - Context budget: scoped rules, scoped language skills, doctor budget checks (2026-09-04)
