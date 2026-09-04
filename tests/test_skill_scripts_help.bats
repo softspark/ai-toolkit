@@ -21,8 +21,10 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
         rel=${ref##*\$\{CLAUDE_SKILL_DIR\}/}
         [ -f "$D/$rel" ] || { echo "PATH DOES NOT RESOLVE: $(basename "$D") $rel" >&2; failures=$((failures + 1)); continue; }
         probed=$((probed + 1))
-        out=$(cd "$D" && CLAUDE_SKILL_DIR="$D" timeout 20 "$interp" "$D/$rel" --help </dev/null 2>&1)
-        rc=$?
+        # Capture rc explicitly: under bats' errexit a failing command
+        # substitution in an assignment aborts the test before the report.
+        rc=0
+        out=$(cd "$D" && CLAUDE_SKILL_DIR="$D" timeout 20 "$interp" "$D/$rel" --help </dev/null 2>&1) || rc=$?
         if [ "$rc" -ne 0 ] || printf '%s' "$out" | grep -q 'Traceback'; then
             echo "FAIL $(basename "$D") $rel rc=$rc: $(printf '%s' "$out" | head -1 | cut -c1-80)" >&2
             failures=$((failures + 1))

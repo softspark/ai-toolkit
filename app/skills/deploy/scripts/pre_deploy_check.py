@@ -16,6 +16,7 @@ Usage::
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -50,12 +51,15 @@ def _git_branch() -> str:
 
 
 def _docker_available() -> bool:
-    """Return True if the ``docker`` command is on PATH."""
-    result = _run(["command", "-v", "docker"])
-    # Fallback: just try docker --version
-    if result.returncode != 0:
-        result = _run(["docker", "--version"])
-    return result.returncode == 0
+    """Return True if the ``docker`` command is on PATH.
+
+    ``command -v`` is a shell builtin; running it through ``subprocess`` only
+    worked on macOS, which ships a ``/usr/bin/command`` binary. On Linux it
+    raised ``FileNotFoundError`` before any check ran (v4.32.1).
+    """
+    if shutil.which("docker") is None:
+        return False
+    return _run(["docker", "--version"]).returncode == 0
 
 
 def _docker_services_running() -> bool:
@@ -155,6 +159,9 @@ def _run_checks(env: str) -> _CheckCollector:
 
 def main() -> None:
     """Entry point: run checks and print JSON result to stdout."""
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print("Usage: pre_deploy_check.py [environment]\n\nRun pre-deployment checks for environment (default: staging) and print JSON.")
+        return
     env = sys.argv[1] if len(sys.argv) > 1 else "staging"
     branch = _git_branch()
     collector = _run_checks(env)
