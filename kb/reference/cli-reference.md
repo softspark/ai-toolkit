@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-08-19"
+last_updated: "2026-09-04"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -19,6 +19,7 @@ Usage: ai-toolkit <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install` | First-time global install into `~/.claude/` + Cursor, Windsurf, Gemini |
+| `install --language-skills detected\|all` | `detected` (default): turn off `<lang>-rules`/`<lang>-patterns` skills for languages no registered project uses, via `skillOverrides` in `~/.claude/settings.json` (entries are tracked in `state.json` and restored when a project brings the language back; a user's own override is never touched); `all`: keep every language skill on. The choice persists across `install`/`update` |
 | `install --local` | Claude Code configs only; add `--editors all` or `--editors cursor,aider` for other tools |
 | `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
 | `update --local` | Re-apply + auto-detect editors from existing project files |
@@ -26,7 +27,7 @@ Usage: ai-toolkit <command> [options]
 | `status` | Show installed modules and version |
 | `uninstall` | Remove toolkit from `~/.claude/` |
 | `validate` | Verify toolkit integrity (`--strict` for CI-grade, warnings = errors) |
-| `doctor` | Diagnose install health, hooks, quick-win assets, and artifact drift |
+| `doctor` | Diagnose install health, hooks, quick-win assets, artifact drift, context budget (est. resident tokens of the skill/agent listings and user rules, plus skills with zero recorded use; read-only, prints the `skillOverrides` key to paste), and permission rules (`permissions.allow` wildcards on interpreters, task runners, package installs, `gh api`, `curl`, `git fetch`, destructive commands; warns only, never edits) |
 | `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |
 | `eject [dir]` | Export standalone config (no symlinks, no toolkit dependency) |
 | `claude-app export [--output FILE] [--no-custom-rules] [--verify]` | Build an uploadable Claude Chat/Desktop/Cowork plugin ZIP and global-instructions file |

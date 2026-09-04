@@ -151,7 +151,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/quality-check.sh\""
+            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/quality-check.sh\"",
+            "async": true
           }
         ]
       },
@@ -160,7 +161,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/save-session.sh\""
+            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/save-session.sh\"",
+            "async": true
           }
         ]
       },

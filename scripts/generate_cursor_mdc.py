@@ -41,7 +41,6 @@ from dir_rules_shared import (
     PREFIX,
     build_language_rules,
     build_registered_rules,
-    cleanup_stale,
     rule_agents_and_skills,
     rule_code_style,
     rule_quality_standards,
@@ -134,9 +133,9 @@ def generate(target_dir: Path, *,
         lang = filename.removeprefix(f"{PREFIX}lang-").removesuffix(".md")
         globs = LANG_GLOBS.get(lang)
         mdc_name = filename.replace(".md", ".mdc")
-        all_rules[mdc_name] = (lambda fn, l, g: lambda: _mdc(
+        all_rules[mdc_name] = (lambda fn, language, g: lambda: _mdc(
             fn(),
-            description=f"{l.title()} language rules",
+            description=f"{language.title()} language rules",
             globs=g if g else None,
             always_apply=not g,
         ))(content_fn, lang, globs)

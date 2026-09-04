@@ -11,12 +11,11 @@ Usage:
 """
 from __future__ import annotations
 
-import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import agents_dir, frontmatter_field, skill_count, skills_dir, toolkit_dir
+from _common import agents_dir, frontmatter_field, skills_dir, toolkit_dir
 
 
 def _relative(path: Path) -> str:
@@ -51,21 +50,8 @@ def _find_agent_files() -> list[Path]:
     return sorted(agents_dir.glob("*.md"))
 
 
-def _count_skills() -> int:
-    """Count skill directories containing SKILL.md."""
-    return skill_count()
-
-
-def _count_agents() -> int:
-    """Count agent .md files."""
-    return sum(1 for f in agents_dir.glob("*.md") if f.is_file())
-
-
 def generate_index() -> None:
     """Print the llms.txt index."""
-    skills = _count_skills()
-    agents = _count_agents()
-
     print("# ai-toolkit")
     print()
     print(

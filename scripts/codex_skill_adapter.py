@@ -280,8 +280,10 @@ def _build_portable_skill_text(skill_file: Path, platform: str) -> str:
             if invocation_lines:
                 rendered_frontmatter += "\n" + "\n".join(invocation_lines)
     else:
-        frontmatter = _parse_frontmatter(match.group("frontmatter"))
-        rendered_frontmatter = _render_frontmatter(frontmatter)
+        # Native skills pass their frontmatter through untouched. The old
+        # line-by-line re-render flattened nested keys (`hooks:` blocks) into
+        # top-level `key: ` lines, which is not the document the author wrote.
+        rendered_frontmatter = match.group("frontmatter").strip("\n")
 
     return f"---\n{rendered_frontmatter}\n---\n{body.rstrip()}\n"
 
@@ -1110,16 +1112,6 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
         return True
     except ValueError:
         return False
-
-
-def _parse_frontmatter(frontmatter_text: str) -> list[tuple[str, str]]:
-    entries: list[tuple[str, str]] = []
-    for line in frontmatter_text.splitlines():
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        entries.append((key.strip(), value.strip()))
-    return entries
 
 
 def _invocation_metadata_lines(frontmatter_text: str) -> list[str]:

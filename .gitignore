@@ -20,7 +20,8 @@ CONVENTIONS.md
 /.cline/
 /.roo/
 
-# Python caches / coverage
+# Python caches / coverage / local dev venv (requirements-dev.txt)
+.venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/

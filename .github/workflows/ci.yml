@@ -61,6 +61,31 @@ jobs:
           sys.exit(1 if failed else 0)
           PY
 
+  python-quality:
+    # Dev tooling only: pytest for scripts/ logic, ruff and mypy as ratchets.
+    # Installed from requirements-dev.txt here and nowhere else; the published
+    # package and every user machine stay stdlib-only.
+    name: Python unit tests + lint + types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dev tooling
+        run: python3 -m pip install -r requirements-dev.txt
+
+      - name: pytest (tests/python)
+        run: npm run test:py
+
+      - name: ruff (rule set lives in package.json lint:py)
+        run: npm run lint:py
+
+      - name: mypy --strict (allowlist in mypy.ini)
+        run: npm run typecheck:py
+
   validate:
     name: Validate toolkit integrity
     runs-on: ubuntu-latest

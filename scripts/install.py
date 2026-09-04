@@ -41,6 +41,9 @@ Options:
   --persona <p>           backend-lead|frontend-lead|devops-eng|junior-dev
   --modules <list>        Install specific modules (comma-separated)
   --auto-detect           Detect project languages and install matching rules
+  --language-skills <s>   detected (default): turn off <lang>-rules/<lang>-patterns
+                          skills for languages no registered project uses;
+                          all: keep every language skill on (persisted)
   --status                Show installed modules and exit
 """
 from __future__ import annotations
@@ -50,7 +53,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import toolkit_dir, app_dir, inject_rule
+from _common import toolkit_dir, app_dir, inject_rule, should_install
 from emission import agent_count as count_agents, skill_count as count_skills
 
 # Step modules
@@ -223,6 +226,7 @@ def parse_args(argv: list[str]) -> dict:
         "refresh_base": False,
         "skip_register": False,
         "codex_skills": False,
+        "language_skills": "",
     }
     i = 0
     while i < len(argv):
@@ -283,6 +287,11 @@ def parse_args(argv: list[str]) -> dict:
             cfg["skip_register"] = True
         elif arg == "--codex-skills":
             cfg["codex_skills"] = True
+        elif arg.startswith("--language-skills="):
+            cfg["language_skills"] = arg.split("=", 1)[1]
+        elif arg == "--language-skills":
+            i += 1
+            cfg["language_skills"] = argv[i] if i < len(argv) else ""
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -334,6 +343,15 @@ def validate_args(cfg: dict) -> None:
             c = c.strip()
             if c and c not in VALID_COMPONENTS:
                 errors.append(f"Unknown component in --skip: '{c}' (valid: {', '.join(sorted(VALID_COMPONENTS))})")
+
+    # Validate --language-skills
+    if cfg["language_skills"]:
+        from install_steps.skill_scope import VALID_SCOPES
+        if cfg["language_skills"] not in VALID_SCOPES:
+            errors.append(
+                f"Unknown --language-skills value: '{cfg['language_skills']}' "
+                f"(valid: {', '.join(VALID_SCOPES)})"
+            )
 
     # Validate --editors
     if cfg["editors"] and cfg["editors"] != "all":
@@ -847,6 +865,19 @@ def main() -> None:
             )
             if is_new:
                 print(f"  Registered project in {TOOLKIT_DATA_DIR / 'projects.json'}")
+
+    # Language knowledge skills are symlinked for every language, but their
+    # descriptions load into every session. Scope them to the languages the
+    # registered projects actually use (after registration, so a new project's
+    # language re-enables its skills in the same run). Read-only in dry-run.
+    if should_install("skills", only, skip):
+        from install_steps.skill_scope import reconcile_language_skill_overrides, resolve_scope
+        reconcile_language_skill_overrides(
+            toolkit_dir,
+            target_dir / ".claude" / "settings.json",
+            scope=resolve_scope(cfg["language_skills"]),
+            dry_run=dry_run,
+        )
 
     # A global install is authoritative for Claude Code, so an uploaded Claude
     # app plugin must not feed it in parallel. Uploading the ZIP re-enables the

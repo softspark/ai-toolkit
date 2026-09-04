@@ -207,27 +207,22 @@ Default response mode for this project is **concise**. The `brand-voice` skill (
 - Magic numbers/strings: use named constants.
 - Mutable global state: use dependency injection instead.
 
-## Source: `app/rules/common/git-workflow.md`
+## Source: `app/rules/common/git-team.md`
 
-# Git Workflow Rules
+# Git Team Workflow Rules
 
-## Commit Messages
-- Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
-- First line: imperative mood, max 72 chars (`feat: add user registration endpoint`).
-- Body (optional): explain *why*, not *what*. The diff shows what.
-- Reference tickets: `fix: prevent duplicate orders (PROJ-456)`.
-
-## Commit Practices
-- Commit small, atomic changes. One commit = one logical change.
-- Never commit: secrets, `.env` files, build artifacts, large binaries.
-- Never commit broken code to `main`. Use feature branches.
-- Squash fixup commits before merging to keep history clean.
+These rules assume more than one person merges into `main`. They ship only with
+the `strict` profile; a solo maintainer who commits straight to `main` is not
+doing anything wrong, and a reviewer that keeps flagging "use a feature branch"
+in that setting is noise. The solo-safe core (commit format, no secrets, no
+force-push) lives in `git-workflow`.
 
 ## Branching
-- `main` is always deployable. Protect it with required reviews and CI.
-- Feature branches: `feat/user-registration`, `fix/order-total-calc`.
+- Protect `main` with required reviews and CI. Never commit broken code to it.
+- Work on feature branches: `feat/user-registration`, `fix/order-total-calc`.
+- Rebase feature branches on `main` before opening a PR to keep linear history.
+- Squash fixup commits before merging to keep history clean.
 - Delete branches after merge. Stale branches are clutter.
-- Rebase feature branches on main before PR to keep linear history.
 
 ## Pull Requests
 - Keep PRs small: <400 lines changed. Split large features into stacked PRs.
@@ -239,6 +234,25 @@ Default response mode for this project is **concise**. The `brand-voice` skill (
 - Review for: correctness, security, performance, readability.
 - Approve with comments if nits only. Block for: bugs, security, missing tests.
 - Respond to reviews within 24 hours. Do not let PRs rot.
+
+## Source: `app/rules/common/git-workflow.md`
+
+# Git Workflow Rules
+
+Solo-safe core: everything here holds whether one person or twenty merge into
+`main`. Branching, pull-request, and review conventions for teams live in
+`git-team` and ship only with the `strict` profile.
+
+## Commit Messages
+- Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
+- First line: imperative mood, max 72 chars (`feat: add user registration endpoint`).
+- Body (optional): explain *why*, not *what*. The diff shows what.
+- Reference tickets: `fix: prevent duplicate orders (PROJ-456)`.
+
+## Commit Practices
+- Commit small, atomic changes. One commit = one logical change.
+- Never commit: secrets, `.env` files, build artifacts, large binaries.
+- `main` is always deployable: run the project's gates before every commit that lands there.
 
 ## Tags and Releases
 - Use semantic versioning: MAJOR.MINOR.PATCH.

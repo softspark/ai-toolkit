@@ -253,6 +253,77 @@ _skill_with_script() {
     echo "$output" | grep -q "limit 20000"
 }
 
+@test "validate.py catches an unquoted skill description containing ': '" {
+    mkdir -p "$TEST_DIR/app/skills/colon-skill"
+    cat > "$TEST_DIR/app/skills/colon-skill/SKILL.md" <<'EOF'
+---
+name: colon-skill
+description: Contracts (B2B, IT: body leasing) reviewed clause by clause
+allowed-tools: Read
+---
+Body.
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "skills/colon-skill/SKILL.md: description is an unquoted scalar containing ': ' or ' #'"
+}
+
+@test "validate.py accepts the same description as a '>-' block scalar" {
+    mkdir -p "$TEST_DIR/app/skills/block-skill"
+    cat > "$TEST_DIR/app/skills/block-skill/SKILL.md" <<'EOF'
+---
+name: block-skill
+description: >-
+  Contracts (B2B, IT: body leasing) reviewed clause by clause,
+  continued on a second folded line.
+allowed-tools: Read
+---
+Body.
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    ! echo "$output" | grep -q "block-skill/SKILL.md: description"
+}
+
+@test "validate.py catches a skill description over the 1024-character limit" {
+    mkdir -p "$TEST_DIR/app/skills/verbose-skill"
+    {
+        printf -- '---\nname: verbose-skill\ndescription: "'
+        # 60 x 18 chars = 1080 inside the quotes (YAML keeps quoted whitespace), past the 1024 limit.
+        for _ in $(seq 1 60); do printf 'padding sentence. '; done
+        printf '"\n---\nBody.\n'
+    } > "$TEST_DIR/app/skills/verbose-skill/SKILL.md"
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "skills/verbose-skill/SKILL.md: description is 1080 characters"
+    echo "$output" | grep -q "limit 1024"
+}
+
+@test "validate.py applies the description gate to plugin pack skills" {
+    mkdir -p "$TEST_DIR/app/plugins/example-pack/skills/pack-skill"
+    cat > "$TEST_DIR/app/plugins/example-pack/plugin.json" <<'EOF'
+{
+  "name": "example-pack",
+  "description": "Pack fixture",
+  "version": "1.0.0",
+  "domain": "testing",
+  "type": "plugin-pack",
+  "status": "experimental",
+  "requires": {"ai-toolkit": ">=1.0.0"},
+  "includes": {"agents": [], "skills": ["pack-skill"], "rules": [], "hooks": []}
+}
+EOF
+    cat > "$TEST_DIR/app/plugins/example-pack/skills/pack-skill/SKILL.md" <<'EOF'
+---
+name: pack-skill
+description: Pack skill with a trap: colon inside
+---
+Body.
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "app/plugins/example-pack/skills/pack-skill/SKILL.md: description is an unquoted scalar"
+}
+
 @test "validate.py warns rather than errors between the warn and error budget" {
     mkdir -p "$TEST_DIR/app/skills/chunky-skill"
     {
@@ -352,6 +423,70 @@ EOF
     run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
     [ "$status" -ne 0 ]
     echo "$output" | grep -q "app/rules/python missing required rule category: security"
+}
+
+@test "validate.py catches an unknown rule profile and profiles on a per-language rule" {
+    mkdir -p "$TEST_DIR/app/rules/common"
+    cat > "$TEST_DIR/app/rules/common/git-team.md" <<'EOF'
+---
+language: common
+category: git-team
+version: "1.0.0"
+profiles:
+  - "team"
+---
+
+# Unknown profile
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "app/rules/common/git-team.md - unknown profile 'team' (valid: full, minimal, standard, strict)"
+
+    cat > "$TEST_DIR/app/rules/python/testing.md" <<'EOF'
+---
+language: python
+category: testing
+version: "1.0.0"
+profiles:
+  - "strict"
+---
+
+# Language rules ship as skills; no profile applies
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "app/rules/python/testing.md - profiles is only meaningful for common rules"
+}
+
+@test "validate.py catches inline or unquoted rule paths scope" {
+    cat > "$TEST_DIR/app/rules/python/testing.md" <<'EOF'
+---
+language: python
+category: testing
+version: "1.0.0"
+paths: ["**/tests/**"]
+---
+
+# Inline list is not what the installer reads
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "app/rules/python/testing.md - paths must be a block list, not inline"
+
+    cat > "$TEST_DIR/app/rules/python/testing.md" <<'EOF'
+---
+language: python
+category: testing
+version: "1.0.0"
+paths:
+  - **/tests/**
+---
+
+# Unquoted glob
+EOF
+    run python3 "$TOOLKIT_DIR/scripts/validate.py" "$TEST_DIR"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "app/rules/python/testing.md - paths entry must be a double-quoted glob"
 }
 
 # ── Planned assets ───────────────────────────────────────────────────────────

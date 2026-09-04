@@ -3,9 +3,9 @@ title: "Language Rules System"
 category: reference
 service: ai-toolkit
 tags: [rules, languages, coding-style, testing, patterns, security]
-version: "2.1.0"
+version: "2.2.0"
 created: "2026-04-07"
-last_updated: "2026-06-30"
+last_updated: "2026-09-04"
 description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus common rules installed as Claude Code path-scoped project rules."
 ---
 
@@ -55,7 +55,7 @@ app/rules/
 └── medplum/
 ```
 
-**Total: 13 per-language directories × 5 files + 1 common directory × 5 files + 3 standalone files** (see README.md for canonical count). Per-language directories ship as `<lang>-rules` knowledge skills; the common directory is installed as Claude Code `.claude/rules/ai-toolkit-*.md` files.
+**Total: 13 per-language directories × 5 files + 1 common directory × 6 files (5 in every profile + `git-team` in `strict`) + 3 standalone files** (see README.md for canonical count). Per-language directories ship as `<lang>-rules` knowledge skills; the common directory is installed as Claude Code `.claude/rules/ai-toolkit-*.md` files.
 
 ## Supported Languages
 
@@ -145,18 +145,33 @@ Common rules are installed as path-scoped Claude Code rule files:
 ```
 .claude/rules/
 ├── ai-toolkit-coding-style.md
+├── ai-toolkit-git-team.md        # --profile strict only
 ├── ai-toolkit-git-workflow.md
 ├── ai-toolkit-performance.md
 ├── ai-toolkit-security.md
 └── ai-toolkit-testing.md
 ```
 
-Each file starts with:
+A source rule may also carry `profiles:` (same block-list form). `git-team` declares `profiles: ["strict"]`: branching, pull-request, and review conventions for teams, kept out of `standard` so a solo maintainer who releases straight to `main` is not told to open PRs against themselves. Rerunning `install --local` with a different profile adds or removes the managed file. Only the Claude Code local install honours `profiles`; the Claude app export, `compile-slm`, and editor `lang-common` bundles still receive every common rule (see `DECISIONS.md`, 2026-09-04).
+
+Each file's `paths` frontmatter is copied from the source rule in `app/rules/common/<category>.md`. A source rule without a `paths` block is always-on:
 
 ```yaml
 ---
 paths:
   - "**/*"
+---
+```
+
+A source rule with a `paths` block is path-scoped, so Claude Code loads it only when a matching file is touched. As of v4.32.0 `testing` (`**/*.test.*`, `**/*.spec.*`, `**/test_*`, `**/*_test.*`, `**/tests/**`) and `performance` (source-file extensions plus `**/*.sql`) are scoped; `coding-style`, `git-workflow`, and `security` stay always-on because they carry prohibitions that must hold in every session. To change a scope, edit the source frontmatter; `validate.py` rejects inline lists and unquoted globs because the installer reads only the block form:
+
+```yaml
+---
+language: common
+category: testing
+version: "1.1.0"
+paths:
+  - "**/tests/**"
 ---
 ```
 
@@ -167,10 +182,13 @@ The project `CLAUDE.md` receives only a compact index between a single named mar
 # Language Rules
 
 Common ai-toolkit rules live in `.claude/rules/ai-toolkit-*.md`
-with Claude Code `paths` frontmatter so they load when project files
-are opened instead of expanding this CLAUDE.md at session startup.
+with Claude Code `paths` frontmatter instead of expanding this
+CLAUDE.md. Always-on rules load in every session; path-scoped rules
+load only when a matching file is touched.
 
-Common rule files: `.claude/rules/ai-toolkit-coding-style.md`, ...
+Always-on: `.claude/rules/ai-toolkit-coding-style.md`, ...
+
+Path-scoped: `.claude/rules/ai-toolkit-performance.md`, ...
 
 Language-specific rules live in `<lang>-rules` knowledge skills (e.g.
 `python-rules`, `typescript-rules`) and load automatically when their
@@ -207,7 +225,7 @@ Language rules are tracked as modules in `manifest.json`:
 
 | Module | Description |
 |--------|-------------|
-| `rules-common` | Common coding rules (5 files), included in `standard` profile |
+| `rules-common` | Common coding rules (6 files: 5 in every profile, `git-team` in `strict` only), included in `standard` profile |
 | `rules-typescript` | TypeScript-specific rules |
 | `rules-python` | Python-specific rules |
 | `rules-golang` | Go-specific rules |
@@ -228,9 +246,9 @@ Language rules are tracked as modules in `manifest.json`:
 |---|---|---|---|
 | Source | `app/rules/common/` | `app/rules/<lang>/` | `app/skills/<name>/SKILL.md` |
 | Delivery to Claude | Path-scoped `.claude/rules/ai-toolkit-*.md` files (`--local`) + compact `CLAUDE.md` index | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
-| Visibility | Loaded when project files are opened | Loaded when triggers match (file extensions, framework names) | Loaded when triggers match |
+| Visibility | Always-on (`coding-style`, `git-workflow`, `security`) or loaded when a matching file is touched (`testing`, `performance`) | Loaded when triggers match (file extensions, framework names) | Loaded when triggers match |
 | Scope | Language-agnostic standards (security, git, testing, perf, style) | Per-language coding-style, frameworks, patterns, security, testing | Domain skills (testing, debugging, RAG, etc.) |
-| Install | `ai-toolkit install --local` | Global install (skills directory is symlinked) | Global install |
+| Install | `ai-toolkit install --local` | Global install (skills directory is symlinked); skills for languages no registered project uses are turned off via `skillOverrides` (`--language-skills detected`, the default) unless `--language-skills all` was chosen | Global install |
 | Other editors | Inlined into editor-specific rule files | Inlined into editor-specific rule files (still full content, not skills) | N/A |
 
 Per-language content delivered as a knowledge skill is the same Markdown that other editors receive inlined. The split exists only for Claude, where the Agent Skills progressive-disclosure mechanism keeps the system prompt small.

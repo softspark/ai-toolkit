@@ -1,0 +1,6 @@
+# Developer tooling for this repository only. Never installed by the npm
+# package; the toolkit's runtime scripts stay stdlib-only. Pinned to majors
+# so CI does not move under a release.
+pytest>=8,<10
+ruff>=0.6,<1
+mypy>=1.10,<3

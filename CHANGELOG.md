@@ -7,6 +7,95 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.32.0 - Context budget: scoped rules, scoped language skills, doctor budget checks (2026-09-04)
+
+### Added
+
+- **`install --language-skills detected|all`.** Language knowledge skills
+  (`<lang>-rules`, `<lang>-patterns`) for languages no registered project uses
+  are turned off through `skillOverrides` in `~/.claude/settings.json`. The
+  entries the toolkit wrote are tracked in `state.json` and restored when a
+  newly registered project brings the language back; a user's own override is
+  never touched; with no registered project on disk nothing is disabled. `all`
+  restores everything and persists the choice.
+- **`doctor` check 12, Context Budget.** Estimated resident tokens of the
+  model-visible skill listing (against `skillListingBudgetFraction`), the agent
+  listing, and always-loaded user memory, plus skills with zero recorded use in
+  both Claude Code's counters and the toolkit's `stats.json`. Read-only; prints
+  the `skillOverrides` key to paste.
+- **`doctor` check 13, Permission Rules.** Warns on `permissions.allow`
+  wildcards that pre-approve execution or writes: interpreters, task runners,
+  package installs, `gh api`, `curl`/`wget`, `git fetch`/`pull`, destructive
+  commands, `find -exec`. Never edits.
+- **`validate.py` skill description budget.** Error over 1024 characters (the
+  Agent Skills cap), warning over 400, and an error for an unquoted description
+  containing `: ` or ` #` (strict YAML drops every field, `allowed-tools`
+  included). Applied to plugin-pack skills too.
+- **`git-team` common rule.** Branching, pull-request, and review conventions
+  moved out of `git-workflow` into a rule that ships with `--profile strict`
+  only, via a new `profiles:` frontmatter gate. See `DECISIONS.md`.
+- **One frontmatter parser.** `scripts/frontmatter.py` now parses the whole
+  toolkit subset (scalars, quoted scalars, `>-`/`|` blocks, block and flow
+  lists, nested maps) strictly and is the only parser; twelve private
+  strip/parse copies in `validate.py`, `doctor.py`, `install_steps/ai_tools.py`,
+  `claude_app.py`, `compile_slm.py`, `surface_manifest.py`, `instruction_core.py`,
+  `check_split.py`, `codex_skill_adapter.py`, `generate_opencode_skills.py`, and
+  `generate_language_rules_skills.py` are gone. Every shipped `app/` and `kb/`
+  Markdown file parses under the strict grammar (pytest corpus test).
+- **Repo dev tooling, stdlib runtime.** `requirements-dev.txt` + `pytest.ini`
+  + `mypy.ini` (pytest, ruff, mypy) and a `python-quality` CI job:
+  `npm run test:py` (348 pytest tests under `tests/python/`), `npm run lint:py`
+  (ruff `E,F`, rule set in `package.json`), `npm run typecheck:py` (mypy
+  `--strict` over an allowlist). No `pyproject.toml`: the toolkit's own
+  `quality-gate.sh` reads one as "Python project, run `ruff check .`", which
+  is not what an npm-first repo wants. Nothing is added to the published
+  package or to user machines. See `DECISIONS.md` for why no runtime
+  dependency.
+
+### Changed
+
+- **Common rules are path-scoped from their source.** `app/rules/common/*.md`
+  may declare `paths:`; the generated `.claude/rules/ai-toolkit-*.md` copies it.
+  `testing` and `performance` load only for matching files; `coding-style`,
+  `git-workflow`, and `security` stay always-on. The `.claude/CLAUDE.md` index
+  now lists which rules are always-on and which are path-scoped instead of
+  claiming lazy loading for all of them.
+- **Stop hooks `quality-check.sh` and `save-session.sh` run with
+  `"async": true`.** Both are advisory and always exit 0; the linter was the
+  bulk of a 3.3 s median Stop chain. `quality-gate.sh` (exit 2) and
+  `stop-search-check.sh` stay synchronous.
+- **`git-workflow` is the solo-safe core** (commit format, no secrets, `main`
+  deployable, tags, recovery). Version 2.0.0.
+
+### Fixed
+
+- **`quality-gate.sh` runs ruff only for projects that configured it.** A bare
+  `pyproject.toml` (build metadata, pytest/mypy tables) used to trigger
+  `ruff check .` on every Stop under whatever ruff configuration the machine
+  resolves; found when this repository's own gate went red on 348 unrelated
+  findings. Ruff now needs `ruff.toml`, `.ruff.toml`, or a `[tool.ruff]` table.
+- **Codex/DSH skill sync no longer flattens nested frontmatter.** Native
+  (non-adapted) skills had their frontmatter re-rendered line by line, which
+  turned a `hooks:` block into stray top-level `PreToolUse:` / `- matcher:`
+  lines. The frontmatter now passes through verbatim.
+- **Hook merge de-duplicates legacy untagged toolkit hooks by command identity.**
+  Scheduling fields (`async`, `timeout`, `statusMessage`, ...) no longer defeat
+  the match, so adding one in `app/hooks.json` does not leave existing installs
+  running the old and the new copy side by side. Fixed in both
+  `scripts/merge-hooks.py` and `scripts/inject_hook_cli.py`.
+- **Test count.** Bats increased from 1931 to 1966; 348 pytest tests added under
+  `tests/python/` (run by the new `python-quality` CI job).
+
+### Ecosystem
+
+- Ecosystem doctor run for this minor release: 12 tools drifted since the
+  v4.30.3 snapshot, all class A (content edits with no heading delta) or class
+  C (Cline gained a "Resources" heading, Codex CLI a "ChatGPT Work" heading;
+  neither adds a surface the toolkit integrates). Tracked versions moved:
+  Claude Code 2.1.252 -> 2.1.260 (its hooks documentation now lists the
+  `async` command-hook field this release relies on), Codex CLI 0.151.0 ->
+  0.153.2. No generator changed; snapshot refreshed.
+
 ## v4.31.0 - Toolkit rules reach every editor (2026-09-03)
 
 ### Added

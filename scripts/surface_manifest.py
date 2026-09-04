@@ -44,6 +44,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import toolkit_dir as default_toolkit_dir
+from frontmatter import FrontmatterError, load_frontmatter
 
 MANIFEST_RELPATH = Path("app") / "surface.json"
 
@@ -52,14 +53,12 @@ CLI_COMMAND_RE = re.compile(r"^\s+'?([a-z][a-z0-9-]*)'?\s*:")
 
 
 def _frontmatter_fields(path: Path) -> set[str]:
-    parts = path.read_text(encoding="utf-8").split("---")
-    if len(parts) < 3:
+    """Top-level frontmatter keys of one file; a file the subset parser
+    refuses contributes nothing, which the removal check then reports."""
+    try:
+        return {key for key in load_frontmatter(path, strict=False) if FM_FIELD_RE.match(f"{key}:")}
+    except FrontmatterError:
         return set()
-    return {
-        m.group(1)
-        for line in parts[1].splitlines()
-        if (m := FM_FIELD_RE.match(line))
-    }
 
 
 def collect_surface(tk_dir: Path) -> dict:

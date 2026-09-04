@@ -36,7 +36,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import toolkit_dir
+from frontmatter import FrontmatterError, load_frontmatter
 from paths import HOOKS_DIR as _HOOKS_DIR, RULES_DIR as _RULES_DIR, EXTERNAL_HOOKS_DIR as _EXTERNAL_HOOKS_DIR
+from paths import STATS_FILE as _STATS_FILE
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +51,16 @@ RULES_DIR = _RULES_DIR
 EXTERNAL_HOOKS_DIR = _EXTERNAL_HOOKS_DIR
 BENCHMARK_DASHBOARD = toolkit_dir / "benchmarks" / "ecosystem-dashboard.json"
 PLUGIN_REGISTRY = CLAUDE_DIR / "plugins" / "installed_plugins.json"
+STATS_FILE = _STATS_FILE
+
+# Context budget (check 12). Estimates only: tokens ~= characters / 4.
+# Claude Code caps the model-visible skill listing at a fraction of the context
+# window (settings key `skillListingBudgetFraction`, default 1%). The window
+# size is not readable from disk, so the smallest production window is assumed.
+CONTEXT_WINDOW_TOKENS = 200_000
+DEFAULT_SKILL_LISTING_FRACTION = 0.01
+# Below this many recorded startups a zero usage counter is thin evidence.
+MIN_STARTUPS_FOR_USAGE_VERDICT = 200
 
 VALID_EVENTS = frozenset({
     "SessionStart", "Notification", "PreToolUse", "PostToolUse", "Stop",
@@ -156,6 +168,9 @@ class DiagResult:
 
     def fixed(self, msg: str) -> None:
         print(f"  FIXED: {msg}")
+
+    def info(self, msg: str) -> None:
+        print(f"  INFO: {msg}")
 
 
 # ---------------------------------------------------------------------------
@@ -903,6 +918,311 @@ def check_plugin_double_load(dr: DiagResult, fix_mode: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check 12: Context Budget
+# ---------------------------------------------------------------------------
+
+def _frontmatter_top_level(path: Path) -> dict[str, str]:
+    """Top-level scalar fields of a skill or agent file, as the listing sees them.
+
+    Tolerant: doctor describes a broken file rather than refusing it, so the
+    parser runs non-strict and anything it still rejects reads as empty.
+    Block scalars come back folded onto one line, which is how description
+    length is measured by the runtime; list and map values are dropped.
+    """
+    try:
+        data = load_frontmatter(path, strict=False)
+    except (OSError, FrontmatterError):
+        return {}
+    return {
+        key: value.replace("\n", " ").strip()
+        for key, value in data.items()
+        if isinstance(value, str)
+    }
+
+
+def _est_tokens(chars: int) -> int:
+    return chars // 4
+
+
+def _load_json_keys(path: Path, keys: tuple[str, ...]) -> dict:
+    """Read only the named top-level keys from a JSON file.
+
+    Settings files carry secrets next to the keys this check needs, so
+    nothing else leaves this function.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {k: data[k] for k in keys if k in data}
+
+
+def _usage_counts(claude_json: Path, stats_file: Path) -> tuple[dict[str, int], int | None]:
+    """Merge Claude Code's lifetime skill counters with the toolkit's stats.json.
+
+    Returns ``(counts by skill name, numStartups or None when unknown)``.
+    Both sources are lifetime totals, never windowed.
+    """
+    counts: dict[str, int] = {}
+    startups: int | None = None
+    cc = _load_json_keys(claude_json, ("skillUsage", "numStartups"))
+    usage = cc.get("skillUsage")
+    if isinstance(usage, dict):
+        for name, info in usage.items():
+            if isinstance(info, dict):
+                n = info.get("usageCount", 0)
+                if isinstance(n, int):
+                    # Nested skills are keyed "<dir>:<name>"; count under both.
+                    bare = str(name).rsplit(":", 1)[-1]
+                    counts[bare] = counts.get(bare, 0) + n
+    if isinstance(cc.get("numStartups"), int):
+        startups = cc["numStartups"]
+    try:
+        with open(stats_file, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        raw = {}
+    if isinstance(raw, dict):
+        for name, info in raw.items():
+            if isinstance(info, dict) and isinstance(info.get("count"), int):
+                counts[str(name)] = counts.get(str(name), 0) + info["count"]
+    return counts, startups
+
+
+def check_context_budget(dr: DiagResult) -> None:
+    """Estimate always-resident context and list skills with no recorded use.
+
+    Read-only by design: the verdict on a zero-use skill belongs to the user.
+    The output ends with the exact ``skillOverrides`` key to paste.
+    """
+    print()
+    print("## 12. Context Budget")
+
+    skills_dir = CLAUDE_DIR / "skills"
+    if not skills_dir.is_dir():
+        dr.skip("No ~/.claude/skills directory")
+        return
+
+    settings = _load_json_keys(
+        CLAUDE_DIR / "settings.json",
+        ("skillOverrides", "skillListingBudgetFraction"),
+    )
+    overrides = settings.get("skillOverrides")
+    disabled = {
+        name for name, state in overrides.items() if state == "off"
+    } if isinstance(overrides, dict) else set()
+    fraction = settings.get("skillListingBudgetFraction")
+    if not isinstance(fraction, (int, float)) or fraction <= 0:
+        fraction = DEFAULT_SKILL_LISTING_FRACTION
+
+    # Skill listing: name + description of every model-invocable skill.
+    listing_chars = 0
+    listed: dict[str, int] = {}
+    for skill_dir in sorted(skills_dir.iterdir()):
+        skill_file = skill_dir / "SKILL.md"
+        if not skill_file.is_file() or skill_dir.name in disabled:
+            continue
+        fm = _frontmatter_top_level(skill_file)
+        if fm.get("disable-model-invocation", "").lower() == "true":
+            continue
+        chars = len(fm.get("name", skill_dir.name)) + len(fm.get("description", ""))
+        listed[skill_dir.name] = chars
+        listing_chars += chars
+
+    budget_tokens = int(CONTEXT_WINDOW_TOKENS * fraction)
+    listing_tokens = _est_tokens(listing_chars)
+    listing_msg = (
+        f"skill listing: {len(listed)} model-invocable skills, "
+        f"~{listing_tokens} est. tokens "
+        f"(budget ~{budget_tokens} at {fraction:.0%} of a {CONTEXT_WINDOW_TOKENS // 1000}k window)"
+    )
+    if listing_tokens > budget_tokens:
+        dr.warn(listing_msg + " - over budget on a 200k-window model, entries get truncated "
+                "and skill routing degrades")
+    else:
+        dr.ok(listing_msg)
+
+    # Agents listing.
+    agents_dir = CLAUDE_DIR / "agents"
+    if agents_dir.is_dir():
+        agent_chars = 0
+        agent_count = 0
+        for agent_file in sorted(agents_dir.glob("*.md")):
+            fm = _frontmatter_top_level(agent_file)
+            if "name" not in fm:
+                continue
+            agent_count += 1
+            agent_chars += len(fm["name"]) + len(fm.get("description", ""))
+        dr.ok(f"agents listing: {agent_count} agents, ~{_est_tokens(agent_chars)} est. tokens")
+
+    # Always-loaded user memory: ~/.claude/CLAUDE.md and ~/.claude/rules/*.md.
+    memory_files = [CLAUDE_DIR / "CLAUDE.md"] + sorted((CLAUDE_DIR / "rules").glob("*.md")) \
+        if (CLAUDE_DIR / "rules").is_dir() else [CLAUDE_DIR / "CLAUDE.md"]
+    memory_chars = sum(p.stat().st_size for p in memory_files if p.is_file())
+    memory_count = sum(1 for p in memory_files if p.is_file())
+    dr.ok(
+        f"user memory: {memory_count} always-loaded files "
+        f"(~/.claude/CLAUDE.md + rules), ~{_est_tokens(memory_chars)} est. tokens"
+    )
+
+    # Zero-use skills. Evidence: Claude Code lifetime counters + toolkit stats.
+    claude_json = Path.home() / ".claude.json"
+    counts, startups = _usage_counts(claude_json, STATS_FILE)
+    if not claude_json.is_file():
+        dr.skip("usage evidence: ~/.claude.json not found, cannot judge unused skills")
+        return
+    if startups is None or startups < MIN_STARTUPS_FOR_USAGE_VERDICT:
+        dr.skip(
+            f"usage evidence: {startups or 0} startups recorded "
+            f"(need {MIN_STARTUPS_FOR_USAGE_VERDICT} before a zero counter means anything)"
+        )
+        return
+
+    unused = sorted(name for name in listed if counts.get(name, 0) == 0)
+    used = len(listed) - len(unused)
+    dr.ok(f"usage evidence: {startups} startups, {used} of {len(listed)} listed skills ever dispatched")
+    if not unused:
+        return
+
+    unused_tokens = _est_tokens(sum(listed[n] for n in unused))
+    # Language knowledge skills are generated from app/rules/<lang>/; a zero
+    # there almost always means "not your stack", unlike domain skills.
+    rules_root = toolkit_dir / "app" / "rules"
+    languages = {
+        p.name for p in rules_root.iterdir() if p.is_dir() and p.name != "common"
+    } if rules_root.is_dir() else set()
+    language = [
+        n for n in unused
+        if n.rsplit("-", 1)[-1] in ("rules", "patterns") and n.rsplit("-", 1)[0] in languages
+    ]
+    other = [n for n in unused if n not in language]
+    dr.info(
+        f"{len(unused)} listed skills have zero recorded use over {startups} startups "
+        f"(~{unused_tokens} est. tokens in every session)"
+    )
+    if language:
+        dr.info("language skills (safe to turn off for stacks you do not work in): "
+                + ", ".join(language))
+    if other:
+        dr.info("other zero-use skills (a zero here may mean never triggered, not useless): "
+                + ", ".join(other))
+    dr.info('to turn one off: ~/.claude/settings.json -> "skillOverrides": {"<name>": "off"} '
+            "(reversible; doctor never writes this for you)")
+
+
+# ---------------------------------------------------------------------------
+# Check 13: Permission Rules
+# ---------------------------------------------------------------------------
+
+# Bash allow rules are prefix string matches with no flag analysis. A wildcard
+# on any of these pre-approves arbitrary code execution or writes, whatever the
+# rule's author had in mind when they clicked "always allow".
+_EXEC_COMMANDS = frozenset({
+    "python", "python3", "node", "deno", "bun", "ruby", "perl", "php",
+    "bash", "sh", "zsh", "fish", "npx", "bunx", "pnpx", "eval", "exec", "xargs",
+    "ssh", "sudo", "su", "docker", "kubectl",
+})
+_TASK_RUNNERS = frozenset({"npm run", "yarn", "pnpm run", "make", "just", "task", "rake", "gradle", "mvn", "cargo run"})
+# Package installs run lifecycle scripts (postinstall, build.rs, setup.py).
+_PACKAGE_INSTALLS = frozenset({
+    "npm install", "npm i", "npm ci", "pnpm install", "pnpm add", "yarn add",
+    "pip install", "pip3 install", "uv pip", "cargo install", "gem install", "composer install",
+})
+_NETWORK_FETCHERS = frozenset({"curl", "wget", "http", "nc", "ncat", "netcat"})
+_GIT_EXEC_SUBCOMMANDS = frozenset({"git fetch", "git pull", "git clone", "git submodule"})
+_DESTRUCTIVE = frozenset({"rm", "rmdir", "mv", "dd", "mkfs", "shred", "truncate", "chmod", "chown"})
+
+
+def _bash_rule_body(rule: str) -> str | None:
+    """Return the command pattern inside ``Bash(...)`` or None for other tools."""
+    if not rule.startswith("Bash(") or not rule.endswith(")"):
+        return None
+    return rule[len("Bash("):-1].strip()
+
+
+def _classify_allow_rule(rule: str) -> str | None:
+    """Return why an allow rule is over-broad, or None when it looks fine.
+
+    Only patterns are judged, never the user's intent: an exact rule is
+    left alone even for an interpreter, since it pre-approves one string.
+    Wildcards (``*`` or trailing ``:*``) are what turn a rule into a class.
+    """
+    body = _bash_rule_body(rule)
+    if body is None:
+        return None
+    wildcard = "*" in body
+    if not wildcard:
+        return None
+    head = body.replace(":*", " *").rstrip("* ").strip()
+    tokens = head.split()
+    if not tokens:
+        return "matches every Bash command"
+    first = tokens[0]
+    two = " ".join(tokens[:2])
+    if first in _EXEC_COMMANDS:
+        return f"wildcard on interpreter/executor '{first}' (arbitrary code execution)"
+    if two in _TASK_RUNNERS or first in _TASK_RUNNERS:
+        return f"wildcard on task runner '{two if two in _TASK_RUNNERS else first}' (runs whatever the project script says)"
+    if two in _PACKAGE_INSTALLS:
+        return f"wildcard on '{two}' (package lifecycle scripts execute on install)"
+    if first in _NETWORK_FETCHERS:
+        return f"wildcard on '{first}' (can POST data out or fetch and pipe code)"
+    if two == "gh api":
+        return "wildcard on 'gh api' (also matches POST/DELETE and GraphQL mutations)"
+    if two in _GIT_EXEC_SUBCOMMANDS:
+        return f"wildcard on '{two}' (remote helpers and ext:: URLs execute commands)"
+    if first in _DESTRUCTIVE:
+        return f"wildcard on '{first}' (destructive)"
+    if first == "find" and ("-exec" in body or "-delete" in body):
+        return "find with -exec/-delete"
+    return None
+
+
+def check_permission_rules(dr: DiagResult) -> None:
+    """Flag allow rules that pre-approve more than a read-only class of commands.
+
+    Read-only. Deny/ask rules are never touched and never flagged.
+    """
+    print()
+    print("## 13. Permission Rules")
+
+    candidates = [
+        ("~/.claude/settings.json", CLAUDE_DIR / "settings.json"),
+        (".claude/settings.json", Path.cwd() / ".claude" / "settings.json"),
+        (".claude/settings.local.json", Path.cwd() / ".claude" / "settings.local.json"),
+    ]
+    seen_any = False
+    flagged = 0
+    for label, path in candidates:
+        if not path.is_file():
+            continue
+        perms = _load_json_keys(path, ("permissions",)).get("permissions")
+        if not isinstance(perms, dict):
+            continue
+        allow = perms.get("allow")
+        if not isinstance(allow, list):
+            continue
+        seen_any = True
+        for rule in allow:
+            if not isinstance(rule, str):
+                continue
+            reason = _classify_allow_rule(rule)
+            if reason:
+                flagged += 1
+                dr.warn(f"{label}: allow rule {rule} - {reason}")
+    if not seen_any:
+        dr.skip("no permissions.allow lists in user or project settings")
+        return
+    if flagged == 0:
+        dr.ok("allow rules pre-approve nothing beyond read-only commands")
+    else:
+        dr.info("doctor never edits permissions; remove a rule from its file, or narrow it to the exact command you meant")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -927,6 +1247,8 @@ def main() -> None:
     check_url_hooks(dr, fix_mode)
     check_language_drift(dr)
     check_plugin_double_load(dr, fix_mode)
+    check_context_budget(dr)
+    check_permission_rules(dr)
 
     # Summary
     print("========================")

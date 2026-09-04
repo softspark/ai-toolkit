@@ -27,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import toolkit_dir as default_toolkit_dir, frontmatter_field
+from frontmatter import FrontmatterError, parse_scalar
 from plugin_schema import validate_manifest as _validate_plugin_manifest_schema
 from plugin_schema import validate_references as _validate_plugin_references
 
@@ -152,15 +153,28 @@ MAX_EMITTED_SKILL_NODES = 10_000
 SKILL_BODY_BUDGET_ERROR = 20_000
 SKILL_BODY_BUDGET_WARN = 18_000
 
+# Skill description budget, in characters of the decoded description text.
+#
+# Every model-invocable skill's description sits in the listing that loads at
+# the start of every session, so a long description is paid for on every turn
+# of every user, not just when the skill fires. The Agent Skills spec caps the
+# field at 1024 characters; anything past that is truncated by the runtime.
+SKILL_DESCRIPTION_LIMIT = 1024
+SKILL_DESCRIPTION_BUDGET_WARN = 400
+
 VALID_RULE_CATEGORIES = frozenset({
     "coding-style",
     "testing",
     "security",
     "performance",
     "git-workflow",
+    "git-team",
     "patterns",
     "frameworks",
 })
+
+# Install profiles a common rule may restrict itself to via `profiles:`.
+VALID_RULE_PROFILES = frozenset({"minimal", "standard", "strict", "full"})
 
 COMMON_RULE_CATEGORIES = frozenset({
     "coding-style",
@@ -256,6 +270,139 @@ def _fm_has(lines: list[str], field: str) -> bool:
     return any(line.startswith(f"{field}:") for line in lines)
 
 
+def _fm_description(fm_lines: list[str]) -> tuple[str, str]:
+    """Return ``(raw first-line value, decoded text)`` for ``description:``.
+
+    Handles the three spellings skills use: a plain scalar, a quoted scalar,
+    and a block scalar (``>-`` / ``|``) whose text continues on indented lines.
+    """
+    for index, line in enumerate(fm_lines):
+        if not line.startswith("description:"):
+            continue
+        raw = line[len("description:"):].strip()
+        if raw and raw[0] in ">|":
+            continuation: list[str] = []
+            for nxt in fm_lines[index + 1:]:
+                if nxt.strip() and not nxt[0].isspace():
+                    break
+                continuation.append(nxt.strip())
+            return raw, " ".join(part for part in continuation if part)
+        return raw, _frontmatter_scalar(raw)
+    return "", ""
+
+
+def _validate_skill_description(label: str, fm_lines: list[str],
+                                vr: ValidationResult) -> None:
+    """Enforce the description budget and reject ambiguous plain scalars."""
+    raw, text = _fm_description(fm_lines)
+    if not raw:
+        return
+    is_plain = raw[0] not in "\"'>|"
+    if is_plain and (": " in raw or " #" in raw):
+        # A plain scalar with `: ` or ` #` parses as a nested mapping or a
+        # comment under strict YAML. Claude Code tolerates it today; a stricter
+        # parser drops every field, including allowed-tools, without a warning.
+        vr.error(
+            f"{label}: description is an unquoted scalar containing ': ' or ' #' "
+            "- quote it or use a '>-' block scalar"
+        )
+    length = len(text)
+    if length > SKILL_DESCRIPTION_LIMIT:
+        vr.error(
+            f"{label}: description is {length} characters "
+            f"(limit {SKILL_DESCRIPTION_LIMIT}) - the runtime truncates it"
+        )
+    elif length > SKILL_DESCRIPTION_BUDGET_WARN:
+        vr.warn(
+            f"{label}: description is {length} characters "
+            f"(budget {SKILL_DESCRIPTION_BUDGET_WARN}) - it loads in every session"
+        )
+
+
+def _validate_rule_profiles(rel: str, language: str, fm_lines: list[str],
+                            vr: ValidationResult) -> int:
+    """Validate an optional ``profiles:`` gate on a common rule source file.
+
+    Same block-list form as ``paths``; every value must be an existing install
+    profile. Per-language rules ship as skills and have no profile, so the key
+    is rejected outside ``app/rules/common/``.
+    """
+    if language != "common":
+        vr.error(f"{rel} - profiles is only meaningful for common rules")
+        return 1
+    errors = 0
+    items: list[str] = []
+    in_block = False
+    for line in fm_lines:
+        if line.startswith("profiles:"):
+            if line[len("profiles:"):].strip():
+                vr.error(f"{rel} - profiles must be a block list, not inline: {line.strip()}")
+                return 1
+            in_block = True
+            continue
+        if not in_block:
+            continue
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if not line.startswith("  - "):
+            break
+        item = stripped[2:].strip().strip('"')
+        if item not in VALID_RULE_PROFILES:
+            vr.error(
+                f"{rel} - unknown profile '{item}' "
+                f"(valid: {', '.join(sorted(VALID_RULE_PROFILES))})"
+            )
+            errors += 1
+            continue
+        items.append(item)
+    if not items and errors == 0:
+        vr.error(f"{rel} - profiles block is empty (drop the key to ship in every profile)")
+        errors += 1
+    return errors
+
+
+def _validate_rule_paths(rel: str, fm_lines: list[str], vr: ValidationResult) -> int:
+    """Validate an optional ``paths:`` scope block on a rule source file.
+
+    Mirrors what ``install_steps.ai_tools._rule_paths`` reads: a bare
+    ``paths:`` key followed by one or more ``  - "glob"`` items. Returns the
+    number of errors reported.
+    """
+    errors = 0
+    items: list[str] = []
+    in_paths = False
+    for line in fm_lines:
+        if line.startswith("paths:"):
+            if line[len("paths:"):].strip():
+                vr.error(f"{rel} - paths must be a block list, not inline: {line.strip()}")
+                return 1
+            in_paths = True
+            continue
+        if not in_paths:
+            continue
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if not line.startswith("  - "):
+            break
+        item = stripped[2:].strip()
+        if len(item) < 3 or item[0] != '"' or item[-1] != '"':
+            vr.error(f"{rel} - paths entry must be a double-quoted glob: {stripped}")
+            errors += 1
+            continue
+        glob_value = item[1:-1]
+        if not glob_value or any(ch in glob_value for ch in ' \\"'):
+            vr.error(f"{rel} - paths glob contains whitespace, backslash, or quote: {stripped}")
+            errors += 1
+            continue
+        items.append(glob_value)
+    if not items and errors == 0:
+        vr.error(f"{rel} - paths block is empty (drop the key for an always-on rule)")
+        errors += 1
+    return errors
+
+
 def _validate_invocation_metadata(label: str, fm_lines: list[str],
                                   vr: ValidationResult) -> None:
     """Reject metadata spellings that DSH interprets differently or ignores."""
@@ -296,14 +443,16 @@ def _validate_invocation_metadata(label: str, fm_lines: list[str],
 
 
 def _frontmatter_scalar(raw_value: str) -> str:
-    """Decode the simple scalar forms used by emitted skill metadata."""
-    value = raw_value.strip()
-    if not value:
-        return ""
-    quoted = re.fullmatch(r'''(["'])(.*?)\1(?:\s+#.*)?''', value)
-    if quoted:
-        return quoted.group(2).strip()
-    return re.split(r"\s+#", value, maxsplit=1)[0].strip()
+    """Decode one scalar the way the shared parser does, never raising.
+
+    Validation reports problems as findings; a value the subset parser
+    refuses (anchor, tag, unterminated quote) decodes to its raw text here and
+    is caught by the dedicated checks that follow.
+    """
+    try:
+        return parse_scalar(raw_value, strict=False)
+    except FrontmatterError:
+        return raw_value.strip()
 
 
 def _parse_supported_top_level_entry(
@@ -672,9 +821,7 @@ def _validate_skill_frontmatter(tk_dir: Path, skill_path: Path,
             f"(budget {SKILL_BODY_BUDGET_WARN}) - move detail into reference/"
         )
 
-    desc_value = _fm_field(fm_lines, "description")
-    if len(desc_value) > 1024:
-        vr.warn(f"{name} - Description exceeds 1024 characters")
+    _validate_skill_description(f"skills/{name}/SKILL.md", fm_lines, vr)
 
 
 def _validate_skill_script_invocations(skill_path: Path, vr: ValidationResult) -> None:
@@ -1104,6 +1251,17 @@ def validate_language_rules(tk_dir: Path, vr: ValidationResult) -> None:
                     vr.error(f"{rel} filename does not match category '{category}'")
                     rule_errors += 1
 
+            # Optional Claude Code `paths` scope. The installer reads only the
+            # block-list form (`  - "glob"`), so reject anything else here
+            # rather than letting a rule silently fall back to always-on.
+            if _fm_has(fm_lines, "paths"):
+                rule_errors += _validate_rule_paths(rel, fm_lines, vr)
+
+            # Optional `profiles` gate (common rules only): same block-list
+            # form, values limited to the install profiles that exist.
+            if _fm_has(fm_lines, "profiles"):
+                rule_errors += _validate_rule_profiles(rel, language, fm_lines, vr)
+
         for category in sorted(expected - seen):
             vr.error(f"app/rules/{language} missing required rule category: {category}")
             rule_errors += 1
@@ -1229,6 +1387,17 @@ def _validate_pack_refs(tk_dir: Path, pack_path: Path, d: dict,
     )
     for err in ref_errors:
         vr.error(f"app/plugins/{pack_name}/plugin.json {err}")
+
+    # Pack skills bypass validate_skills() (they live outside app/skills), yet
+    # they are installed as skills. Apply the same description gate so a pack
+    # cannot ship a listing-bloating or strict-YAML-hostile description.
+    pack_skills_dir = pack_path / "skills"
+    if pack_skills_dir.is_dir():
+        for skill_file in sorted(pack_skills_dir.glob("*/SKILL.md")):
+            if not _has_frontmatter(skill_file):
+                continue
+            rel = str(skill_file.relative_to(tk_dir))
+            _validate_skill_description(rel, _parse_frontmatter_lines(skill_file), vr)
 
     hooks_dir = pack_path / "hooks"
     if hooks_dir.is_dir():

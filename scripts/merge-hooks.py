@@ -123,12 +123,22 @@ def _is_retired_toolkit_entry(entry: dict) -> bool:
     return True
 
 
+# Handler fields that change *how* a command hook is scheduled, not *what* it
+# runs. A legacy untagged entry that differs only in these is the same hook;
+# otherwise adding `async` or `timeout` in app/hooks.json would leave every
+# existing install running the old copy and the new copy side by side.
+_SCHEDULING_FIELDS = frozenset({
+    "async", "asyncRewake", "timeout", "statusMessage", "shell", "once", "if",
+})
+
+
 def _entry_signature(entry: dict) -> tuple:
     """Return the behavior-defining parts of a hook entry.
 
     Older ai-toolkit installs wrote hook entries without ``_source``. Matching
-    on the event, matcher, and handler payload lets current installs remove
-    those legacy duplicates while preserving unrelated user hooks.
+    on the event, matcher, and handler payload (minus scheduling fields) lets
+    current installs remove those legacy duplicates while preserving unrelated
+    user hooks.
     """
     handlers = []
     for hook in entry.get("hooks", []):
@@ -138,7 +148,7 @@ def _entry_signature(entry: dict) -> tuple:
         handlers.append(tuple(sorted(
             (key, value)
             for key, value in hook.items()
-            if key != "_source"
+            if key != "_source" and key not in _SCHEDULING_FIELDS
         )))
     return (entry.get("matcher", ""), tuple(handlers))
 

@@ -38,6 +38,7 @@ Stale counts = broken user trust. This is non-negotiable.
 # Generate: python3 scripts/generate_language_rules_skills.py  (build app/skills/<lang>-rules/ from app/rules/<lang>/)
 # Install:  ai-toolkit install            (global → ~/.claude/settings.json hooks + ~/.softspark/ai-toolkit/hooks/ scripts)
 # Install:  ai-toolkit install --profile minimal|standard|strict
+# Install:  ai-toolkit install --language-skills detected|all  (scope <lang>-rules/<lang>-patterns skills to languages registered projects use; default detected, choice persisted in state.json)
 # Init:     ai-toolkit install --local    (project-local Claude Code configs only)
 # Init:     ai-toolkit install --local --editors all  (+ all editors: cursor, windsurf, cline, roo, aider, augment, copilot, antigravity, codex)
 # Init:     ai-toolkit install --local --editors cursor,aider  (+ specific editors)
@@ -53,6 +54,11 @@ Stale counts = broken user trust. This is non-negotiable.
 # Codex:   ai-toolkit codex-rules         (generate .agents/rules/*.md for Codex CLI)
 # Codex:   ai-toolkit codex-hooks         (generate .codex/hooks.json for Codex CLI)
 # Deps:    python3 scripts/check_deps.py  (check system dependencies, OS-specific install hints)
+# Dev tooling (repo only, never shipped): python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+# Python unit tests: npm run test:py   (pytest tests/python; runs in ci.yml python-quality)
+# Lint:   npm run lint:py    (ruff E,F; the rule set is the package.json script, not a config file)
+# Types:  npm run typecheck:py  (mypy --strict over the allowlist in mypy.ini; add a file when it passes, never remove one)
+# No pyproject.toml here on purpose: quality-gate.sh reads one as "Python project, ruff check ." and this repo is npm-first (pytest.ini / mypy.ini instead)
 ```
 
 ## Skill Tiers (When to Use What)

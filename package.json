@@ -1,6 +1,6 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "4.31.0",
+  "version": "4.32.0",
   "description": "AI coding toolkit: 109 skills, 44 agents, 14 developer-tool integrations, recoverable native tool-output filtering, Claude Chat/Cowork export, safety constitution, SARIF audit, and signed npm provenance.",
   "keywords": [
     "claude",
@@ -75,7 +75,10 @@
     "generate:all": "npm run generate:language-rules && npm run generate:claude-app && npm run generate:agents && npm run generate:opencode-agents && npm run generate:opencode-commands && npm run generate:opencode-skills && npm run generate:cursor && npm run generate:cursor-mdc && npm run generate:windsurf && npm run generate:windsurf-rules && npm run generate:copilot && npm run generate:gemini && npm run generate:gemini-agents && npm run generate:cline && npm run generate:cline-hooks && npm run generate:roo && npm run generate:roo-rules && npm run generate:aider && npm run generate:augment-rules && npm run generate:antigravity && npm run generate:llms && npm run generate:badges",
     "generate:badges": "python3 scripts/sync_badges.py",
     "surface": "python3 scripts/surface_manifest.py",
-    "surface:update": "python3 scripts/surface_manifest.py --update"
+    "surface:update": "python3 scripts/surface_manifest.py --update",
+    "test:py": "python3 -m pytest tests/python",
+    "lint:py": "ruff check scripts --select E,F --ignore E501,E402 --line-length 120 --extend-exclude app/skills/*/scripts,benchmarks",
+    "typecheck:py": "python3 -m mypy"
   },
   "files": [
     "bin/",

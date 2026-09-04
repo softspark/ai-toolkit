@@ -1,10 +1,14 @@
 ---
 language: common
 category: git-workflow
-version: "1.0.0"
+version: "2.0.0"
 ---
 
 # Git Workflow Rules
+
+Solo-safe core: everything here holds whether one person or twenty merge into
+`main`. Branching, pull-request, and review conventions for teams live in
+`git-team` and ship only with the `strict` profile.
 
 ## Commit Messages
 - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
@@ -15,25 +19,7 @@ version: "1.0.0"
 ## Commit Practices
 - Commit small, atomic changes. One commit = one logical change.
 - Never commit: secrets, `.env` files, build artifacts, large binaries.
-- Never commit broken code to `main`. Use feature branches.
-- Squash fixup commits before merging to keep history clean.
-
-## Branching
-- `main` is always deployable. Protect it with required reviews and CI.
-- Feature branches: `feat/user-registration`, `fix/order-total-calc`.
-- Delete branches after merge. Stale branches are clutter.
-- Rebase feature branches on main before PR to keep linear history.
-
-## Pull Requests
-- Keep PRs small: <400 lines changed. Split large features into stacked PRs.
-- PR title follows conventional commit format.
-- Include: summary, test plan, and screenshots/recordings for UI changes.
-- Require at least one approval before merge.
-
-## Code Review
-- Review for: correctness, security, performance, readability.
-- Approve with comments if nits only. Block for: bugs, security, missing tests.
-- Respond to reviews within 24 hours. Do not let PRs rot.
+- `main` is always deployable: run the project's gates before every commit that lands there.
 
 ## Tags and Releases
 - Use semantic versioning: MAJOR.MINOR.PATCH.

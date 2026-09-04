@@ -50,7 +50,6 @@ from dir_rules_shared import (
     build_language_rules,
     build_registered_rules,
     cleanup_stale,
-    rule_testing,
     write_rules,
 )
 

@@ -214,10 +214,10 @@ def _refresh_url_rules(rules_dir: Path) -> None:
         except Exception as exc:
             if rule_file.is_file():
                 print(f"  Warning: could not refresh '{rule_name}' from {url}: {exc}")
-                print(f"           Using cached version.")
+                print("           Using cached version.")
             else:
                 print(f"  Warning: could not fetch '{rule_name}' from {url}: {exc}")
-                print(f"           No cached version — rule will be skipped.")
+                print("           No cached version — rule will be skipped.")
 
 
 def refresh_url_hooks(target_dir: str | None = None) -> None:
@@ -250,10 +250,10 @@ def refresh_url_hooks(target_dir: str | None = None) -> None:
         except Exception as exc:
             if cached_file.is_file():
                 print(f"  Warning: could not refresh '{hook_name}' from {url}: {exc}")
-                print(f"           Using cached version.")
+                print("           Using cached version.")
             else:
                 print(f"  Warning: could not fetch '{hook_name}' from {url}: {exc}")
-                print(f"           No cached version — hook will be skipped.")
+                print("           No cached version — hook will be skipped.")
                 continue
 
         # Re-inject from cached file
@@ -291,10 +291,10 @@ def refresh_url_mcp(target_dir: str | None = None) -> None:
         except Exception as exc:
             if cached_file.is_file():
                 print(f"  Warning: could not refresh '{template_name}' from {url}: {exc}")
-                print(f"           Using cached version.")
+                print("           Using cached version.")
             else:
                 print(f"  Warning: could not fetch '{template_name}' from {url}: {exc}")
-                print(f"           No cached version — template will be skipped.")
+                print("           No cached version — template will be skipped.")
                 continue
 
         if cached_file.is_file():

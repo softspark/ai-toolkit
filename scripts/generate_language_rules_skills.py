@@ -15,9 +15,10 @@ block in ``.claude/CLAUDE.md``: instead of nudging Claude to Read absolute
 nvm-pinned paths on demand, the rules ride on the Agent Skills mechanism.
 
 Common rules (``app/rules/common/``) are installed as Claude Code
-path-scoped ``.claude/rules/ai-toolkit-*.md`` files by ``install --local``.
-This keeps ``CLAUDE.md`` below Claude's current size guidance while still
-loading common guidance when project files are opened.
+``.claude/rules/ai-toolkit-*.md`` files by ``install --local``. Each source
+rule's ``paths`` frontmatter decides whether it is always-on or loads only
+for matching files. This keeps ``CLAUDE.md`` below Claude's current size
+guidance without loading file-type-specific guidance in every session.
 
 Idempotent: rerunning overwrites generated SKILL.md but leaves any other
 files in the skill directory alone.
@@ -33,6 +34,9 @@ import argparse
 import sys
 from pathlib import Path
 from textwrap import dedent
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from frontmatter import split_frontmatter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RULES_DIR = ROOT / "app" / "rules"
@@ -98,16 +102,6 @@ TRIGGERS: dict[str, dict[str, str]] = {
 }
 
 
-def _strip_frontmatter(text: str) -> str:
-    """Remove YAML frontmatter (--- ... ---) if present."""
-    if not text.startswith("---"):
-        return text.lstrip("\n")
-    end = text.find("\n---", 3)
-    if end == -1:
-        return text.lstrip("\n")
-    return text[end + 4:].lstrip("\n")
-
-
 def _category_title(stem: str) -> str:
     """Convert filename stem (e.g. ``coding-style``) to a section title."""
     return " ".join(part.capitalize() for part in stem.split("-"))
@@ -117,7 +111,7 @@ def _build_skill_body(lang_dir: Path) -> str:
     """Concatenate all rule category files into a skill body."""
     parts: list[str] = []
     for f in sorted(lang_dir.glob("*.md")):
-        body = _strip_frontmatter(f.read_text(encoding="utf-8")).rstrip()
+        body = split_frontmatter(f.read_text(encoding="utf-8"))[1].lstrip("\n").rstrip()
         # If the source file already starts with a top-level "# Title", keep
         # it. Otherwise, prepend a "## Category" header so the skill body
         # has structure.

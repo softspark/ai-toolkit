@@ -54,6 +54,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import toolkit_dir as default_toolkit_dir
+from frontmatter import FrontmatterError
+from frontmatter import split_frontmatter as _split_frontmatter
 
 # Sections that carry prescriptive process and environment-specific traps.
 # They must load on every run, so they never move down into reference/.
@@ -75,16 +77,16 @@ NON_FILE_PREFIXES = ("#", "/", "mailto:", "tel:", "$")
 # ---------------------------------------------------------------------------
 
 def split_frontmatter(text: str) -> tuple[str, str]:
-    """Return (frontmatter_block, body). Frontmatter is '' when absent."""
-    lines = text.splitlines()
-    if not lines or lines[0].strip() != "---":
+    """Return (frontmatter_block, body). Frontmatter is '' when absent.
+
+    An unterminated block counts as body rather than being swallowed, so the
+    split gate still compares every byte of such a file.
+    """
+    try:
+        block, body = _split_frontmatter(text)
+    except FrontmatterError:
         return "", text
-    for idx in range(1, len(lines)):
-        if lines[idx].strip() == "---":
-            return "\n".join(lines[1:idx]), "\n".join(lines[idx + 1:])
-    # Unterminated frontmatter — treat the whole file as body rather than
-    # silently swallowing it.
-    return "", text
+    return block or "", body
 
 
 def description_of(frontmatter: str) -> str:

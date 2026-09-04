@@ -6,7 +6,11 @@
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from frontmatter import split_frontmatter  # noqa: E402
 
 
 CONSTITUTION_PATH = (
@@ -16,14 +20,7 @@ CONSTITUTION_PATH = (
 
 def _strip_frontmatter(text: str) -> str:
     """Return Markdown after an optional leading YAML frontmatter block."""
-    lines = text.splitlines()
-    if not lines or lines[0] != "---":
-        return text.strip()
-    try:
-        closing = lines.index("---", 1)
-    except ValueError:
-        return text.strip()
-    return "\n".join(lines[closing + 1:]).strip()
+    return split_frontmatter(text)[1].strip()
 
 
 def read_constitution(path: Path = CONSTITUTION_PATH) -> str:

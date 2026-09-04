@@ -221,8 +221,17 @@ def _entry_source(entry: dict) -> str | None:
     return None
 
 
+# Handler fields that change *how* a command hook is scheduled, not *what* it
+# runs. A legacy untagged entry that differs only in these is the same hook,
+# otherwise adding `async` or `timeout` to app/hooks.json would leave every
+# existing install running the old copy and the new copy side by side.
+_SCHEDULING_FIELDS = frozenset({
+    "async", "asyncRewake", "timeout", "statusMessage", "shell", "once", "if",
+})
+
+
 def _entry_signature(entry: dict) -> tuple:
-    """Return behavior-defining hook fields without source tags."""
+    """Return behavior-defining hook fields without source or scheduling tags."""
     handlers = []
     for hook in entry.get("hooks", []):
         if not isinstance(hook, dict):
@@ -230,7 +239,11 @@ def _entry_signature(entry: dict) -> tuple:
             continue
         handlers.append(
             tuple(
-                sorted((key, value) for key, value in hook.items() if key != "_source")
+                sorted(
+                    (key, value)
+                    for key, value in hook.items()
+                    if key != "_source" and key not in _SCHEDULING_FIELDS
+                )
             )
         )
     return (entry.get("matcher", ""), tuple(handlers))

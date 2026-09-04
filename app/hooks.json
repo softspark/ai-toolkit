@@ -167,7 +167,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\"",
+                        "async": true
                     }
                 ]
             },
@@ -177,7 +178,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/save-session.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/save-session.sh\"",
+                        "async": true
                     }
                 ]
             },

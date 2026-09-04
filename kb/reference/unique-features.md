@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-08-06"
+last_updated: "2026-09-04"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -119,6 +119,7 @@ added after the thing it checks had already shipped broken.
 | **Public surface** (`surface_manifest.py` + `app/surface.json`) | a skill, agent, CLI command, frontmatter field, hook, KB category or pack disappearing | `BACKWARD_COMPATIBILITY.md` listed the surfaces; renaming one still left every check green |
 | **Script invocation** (`validate.py`) | a skill running its own script by any path other than `${CLAUDE_SKILL_DIR}`, or through the wrong interpreter | nine skills shipped invocations that resolved only in the repo, never on an installed machine |
 | **Skill body budget** (`validate.py`) | a `SKILL.md` body over 20,000 bytes; warns over 18,000 | the body loads on every trigger match, including accidental ones; three skills sat at 24–35 KB |
+| **Skill description budget** (`validate.py`) | a description over 1,024 characters (the Agent Skills cap; the runtime truncates past it), or an unquoted description containing `: ` or ` #` (strict YAML drops every field, `allowed-tools` included); warns over 400; applied to plugin-pack skills too | two installed skills sat at 791 and 883 characters and made up 8% of the model's skill listing on their own |
 | **Split integrity** (`check_split.py`) | a body → `reference/` refactor that lost a fenced code line, a required section, the description, or a working link | run by hand during a split; caught a heading corrupted inside a fenced example on first use |
 
 The surface check is deliberately one-directional: **removals fail, additions pass.**

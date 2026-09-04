@@ -3,9 +3,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.4.0"
+version: "3.5.0"
 created: "2026-03-23"
-last_updated: "2026-08-06"
+last_updated: "2026-09-04"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -229,7 +229,9 @@ that runtime should receive the change.
    greets the user with a traceback, and one that reads stdin must answer an
    empty stdin with an error rather than blocking forever.
 3. Update `kb/reference/skills-catalog.md` and `app/ARCHITECTURE.md`
-4. Run `scripts/validate.py` — it checks the invocation, the body budget, and
+4. Run `scripts/validate.py` — it checks the invocation, the body budget, the
+   description budget (warn over 400 characters, error over 1024; unquoted
+   descriptions containing `: ` or ` #` are rejected, use `>-`), and
    `reference/` link resolution
 5. Run `python3 scripts/surface_manifest.py` before the next release to adopt the
    new skill into the protected surface
@@ -305,6 +307,7 @@ bats tests/test_install.bats tests/test_codex.bats
 bats tests/test_claude_app.bats tests/test_hooks_per_editor.bats
 python3 scripts/claude_app.py verify
 python3 scripts/validate.py --strict
+npm run test:py   # pytest over scripts/ logic incl. the frontmatter corpus test (dev venv, see CONTRIBUTING.md)
 ```
 
 ## Managing Plugins

@@ -48,7 +48,6 @@ def _agent_body(agent_file: Path) -> str:
 
 def _render_opencode_agent(agent_file: Path) -> str:
     """Render a single opencode subagent .md file from an ai-toolkit agent."""
-    name = frontmatter_field(agent_file, "name")
     description = frontmatter_field(agent_file, "description")
     model = frontmatter_field(agent_file, "model")
     color = frontmatter_field(agent_file, "color")

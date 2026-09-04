@@ -383,9 +383,9 @@ run_hook_with_input() {
     true
 }
 
-@test "quality-gate: blocks when ruff exits non-zero" {
+@test "quality-gate: blocks when ruff exits non-zero and the project configured ruff" {
     cd "$TEST_TMP"
-    touch pyproject.toml
+    printf '[tool.ruff]\nline-length = 100\n' > pyproject.toml
     mkdir -p "$TEST_TMP/bin"
     cat > "$TEST_TMP/bin/ruff" <<'EOF'
 #!/usr/bin/env bash
@@ -396,6 +396,29 @@ EOF
     PATH="$TEST_TMP/bin:$PATH" run_hook "quality-gate.sh"
     [ "$status" -eq 2 ]
     echo "$output" | grep -q "QUALITY GATE FAILED: ruff found errors"
+}
+
+@test "quality-gate: ruff.toml also counts as a ruff-configured project" {
+    cd "$TEST_TMP"
+    touch pyproject.toml ruff.toml
+    mkdir -p "$TEST_TMP/bin"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$TEST_TMP/bin/ruff"
+    chmod +x "$TEST_TMP/bin/ruff"
+    PATH="$TEST_TMP/bin:$PATH" run_hook "quality-gate.sh"
+    [ "$status" -eq 2 ]
+}
+
+@test "quality-gate: a pyproject.toml without [tool.ruff] does not run ruff" {
+    cd "$TEST_TMP"
+    # pytest/mypy tables or build metadata only: the project never asked for
+    # ruff, so a failing ruff on PATH must not turn the Stop gate red.
+    printf '[tool.pytest.ini_options]\ntestpaths = ["tests"]\n' > pyproject.toml
+    mkdir -p "$TEST_TMP/bin"
+    printf '#!/usr/bin/env bash\necho "should not run"\nexit 1\n' > "$TEST_TMP/bin/ruff"
+    chmod +x "$TEST_TMP/bin/ruff"
+    PATH="$TEST_TMP/bin:$PATH" run_hook "quality-gate.sh"
+    [ "$status" -eq 0 ]
+    ! echo "$output" | grep -q "ruff found errors"
 }
 
 @test "quality-gate: lists edits for payload conversation" {

@@ -1,7 +1,13 @@
 ---
 language: common
 category: testing
-version: "1.0.0"
+version: "1.1.0"
+paths:
+  - "**/*.test.*"
+  - "**/*.spec.*"
+  - "**/test_*"
+  - "**/*_test.*"
+  - "**/tests/**"
 ---
 
 # Universal Testing Rules

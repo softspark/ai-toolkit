@@ -1,5 +1,5 @@
 {
-  "version": "4.31.0",
+  "version": "4.32.0",
   "components": {
     "agents": {
       "description": "44 specialized agents (orchestrator, backend, frontend, security, devops, etc.)",
@@ -141,7 +141,7 @@
       "default": true
     },
     "rules-common": {
-      "description": "Common coding rules (5 files)",
+      "description": "Common coding rules (6 files; git-team ships with the strict profile only)",
       "default": true
     },
     "rules-typescript": {

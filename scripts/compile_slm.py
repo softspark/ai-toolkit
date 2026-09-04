@@ -35,17 +35,16 @@ import re
 import sys
 import urllib.request
 import urllib.error
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from frontmatter import split_frontmatter
 from _common import (
-    toolkit_dir,
     app_dir,
     agents_dir,
     skills_dir,
     frontmatter_field,
-    frontmatter_block,
 )
 
 # ---------------------------------------------------------------------------
@@ -209,16 +208,6 @@ def _read_file_text(path: Path) -> str:
         return ""
 
 
-def _strip_frontmatter(text: str) -> str:
-    """Remove YAML frontmatter (--- delimited) from text."""
-    if not text.startswith("---"):
-        return text
-    end = text.find("---", 3)
-    if end == -1:
-        return text
-    return text[end + 3:].lstrip("\n")
-
-
 def _parse_persona_skills(persona_path: Path) -> list[str]:
     """Extract preferred skill names from a persona file."""
     text = _read_file_text(persona_path)
@@ -252,7 +241,7 @@ def parse_components(
     constitution_path = app_dir / "constitution.md"
     if constitution_path.is_file():
         text = _read_file_text(constitution_path)
-        body = _strip_frontmatter(text)
+        body = split_frontmatter(text)[1].lstrip("\n")
         components.append(Component(
             name="Constitution",
             type="constitution",
@@ -289,7 +278,7 @@ def parse_components(
     # --- Persona definition (score=0.90) ---
     if persona_path and persona_path.is_file():
         text = _read_file_text(persona_path)
-        body = _strip_frontmatter(text)
+        body = split_frontmatter(text)[1].lstrip("\n")
         components.append(Component(
             name=f"Persona: {persona}",
             type="persona",
@@ -310,7 +299,7 @@ def parse_components(
     if common_rules_dir.is_dir():
         for rule_file in sorted(common_rules_dir.glob("*.md")):
             text = _read_file_text(rule_file)
-            body = _strip_frontmatter(text)
+            body = split_frontmatter(text)[1].lstrip("\n")
             components.append(Component(
                 name=f"Rule: common/{rule_file.stem}",
                 type="rule",
@@ -332,7 +321,7 @@ def parse_components(
                 continue
             for rule_file in sorted(lang_dir.glob("*.md")):
                 text = _read_file_text(rule_file)
-                body = _strip_frontmatter(text)
+                body = split_frontmatter(text)[1].lstrip("\n")
                 components.append(Component(
                     name=f"Rule: {lang}/{rule_file.stem}",
                     type="rule",
@@ -355,7 +344,6 @@ def parse_components(
             skill_name = frontmatter_field(skill_file, "name")
             if not skill_name:
                 skill_name = skill_dir.name
-            description = frontmatter_field(skill_file, "description")
             user_invocable = frontmatter_field(skill_file, "user-invocable")
 
             # Skip non-user-invocable knowledge skills for SLM
@@ -364,7 +352,7 @@ def parse_components(
 
             # Build a compact skill summary (name + description)
             text = _read_file_text(skill_file)
-            body = _strip_frontmatter(text)
+            body = split_frontmatter(text)[1].lstrip("\n")
 
             # Persona relevance boost
             p_relevance = 0.7 if skill_name in persona_skills else 0.3
@@ -391,9 +379,8 @@ def parse_components(
             agent_name = frontmatter_field(agent_file, "name")
             if not agent_name:
                 agent_name = agent_file.stem
-            description = frontmatter_field(agent_file, "description")
             text = _read_file_text(agent_file)
-            body = _strip_frontmatter(text)
+            body = split_frontmatter(text)[1].lstrip("\n")
 
             # Persona relevance: match if agent skills overlap persona skills
             agent_skills_str = frontmatter_field(agent_file, "skills")
@@ -457,7 +444,7 @@ def compress_component(component: Component, level_config: dict[str, object]) ->
         return
 
     # Strip frontmatter (already done in parsing, but safety check)
-    text = _strip_frontmatter(text)
+    text = split_frontmatter(text)[1].lstrip("\n")
 
     # Strip examples
     strip_examples = level_config.get("strip_examples", True)
@@ -611,9 +598,6 @@ def pack_components(
 
     # Constitution budget guard
     if fixed_tokens > effective_budget:
-        constitution_tokens = sum(
-            c.tokens_compressed for c in fixed if c.type == "constitution"
-        )
         print(
             f"ERROR: Constitution + safety rules alone require {fixed_tokens} tokens, "
             f"exceeding budget of {effective_budget} (budget={budget} × {BUDGET_SAFETY_MARGIN}).\n"
@@ -995,7 +979,7 @@ def main(argv: list[str] | None = None) -> int:
     level = args.level or str(model_config["level"])
 
     # Parse languages
-    languages = [l.strip() for l in args.lang.split(",") if l.strip()] if args.lang else []
+    languages = [lang.strip() for lang in args.lang.split(",") if lang.strip()] if args.lang else []
 
     # Parse components
     components = parse_components(persona=args.persona, languages=languages)

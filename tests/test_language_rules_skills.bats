@@ -92,6 +92,87 @@ _inject_language_rules(Path('$TEST_PROJECT'), ['rules-common', 'rules-python'])
     grep -q '  - "\*\*/\*"' "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md"
 }
 
+@test "inject_language_rules: source paths frontmatter scopes testing/performance, others stay always-on" {
+    cd "$TEST_PROJECT"
+    PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import _inject_language_rules
+_inject_language_rules(Path('$TEST_PROJECT'), ['rules-common', 'rules-python'])
+"
+    # Scoped rules carry their source globs and must NOT fall back to **/*
+    testing="$TEST_PROJECT/.claude/rules/ai-toolkit-testing.md"
+    grep -q '  - "\*\*/tests/\*\*"' "$testing"
+    grep -q '  - "\*\*/test_\*"' "$testing"
+    ! grep -q '  - "\*\*/\*"$' "$testing"
+    perf="$TEST_PROJECT/.claude/rules/ai-toolkit-performance.md"
+    grep -q '  - "\*\*/\*\.py"' "$perf"
+    ! grep -q '  - "\*\*/\*"$' "$perf"
+    # Rules without a source paths block are always-on
+    for name in coding-style git-workflow security; do
+        f="$TEST_PROJECT/.claude/rules/ai-toolkit-$name.md"
+        grep -q '  - "\*\*/\*"$' "$f" || { echo "$name must be always-on" >&2; return 1; }
+    done
+    # The CLAUDE.md index tells the truth about which is which
+    idx="$TEST_PROJECT/.claude/CLAUDE.md"
+    grep -q '^Always-on: .*ai-toolkit-security.md' "$idx"
+    grep -q '^Path-scoped: .*ai-toolkit-testing.md' "$idx"
+    ! grep -q 'load when project files are opened' "$idx"
+}
+
+@test "inject_language_rules: git-team ships with the strict profile only and converges on rerun" {
+    cd "$TEST_PROJECT"
+    _inject() {
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import _inject_language_rules
+_inject_language_rules(Path('$TEST_PROJECT'), ['rules-common'], profile='$1')
+"
+    }
+    _inject standard
+    [ ! -f "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-git-workflow.md" ]
+    # The solo-safe core must not carry team-only conventions
+    ! grep -q 'Require at least one approval' "$TEST_PROJECT/.claude/rules/ai-toolkit-git-workflow.md"
+    ! grep -q 'Use feature branches' "$TEST_PROJECT/.claude/rules/ai-toolkit-git-workflow.md"
+
+    _inject strict
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md" ]
+    grep -q 'Require at least one approval' "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md"
+    grep -q '  - "\*\*/\*"$' "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md"
+    grep -q '^Always-on: .*ai-toolkit-git-team.md' "$TEST_PROJECT/.claude/CLAUDE.md"
+
+    # Back to standard: the managed strict-only file is removed, user files untouched
+    printf '# mine\n' > "$TEST_PROJECT/.claude/rules/my-rule.md"
+    _inject standard
+    [ ! -f "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/my-rule.md" ]
+    ! grep -q 'ai-toolkit-git-team.md' "$TEST_PROJECT/.claude/CLAUDE.md"
+}
+
+@test "inject_language_rules: generated frontmatter mirrors the source paths block exactly" {
+    cd "$TEST_PROJECT"
+    PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import _inject_language_rules
+_inject_language_rules(Path('$TEST_PROJECT'), ['rules-common'])
+"
+    for src in "$RULES_DIR"/common/*.md; do
+        name="$(basename "$src" .md)"
+        # Profile-gated sources (git-team) are absent under the default profile
+        grep -q '^profiles:' "$src" && continue
+        out="$TEST_PROJECT/.claude/rules/ai-toolkit-$name.md"
+        # Source globs, in order, as the installer emits them
+        expected="$(awk '/^paths:/{f=1;next} f&&/^  - /{print;next} f&&NF{exit}' "$src")"
+        [ -n "$expected" ] || expected='  - "**/*"'
+        actual="$(awk 'NR==1{next} /^---$/{exit} /^  - /{print}' "$out")"
+        [ "$expected" = "$actual" ] || {
+            echo "paths drift for $name" >&2
+            echo "expected:"; echo "$expected"; echo "actual:"; echo "$actual"
+            return 1
+        }
+    done
+}
+
 @test "inject_language_rules: keeps CLAUDE.md below Claude Code size guidance" {
     cd "$TEST_PROJECT"
     PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "

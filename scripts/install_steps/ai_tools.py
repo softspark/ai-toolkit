@@ -12,6 +12,7 @@ import subprocess
 from pathlib import Path
 
 from _common import app_dir, inject_section, toolkit_dir
+from frontmatter import FrontmatterError, parse_frontmatter, split_frontmatter
 from codex_skill_adapter import (
     cleanup_codex_skills,
     managed_skill_surface_transaction,
@@ -965,7 +966,7 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
         _apply_extends_config(cwd, merged_config)
 
     # Inject language-specific rules into project CLAUDE.md
-    _inject_language_rules(cwd, language_modules)
+    _inject_language_rules(cwd, language_modules, profile=profile)
 
     # Install editor configs only for resolved editors
     _create_local_ai_tool_configs(cwd, rules_dir, resolved_editors,
@@ -1061,17 +1062,21 @@ def _apply_extends_config(cwd: Path, merged: dict) -> None:
         print("  Saved: .softspark-toolkit-extends.json (resolution metadata)")
 
 
-def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> None:
+def _inject_language_rules(cwd: Path, language_modules: list[str] | None,
+                           profile: str = "standard") -> None:
     """Install Claude language-rule entrypoints for a project.
 
     Per-language rules (``app/rules/<lang>/``) are NOT injected here -- they
     ship as ``<lang>-rules`` knowledge skills under ``app/skills/`` and load
     contextually via the Agent Skills progressive-disclosure mechanism.
 
-    Common rules are written as Claude Code path-scoped rules under
-    ``.claude/rules/``. Current Claude Code guidance targets under 200 lines
-    per ``CLAUDE.md`` file; path-scoped rules keep startup context smaller
-    while still loading the rule bodies when project files are opened.
+    Common rules are written as Claude Code rules under ``.claude/rules/``.
+    Each source rule's ``paths`` frontmatter decides whether it is always-on
+    (``**/*``: coding-style, git-workflow, security) or path-scoped (testing,
+    performance load only for matching files). Current Claude Code guidance
+    targets under 200 lines per ``CLAUDE.md`` file; keeping rule bodies out
+    of it and scoping the ones that are file-type specific keeps startup
+    context smaller.
     """
     if not language_modules:
         return
@@ -1081,7 +1086,7 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
     if not common_dir.is_dir():
         return
 
-    rule_files = _sync_claude_common_rules(cwd, common_dir)
+    rule_files = _sync_claude_common_rules(cwd, common_dir, profile)
 
     # Detect requested per-language modules so we can name the linked skills
     # in the marker block. The modules themselves are not inlined.
@@ -1095,12 +1100,18 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
     lines: list[str] = ["# Language Rules", ""]
     lines.append(
         "Common ai-toolkit rules live in `.claude/rules/ai-toolkit-*.md` "
-        "with Claude Code `paths` frontmatter so they load when project files "
-        "are opened instead of expanding this CLAUDE.md at session startup."
+        "with Claude Code `paths` frontmatter instead of expanding this "
+        "CLAUDE.md. Always-on rules load in every session; path-scoped rules "
+        "load only when a matching file is touched."
     )
-    if rule_files:
+    always_on = [p for p, on in rule_files if on]
+    scoped = [p for p, on in rule_files if not on]
+    if always_on:
         lines.append("")
-        lines.append("Common rule files: " + ", ".join(f"`{p}`" for p in rule_files) + ".")
+        lines.append("Always-on: " + ", ".join(f"`{p}`" for p in always_on) + ".")
+    if scoped:
+        lines.append("")
+        lines.append("Path-scoped: " + ", ".join(f"`{p}`" for p in scoped) + ".")
     lines.append("")
     lines.append(
         "Language-specific rules live in `<lang>-rules` knowledge skills "
@@ -1132,16 +1143,40 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None) -> Non
         tmp_path.unlink(missing_ok=True)
 
 
-def _strip_rule_frontmatter(text: str) -> str:
-    if text.startswith("---"):
-        end = text.find("\n---", 3)
-        if end != -1:
-            return text[end + 4:].lstrip("\n")
-    return text
+ALWAYS_ON_RULE_PATHS = ["**/*"]
 
 
-def _sync_claude_common_rules(cwd: Path, common_dir: Path) -> list[str]:
+def _rule_source(src: Path) -> tuple[str, list[str], list[str]]:
+    """Return ``(body, paths, profiles)`` for one ``app/rules/common`` file.
+
+    ``paths`` defaults to always-on (``**/*``); an empty ``profiles`` means
+    the rule ships in every profile. Shipped rules pass ``validate.py`` before
+    release, so a parse failure here is a broken install, not a soft case.
+    """
+    text = src.read_text(encoding="utf-8")
+    try:
+        _, body = split_frontmatter(text)
+        meta = parse_frontmatter(text)
+    except FrontmatterError as error:
+        raise RuntimeError(f"invalid frontmatter in {src}: {error}") from error
+    paths = meta.get("paths")
+    profiles = meta.get("profiles")
+    return (
+        body,
+        [str(p) for p in paths] if isinstance(paths, list) and paths else list(ALWAYS_ON_RULE_PATHS),
+        [str(p) for p in profiles] if isinstance(profiles, list) else [],
+    )
+
+
+def _sync_claude_common_rules(cwd: Path, common_dir: Path,
+                              profile: str = "standard") -> list[tuple[str, bool]]:
     """Write common ai-toolkit rules as Claude Code path-scoped rules.
+
+    Each source rule's ``paths`` frontmatter decides its scope; rules
+    without one are always-on. A ``profiles`` frontmatter restricts the rule
+    to those install profiles (``git-team`` ships with ``strict`` only); a
+    managed file whose rule no longer applies is removed, so switching profile
+    on a rerun converges. Returns ``(relative path, always_on)`` pairs.
 
     Only ``ai-toolkit-*.md`` files are managed. User-authored files in
     ``.claude/rules/`` are preserved.
@@ -1149,22 +1184,27 @@ def _sync_claude_common_rules(cwd: Path, common_dir: Path) -> list[str]:
     rules_dir = cwd / ".claude" / "rules"
     rules_dir.mkdir(parents=True, exist_ok=True)
 
-    source_files = sorted(common_dir.glob("*.md"))
-    expected = {f"ai-toolkit-{src.stem}.md" for src in source_files}
+    source_files: list[tuple[Path, str, list[str]]] = []
+    for src in sorted(common_dir.glob("*.md")):
+        body, paths, gate = _rule_source(src)
+        if gate and profile not in gate:
+            continue
+        source_files.append((src, body, paths))
+    expected = {f"ai-toolkit-{src.stem}.md" for src, _, _ in source_files}
     for stale in sorted(rules_dir.glob("ai-toolkit-*.md")):
         if stale.name not in expected:
             stale.unlink()
 
-    written: list[str] = []
-    for src in source_files:
-        body = _strip_rule_frontmatter(src.read_text(encoding="utf-8")).rstrip()
+    written: list[tuple[str, bool]] = []
+    for src, body, paths in source_files:
+        body = body.lstrip("\n").rstrip()
         rel = Path(".claude") / "rules" / f"ai-toolkit-{src.stem}.md"
         target = cwd / rel
         target.write_text(
             "\n".join([
                 "---",
                 "paths:",
-                '  - "**/*"',
+                *[f'  - "{p}"' for p in paths],
                 "---",
                 "",
                 body,
@@ -1172,7 +1212,7 @@ def _sync_claude_common_rules(cwd: Path, common_dir: Path) -> list[str]:
             ]),
             encoding="utf-8",
         )
-        written.append(rel.as_posix())
+        written.append((rel.as_posix(), paths == ALWAYS_ON_RULE_PATHS))
 
     return written
 

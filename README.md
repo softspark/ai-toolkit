@@ -6,25 +6,30 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-114-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1931%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1966%20passing-success)](tests/)
 
-## What's New in v4.31.0
+## What's New in v4.32.0
 
-**v4.31.0** corrects the post-release health check for the managed DSH and
-plugin-owned MCP release:
+**v4.32.0** cuts what every session pays for before you type, and adds the
+checks that keep it cut:
 
-- `ai-toolkit doctor` now extracts `1.0.80` from the official Copilot CLI output
-  `GitHub Copilot CLI 1.0.80.` instead of treating sentence punctuation as an
-  invalid SemVer suffix.
-- Complete-token validation remains fail closed for malformed versions such as
-  `1.2.3.4`, invalid prerelease identifiers, and leading-zero numeric fields.
-- The DSH cold-add regression keeps its legacy-timeout coverage with macOS CI
-  process-startup headroom, removing the release-blocking timing flake.
-- Release tags now require green Ubuntu and macOS branch CI for the exact commit
-  before the publish workflow can start.
-- The release retains the explicit DSH lifecycle, plugin-owned MCP/rules, portable
-  recovery gates, and the exact DSH package set published in v4.30.2. Test count:
-  1920 -> 1931.
+- Common rules are path-scoped from their source: `testing` and `performance`
+  load only for matching files, and the project `.claude/CLAUDE.md` index says
+  which rules are always-on instead of claiming lazy loading for all of them.
+- Language knowledge skills follow your projects: `install --language-skills
+  detected` (default) turns off `<lang>-rules`/`<lang>-patterns` skills for
+  languages no registered project uses, reversibly, and restores them when a
+  project brings the language back.
+- `ai-toolkit doctor` gains a Context Budget check (est. resident tokens,
+  zero-use skills) and a Permission Rules check (over-broad `permissions.allow`
+  wildcards). Both read-only.
+- One strict frontmatter parser replaces twelve private copies; `validate.py`
+  now rejects descriptions over 1024 characters or unquoted ones containing
+  `: `. Every shipped Markdown file parses under the strict grammar.
+- Team-only git conventions moved to a `git-team` rule that ships with
+  `--profile strict`; `quality-gate.sh` lints with ruff only when the project
+  configured ruff; advisory Stop hooks run in the background. Test count:
+  1931 -> 1966 bats + 348 pytest.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -61,6 +66,8 @@ npx @softspark/ai-toolkit install
 ```
 
 **That's it.** Claude Code picks up 114 skills, 44 agents, quality hooks, and the safety constitution automatically.
+
+Language knowledge skills (`rust-rules`, `kotlin-patterns`, ...) are scoped to the languages your registered projects use: once you have run `ai-toolkit install --local` in at least one project, the global install turns the other languages' skills off through `skillOverrides` in `~/.claude/settings.json` so their descriptions stop loading into every session. A new project in a new language turns its skills back on. `ai-toolkit install --language-skills all` keeps every language skill on and remembers that choice; `ai-toolkit doctor` shows the resulting context budget.
 
 **Windows:** WSL is the recommended runtime. Native Windows works when Git Bash is available for hook scripts; dependency hints cover `winget`, Chocolatey, and Scoop. See [Windows Support](kb/reference/windows-support.md).
 

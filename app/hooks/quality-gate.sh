@@ -98,8 +98,15 @@ if [ -f .claude/test-cohesion-map.json ] || \
 fi
 
 if [ -f pyproject.toml ] || [ -f setup.py ]; then
-    if require_command ruff; then
-        run_required "ruff found errors" "head -30" ruff check .
+    # Lint only what the project itself configured. A bare pyproject.toml
+    # (build metadata, pytest/mypy tables) says nothing about ruff, and running
+    # `ruff check .` under whatever config the machine resolves turns the Stop
+    # gate red on findings the project never signed up for (v4.32.0 postmortem:
+    # 348 findings in a repo whose ruff rule set lives in a package.json script).
+    if [ -f ruff.toml ] || [ -f .ruff.toml ] || grep -qs '^\[tool\.ruff' pyproject.toml; then
+        if require_command ruff; then
+            run_required "ruff found errors" "head -30" ruff check .
+        fi
     fi
     if [ -d src ] && [ "$PROFILE" = "strict" ]; then
         if require_command mypy; then

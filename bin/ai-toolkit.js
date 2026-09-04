@@ -311,6 +311,8 @@ function showHelp() {
   console.log('                  dsh (explicit project target; requires --local; excluded from "all")');
   console.log('                  Default with --local: auto-detect from existing project files');
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
+  console.log('  --language-skills <s>  detected (default): turn off <lang>-rules/<lang>-patterns skills for languages');
+  console.log('                  no registered project uses (skillOverrides, reversible); all: keep every language skill on');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
   console.log('\nOptions for create:');
   console.log('  skill <name> --template=<type>  Scaffold skill (types: linter, reviewer, generator, workflow, knowledge)');

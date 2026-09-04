@@ -27,6 +27,9 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from frontmatter import split_frontmatter  # noqa: E402
+
 
 TOOLKIT_DIR = Path(__file__).resolve().parent.parent
 APP_DIR = TOOLKIT_DIR / "app"
@@ -55,13 +58,8 @@ def _write_text(path: Path, content: str) -> None:
 
 
 def _strip_frontmatter(content: str) -> str:
-    lines = content.splitlines()
-    if not lines or lines[0].strip() != "---":
-        return content.strip()
-    for index in range(1, len(lines)):
-        if lines[index].strip() == "---":
-            return "\n".join(lines[index + 1 :]).strip()
-    return content.strip()
+    """Body of a rule file with surrounding whitespace removed."""
+    return split_frontmatter(content)[1].strip()
 
 
 def render_plugin_hooks() -> str:

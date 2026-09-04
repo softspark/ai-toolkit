@@ -11,7 +11,6 @@ Usage: python3 install_git_hooks.py [target-dir]
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 

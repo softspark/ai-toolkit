@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.11.0"
+version: "1.12.0"
 created: "2026-03-27"
-last_updated: "2026-08-19"
+last_updated: "2026-09-04"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -190,6 +190,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Matcher | *(all)* |
 | Script | `~/.softspark/ai-toolkit/hooks/quality-check.sh` |
 | Fires | After every Claude response |
+| Mode | Background (`"async": true`). The linter (`npx tsc`, `ruff`) was the bulk of a 3.3 s median Stop chain; its output is advisory and reaches you when it finishes instead of holding the turn open |
 
 **Action:** Runs language-appropriate linter:
 - Python: `ruff check .`
@@ -208,6 +209,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Matcher | *(all)* |
 | Script | `~/.softspark/ai-toolkit/hooks/save-session.sh` |
 | Fires | After every Claude response |
+| Mode | Background (`"async": true`): writes a file and exits 0, nothing to wait for |
 
 **Action:** Writes enriched session context to the per-repo session store (`~/.softspark/ai-toolkit/sessions/<repo-key>/session-context.md`) for cross-session persistence. Captures:
 - Session ID and last assistant message (first 5 lines)
@@ -225,7 +227,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/quality-gate.sh` |
 | Fires | Before Claude is allowed to finish a response |
 
-**Action:** Runs lint/typecheck. **Blocks stopping (exit 2)** if errors found, so Claude must continue and fix the issues. Missing local tooling is reported as skipped rather than blocking the session.
+**Action:** Runs lint/typecheck. **Blocks stopping (exit 2)** if errors found, so Claude must continue and fix the issues. Missing local tooling is reported as skipped rather than blocking the session. Ruff runs only when the project configured it (`ruff.toml`, `.ruff.toml`, or a `[tool.ruff]` table in `pyproject.toml`); a `pyproject.toml` that only carries build or pytest/mypy metadata does not trigger `ruff check .` under whatever configuration the machine resolves (v4.32.0).
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 

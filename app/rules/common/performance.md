@@ -1,7 +1,31 @@
 ---
 language: common
 category: performance
-version: "1.0.0"
+version: "1.1.0"
+paths:
+  - "**/*.py"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+  - "**/*.jsx"
+  - "**/*.mjs"
+  - "**/*.cjs"
+  - "**/*.go"
+  - "**/*.rs"
+  - "**/*.java"
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.swift"
+  - "**/*.dart"
+  - "**/*.cs"
+  - "**/*.php"
+  - "**/*.cpp"
+  - "**/*.cc"
+  - "**/*.cxx"
+  - "**/*.hpp"
+  - "**/*.h"
+  - "**/*.rb"
+  - "**/*.sql"
 ---
 
 # Universal Performance Rules

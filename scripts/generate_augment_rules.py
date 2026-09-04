@@ -108,17 +108,17 @@ def generate(target_dir: Path, *,
         lang = filename.removeprefix(f"{PREFIX}lang-").removesuffix(".md")
         globs = LANG_GLOBS.get(lang)
         if globs:
-            all_rules[filename] = (lambda fn, l, g: lambda: _augment_wrap(
+            all_rules[filename] = (lambda fn, language, g: lambda: _augment_wrap(
                 fn(),
-                description=f"{l.title()} language rules",
+                description=f"{language.title()} language rules",
                 rule_type="agent_requested",
                 globs=g,
             ))(content_fn, lang, globs)
         else:
             # common — always apply
-            all_rules[filename] = (lambda fn, l: lambda: _augment_wrap(
+            all_rules[filename] = (lambda fn, language: lambda: _augment_wrap(
                 fn(),
-                description=f"{l.title()} language rules",
+                description=f"{language.title()} language rules",
             ))(content_fn, lang)
 
     # Add registered rules with Augment frontmatter

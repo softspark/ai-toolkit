@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import frontmatter_block, frontmatter_field, skills_dir
+from _common import frontmatter_block, skills_dir
 
 # Deprecated frontmatter fields and their replacements
 _DEPRECATED_FIELDS: list[tuple[str, str]] = [

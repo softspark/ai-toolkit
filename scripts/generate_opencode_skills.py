@@ -21,7 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from codex_skill_adapter import build_opencode_skill_text
 from emission import skills_dir
-from frontmatter import frontmatter_field
+from frontmatter import frontmatter_block, frontmatter_field, frontmatter_sections
 from secure_fs import SecureDestination, SecureTransaction, nearest_existing_root
 
 
@@ -43,24 +43,6 @@ class PreparedSkill:
         return {Path("SKILL.md"), Path(MANAGED_MANIFEST), *self.files}
 
 
-def _frontmatter_sections(skill_file: Path) -> dict[str, list[str]]:
-    text = skill_file.read_text(encoding="utf-8")
-    if not text.startswith("---\n"):
-        return {}
-    parts = text.split("---", 2)
-    if len(parts) != 3:
-        return {}
-    sections: dict[str, list[str]] = {}
-    current: str | None = None
-    for line in parts[1].strip("\n").splitlines():
-        if line and not line[0].isspace() and ":" in line:
-            current = line.split(":", 1)[0].strip()
-            sections[current] = [line]
-        elif current is not None:
-            sections[current].append(line)
-    return sections
-
-
 def _portable_body(skill_file: Path) -> str:
     rendered = build_opencode_skill_text(skill_file)
     if not rendered.startswith("---\n"):
@@ -72,7 +54,7 @@ def _portable_body(skill_file: Path) -> str:
 def _render_skill(skill_file: Path) -> str:
     name = frontmatter_field(skill_file, "name")
     description = frontmatter_field(skill_file, "description")
-    sections = _frontmatter_sections(skill_file)
+    sections = frontmatter_sections(frontmatter_block(skill_file))
     lines = [
         "---",
         f"name: {name}",

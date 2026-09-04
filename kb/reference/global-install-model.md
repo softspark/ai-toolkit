@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.4.0"
+version: "3.5.0"
 created: "2026-03-26"
-last_updated: "2026-08-19"
+last_updated: "2026-09-04"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -16,6 +16,19 @@ description: "Reference description of Claude Code global install, Claude app pl
 `ai-toolkit` installs globally into `~/.claude/` by default.
 
 That means one machine-level install provides agents, skills, hooks, constitution, and rule files to every project without committing toolkit boilerplate into each repository.
+
+Language knowledge skills are the one part of the global install that is
+scoped by evidence (v4.32.0). Every `<lang>-rules` / `<lang>-patterns` skill is
+still symlinked, but `install` and `update` read the languages detected across
+the projects registered in `projects.json` and set `skillOverrides: off` in
+`~/.claude/settings.json` for the others, so their descriptions stop loading
+into every session. The entries the toolkit wrote are listed in `state.json`
+under `managed_skill_overrides`; only those are ever removed again (when a
+newly registered project brings the language back), a user's own override is
+left alone. With no registered project on disk nothing is disabled.
+`--language-skills all` restores everything and persists the choice
+(`language_skill_scope` in `state.json`); `ai-toolkit doctor` reports the
+resulting listing size and zero-use skills.
 
 Other editor targets are opt-in and only use documented file surfaces. Cursor
 rules stay project-local because Cursor's global user rules are managed through
@@ -59,7 +72,7 @@ The `--profile` flag controls how much of each editor's native surface is activa
 |---------|-----------|----------|
 | `minimal` | Smallest editor surface. Copilot still receives its root instructions, native agents, and self-contained skills; Codex still receives instructions, agents, skills, and native safety hooks. | You want the smallest supported footprint. |
 | `standard` (default) | Claude Code + editor rule files. Includes Gemini and Antigravity hooks plus native Copilot instructions, agents, portable skills, and hooks. | Day-to-day installs. Most users. |
-| `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks. | Solo dev or tight team with zero tolerance for drift. |
+| `strict` | Everything in `standard` plus git-hook wiring for commit-time safety checks and the `git-team` common rule (feature branches, PR size, required approval, review SLA). | Tight team with zero tolerance for drift. A solo maintainer releasing straight to `main` wants `standard`, which keeps the solo-safe `git-workflow` core only. |
 | `full` | Every native surface across every editor: hooks, sub-agents, custom commands, skill pointers for Cursor / Windsurf / Gemini / Augment / Antigravity. | You want maximum coverage and understand that each editor will carry generated files under its own layout. |
 
 Codex installs materialize the full skill catalog under `.agents/skills/`

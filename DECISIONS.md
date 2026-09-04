@@ -272,3 +272,113 @@ Two new errors landed with it, and those are stricter than before:
 The taxonomy lives in two files — `scripts/validate.py` rejects typos,
 `app/skills/documentation-standards/SKILL.md` is what authors read. They are one
 list in two places and a change belongs in both, in the same commit.
+
+## Common rules carry their own scope and profile; profiles gate files, not prose (2026-09-04)
+
+Two facts about the generated `.claude/rules/ai-toolkit-*.md` files did not
+survive contact with a real install:
+
+1. `.claude/CLAUDE.md` said the rules "load when project files are opened".
+   The generator wrote `paths: ["**/*"]` on all five, so 13.7k characters were
+   resident in every session of every project. The doctor run that found it
+   put the five files at roughly the same cost as the whole model-visible
+   skill listing.
+2. `git-workflow` told a solo maintainer who releases straight to `main` to use
+   feature branches and require one approval. The review agent then flagged the
+   maintainer's own workflow on every pass. That is noise, and noise trains
+   people to ignore the rule file.
+
+Both are fixed by the same move: **the source rule declares what applies to it,
+the generator obeys, and the index tells the truth.**
+
+- `paths:` in `app/rules/common/<category>.md` frontmatter is copied verbatim
+  into the generated file; no `paths` means always-on. `testing` and
+  `performance` are scoped to the files they talk about; `coding-style`,
+  `git-workflow`, and `security` stay `**/*` because they carry prohibitions
+  that must hold in every session. `.claude/CLAUDE.md` now lists which is which.
+- `profiles:` in the same frontmatter limits a rule to install profiles.
+  `git-workflow` keeps the solo-safe core (commit format, no secrets, `main`
+  deployable, no force-push). The branching, PR, and review conventions moved
+  to a new `git-team` rule that ships only with `--profile strict`, the profile
+  the docs already describe as "tight team with zero tolerance for drift".
+  Switching profile on a rerun removes or adds the managed file, so the state
+  converges.
+
+Rejected:
+
+- **Marker comments inside one `git-workflow.md`** (`<!-- profile: strict -->`
+  around the team sections). Zero count churn, but every consumer of the common
+  rules (Claude app export, `compile-slm`, the editor `lang-common` bundles)
+  would need the same stripping logic or leak markers into rendered output.
+  A file is a unit every consumer already understands.
+- **Profiles that differentiate the text of a rule.** Profiles keep selecting
+  *which* files ship. Nothing reads a profile inside a rule body, and a rule
+  file is byte-identical in every profile that receives it.
+- **Gating in every editor generator.** Only the Claude Code local install
+  honours `profiles` in this change. The Claude app export, `compile-slm`, and
+  the editor `lang-common` bundles still receive every common rule, as they did
+  before; they have no profile today. Extending them is a follow-up, not a
+  reason to ship the team rules to solo Claude Code users for another release.
+
+The `validate.py` gate rejects inline lists, unquoted globs, unknown profiles,
+and `profiles:` on a per-language rule (those ship as skills and have no
+profile), so a typo falls back to nothing rather than to always-on.
+
+## One frontmatter parser; dev dependencies in the repo, none at runtime (2026-09-04)
+
+`scripts/frontmatter.py` had two functions and nineteen importers, and eleven
+other scripts carried their own strip-or-parse routine because the shared one
+could not read a list or a block scalar. Each copy had its own idea of what a
+scalar is. That is how an unquoted description containing `IT: body leasing`
+shipped in a plugin pack: no copy was strict, so no gate objected, and a
+stricter parser downstream would drop every field, `allowed-tools` included.
+
+The fix is one parser that reads the whole subset the toolkit emits (scalars,
+quoted scalars, `>-`/`|` blocks, block and flow lists, nested maps, comments)
+and refuses everything else: `: ` and ` #` in a plain scalar, anchors, tags,
+flow maps, duplicate keys, quoted keys, tabs, unterminated blocks. Strict is
+the default; read-only reporters (`doctor`, `surface_manifest`) pass
+`strict=False` so they can describe a broken file instead of refusing it. A
+pytest corpus test parses every shipped `app/` and `kb/` Markdown file under
+the strict grammar, so the grammar cannot drift from the content.
+
+The obvious alternative was PyYAML. Rejected, in order of weight:
+
+- **A runtime Python dependency cannot be installed from an npm package
+  without a failure mode we would own.** `pip install` into the system
+  interpreter fails under PEP 668 on macOS with Homebrew Python and on
+  Debian 12 / Ubuntu 23.04 and later ("externally-managed-environment"). The
+  toolkit's one installation promise is that `npm install -g` is the whole
+  install; a postinstall `pip` step breaks that promise on the two most common
+  developer platforms.
+- **Vendoring PyYAML** (pure Python, MIT, ~10k lines) would work everywhere,
+  but it parses a language the toolkit never emits and `validate.py` would
+  have to forbid most of it anyway so that Cline, Copilot, and Codex receive
+  the same document. Ten thousand lines to gain features we then ban.
+- **A full YAML grammar hand-written in stdlib.** Same objection, without the
+  upstream maintenance.
+
+Dev dependencies are a different question and the answer is yes: `pytest`,
+`ruff`, and `mypy` live in `requirements-dev.txt` and are installed by the
+`python-quality` CI job only. `package.json` `files` does not include
+`pytest.ini`, `mypy.ini`, or `requirements-dev.txt`, so nothing reaches the
+published package.
+
+There is deliberately no `pyproject.toml`. Two of the toolkit's own hooks
+react to that file: `guard-config.sh` protects a `[tool.ruff]` table from
+unattended edits, and `quality-gate.sh` reads the file's presence as "Python
+project" and runs `ruff check .` over the whole tree on every Stop, under
+whatever ruff configuration the machine resolves. The first attempt at this
+change added a `pyproject.toml`, and the Stop gate went red on 348 findings
+that had nothing to do with the change. A gate should not begin by carving an
+exception into its own guards, so the config moved to the files each tool
+reads natively (`pytest.ini`, `mypy.ini`) and ruff's rule set is the
+`package.json` `lint:py` script. Both linters are ratchets: ruff selects only
+`E,F` (the tree passes today), mypy checks an explicit allowlist that grows
+when a file passes `--strict` and never shrinks.
+
+Test organisation follows: logic that lives in Python is tested in
+`tests/python/` with pytest; bats stays for hooks, CLI surfaces, and anything
+that must be observed from a shell. New tests for Python modules go to pytest;
+existing bats tests migrate when the code they cover is touched, not in a
+sweep.

@@ -55,7 +55,6 @@ from __future__ import annotations
 
 import copy
 import json
-import os
 import re
 import sys
 import urllib.parse
@@ -163,7 +162,7 @@ def _check_collisions(
 
     if not force:
         print(
-            f"Error: server name collision(s) in .mcp.json (re-run with --force):",
+            "Error: server name collision(s) in .mcp.json (re-run with --force):",
             file=sys.stderr,
         )
         for name, other_source in collisions:

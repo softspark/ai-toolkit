@@ -146,7 +146,7 @@ import sys; sys.path.insert(0, '$TOOLKIT_DIR/scripts')
 from compile_slm import parse_components
 components = parse_components()
 rules = [c for c in components if c.type == 'rule' and 'common/' in c.name]
-assert len(rules) == 5, f'Expected 5 common rules, got {len(rules)}'
+assert len(rules) == 6, f'Expected 6 common rules (5 always-on + git-team), got {len(rules)}'
 print('OK')
 "
     [ "$status" -eq 0 ]

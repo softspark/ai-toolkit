@@ -51,6 +51,21 @@ python3 scripts/audit_skills.py --ci    # Security audit (0 HIGH findings)
 python3 scripts/evaluate_skills.py      # Skill evaluation
 ```
 
+Python logic in `scripts/` is unit-tested with pytest and gated by ruff and
+mypy. These are repository dev tools only (`requirements-dev.txt`); the
+published package and user machines stay stdlib-only, so install them in a
+local venv, never into the system interpreter:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+npm run test:py        # pytest tests/python
+npm run lint:py        # ruff E,F (rule set is the package.json script)
+npm run typecheck:py   # mypy --strict over the allowlist in mypy.ini
+```
+
+New tests for Python modules go to `tests/python/`; bats remains for hooks,
+CLI surfaces, and anything observed from a shell.
+
 If you touched any hook script, also run ShellCheck yourself — CI runs it, but
 `validate.py`, `npm test`, and the publish workflow do not:
 

@@ -220,3 +220,46 @@ print('ok')
     [ -d "$TOOLKIT_DIR/app/agents" ]
     [ -f "$TOOLKIT_DIR/app/hooks.json" ]
 }
+
+@test "claude-code: only advisory Stop hooks run async, blocking ones stay synchronous" {
+    python3 - "$TOOLKIT_DIR/app/hooks.json" <<'PY'
+import json, sys
+hooks = json.load(open(sys.argv[1]))["hooks"]
+mode = {}
+for group in hooks["Stop"]:
+    for handler in group["hooks"]:
+        name = handler["command"].rsplit("/", 1)[-1].strip('"')
+        mode[name] = handler.get("async", False)
+# quality-check and save-session always exit 0; their output is advisory, so
+# they must not hold the turn open (measured p50 3.3 s across the chain).
+assert mode["quality-check.sh"] is True, mode
+assert mode["save-session.sh"] is True, mode
+# quality-gate blocks with exit 2 and stop-search-check corrects the turn:
+# both must stay synchronous or their verdicts would arrive after the fact.
+assert mode["quality-gate.sh"] is False, mode
+assert mode["stop-search-check.sh"] is False, mode
+# No other event uses async: a PreToolUse guard that ran in the background
+# could never block.
+for event, groups in hooks.items():
+    if event == "Stop":
+        continue
+    for group in groups:
+        for handler in group["hooks"]:
+            assert not handler.get("async"), (event, handler["command"])
+PY
+}
+
+@test "claude-code: merge-hooks treats a legacy handler that differs only in async as the same hook" {
+    tmp="$(mktemp -d)"
+    cat > "$tmp/settings.json" <<'EOF'
+{"hooks": {"Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "\"$HOME/.softspark/ai-toolkit/hooks/save-session.sh\"", "timeout": 30}]}]}}
+EOF
+    python3 "$TOOLKIT_DIR/scripts/merge-hooks.py" inject "$TOOLKIT_DIR/app/hooks.json" "$tmp/settings.json" >/dev/null
+    count="$(python3 -c "
+import json, sys
+stop = json.load(open(sys.argv[1]))['hooks']['Stop']
+print(sum(1 for g in stop for h in g['hooks'] if h['command'].endswith('save-session.sh\"')))
+" "$tmp/settings.json")"
+    [ "$count" -eq 1 ]
+    rm -rf "$tmp"
+}
