@@ -130,6 +130,9 @@ def get_mtime(filepath: str) -> float:
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print("Usage: doc-inventory.py [directory]\n\nInventory documentation files under directory (default: cwd) as JSON.")
+        return
     root = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.getcwd()
     if not os.path.isdir(root):
         print(json.dumps({"error": f"Not a directory: {root}"}))

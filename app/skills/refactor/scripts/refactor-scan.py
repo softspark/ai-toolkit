@@ -154,6 +154,9 @@ def analyze_file(filepath: str, project_root: str) -> dict:
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print("Usage: refactor-scan.py <file_or_directory>\n\nScan a file or directory for refactoring candidates and print JSON.")
+        return
     if len(sys.argv) < 2:
         print(json.dumps({"error": "Usage: refactor-scan.py <file_or_directory>"}))
         sys.exit(1)

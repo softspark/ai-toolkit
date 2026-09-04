@@ -2006,6 +2006,16 @@ def _apply_asset_install(
             "inode": version.inode,
         }
         print(f"    Installed plugin {spec.kind}: {spec.path.name}")
+    return _merge_asset_ownership(previous_ownership, name, editor, produced_entries)
+
+
+def _merge_asset_ownership(
+    previous_ownership: dict | None,
+    name: str,
+    editor: str,
+    produced_entries: dict[str, dict],
+) -> dict:
+    """Fold one editor's freshly written assets into the pack's ownership record."""
     entries = _asset_entries(previous_ownership, name)
     entries.update(produced_entries)
     consumers = _shared_asset_consumers(previous_ownership, name)
@@ -2020,6 +2030,37 @@ def _apply_asset_install(
         "entries": entries,
         "consumers": consumers,
     }
+
+
+def _ownership_from_copied_assets(
+    name: str,
+    editor: str,
+    pack_dir: Path,
+    hook_specs: list[dict],
+    previous_ownership: dict | None,
+) -> dict:
+    """Record what the non-transactional Claude/Codex install just copied.
+
+    ``_copy_plugin_hook_scripts`` and ``_copy_plugin_scripts`` write the same
+    paths ``_prepare_asset_specs`` describes but never recorded them, so
+    removal had nothing to verify against and preserved every file as
+    "untracked" (v4.32.1). Reading the versions back from disk after the copy
+    gives removal the same sha256/mode/inode contract the JSON runtimes get.
+    """
+    produced: dict[str, dict] = {}
+    for spec in _prepare_asset_specs(name, pack_dir, hook_specs):
+        version = _read_file_version(spec.path)
+        if version is None:
+            continue
+        produced[spec.key] = {
+            "path": str(spec.path),
+            "kind": spec.kind,
+            "sha256": hashlib.sha256(version.content).hexdigest(),
+            "mode": version.mode,
+            "device": version.device,
+            "inode": version.inode,
+        }
+    return _merge_asset_ownership(previous_ownership, name, editor, produced)
 
 
 def _preflight_asset_removal(
@@ -2073,6 +2114,74 @@ def _apply_asset_removal(
         print(f"    Removed plugin asset: {path.name}")
     for _key, path in plan.preserved:
         print(f"    WARN preserved changed or user-owned plugin asset: {path}")
+
+
+def _remove_owned_plugin_assets(state: dict | None, name: str, editor: str) -> None:
+    """Delete the hook and script files this pack installed for ``editor``.
+
+    Claude and Codex removal never consulted ``shared_asset_ownership``: the
+    files were written on install, recorded, and then reported as "untracked"
+    on remove because nothing looked the record up. Every pack left its hooks
+    and ``plugin-scripts/<name>/`` behind (v4.32.1).
+
+    Same rules as the transactional runtimes: an entry is deleted only when
+    this editor consumes it, no other editor still does, and the file on disk
+    is byte- and inode-identical to what install recorded. Anything else
+    (user edits, a file install never wrote, a symlink) is preserved and named.
+    """
+    ownership = _shared_asset_ownership_for(state or {}, name)
+    entries = _asset_entries(ownership, name)
+    consumers = _shared_asset_consumers(ownership, name)
+    editor_keys = set(consumers.get(editor, ()))
+    other_keys = {
+        key
+        for consumer, keys in consumers.items()
+        if consumer != editor
+        for key in keys
+    }
+    scripts_root = TOOLKIT_DATA_DIR / "plugin-scripts" / name
+    hook_prefix = f"plugin-{name}-"
+    handled: set[Path] = set()
+
+    for key, entry in entries.items():
+        raw_path = entry.get("path")
+        if not isinstance(raw_path, str):
+            continue
+        path = Path(raw_path)
+        handled.add(path.absolute())
+        if key not in editor_keys or key in other_keys:
+            continue
+        kind = entry.get("kind")
+        if kind == "hook":
+            safe = path.parent.absolute() == HOOKS_DIR.absolute() and path.name.startswith(hook_prefix)
+        elif kind == "script":
+            safe = path.parent.absolute() == scripts_root.absolute()
+        else:
+            safe = False
+        if not safe:
+            print(f"    WARN refused to remove plugin asset outside its owned root: {path}")
+            continue
+        if path.is_symlink():
+            print(f"    WARN preserved symlinked plugin asset: {path}")
+            continue
+        version = _read_file_version(path)
+        if version is None:
+            continue
+        if not _asset_entry_matches(path, version, entry):
+            print(f"    WARN preserved changed plugin asset: {path}")
+            continue
+        path.unlink()
+        print(f"    Removed plugin asset: {path.name}")
+
+    for hook in sorted(HOOKS_DIR.glob(f"{hook_prefix}*")):
+        if hook.absolute() not in handled:
+            print(f"    WARN preserved untracked plugin hook: {hook}")
+    if scripts_root.is_dir():
+        for leftover in sorted(scripts_root.iterdir()):
+            if leftover.absolute() not in handled:
+                print(f"    WARN preserved untracked plugin script: {leftover}")
+        if not any(scripts_root.iterdir()):
+            scripts_root.rmdir()
 
 
 def _state_after_removal(
@@ -2616,19 +2725,15 @@ def _remove_claude_pack_links(pack: dict, pack_dir: Path) -> None:
 
 
 def remove_pack_claude(
-    name: str, pack: dict, pack_dir: Path, *, keep_shared_assets: bool
+    name: str, pack: dict, pack_dir: Path, *, keep_shared_assets: bool,
+    state: dict | None = None,
 ) -> bool:
     hook_specs = _resolve_pack_hooks(pack, pack_dir)
     rule_specs = _resolve_pack_rules(pack, pack_dir)
     _remove_claude_pack_links(pack, pack_dir)
 
     if not keep_shared_assets:
-        for hook in HOOKS_DIR.glob(f"plugin-{name}-*"):
-            print(f"    WARN preserved untracked plugin hook: {hook}")
-
-        scripts_dir = TOOLKIT_DATA_DIR / "plugin-scripts" / name
-        if scripts_dir.is_dir():
-            print(f"    WARN preserved untracked plugin scripts: {scripts_dir}")
+        _remove_owned_plugin_assets(state, name, "claude")
 
     if any(not spec["is_core"] for spec in hook_specs):
         _strip_claude_hooks(name)
@@ -3000,7 +3105,8 @@ def install_pack_codex(name: str, pack: dict, pack_dir: Path) -> bool:
 
 
 def remove_pack_codex(
-    name: str, pack: dict, pack_dir: Path, *, keep_shared_assets: bool
+    name: str, pack: dict, pack_dir: Path, *, keep_shared_assets: bool,
+    state: dict | None = None,
 ) -> bool:
     _assert_safe_codex_surface()
     _strip_codex_hooks(name)
@@ -3016,14 +3122,10 @@ def remove_pack_codex(
                 print(f"    WARN preserved user-owned Codex hook: {hook.name}")
 
     if not keep_shared_assets:
-        # Clean paths used by releases before native Codex plugin assets moved
-        # under $CODEX_HOME. Claude still owns these when installed for both.
-        for hook in HOOKS_DIR.glob(f"plugin-{name}-*"):
-            print(f"    WARN preserved untracked plugin hook: {hook}")
-
-        scripts_dir = TOOLKIT_DATA_DIR / "plugin-scripts" / name
-        if scripts_dir.is_dir():
-            print(f"    WARN preserved untracked plugin scripts: {scripts_dir}")
+        # Paths used by releases before native Codex plugin assets moved under
+        # $CODEX_HOME. Claude still owns these when installed for both, which
+        # the ownership consumers encode; only Codex-consumed entries go.
+        _remove_owned_plugin_assets(state, name, "codex")
 
     _remove_codex_rules(name)
     print(f"  Done: removed {name} from codex")
@@ -3202,6 +3304,14 @@ def _install_pack_locked(
             if transaction_snapshots is not None:
                 _restore_file_snapshots(transaction_snapshots)
             return False
+        if editor in ("claude", "codex"):
+            asset_ownership = _ownership_from_copied_assets(
+                name,
+                editor,
+                pack_dir,
+                _resolve_pack_hooks(pack, pack_dir),
+                _shared_asset_ownership_for(state, name),
+            )
 
         if hook_config_update is not None:
             if transaction_snapshots is not None:
@@ -3362,6 +3472,7 @@ def _remove_pack_locked(
                 pack,
                 pack_dir,
                 keep_shared_assets=keep_shared_assets,
+                state=state,
             )
         elif editor == "codex":
             ok = remove_pack_codex(
@@ -3369,6 +3480,7 @@ def _remove_pack_locked(
                 pack,
                 pack_dir,
                 keep_shared_assets=keep_shared_assets,
+                state=state,
             )
         elif editor in JSON_HOOK_RUNTIMES:
             ok = remove_pack_json_runtime(

@@ -7,6 +7,32 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.32.1 - Plugin removal leaves nothing behind (2026-09-04)
+
+Both fixes come from running the post-release SOPs on v4.32.0 in an isolated
+sandbox; both defects predate that release (identical on v4.31.0).
+
+### Fixed
+
+- **`plugin remove` deletes the hooks and scripts a pack installed.** The
+  Claude and Codex install paths copied `hooks/plugin-<pack>-*` and
+  `plugin-scripts/<pack>/*` into `~/.softspark/ai-toolkit` but never recorded
+  them in `shared_asset_ownership`, so removal found no owner and preserved
+  every file as "untracked": each pack left 4-5 files behind. Install now
+  records sha256/mode/inode for what it copied; removal deletes only entries
+  this editor consumes that no other editor still uses and that are unchanged
+  on disk, preserves an edited file with a `WARN preserved changed plugin
+  asset` line, and drops the empty `plugin-scripts/<pack>/` directory.
+  `tests/test_plugin_asset_removal.bats` covers install, zero-residue removal,
+  user-edited preservation, two-editor sharing, and reinstall.
+- **Five skill scripts answer `--help`.** `doc-inventory.py`,
+  `dependency-graph.py`, `migration-status.py`, `refactor-scan.py`, and
+  `complexity.py` treated `--help` as a path and returned a JSON error.
+  `tests/test_skill_scripts_help.bats` now probes every documented
+  `${CLAUDE_SKILL_DIR}` invocation with `--help` (exit 0, no traceback), the
+  same check as post-release SOP Phase 4b.
+- **Test count.** Bats increased from 1966 to 1972.
+
 ## v4.32.0 - Context budget: scoped rules, scoped language skills, doctor budget checks (2026-09-04)
 
 ### Added

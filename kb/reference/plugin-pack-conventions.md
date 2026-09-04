@@ -3,9 +3,9 @@ title: "Plugin Pack Conventions"
 category: reference
 service: ai-toolkit
 tags: [plugins, plugin-packs, conventions, manifests, hooks, policy-packs]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-03-28"
-last_updated: "2026-08-31"
+last_updated: "2026-09-04"
 description: "Conventions for experimental ai-toolkit plugin packs, policy packs, hook packs, and plugin-creator scaffolding across supported editors."
 ---
 
@@ -167,7 +167,7 @@ ai-toolkit plugin status --editor all              # show installed packs with r
 1. **Claude Code target**: strips plugin hook entries from `~/.claude/settings.json` and removes plugin-local rule sections from `~/.claude/CLAUDE.md`
 2. **Codex target**: strips only command handlers carrying the exact `AI_TOOLKIT_HOOK_OWNER=ai-toolkit-plugin-<pack>` marker from `$CODEX_HOME/hooks.json`, removes owned `$CODEX_HOME/ai-toolkit-hooks/plugin-<pack>-*` assets, and removes the pack's marker-bounded sections from `$CODEX_HOME/AGENTS.md`
 3. **Cursor/Gemini rules**: removes only exact content recorded in `rule_ownership`; foreign or user-modified files/sections are preserved with a warning
-4. **Claude/shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack
+4. **Claude/shared assets** (`~/.softspark/ai-toolkit/hooks/plugin-*`, `plugin-scripts/<pack>/`) are removed only when no remaining runtime still uses that pack, and only when the file on disk is byte-, mode- and inode-identical to what install recorded in `shared_asset_ownership`; a file the user edited is preserved and named in a `WARN preserved changed plugin asset` line. Before v4.32.1 the Claude and Codex install paths never recorded that ownership, so removal preserved every hook and script as "untracked" and each pack left 4-5 files behind (found by the post-release SOP on v4.32.0)
 5. **Updates** `plugins.json` state per runtime
 6. **Leaves** core agents/skills untouched (they belong to the base install)
 7. **Leaves** plugin data intact (e.g. `memory.db` — use `clean` to prune)

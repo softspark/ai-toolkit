@@ -159,6 +159,9 @@ def generate_mermaid(target_name: str, imports: list, imported_by: list) -> str:
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print("Usage: dependency-graph.py <file_or_directory>\n\nPrint the import/dependency graph of a file or directory as JSON.")
+        return
     if len(sys.argv) < 2:
         print(json.dumps({"error": "Usage: dependency-graph.py <file_or_directory>"}))
         sys.exit(1)

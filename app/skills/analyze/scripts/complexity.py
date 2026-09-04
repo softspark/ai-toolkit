@@ -125,6 +125,9 @@ def _summary(root: Path, all_files: list[Path]) -> tuple[int, int]:
 
 def main() -> None:
     """Entry point: analyse directory and print text report to stdout."""
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print("Usage: complexity.py [directory]\n\nReport per-file code complexity for directory (default: cwd).")
+        return
     root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd().resolve()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 

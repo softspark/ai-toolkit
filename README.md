@@ -6,30 +6,25 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-114-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1966%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1972%20passing-success)](tests/)
 
-## What's New in v4.32.0
+## What's New in v4.32.1
 
-**v4.32.0** cuts what every session pays for before you type, and adds the
-checks that keep it cut:
+**v4.32.1** fixes two defects the post-release SOPs found on v4.32.0 (both
+older than that release):
 
-- Common rules are path-scoped from their source: `testing` and `performance`
-  load only for matching files, and the project `.claude/CLAUDE.md` index says
-  which rules are always-on instead of claiming lazy loading for all of them.
-- Language knowledge skills follow your projects: `install --language-skills
-  detected` (default) turns off `<lang>-rules`/`<lang>-patterns` skills for
-  languages no registered project uses, reversibly, and restores them when a
-  project brings the language back.
-- `ai-toolkit doctor` gains a Context Budget check (est. resident tokens,
-  zero-use skills) and a Permission Rules check (over-broad `permissions.allow`
-  wildcards). Both read-only.
-- One strict frontmatter parser replaces twelve private copies; `validate.py`
-  now rejects descriptions over 1024 characters or unquoted ones containing
-  `: `. Every shipped Markdown file parses under the strict grammar.
-- Team-only git conventions moved to a `git-team` rule that ships with
-  `--profile strict`; `quality-gate.sh` lints with ruff only when the project
-  configured ruff; advisory Stop hooks run in the background. Test count:
-  1931 -> 1966 bats + 348 pytest.
+- `ai-toolkit plugin remove` now deletes the hooks and scripts a pack
+  installed under `~/.softspark/ai-toolkit`. Install records what it copied;
+  removal deletes only unchanged, unshared files and names anything it
+  preserves. Every pack used to leave 4-5 files behind.
+- Five skill scripts (`doc-inventory`, `dependency-graph`, `migration-status`,
+  `refactor-scan`, `complexity`) answer `--help` instead of treating it as a
+  path; a new test probes every documented skill script with `--help`.
+- Still in this train from v4.32.0: path-scoped common rules, language skills
+  scoped to your registered projects (`--language-skills`), `doctor` Context
+  Budget and Permission Rules checks, one strict frontmatter parser, and the
+  `git-team` rule for `--profile strict`. Test count: 1966 -> 1972 bats +
+  348 pytest.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

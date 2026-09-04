@@ -182,6 +182,9 @@ def detect(project_dir: Path) -> dict[str, object]:
 
 def main() -> None:
     """Entry point: detect migration tool and print JSON result to stdout."""
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
+        print("Usage: migration-status.py [project_dir]\n\nDetect the migration tool in project_dir (default: cwd) and report its status as JSON.")
+        return
     project_dir = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd()
     if not project_dir.is_dir():
         print(json.dumps({"error": f"Not a directory: {project_dir}"}))
