@@ -30,7 +30,8 @@ sandbox; both defects predate that release (identical on v4.31.0).
   `complexity.py` treated `--help` as a path and returned a JSON error.
   `tests/test_skill_scripts_help.bats` now probes every documented
   `${CLAUDE_SKILL_DIR}` invocation with `--help` (exit 0, no traceback), the
-  same check as post-release SOP Phase 4b.
+  same check as post-release SOP Phase 4b. The probe uses `perl alarm` as its
+  hang guard, not GNU `timeout`, which the macOS CI runner does not have.
 - **`pre_deploy_check.py` no longer crashes on Linux.** It probed for docker
   by running the shell builtin `command -v` through `subprocess`, which only
   works on macOS (a `/usr/bin/command` binary exists there); on Linux it raised
