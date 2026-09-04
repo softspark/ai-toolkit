@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.32.3 — Search-first stops firing on things nobody asked (2026-09-04)
+
+### Fixed
+
+- **A background task finishing no longer demands a KB search.**
+  `user-prompt-submit.sh` set the search-required flag on any stdin longer
+  than 30 characters. The harness delivers background-task notifications, CI
+  events and replayed slash-command output on the same channel as a prompt, so
+  a task completing blocked `Stop` and asked for a search over text nobody
+  wrote. Harness event envelopes no longer set the flag.
+- **A pasted credential no longer becomes a search query.** A 43-character API
+  key on its own line cleared the length gate, and the block message names the
+  prompt as the thing to search for — so the enforcement path asked for a live
+  secret to be sent to a retrieval service. Single-token prompts no longer set
+  the flag; a genuine one-word prompt is under the length gate anyway, so
+  nothing that was enforced before stops being enforced. Prose that merely
+  mentions a task notification still sets it, and that case is now a test.
+
+---
+
 ## v4.32.2 - Plugin exports land where you run the command (2026-09-04)
 
 ### Fixed

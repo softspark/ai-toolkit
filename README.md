@@ -6,25 +6,30 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-114-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1974%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1978%20passing-success)](tests/)
 
-## What's New in v4.32.2
+## What's New in v4.32.3
 
-**v4.32.2** makes plugin exports land where you run the command:
+**v4.32.3** stops search-first enforcement firing on things nobody asked:
 
-- `ai-toolkit claude-app export`, `codex-plugin export`, and
-  `antigravity-plugin export` write their ZIP (and the sibling
-  `*-global-instructions.md`) to the directory you typed the command in. They
-  used to appear inside `node_modules/@softspark/ai-toolkit` because the CLI
-  runs them with its own working directory; the wrapper now hands the shell's
-  directory to the exporters. Absolute `--output` paths are unchanged.
-- Root-level `*.zip` and `*-global-instructions.md` are gitignored so an
-  export run from the repository is never committed.
-- Still in this train: `plugin remove` leaves nothing behind, every skill
-  script answers `--help` (v4.32.1); path-scoped common rules, project-scoped
-  language skills, `doctor` context-budget and permission checks, one strict
-  frontmatter parser, `git-team` for `--profile strict` (v4.32.0). Test
-  count: 1972 -> 1974 bats + 348 pytest.
+- **A background task finishing no longer blocks `Stop`.** The search-required
+  flag was set on any stdin over 30 characters, and the harness delivers
+  background-task notifications, CI events and replayed slash-command output
+  on the same channel as a prompt. Event envelopes no longer set it.
+- **A pasted credential no longer becomes a search query.** A 43-character API
+  key on its own line cleared the length gate, and the block message names the
+  prompt as the thing to search for — so the enforcement path asked for a live
+  secret to be sent to a retrieval service. Single-token prompts no longer set
+  the flag.
+- Nothing that was enforced before stops being enforced: a genuine one-word
+  prompt is under the length gate anyway, and prose that merely mentions a task
+  notification still sets the flag. That case is now a test.
+- Still in this train: exports land in the directory you ran the command in
+  (v4.32.2); `plugin remove` leaves nothing behind, every skill script answers
+  `--help` (v4.32.1); path-scoped common rules, project-scoped language skills,
+  `doctor` context-budget and permission checks, one strict frontmatter parser,
+  `git-team` for `--profile strict` (v4.32.0). Test count: 1974 -> 1978 bats +
+  348 pytest.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
