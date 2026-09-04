@@ -29,7 +29,28 @@ PROMPT_LEN=${#PROMPT_TEXT}
 STATE_DIR="$HOME/.softspark/ai-toolkit/state"
 FLAG="$STATE_DIR/search-required-$(hook_session_id).flag"
 mkdir -p "$STATE_DIR" 2>/dev/null
+
+# The flag means "somebody asked a question the KB might answer". Length alone
+# does not establish that. The harness delivers background-task notifications,
+# CI events and replayed slash-command output on the same channel as a prompt,
+# and a 43-character API key pasted on its own line clears the length gate too.
+# Both were observed in one session: the first demanded a KB search for text
+# nobody asked about, the second would have sent a live credential to a
+# retrieval service as the query. Neither is a prompt.
+PROMPT_HEAD="${PROMPT_TEXT#"${PROMPT_TEXT%%[![:space:]]*}"}"
+PROMPT_IS_QUESTION=1
+case "$PROMPT_HEAD" in
+    '<task-notification'*|'<ci-monitor-event'*|'<system-reminder'*|\
+    '<local-command-'*|'<command-name'*|'<command-message'*) PROMPT_IS_QUESTION=0 ;;
+esac
+# A single opaque token — API key, hash, URL, path — carries no question. A
+# genuine one-word prompt is under the length gate anyway, so nothing is lost.
+if [ "$(printf '%s' "$PROMPT_TEXT" | wc -w | tr -d ' ')" -le 1 ]; then
+    PROMPT_IS_QUESTION=0
+fi
+
 if [ "$PROMPT_LEN" -gt 30 ] && \
+   [ "$PROMPT_IS_QUESTION" -eq 1 ] && \
    [ "${CLAUDE_SKIP_SEARCH_FIRST:-0}" != "1" ] && \
    ai_toolkit_has_search_provider; then
     { printf '%s\n%s\n' "$(date -u +%s)" "$PROMPT_TEXT" > "$FLAG"; } 2>/dev/null

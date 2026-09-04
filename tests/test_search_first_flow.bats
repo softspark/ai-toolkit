@@ -105,6 +105,32 @@ TOML
     [ ! -f "$(FLAG_PATH)" ]
 }
 
+@test "search-first: background task notification does NOT set flag" {
+    run bash -c "echo '{\"prompt\":\"<task-notification>\\n<task-id>bthepjcb2</task-id>\\n<status>failed</status>\\n</task-notification>\"}' | AI_TOOLKIT_SEARCH_FIRST=strict bash '$HOOKS/user-prompt-submit.sh'"
+    [ "$status" -eq 0 ]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
+@test "search-first: replayed slash-command output does NOT set flag" {
+    run bash -c "echo '{\"prompt\":\"<command-name>/compact</command-name> ran and produced a long summary of the session\"}' | AI_TOOLKIT_SEARCH_FIRST=strict bash '$HOOKS/user-prompt-submit.sh'"
+    [ "$status" -eq 0 ]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
+# A pasted credential is over the length gate and has no question in it.
+# Flagging it demands a KB search whose query is the secret itself.
+@test "search-first: a bare pasted token does NOT set flag" {
+    run bash -c "echo '{\"prompt\":\"ctx7sk-00000000-0000-0000-0000-000000000000\"}' | AI_TOOLKIT_SEARCH_FIRST=strict bash '$HOOKS/user-prompt-submit.sh'"
+    [ "$status" -eq 0 ]
+    [ ! -f "$(FLAG_PATH)" ]
+}
+
+@test "search-first: prose that merely mentions a task still sets flag" {
+    run bash -c "echo '{\"prompt\":\"the task notification said the build failed, where is that handled?\"}' | AI_TOOLKIT_SEARCH_FIRST=strict bash '$HOOKS/user-prompt-submit.sh'"
+    [ "$status" -eq 0 ]
+    [ -f "$(FLAG_PATH)" ]
+}
+
 @test "search-first: CLAUDE_SKIP_SEARCH_FIRST=1 prevents flag" {
     CLAUDE_SKIP_SEARCH_FIRST=1 AI_TOOLKIT_SEARCH_FIRST=strict run bash -c "echo '{\"prompt\":\"long technical prompt about hooks dedup logic and tests\"}' | bash '$HOOKS/user-prompt-submit.sh'"
     [ "$status" -eq 0 ]
