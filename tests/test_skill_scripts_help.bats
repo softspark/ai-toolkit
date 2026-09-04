@@ -23,8 +23,10 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
         probed=$((probed + 1))
         # Capture rc explicitly: under bats' errexit a failing command
         # substitution in an assignment aborts the test before the report.
+        # `timeout` is GNU coreutils and is not on the macOS CI runner (rc=127
+        # for every probe on the first run); perl's alarm is on both runners.
         rc=0
-        out=$(cd "$D" && CLAUDE_SKILL_DIR="$D" timeout 20 "$interp" "$D/$rel" --help </dev/null 2>&1) || rc=$?
+        out=$(cd "$D" && CLAUDE_SKILL_DIR="$D" perl -e 'alarm shift; exec @ARGV' 20 "$interp" "$D/$rel" --help </dev/null 2>&1) || rc=$?
         if [ "$rc" -ne 0 ] || printf '%s' "$out" | grep -q 'Traceback'; then
             echo "FAIL $(basename "$D") $rel rc=$rc: $(printf '%s' "$out" | head -1 | cut -c1-80)" >&2
             failures=$((failures + 1))
