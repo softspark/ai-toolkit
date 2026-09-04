@@ -12,7 +12,7 @@ jobs:
     name: ShellCheck hooks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install ShellCheck
         run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
@@ -29,7 +29,7 @@ jobs:
         # scripts/_common.py); 3.13 guards against the opposite drift.
         python-version: ['3.11', '3.13']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
@@ -68,7 +68,7 @@ jobs:
     name: Python unit tests + lint + types
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -90,7 +90,7 @@ jobs:
     name: Validate toolkit integrity
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Run validate.py
         run: python3 scripts/validate.py --strict
@@ -105,7 +105,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -131,7 +131,7 @@ jobs:
     name: Required files
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Every file the module template requires is present
         run: |
           for f in LICENSE NOTICE CHANGELOG.md SECURITY.md CODE_OF_CONDUCT.md \
@@ -160,7 +160,7 @@ jobs:
     name: Skill security audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Run audit_skills.py
         run: python3 scripts/audit_skills.py --ci
