@@ -55,3 +55,21 @@ LEGACY_PROJECT_LOCK = ".ai-toolkit.lock.json"
 
 # Base config filename (published in npm packages — unchanged)
 BASE_CONFIG_FILENAME = "ai-toolkit.config.json"
+
+
+def user_path(raw: "str | os.PathLike[str]") -> Path:
+    """Resolve a user-supplied path against the directory the user ran the CLI in.
+
+    ``bin/ai-toolkit.js`` runs some commands (``claude-app``, ``codex-plugin``,
+    ``antigravity-plugin``) with ``cwd`` inside the installed package so their
+    relative asset paths resolve, and passes the shell's own directory as
+    ``AI_TOOLKIT_USER_CWD``. Before v4.32.2 a relative ``--output`` (including
+    every default) was written next to ``node_modules/@softspark/ai-toolkit``.
+    Absolute paths pass through; direct ``python3 scripts/...`` runs, where the
+    variable is unset, resolve against the real cwd as before.
+    """
+    path = Path(raw).expanduser()
+    if path.is_absolute():
+        return path
+    base = os.environ.get("AI_TOOLKIT_USER_CWD", "").strip()
+    return (Path(base) if base else Path.cwd()) / path

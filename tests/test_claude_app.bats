@@ -99,6 +99,21 @@ PY
     [ -f "$archive" ]
 }
 
+@test "claude-app: relative --output and the default land in the shell's cwd, not the package" {
+    # The CLI runs claude-app with cwd inside the package (toolkitCwd), which
+    # used to put every relative export next to node_modules/@softspark/ai-toolkit.
+    mkdir -p "$TEST_TMP/out" && cd "$TEST_TMP/out"
+    run $CLI claude-app export --output rel.zip --no-custom-rules
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/out/rel.zip" ]
+    [ -f "$TEST_TMP/out/rel-global-instructions.md" ]
+    [ ! -e "$TOOLKIT_DIR/rel.zip" ]
+    run $CLI claude-app export --no-custom-rules
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/out/ai-toolkit-claude-app.zip" ]
+    [ ! -e "$TOOLKIT_DIR/ai-toolkit-claude-app.zip" ]
+}
+
 @test "claude-app: official validator accepts clean staged plugin when available" {
     command -v claude >/dev/null 2>&1 || skip "claude CLI not installed"
     run python3 "$TOOLKIT_DIR/scripts/claude_app.py" verify

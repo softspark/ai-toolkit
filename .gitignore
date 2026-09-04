@@ -20,6 +20,10 @@ CONVENTIONS.md
 /.cline/
 /.roo/
 
+# Plugin exports run from the repo root (claude-app / codex-plugin / antigravity-plugin)
+/*.zip
+/*-global-instructions.md
+
 # Python caches / coverage / local dev venv (requirements-dev.txt)
 .venv/
 __pycache__/

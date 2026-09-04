@@ -6,25 +6,25 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-114-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1972%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1974%20passing-success)](tests/)
 
-## What's New in v4.32.1
+## What's New in v4.32.2
 
-**v4.32.1** fixes two defects the post-release SOPs found on v4.32.0 (both
-older than that release):
+**v4.32.2** makes plugin exports land where you run the command:
 
-- `ai-toolkit plugin remove` now deletes the hooks and scripts a pack
-  installed under `~/.softspark/ai-toolkit`. Install records what it copied;
-  removal deletes only unchanged, unshared files and names anything it
-  preserves. Every pack used to leave 4-5 files behind.
-- Five skill scripts (`doc-inventory`, `dependency-graph`, `migration-status`,
-  `refactor-scan`, `complexity`) answer `--help` instead of treating it as a
-  path; a new test probes every documented skill script with `--help`.
-- Still in this train from v4.32.0: path-scoped common rules, language skills
-  scoped to your registered projects (`--language-skills`), `doctor` Context
-  Budget and Permission Rules checks, one strict frontmatter parser, and the
-  `git-team` rule for `--profile strict`. Test count: 1966 -> 1972 bats +
-  348 pytest.
+- `ai-toolkit claude-app export`, `codex-plugin export`, and
+  `antigravity-plugin export` write their ZIP (and the sibling
+  `*-global-instructions.md`) to the directory you typed the command in. They
+  used to appear inside `node_modules/@softspark/ai-toolkit` because the CLI
+  runs them with its own working directory; the wrapper now hands the shell's
+  directory to the exporters. Absolute `--output` paths are unchanged.
+- Root-level `*.zip` and `*-global-instructions.md` are gitignored so an
+  export run from the repository is never committed.
+- Still in this train: `plugin remove` leaves nothing behind, every skill
+  script answers `--help` (v4.32.1); path-scoped common rules, project-scoped
+  language skills, `doctor` context-budget and permission checks, one strict
+  frontmatter parser, `git-team` for `--profile strict` (v4.32.0). Test
+  count: 1972 -> 1974 bats + 348 pytest.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

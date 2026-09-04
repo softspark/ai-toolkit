@@ -22,6 +22,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dir_rules_shared import STANDARD_RULES
+from paths import user_path
 from emission import agents_dir
 from generate_antigravity_agents import render_agent
 from generate_antigravity_hooks import (
@@ -550,7 +551,7 @@ def main(argv: list[str] | None = None) -> int:
                 or args.output_path
                 or "ai-toolkit-antigravity-plugin.zip"
             )
-            path = export(output)
+            path = export(user_path(output))
             print(f"Created: {path}")
             print(
                 "Install under .agents/plugins/ai-toolkit/ (workspace), "

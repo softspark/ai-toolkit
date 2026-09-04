@@ -1,6 +1,6 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "4.32.1",
+  "version": "4.32.2",
   "description": "AI coding toolkit: 109 skills, 44 agents, 14 developer-tool integrations, recoverable native tool-output filtering, Claude Chat/Cowork export, safety constitution, SARIF audit, and signed npm provenance.",
   "keywords": [
     "claude",

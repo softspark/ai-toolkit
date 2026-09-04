@@ -10482,7 +10482,7 @@ Usage: ai-toolkit <command> [options]
 | `doctor` | Diagnose install health, hooks, quick-win assets, artifact drift, context budget (est. resident tokens of the skill/agent listings and user rules, plus skills with zero recorded use; read-only, prints the `skillOverrides` key to paste), and permission rules (`permissions.allow` wildcards on interpreters, task runners, package installs, `gh api`, `curl`, `git fetch`, destructive commands; warns only, never edits) |
 | `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |
 | `eject [dir]` | Export standalone config (no symlinks, no toolkit dependency) |
-| `claude-app export [--output FILE] [--no-custom-rules] [--verify]` | Build an uploadable Claude Chat/Desktop/Cowork plugin ZIP and global-instructions file |
+| `claude-app export [--output FILE] [--no-custom-rules] [--verify]` | Writes to the directory you run the command in (relative `--output` and the default `ai-toolkit-claude-app.zip` + `*-global-instructions.md`; before v4.32.2 they landed inside `node_modules/@softspark/ai-toolkit`). Build an uploadable Claude Chat/Desktop/Cowork plugin ZIP and global-instructions file |
 | `claude-app verify` | Validate a clean staged plugin with structural checks and the official Claude plugin validator |
 | `codex-plugin export [--output FILE]` | Build a deterministic native Codex plugin ZIP with skills and self-contained hooks |
 | `codex-plugin verify` | Validate a clean native Codex plugin stage without installing it or changing user configuration |

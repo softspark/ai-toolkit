@@ -199,6 +199,14 @@ PY
     [[ "$output" == *"verify"* ]]
 }
 
+@test "codex-plugin: relative --output lands in the shell's cwd, not the package" {
+    mkdir -p "$TEST_TMP/out" && cd "$TEST_TMP/out"
+    run $CLI codex-plugin export --output rel.zip
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_TMP/out/rel.zip" ]
+    [ ! -e "$TOOLKIT_DIR/rel.zip" ]
+}
+
 @test "codex-plugin: hooks use the exact command schema and PLUGIN_ROOT assets" {
     archive="$TEST_TMP/hooks.zip"
     python3 "$TOOLKIT_DIR/scripts/codex_plugin.py" export --output "$archive" >/dev/null

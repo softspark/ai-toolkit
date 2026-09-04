@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.32.2 - Plugin exports land where you run the command (2026-09-04)
+
+### Fixed
+
+- **`claude-app export`, `codex-plugin export`, `antigravity-plugin export`
+  write to the shell's directory.** `bin/ai-toolkit.js` runs these three with
+  `cwd` inside the installed package so their asset paths resolve, which also
+  made every relative `--output`, and therefore every default
+  (`ai-toolkit-claude-app.zip`, `*-global-instructions.md`), appear next to
+  `node_modules/@softspark/ai-toolkit`. The wrapper now passes the user's
+  directory as `AI_TOOLKIT_USER_CWD` and `paths.user_path()` resolves relative
+  outputs against it; absolute paths and direct `python3 scripts/...` runs
+  are unchanged. Found the first time the v4.32.1 README instruction was
+  followed from `~/Downloads`.
+- `.gitignore` ignores root-level `*.zip` and `*-global-instructions.md` so an
+  export run from the repository cannot be committed by accident.
+- **Test count.** Bats increased from 1972 to 1974 (relative `--output` from
+  a foreign cwd for `claude-app` and `codex-plugin`).
+
 ## v4.32.1 - Plugin removal leaves nothing behind (2026-09-04)
 
 Both fixes come from running the post-release SOPs on v4.32.0 in an isolated

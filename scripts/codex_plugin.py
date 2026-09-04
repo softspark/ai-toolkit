@@ -26,6 +26,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from codex_skill_adapter import build_codex_skill_text
+from paths import user_path
 from generate_codex_hooks import (
     CODEX_HOOKS,
     _asset_names,
@@ -754,7 +755,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.action == "export":
-        return 0 if export_plugin(Path(args.output)) else 1
+        return 0 if export_plugin(user_path(args.output)) else 1
     if args.action == "verify":
         return 0 if verify_plugin() else 1
     return 2

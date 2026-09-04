@@ -222,10 +222,14 @@ function runGenerator(scriptName, extraArgs = []) {
  */
 function run(script, args = [], opts = {}) {
   requirePython();
+  // Commands flagged toolkitCwd run with cwd inside the installed package so
+  // their relative asset paths resolve; the user's own directory travels in
+  // AI_TOOLKIT_USER_CWD so a relative --output still lands where they typed
+  // the command, not inside node_modules (v4.32.2).
   const result = spawnSync('python3', [script, ...args], {
     stdio: 'inherit',
     cwd: opts.cwd || CWD,
-    env: { ...process.env },
+    env: { ...process.env, AI_TOOLKIT_USER_CWD: CWD },
   });
   if (result.status !== 0) {
     process.exit(result.status || 1);

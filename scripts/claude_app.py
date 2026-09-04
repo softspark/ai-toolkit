@@ -29,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from frontmatter import split_frontmatter  # noqa: E402
+from paths import user_path  # noqa: E402
 
 
 TOOLKIT_DIR = Path(__file__).resolve().parent.parent
@@ -347,7 +348,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if verify_plugin() else 1
     if args.action == "export":
         return 0 if export_plugin(
-            Path(args.output),
+            user_path(args.output),
             include_custom_rules=not args.no_custom_rules,
             verify=args.verify,
         ) else 1
