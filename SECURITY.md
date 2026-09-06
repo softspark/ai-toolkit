@@ -4,7 +4,8 @@
 
 | Version | Supported |
 |---------|-----------|
-| 1.x     | Yes       |
+| Latest published 4.x release | Yes |
+| Earlier releases | Upgrade to the latest 4.x release |
 
 ## Reporting a Vulnerability
 
@@ -27,28 +28,26 @@ You will receive a response within 48 hours. We will:
 
 ### Constitution Enforcement
 
-The toolkit enforces a 7-article safety constitution via `PreToolUse` hooks. Article 1 (Safety First) blocks:
+The toolkit distributes a 7-article safety constitution and command guards through supported client hooks. The destructive-command guard checks patterns including:
 - `rm -rf` and mass deletion commands
 - `DROP TABLE` and destructive database operations
-- Any command that could cause irreversible data loss without explicit confirmation
+- Known destructive command patterns that require explicit confirmation
+
+These guards complement the coding client's approval controls. They are not an operating-system sandbox and do not identify every possible way a command can cause damage.
 
 ### Hook Security
 
-Hooks execute in the user's local environment. They do NOT:
-- Phone home or send telemetry
-- Execute network requests
-- Store or transmit any code or data externally
+Hooks execute in the user's local environment with that user's permissions. Review the enabled hook scripts and optional plugin configuration when selecting integrations. Client approval controls and the permissions of invoked tools remain part of the execution boundary.
 
 ### Script Security
 
-All bundled scripts (`scripts/*.py`, `scripts/*.sh`) use stdlib only — no external dependencies, no network calls. Review them directly: they are short and readable.
+Published Python runtime scripts use the standard library. Explicit commands can fetch remote metadata or configuration and invoke external tools, including package managers and vendor CLIs. Remote-configuration fetches record SHA256 pins; strict-pin mode rejects changed payloads. Development tools such as pytest, ruff, and mypy are separate from the published runtime.
 
 ### Installation Security
 
-`install.sh` creates symlinks only. It does NOT:
-- Execute arbitrary code from the network
-- Modify system files outside of the target project's `.claude/` directory
-- Request elevated permissions
+Installation manages the files required by the selected developer-tool integrations, using generated files, copies, and symlinks as appropriate. Its scope includes project and user configuration locations, depending on the command and target. Review the command's dry-run output and ownership checks before changing an existing installation.
+
+DSH package installation and updates are explicit profile lifecycle operations. They invoke the supported package manager and preserve unrelated profile dependencies and files. Vendor authentication stays with the vendor's own CLI; the toolkit does not implement a credential broker.
 
 ## GitHub Security Advisories
 

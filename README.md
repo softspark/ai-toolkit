@@ -6,24 +6,21 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-114-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1978%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1989%20passing-success)](tests/)
 
-## What's New in v4.32.4
+## What's New in v4.33.0
 
-**v4.32.4** documents validation parity and reliable API error handling:
+**v4.33.0** refreshes the explicit DSH lifecycle and public maintenance policies:
 
-- **One validation contract for frontend and backend.** Existing skills cover
-  DTO groups/defaults, nested collections, Unicode, explicit server-only checks
-  and shared regression fixtures, with backend enforcement kept authoritative.
-- **Errors preserve the API contract.** Guidance separates local refusals,
-  domain conflicts and technical failures, retaining field paths, machine
-  codes and safe recovery when a write outcome is uncertain.
-- **Schema examples match validator behavior.** Correct JSON Schema
-  conditional requirements and Ajv strict-mode guidance; keep state-dependent
-  domain checks alongside validation at the request boundary.
-- **Release smoke tests verify the installed artifact.** Procedures use
-  disposable environments, current inventories and assertions for missing
-  generated files, without modifying the operator's live installation.
+- **Current DSH package pins.** Explicit profile installation and updates target
+  DSH `0.1.2-rc.1`, `dsh-codex 1.5.0`, and `dsh-orchestrator 2.0.0`.
+- **Existing profile ownership survives the update.** Regression tests cover
+  refreshing the previously shipped package pair and restoring the recorded
+  versions when an update fails.
+- **Accurate security scope.** The support table follows the current release
+  line, and the policy describes the actual installation and network boundaries.
+- **Documentation travels with code.** Contributions update affected KB pages,
+  manifests, counts, and generated instructions in the same pull request.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -96,7 +93,7 @@ ai-toolkit dsh doctor --profile web
 ai-toolkit dsh uninstall --profile web --yes
 ```
 
-DSH is excluded from `--editors all`, auto-detection, and defaults. Its only DSH-specific project output is `.agents/skills`; the normal `--local` Claude files, detected language rules, and other generic project outputs still apply. Project and profile `--dry-run` commands are read-only. The reviewed pins are DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. Codex, Claude Code, and GitHub Copilot own their logins. ai-toolkit accepts no provider API keys, and GitHub AI credits apply to the Copilot Gemini route. Isolated pre-tag and exact-registry post-release qualification completed both Claude Code and Copilot Gemini marker roundtrips through the Codex parent. See [DSH Compatibility](kb/reference/dsh-compatibility.md).
+DSH is excluded from `--editors all`, auto-detection, and defaults. Its only DSH-specific project output is `.agents/skills`; the normal `--local` Claude files, detected language rules, and other generic project outputs still apply. Project and profile `--dry-run` commands are read-only. The lifecycle targets DSH `0.1.2-rc.1`, `@softspark/dsh-codex@1.5.0`, and `@softspark/dsh-orchestrator@2.0.0`. Update the DSH runtime before updating this profile integration. Codex, Claude Code, and GitHub Copilot own their logins. ai-toolkit accepts no provider API keys, and GitHub AI credits apply to the Copilot Gemini route. See [DSH Compatibility](kb/reference/dsh-compatibility.md) for the exact contract and version-specific qualification evidence.
 
 ### Plugin Management
 

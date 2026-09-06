@@ -12072,9 +12072,9 @@ title: "AI Toolkit - DSH Compatibility"
 category: reference
 service: ai-toolkit
 tags: [dsh, deepseek-harness, subscriptions, lifecycle, compatibility]
-version: "1.7.0"
+version: "1.8.0"
 created: "2026-08-31"
-last_updated: "2026-09-01"
+last_updated: "2026-09-06"
 description: "Compatibility contract for project skills and the explicit SoftSpark package lifecycle in DeepSeek Harness."
 ---
 
@@ -12084,14 +12084,14 @@ description: "Compatibility contract for project skills and the explicit SoftSpa
 
 ai-toolkit supports DeepSeek Harness as an explicit developer-preview target. The integration is maintained by SoftSpark as a community compatibility layer. DeepSeek AI has not endorsed it.
 
-The reviewed runtime is DSH `0.1.1-rc.2`. Newer upstream prereleases are not covered until they pass the same qualification. Isolated pre-tag and exact-registry post-release profiles completed the Claude Code and Copilot Gemini marker roundtrips through a Codex parent on 2026-09-01.
+The 4.33.0 lifecycle targets DSH `0.1.2-rc.1`, with the exact package pair below. Other upstream prereleases require their own qualification. Historical marker roundtrips from 2026-09-01 used DSH `0.1.1-rc.2`; version-specific evidence is recorded under Qualification below.
 
 ## Project vs Profile Outputs
 
 | Surface | Command | Managed output | Explicit non-output |
 |---|---|---|---|
 | Project install | `ai-toolkit install --local --editors dsh` | `CLAUDE.md`, `.claude/settings.local.json`, `.claude/constitution.md`, detected language rules, other generic local outputs, and the DSH-specific one-level `.agents/skills/<name>/SKILL.md` catalog with bundled resources | No `$DSH_HOME` writes, npm package changes, profile changes, preset changes, or credential reads |
-| DSH profile | `ai-toolkit dsh install --profile web` | Two exact npm dependencies in the named profile, the released `softspark-orchestrator` preset, and ai-toolkit ownership state | No project files, provider login, API keys, unrelated plugins, or user presets |
+| DSH profile | `ai-toolkit dsh install --profile web` | Two exact npm dependencies, the scoped Claude SDK override and missing profile initialization files, the released `softspark-orchestrator` preset, and ai-toolkit ownership state | No project files, provider login, API keys, unrelated plugins, or user presets |
 
 DSH is excluded from `--editors all`, auto-detection, default profiles, and default editor selection. Naming `dsh` without `--local` is not a supported project install route.
 
@@ -12119,12 +12119,30 @@ The DSH profile defaults to `web` when `--profile` is omitted. `DSH_HOME` select
 
 | Component | Reviewed version | Role |
 |---|---:|---|
-| DeepSeek Harness | `0.1.1-rc.2` | Profile host and plugin manager |
+| DeepSeek Harness | `0.1.2-rc.1` | Profile host and plugin manager |
 | pnpm | `>=11.7.0,<12.0.0` | Package manager used by the DSH plugin command |
-| `@softspark/dsh-codex` | `1.0.0` | Codex parent provider through local `codex app-server` |
-| `@softspark/dsh-orchestrator` | `1.0.1` | Claude Code and GitHub Copilot Gemini delegation bundle plus released preset |
+| `@softspark/dsh-codex` | `1.5.0` | Codex parent provider through local `codex app-server` |
+| `@softspark/dsh-orchestrator` | `2.0.0` | Claude Code and GitHub Copilot Gemini delegation bundle plus released preset |
+| Claude Agent SDK | `0.3.263` | Exact profile override for the DSH Claude provider's bundled CLI |
 
 Install and update use exact package arguments with `--save-exact`. Arbitrary DSH prereleases and unpinned SoftSpark packages are outside this contract.
+
+Install and update also configure the exact profile selector
+`@deepseek-ai/dsh-subagent-claude-code@0.1.2-rc.1>@anthropic-ai/claude-agent-sdk`
+to `0.3.263`. DSH's original SDK `0.3.241` embeds Claude Code `2.1.241`, which
+current models reject even when the standalone Claude command is up to date.
+The override is applied through pnpm's JSON configuration API. Unrelated
+settings and overrides are preserved; an incompatible SDK override or an
+explicit non-hoisted package layout fails with guidance before modification.
+The installed SDK's actual package metadata is checked before state is committed.
+
+Upgrade the DSH runtime to `0.1.2-rc.1` before running this release's profile
+update. Ownership records for the earlier exact package pair remain valid and
+are migrated by `ai-toolkit dsh update`. On failure, rollback uses the versions
+recorded before the operation. The optional `dsh-file-preview` and
+`dsh-process-console` UI bundles are separate profile additions; their `2.0.0`
+line targets the new DSH client APIs, and the toolkit preserves them as unrelated
+dependencies.
 
 The reviewed DSH tag declares `pnpm@11.7.0`. The isolated cold-install environment used Corepack pnpm `11.24.0`, so the lifecycle accepts stable pnpm releases from `11.7.0` through the end of major 11. Before it creates the lifecycle lock or changes a profile, it resolves exact DSH and pnpm command paths from the minimal child `PATH`, records their command and resolved-file identities, and runs their version probes with a five-second bound. Missing, nonzero, timed-out, malformed, or unsupported pnpm probes fail with no package, preset, state, or lifecycle artifact.
 
@@ -12180,6 +12198,17 @@ The DSH record stores the canonical DSH home, profile, exact package versions, p
 
 The published npm packages own their installed code. The canonical preset source is `@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator` inside the exact installed package. ai-toolkit copies and verifies that tree. It does not reconstruct the preset.
 
+Missing profile initialization files are created exclusively under pinned
+directories using the qualified DSH profile schema before invoking the external
+configuration command. A file appearing concurrently is never adopted as owned,
+even when its bytes match. The transaction snapshots `pnpm-workspace.yaml` bytes, mode and file identity in
+addition to package state. Ordinary failures restore that prestate through the
+same guarded file restoration used for the profile manifest. Default profile
+files created during initialization are removed only while their recorded
+identities still match. Unexpected settings changes or ambiguous failed
+external writes remain preserved behind a recovery marker. Configuration
+contents are never copied into lifecycle state, receipts, or error messages.
+
 Mutations first take a nonblocking exclusive POSIX `flock` on the already pinned `DSH_HOME` directory descriptor, then claim the bounded canonical lifecycle lock and use the shared state lock with compare-and-swap publication. Directory locking is independent of the replaceable lock filename. It remains held across sentinel scans, package and preset mutation, normal canonical-lock release, or recovery-sentinel creation plus file and directory `fsync`. A competing lifecycle must acquire the same directory lock before it can scan recovery state or claim the canonical name. The immutable prerequisite record is revalidated after lock acquisition and before every package mutation or package rollback. A replaced or removed executable, or a new earlier `pnpm` PATH shadow, blocks the command. The verified pnpm command directory is placed first in the child PATH so DSH's literal `pnpm` lookup resolves to the probed command. Install, update, and uninstall verify the profile manifest, package trees, preset identity, and unrelated dependencies before and after each external package-manager command. Rollback restores the immutable pre-operation target. It does not reinterpret concurrent bytes as owned data.
 
 Each DSH plugin add, update, remove, or rollback command has a 300-second process bound, separate from the short prerequisite probe. This bound accommodates cold package resolution without promising registry or network latency. Every mutation starts DSH in a dedicated POSIX session and process group. A timeout or interruption signals the complete group, escalates from `SIGTERM` to `SIGKILL` when needed, and waits for confirmed group exit before rollback. If exit cannot be confirmed, package rollback is blocked and deterministic inspection steps are reported. Child stdout and stderr remain suppressed from user-facing errors.
@@ -12213,7 +12242,16 @@ The first native target also excludes DSH hook bridging, MCP bridging, arbitrary
 
 `ai-toolkit dsh doctor` is read-only. It reports the DSH runtime version, pnpm availability and version, package pins, package-tree and preset ownership, state consistency, lifecycle lock recovery artifacts, staging paths, and recovery markers. A recovery marker keeps `Recovery needed: yes` visible until the operator resolves the named paths.
 
+Doctor also checks the required SDK override and installed SDK version. It
+queries pnpm directly only when the profile directory exists. It never uses
+`dsh plugin` for inspection, because that command initializes missing profiles.
+
 `ai-toolkit dsh uninstall --yes` removes only the recorded SoftSpark packages, preset, and profile state. Drift or ownership ambiguity stops removal. Unrelated profile dependencies, patch files, presets, and state keys remain unchanged.
+
+Successful uninstall retains the scoped SDK compatibility setting and the
+profile's pnpm layout. They are runtime prerequisites for a later reinstall,
+not ownership of the user's entire profile. Failed operations restore their
+pre-operation configuration unless concurrent edits make that unsafe.
 
 ## Verification
 
@@ -12232,11 +12270,29 @@ ai-toolkit dsh doctor --profile web
 ai-toolkit dsh uninstall --profile web --dry-run --yes
 ```
 
-Phase 3 real-profile qualification completed with a task-specific `DSH_HOME`, exact published package artifacts, and native vendor logins. The pre-tag candidate and exact npm registry package both produced successful child and parent markers through `subagent_claude_code` and `subagent_gemini_copilot`; no provider API key was supplied or handled. The isolated DSH processes stopped cleanly and the unrelated profile fixture remained intact.
+### Historical qualification, 2026-09-01
+
+The earlier DSH `0.1.1-rc.2` package pair completed real-profile qualification
+with a task-specific `DSH_HOME`, exact published package artifacts, and native
+vendor logins. The pre-tag candidate and registry package produced successful
+child and parent markers through `subagent_claude_code` and
+`subagent_gemini_copilot`. No provider API key was supplied or handled; the
+isolated processes stopped and the unrelated profile fixture remained intact.
+
+### DSH 0.1.2-rc.1 qualification
+
+The current release must verify the exact pair in the table through the same
+isolated install, doctor, update, rollback and uninstall checks, followed by
+real composition and vendor marker roundtrips. Candidate and published-artifact
+results are recorded separately. Publication remains gated until this record
+contains the current executed results.
 
 ## Preview and Upstream Drift
 
-DeepSeek Harness describes itself as a developer preview with compatibility-breaking changes. The upstream release feed published `0.1.2-alpha.2` after the reviewed `0.1.1-rc.2` line. ai-toolkit does not adopt that prerelease by inference.
+DeepSeek Harness is a developer preview with compatibility-breaking changes.
+On 2026-09-06, npm `latest` pointed to `0.1.2-rc.1`. GitHub also listed
+`0.1.3-alpha.1`, but that exact CLI version was absent from npm. It is outside
+this lifecycle contract.
 
 Use the registry doctor to detect documentation, capability-marker, and local version changes. A new upstream version requires source review, focused fixture updates, isolated real-profile qualification, and explicit pin changes before support moves.
 
@@ -12244,10 +12300,10 @@ Use the registry doctor to detect documentation, capability-marker, and local ve
 
 - [DeepSeek Harness documentation](https://deepseek-harness.github.io/deepseek-harness/)
 - [DeepSeek Harness releases](https://github.com/deepseek-ai/deepseek-harness/releases)
-- [Reviewed DSH 0.1.1-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2)
-- [Reviewed DSH package-manager declaration](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/package.json)
-- [Reviewed DSH CLI profile and plugin contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md)
-- [Reviewed DSH skill discovery contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md)
+- [Reviewed DSH 0.1.2-rc.1 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1)
+- [Reviewed DSH package-manager declaration](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/package.json)
+- [Reviewed DSH CLI profile and plugin contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md)
+- [Reviewed DSH skill discovery contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md)
 - [PATH: kb/reference/manifest-install.md]
 - [PATH: kb/history/completed/dsh-native-install-target-plan.md]
 

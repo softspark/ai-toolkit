@@ -6,9 +6,15 @@
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
 setup() {
+    # Recovery diagnostics use canonical paths; macOS TMPDIR may use /var's alias.
+    export TMPDIR
+    TMPDIR="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
     export TEST_PROJECT; TEST_PROJECT="$(mktemp -d)"
     export TEST_HOME; TEST_HOME="$(mktemp -d)"
     export TEST_DSH_HOME; TEST_DSH_HOME="$(mktemp -d)"
+    TEST_PROJECT="$(cd "$TEST_PROJECT" && pwd -P)"
+    TEST_HOME="$(cd "$TEST_HOME" && pwd -P)"
+    TEST_DSH_HOME="$(cd "$TEST_DSH_HOME" && pwd -P)"
 }
 
 teardown() {
@@ -32,6 +38,170 @@ install_fake_dsh_without_pnpm() {
     ln -s "$(command -v python3)" "$fake_bin/python3"
     chmod +x "$fake_bin/dsh"
     printf '%s\n' "$fake_bin"
+}
+
+@test "dsh SDK: install preserves unrelated settings and uninstall retains prerequisite" {
+    fake_bin="$(install_fake_dsh)"
+    mkdir -p "$TEST_DSH_HOME/profiles/web"
+    python3 - "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml" <<'PY'
+import json, sys
+from pathlib import Path
+Path(sys.argv[1]).write_text(json.dumps({"nodeLinker": "hoisted", "minimumReleaseAge": 4320, "overrides": {"unrelated-package": "1.2.3"}}))
+PY
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+    [ "$status" -eq 0 ]
+    python3 - "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml" <<'PY'
+import json, sys
+from pathlib import Path
+settings = json.loads(Path(sys.argv[1]).read_text())
+assert settings["minimumReleaseAge"] == 4320
+assert settings["overrides"] == {"unrelated-package": "1.2.3", "@deepseek-ai/dsh-subagent-claude-code@0.1.2-rc.1>@anthropic-ai/claude-agent-sdk": "0.3.263"}
+PY
+    before="$(shasum "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml")"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh uninstall --profile web --yes
+    [ "$status" -eq 0 ]
+    [ "$(shasum "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml")" = "$before" ]
+}
+
+@test "dsh SDK: conflicting override and explicit non-hoisted layout stay intact" {
+    fake_bin="$(install_fake_dsh)"
+    for kind in override linker; do
+        case_home="$TEST_DSH_HOME/$kind"
+        mkdir -p "$case_home/profiles/web"
+        python3 - "$case_home/profiles/web/pnpm-workspace.yaml" "$kind" <<'PY'
+import json, sys
+from pathlib import Path
+settings = {"nodeLinker": "hoisted", "overrides": {"@anthropic-ai/claude-agent-sdk": "0.3.241"}} if sys.argv[2] == "override" else {"nodeLinker": "isolated"}
+Path(sys.argv[1]).write_text(json.dumps(settings))
+PY
+        before="$(shasum "$case_home/profiles/web/pnpm-workspace.yaml")"
+        run env HOME="$TEST_HOME" DSH_HOME="$case_home" PATH="$fake_bin:$PATH" \
+            node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+        [ "$status" -ne 0 ]
+        [ "$(shasum "$case_home/profiles/web/pnpm-workspace.yaml")" = "$before" ]
+        [ ! -e "$case_home/fake-argv.jsonl" ]
+    done
+}
+
+@test "dsh SDK: failed config set restores new profile files" {
+    fake_bin="$(install_fake_dsh)"
+    printf '%s\n' '{"config_set_fail":true}' > "$TEST_DSH_HOME/fake-control.json"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+    [ "$status" -ne 0 ]
+    [ ! -e "$TEST_DSH_HOME/profiles/web/package.json" ]
+    [ ! -e "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml" ]
+    [ ! -e "$TEST_DSH_HOME/profiles/web/cordis.patch.yml" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh SDK: failed configuration inspection restores preclaimed files" {
+    fake_bin="$(install_fake_dsh)"
+    printf '%s\n' '{"config_init_fail":true}' > "$TEST_DSH_HOME/fake-control.json"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+    [ "$status" -ne 0 ]
+    [ ! -e "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml" ]
+    [ ! -e "$TEST_DSH_HOME/fake-argv.jsonl" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh SDK: effective SDK mismatch rolls back original configuration" {
+    fake_bin="$(install_fake_dsh)"
+    mkdir -p "$TEST_DSH_HOME/profiles/web"
+    printf '%s\n' '{"nodeLinker":"hoisted","minimumReleaseAge":4320}' > "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml"
+    before="$(shasum "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml")"
+    printf '%s\n' '{"sdk_version":"0.3.241"}' > "$TEST_DSH_HOME/fake-control.json"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"installed Claude SDK does not match"* ]]
+    [ "$(shasum "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml")" = "$before" ]
+    [ ! -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-orchestrator" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh SDK: concurrent settings edit is preserved instead of rolled back" {
+    fake_bin="$(install_fake_dsh)"
+    printf '%s\n' '{"config_concurrent_edit":true}' > "$TEST_DSH_HOME/fake-control.json"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"concurrent edits"* ]]
+    python3 - "$TEST_DSH_HOME/profiles/web/pnpm-workspace.yaml" <<'PY'
+import json, sys
+from pathlib import Path
+assert json.loads(Path(sys.argv[1]).read_text())["minimumReleaseAge"] == 987
+PY
+    [ ! -e "$TEST_DSH_HOME/fake-argv.jsonl" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+}
+
+@test "dsh SDK: doctor and dry-run do not create configuration" {
+    fake_bin="$(install_fake_dsh)"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web --dry-run
+    [ "$status" -eq 0 ]
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh doctor --profile web
+    [ "$status" -ne 0 ]
+    [ ! -e "$TEST_DSH_HOME/profiles" ]
+    [ ! -e "$TEST_DSH_HOME/fake-config-argv.jsonl" ]
+}
+
+@test "dsh SDK: reserved module directory cannot become a profile" {
+    fake_bin="$(install_fake_dsh)"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile node_modules
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"invalid DSH profile id"* ]]
+    [ ! -e "$TEST_DSH_HOME/profiles" ]
+    [ ! -e "$TEST_DSH_HOME/fake-config-argv.jsonl" ]
+}
+
+@test "dsh SDK: initial inspection cannot adopt a concurrent workspace or manifest replacement" {
+    fake_bin="$(install_fake_dsh)"
+    for race in conflicting identical manifest; do
+        case_home="$TEST_DSH_HOME/$race"
+        mkdir -p "$case_home"
+        python3 - "$case_home/fake-control.json" "$race" <<'PY'
+import json, sys
+from pathlib import Path
+Path(sys.argv[1]).write_text(json.dumps({"config_inspection_race":sys.argv[2], "fail_before":"add:@softspark/dsh-orchestrator"}))
+PY
+        run env HOME="$TEST_HOME" DSH_HOME="$case_home" PATH="$fake_bin:$PATH" \
+            node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+        [ "$status" -ne 0 ]
+        [[ "$output" == *"identity changed during configuration inspection"* ]]
+        [ -f "$case_home/profiles/web/pnpm-workspace.yaml" ]
+        [ -f "$case_home/profiles/web/package.json" ]
+        [ ! -e "$case_home/fake-argv.jsonl" ]
+        [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
+    done
+}
+
+@test "dsh SDK: doctor rejects absent or wrong provider even with matching top-level SDK" {
+    fake_bin="$(install_fake_dsh)"
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
+    [ "$status" -eq 0 ]
+    for variant in wrong missing; do
+        python3 - "$TEST_DSH_HOME/profiles/web/node_modules/@deepseek-ai/dsh-subagent-claude-code/package.json" "$variant" <<'PY'
+import json, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+if sys.argv[2] == "missing":
+    path.rename(path.with_name("saved-package.json"))
+else:
+    path.write_text(json.dumps({"name":"@deepseek-ai/dsh-subagent-claude-code","version":"0.1.1-rc.2"}))
+PY
+        run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+            node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh doctor --profile web
+        [ "$status" -ne 0 ]
+        [[ "$output" == *"Claude SDK: incompatible"* ]]
+    done
 }
 
 portable_mode() {
@@ -494,8 +664,8 @@ dsh_home = Path(sys.argv[1])
 state_path = Path(sys.argv[2])
 calls = [json.loads(line) for line in (dsh_home / "fake-argv.jsonl").read_text().splitlines()]
 assert calls == [
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.5.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@2.0.0", "--save-exact"],
 ], calls
 preset = dsh_home / ".agent-presets" / "softspark-orchestrator"
 assert (preset / "preset.md").read_text() == "softspark orchestrator\n"
@@ -503,8 +673,8 @@ state = json.loads(state_path.read_text())["dsh"]["profiles"]["web"]
 assert state["dsh_home"] == str(dsh_home.resolve())
 assert state["profile"] == "web"
 assert state["packages"] == {
-    "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.1",
+    "@softspark/dsh-codex": "1.5.0",
+    "@softspark/dsh-orchestrator": "2.0.0",
 }
 
 assert set(state["package_trees"]) == set(state["packages"])
@@ -766,7 +936,7 @@ injected = [False]
 
 def drift_after_first_add(argv, *, dsh_home):
     result = real_run(argv, dsh_home=dsh_home)
-    if "@softspark/dsh-codex@1.0.0" in argv and not injected[0]:
+    if "@softspark/dsh-codex@1.5.0" in argv and not injected[0]:
         injected[0] = True
         pnpm.rename(preserved)
     return result
@@ -789,7 +959,7 @@ from pathlib import Path
 calls = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines()]
 assert calls == [[
     "plugin", "--profile", "web", "add",
-    "@softspark/dsh-codex@1.0.0", "--save-exact",
+    "@softspark/dsh-codex@1.5.0", "--save-exact",
 ]], calls
 PY
     [ -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-codex" ]
@@ -874,7 +1044,7 @@ injected = [False]
 
 
 def interrupt_first_mutation(argv, *, dsh_home):
-    if injected[0]:
+    if injected[0] or "add" not in argv:
         return real_run(argv, dsh_home=dsh_home)
     injected[0] = True
     timer = threading.Timer(0.2, lambda: os.kill(os.getpid(), signal.SIGINT))
@@ -951,7 +1121,7 @@ def repeatedly_interrupt_wait(process_group, timeout):
 
 
 def interrupt_first_mutation(argv, *, dsh_home):
-    if mutation_started[0]:
+    if mutation_started[0] or "add" not in argv:
         return real_run(argv, dsh_home=dsh_home)
     mutation_started[0] = True
     timer = threading.Timer(0.2, lambda: os.kill(os.getpid(), signal.SIGINT))
@@ -1127,8 +1297,8 @@ from pathlib import Path
 
 calls = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines()]
 assert calls == [
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.5.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@2.0.0", "--save-exact"],
 ], calls
 PY
     [ -e "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-codex" ]
@@ -1690,7 +1860,7 @@ if boundary == "after_external":
 
     def run_then_swap(argv, *, dsh_home):
         result = real_run(argv, dsh_home=dsh_home)
-        if "plugin" in argv and not injected[0]:
+        if "add" in argv and not injected[0]:
             swap_home()
         return result
 
@@ -1699,7 +1869,7 @@ else:
     real_claim = dsh._claim_directory
 
     def swap_before_claim(path, owned, *, mode=0o700):
-        if not injected[0]:
+        if not injected[0] and ".agent-presets" in str(path):
             swap_home()
         return real_claim(path, owned, mode=mode)
 
@@ -1804,6 +1974,7 @@ PY
     fake_bin="$(install_fake_dsh)"
     for concurrent in no yes; do
         case_root="$(mktemp -d)"
+        case_root="$(cd "$case_root" && pwd -P)"
         case_home="$case_root/home"
         case_dsh="$case_root/dsh"
         mkdir -p "$case_home" "$case_dsh"
@@ -1975,7 +2146,7 @@ PY
 
     [ "$status" -ne 0 ]
     echo "$output" | grep -q 'unsupported DSH version 0.1.1-rc.3'
-    echo "$output" | grep -q 'required 0.1.1-rc.2'
+    echo "$output" | grep -q 'required 0.1.2-rc.1'
     [ "$(surface_fingerprint "$TEST_DSH_HOME")" = "$before" ]
     [ ! -e "$TEST_HOME/.softspark/ai-toolkit/state.json" ]
 }
@@ -2017,9 +2188,9 @@ PY
 
     [ "$status" -eq 0 ]
     echo "$output" | grep -Fq \
-        "'plugin', '--profile', 'web', 'add', '@softspark/dsh-codex@1.0.0', '--save-exact'"
+        "'plugin', '--profile', 'web', 'add', '@softspark/dsh-codex@1.5.0', '--save-exact'"
     echo "$output" | grep -Fq \
-        "'plugin', '--profile', 'web', 'add', '@softspark/dsh-orchestrator@1.0.1', '--save-exact'"
+        "'plugin', '--profile', 'web', 'add', '@softspark/dsh-orchestrator@2.0.0', '--save-exact'"
     echo "$output" | grep -Fq \
         "$TEST_DSH_HOME/profiles/web/node_modules/@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator"
     echo "$output" | grep -Fq \
@@ -2186,8 +2357,8 @@ from pathlib import Path
 home = Path(sys.argv[1])
 calls = [json.loads(line) for line in (home / "fake-argv.jsonl").read_text().splitlines()]
 assert calls == [
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.5.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@2.0.0", "--save-exact"],
     ["plugin", "--profile", "web", "remove", "@softspark/dsh-codex"],
 ], calls
 PY
@@ -2211,7 +2382,7 @@ added = False
 def add_user_file_after_first_package(argv, *, dsh_home):
     global added
     result = real_run(argv, dsh_home=dsh_home)
-    if "add" in argv and "@softspark/dsh-codex@1.0.0" in argv and not added:
+    if "add" in argv and "@softspark/dsh-codex@1.5.0" in argv and not added:
         added = True
         profile = Path(os.environ["DSH_HOME"]) / "profiles" / "web"
         (profile / "concurrent-user.txt").write_text("concurrent user bytes\n")
@@ -2257,7 +2428,7 @@ real_run = dsh._run
 
 def interrupt_after_first_add(argv, *, dsh_home):
     result = real_run(argv, dsh_home=dsh_home)
-    if "add" in argv and "@softspark/dsh-codex@1.0.0" in argv:
+    if "add" in argv and "@softspark/dsh-codex@1.5.0" in argv:
         raise KeyboardInterrupt
     return result
 
@@ -2327,7 +2498,7 @@ if boundary == "second_add":
 
     def injected(argv, *, dsh_home):
         result = real(argv, dsh_home=dsh_home)
-        if "add" in argv and "@softspark/dsh-orchestrator@1.0.1" in argv:
+        if "add" in argv and "@softspark/dsh-orchestrator@2.0.0" in argv:
             raise KeyboardInterrupt
         return result
 
@@ -2530,7 +2701,7 @@ dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.5
 def timeout_only_cold_add(argv, *, dsh_home):
     is_cold_target = (
         "add" in argv
-        and "@softspark/dsh-orchestrator@1.0.1" in argv
+        and "@softspark/dsh-orchestrator@2.0.0" in argv
     )
     if is_cold_target:
         dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
@@ -2556,8 +2727,8 @@ from pathlib import Path
 
 calls = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines()]
 assert calls == [
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.5.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@2.0.0", "--save-exact"],
     ["plugin", "--profile", "web", "remove", "@softspark/dsh-codex"],
 ], calls
 PY
@@ -2833,6 +3004,43 @@ PY
     done
 }
 
+@test "dsh lifecycle: refreshes the previously shipped package pair without losing ownership" {
+    fake_bin="$(install_fake_dsh)"
+
+    run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+from install_steps import dsh
+
+current = dict(dsh.PACKAGES)
+dsh.PACKAGES = {
+    "@softspark/dsh-codex": "1.0.0",
+    "@softspark/dsh-orchestrator": "1.0.1",
+}
+assert dsh.main(["install", "--profile", "web"]) == 0
+dsh.PACKAGES = current
+assert dsh.main(["update", "--profile", "web"]) == 0
+home = Path(os.environ["DSH_HOME"])
+record = json.loads(
+    (Path(os.environ["HOME"]) / ".softspark/ai-toolkit/state.json").read_text()
+)["dsh"]["profiles"]["web"]
+assert record["packages"] == current
+assert record["owned"] is True
+manifest = json.loads((home / "profiles/web/package.json").read_text())
+assert manifest["dependencies"] == current
+calls = [json.loads(line) for line in (home / "fake-argv.jsonl").read_text().splitlines()]
+assert calls[-2:] == [
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.5.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@2.0.0", "--save-exact"],
+]
+PY
+
+    [ "$status" -eq 0 ]
+}
+
 @test "dsh lifecycle: update accepts owned package trees recorded under older exact pins" {
     fake_bin="$(install_fake_dsh)"
 
@@ -2848,13 +3056,13 @@ assert dsh.main(["install", "--profile", "web"]) == 0
 state_path = Path(os.environ["HOME"]) / ".softspark/ai-toolkit/state.json"
 old_record = json.loads(state_path.read_text())["dsh"]["profiles"]["web"]
 assert old_record["packages"] == {
-    "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.1",
+    "@softspark/dsh-codex": "1.5.0",
+    "@softspark/dsh-orchestrator": "2.0.0",
 }
 
 dsh.PACKAGES = {
-    "@softspark/dsh-codex": "1.1.0",
-    "@softspark/dsh-orchestrator": "1.1.0",
+    "@softspark/dsh-codex": "3.0.0",
+    "@softspark/dsh-orchestrator": "3.0.0",
 }
 assert dsh.main(["update", "--profile", "web"]) == 0
 
@@ -2884,8 +3092,8 @@ from install_steps import dsh
 
 assert dsh.main(["install", "--profile", "web"]) == 0
 dsh.PACKAGES = {
-    "@softspark/dsh-codex": "1.1.0",
-    "@softspark/dsh-orchestrator": "1.1.0",
+    "@softspark/dsh-codex": "3.0.0",
+    "@softspark/dsh-orchestrator": "3.0.0",
 }
 assert dsh.main(["uninstall", "--profile", "web", "--yes"]) == 0
 
@@ -3001,8 +3209,8 @@ old_preset = dsh._tree_hash(dsh_home / ".agent-presets/softspark-orchestrator")
     json.dumps({"fail_before_once": "add:@softspark/dsh-orchestrator"})
 )
 dsh.PACKAGES = {
-    "@softspark/dsh-codex": "1.1.0",
-    "@softspark/dsh-orchestrator": "1.1.0",
+    "@softspark/dsh-codex": "3.0.0",
+    "@softspark/dsh-orchestrator": "3.0.0",
 }
 assert dsh.main(["update", "--profile", "web"]) == 1
 
@@ -3010,8 +3218,8 @@ profile = dsh_home / "profiles/web"
 assert state_path.read_bytes() == old_state
 assert dsh._tree_hash(dsh_home / ".agent-presets/softspark-orchestrator") == old_preset
 expected_recorded_versions = {
-    "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.1",
+    "@softspark/dsh-codex": "1.5.0",
+    "@softspark/dsh-orchestrator": "2.0.0",
 }
 for package in dsh.MANAGED_PACKAGE_NAMES:
     package_manifest = profile / "node_modules" / Path(package) / "package.json"
@@ -3024,10 +3232,10 @@ calls = [
     for line in (dsh_home / "fake-argv.jsonl").read_text().splitlines()
 ]
 assert calls[-4:] == [
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.1.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.1.0", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@3.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@3.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@2.0.0", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-codex@1.5.0", "--save-exact"],
 ]
 PY
 
@@ -3055,8 +3263,8 @@ old_preset = dsh._tree_hash(dsh_home / ".agent-presets/softspark-orchestrator")
     json.dumps({"fail_before_once": "remove:@softspark/dsh-codex"})
 )
 dsh.PACKAGES = {
-    "@softspark/dsh-codex": "1.1.0",
-    "@softspark/dsh-orchestrator": "1.1.0",
+    "@softspark/dsh-codex": "3.0.0",
+    "@softspark/dsh-orchestrator": "3.0.0",
 }
 assert dsh.main(["uninstall", "--profile", "web", "--yes"]) == 1
 
@@ -3064,8 +3272,8 @@ profile = dsh_home / "profiles/web"
 assert state_path.read_bytes() == old_state
 assert dsh._tree_hash(dsh_home / ".agent-presets/softspark-orchestrator") == old_preset
 expected_recorded_versions = {
-    "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.1",
+    "@softspark/dsh-codex": "1.5.0",
+    "@softspark/dsh-orchestrator": "2.0.0",
 }
 for package in dsh.MANAGED_PACKAGE_NAMES:
     package_manifest = profile / "node_modules" / Path(package) / "package.json"
@@ -3080,7 +3288,7 @@ calls = [
 assert calls[-3:] == [
     ["plugin", "--profile", "web", "remove", "@softspark/dsh-orchestrator"],
     ["plugin", "--profile", "web", "remove", "@softspark/dsh-codex"],
-    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@1.0.1", "--save-exact"],
+    ["plugin", "--profile", "web", "add", "@softspark/dsh-orchestrator@2.0.0", "--save-exact"],
 ]
 PY
 
@@ -3108,7 +3316,7 @@ real_run = dsh._run
 
 def interrupt_after_orchestrator_add(argv, *, dsh_home):
     result = real_run(argv, dsh_home=dsh_home)
-    if "add" in argv and "@softspark/dsh-orchestrator@1.0.1" in argv:
+    if "add" in argv and "@softspark/dsh-orchestrator@2.0.0" in argv:
         raise KeyboardInterrupt
     return result
 
@@ -3134,9 +3342,9 @@ PY
 
     run "${command[@]}" doctor --profile web
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'Runtime: supported (0.1.1-rc.2)'
-    echo "$output" | grep -q '@softspark/dsh-codex: 1.0.0 (expected 1.0.0)'
-    echo "$output" | grep -q '@softspark/dsh-orchestrator: 1.0.1 (expected 1.0.1)'
+    echo "$output" | grep -q 'Runtime: supported (0.1.2-rc.1)'
+    echo "$output" | grep -q '@softspark/dsh-codex: 1.5.0 (expected 1.5.0)'
+    echo "$output" | grep -q '@softspark/dsh-orchestrator: 2.0.0 (expected 2.0.0)'
     echo "$output" | grep -q 'Preset: owned, hash matches'
     echo "$output" | grep -q 'State: consistent'
     echo "$output" | grep -q 'Recovery needed: no'

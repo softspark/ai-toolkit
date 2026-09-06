@@ -7,6 +7,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.33.0 - DSH refresh and maintenance contracts (2026-09-06)
+
+### Changed
+
+- Explicit DSH profile lifecycle targets runtime `0.1.2-rc.1` and exact packages
+  `@softspark/dsh-codex@1.5.0` and `@softspark/dsh-orchestrator@2.0.0`.
+  Upgrade the DSH runtime before updating the managed profile packages.
+- Refresh the ecosystem source references and retain the pnpm 11 support range
+  declared by the reviewed upstream release.
+
+### Fixed
+
+- Automatically select Claude Agent SDK `0.3.263` for the DSH Claude provider,
+  replacing the bundled CLI rejected by current models. Preserve unrelated
+  profile settings and restore prior configuration after failed installation
+  or update; concurrent file replacements remain preserved for recovery.
+- Align the security support table with the current 4.x release line and describe
+  the actual scope of hooks, network-aware commands, and managed installation files.
+- Require documentation, generated surfaces, and counts to change in the same
+  pull request as the corresponding behavior.
+- Cover migration from the previously shipped DSH package pair and retain
+  rollback tests that restore the exact recorded package versions.
+- Canonicalize temporary test roots on macOS so recovery assertions compare
+  the same paths reported by the lifecycle without weakening the assertions.
+
 ## v4.32.4 - Validation parity and API error contracts (2026-09-06)
 
 ### Changed

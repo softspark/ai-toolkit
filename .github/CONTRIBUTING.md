@@ -10,9 +10,9 @@ how to contribute: workflow, branching, commits, and the checks your PR must pas
 3. **Make your changes** — follow the conventions below
 4. **Run all checks** locally (see CI Requirements)
 5. **Push** to your fork and open a **Pull Request** against `main`
-6. The maintainer will review, pull the branch locally if needed, adjust documentation, and merge
+6. The maintainer will review, request any needed corrections, and merge after the required checks pass
 
-> **Note:** Documentation updates (README, ARCHITECTURE, CLAUDE.md, counts, etc.) are handled by the maintainer after merge. You do not need to update these yourself.
+Update affected documentation in the same pull request as the behavior change. Keep README tables and badges, CHANGELOG, manifests, KB references, and generated integration instructions consistent. Run the applicable generators and `python3 scripts/validate.py --strict` before requesting review.
 
 ## Branch Naming
 
@@ -95,7 +95,7 @@ Additionally, CI runs:
 
 ## Coding Standards
 
-- **Python scripts:** stdlib only, no external dependencies, no network calls
+- **Python runtime scripts:** standard library only; network access and subprocess execution must be explicit, bounded, and tested. Keep development dependencies in the local virtual environment.
 - **Bash hooks:** ShellCheck clean, fast execution (hooks run on every tool call)
 - **Skills:** follow the SKILL.md frontmatter schema in existing skills
 - **Agents:** follow the agent `.md` schema in `app/agents/`

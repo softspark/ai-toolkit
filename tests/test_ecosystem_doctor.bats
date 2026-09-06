@@ -64,7 +64,7 @@ dsh = matches[0]
 assert dsh['kind'] == 'harness'
 assert dsh['status'] == 'developer-preview'
 assert dsh['selection_policy'] == 'explicit-only'
-assert dsh['reviewed_version'] == '0.1.1-rc.2'
+assert dsh['reviewed_version'] == '0.1.2-rc.1'
 assert set(dsh['excluded_from']) == {'editors-all', 'auto-detect', 'defaults'}
 print('ok')
 "
@@ -89,9 +89,9 @@ dsh = next(tool for tool in data['tools'] if tool['id'] == 'dsh')
 
 assert urlparse(dsh['urls']['docs']).netloc == 'deepseek-harness.github.io'
 assert dsh['urls']['release_notes'] == 'https://github.com/deepseek-ai/deepseek-harness/releases'
-assert dsh['urls']['reviewed_release'].endswith('/tag/dsh-v0.1.1-rc.2')
-assert '/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md' in dsh['urls']['reviewed_cli_docs']
-assert '/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md' in dsh['urls']['reviewed_skill_docs']
+assert dsh['urls']['reviewed_release'].endswith('/tag/dsh-v0.1.2-rc.1')
+assert '/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md' in dsh['urls']['reviewed_cli_docs']
+assert '/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md' in dsh['urls']['reviewed_skill_docs']
 assert {
     '.agents/skills/*/SKILL.md',
     '\$DSH_HOME/profiles/<profile>/package.json',

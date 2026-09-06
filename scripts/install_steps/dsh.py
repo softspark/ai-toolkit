@@ -14,8 +14,8 @@ import json
 import os
 import re
 import secrets
-import signal
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -44,16 +44,26 @@ from install_steps.install_state import (
     secure_dsh_state_mutation_supported,
 )
 
-SUPPORTED_DSH_VERSION = "0.1.1-rc.2"
+SUPPORTED_DSH_VERSION = "0.1.2-rc.1"
 MINIMUM_PNPM_VERSION = (11, 7, 0)
 MAXIMUM_PNPM_VERSION_EXCLUSIVE = (12, 0, 0)
 SUPPORTED_PNPM_RANGE = ">=11.7.0,<12.0.0"
 DEFAULT_PROFILE = "web"
 PRESET_NAME = "softspark-orchestrator"
 PACKAGES = {
-    "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.1",
+    "@softspark/dsh-codex": "1.5.0",
+    "@softspark/dsh-orchestrator": "2.0.0",
 }
+CLAUDE_SDK_PACKAGE = "@anthropic-ai/claude-agent-sdk"
+CLAUDE_SDK_VERSION = "0.3.263"
+CLAUDE_PROVIDER = "@deepseek-ai/dsh-subagent-claude-code"
+CLAUDE_SDK_OVERRIDE = f"{CLAUDE_PROVIDER}@0.1.2-rc.1>{CLAUDE_SDK_PACKAGE}"
+PNPM_WORKSPACE_FILENAME = "pnpm-workspace.yaml"
+DEFAULT_PROFILE_PATCH = (
+    b"# Your patch layer for this dsh profile, applied after every bundle layer:\n"
+    b"# a top-level YAML array of loader patch entries (id-targeted config\n"
+    b"# overrides, disables, and insert lists; `!!js` expressions allowed).\n[]\n"
+)
 MANAGED_PACKAGE_NAMES = tuple(PACKAGES)
 PROBE_TIMEOUT_SECONDS = 5
 PACKAGE_MUTATION_TIMEOUT_SECONDS = 300
@@ -378,9 +388,7 @@ def _acquire_dsh_home_directory_lock(home: _PinnedDshHome) -> None:
     try:
         fcntl.flock(home.root_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError as error:
-        raise DshLifecycleError(
-            "DSH home directory lifecycle lock is busy"
-        ) from error
+        raise DshLifecycleError("DSH home directory lifecycle lock is busy") from error
     except OSError as error:
         raise DshLifecycleError(
             "unable to acquire DSH home directory lifecycle lock"
@@ -414,10 +422,14 @@ def _cleanup_failed_lifecycle_lock(
             dir_fd=home.root_descriptor,
             follow_symlinks=False,
         )
-        if not stat.S_ISREG(named.st_mode) or (
-            named.st_dev,
-            named.st_ino,
-        ) != identity:
+        if (
+            not stat.S_ISREG(named.st_mode)
+            or (
+                named.st_dev,
+                named.st_ino,
+            )
+            != identity
+        ):
             return path
         _secure_rename_noreplace_at(
             home.root_descriptor,
@@ -429,10 +441,14 @@ def _cleanup_failed_lifecycle_lock(
             dir_fd=home.root_descriptor,
             follow_symlinks=False,
         )
-        if not stat.S_ISREG(moved.st_mode) or (
-            moved.st_dev,
-            moved.st_ino,
-        ) != identity:
+        if (
+            not stat.S_ISREG(moved.st_mode)
+            or (
+                moved.st_dev,
+                moved.st_ino,
+            )
+            != identity
+        ):
             return recovery
         os.unlink(recovery.name, dir_fd=home.root_descriptor)
         return None
@@ -459,11 +475,7 @@ def _lifecycle_lock_recovery_artifacts(dsh_home: Path) -> tuple[Path, ...]:
         pass
     return tuple(
         sorted(
-            (
-                path
-                for path in candidates
-                if path.exists() or path.is_symlink()
-            ),
+            (path for path in candidates if path.exists() or path.is_symlink()),
             key=str,
         )
     )
@@ -522,10 +534,14 @@ def _read_lifecycle_lock_fields_at(
     descriptor = os.open(path.name, flags, dir_fd=home.root_descriptor)
     try:
         metadata = os.fstat(descriptor)
-        if not stat.S_ISREG(metadata.st_mode) or (
-            metadata.st_dev,
-            metadata.st_ino,
-        ) != identity:
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or (
+                metadata.st_dev,
+                metadata.st_ino,
+            )
+            != identity
+        ):
             raise DshLifecycleError(
                 f"DSH lifecycle lock identity changed while reading: {path}"
             )
@@ -1025,12 +1041,21 @@ class _ProfileTransaction:
     latest_manifest: _OwnedEntry | None = None
     latest_package_identity: _PackageMutationIdentity | None = None
     rollback_blocked: bool = False
+    workspace: _PathPrestate | None = None
+    latest_workspace: _OwnedEntry | None = None
+    profile_patch: _PathPrestate | None = None
+    latest_profile_patch: _OwnedEntry | None = None
+    pnpm_settings: dict[str, object] | None = None
+    initialized_manifest: _PathPrestate | None = None
 
 
 @dataclass(frozen=True)
 class _PackageMutationIdentity:
     manifest: _PathPrestate | None
     package_trees: dict[Path, dict[Path, _PathPrestate] | None]
+    workspace: _PathPrestate | None = None
+    workspace_entry: _OwnedEntry | None = None
+    manifest_entry: _OwnedEntry | None = None
 
 
 @dataclass(frozen=True)
@@ -1101,14 +1126,32 @@ def _capture_package_mutation_identity(
         )
         for package in PACKAGES
     }
-    return _PackageMutationIdentity(manifest, package_trees)
+    workspace_path = profile_root / PNPM_WORKSPACE_FILENAME
+    workspace = _optional_profile_file(workspace_path)
+    workspace_entry = _capture_entry(workspace_path) if workspace is not None else None
+    return _PackageMutationIdentity(
+        manifest,
+        package_trees,
+        workspace,
+        workspace_entry,
+        _capture_entry(manifest_path) if manifest is not None else None,
+    )
+
+
+def _optional_profile_file(path: Path) -> _PathPrestate | None:
+    if not path.exists() and not path.is_symlink():
+        return None
+    snapshot = _path_prestate(path)
+    if snapshot.kind != "file":
+        raise DshLifecycleError(f"unsafe DSH profile configuration: {path}")
+    return snapshot
 
 
 def _capture_profile_transaction(dsh_home: Path, profile: str) -> _ProfileTransaction:
     profile_root = dsh_home / "profiles" / profile
     node_modules = profile_root / "node_modules"
     namespace = node_modules / "@softspark"
-    base_paths = (profile_root, node_modules, namespace)
+    base_paths = (profile_root.parent, profile_root, node_modules, namespace)
     base_existed = {
         path: path.exists() and path.is_dir() and not path.is_symlink()
         for path in base_paths
@@ -1133,6 +1176,13 @@ def _capture_profile_transaction(dsh_home: Path, profile: str) -> _ProfileTransa
         manifest,
         package_trees,
         {},
+        workspace=_optional_profile_file(profile_root / PNPM_WORKSPACE_FILENAME),
+        profile_patch=(
+            _path_prestate(profile_root / "cordis.patch.yml")
+            if (profile_root / "cordis.patch.yml").exists()
+            or (profile_root / "cordis.patch.yml").is_symlink()
+            else None
+        ),
     )
     transaction.latest_package_identity = _capture_package_mutation_identity(
         profile_root
@@ -1158,6 +1208,24 @@ def _observe_profile_transaction(transaction: _ProfileTransaction) -> None:
             transaction.latest_manifest = None
     else:
         transaction.latest_manifest = None
+    workspace_path = transaction.profile_root / PNPM_WORKSPACE_FILENAME
+    transaction.latest_workspace = (
+        _capture_entry(workspace_path)
+        if workspace_path.exists() or workspace_path.is_symlink()
+        else None
+    )
+    patch_path = transaction.profile_root / "cordis.patch.yml"
+    if (
+        transaction.profile_patch is None
+        and patch_path.exists()
+        and transaction.latest_profile_patch is None
+    ):
+        if _read_regular_bytes(patch_path) not in {DEFAULT_PROFILE_PATCH, b"[]\n"}:
+            transaction.rollback_blocked = True
+            raise DshLifecycleError(
+                "unexpected profile patch appeared during initialization; preserved"
+            )
+        transaction.latest_profile_patch = _capture_entry(patch_path)
 
 
 def _run_profile_command(
@@ -1232,6 +1300,8 @@ def _run_profile_command(
                 "package recovery target drifted during successful external mutation"
             )
     transaction.latest_package_identity = after
+    if transaction.pnpm_settings is not None and argv[4] in {"add", "remove"}:
+        _check_pnpm_settings_after_mutation(argv[0], dsh_home, argv[3], transaction)
     return result
 
 
@@ -1409,7 +1479,11 @@ def _created_file_matches(
     )
 
 
-def _create_snapshot_file(snapshot: _PathPrestate, parent: int) -> bool:
+def _create_snapshot_file(
+    snapshot: _PathPrestate,
+    parent: int,
+    created_entries: list[_OwnedEntry] | None = None,
+) -> bool:
     _assert_active_dsh_home_binding()
     flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
     descriptor = os.open(snapshot.path.name, flags, snapshot.mode, dir_fd=parent)
@@ -1428,6 +1502,19 @@ def _create_snapshot_file(snapshot: _PathPrestate, parent: int) -> bool:
             created=created,
         )
         _assert_active_dsh_home_binding()
+        if created_matches and created_entries is not None:
+            parent_metadata = os.fstat(parent)
+            created_entries.append(
+                _OwnedEntry(
+                    snapshot.path,
+                    created.st_dev,
+                    created.st_ino,
+                    "file",
+                    hashlib.sha256(snapshot.content or b"").hexdigest(),
+                    parent_device=parent_metadata.st_dev,
+                    parent_inode=parent_metadata.st_ino,
+                )
+            )
         return created_matches
     finally:
         os.close(descriptor)
@@ -1697,16 +1784,30 @@ def _manifest_has_only_empty_managed_dependencies(path: Path) -> bool:
 
 def _restore_manifest_prestate(transaction: _ProfileTransaction) -> list[Path]:
     path = transaction.profile_root / "package.json"
-    expected = transaction.manifest
-    current_identity = transaction.latest_manifest
+    removable = _manifest_has_only_empty_managed_dependencies(path)
+    if not removable and transaction.initialized_manifest is not None:
+        try:
+            removable = json.loads(_read_regular_bytes(path)) == json.loads(
+                transaction.initialized_manifest.content or b"{}"
+            )
+        except (DshLifecycleError, ValueError):
+            removable = False
+    return _restore_profile_file_prestate(
+        path, transaction.manifest, transaction.latest_manifest, removable=removable
+    )
+
+
+def _restore_profile_file_prestate(
+    path: Path,
+    expected: _PathPrestate | None,
+    current_identity: _OwnedEntry | None,
+    *,
+    removable: bool = False,
+) -> list[Path]:
     if expected is None:
         if not path.exists() and not path.is_symlink():
             return []
-        if (
-            current_identity is None
-            or current_identity.kind != "file"
-            or not _manifest_has_only_empty_managed_dependencies(path)
-        ):
+        if current_identity is None or current_identity.kind != "file" or not removable:
             return [path]
         try:
             _assert_entry_unchanged(current_identity, "profile package manifest")
@@ -1827,6 +1928,26 @@ def _restore_profile_prestate(transaction: _ProfileTransaction) -> list[Path]:
     for root, snapshots in transaction.package_trees.items():
         residuals.extend(_restore_tree_prestate(root, snapshots))
     residuals.extend(_restore_manifest_prestate(transaction))
+    residuals.extend(
+        _restore_profile_file_prestate(
+            transaction.profile_root / PNPM_WORKSPACE_FILENAME,
+            transaction.workspace,
+            transaction.latest_workspace,
+            removable=True,
+        )
+    )
+    if (
+        transaction.profile_patch is None
+        and transaction.latest_profile_patch is not None
+    ):
+        residuals.extend(
+            _restore_profile_file_prestate(
+                transaction.profile_root / "cordis.patch.yml",
+                None,
+                transaction.latest_profile_patch,
+                removable=True,
+            )
+        )
     for path in reversed(tuple(transaction.base_existed)):
         if transaction.base_existed[path]:
             continue
@@ -2442,7 +2563,9 @@ def _copy_tree_exclusive(
                     raise DshLifecycleError(
                         f"managed preset contains an unsupported entry: {relative}"
                     )
-                source_content, source_metadata = _stable_regular_file_bytes(source_path)
+                source_content, source_metadata = _stable_regular_file_bytes(
+                    source_path
+                )
                 expected_digest = hashlib.sha256(source_content).hexdigest()
                 flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
                 try:
@@ -2710,7 +2833,7 @@ def _remove_exact_managed_tree(
 
 
 def _validate_profile(profile: str) -> str:
-    if profile in {".", ".."} or not PROFILE_PATTERN.fullmatch(profile):
+    if profile in {".", "..", "node_modules"} or not PROFILE_PATTERN.fullmatch(profile):
         raise DshLifecycleError(
             "invalid DSH profile id; use 1-64 lowercase letters, digits, '.', '_' or '-'"
         )
@@ -2786,11 +2909,12 @@ def _mutation_environment(
 ) -> dict[str, str]:
     environment = _minimal_environment(dsh_home)
     verified_directory = str(prerequisites.pnpm.command_path.parent)
-    environment["PATH"] = (
-        verified_directory + os.pathsep + prerequisites.execution_path
-    )
+    environment["PATH"] = verified_directory + os.pathsep + prerequisites.execution_path
     selected = shutil.which("pnpm", path=environment["PATH"])
-    if selected is None or _absolute_command_path(selected) != prerequisites.pnpm.command_path:
+    if (
+        selected is None
+        or _absolute_command_path(selected) != prerequisites.pnpm.command_path
+    ):
         raise DshLifecycleError("pnpm prerequisite PATH binding changed")
     return environment
 
@@ -2991,9 +3115,7 @@ def _run(argv: list[str], *, dsh_home: Path) -> subprocess.CompletedProcess[str]
                 timeout=PACKAGE_MUTATION_TIMEOUT_SECONDS
             )
             if _process_group_exists(process.pid):
-                raise DshLifecycleError(
-                    "DSH command left a descendant process running"
-                )
+                raise DshLifecycleError("DSH command left a descendant process running")
             _assert_active_dsh_home_binding()
             _active_prerequisites()
             if process.returncode in {-2, 130}:
@@ -3041,7 +3163,9 @@ def _capture_executable_prerequisite(
     try:
         command_metadata = command_path.lstat()
         command_link_target = (
-            os.readlink(command_path) if stat.S_ISLNK(command_metadata.st_mode) else None
+            os.readlink(command_path)
+            if stat.S_ISLNK(command_metadata.st_mode)
+            else None
         )
         resolved_path = command_path.resolve(strict=True)
         resolved_metadata = resolved_path.stat(follow_symlinks=False)
@@ -3308,9 +3432,9 @@ def _tree_inventory(root: Path) -> dict[str, object]:
         try:
             children = sorted(
                 directory.iterdir(),
-                key=lambda item: item.relative_to(root)
-                .as_posix()
-                .encode("utf-8", errors="strict"),
+                key=lambda item: (
+                    item.relative_to(root).as_posix().encode("utf-8", errors="strict")
+                ),
                 reverse=True,
             )
         except (OSError, UnicodeError) as error:
@@ -3505,6 +3629,309 @@ def _profile_package_versions(dsh_home: Path, profile: str) -> dict[str, str]:
         else:
             versions[package] = installed_version
     return versions
+
+
+def _parse_pnpm_settings(result: subprocess.CompletedProcess[str]) -> dict[str, object]:
+    try:
+        if len(result.stdout.encode("utf-8")) > 256 * 1024:
+            raise ValueError("oversized configuration")
+        value = json.loads(result.stdout)
+    except (ValueError, UnicodeError) as error:
+        raise DshLifecycleError(
+            "pnpm returned invalid profile configuration"
+        ) from error
+    if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
+        raise DshLifecycleError("pnpm returned invalid profile configuration")
+    return value
+
+
+def _read_pnpm_settings(
+    executable: str, dsh_home: Path, profile: str, transaction: _ProfileTransaction
+) -> dict[str, object]:
+    before = transaction.latest_package_identity
+    result = _run_profile_command(
+        [
+            executable,
+            "plugin",
+            "--profile",
+            profile,
+            "config",
+            "list",
+            "--json",
+            "--location",
+            "project",
+        ],
+        dsh_home=dsh_home,
+        transaction=transaction,
+    )
+    if before != transaction.latest_package_identity:
+        transaction.rollback_blocked = True
+        raise DshLifecycleError(
+            "profile identity changed during configuration inspection; preserved"
+        )
+    return _parse_pnpm_settings(result)
+
+
+def _initial_profile_manifest(profile: str) -> bytes:
+    app = {
+        "web": "dsh-web-app",
+        "acp": "dsh-acp-app",
+        "headless": "dsh-headless",
+        "sdk": "dsh-sdk-app",
+    }.get(profile)
+    bundles = ["@deepseek-ai/dsh-base"]
+    if app is not None:
+        bundles.append(f"@deepseek-ai/{app}")
+    if profile == "sdk-minimal":
+        bundles = ["@deepseek-ai/dsh-sdk-minimal"]
+    reload = (
+        "startup" if profile in {"acp", "headless", "sdk", "sdk-minimal"} else "live"
+    )
+    return (
+        json.dumps(
+            {
+                "name": f"dsh-profile-{profile}",
+                "private": True,
+                "dependencies": {},
+                "dsh": {"profile": {"bundles": bundles, "patchReload": reload}},
+            },
+            indent=2,
+        )
+        + "\n"
+    ).encode()
+
+
+def _preclaim_profile_configuration(
+    transaction: _ProfileTransaction, profile: str
+) -> None:
+    """Own initialization inodes before invoking a command that may initialize a profile."""
+    existing = [
+        entry
+        for entry in (transaction.latest_manifest, transaction.latest_workspace)
+        if entry is not None
+    ]
+    try:
+        for path in (transaction.profile_root.parent, transaction.profile_root):
+            if not transaction.base_existed[path]:
+                owned: list[_OwnedEntry] = []
+                _claim_directory(path, owned)
+                transaction.created_base[path] = owned[0]
+        files = (
+            ("package.json", transaction.manifest, _initial_profile_manifest(profile)),
+            (
+                PNPM_WORKSPACE_FILENAME,
+                transaction.workspace,
+                b'{"packages":["."],"nodeLinker":"hoisted","autoInstallPeers":false}\n',
+            ),
+            ("cordis.patch.yml", transaction.profile_patch, DEFAULT_PROFILE_PATCH),
+        )
+        parent = _open_active_dsh_directory(transaction.profile_root)
+        try:
+            for name, prestate, content in files:
+                if prestate is not None:
+                    continue
+                snapshot = _PathPrestate(
+                    transaction.profile_root / name, "file", 0o600, content
+                )
+                claimed: list[_OwnedEntry] = []
+                if not _create_snapshot_file(snapshot, parent, claimed):
+                    raise DshLifecycleError(
+                        "profile initialization file identity changed"
+                    )
+                existing.append(claimed[0])
+                if name == "package.json":
+                    transaction.initialized_manifest = snapshot
+                elif name == "cordis.patch.yml":
+                    transaction.latest_profile_patch = claimed[0]
+        finally:
+            os.close(parent)
+        for entry in existing:
+            _assert_entry_unchanged(entry, "profile initialization")
+        transaction.latest_package_identity = _capture_package_mutation_identity(
+            transaction.profile_root
+        )
+        _observe_profile_transaction(transaction)
+    except (DshLifecycleError, OSError, KeyboardInterrupt):
+        transaction.rollback_blocked = True
+        raise DshLifecycleError(
+            "profile initialization ownership changed; preserved for recovery"
+        ) from None
+
+
+def _read_only_pnpm_settings(dsh_home: Path, profile: str) -> dict[str, object]:
+    root = dsh_home / "profiles" / profile
+    if not root.exists():
+        return {}
+    _optional_profile_file(root / PNPM_WORKSPACE_FILENAME)
+    executable, _version = _find_supported_pnpm(dsh_home)
+    result = _run_version_probe(
+        [
+            executable,
+            "--dir",
+            str(root),
+            "config",
+            "list",
+            "--json",
+            "--location",
+            "project",
+        ],
+        dsh_home=dsh_home,
+        label="pnpm configuration",
+        remediation=f"inspect profile configuration at {str(root)!r}",
+    )
+    return _parse_pnpm_settings(result)
+
+
+def _compatible_sdk_overrides(settings: dict[str, object]) -> dict[str, str]:
+    linker = settings.get("nodeLinker")
+    if linker is not None and linker != "hoisted":
+        raise DshLifecycleError(
+            "DSH profile requires nodeLinker: hoisted; existing setting was preserved"
+        )
+    overrides = settings.get("overrides", {})
+    if not isinstance(overrides, dict) or not all(
+        isinstance(key, str) and isinstance(value, str)
+        for key, value in overrides.items()
+    ):
+        raise DshLifecycleError(
+            "DSH profile overrides must be an object of package selectors and versions"
+        )
+    for key, value in overrides.items():
+        if CLAUDE_SDK_PACKAGE in key and value != CLAUDE_SDK_VERSION:
+            raise DshLifecycleError(
+                "conflicting Claude SDK override; existing profile settings were preserved"
+            )
+    return {**overrides, CLAUDE_SDK_OVERRIDE: CLAUDE_SDK_VERSION}
+
+
+def _configure_claude_sdk(
+    executable: str, dsh_home: Path, profile: str, transaction: _ProfileTransaction
+) -> None:
+    if transaction.base_existed[transaction.profile_root]:
+        _compatible_sdk_overrides(_read_only_pnpm_settings(dsh_home, profile))
+    _preclaim_profile_configuration(transaction, profile)
+    settings = _read_pnpm_settings(executable, dsh_home, profile, transaction)
+    overrides = _compatible_sdk_overrides(settings)
+    changes: dict[str, object] = {"overrides": overrides}
+    if settings.get("nodeLinker") is None:
+        changes["nodeLinker"] = "hoisted"
+    for key, value in changes.items():
+        if settings.get(key) == value:
+            continue
+        _run_profile_command(
+            [
+                executable,
+                "plugin",
+                "--profile",
+                profile,
+                "config",
+                "set",
+                "--json",
+                "--location",
+                "project",
+                key,
+                json.dumps(value),
+            ],
+            dsh_home=dsh_home,
+            transaction=transaction,
+        )
+        expected = {**settings, key: value}
+        settings = _read_pnpm_settings(executable, dsh_home, profile, transaction)
+        if settings != expected:
+            transaction.rollback_blocked = True
+            raise DshLifecycleError(
+                "profile settings changed during configuration; refusing to overwrite concurrent edits"
+            )
+    transaction.pnpm_settings = settings
+
+
+def _check_pnpm_settings_after_mutation(
+    executable: str, dsh_home: Path, profile: str, transaction: _ProfileTransaction
+) -> None:
+    expected = dict(transaction.pnpm_settings or {})
+    found = _read_pnpm_settings(executable, dsh_home, profile, transaction)
+    # pnpm may record release-age approval for the exact reviewed SDK artifacts.
+    previous = expected.pop("minimumReleaseAgeExclude", [])
+    current = found.get("minimumReleaseAgeExclude", [])
+    remaining = {
+        key: value for key, value in found.items() if key != "minimumReleaseAgeExclude"
+    }
+    approved = {f"{CLAUDE_SDK_PACKAGE}@{CLAUDE_SDK_VERSION}"}
+    approved.update(f"{package}@{version}" for package, version in PACKAGES.items())
+    approved.update(
+        f"{CLAUDE_SDK_PACKAGE}-{platform}@{CLAUDE_SDK_VERSION}"
+        for platform in (
+            "darwin-arm64",
+            "darwin-x64",
+            "linux-arm64",
+            "linux-arm64-musl",
+            "linux-x64",
+            "linux-x64-musl",
+            "win32-arm64",
+            "win32-x64",
+        )
+    )
+    if (
+        remaining != expected
+        or not isinstance(previous, list)
+        or not isinstance(current, list)
+        or any(not isinstance(item, str) for item in [*previous, *current])
+        or not set(previous).issubset(current)
+        or not set(current).difference(previous).issubset(approved)
+    ):
+        transaction.rollback_blocked = True
+        raise DshLifecycleError(
+            "profile settings changed during package mutation; refusing to overwrite concurrent edits"
+        )
+    transaction.pnpm_settings = found
+
+
+def _assert_installed_claude_sdk(dsh_home: Path, profile: str) -> None:
+    modules = dsh_home / "profiles" / profile / "node_modules"
+    provider = modules / Path(CLAUDE_PROVIDER)
+    _assert_no_symlink_ancestry(provider, "Claude provider")
+    try:
+        provider_manifest = json.loads(_read_regular_bytes(provider / "package.json"))
+    except (DshLifecycleError, ValueError) as error:
+        raise DshLifecycleError(
+            "installed Claude provider metadata is missing or unsafe"
+        ) from error
+    if (
+        not isinstance(provider_manifest, dict)
+        or provider_manifest.get("name") != CLAUDE_PROVIDER
+        or provider_manifest.get("version") != SUPPORTED_DSH_VERSION
+    ):
+        raise DshLifecycleError(
+            "installed Claude provider version does not match the qualified DSH host"
+        )
+    # Match the actual bare import's nearest node_modules candidates, including shadows.
+    candidates = (
+        provider / "lib" / "node_modules",
+        provider / "node_modules",
+        provider.parent / "node_modules",
+        modules,
+    )
+    for base in candidates:
+        root = base / Path(CLAUDE_SDK_PACKAGE)
+        if not root.exists() and not root.is_symlink():
+            continue
+        _assert_no_symlink_ancestry(root, "Claude SDK")
+        try:
+            manifest = json.loads(_read_regular_bytes(root / "package.json"))
+        except (DshLifecycleError, ValueError) as error:
+            raise DshLifecycleError(
+                "installed Claude SDK metadata is unreadable"
+            ) from error
+        if (
+            isinstance(manifest, dict)
+            and manifest.get("name") == CLAUDE_SDK_PACKAGE
+            and manifest.get("version") == CLAUDE_SDK_VERSION
+        ):
+            return
+        break
+    raise DshLifecycleError(
+        f"installed Claude SDK does not match {CLAUDE_SDK_VERSION}; run 'ai-toolkit dsh update'"
+    )
 
 
 def _profile_unmanaged_dependencies(
@@ -4034,6 +4461,12 @@ def _install(
         if source_hash != current_hash:
             raise DshLifecycleError("installed DSH package preset source has drifted")
         _current_dsh_executable(dsh_home)
+        settings = _read_only_pnpm_settings(dsh_home, profile)
+        if settings.get("overrides", {}) != _compatible_sdk_overrides(settings):
+            raise DshLifecycleError(
+                "Claude SDK compatibility configuration is missing; run 'ai-toolkit dsh update'"
+            )
+        _assert_installed_claude_sdk(dsh_home, profile)
         return f"DSH profile integration already installed and unchanged: {profile}"
     if preset_destination.exists() or preset_destination.is_symlink():
         raise DshLifecycleError(
@@ -4059,6 +4492,10 @@ def _install(
         for package, version in PACKAGES.items()
     ]
     if dry_run:
+        _compatible_sdk_overrides(_read_only_pnpm_settings(dsh_home, profile))
+        print(
+            f"PLAN Claude SDK profile override: {CLAUDE_SDK_OVERRIDE} -> {CLAUDE_SDK_VERSION}"
+        )
         for command in commands:
             print("PLAN argv:", repr(command))
         print(
@@ -4082,6 +4519,7 @@ def _install(
         expected_transaction=profile_transaction,
     )
     try:
+        _configure_claude_sdk(executable, dsh_home, profile, profile_transaction)
         expected_managed = dict(present_packages)
         observed_trees: dict[str, dict[str, object]] = {}
         for (package, version), command in zip(PACKAGES.items(), commands, strict=True):
@@ -4115,6 +4553,7 @@ def _install(
             expected_managed=PACKAGES,
             expected_unmanaged=unmanaged_dependencies,
         )
+        _assert_installed_claude_sdk(dsh_home, profile)
         package_trees = _package_tree_inventories(dsh_home, profile)
         source = _package_source(dsh_home, profile)
         preset_hash = _tree_hash(source)
@@ -4347,6 +4786,10 @@ def _update(
         for package, version in PACKAGES.items()
     ]
     if dry_run:
+        _compatible_sdk_overrides(_read_only_pnpm_settings(dsh_home, profile))
+        print(
+            f"PLAN Claude SDK profile override: {CLAUDE_SDK_OVERRIDE} -> {CLAUDE_SDK_VERSION}"
+        )
         for command in commands:
             print("PLAN argv:", repr(command))
         print(f"PLAN preset: {_package_source(dsh_home, profile)} -> {destination}")
@@ -4366,11 +4809,10 @@ def _update(
         expected_transaction=profile_transaction,
     )
     try:
+        _configure_claude_sdk(executable, dsh_home, profile, profile_transaction)
         expected_managed = dict(recorded_packages)
         expected_trees = dict(record["package_trees"])
-        for (package, version), command in zip(
-            PACKAGES.items(), commands, strict=True
-        ):
+        for (package, version), command in zip(PACKAGES.items(), commands, strict=True):
             _run_profile_command(
                 command, dsh_home=dsh_home, transaction=profile_transaction
             )
@@ -4398,6 +4840,7 @@ def _update(
             expected_managed=PACKAGES,
             expected_unmanaged=unmanaged_dependencies,
         )
+        _assert_installed_claude_sdk(dsh_home, profile)
         package_trees = _package_tree_inventories(dsh_home, profile)
         preset_hash, backup = _replace_owned_preset(
             _package_source(dsh_home, profile),
@@ -4646,6 +5089,15 @@ def _doctor(*, profile: str) -> int:
         if found != expected:
             healthy = False
     try:
+        settings = _read_only_pnpm_settings(dsh_home, profile)
+        if settings.get("overrides", {}) != _compatible_sdk_overrides(settings):
+            raise DshLifecycleError("profile SDK override is missing")
+        _assert_installed_claude_sdk(dsh_home, profile)
+        print(f"Claude SDK: compatible ({CLAUDE_SDK_VERSION})")
+    except DshLifecycleError as error:
+        print(f"Claude SDK: incompatible ({error})")
+        healthy = False
+    try:
         record = get_dsh_profile(profile)
     except ValueError as error:
         print(f"State: invalid ({error})")
@@ -4778,6 +5230,9 @@ def _uninstall(
     )
     package_mutation_started = False
     try:
+        profile_transaction.pnpm_settings = _read_pnpm_settings(
+            executable, dsh_home, profile, profile_transaction
+        )
         _assert_entry_unchanged(destination_identity, "managed preset")
         backup = _relocate_owned_preset(
             destination_identity,
@@ -4793,9 +5248,7 @@ def _uninstall(
         )
         expected_managed = dict(packages)
         expected_trees = dict(record["package_trees"])
-        for package, command in zip(
-            reversed(recorded_packages), commands, strict=True
-        ):
+        for package, command in zip(reversed(recorded_packages), commands, strict=True):
             package_mutation_started = True
             _run_profile_command(
                 command, dsh_home=dsh_home, transaction=profile_transaction

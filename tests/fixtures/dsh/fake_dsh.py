@@ -15,8 +15,61 @@ import time
 from pathlib import Path
 
 
-SUPPORTED_VERSION = "0.1.1-rc.2"
+SUPPORTED_VERSION = "0.1.2-rc.1"
 SUPPORTED_PNPM_VERSION = "11.24.0"
+SDK_PACKAGE = "@anthropic-ai/claude-agent-sdk"
+SDK_SELECTOR = "@deepseek-ai/dsh-subagent-claude-code@0.1.2-rc.1>" + SDK_PACKAGE
+
+
+def _profile_settings(root: Path) -> dict[str, object]:
+    path = root / "pnpm-workspace.yaml"
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
+def _config(profile_root: Path, argv: list[str], *, initialize: bool) -> int:
+    if initialize:
+        with (_home() / "fake-config-argv.jsonl").open("a") as stream:
+            stream.write(json.dumps(argv) + "\n")
+        if not (profile_root / "package.json").exists():
+            _write_profile_manifest(profile_root, {})
+            if not (profile_root / "cordis.patch.yml").exists():
+                (profile_root / "cordis.patch.yml").write_text("[]\n")
+            if not (profile_root / "pnpm-workspace.yaml").exists():
+                (profile_root / "pnpm-workspace.yaml").write_text(
+                    json.dumps(
+                        {
+                            "packages": ["."],
+                            "nodeLinker": "hoisted",
+                            "autoInstallPeers": False,
+                        }
+                    )
+                )
+        if _control().get("config_init_fail"):
+            return 73
+    if argv[0] == "list":
+        if race := _control().get("config_inspection_race"):
+            name = "package.json" if race == "manifest" else "pnpm-workspace.yaml"
+            path = profile_root / name
+            replacement = profile_root / ".user-config-replacement"
+            content = (
+                path.read_bytes()
+                if race in {"manifest", "identical"}
+                else b'{"nodeLinker":"hoisted","user":"keep","overrides":{"@anthropic-ai/claude-agent-sdk":"0.3.241"}}'
+            )
+            replacement.write_bytes(content)
+            replacement.replace(path)
+        print(json.dumps(_profile_settings(profile_root)))
+        return 0
+    if argv[0] == "set":
+        if _control().get("config_set_fail"):
+            return 74
+        settings = _profile_settings(profile_root)
+        settings[argv[-2]] = json.loads(argv[-1])
+        if _control().get("config_concurrent_edit"):
+            settings["minimumReleaseAge"] = 987
+        (profile_root / "pnpm-workspace.yaml").write_text(json.dumps(settings))
+        return 0
+    return 64
 
 
 def _home() -> Path:
@@ -185,6 +238,23 @@ def _add(profile_root: Path, specification: str) -> int:
         encoding="utf-8",
     )
     if package == "@softspark/dsh-orchestrator":
+        provider = profile_root / "node_modules/@deepseek-ai/dsh-subagent-claude-code"
+        provider.mkdir(parents=True, exist_ok=True)
+        (provider / "package.json").write_text(
+            json.dumps(
+                {
+                    "name": "@deepseek-ai/dsh-subagent-claude-code",
+                    "version": SUPPORTED_VERSION,
+                }
+            )
+        )
+        sdk = profile_root / "node_modules" / SDK_PACKAGE
+        sdk.mkdir(parents=True, exist_ok=True)
+        overrides = _profile_settings(profile_root).get("overrides", {})
+        version = _control().get("sdk_version", overrides.get(SDK_SELECTOR, "0.3.241"))
+        (sdk / "package.json").write_text(
+            json.dumps({"name": SDK_PACKAGE, "version": version})
+        )
         preset = package_root / "agent-presets" / "softspark-orchestrator"
         preset.mkdir(parents=True, exist_ok=True)
         control = _control()
@@ -219,10 +289,25 @@ def _remove(profile_root: Path, package: str) -> int:
                 path.rmdir()
         package_root.rmdir()
     _write_profile_manifest(profile_root, dependencies)
+    if package == "@softspark/dsh-orchestrator":
+        sdk = profile_root / "node_modules" / SDK_PACKAGE
+        if (sdk / "package.json").is_file():
+            (sdk / "package.json").unlink()
+            sdk.rmdir()
+            if not list(sdk.parent.iterdir()):
+                sdk.parent.rmdir()
+        provider = profile_root / "node_modules/@deepseek-ai/dsh-subagent-claude-code"
+        if (provider / "package.json").is_file():
+            (provider / "package.json").unlink()
+            provider.rmdir()
+            if not list(provider.parent.iterdir()):
+                provider.parent.rmdir()
     return 0
 
 
 def _pnpm_main(argv: list[str]) -> int:
+    if len(argv) >= 4 and argv[0] == "--dir" and argv[2] == "config":
+        return _config(Path(argv[1]), argv[3:], initialize=False)
     if argv != ["--version"]:
         print("unsupported fake pnpm invocation", file=sys.stderr)
         return 64
@@ -246,6 +331,8 @@ def main(argv: list[str]) -> int:
     if argv == ["--version"]:
         print(f"dsh {_control().get('version', SUPPORTED_VERSION)}")
         return 0
+    if len(argv) >= 5 and argv[:2] == ["plugin", "--profile"] and argv[3] == "config":
+        return _config(_home() / "profiles" / argv[2], argv[4:], initialize=True)
     _append_argv(argv)
     if len(argv) < 5 or argv[:2] != ["plugin", "--profile"]:
         print("unsupported fake invocation", file=sys.stderr)

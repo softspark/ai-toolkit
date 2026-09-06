@@ -10,7 +10,8 @@
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
 setup() {
-    TEST_ROOT="$BATS_TEST_TMPDIR/root"
+    # Match the canonical paths intentionally printed by recovery diagnostics.
+    TEST_ROOT="$(cd "$BATS_TEST_TMPDIR" && pwd -P)/root"
     TEST_HOME="$TEST_ROOT/home"
     TEST_PROJECT="$TEST_ROOT/project"
     unset CODEX_HOME COPILOT_HOME
@@ -458,9 +459,9 @@ from install_steps import dsh
 if boundary in {"first_add", "second_add"}:
     real = dsh._run
     target = (
-        "@softspark/dsh-codex@1.0.0"
+        "@softspark/dsh-codex@1.5.0"
         if boundary == "first_add"
-        else "@softspark/dsh-orchestrator@1.0.1"
+        else "@softspark/dsh-orchestrator@2.0.0"
     )
 
     def injected(argv, *, dsh_home):
@@ -557,7 +558,7 @@ JSON
 
     [ "$status" -ne 0 ]
     [[ "$output" == *"Recovery required"* ]]
-    [[ "$output" == *"@softspark/dsh-orchestrator@1.0.1"* ]]
+    [[ "$output" == *"@softspark/dsh-orchestrator@2.0.0"* ]]
     [ "$(shasum "$preset")" = "$before_preset" ]
     [ "$(shasum "$state")" = "$before_state" ]
 
@@ -600,8 +601,8 @@ from pathlib import Path
 home = Path(sys.argv[1])
 manifest = json.loads((home / "profiles/web/package.json").read_text())
 assert manifest["dependencies"] == {
-    "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.1",
+    "@softspark/dsh-codex": "1.5.0",
+    "@softspark/dsh-orchestrator": "2.0.0",
 }, manifest
 PY
 }
@@ -805,8 +806,8 @@ from pathlib import Path
 home = Path(sys.argv[1])
 manifest = json.loads((home / "profiles/web/package.json").read_text())
 assert manifest["dependencies"] == {
-    "@softspark/dsh-codex": "1.0.0",
-    "@softspark/dsh-orchestrator": "1.0.1",
+    "@softspark/dsh-codex": "1.5.0",
+    "@softspark/dsh-orchestrator": "2.0.0",
 }, manifest
 PY
 }

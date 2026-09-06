@@ -136,7 +136,7 @@
       "kind": "harness",
       "status": "developer-preview",
       "selection_policy": "explicit-only",
-      "reviewed_version": "0.1.1-rc.2",
+      "reviewed_version": "0.1.2-rc.1",
       "excluded_from": [
         "editors-all",
         "auto-detect",
@@ -145,9 +145,9 @@
       "urls": {
         "docs": "https://deepseek-harness.github.io/deepseek-harness/",
         "release_notes": "https://github.com/deepseek-ai/deepseek-harness/releases",
-        "reviewed_release": "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2",
-        "reviewed_cli_docs": "https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md",
-        "reviewed_skill_docs": "https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md"
+        "reviewed_release": "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1",
+        "reviewed_cli_docs": "https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md",
+        "reviewed_skill_docs": "https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md"
       },
       "config_paths": [
         ".agents/skills/*/SKILL.md",
@@ -167,7 +167,7 @@
         "ai-toolkit dsh doctor --profile web",
         "ai-toolkit dsh uninstall --profile web"
       ],
-      "status_note": "Community compatibility target maintained by SoftSpark. DeepSeek AI has not endorsed this integration. ai-toolkit reuses its native skill generator for project .agents/skills output and manages exact @softspark/dsh-codex@1.0.0 and @softspark/dsh-orchestrator@1.0.1 packages only through explicit profile lifecycle commands. Upstream has newer prereleases, but this entry remains pinned to the reviewed DSH 0.1.1-rc.2 contract pending qualification.",
+      "status_note": "Community compatibility target maintained by SoftSpark. DeepSeek AI has not endorsed this integration. ai-toolkit reuses its native skill generator for project .agents/skills output and manages exact @softspark/dsh-codex@1.5.0 and @softspark/dsh-orchestrator@2.0.0 packages only through explicit profile lifecycle commands. The lifecycle targets DSH 0.1.2-rc.1. Other prereleases require separate qualification before these pins change.",
       "capability_markers": [
         "Developer preview",
         "profiles",
