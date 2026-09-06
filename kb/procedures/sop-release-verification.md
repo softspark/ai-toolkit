@@ -3,7 +3,7 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif, dsh]
-version: "1.8.1"
+version: "1.8.2"
 created: "2026-04-08"
 last_updated: "2026-09-06"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, explicit DSH lifecycle, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
@@ -473,15 +473,17 @@ app-native rules skill, bundled agents/skills, and plugin-relative Cowork hooks.
 
 Run this phase whenever the release changes the `dsh` target, package pins, preset lifecycle, or DSH compatibility documentation. Use a new task-specific `DSH_HOME`; never replace `HOME` or reuse a regular profile.
 
-Prerequisites: DSH `0.1.1-rc.2`, pnpm `>=11.7.0,<12.0.0`, Codex logged in through ChatGPT, Claude Code logged in natively, and GitHub Copilot CLI logged in natively. Do not supply provider API keys.
+Prerequisites: DSH `0.1.2-rc.1`, pnpm `>=11.7.0,<12.0.0`, Codex logged in through ChatGPT, Claude Code logged in natively, and GitHub Copilot CLI logged in natively. Do not supply provider API keys. The lifecycle automatically installs the scoped Claude Agent SDK `0.3.263` override and checks the actual provider and SDK metadata; no manual vendor configuration is needed.
 
 ```bash
 DSH_SMOKE_ROOT="$(mktemp -d)"
 export DSH_HOME="$DSH_SMOKE_ROOT/dsh-home"
+export AI_TOOLKIT_HOME="$DSH_SMOKE_ROOT/toolkit-state"
+mkdir -p "$DSH_HOME"
 
 ai-toolkit dsh install --profile web
 ai-toolkit dsh doctor --profile web
-dsh --profile web --host 127.0.0.1 --port 0 --no-open
+DSH_TELEMETRY_DISABLED=1 dsh --profile web --host 127.0.0.1 --port 0 --no-open
 ```
 
 In a new `softspark-orchestrator` session, select the `codex` provider and run two standalone marker prompts:
@@ -495,7 +497,7 @@ Stop DSH, then remove only the managed profile artifacts:
 ai-toolkit dsh uninstall --profile web --yes
 ```
 
-**Verify:** both tool results have `isError=false`, both turns end as `completed`, `doctor` reports no recovery requirement before uninstall, and an unrelated preset fixture remains unchanged. Preserve only redacted event sequence evidence; never attach credentials, auth files, or full private prompts.
+**Verify:** both tool results have `isError=false`, both turns end as `completed`, `doctor` reports `Claude SDK: compatible (0.3.263)` and no recovery requirement before uninstall, and an unrelated preset fixture remains unchanged. The task-specific `AI_TOOLKIT_HOME` keeps lifecycle state separate from the operator's installation; `HOME` remains unchanged. Preserve only redacted event sequence evidence; never attach credentials, auth files, or full private prompts.
 
 ---
 
