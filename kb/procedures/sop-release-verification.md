@@ -3,9 +3,9 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif, dsh]
-version: "1.8.0"
+version: "1.8.1"
 created: "2026-04-08"
-last_updated: "2026-09-01"
+last_updated: "2026-09-06"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, explicit DSH lifecycle, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
@@ -23,9 +23,27 @@ Verifies all critical paths from the user's perspective.
 
 **Prerequisites:**
 - Node.js >= 18, Python 3, `bats`, git
-- `@softspark/ai-toolkit` installed globally
+- The target version of `@softspark/ai-toolkit` installed in a disposable test environment
 
 **Time:** 10-15 minutes (full), 2 minutes (quick checklist)
+
+---
+
+## Verification environment
+
+Run installation, update, eject and editor smoke checks in a disposable
+container or VM with its own OS user and default home directory. Do not
+reassign `HOME` or `CODEX_HOME`, mount the operator's home/authentication
+directories, or alter the global installation used by an active session.
+Use the packed release candidate before publication and the exact npm version
+after publication; the installed package must be the source of runtime checks.
+Source validation and test commands still run from the matching release checkout.
+
+A scratch project alone does not isolate home-scoped writes. In particular,
+the live Augment checks in Phase 9 write user settings. Execute them inside
+the disposable environment, retain logs outside it, and remove only resources
+created for this verification run. Do not treat a dry-run as proof that emitted
+files parse or that a second install is idempotent.
 
 ---
 
@@ -123,9 +141,11 @@ ai-toolkit status
 ```
 
 **Verify `--dry-run`:**
-- [ ] Agents: 44
-- [ ] Skills: 108
-- [ ] Hooks merged into settings.json
+- [ ] Agent and skill totals match the target package's `app/agents/` and
+      `app/skills/*/SKILL.md` inventory; compare with that release's validator
+      output and README badges, not a number copied from an older release
+- [ ] Dry-run describes the planned hook merge; the isolated installed copy
+      contains the expected hooks in settings.json
 - [ ] "Other AI Tools" lists documented global targets (with `--editors`): aider, antigravity, augment, cline, codex, copilot, cursor, gemini, opencode, roo, windsurf. Scope varies: Codex uses `$CODEX_HOME` (default `~/.codex`) plus `$HOME/.agents/skills`; Copilot uses `$COPILOT_HOME` (default `~/.copilot`); cursor has only `~/.cursor/hooks.json`; antigravity has the `~/.gemini/*/skills` pointer. Cursor and Antigravity rules remain project-only.
 
 **Verify `status`:**
@@ -195,9 +215,12 @@ python3 scripts/audit_skills.py --ci
 ```
 
 **Verify validate.py:**
-- [ ] Agents: 44, Skills: 108, Tests: exactly the current README badge count
-- [ ] Hook events: 14, Hook scripts: >= 30
-- [ ] Plugin packs >= 10, KB documents >= 20
+- [ ] Agent, skill and Bats test totals match the current release inventory
+      and README badges, as checked by the validator's metadata contracts
+- [ ] Hook events/scripts match `app/hooks.json` and the shipped hook files
+- [ ] Every shipped plugin pack and KB document passes its validator; compare
+      inventory with the release checkout rather than requiring an obsolete
+      fixed minimum number of packs or documents
 - [ ] `Errors: 0 | Warnings: 0` → `VALIDATION PASSED`
 
 **Verify audit_skills.py:**
@@ -210,7 +233,7 @@ python3 scripts/audit_skills.py --ci
 ## Phase 6: Tests (3-5 min)
 
 ```bash
-# Run ONCE, capture to file, then parse. Full suite is 669+ bats cases —
+# Run ONCE, capture to file, then parse. Use the current release's Bats count;
 # re-running it per check (tail / grep ok / grep not ok piped separately)
 # wastes minutes every release. Always cache the output.
 npm test > /tmp/npm-test.log 2>&1
@@ -223,7 +246,7 @@ echo "exit:   $exit"
 
 **Verify:**
 - [ ] `exit == 0`
-- [ ] `ok == expected test count` (e.g., 945 on v3.0.0)
+- [ ] `ok == expected test count` from the current release's metadata contracts
 - [ ] `not ok == 0`
 - [ ] Bats runs tests in parallel (4 jobs)
 - [ ] Groups: agents, autodetect, cli, generators, guards, hooks, inject,
@@ -334,7 +357,7 @@ AI_TOOLKIT_STRICT_PIN=1 ai-toolkit update --dry-run
 
 These verify the native-surface generators shipped in v3.0.0 actually emit the right files for the right profiles, and that the tool registry stays in sync with shipped generators.
 
-> **Safety warning — HOME-scoped writes:** Running `--profile full` with `augment` in the editor list writes to `$HOME/.augment/settings.json` (Augment stores hooks under HOME, not per-project). Use `--dry-run` for verification unless you intend to carry ai-toolkit hook entries on this machine. The generator is marker-safe (only rewrites its own `_source: ai-toolkit` entries) but is still a side-effect.
+> Run this phase inside the disposable verification environment. `--profile full` with `augment` writes to `$HOME/.augment/settings.json`, so a temporary project on the operator's machine is insufficient. Dry-run checks cover the planned paths; Phases 9.4 and 9.5 must also exercise actual writes in isolation.
 
 ### 9.1 `--profile full` emits every native surface
 
@@ -411,7 +434,9 @@ The bats suite validates JSON shape at generation time. This re-checks that what
 D=/tmp/aitk-json-${RANDOM} && mkdir -p "$D" && cd "$D" && git init -q
 ai-toolkit install --local --editors cursor,windsurf,gemini,augment,codex,copilot --profile full >/dev/null 2>&1
 for f in .cursor/hooks.json .devin/hooks.v1.json .gemini/settings.json .codex/hooks.json .github/hooks/ai-toolkit.json "$HOME/.augment/settings.json"; do
-  [ -f "$f" ] && python3 -c "import json; json.load(open('$f'))" && echo "OK: $f"
+  [ -f "$f" ] || { echo "MISSING: $f"; exit 1; }
+  python3 -c 'import json, sys; json.load(open(sys.argv[1]))' "$f" || exit 1
+  echo "OK: $f"
 done
 ```
 

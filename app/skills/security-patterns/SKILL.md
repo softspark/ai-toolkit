@@ -129,13 +129,13 @@ For authentication patterns (JWT, passwords, token strategy), see [reference/aut
 
 For authorization patterns (RBAC, ABAC), see [reference/authorization.md](reference/authorization.md).
 
-For input validation patterns (SQL injection, XSS, Pydantic), see [reference/input-validation.md](reference/input-validation.md).
+For input validation, client/backend contract parity, finite bounds and Unicode gotchas, see [reference/input-validation.md](reference/input-validation.md).
 
 For OAuth2 flows, CSRF protection, and audit logging, see [reference/oauth-csrf-audit.md](reference/oauth-csrf-audit.md).
 
 ## Rules
 
-- **MUST** validate all input at the trust boundary, not inside business logic — deep validation allows bad data to spread before rejection
+- **MUST** validate input type, format and size at the trust boundary; domain logic must also enforce state-dependent invariants before side effects
 - **MUST** use parameterized queries (prepared statements) for every SQL interaction — string concatenation is SQL injection
 - **NEVER** store secrets (API keys, tokens, passwords) in code, config files, or git history — use the platform's secret manager
 - **NEVER** log passwords, tokens, PII, or PHI — even at debug level. Logs reach aggregation systems, backups, and disk snapshots.

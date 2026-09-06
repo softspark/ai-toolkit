@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.10.0"
+version: "1.10.1"
 created: "2026-03-23"
-last_updated: "2026-09-01"
+last_updated: "2026-09-06"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, the explicit DSH target, skill tiers, and project integration."
 ---
 
@@ -315,7 +315,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
-29 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+28 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
 
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|

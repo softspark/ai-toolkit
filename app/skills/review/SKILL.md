@@ -125,6 +125,8 @@ After all reviewers complete:
 - [ ] Backward compatibility preserved (no silent breaking changes)
 - [ ] API versioning updated if contract changed
 - [ ] Schema validation on request/response
+- [ ] Client validation uses the authoritative input contract, including operation groups/defaults, finite bounds, nested paths and documented Unicode units; read `reference/input-validation.md` from the `security-patterns` skill located through the current client's installed catalog
+- [ ] Shared backend/client fixtures and generation drift checks cover changed rules; unsupported/server-only checks are explicit, and local refusals do not masquerade as HTTP responses
 - [ ] Error responses follow project convention
 - [ ] Statuses and messages distinguish input/state refusals from infrastructure failures; original causes remain available in authorized diagnostics
 - [ ] Error filtering preserves machine codes, field paths, JSON object/list types, locale and recovery headers; background-job error fields are covered too
