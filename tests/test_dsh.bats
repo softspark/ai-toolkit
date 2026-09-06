@@ -1279,12 +1279,63 @@ JSON
 
     run env HOME="$TEST_HOME" DSH_HOME="$TEST_DSH_HOME" PATH="$fake_bin:$PATH" \
         PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - <<'PY'
+import json
+import subprocess
+import time
+from pathlib import Path
+
 from install_steps import dsh
 
-dsh.PACKAGE_MUTATION_TIMEOUT_SECONDS = 0.2
+expected_call = [
+    "plugin", "--profile", "web", "add",
+    "@softspark/dsh-orchestrator@2.0.0", "--save-exact",
+]
+calls_path = Path(dsh._dsh_home()) / "fake-argv.jsonl"
+real_popen = dsh.subprocess.Popen
+timeout_injected = [False]
+
+
+def orchestrator_started():
+    try:
+        return expected_call in [
+            json.loads(line) for line in calls_path.read_text().splitlines()
+        ]
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
+
+def start_with_ready_timeout(*args, **kwargs):
+    process = real_popen(*args, **kwargs)
+    command = args[0] if args else kwargs["args"]
+    if command[1:] != expected_call:
+        return process
+    real_communicate = process.communicate
+
+    def communicate(*args, **kwargs):
+        if not timeout_injected[0]:
+            # Config reads and Codex installation keep their normal budgets.
+            # Inject the failure only after the intended fixture has started.
+            deadline = time.monotonic() + 10
+            while not orchestrator_started():
+                assert time.monotonic() < deadline, "orchestrator fixture did not start"
+                time.sleep(0.01)
+            timeout_injected[0] = True
+            raise subprocess.TimeoutExpired(command, kwargs.get("timeout"))
+        return real_communicate(*args, **kwargs)
+
+    process.communicate = communicate
+    return process
+
+
+dsh.subprocess.Popen = start_with_ready_timeout
 dsh.PROCESS_TERMINATION_GRACE_SECONDS = 0.05
 dsh._wait_for_process_group_exit = lambda process_group, timeout: False
-raise SystemExit(dsh.main(["install", "--profile", "web"]))
+try:
+    status = dsh.main(["install", "--profile", "web"])
+finally:
+    dsh.subprocess.Popen = real_popen
+assert timeout_injected == [True], "targeted timeout was not exercised"
+raise SystemExit(status)
 PY
 
     [ "$status" -ne 0 ]
