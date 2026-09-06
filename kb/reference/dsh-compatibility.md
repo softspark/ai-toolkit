@@ -212,11 +212,27 @@ isolated processes stopped and the unrelated profile fixture remained intact.
 
 ### DSH 0.1.2-rc.1 qualification
 
-The current release must verify the exact pair in the table through the same
-isolated install, doctor, update, rollback and uninstall checks, followed by
-real composition and vendor marker roundtrips. Candidate and published-artifact
-results are recorded separately. Publication remains gated until this record
-contains the current executed results.
+On 2026-09-06, the installed 4.33.0 candidate completed install, doctor,
+update, doctor, a controlled second-package failure with real pnpm rollback,
+doctor and uninstall against the published Codex 1.5.0/orchestrator 2.0.0
+pair. Rollback preserved the manifest, pnpm settings, ownership state and
+unrelated preset byte for byte. Doctor reported the exact package versions,
+Claude SDK 0.3.263 and no recovery requirement. Uninstall removed the managed
+packages, preset and profile ownership while retaining the unrelated preset
+and runtime SDK prerequisite. Both state roots were disposable; HOME stayed
+unchanged.
+
+The composed web host returned the Claude and Gemini child markers through
+the Codex parent. Browser checks covered cancellation, restart, the native
+child transcript and preservation of the parent session. The DSH package
+verification records retain those runtime results and their separate exact
+registry signature/provenance checks.
+
+The toolkit candidate also passed 1,989 Bats and 354 Python tests. An
+unmounted disposable container passed global install, status, doctor, local
+installation for all editors, repeated installation, eject and the official
+Claude 2.1.263 plugin validator. Exact published toolkit artifact results are
+recorded on the 4.33.0 release page after publication.
 
 ## Preview and Upstream Drift
 
