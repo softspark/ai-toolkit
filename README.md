@@ -8,28 +8,22 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1978%20passing-success)](tests/)
 
-## What's New in v4.32.3
+## What's New in v4.32.4
 
-**v4.32.3** stops search-first enforcement firing on things nobody asked:
+**v4.32.4** documents validation parity and reliable API error handling:
 
-- **A background task finishing no longer blocks `Stop`.** The search-required
-  flag was set on any stdin over 30 characters, and the harness delivers
-  background-task notifications, CI events and replayed slash-command output
-  on the same channel as a prompt. Event envelopes no longer set it.
-- **A pasted credential no longer becomes a search query.** A 43-character API
-  key on its own line cleared the length gate, and the block message names the
-  prompt as the thing to search for — so the enforcement path asked for a live
-  secret to be sent to a retrieval service. Single-token prompts no longer set
-  the flag.
-- Nothing that was enforced before stops being enforced: a genuine one-word
-  prompt is under the length gate anyway, and prose that merely mentions a task
-  notification still sets the flag. That case is now a test.
-- Still in this train: exports land in the directory you ran the command in
-  (v4.32.2); `plugin remove` leaves nothing behind, every skill script answers
-  `--help` (v4.32.1); path-scoped common rules, project-scoped language skills,
-  `doctor` context-budget and permission checks, one strict frontmatter parser,
-  `git-team` for `--profile strict` (v4.32.0). Test count: 1974 -> 1978 bats +
-  348 pytest.
+- **One validation contract for frontend and backend.** Existing skills cover
+  DTO groups/defaults, nested collections, Unicode, explicit server-only checks
+  and shared regression fixtures, with backend enforcement kept authoritative.
+- **Errors preserve the API contract.** Guidance separates local refusals,
+  domain conflicts and technical failures, retaining field paths, machine
+  codes and safe recovery when a write outcome is uncertain.
+- **Schema examples match validator behavior.** Correct JSON Schema
+  conditional requirements and Ajv strict-mode guidance; keep state-dependent
+  domain checks alongside validation at the request boundary.
+- **Release smoke tests verify the installed artifact.** Procedures use
+  disposable environments, current inventories and assertions for missing
+  generated files, without modifying the operator's live installation.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -211,7 +205,7 @@ ai-toolkit/
 │   ├── agents/          # 44 agent definitions
 │   ├── skills/          # 114 skills (task / hybrid / knowledge)
 │   ├── rules/           # Source rules synced into Claude/editor rule files
-│   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
+│   ├── hooks/           # Hook scripts (28 entries, 14 lifecycle events)
 │   ├── claude-app/      # Generated Chat/Cowork plugin rules, hooks, instructions
 │   ├── plugins/         # 2 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides

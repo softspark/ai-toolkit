@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.15.0"
+version: "1.15.1"
 created: "2026-04-10"
-last_updated: "2026-09-02"
+last_updated: "2026-09-06"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
@@ -14,6 +14,13 @@ description: "Step-by-step checklist for preparing a new ai-toolkit release — 
 Complete checklist for preparing a new `@softspark/ai-toolkit` release.
 Run this **before** tagging. After tagging and publishing, run the
 [Release Verification SOP](sop-release-verification.md) to smoke-test.
+
+Installation smoke uses a disposable container or VM with its own default
+home directory, as described in the verification SOP. Test the packed release
+candidate before publishing and the exact npm version afterward. Keep the
+operator's installed toolkit, editor settings and authentication directories
+outside that environment. Compare component counts with the current release
+inventory and validator output instead of historical constants in a checklist.
 
 **Pipeline:**
 ```

@@ -7,18 +7,39 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v4.32.4 - Validation parity and API error contracts (2026-09-06)
 
 ### Changed
 
-- API guidance preserves the host's existing error representation and separates
-  supported domain refusals from technical failures. A focused reference covers
-  actionable messages, JSON type preservation, background-job errors and safe
-  retries when an operation outcome is unknown.
-- Common security/testing rules and the review checklist cover error contracts
-  and shared-database test isolation. The FastAPI example preserves exception
-  provenance and catches a specific request-level refusal instead of exposing
-  arbitrary `ValueError` text.
+- **Validation contracts:** Add practical guidance to `/api-patterns`,
+  `/security-patterns`, `/review` and `/testing-patterns` for a shared backend
+  and frontend rule source, operation-specific DTO groups/defaults, finite
+  collection bounds, Unicode units, explicit server-only checks and parity
+  fixtures. Local validation failures remain distinct from HTTP responses.
+- **API error contracts:** Preserve the host's error representation and
+  distinguish domain refusals from technical failures. Cover actionable
+  messages, JSON types, background-job failures, unknown outcomes and safe
+  retries. Common security/testing rules retain shared-database test isolation.
+
+### Fixed
+
+- **Schema guidance:** Correct JSON Schema conditional requirements and Ajv
+  strict-mode semantics, retain domain checks alongside boundary validation,
+  and import `Field` in the Pydantic example. The FastAPI example catches a
+  specific request refusal while preserving its exception cause.
+- **Release verification:** Compare inventories with the current artifact,
+  run installation smoke in a disposable environment, and fail when an
+  expected generated JSON file is missing. Preserve the operator's install
+  and authentication state during candidate and published-package checks.
+- **Package metadata:** Refresh skill and hook inventory descriptions.
+
+### Release checks
+
+- **Ecosystem:** Refresh documentation hashes and local CLI version probes;
+  the review found no heading or capability-marker changes and changes no
+  generators, runtime integration paths or permission declarations.
+- **Skill body budget:** Keep the existing 18,000-byte warning threshold;
+  the largest body remains 17,197 bytes, so the ratchet cannot tighten yet.
 
 ## v4.32.3 — Search-first stops firing on things nobody asked (2026-09-04)
 

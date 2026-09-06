@@ -3,10 +3,10 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: ai-toolkit
 tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, isolation]
-version: "1.2.0"
+version: "1.2.1"
 created: "2026-07-26"
-last_updated: "2026-08-19"
-description: "Smoke-test a published @softspark/ai-toolkit release from npm in an isolated HOME and npm prefix, without touching the maintainer's real install. Covers provenance, CLI, doctor, per-skill script resolution, scanner wiring, and the full plugin-pack lifecycle including the degraded-install path. Written for v4.18.0 and not run; v4.18.0 shipped a pack that broke every command it touched. First actually run on v4.22.0, which added Phases 4b and 4c after that release fixed four skills whose documented script path had never resolved and two that shipped a scanner nothing invoked."
+last_updated: "2026-09-06"
+description: "Smoke-test a published @softspark/ai-toolkit npm artifact in a disposable container or VM with its default HOME, no host settings or credential mounts, host-side configuration fingerprints, and retained evidence. Covers provenance, CLI, doctor, installed skill scripts, scanner wiring, and the plugin-pack lifecycle."
 ---
 
 # SOP: Post-Release Testing
@@ -16,43 +16,118 @@ actually install, from npm, rather than the working tree.
 
 Sibling procedures exist for `jira-mcp` and `legal-pl-pack`; this is the
 ai-toolkit equivalent. It complements
-[Release Verification](sop-release-verification.md), which checks the toolkit
-from the maintainer's own installed copy. The difference that matters: this one
-never writes to the maintainer's `~/.claude` or `~/.softspark`.
+[Release Verification](sop-release-verification.md), whose cross-editor checks
+must use the same isolated published artifact. Neither procedure installs or
+updates the maintainer's working copy.
 
 **Time:** 10 minutes.
 
 ## Why isolation is the first step, not a detail
 
-The toolkit installs into `$HOME`. Testing a release against your own HOME
-means the test either pollutes your working setup or, worse, passes because of
-state your setup already had. Both make the result meaningless.
+The toolkit writes settings beneath the current user's home directory. Run the
+published artifact in a disposable Docker container or VM with its normal HOME.
+Do not override host HOME, CODEX_HOME, or another editor's configuration root as
+a substitute for isolation. Do not expose the host home, credentials, SSH agent,
+Docker socket, or existing toolkit installation to the test environment.
 
-Every command below runs against a throwaway HOME and a throwaway npm prefix.
-Nothing is global.
+## Phase 1: Create and verify an isolated test environment
 
-## Phase 1: Sandbox
+The recipe below uses Docker. A disposable VM is equivalent only when host shared
+folders and authentication forwarding are absent. The host needs Docker and
+Python 3; the container prerequisites are installed separately below.
 
-```bash
-SB=$(mktemp -d)
-mkdir -p "$SB/home" "$SB/npm"
-export HOME="$SB/home"
-AT="$SB/npm/bin/ai-toolkit"
-echo "sandbox: $SB"
-```
-
-Record the real state now, so Phase 7 can prove it is unchanged:
+**Host terminal:** keep this terminal open for Phases 7 and 8. The fingerprint
+reads only these toolkit-managed settings files and records hashes and presence,
+never their contents. Add a path only after verifying that the tested installer
+actually manages it.
 
 ```bash
-python3 -c "
-import json, pathlib
-p = pathlib.Path('$SB/../real-before.json')
+set -o pipefail
+VERSION="X.Y.Z"
+EVIDENCE=$(mktemp -d "${TMPDIR:-/tmp}/ai-toolkit-release-${VERSION}.XXXXXX")
+SMOKE_CONTAINER=$(python3 -c 'import uuid; print("ai-toolkit-smoke-" + uuid.uuid4().hex)')
+
+fingerprint_host() {
+  python3 - <<'PY'
+import hashlib
+import json
 import os
-home = pathlib.Path(os.path.expanduser('~'))
-" 2>/dev/null
-# Simpler: note what exists today.
-cat ~/.softspark/ai-toolkit/plugins.json 2>/dev/null
+from pathlib import Path
+
+home = Path.home()
+managed = [
+    ".claude/settings.json",
+    ".claude.json",
+    ".softspark/ai-toolkit/plugins.json",
+    ".codex/config.toml",
+    ".cursor/mcp.json",
+    ".gemini/settings.json",
+    ".config/opencode/opencode.json",
+]
+rows = {}
+for relative in managed:
+    path = home / relative
+    row = {"exists": path.exists() or path.is_symlink()}
+    if path.is_symlink():
+        row["link_sha256"] = hashlib.sha256(os.readlink(path).encode()).hexdigest()
+    if path.is_file():
+        row["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    rows[relative] = row
+print(json.dumps({
+    "host_home_sha256": hashlib.sha256(str(home).encode()).hexdigest(),
+    "files": rows,
+}, sort_keys=True, indent=2))
+PY
+}
+
+fingerprint_host > "$EVIDENCE/host-before.json"
+docker run -d --name "$SMOKE_CONTAINER" \
+  --label "org.softspark.release-smoke=$SMOKE_CONTAINER" \
+  --env "VERSION=$VERSION" \
+  node:22-bookworm sleep infinity
+docker inspect "$SMOKE_CONTAINER" > "$EVIDENCE/container-before.json"
+python3 - "$EVIDENCE/container-before.json" <<'PY'
+import json
+import sys
+
+container = json.load(open(sys.argv[1], encoding="utf-8"))[0]
+assert container["Mounts"] == [], "Smoke container must have no mounts"
+host = container["HostConfig"]
+assert not host["Privileged"], "Privileged containers are forbidden"
+assert host["NetworkMode"] != "host", "Do not share the host network namespace"
+assert host["PidMode"] != "host", "Do not share host processes"
+PY
+docker exec "$SMOKE_CONTAINER" bash -lc \
+  'test "$HOME" = "$(getent passwd "$(id -u)" | cut -d: -f6)"'
+docker exec "$SMOKE_CONTAINER" bash -lc \
+  'apt-get update && apt-get install -y --no-install-recommends python3 python3-yaml git coreutils jq bats shellcheck ca-certificates curl util-linux' \
+  2>&1 | tee "$EVIDENCE/bootstrap.log"
 ```
+
+Install any additional prerequisite declared by the pack under test only inside
+the container. GNU coreutils supplies timeout; util-linux supplies the session
+recorder. Use docker cp for evidence transfer, not host temporary-directory bind
+mounts: a remote Docker daemon may not see the host's /private/tmp.
+
+**Enter the container, then run Phases 2 through 6 there:**
+
+```bash
+docker exec -it "$SMOKE_CONTAINER" bash
+```
+
+Inside that container shell:
+
+```bash
+SB=/tmp/ai-toolkit-smoke
+AT="$SB/npm/bin/ai-toolkit"
+mkdir -p "$SB/npm" "$SB/evidence"
+export SB AT
+exec script -q -e -a "$SB/evidence/session.log" -c 'bash --noprofile --norc'
+```
+
+Keep HOME at the container user's default. VERSION was passed when the container
+was created; SB and the npm prefix are disposable container paths. No command in
+Phases 2 through 6 runs in the host shell.
 
 ## Phase 2: Provenance
 
@@ -60,29 +135,28 @@ Do this before installing anything: an unsigned publish is a release-blocking
 regression, and there is no point smoke-testing a build you would have to redo.
 
 ```bash
-VERSION="X.Y.Z"
-npm view "@softspark/ai-toolkit@${VERSION}" --json \
-  | python3 -c "
+npm view "@softspark/ai-toolkit@${VERSION}" --json > "$SB/evidence/npm-view.json"
+python3 -c "
 import json, sys
-d = json.load(sys.stdin); att = d['dist'].get('attestations', {})
+d = json.load(open(sys.argv[1], encoding='utf-8')); att = d['dist'].get('attestations', {})
 pt = att.get('provenance', {}).get('predicateType')
 assert pt == 'https://slsa.dev/provenance/v1', f'NO PROVENANCE: {pt}'
 print('PROVENANCE OK:', att['url'])
-"
+" "$SB/evidence/npm-view.json"
 ```
 
 ## Phase 3: Install from npm
 
 ```bash
 npm install -g --prefix "$SB/npm" "@softspark/ai-toolkit@${VERSION}"
-"$AT" --version    # must equal VERSION
+"$AT" --version | tee "$SB/evidence/version.txt"    # must equal VERSION
 "$AT" --help >/dev/null && echo "help OK"
 ```
 
 ## Phase 4: Core surfaces
 
 ```bash
-"$AT" install            # full global install into the sandbox HOME
+"$AT" install            # global install inside the container's default HOME
 "$AT" doctor             # must end: Errors: 0 | Warnings: 0
 "$AT" status
 "$AT" plugin list        # pack count must match app/plugins/
@@ -120,8 +194,13 @@ for D in "$HOME"/.claude/skills/*/; do
   rel=${ref##*\$\{CLAUDE_SKILL_DIR\}/}
   printf '%-22s %-10s %-26s ' "$s" "$interp" "$rel"
   [ -f "$D/$rel" ] || { echo 'PATH DOES NOT RESOLVE'; continue; }
-  out=$(CLAUDE_SKILL_DIR="$D" timeout 20 "$interp" "$D/$rel" --help </dev/null 2>&1 | head -1)
-  printf 'rc=%s %s\n' "$?" "$(echo "$out" | cut -c1-40)"
+  if out=$(CLAUDE_SKILL_DIR="$D" timeout 20 "$interp" "$D/$rel" --help </dev/null 2>&1); then
+    rc=0
+  else
+    rc=$?
+  fi
+  printf '%s\n' "$out" > "$SB/evidence/skill-$s.log"
+  printf 'rc=%s %s\n' "$rc" "$(printf '%s\n' "$out" | head -1 | cut -c1-40)"
 done
 ```
 
@@ -262,36 +341,58 @@ again, pointing its source-override variable at a dead URL:
 - [ ] `plugin status` says the pack is inert and names the fix
 - [ ] Re-installing without the broken source recovers
 
-## Phase 7: Prove the real environment is untouched
+## Phase 7: Verify the host configuration
+
+Exit the recorded container shell. This returns to the unchanged host terminal
+from Phase 1. Run fingerprint_host there, not through docker exec and not in a
+shell that changed HOME:
 
 ```bash
-python3 -c "
-import json, pathlib
-d = json.loads(pathlib.Path.home().joinpath('.softspark/ai-toolkit/plugins.json').read_text())
-print('plugins.json:', d['targets']['claude'])
-p = pathlib.Path.home() / '.claude/settings.json'
-print('pack hook leaked into real settings:', '<pack>' in json.dumps(json.loads(p.read_text()).get('hooks', {})) if p.exists() else False)
-print('pack paths in real ~/.softspark:', len(list(pathlib.Path.home().joinpath('.softspark').rglob('*<pack>*'))))
-"
+fingerprint_host > "$EVIDENCE/host-after.json"
+cmp -s "$EVIDENCE/host-before.json" "$EVIDENCE/host-after.json" || {
+  diff -u "$EVIDENCE/host-before.json" "$EVIDENCE/host-after.json"
+  echo "Host configuration changed: investigate before accepting the release."
+  exit 1
+}
+docker inspect "$SMOKE_CONTAINER" > "$EVIDENCE/container-after.json"
 ```
 
-All three must show the pre-test state.
+The fingerprints must match. This proves the enumerated managed settings stayed
+unchanged; the recorded container configuration separately proves there were no
+host mounts or shared host namespaces. Do not claim to have hashed the whole
+home directory, or print settings contents to demonstrate isolation.
 
-## Phase 8: Clean up
+## Phase 8: Preserve evidence and remove only the owned container
 
-`guard-destructive.sh` blocks `rm -rf` on a `PreToolUse` hook, so removal goes
-through an enumerated delete that reports what it removed:
+Run on the host, after leaving the container shell. Confirm ownership before any
+cleanup, then copy the recorded session, npm provenance metadata, and CLI version.
+Keep the host evidence directory for the release record.
 
 ```bash
-python3 -c "
-import pathlib, shutil
-sb = pathlib.Path('$SB')
-assert sb.is_dir() and str(sb).startswith(('/tmp', '/var/folders')), sb
-n = sum(1 for _ in sb.rglob('*') if _.is_file())
-shutil.rmtree(sb)
-print(f'removed {sb} ({n} files)')
-"
+test "$(docker inspect --format '{{index .Config.Labels "org.softspark.release-smoke"}}' "$SMOKE_CONTAINER")" = "$SMOKE_CONTAINER" || {
+  echo "Container ownership does not match; refusing cleanup."
+  exit 1
+}
+docker logs "$SMOKE_CONTAINER" > "$EVIDENCE/container.log" 2>&1
+mkdir -p "$EVIDENCE/container"
+docker cp "$SMOKE_CONTAINER:/tmp/ai-toolkit-smoke/evidence/." "$EVIDENCE/container/" || {
+  echo "Evidence transfer failed; keep the container and investigate."
+  exit 1
+}
+test -f "$EVIDENCE/container/session.log" || {
+  echo "Session evidence is missing; refusing cleanup."
+  exit 1
+}
+docker stop "$SMOKE_CONTAINER"
+docker rm "$SMOKE_CONTAINER"
+printf 'Evidence retained: %s\n' "$EVIDENCE"
 ```
+
+There are no host bind mounts or named volumes to delete. Never bypass a
+destructive-command guard with Python, shutil.rmtree, another interpreter, or a
+different deletion tool. If a guard rejects cleanup, leave the owned container
+and evidence in place and report the rejection through the normal approval
+mechanism. Do not prune Docker resources or delete unrelated temporary files.
 
 ## Success criteria
 
@@ -306,10 +407,10 @@ print(f'removed {sb} ({n} files)')
 | Pack update | Current version silent; stale version updates and re-records |
 | Pack removal | Zero residue in `~/.softspark` and `settings.json`; re-install works |
 | Degraded path | Fetch failure is inert, loud in status, and recoverable |
-| Isolation | Real `~/.claude` and `~/.softspark` byte-identical to pre-test |
+| Isolation | Host-side managed-settings fingerprints match; container has no host mounts or shared host namespaces |
 
 ## Related
 
 - [Release Preparation](sop-release.md) — run before tagging
-- [Release Verification](sop-release-verification.md) — the maintainer-install checks
+- [Release Verification](sop-release-verification.md) — cross-editor checks of the isolated npm artifact
 - [rtk-pack Retirement](../history/completed/rtk-pack-retirement-20260727.md) — what happened the one time this SOP was written and not run
