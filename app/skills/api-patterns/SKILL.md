@@ -94,6 +94,10 @@ the original cause, preserve public codes and JSON types, and distinguish an
 unknown operation outcome from a confirmed refusal. Do not turn arbitrary
 server failures into invalid-input responses.
 
+When adding client-side validation, read the
+[validation contract gotchas](../security-patterns/reference/input-validation.md#validation-contract-gotchas).
+Use one authoritative rule source and prove parity at the request boundary.
+
 ---
 
 ## FastAPI Implementation
@@ -168,7 +172,7 @@ In OpenAPI, pair `enum` with the value meanings in the description (or `x-enum-d
 
 ### Encode cross-field dependencies in the description
 
-If a field is only valid given another, say so where the dependent field is defined — schemas cannot express "required when":
+Document cross-field requirements where the dependent field is defined and encode them in the supported schema dialect. JSON Schema supports conditional requirements with `dependentRequired` or `if`/`then`; application state and opaque-token provenance still require prose and runtime checks. See [conditional schema validation](https://json-schema.org/understanding-json-schema/reference/conditionals).
 
 ```python
 cursor: str | None = Field(
@@ -394,7 +398,7 @@ Accept: application/vnd.myapi.v1+json
 ## Hard Rules
 
 - **MUST** version the API from day one (URL path or Accept header) — unversioned APIs break clients on every change
-- **MUST** validate every input at the API boundary, not inside business logic
+- **MUST** validate input type, format and size at the API boundary; enforce state-dependent domain invariants in business logic as well
 - **MUST** use PUT for full replacement and PATCH for partial update — confusing the two causes silent data loss
 - **NEVER** return unbounded list responses — pagination (offset or cursor) is mandatory
 - **NEVER** expose private implementation details in ordinary API errors, including 4xx and background-job error fields; preserve the host's public error representation
@@ -417,7 +421,7 @@ Accept: application/vnd.myapi.v1+json
 ## Gotchas
 
 - CDN and load-balancer caches key on the full URL by default. If you version via both URL path and `Accept` header (e.g., `/api/v1/...` + `Accept: application/vnd.myapi.v2+json`), the edge returns the wrong payload for non-path versioning. Pick one versioning axis and stick to it.
-- OpenAPI `additionalProperties: false` is **not** enforced by most JSON Schema validators unless you explicitly enable strict mode (`ajv({strict: true})`, Pydantic `Config.extra = "forbid"`). An API marked "strict" in the spec silently accepts unknown fields.
+- A published OpenAPI schema does not prove request enforcement. Ajv enforces `additionalProperties: false` when that schema is executed; its strict mode checks schema correctness and does not change validation results. Verify that the request boundary runs the intended schema and test unknown fields. See [Ajv strict mode](https://ajv.js.org/strict-mode.html) and [additionalProperties](https://ajv.js.org/json-schema.html#additionalproperties).
 - `Idempotency-Key` only works if the server persists the mapping from key to response — purely in-memory implementations forget it on restart. Back it with Redis or the primary DB.
 - HTTP methods are **case-sensitive** per RFC 7230 (all uppercase); some clients and proxies normalize, some don't. A `post` method reaches the server as-is through some edge proxies and hits a 405 instead of the POST route.
 - Give rate-limited callers a meaningful `Retry-After`. For 503, include it when the server can provide a credible retry window; do not invent an outage duration. A retry header does not prove that repeating a write is safe.

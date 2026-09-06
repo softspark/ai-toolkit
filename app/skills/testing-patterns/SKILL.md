@@ -53,6 +53,23 @@ tests/
 
 ---
 
+## Validation contract regressions
+
+Mirrored validators can agree on a generated snapshot while disagreeing on real
+inputs. Execute the same accepted/rejected fixtures against the real backend
+validator and the client evaluator. Include N/N+1 boundaries, collection/item
+limits, omitted/null/empty/default values, nested paths, conditional branches,
+hydrated updates versus fresh DTOs, Unicode units and previously valid inputs.
+
+Test the actual HTTP path for malformed input and unchanged persisted state
+after a pre-write refusal. Test zero transport calls for a local refusal,
+normal transport for a valid payload, and field correction/resubmission.
+Run deterministic-generation and reviewed-exclusion checks separately from
+behavioral parity. A schema/rule count is inventory, not assertion coverage.
+
+See the [validation contract gotchas](../security-patterns/reference/input-validation.md#validation-contract-gotchas)
+for operation semantics and runtime mismatches.
+
 ## Language-Specific References
 
 | Language | Reference | Key Topics |
