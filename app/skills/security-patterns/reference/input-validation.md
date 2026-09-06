@@ -72,10 +72,11 @@ Input validation does not replace parameterized queries or context-appropriate
 output encoding. The backend may still reject a client-valid request because
 state changed after local validation.
 
-For regression selection, see
-[testing patterns](../../testing-patterns/SKILL.md#validation-contract-regressions).
-For HTTP failure semantics, see
-[error contracts](../../api-patterns/reference/error-contracts.md).
+For regression selection, use the "Validation contract regressions" section
+of the installed `testing-patterns` skill. For HTTP failure semantics, read
+`reference/error-contracts.md` from the installed `api-patterns` skill.
+Locate these skills through the current client's catalog because adapters may
+namespace their directory names.
 
 ## SQL Injection Prevention
 ```python

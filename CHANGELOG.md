@@ -16,6 +16,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   and frontend rule source, operation-specific DTO groups/defaults, finite
   collection bounds, Unicode units, explicit server-only checks and parity
   fixtures. Local validation failures remain distinct from HTTP responses.
+  Cross-skill references resolve through the installed catalog so namespaced
+  adapters, including GitHub Copilot, can find the same guidance.
 - **API error contracts:** Preserve the host's error representation and
   distinguish domain refusals from technical failures. Cover actionable
   messages, JSON types, background-job failures, unknown outcomes and safe

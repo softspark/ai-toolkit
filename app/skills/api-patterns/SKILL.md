@@ -94,8 +94,9 @@ the original cause, preserve public codes and JSON types, and distinguish an
 unknown operation outcome from a confirmed refusal. Do not turn arbitrary
 server failures into invalid-input responses.
 
-When adding client-side validation, read the
-[validation contract gotchas](../security-patterns/reference/input-validation.md#validation-contract-gotchas).
+When adding client-side validation, read `reference/input-validation.md` from
+the installed `security-patterns` skill. Resolve that skill through the current
+client's catalog, since adapters may namespace skill directory names.
 Use one authoritative rule source and prove parity at the request boundary.
 
 ---

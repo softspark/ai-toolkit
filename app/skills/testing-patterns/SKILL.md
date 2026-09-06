@@ -67,8 +67,10 @@ normal transport for a valid payload, and field correction/resubmission.
 Run deterministic-generation and reviewed-exclusion checks separately from
 behavioral parity. A schema/rule count is inventory, not assertion coverage.
 
-See the [validation contract gotchas](../security-patterns/reference/input-validation.md#validation-contract-gotchas)
-for operation semantics and runtime mismatches.
+For operation semantics and runtime mismatches, read
+`reference/input-validation.md` from the installed `security-patterns` skill.
+Resolve the skill through the current client's catalog; directory names may
+carry an adapter-specific prefix.
 
 ## Language-Specific References
 
