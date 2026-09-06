@@ -352,7 +352,8 @@ Solo-safe core: everything here holds whether one person or twenty merge into
 - Use HTTPS everywhere. No exceptions.
 - Implement rate limiting and request throttling.
 - Set CORS headers explicitly. Never use `*` in production.
-- Return generic error messages to clients. Log details server-side.
+- Return safe, actionable messages for known failures; use a neutral fallback when the cause is unknown or disclosure would reveal protected information.
+- Keep SQL, stack traces and provider internals out of ordinary client responses, including 4xx and background-job error fields. Preserve original causes in access-controlled, redacted diagnostics.
 - Use security headers: HSTS, X-Content-Type-Options, X-Frame-Options.
 
 ## Dependencies
@@ -403,6 +404,12 @@ Solo-safe core: everything here holds whether one person or twenty merge into
 - Tests must be fast: unit tests <100ms each, test suite <60s.
 - Avoid `sleep` in tests: use polling, events, or test clocks.
 - Do not test implementation details (private methods, internal state).
+- Run integration suites serially when they share or reset a database. Parallel runners need isolated databases/stores; a filtered test must not invalidate an in-progress full suite.
+
+## API Error Paths
+- For changed error handling, assert the actual status, public code/message, field paths, locale and recovery headers through the API boundary.
+- Preserve JSON object/list types, including empty nested `{}` and `[]`, when testing response filters.
+- Exercise real database constraints, idempotent replay and known versus uncertain write outcomes; schema-generated fixtures may omit migration-only indexes.
 
 ## Coverage
 - Measure coverage but do not chase 100%: focus on critical paths.

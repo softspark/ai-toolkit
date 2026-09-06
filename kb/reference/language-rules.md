@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [rules, languages, coding-style, testing, patterns, security]
 version: "2.2.0"
 created: "2026-04-07"
-last_updated: "2026-09-04"
+last_updated: "2026-09-06"
 description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus common rules installed as Claude Code path-scoped project rules."
 ---
 
@@ -77,6 +77,12 @@ app/rules/
 | Medplum | `rules/medplum/` | `medplum.config.mts`, `medplum.config.ts` |
 
 ## Rule Categories
+
+The common security rules distinguish safe, actionable failure messages from
+private diagnostics. Common testing rules cover API error contracts and prohibit
+overlapping runners that reset a shared database. The `api-patterns` skill carries
+the focused error-contract guidance; the `review` checklist checks the same
+failure boundaries. These are content rules, not new hooks or runtime permissions.
 
 | Category | Filename | Content |
 |----------|----------|---------|

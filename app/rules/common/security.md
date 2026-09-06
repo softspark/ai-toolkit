@@ -45,7 +45,8 @@ version: "1.0.0"
 - Use HTTPS everywhere. No exceptions.
 - Implement rate limiting and request throttling.
 - Set CORS headers explicitly. Never use `*` in production.
-- Return generic error messages to clients. Log details server-side.
+- Return safe, actionable messages for known failures; use a neutral fallback when the cause is unknown or disclosure would reveal protected information.
+- Keep SQL, stack traces and provider internals out of ordinary client responses, including 4xx and background-job error fields. Preserve original causes in access-controlled, redacted diagnostics.
 - Use security headers: HSTS, X-Content-Type-Options, X-Frame-Options.
 
 ## Dependencies

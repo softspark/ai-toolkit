@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Changed
+
+- API guidance preserves the host's existing error representation and separates
+  supported domain refusals from technical failures. A focused reference covers
+  actionable messages, JSON type preservation, background-job errors and safe
+  retries when an operation outcome is unknown.
+- Common security/testing rules and the review checklist cover error contracts
+  and shared-database test isolation. The FastAPI example preserves exception
+  provenance and catches a specific request-level refusal instead of exposing
+  arbitrary `ValueError` text.
+
 ## v4.32.3 — Search-first stops firing on things nobody asked (2026-09-04)
 
 ### Fixed

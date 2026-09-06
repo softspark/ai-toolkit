@@ -1,6 +1,6 @@
 ---
 name: api-patterns
-description: "REST/GraphQL API design: naming, versioning, pagination, idempotency, OpenAPI. Triggers: API design, REST, GraphQL, OpenAPI, Swagger, idempotency, rate limit."
+description: "API design: naming, versioning, pagination, idempotency, OpenAPI, error contracts and safe retries. Triggers: API design, REST, GraphQL, OpenAPI, Swagger, error response, HTTP status, rate limit."
 effort: medium
 user-invocable: false
 allowed-tools: Read
@@ -34,16 +34,23 @@ GET    /api/v1/users/{id}/documents  # User's documents
 | 200 | OK | Successful GET/PUT/PATCH |
 | 201 | Created | Successful POST |
 | 204 | No Content | Successful DELETE |
-| 400 | Bad Request | Invalid input |
+| 400 | Bad Request | Malformed request or an established domain refusal |
 | 401 | Unauthorized | Missing/invalid auth |
 | 403 | Forbidden | No permission |
 | 404 | Not Found | Resource doesn't exist |
-| 409 | Conflict | Duplicate resource |
+| 405 | Method Not Allowed | Unsupported method; preserve Allow |
+| 409 | Conflict | Duplicate resource or current-state conflict |
+| 412 | Precondition Failed | Supplied concurrency version is stale |
 | 422 | Unprocessable | Validation error |
+| 428 | Precondition Required | Required concurrency precondition is missing |
 | 429 | Too Many Requests | Rate limited |
 | 500 | Internal Error | Server error |
+| 503 | Service Unavailable | Dependency temporarily unavailable |
 
 ### Response Format
+
+Follow the host's existing resource and collection contract. This envelope is
+illustrative; do not impose it on a framework that already defines another shape.
 
 ```json
 {
@@ -65,6 +72,9 @@ GET    /api/v1/users/{id}/documents  # User's documents
 
 ### Error Response
 
+Use the established error representation, which may be problem details,
+framework validation errors, or a domain-specific envelope like this example:
+
 ```json
 {
   "error": {
@@ -78,6 +88,12 @@ GET    /api/v1/users/{id}/documents  # User's documents
 }
 ```
 
+When implementing or reviewing failure paths, read
+[Error contracts and safe retries](reference/error-contracts.md). Classify from
+the original cause, preserve public codes and JSON types, and distinguish an
+unknown operation outcome from a confirmed refusal. Do not turn arbitrary
+server failures into invalid-input responses.
+
 ---
 
 ## FastAPI Implementation
@@ -87,6 +103,9 @@ from fastapi import FastAPI, HTTPException, Query, Path
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="RAG-MCP API", version="1.0.0")
+
+class InvalidSearchQuery(Exception):
+    """Known request-level refusal from the application-owned search adapter."""
 
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Search query")
@@ -115,8 +134,11 @@ async def search(request: SearchRequest):
     try:
         results = await perform_search(request.query, request.limit)
         return SearchResponse(results=results, total=len(results))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except InvalidSearchQuery as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="The search query is not supported. Check its syntax.",
+        ) from exc
 ```
 
 ---
@@ -375,7 +397,7 @@ Accept: application/vnd.myapi.v1+json
 - **MUST** validate every input at the API boundary, not inside business logic
 - **MUST** use PUT for full replacement and PATCH for partial update — confusing the two causes silent data loss
 - **NEVER** return unbounded list responses — pagination (offset or cursor) is mandatory
-- **NEVER** expose stack traces or internal error details in 5xx responses — clients get a `code`, `message`, and optional `details[]`
+- **NEVER** expose private implementation details in ordinary API errors, including 4xx and background-job error fields; preserve the host's public error representation
 - **CRITICAL**: idempotency on POST/PUT/PATCH is non-negotiable when retries are possible — accept an `Idempotency-Key` header or design the endpoint to be naturally idempotent
 - **CRITICAL**: rate limits exist from the first deploy, not "later" — unprotected endpoints get abused within hours
 
@@ -398,7 +420,7 @@ Accept: application/vnd.myapi.v1+json
 - OpenAPI `additionalProperties: false` is **not** enforced by most JSON Schema validators unless you explicitly enable strict mode (`ajv({strict: true})`, Pydantic `Config.extra = "forbid"`). An API marked "strict" in the spec silently accepts unknown fields.
 - `Idempotency-Key` only works if the server persists the mapping from key to response — purely in-memory implementations forget it on restart. Back it with Redis or the primary DB.
 - HTTP methods are **case-sensitive** per RFC 7230 (all uppercase); some clients and proxies normalize, some don't. A `post` method reaches the server as-is through some edge proxies and hits a 405 instead of the POST route.
-- `429 Too Many Requests` without a `Retry-After` header leaves clients guessing — most libraries back off exponentially from zero and hammer the server. Always include `Retry-After` on 429 and 503.
+- Give rate-limited callers a meaningful `Retry-After`. For 503, include it when the server can provide a credible retry window; do not invent an outage duration. A retry header does not prove that repeating a write is safe.
 
 ## When NOT to Load
 
@@ -407,4 +429,3 @@ Accept: application/vnd.myapi.v1+json
 - For **language-specific idioms** (Fastify middleware chains, ASP.NET minimal APIs, etc.) — pair this skill with `/typescript-patterns`, `/csharp-patterns`, etc.
 - For **OpenAPI schema authoring** as the primary task — use `/docs` with OpenAPI output; this skill is design-only
 - For **authentication deep-dives** beyond the starter API-key and JWT snippets — use `/security-patterns`
-

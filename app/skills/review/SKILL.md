@@ -126,6 +126,9 @@ After all reviewers complete:
 - [ ] API versioning updated if contract changed
 - [ ] Schema validation on request/response
 - [ ] Error responses follow project convention
+- [ ] Statuses and messages distinguish input/state refusals from infrastructure failures; original causes remain available in authorized diagnostics
+- [ ] Error filtering preserves machine codes, field paths, JSON object/list types, locale and recovery headers; background-job error fields are covered too
+- [ ] Retry advice reflects known persisted/provider state and does not invite blind replay of an uncertain mutation
 - [ ] Wire-level contracts checked, not just code signatures: HTTP routes, webhook payloads, event/queue schemas
 
 ### Concurrency / Async

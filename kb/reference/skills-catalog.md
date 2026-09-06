@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
 version: "1.5.0"
 created: "2026-03-23"
-last_updated: "2026-08-06"
+last_updated: "2026-09-06"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
@@ -123,7 +123,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **app-builder** | `skills/app-builder/` | Full-stack application architecture |
-| **api-patterns** | `skills/api-patterns/` | REST/GraphQL design, versioning, error handling |
+| **api-patterns** | `skills/api-patterns/` | API design, versioning, actionable error contracts and safe retries; focused `reference/error-contracts.md` |
 | **database-patterns** | `skills/database-patterns/` | Schema design, indexing, query optimization |
 | **flutter-patterns** | `skills/flutter-patterns/` | Flutter/Dart architecture, state management |
 | **ecommerce-patterns** | `skills/ecommerce-patterns/` | E-commerce: catalog, cart, checkout, payments |

@@ -84,7 +84,7 @@
 - **a11y-validate**: Accessibility validator: WCAG 2.1 AA, EN 301 549, EAA. Triggers: a11y, accessibility, WCAG, EAA, ARIA, contrast, keyboard, screen reader.
 - **agent-creator**: Creates new specialized agents with frontmatter, tools, delegation. Triggers: new agent, create agent, agent scaffold, specialized agent.
 - **analyze**: Analyzes code quality, complexity, patterns across codebase. Triggers: quality report, hotspot scan, code analysis, architecture signal.
-- **api-patterns**: REST/GraphQL API design: naming, versioning, pagination, idempotency, OpenAPI. Triggers: API design, REST, GraphQL, OpenAPI, Swagger, idempotency, rate limit.
+- **api-patterns**: API design: naming, versioning, pagination, idempotency, OpenAPI, error contracts and safe retries. Triggers: API design, REST, GraphQL, OpenAPI, Swagger, error response, HTTP status, rate limit.
 - **app-builder**: App scaffolding: Next.js, Vite, Nuxt, Astro, FastAPI, Django, Laravel, RN, Flutter. Triggers: scaffold, bootstrap, new project, starter, dashboard, mobile app.
 - **architecture-audit**: Audits codebase for architectural friction, shallow modules; proposes RFCs. Triggers: improve architecture, shallow modules, deepen modules, reduce coupling.
 - **architecture-decision**: Architecture decisions in ADR/RFC/RFD format: context, constraints, options, recommendation. Triggers: ADR, RFC, RFD, trade-offs, design choice, pick between, evaluate approach.
@@ -14066,7 +14066,7 @@ service: ai-toolkit
 tags: [rules, languages, coding-style, testing, patterns, security]
 version: "2.2.0"
 created: "2026-04-07"
-last_updated: "2026-09-04"
+last_updated: "2026-09-06"
 description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus common rules installed as Claude Code path-scoped project rules."
 ---
 
@@ -14138,6 +14138,12 @@ app/rules/
 | Medplum | `rules/medplum/` | `medplum.config.mts`, `medplum.config.ts` |
 
 ## Rule Categories
+
+The common security rules distinguish safe, actionable failure messages from
+private diagnostics. Common testing rules cover API error contracts and prohibit
+overlapping runners that reset a shared database. The `api-patterns` skill carries
+the focused error-contract guidance; the `review` checklist checks the same
+failure boundaries. These are content rules, not new hooks or runtime permissions.
 
 | Category | Filename | Content |
 |----------|----------|---------|
@@ -16265,7 +16271,7 @@ service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
 version: "1.5.0"
 created: "2026-03-23"
-last_updated: "2026-08-06"
+last_updated: "2026-09-06"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
@@ -16383,7 +16389,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | Skill | Directory | Domain |
 |-------|-----------|--------|
 | **app-builder** | `skills/app-builder/` | Full-stack application architecture |
-| **api-patterns** | `skills/api-patterns/` | REST/GraphQL design, versioning, error handling |
+| **api-patterns** | `skills/api-patterns/` | API design, versioning, actionable error contracts and safe retries; focused `reference/error-contracts.md` |
 | **database-patterns** | `skills/database-patterns/` | Schema design, indexing, query optimization |
 | **flutter-patterns** | `skills/flutter-patterns/` | Flutter/Dart architecture, state management |
 | **ecommerce-patterns** | `skills/ecommerce-patterns/` | E-commerce: catalog, cart, checkout, payments |

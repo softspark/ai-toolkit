@@ -46,6 +46,12 @@ paths:
 - Tests must be fast: unit tests <100ms each, test suite <60s.
 - Avoid `sleep` in tests: use polling, events, or test clocks.
 - Do not test implementation details (private methods, internal state).
+- Run integration suites serially when they share or reset a database. Parallel runners need isolated databases/stores; a filtered test must not invalidate an in-progress full suite.
+
+## API Error Paths
+- For changed error handling, assert the actual status, public code/message, field paths, locale and recovery headers through the API boundary.
+- Preserve JSON object/list types, including empty nested `{}` and `[]`, when testing response filters.
+- Exercise real database constraints, idempotent replay and known versus uncertain write outcomes; schema-generated fixtures may omit migration-only indexes.
 
 ## Coverage
 - Measure coverage but do not chase 100%: focus on critical paths.
