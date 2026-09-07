@@ -7,6 +7,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.33.1 - Conflict gate stops flagging binaries (2026-09-07)
+
+### Fixed
+
+- **Fallback pre-commit hook no longer blocks commits over binary files.**
+  `scripts/install_git_hooks.py` gated on `git diff --cached -S'<<<<<<<'`, a
+  pickaxe that reports any blob whose *count* of the string changed, reads
+  binary blobs, and never anchors to a line start. A committed WebM whose
+  compressed bytes happened to contain `<<<<<<<` blocked every commit in the
+  repository. The gate now greps staged text blobs only (`git grep --cached
+  -I`) for a line-anchored `<<<<<<< `, `>>>>>>> `, or a bare `=======`.
+- **The conflict error names the offending files.** The previous message stated
+  only that conflicts existed, leaving no way to tell a real conflict from a
+  false positive.
+- **Release SOP registry gate excludes `generate_toolkit_rules_skills.py`.** It
+  compiles `app/rules/*.md` into knowledge skills and is not an editor config
+  generator, so it never belonged in `supported-tools-registry.md`. Same
+  treatment its sibling `generate_language_rules_skills.py` already had; the
+  gate has reported drift since the generator landed.
+
+### Added
+
+- `tests/test_install_git_hooks.bats` - 7 cases covering hook installation, a
+  clean index, a real conflict, the file name in the message, and three
+  regressions: marker bytes inside a binary blob, a commit that *removes*
+  markers, and marker text that is not line-anchored. Four fail against the
+  previous gate.
+
 ## v4.33.0 - DSH refresh and maintenance contracts (2026-09-06)
 
 ### Changed

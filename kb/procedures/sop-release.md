@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.15.1"
+version: "1.15.2"
 created: "2026-04-10"
-last_updated: "2026-09-06"
+last_updated: "2026-09-07"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
@@ -369,7 +369,7 @@ python3 scripts/audit_skills.py --permissions               # review Bash/Write/
 shellcheck --severity=warning app/hooks/*.sh && echo "OK: shellcheck clean"
 
 # Registry / generator drift (added in 1.10.0). Meta-generators excluded.
-META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
+META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py|generate_toolkit_rules_skills.py"
 diff \
   <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) \
   <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) \
@@ -405,7 +405,7 @@ echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp
 
 **One-liner:**
 ```bash
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py' | sort -u) && npm test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py|generate_toolkit_rules_skills\.py' | sort -u) && npm test
 ```
 
 **If tests fail:** Fix the issue, do NOT skip. Common failures:

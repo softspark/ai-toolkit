@@ -25,10 +25,15 @@ PRE_COMMIT_CONTENT = """\
 
 echo "[ai-toolkit] Running pre-commit quality gate..."
 
-# 1. Check for unresolved merge conflicts
-if git diff --cached -S'<<<<<<<' --name-only | grep -q '.*'; then
+# 1. Check for unresolved merge conflicts.
+# Line-anchored grep over text blobs only: -S counts occurrence *changes* and
+# reads binaries, so it flags any blob whose bytes happen to contain '<<<<<<<'.
+CONFLICTS=$(git diff --cached --name-only --diff-filter=ACMR -z \\
+    | xargs -0 -r git grep --cached -I -l -E '^(<<<<<<< |>>>>>>> |={7}$)' --)
+if [ -n "$CONFLICTS" ]; then
     echo "ERROR: Unresolved merge conflicts found in staged files."
-    echo "   Please resolve conflicts and remove '<<<<<<<' markers before committing."
+    echo "$CONFLICTS" | sed 's/^/   - /'
+    echo "   Please resolve conflicts and remove the markers before committing."
     exit 1
 fi
 
