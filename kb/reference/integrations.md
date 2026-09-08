@@ -3,9 +3,9 @@ title: "AI Toolkit - External Integrations"
 category: reference
 service: ai-toolkit
 tags: [integrations, rules, add-rule]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-03-26"
-last_updated: "2026-06-30"
+last_updated: "2026-09-08"
 description: "How external repos register rules that ai-toolkit syncs into Claude Code user-level rules and other editor configs."
 ---
 
@@ -85,3 +85,18 @@ Teaches Claude Code the Jira MCP tool set: `sync_tasks`, `read_cached_tasks`, `u
 cd /path/to/jira-mcp
 ai-toolkit add-rule ./jira-rules.md
 ```
+
+## Autonomous delivery profile
+
+`/autonomous-dev` can use the installed RAG and Jira connectors through an
+explicit project profile. `issueTracker` identifies Jira tasks, `codeHost`
+identifies the PR/CI repository and `knowledge` scopes technical KB retrieval.
+The readonly config preflight validates local shape and canonical Jira task
+identity; live tools remain responsible for freshness, language, transitions,
+permissions and repository mapping.
+
+The process carries a source-backed context in its hashed plan, reconciles Jira
+comment receipts on retry and distinguishes a ready PR from Jira completion or
+KB indexing. Connector credentials and instance routing stay in the connector's
+own configuration. See [the autonomous delivery guide](../howto/autonomous-development.md)
+and its shared stack contract for the maintained operational sequence.

@@ -49,7 +49,7 @@ legal = json.loads((templates / "rag-mcp-legal.json").read_text(encoding="utf-8"
 
 assert general == {
     "name": "rag-mcp",
-    "description": "Multi-tenant RAG over knowledge bases — semantic, hybrid, CRAG and multi-hop search via HTTP MCP",
+    "description": "Knowledge-base retrieval: semantic, hybrid, CRAG and multi-hop search via HTTP MCP",
     "mcpServers": {
         "rag-mcp": {
             "type": "http",

@@ -149,6 +149,13 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 
 ## Skills
 
+`/autonomous-dev` composes the existing development skills into a task-to-PR
+process. Its bundled Python/SQLite journal records per-session ownership,
+attempts and commit-bound evidence under the external per-repo session store.
+`/prepare-test-env` provides source identity and readiness for application QA.
+The agent host remains the executor; no background service or model runtime is
+installed. See `kb/howto/autonomous-development.md` for the public contract.
+
 ### Task Skills (32)
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
@@ -183,7 +190,7 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 | `hipaa-validate` | `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, missing BAA references |
 | `mcp-builder` | `/mcp-builder` | Build production-grade MCP servers using 4-phase methodology (research, implement, test, evaluate) |
 
-### Hybrid Skills (31)
+### Hybrid Skills (33)
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `explore` | `/explore` | Codebase exploration and tech stack discovery |
@@ -199,6 +206,8 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 | `orchestrate` | `/orchestrate` | Multi-agent coordination for complex tasks |
 | `swarm` | `/swarm` | Massive parallelism via Agent Teams |
 | `workflow` | `/workflow` | Run agent workflow |
+| `autonomous-dev` | `/autonomous-dev` | Resumable task-to-PR process with transactional ownership and commit-bound evidence |
+| `prepare-test-env` | `/prepare-test-env` | Project-specific QA environment, source identity, readiness and owned cleanup |
 | `instinct-review` | `/instinct-review` | Review, curate, and manage learned instincts |
 | `write-a-prd` | `/write-a-prd` | Create PRD through interactive interview and module design |
 | `prd-to-plan` | `/prd-to-plan` | Convert PRD into phased vertical-slice implementation plan |

@@ -3,9 +3,9 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-03-23"
-last_updated: "2026-09-06"
+last_updated: "2026-09-08"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
@@ -78,7 +78,9 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |
 | **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, native in Claude, Codex-adapted with semantic subagent guidance |
 | **swarm** | `/swarm` | max | Massive parallelism: map-reduce, consensus, relay — Tier 3 |
-| **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2, Codex-adapted to native subagent orchestration |
+| **workflow** | `/workflow` | max | 16 workflow routes, including autonomous software delivery; adapted to the current client's orchestration |
+| **autonomous-dev** | `/autonomous-dev` | high | Brief/spec/issue/PR to verified ready PR; transactional run ownership, persistent attempts, commit-bound reports and resume |
+| **prepare-test-env** | `/prepare-test-env` | high | Source-bound QA environment and bounded HTTP readiness checks; browser evidence and owned cleanup |
 | **instinct-review** | `/instinct-review` | low | Review, curate, and manage learned instincts from past sessions |
 | **write-a-prd** | `/write-a-prd` | high | Create PRD through interactive interview, codebase exploration, and module design |
 | **prd-to-plan** | `/prd-to-plan` | high | Convert PRD into phased implementation plan using tracer-bullet vertical slices |
@@ -294,7 +296,7 @@ Compiles the full toolkit into a minimal system prompt for local Small Language 
 
 Profile `offline-slm` in `manifest.json` — installs core only, then compiles.
 
-### Executable Scripts (18 total, stdlib-only, JSON output)
+### Selected Executable Helpers (stdlib-only, JSON output)
 
 | Skill | Script | Purpose |
 |-------|--------|---------|
@@ -308,6 +310,9 @@ Profile `offline-slm` in `manifest.json` — installs core only, then compiles.
 | **ci** | `scripts/ci-detect.py` | Detect CI platform |
 | **fix** | `scripts/error-classifier.py` | Classify lint/test errors |
 | **pr** | `scripts/pr-summary.py` | Generate PR title/description |
+| **autonomous-dev** | `scripts/run-state.py` | Transactional run state, ownership, attempt limits and evidence integrity |
+| **autonomous-dev** | `scripts/delivery-config.py` | Readonly project profile validation and canonical Jira task identity |
+| **prepare-test-env** | `scripts/env-check.py` | Verify clean source identity and bounded HTTP readiness |
 | **review** | `scripts/diff-analyzer.py` | Parse git diff, categorize files |
 | **debug** | `scripts/error-parser.py` | Parse stack traces |
 | **explore** | `scripts/visualize.py` | Interactive HTML codebase tree |

@@ -11,11 +11,16 @@ allowed-tools: Bash, Read, Grep
 
 $ARGUMENTS
 
-Create a GitHub pull request.
+Create or update the task's GitHub pull request after project-specific checks.
+When called by `/autonomous-dev`, preserve its run ID, branch, PR identity,
+approval history and evidence. This skill publishes the PR; the calling process
+owns subsequent review, QA and required-CI completion.
 
 ## Project context
 
-- Recent commits: !`git log --oneline main..HEAD 2>/dev/null | head -20`
+- Inspect the actual repository, branch and working tree. Resolve the base from
+  an existing PR first, then project configuration or the remote default branch.
+  Do not assume a branch named `main` exists.
 
 ## Usage
 
@@ -29,8 +34,7 @@ Generate a structured PR summary from the commit history before writing the PR d
 
 ```bash
 python3 ${CLAUDE_SKILL_DIR}/scripts/pr-summary.py [base_branch]
-# Default base branch: main
-# Example: python3 ${CLAUDE_SKILL_DIR}/scripts/pr-summary.py develop
+# Pass the resolved PR base explicitly, for example develop.
 ```
 
 The script outputs JSON with:
@@ -52,33 +56,37 @@ Use the output to populate the PR template fields below.
 
 ### 1. Pre-PR Checks
 
-```bash
-# Run CI checks
-ruff check . && mypy src/ && pytest tests/
+Read the project's instructions, CI configuration and package/Make scripts.
+For an autonomous run, use the commands frozen in its plan from
+`.ai-toolkit/autonomous.json`. Run the actual lint, typecheck, test and build
+commands applicable to that project; a Python command is not a universal gate.
+Inspect every result and preserve evidence of the tested commit. Missing runtime
+services or failed commands are blockers, never successful checks.
 
-# Check branch status
-git status
-git diff main...HEAD --stat
-```
+Verify that the authorized changes are committed, the intended base exists,
+and the diff contains only the task's work. Use the resolved base with a
+triple-dot diff for PR scope. Preserve unrelated dirty work and report it.
 
 ### 2. Create PR
 
+Verify the repository and active account. Search for an existing PR from the
+exact head branch before creation, including after an interrupted publication.
+Update that PR when it represents this task. Never open a duplicate merely
+because a previous assistant message omitted its URL.
+
+Use the repository's template and write the exact body with an editing tool to
+an absolute temporary file outside the checkout. Pass it through a structured
+connector argument or `gh --body-file`, preserving real newlines. For example,
+with actual repository/branch values and the prepared body file:
+
 ```bash
-gh pr create --title "feat: add multi-hop reasoning" --body "$(cat <<'EOF'
-## Summary
-- Implement query decomposition for complex questions
-- Add iterative retrieval with reasoning
-- Include answer synthesis from aggregated context
-
-## Test plan
-- [ ] Unit tests pass
-- [ ] Integration tests pass
-- [ ] Manual testing with sample queries
-
-Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)"
+gh pr create --base develop --head feat/csv-export --title "feat: export filtered orders" --body-file /absolute/run/pr-body.md
 ```
+
+Publishing must already be authorized by the task and allowed by the current
+host. A missing permission leaves a prepared, reviewable result and a concrete
+blocker. Creating a PR does not authorize merging it. Record the returned URL
+immediately in the autonomous run before continuing.
 
 ## PR Template
 
@@ -99,18 +107,17 @@ EOF
 ## Screenshots
 <if applicable>
 
-Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
 ## PR Checklist
 
 Before creating PR:
-- [ ] All tests pass: `pytest tests/`
-- [ ] Linting passes: `ruff check .`
-- [ ] Type checking passes: `mypy src/`
+- [ ] Project tests and required build pass for the current commit
+- [ ] Applicable linting and type checking pass
+- [ ] Actual base/head and repository are verified; an existing PR is reused
 - [ ] Documentation updated if needed
 - [ ] Commit messages follow conventional commits
-- [ ] Branch is up to date with main
+- [ ] Changes against the actual base are reviewed; merge conflicts are resolved
 
 ## Useful gh Commands
 
@@ -121,28 +128,26 @@ gh pr view
 # Check PR status
 gh pr checks
 
-# Request review
-gh pr edit --add-reviewer username
-
-# Merge PR
-gh pr merge --squash
+# Inspect the current head and review state
+gh pr view --json url,headRefOid,baseRefName,reviewDecision,mergeStateStatus
 ```
 
 ## Rules
 
-- **MUST** run lint + typecheck + tests locally before opening the PR
+- **MUST** run the project's applicable validation commands before opening the PR
 - **NEVER** force-push `main` or `master`
-- **NEVER** add `Co-Authored-By: Claude` or other AI attribution to commits
+- **NEVER** add AI co-authorship or generated-by signatures to commits or the PR body
 - **CRITICAL**: PR body must include a Test plan checklist — no exceptions
 - **MANDATORY**: commit messages follow conventional commits (`feat:`, `fix:`, `docs:` etc.)
 
 ## Gotchas
 
-- `gh pr merge --squash` **drops** all original commit trailers, including `Co-Authored-By:` lines. If the PR had legitimate co-authors, note them in the squashed commit body or use `--rebase` instead.
 - `gh` defaults to `github.com`; for GitHub Enterprise the host must be set per-repo with `gh auth login --hostname <host>` and `gh repo set-default`. Silent failures on enterprise usually mean the wrong host.
 - Running `gh pr create` without `--body` opens an editor (`$EDITOR` or `vi`) — in non-interactive contexts this hangs indefinitely. Always pass `--body` or `--body-file`.
-- The pre-flight `ruff check .` walks respecting `.gitignore` by default but `mypy src/` does not — if `src/` contains generated code excluded from git, mypy will still scan it and report spurious errors.
-- `git diff main...HEAD` (triple dot) shows commits on HEAD since the merge-base; `git diff main..HEAD` (double dot) shows all differences including main's newer commits. Use triple-dot for PR-scope diffs.
+- A local validation pass does not prove required remote CI or human approval.
+  Report pending conditions; `/autonomous-dev` waits for them before completion.
+- A triple-dot diff uses the merge-base. Use the resolved PR base rather than
+  substituting a hardcoded branch name.
 
 ## When NOT to Use
 
