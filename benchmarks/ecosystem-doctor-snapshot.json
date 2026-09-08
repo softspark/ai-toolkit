@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-09-06T10:57:58Z",
+  "last_run": "2026-09-08T10:19:20Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "4433eb23da85627b",
+      "docs_hash": "d3017d1e2e9a921b",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "96c2c218b4114aa2",
+      "docs_hash": "c1a63abb43d3c98d",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -108,7 +108,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "fc44b0aa32724d83",
+      "docs_hash": "ef7e0a89823c3718",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -174,10 +174,10 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.261 (Claude Code)"
+      "version": "2.1.263 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "3eaa2ce9bdeca974",
+      "docs_hash": "7e299697f4c33610",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -225,7 +225,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "7ec73a39c311fc6d",
+      "docs_hash": "9236502b676571e4",
       "headings": [
         "API",
         "API Reference",
@@ -368,7 +368,7 @@
       "version": "codex-cli 0.153.4"
     },
     "cursor": {
-      "docs_hash": "e7386e178a24d763",
+      "docs_hash": "b71a4e9a337185d3",
       "headings": [
         "Agent",
         "CLI",
@@ -412,7 +412,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "49b209908052dcd3",
+      "docs_hash": "49e56808db7737d0",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -453,7 +453,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "59f851bcfd562e8c",
+      "docs_hash": "7eb63b9012fbcf04",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -517,7 +517,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "7ea97688e7b24c4f",
+      "docs_hash": "8675f180c76f02dd",
       "headings": [
         "Add features",
         "Ask questions",
@@ -579,7 +579,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "bcfc29ef31cabfba",
+      "docs_hash": "c9f1d45fe190f606",
       "headings": [
         "Accounts",
         "Advanced",

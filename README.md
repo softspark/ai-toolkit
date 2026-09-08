@@ -1,27 +1,26 @@
 # ai-toolkit
 
-> AI coding toolkit with machine-enforced safety, 114 skills, 44 agents, lifecycle hooks, persona presets, opt-in plugin packs, and benchmark tooling. DSH is available as a separate explicit developer-preview target.
+> AI coding toolkit with machine-enforced safety, 116 skills, 44 agents, lifecycle hooks, persona presets, opt-in plugin packs, and benchmark tooling. DSH is available as a separate explicit developer-preview target.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-114-brightgreen)](app/skills/)
+[![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1996%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2014%20passing-success)](tests/)
 
-## What's New in v4.33.1
+## What's New in v4.34.0
 
-**v4.33.1** fixes a fallback pre-commit hook that could block every commit in a
-repository:
+**v4.34.0** adds autonomous software delivery to the 116-skill catalog:
 
-- **Binary files no longer read as merge conflicts.** The gate used a pickaxe
-  (`git diff --cached -S`), which searches binary blobs and ignores line
-  starts, so a committed video whose bytes happened to contain `<<<<<<<`
-  failed every commit. It now greps staged text blobs for a line-anchored
-  marker.
-- **The error names the conflicted files**, so a false positive is
-  distinguishable from a real conflict at a glance.
-- **Seven regression tests** cover the gate, four of which fail against the
-  previous implementation.
+- **`/autonomous-dev`** takes a brief, specification, Jira task or existing PR
+  through implementation, review, validation, QA and required CI, with durable
+  ownership, bounded attempts and resumable evidence.
+- **`/prepare-test-env`** supplies shared application QA provenance, readiness
+  checks and narrowly owned cleanup.
+- **RAG and Jira profiles** separate task tracking, knowledge and code hosting;
+  refresh requirements on resume and reconcile remote-write receipts.
+- **PR preparation** uses actual project checks and safely resolves Git refs,
+  empty ranges and changed-file names.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -57,7 +56,7 @@ ai-toolkit install
 npx @softspark/ai-toolkit install
 ```
 
-**That's it.** Claude Code picks up 114 skills, 44 agents, quality hooks, and the safety constitution automatically.
+**That's it.** Claude Code picks up 116 skills, 44 agents, quality hooks, and the safety constitution automatically.
 
 Language knowledge skills (`rust-rules`, `kotlin-patterns`, ...) are scoped to the languages your registered projects use: once you have run `ai-toolkit install --local` in at least one project, the global install turns the other languages' skills off through `skillOverrides` in `~/.claude/settings.json` so their descriptions stop loading into every session. A new project in a new language turns its skills back on. `ai-toolkit install --language-skills all` keeps every language skill on and remembers that choice; `ai-toolkit doctor` shows the resulting context budget.
 
@@ -184,7 +183,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Component | Count | Description |
 |-----------|-------|-------------|
 | `skills/` (task) | 32 | Slash commands: `/commit`, `/build`, `/deploy`, `/test`, `/mcp-builder`, ... |
-| `skills/` (hybrid) | 31 | Slash commands with agent knowledge base |
+| `skills/` (hybrid) | 33 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 51 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
 | `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
@@ -201,7 +200,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 ai-toolkit/
 ├── app/
 │   ├── agents/          # 44 agent definitions
-│   ├── skills/          # 114 skills (task / hybrid / knowledge)
+│   ├── skills/          # 116 skills (task / hybrid / knowledge)
 │   ├── rules/           # Source rules synced into Claude/editor rule files
 │   ├── hooks/           # Hook scripts (28 entries, 14 lifecycle events)
 │   ├── claude-app/      # Generated Chat/Cowork plugin rules, hooks, instructions
@@ -255,7 +254,9 @@ See [Unique Features](kb/reference/unique-features.md) for detailed descriptions
 
 | Command | Purpose | Effort |
 |---------|---------|--------|
-| `/workflow <type>` | Pre-defined multi-agent workflow (15 types) | max |
+| `/workflow <type>` | Pre-defined multi-agent workflow (16 types) | max |
+| `/autonomous-dev` | Task-to-PR delivery with persistent state, review, QA and resume | high |
+| `/prepare-test-env` | Prepare and verify the running app used by QA | high |
 | `/orchestrate` | Custom multi-agent coordination (3–6 agents) | max |
 | `/swarm` | Parallel Agent Teams: `map-reduce`, `consensus`, `relay` | max |
 | `/plan` | Implementation plan with task breakdown | high |
@@ -287,6 +288,7 @@ api-design             database-evolution    test-coverage
 security-audit         codebase-onboarding   spike
 debugging              incident-response     performance-optimization
 infrastructure-change  application-deploy    proactive-troubleshooting
+autonomous-development
 ```
 
 ### Multi-Agent Skill Selection
@@ -294,13 +296,43 @@ infrastructure-change  application-deploy    proactive-troubleshooting
 ```
 Need multi-agent coordination?
 ├── Know your domains? → /orchestrate (ad-hoc, 3-6 agents)
-├── Have a known pattern? → /workflow <type> (15 templates)
+├── Have a known pattern? → /workflow <type> (16 routes)
+├── Need task-to-PR delivery with resume? → /autonomous-dev
 ├── Need consensus/map-reduce? → /swarm <mode>
 ├── Want Agent Teams API? → /teams (experimental)
 └── Executing a plan? → /subagent-development
 ```
 
 ---
+
+### Autonomous software delivery
+
+```text
+/autonomous-dev setup
+/autonomous-dev run "Add CSV export for filtered orders"
+/autonomous-dev run PROJ-123
+/autonomous-dev list
+/autonomous-dev resume <run-id>
+/autonomous-dev status <run-id>
+```
+
+The process takes a brief, specification, issue or existing PR through planning,
+implementation, project-specific validation, review, application QA and required
+CI. It reuses the same PR and resumes from durable state. The default endpoint is
+a ready PR; merge and deployment need separate authorization.
+
+The current agent host performs the work. Bundled Python helpers maintain a
+transactional run journal and check QA environment identity/readiness. They do
+not launch an LLM or continue running after the host stops. Generated reports
+stay outside the target repository, while `.ai-toolkit/autonomous.json` records
+intentional project configuration. See the
+[autonomous development guide](kb/howto/autonomous-development.md) for setup,
+ownership, recovery, evidence and supported runtime boundaries.
+
+The optional SoftSpark stack profile separates Jira task tracking, code-host
+PR/CI and RAG knowledge. It refreshes task requirements and source-backed KB
+context on resume, reconciles Jira comment receipts before retries and treats
+Jira completion and KB indexing as explicit project lifecycle outcomes.
 
 ## Getting Started
 

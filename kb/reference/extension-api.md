@@ -3,9 +3,9 @@ title: "Extension API Reference"
 category: reference
 service: ai-toolkit
 tags: [extension-api, inject-rule, inject-hook, inject-mcp, mcp-templates, integration, editors]
-version: "1.8.0"
+version: "1.8.1"
 created: "2026-04-07"
-last_updated: "2026-07-14"
+last_updated: "2026-09-08"
 description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, inject-mcp, remove-* variants, and editor-aware MCP template management."
 ---
 
@@ -181,15 +181,19 @@ npx @softspark/ai-toolkit inject-mcp ./conflict.json --force
 ```json
 {
   "name": "rag-mcp",
-  "description": "Multi-tenant RAG over knowledge bases",
+  "description": "Knowledge-base retrieval with semantic and hybrid search",
   "mcpServers": {
     "rag-mcp": {
       "type": "http",
-      "url": "http://localhost:8081/mcp/sse?secret_key=${RAG_MCP_SECRET_KEY}"
+      "url": "http://localhost:8081/mcp/sse"
     }
   }
 }
 ```
+
+This example matches the built-in RAG template's unauthenticated local endpoint.
+Technical service filters and a query-string key do not establish account or
+tenant isolation. See [MCP templates](mcp-templates.md) for the deployment boundary.
 
 **Source name derivation:** `rag-mcp-template.json` → `"rag-mcp-template"`. For URLs: `https://example.com/rag-mcp-template.json` → `"rag-mcp-template"`. Every server in the `mcpServers` block is tagged with `"_source": "<source-name>"` inside `~/.mcp.json` only; native editor configs receive the same servers **without** the `_source` field (some clients reject unknown keys).
 

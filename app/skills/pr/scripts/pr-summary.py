@@ -13,16 +13,20 @@ object suitable for populating a PR template.
 Usage::
 
     python3 pr-summary.py [base_branch]
-    # Default base branch: main
+    # Default base: cached origin/HEAD, then local main (no network access)
+
+An empty commit range returns a normal summary with zero counts and an empty
+title. Invalid refs and Git failures return an error object and exit nonzero.
 """
+
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
 import sys
 from typing import Any
-
 
 CONVENTIONAL_TYPES: dict[str, str] = {
     "feat": "Features",
@@ -39,20 +43,47 @@ CONVENTIONAL_TYPES: dict[str, str] = {
 }
 
 
-def run(cmd: str) -> str:
-    """Run a command and return stripped stdout.
+def run_git(*args: str) -> str:
+    """Run Git with literal arguments, preserving delimiters and failures."""
+    result = subprocess.run(
+        ["git", "--no-pager", *args], capture_output=True, text=True, check=True
+    )
+    return result.stdout
 
-    Args:
-        cmd: Command string (split via shlex, no shell).
 
-    Returns:
-        Stripped standard output of the command.
-    """
-    import shlex
-    # Strip shell redirects (2>/dev/null) — subprocess captures stderr anyway
-    clean = re.sub(r'\s*2>/dev/null\s*', '', cmd)
-    r = subprocess.run(shlex.split(clean), capture_output=True, text=True)
-    return r.stdout.strip()
+def resolve_commit(ref: str) -> str | None:
+    """Resolve one literal commit ref, returning None only when it is absent."""
+    try:
+        return run_git(
+            "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}"
+        ).strip()
+    except subprocess.CalledProcessError as error:
+        if error.returncode == 1:
+            return None
+        raise
+
+
+def resolve_base(base: str | None) -> tuple[str, str]:
+    """Select a locally available base and pin its commit for this summary."""
+    if base is not None:
+        commit = resolve_commit(base)
+        if commit is None:
+            raise ValueError(
+                f"Base {base!r} is not a commit ref available locally. "
+                "Pass an existing branch, tag, or commit."
+            )
+        return base, commit
+    for label, ref in (
+        ("origin/HEAD", "refs/remotes/origin/HEAD"),
+        ("main", "refs/heads/main"),
+    ):
+        commit = resolve_commit(ref)
+        if commit is not None:
+            return label, commit
+    raise ValueError(
+        "Cannot determine a base: cached origin/HEAD and local main are unavailable. "
+        "Pass the PR target branch explicitly, for example: pr-summary.py develop."
+    )
 
 
 def parse_conventional_commit(message: str) -> dict[str, Any]:
@@ -65,9 +96,7 @@ def parse_conventional_commit(message: str) -> dict[str, Any]:
         Dictionary with ``type``, ``scope``, ``breaking``, and
         ``description`` keys.
     """
-    m = re.match(
-        r"^(\w+)(?:\(([^)]+)\))?(!)?:\s*(.+)$", message
-    )
+    m = re.match(r"^(\w+)(?:\(([^)]+)\))?(!)?:\s*(.+)$", message)
     if m:
         return {
             "type": m.group(1),
@@ -78,42 +107,39 @@ def parse_conventional_commit(message: str) -> dict[str, Any]:
     return {"type": "other", "scope": "", "breaking": False, "description": message}
 
 
-def main() -> None:
-    """Entry point: generate PR summary and print JSON to stdout."""
-    base = sys.argv[1] if len(sys.argv) > 1 else "main"
-
-    # Get oneline log
-    log_output = run(f"git log --oneline {base}..HEAD 2>/dev/null")
-    if not log_output:
-        print(json.dumps({"error": f"No commits found between {base} and HEAD."}))
-        return
-
-    # Parse commits
+def read_commits(commit_range: str) -> tuple[list[dict[str, Any]], list[str]]:
+    """Read subjects and bodies without line or user-controlled separators."""
+    log_output = run_git(
+        "log",
+        "--no-show-signature",
+        "--no-color",
+        "--no-decorate",
+        "--format=%h%x00%s%x00%b",
+        "-z",
+        commit_range,
+        "--",
+    )
+    fields = log_output.split("\0")[:-1]
     commits: list[dict[str, Any]] = []
-    for line in log_output.split("\n"):
-        if not line.strip():
-            continue
-        parts = line.split(" ", 1)
-        if len(parts) < 2:
-            continue
-        sha = parts[0]
-        message = parts[1]
+    breaking_changes: list[str] = []
+    for index in range(0, len(fields), 3):
+        sha, message, body = fields[index : index + 3]
         parsed = parse_conventional_commit(message)
         commits.append({"sha": sha, "message": message, **parsed})
-
-    # Check full commit bodies for BREAKING CHANGE
-    body_output = run(f"git log --format='%B---COMMIT_SEP---' {base}..HEAD 2>/dev/null")
-    breaking_changes: list[str] = []
-    for block in (body_output or "").split("---COMMIT_SEP---"):
-        for bline in block.strip().split("\n"):
-            if bline.startswith("BREAKING CHANGE:") or bline.startswith("BREAKING-CHANGE:"):
+        for bline in f"{message}\n{body}".splitlines():
+            if bline.startswith(("BREAKING CHANGE:", "BREAKING-CHANGE:")):
                 breaking_changes.append(bline.split(":", 1)[1].strip())
     # Also check for ! in commit type
     for c in commits:
         if c["breaking"] and c["description"] not in breaking_changes:
             breaking_changes.append(c["description"])
+    return commits, breaking_changes
 
-    # Group by type
+
+def summarize_groups(
+    commits: list[dict[str, Any]],
+) -> tuple[dict[str, list[str]], list[str]]:
+    """Group commit descriptions and construct the existing summary bullets."""
     groups: dict[str, list[str]] = {}
     for c in commits:
         label = CONVENTIONAL_TYPES.get(c["type"], "Other")
@@ -127,20 +153,13 @@ def main() -> None:
         else:
             summary_bullets.append(f"{label}: {len(descriptions)} changes")
 
-    # File stats
-    diff_stat = run(f"git diff --stat {base}...HEAD 2>/dev/null")
-    files_changed = 0
-    test_files = 0
-    stat_lines = diff_stat.split("\n") if diff_stat else []
-    for sl in stat_lines:
-        sl = sl.strip()
-        if "|" in sl:
-            files_changed += 1
-            fname = sl.split("|")[0].strip()
-            if re.search(r"(test_|_test\.|\.test\.|spec\.|__tests__)", fname, re.IGNORECASE):
-                test_files += 1
+    return groups, summary_bullets
 
-    # Suggest title from most common type + scope
+
+def suggest_title(commits: list[dict[str, Any]]) -> str:
+    """Suggest a title using the most common commit type and scope."""
+    if not commits:
+        return ""
     type_counts: dict[str, int] = {}
     scope_counts: dict[str, int] = {}
     for c in commits:
@@ -148,35 +167,79 @@ def main() -> None:
         if c["scope"]:
             scope_counts[c["scope"]] = scope_counts.get(c["scope"], 0) + 1
 
-    dominant_type = max(type_counts, key=type_counts.get) if type_counts else "feat"
-    dominant_scope = max(scope_counts, key=scope_counts.get) if scope_counts else ""
+    dominant_type = max(type_counts, key=lambda item: type_counts[item])
+    dominant_scope = (
+        max(scope_counts, key=lambda item: scope_counts[item]) if scope_counts else ""
+    )
 
     if len(commits) == 1:
-        title_suggestion = commits[0]["message"]
+        title_suggestion: str = commits[0]["message"]
     else:
         scope_part = f"({dominant_scope})" if dominant_scope else ""
         # Use the description of the first commit of dominant type as hint
-        dominant_descs = [c["description"] for c in commits if c["type"] == dominant_type]
-        brief = dominant_descs[0] if dominant_descs else "multiple changes"
+        dominant_descs = [
+            c["description"] for c in commits if c["type"] == dominant_type
+        ]
+        brief = dominant_descs[0]
         if len(brief) > 50:
             brief = brief[:47] + "..."
         title_suggestion = f"{dominant_type}{scope_part}: {brief}"
+    return title_suggestion
 
-    result: dict[str, Any] = {
+
+def generate_summary(base: str | None) -> dict[str, Any]:
+    """Generate the JSON summary from checked, locally resolved Git refs."""
+    run_git("rev-parse", "--git-dir")
+    base, base_commit = resolve_base(base)
+    head = resolve_commit("HEAD")
+    if head is None:
+        raise ValueError(
+            "HEAD has no commit. Create a commit before generating a PR summary."
+        )
+    commits, breaking_changes = read_commits(f"{base_commit}..{head}")
+    groups, summary_bullets = summarize_groups(commits)
+    names = run_git("diff", "--name-only", "-z", f"{base_commit}...{head}", "--")
+    changed_files = names.split("\0")[:-1]
+    test_files = sum(
+        bool(
+            re.search(r"(test_|_test\.|\.test\.|spec\.|__tests__)", name, re.IGNORECASE)
+        )
+        for name in changed_files
+    )
+    return {
         "base": base,
         "total_commits": len(commits),
-        "title_suggestion": title_suggestion,
+        "title_suggestion": suggest_title(commits),
         "commits": commits,
         "groups": groups,
         "summary_bullets": summary_bullets,
         "has_breaking": len(breaking_changes) > 0,
         "breaking_changes": breaking_changes,
-        "files_changed": files_changed,
+        "files_changed": len(changed_files),
         "test_files_changed": test_files,
         "has_tests": test_files > 0,
     }
+
+
+def main() -> int:
+    """Print a summary or an actionable error, using a failing exit status."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "base_branch", nargs="?", help="PR target ref (default: origin/HEAD, then main)"
+    )
+    args = parser.parse_args()
+    try:
+        result = generate_summary(args.base_branch)
+    except subprocess.CalledProcessError as error:
+        detail = error.stderr.strip() or f"exit status {error.returncode}"
+        print(json.dumps({"error": f"Git command failed: {detail}"}))
+        return 1
+    except (OSError, ValueError) as error:
+        print(json.dumps({"error": str(error)}))
+        return 1
     print(json.dumps(result, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

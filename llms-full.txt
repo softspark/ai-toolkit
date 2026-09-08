@@ -13,6 +13,7 @@
 
 - [Best Practices](kb/best-practices/README.md)
 - [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
+- [Autonomous development in ai-toolkit](kb/history/completed/autonomous-development-plan.md)
 - [Plan: Deep Coverage v3.0 — 100% Native Surface Utilization](kb/history/completed/deep-coverage-v3-20260423.md)
 - [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/history/completed/drop-cascade-hooks-after-sunset-20260710.md)
 - [Plan: DeepSeek Harness (dsh) Integration (Superseded)](kb/history/completed/dsh-integration-plan-superseded.md)
@@ -31,6 +32,7 @@
 - [Retirement: rtk-pack](kb/history/completed/rtk-pack-retirement-20260727.md)
 - [Closed: Tool-Output Token Reduction](kb/history/completed/tool-output-token-reduction-closed-20260727.md)
 - [How-To Guides](kb/howto/README.md)
+- [Autonomous software development](kb/howto/autonomous-development.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
 - [SOP: Ecosystem Sync](kb/procedures/sop-ecosystem-sync.md)
 - [SOP: AI Toolkit Maintenance](kb/procedures/sop-maintenance.md)
@@ -88,6 +90,7 @@
 - **app-builder**: App scaffolding: Next.js, Vite, Nuxt, Astro, FastAPI, Django, Laravel, RN, Flutter. Triggers: scaffold, bootstrap, new project, starter, dashboard, mobile app.
 - **architecture-audit**: Audits codebase for architectural friction, shallow modules; proposes RFCs. Triggers: improve architecture, shallow modules, deepen modules, reduce coupling.
 - **architecture-decision**: Architecture decisions in ADR/RFC/RFD format: context, constraints, options, recommendation. Triggers: ADR, RFC, RFD, trade-offs, design choice, pick between, evaluate approach.
+- **autonomous-dev**: Drives a brief, specification, issue or existing PR through implementation, review, tests and QA to a ready PR. Persists ownership, progress and commit-bound evidence for safe resumption. Use for autonomous software delivery or finishing an interrupted development run.
 - **biz-scan**: Scans codebase for revenue opportunities, KPIs, monetization gaps. Triggers: business metrics, KPI, analytics gaps, monetization, revenue.
 - **brainstorm**: Pre-artifact conversation that prices the zero option and can end in 'do not build this'. Triggers: brainstorm, should we build, is this worth it, explore idea, thinking out loud, half-formed idea.
 - **brand-voice**: Direct technical voice for docs, README, user-facing text. Concise/strict modes. Triggers: documentation, README, content, output-mode, voice, prose style.
@@ -162,6 +165,7 @@
 - **prd-to-issues**: Splits a PRD into vertical-slice GitHub issues with HITL/AFK tagging and dependencies. Triggers: PRD to issues, create tickets, break down PRD, work items.
 - **prd-to-plan**: Converts PRD into phased plan via tracer-bullet vertical slices. Triggers: PRD to plan, break down PRD, implementation plan, tracer bullets, phased plan.
 - **predict**: Analyzes diffs for regression risk and blast radius, generates risk-scored impact report. Triggers: PR review, code change risk, breaking change, blast radius, regression check.
+- **prepare-test-env**: Prepare or verify a project QA environment with source identity, readiness, browser access, evidence paths and owned cleanup. Use for autonomous delivery or application testing that needs a running app.
 - **prompt-caching-patterns**: Anthropic API prompt caching: TTL, breakpoints, stacking, invalidation, hit rate. Triggers: prompt caching, cache_control, cache breakpoint, cache TTL, hit rate.
 - **python-rules**: Python coding rules: style, patterns, security, testing. Triggers: .py, .pyi, pyproject.toml, requirements.txt, Pipfile, FastAPI, Django, Flask, pytest, SQLAlchemy, ruff, mypy.
 - **qa-session**: Interactive QA: user reports bugs conversationally, agent files GitHub issues. Triggers: QA session, report bug, file issue, conversational QA, bug intake.
@@ -305,6 +309,135 @@ Shared AI development toolkit — 90 skills, 44 agents
 # GOOD — no count
 Shared AI development toolkit with multi-platform support
 ```
+
+---
+
+## kb/history/completed/autonomous-development-plan.md
+
+---
+title: "Autonomous Development Implementation Plan"
+category: planning
+service: ai-toolkit
+tags: [autonomous, workflow, planning, qa, recovery]
+version: "1.0.0"
+created: "2026-09-08"
+last_updated: "2026-09-08"
+status: completed
+completed: "2026-09-08"
+shipped_in: "4.34.0"
+description: "Completed implementation plan and verification evidence for the autonomous software-development process."
+---
+
+# Autonomous development in ai-toolkit
+
+This archive records the initial workflow implementation and its verification.
+Current behavior, including the later Jira/RAG profile, is maintained in the
+[autonomous development guide](../../howto/autonomous-development.md).
+
+## Objective and authorization
+
+Implement the user's requested autonomous software-development process, inspired
+by Open Mercato skills at commit `91f11c63721b5f7e17a859940b3e9c55ece698ee`.
+The user authorized adding this process to ai-toolkit. The default deliverable
+is a reviewed PR with passing validation, required CI and applicable QA. Merge
+and deployment remain separately authorized endpoints.
+
+## Design
+
+- Add `/autonomous-dev` as the process owner for briefs, specs, issues and PRs.
+  It composes existing planning, implementation, review, test and PR skills.
+- Persist run identity, ownership, stages and commit-bound evidence outside the
+  target repository using a bundled, standard-library Python state helper.
+  Transactional updates prevent two sessions from claiming the same work.
+- Add `/prepare-test-env` for a shared, provider-neutral QA environment and
+  evidence contract. The agent uses the target project's own runtime commands.
+- Keep model choice and runtime permissions with the host. Subagents inherit
+  those settings and receive bounded tasks and explicit ownership.
+- Use project-specific validation commands; remove Python-only PR examples.
+- Keep installation automatic through existing skill generators. No new daemon,
+  external service, package fetch at runtime, or copied upstream skill tree.
+
+## Phases and owners
+
+1. **A resumable run reaches a reviewed local result.** Backend worker owns
+   `app/skills/autonomous-dev/scripts/` and its behavioral tests. Root owns
+   `app/skills/autonomous-dev/SKILL.md`, its references and workflow integration.
+   Acceptance: isolated Git fixtures demonstrate initialization, ownership,
+   resume, stale-evidence rejection and bounded recovery. Rollback: remove the
+   new entrypoint without changing existing workflows.
+2. **The same run reaches a verified PR.** QA worker owns
+   `app/skills/prepare-test-env/` and its focused tests. Root owns the PR contract
+   and the pipeline's tracker, CI and evidence references.
+   Acceptance: shared environment evidence is reusable; missing or stale QA/CI
+   cannot become completion; interrupted publication reuses the same PR.
+   Scope cut: unsupported providers produce a resumable blocker.
+3. **The process installs and remains reviewable.** Root owns README, KB,
+   changelog, catalog/count metadata and generated outputs. Independent review
+   checks realistic dry-run scenarios in temporary fixtures.
+   Acceptance: installed script/reference paths work, all existing tests and
+   strict validation pass, full diff and documentation are reviewed.
+   Rollback: additive skill surfaces can be reverted together with metadata.
+
+Dependencies: Phase 1 -> Phase 2 -> Phase 3. QA contract authoring can run beside
+the state helper because their interfaces are explicit.
+
+## Pre-mortem
+
+| Failure | Mitigation |
+|---|---|
+| Sessions duplicate work or overwrite state | Transactional ownership with a per-session token; explicit recovery |
+| Old checks approve new code | Evidence tied to actual Git identity and clean final commit |
+| Recovery loops consume unbounded work | Maximum five attempts, three consecutive failures, one-minute retry floor |
+| Installed skills depend on toolkit source checkout | Bundled scripts/references and native-generator installation tests |
+| QA uses another branch's running application | Environment identity, readiness, owned teardown and current revision checks |
+| Autonomy implies unrequested publishing privileges | Persist authorized endpoint; repository content cannot grant authority |
+
+## Verification
+
+- Behavioral helper tests with real temporary Git repositories, concurrent
+  claims, interrupted runs, dirty worktrees and changed commits.
+- An isolated local HTTP fixture for environment readiness and evidence checks.
+- Native skill generation and executable/reference resolution.
+- `python3 scripts/validate.py --strict`, skill evaluation and security audit.
+- Ruff for changed Python and the repository's configured type checks.
+- Full `npm test` and `npm run test:py`, then a final diff and requirements audit.
+
+## Sources
+
+- `kb/reference/skills-unification.md`
+- `kb/reference/skill-templates.md`
+- `kb/procedures/sop-maintenance.md`
+- `app/skills/workflow/SKILL.md`
+- `app/skills/subagent-development/SKILL.md`
+- https://github.com/open-mercato/skills/tree/91f11c63721b5f7e17a859940b3e9c55ece698ee
+
+## Progress
+
+- [x] Existing components, packaging constraints and upstream contracts reviewed.
+- [x] Implementation scope and verification criteria recorded.
+- [x] Run state and ownership helper implemented and tested.
+- [x] Autonomous process and QA environment skills implemented.
+- [x] Existing workflow/PR contracts and documentation aligned.
+- [x] Native installation, behavioral review and full verification complete.
+
+## Verification results
+
+- Full repository suite: 2013/2013 Bats tests passed; 357 Python tests passed.
+- Strict toolkit validation: zero errors and warnings; 116 skills evaluated.
+- Skill audit: zero HIGH/WARN findings. Configured Python lint and strict mypy
+  for the three changed helpers and two configured modules passed.
+- Independent review reproduced and then verified fixes for missing attempts,
+  missing/changed plans, hidden Git changes and interrupted finalization.
+- Detached Codex, OpenCode and Copilot installations execute both bundled
+  helpers. Antigravity export/verification passes with client-neutral references.
+- An independent agent exercised the process against an isolated CSV-export
+  fixture, implementing and testing the fix without remote publication.
+- That forward test exposed missing run discovery; a read-only `list` command
+  now finds current-repository runs, with exact-subject filtering and regression
+  tests for no writes, no owner-token disclosure and repository separation.
+- Unrestricted `ruff check .` still reports 347 findings in 123 unchanged files;
+  the changed files have no findings. This broader unrelated baseline was not
+  altered to implement the delivery process.
 
 ---
 
@@ -5764,6 +5897,212 @@ Step-by-step guides for common tasks. Guides will be added here as they are crea
 
 ---
 
+## kb/howto/autonomous-development.md
+
+---
+title: "Autonomous Software Development"
+category: howto
+service: ai-toolkit
+tags: [autonomous, workflow, skills, qa, pull-request, recovery]
+version: "1.0.0"
+created: "2026-09-08"
+last_updated: "2026-09-08"
+description: "Run and resume autonomous software delivery from a brief, spec, issue or PR, with project checks and durable evidence."
+---
+
+# Autonomous software development
+
+`/autonomous-dev` owns delivery from a task to a verified ready PR. The agent
+running in your current client performs the work. A bundled journal records
+ownership, stages, attempts and evidence; it is not a daemon or an LLM runtime.
+
+The process adapts the chaining, recovery and shared-QA ideas in
+[Open Mercato skills](https://github.com/open-mercato/skills/tree/91f11c63721b5f7e17a859940b3e9c55ece698ee)
+to ai-toolkit's existing skills, native generators and per-repository state.
+The helper implementation is original; installing this process does not fetch
+or install the upstream skill collection.
+
+## Start a run
+
+Install/update ai-toolkit using the existing project/client setup procedure.
+The two new skills are part of the core catalog. In a client with skills:
+
+```text
+/autonomous-dev setup
+/autonomous-dev run "Add CSV export for filtered orders"
+/autonomous-dev run PROJ-123
+/autonomous-dev run https://example.atlassian.net/browse/PROJ-123
+/autonomous-dev run path/to/approved-spec.md
+/autonomous-dev run https://github.com/organization/project/issues/42
+/autonomous-dev run https://github.com/organization/project/pull/43
+```
+
+`/workflow autonomous-development <task>` is another entry to the same process.
+Use the skill name exposed by the current client if it applies a namespace.
+Clients without executable tools can read the guidance but cannot run the full
+process. Native subagents and browser tooling depend on the client; the skill
+preserves its configured models and permissions.
+
+Setup inspects actual project instructions, runtime scripts and CI. It records
+the PR base, validation commands, separate task/code providers, knowledge sources,
+browser provider and applicable gates
+in `.ai-toolkit/autonomous.json`. This intentional configuration can be reviewed
+with the project. Missing configuration does not require an external service.
+For the schema and an Open Mercato configuration mapping, see
+[project-config.md](../../app/skills/autonomous-dev/reference/project-config.md).
+
+## RAG MCP and Jira MCP
+
+Use three explicit roles in the project config:
+
+| Role | Our stack | Responsibility |
+|---|---|---|
+| `issueTracker` | `jira-mcp` | Jira task identity, acceptance criteria, language and workflow |
+| `codeHost` | GitHub | Repository, PR, review and required CI |
+| `knowledge` | `rag-mcp` | Project SOPs, architecture and testing rules, filtered by actual services |
+
+The readonly `delivery-config.py` helper validates this profile and normalizes a
+Jira key and browse URL to the same run subject. It does not verify remote
+permissions, connector availability, live transitions or the task-to-repository
+mapping. The existing GitHub `tracker` shorthand remains compatible. Other code
+hosts require their own supported PR integration; configuring Jira does not add one.
+
+```mermaid
+flowchart LR
+    Jira[Jira task and acceptance criteria] --> Context[Source-backed context in hashed plan]
+    RAG[RAG SOPs and architecture] --> Context
+    Context --> Implementation[Implementation and review]
+    Implementation --> QA[Shared application QA]
+    QA --> PR[Code-host PR and CI]
+    PR --> Handoff[Jira status, evidence and KB indexing handoff]
+```
+
+At discovery and resume, refresh the scoped Jira task with `sync_tasks` and then
+`get_task_details`; read the configured project language before writing text and
+available transitions before changing status. Fetch RAG documents by `kb_id`,
+resolve filesystem paths against their real source repository and record the
+used content/digests in the hashed plan. Refresh these inputs before finalization,
+even when Git HEAD has not changed. New acceptance criteria invalidate old proof.
+
+Jira comments require the actual tool's content approval. The current connector
+has no edit-comment or idempotency-key tool: use a visible run/stage/SHA marker,
+persist the returned receipt, and reconcile comments after a timeout before
+retrying. Project config cannot grant posting permission. `ready-pr` leaves Jira
+at its real status unless a configured, authorized transition applies; it never
+means automatic Jira Done.
+
+KB file updates and indexing are separate. Record `not-required`, `pending` or
+`verified` in the handoff. Use an available, configured indexing mechanism only
+when authorized, and verify its step results plus retrieval of the expected
+document. The current RAG MCP connection may have no write/index tool. Neither
+HTTP acceptance nor a job's done flag alone proves that the index was refreshed.
+
+The full operational sequence and receipt fields are in
+[stack-integrations.md](../../app/skills/autonomous-dev/reference/stack-integrations.md).
+
+## What runs autonomously
+
+| Stage | Result |
+|---|---|
+| Discover | Real task scope, existing work, repository and source identity |
+| Plan | Acceptance criteria, owned slices, actual commands and assumptions |
+| Implement | Reviewed source changes, regression tests and affected docs |
+| Validate/review | Results tied to the exact source and immutable reports |
+| QA | Verified environment provenance and applicable behavioral evidence |
+| Publish/CI | Same PR, current remote head and required check results |
+| Complete | Clean verified source, successful attempt, intact plan/evidence |
+
+Previously granted approval remains valid across phases. Routine reversible
+implementation decisions proceed within that scope. Missing business decisions
+and host permissions remain real blockers. The default endpoint is `ready-pr`;
+merge, release and deployment require separate explicit authorization.
+
+The process invokes existing planning, development, review, test and PR skills.
+It assigns independent subagent work when supported, with explicit file
+ownership. Review must address the acceptance criteria and existing feedback.
+Local AI review does not substitute for required human approvals on GitHub.
+
+## State and recovery
+
+The default store is:
+
+```text
+~/.softspark/ai-toolkit/sessions/<primary-repo-path-with-slashes-replaced>/autonomous/
+  runs.sqlite3
+  <run-id>/artifacts/
+```
+
+Linked worktrees share a canonical Git repository identity and this store.
+Each run has a stable source subject and a per-session owner token. Transactions
+prevent competing sessions on the same store from mutating another session's
+run. This is a local coordination mechanism; it is not a distributed lock for
+agents on separate machines. Tracker ownership signals remain advisory.
+
+```text
+/autonomous-dev list
+/autonomous-dev status <run-id>
+/autonomous-dev resume <run-id>
+```
+
+List discovers this repository's runs without requiring an ID or creating state.
+Status does not mutate state. Resume verifies the current worktree, owner and
+evidence before continuing. A deliberately released run can be claimed by a
+new session. An active foreign owner needs an explicit handoff or authorized
+takeover, identifying the previous owner and reason. Rebinding a replacement
+worktree is explicit and requires the same clean branch, commit and contents.
+For a custom journal `--store`, preserve that path in the handoff; the default
+store lookup cannot discover a separately located fixture store.
+
+The journal permits at most five attempts, halts after three consecutive failed
+attempts and requires at least 60 seconds between starts. Those limits survive
+resume and takeover. Multiple failed gates within one cycle count once. Do not
+create a new run to reset an exhausted budget.
+
+Reports and plans are hashed. Missing, empty, modified or source-stale reports
+cannot satisfy completion. Changing a plan invalidates previous verification.
+Hidden index flags, dirty submodules and uninitialized submodules prevent a
+clean-source claim. The helper never clears flags or changes the target's Git
+state. Inspect and resolve the underlying source state deliberately.
+
+For exact helper operations, see
+[run-state.md](../../app/skills/autonomous-dev/reference/run-state.md).
+
+## QA and evidence
+
+`/prepare-test-env` discovers the project's actual launch/build commands and
+records a shared `test-env.json` under the run directory. It checks the clean
+source revision and HTTP readiness. A successful HTTP response alone does not
+prove which build the server is running: establish launch/build provenance and
+resource ownership, or use an existing application identity endpoint.
+
+The helper does not start or stop services and does not add product API routes.
+The agent uses authorized project tools, runs the changed acceptance scenarios
+and records browser/E2E artifacts. It may stop only resources created by that
+run after checking their creation identity. Unknown or shared services remain
+untouched.
+
+Commit source before final QA, and keep reports outside the checkout. A source
+change requires new evidence. An unavailable browser is a blocker when browser
+QA is required. For non-UI work, a gate declared optional during setup may have a
+reasoned `not-applicable` report, backed by the relevant API/CLI tests. The same
+rule applies to a repository that genuinely has no required CI.
+
+## Verification scope
+
+The repository tests use real temporary Git repositories, concurrent SQLite
+claims, local HTTP servers and detached native skill installations. They verify
+deterministic helper behavior and resource packaging. They do not prove that an
+LLM will always implement a correct feature, nor do they exercise a live hosted
+PR provider. The current agent must inspect actual test/browser/tracker results
+before recording reports. Host shutdown stops execution; resume starts it again.
+
+Related: [maintenance SOP](../procedures/sop-maintenance.md),
+[skills catalog](../reference/skills-catalog.md),
+[completed implementation plan](../history/completed/autonomous-development-plan.md),
+[tracker contract](../../app/skills/autonomous-dev/reference/tracker.md).
+
+---
+
 ## kb/planning/cloud-security-pack-plan.md
 
 ---
@@ -7721,9 +8060,9 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: ai-toolkit
 tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, isolation]
-version: "1.2.1"
+version: "1.2.2"
 created: "2026-07-26"
-last_updated: "2026-09-06"
+last_updated: "2026-09-08"
 description: "Smoke-test a published @softspark/ai-toolkit npm artifact in a disposable container or VM with its default HOME, no host settings or credential mounts, host-side configuration fingerprints, and retained evidence. Covers provenance, CLI, doctor, installed skill scripts, scanner wiring, and the plugin-pack lifecycle."
 ---
 
@@ -7886,11 +8225,11 @@ Install first, then judge doctor.
 
 ## Phase 4b: Skill scripts resolve and run from the installed copy
 
-23 skills ship an executable script under `scripts/`. A skill body invokes it
+Discover skills shipping executable scripts from the installed artifact rather
+than requiring a historical fixed count. A skill body invokes its helper
 through `${CLAUDE_SKILL_DIR}`, which only resolves once the skill is installed —
-so a wrong path is invisible in the working tree and invisible to `validate.py`,
-which checks that the file exists on disk, never that the documented command
-finds it.
+so presence in the working tree is insufficient. `validate.py` now checks
+documented script paths; this phase proves the installed command actually runs.
 
 This is exactly how four skills shipped with `$(dirname "$0")`, which expands to
 the shell's directory rather than the skill's. Every one of them had been broken
@@ -8243,9 +8582,9 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif, dsh]
-version: "1.8.2"
+version: "1.8.3"
 created: "2026-04-08"
-last_updated: "2026-09-06"
+last_updated: "2026-09-08"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, explicit DSH lifecycle, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
@@ -8293,8 +8632,8 @@ The 14 core commands below must pass. Releases that change DSH must also complet
 
 ```bash
 # Pre-commit (Phase 0)
-python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGENTS.md
-python3 scripts/generate_llms_txt.py > llms.txt             # 2. Regenerate llms.txt
+npm run generate:agents                                   # 1. Regenerate AGENTS.md without custom rules
+npm run generate:llms                                     # 2. Regenerate llms.txt + llms-full.txt
 python3 scripts/validate.py --strict                        # 3. Validation passed?
 npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 4. All tests passed? (single run, cached)
 
@@ -8312,7 +8651,7 @@ npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=jso
 python3 scripts/claude_app.py verify                         # 13. Claude Chat/Cowork plugin contract valid?
 
 # Deep-coverage verification (Phase 9, v3.0.0+)
-META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
+META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py|generate_toolkit_rules_skills.py"
 diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 14. Registry <-> generators drift?
 ```
 
@@ -8325,9 +8664,8 @@ counts but does NOT auto-regenerate — you must do it locally.
 
 ```bash
 # 1. Regenerate generated artifacts
-python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_llms_txt.py > llms.txt
-python3 scripts/generate_llms_txt.py --full > llms-full.txt
+npm run generate:agents
+npm run generate:llms
 
 # 2. Validate everything (catches stale counts, missing assets)
 python3 scripts/validate.py --strict
@@ -8353,7 +8691,7 @@ by the developer as part of their PR.
 
 **One-liner (copy-paste):**
 ```bash
-python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+npm run generate:agents && npm run generate:llms && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---
@@ -8687,7 +9025,7 @@ done
 `kb/reference/supported-tools-registry.md` should enumerate every per-editor `scripts/generate_*.py` we ship. Meta-generators (`generate_agents_md.py`, `generate_llms_txt.py`) are excluded — they produce docs/artifacts, not editor configs.
 
 ```bash
-META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
+META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py|generate_toolkit_rules_skills.py"
 REG=$(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u)
 FS=$(ls scripts/generate_*.py | grep -vE "$META" | sort -u)
 diff <(echo "$REG") <(echo "$FS") && echo "OK: registry matches filesystem" || echo "DRIFT: update supported-tools-registry.md"
@@ -8810,9 +9148,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.15.2"
+version: "1.15.3"
 created: "2026-04-10"
-last_updated: "2026-09-07"
+last_updated: "2026-09-08"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
@@ -8864,12 +9202,11 @@ python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
 
 # 3. Write CHANGELOG.md entry
 # 4. Regenerate artifacts
-python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_llms_txt.py > llms.txt
-python3 scripts/generate_llms_txt.py --full > llms-full.txt
+npm run generate:agents
+npm run generate:llms
 
 # 5. Validate + audit + SARIF + shellcheck + test + ecosystem check
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && shellcheck --severity=warning app/hooks/*.sh && npm test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh && npm test
 
 # 5a. Supply-chain standard (v2.8.0+) — non-negotiable
 grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --provenance"; exit 1; }
@@ -8882,10 +9219,19 @@ python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem
 # 5c. Licensing gate — SPDX headers, LICENSE, NOTICE, manifest consistency
 npx bats tests/test_licensing.bats || { echo "LICENSING GATE FAILED"; exit 1; }
 
-# 6. Commit, push branch, and wait for the exact commit's full CI
+# 6. Commit on a release branch, push it, and open the release PR
 git add -A && git commit -m "chore: release vX.Y.Z"
+git push -u origin HEAD || { echo "FAIL: release branch push failed"; exit 1; }
+PR_URL=$(gh pr view --json url --jq .url 2>/dev/null) ||
+  PR_URL=$(gh pr create --base main --title "chore: release vX.Y.Z" --body-file /tmp/release-notes.md) || exit 1
+# Wait for required PR checks and CODEOWNER approval. Merge with the exact
+# release subject; never bypass branch rules merely because a release is due.
+gh pr merge "$PR_URL" --squash --subject "chore: release vX.Y.Z" || { echo "FAIL: release PR merge failed"; exit 1; }
+git fetch origin main || { echo "FAIL: main refresh failed"; exit 1; }
+git switch main || { echo "FAIL: cannot switch to main"; exit 1; }
+git merge --ff-only origin/main || { echo "FAIL: local main cannot fast-forward"; exit 1; }
 RELEASE_SHA=$(git rev-parse HEAD)
-git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
+# The merge produces the commit that needs its own full push CI before tagging.
 RUN_ID=""
 for ATTEMPT in 1 2 3 4 5; do
   RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
@@ -8984,6 +9330,11 @@ Follow [Semantic Versioning](https://semver.org/):
 | Breaking CLI change, removed skill, config format change | **major** | Rename `install` to `setup`, remove skill |
 
 **Rule:** When in doubt, bump minor.
+
+Prepare the candidate on a release branch based on the current `main`, reusing
+an existing release branch only when it contains this release's work. The
+repository requires PRs, required checks and CODEOWNER review. Prepare the PR
+body from the release notes before using the `--body-file` examples below.
 
 ---
 
@@ -9170,10 +9521,10 @@ python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS
 python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
 
 # ShellCheck on hooks (added in 1.11.0). Mirrors the ci.yml "ShellCheck hooks"
-# job. NOT run by validate.py, npm test, OR publish.yml — so a hook with a
-# ShellCheck warning passes every other gate AND still publishes on tag while
-# turning main CI red. Run it here, before tagging.
-shellcheck --severity=warning app/hooks/*.sh && echo "OK: shellcheck clean"
+# job. validate.py and npm test do not run ShellCheck. publish.yml checks hooks
+# too, but its Ubuntu-only job does not replace the exact-commit branch-CI
+# gate including macOS. Run the local hook check here, before tagging.
+shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh && echo "OK: shellcheck clean"
 
 # Registry / generator drift (added in 1.10.0). Meta-generators excluded.
 META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py|generate_toolkit_rules_skills.py"
@@ -9204,15 +9555,15 @@ echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp
 - `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
 - `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
 - `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
-- `shellcheck --severity=warning app/hooks/*.sh`: no output, exit 0. A common false positive is `SC2034` on `INPUT` or env vars (e.g. `AI_TOOLKIT_HOOK_FORMAT`) that a *sourced* helper (`_hook-io.sh`) consumes — ShellCheck cannot see cross-file use. Fix with a `# shellcheck disable=SC2034` directive or `export`, matching `guard-destructive.sh`. Never tag with a red ShellCheck.
+- `shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh`: no output, exit 0. A common false positive is `SC2034` on `INPUT` or env vars (e.g. `AI_TOOLKIT_HOOK_FORMAT`) that a *sourced* helper (`_hook-io.sh`) consumes — ShellCheck cannot see cross-file use. Fix with a `# shellcheck disable=SC2034` directive or `export`, matching `guard-destructive.sh`. Never tag with a red ShellCheck.
 - Registry drift: `OK: registry matches filesystem`. If `DRIFT:` appears, add the missing `scripts/generate_*.py` rows to `kb/reference/supported-tools-registry.md` before tagging.
 - `npm test`: `1..N` with zero `not ok` (read from the cached `/tmp/npm-test.log`, do not rerun)
 
-> **Why this matters (v4.5.1 postmortem):** `publish.yml` runs only `validate.py` + `npm test`, so it published v4.5.0 even though the `main` CI `ShellCheck hooks` job was red on two `SC2034` warnings in a new hook. The publish workflow does **not** depend on the CI workflow. Until that is fixed, ShellCheck is a manual pre-tag gate — run it here every time.
+> **Why this matters (v4.5.1 postmortem):** the older publish workflow ran only `validate.py` and `npm test`, and published v4.5.0 despite a red ShellCheck job. The current workflow also checks hooks and security, but still runs independently of branch CI and only on Ubuntu. Local gates and the exact-commit Ubuntu/macOS branch-CI gate remain mandatory before tagging.
 
 **One-liner:**
 ```bash
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py|generate_toolkit_rules_skills\.py' | sort -u) && npm test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py|generate_toolkit_rules_skills\.py' | sort -u) && npm test
 ```
 
 **If tests fail:** Fix the issue, do NOT skip. Common failures:
@@ -9329,11 +9680,27 @@ git commit -m "chore: release vX.Y.Z"
 
 ---
 
-## Phase 7: Push Branch, Verify CI, Tag, and Push Tag
+## Phase 7: Merge the Release PR, Verify Main CI, Tag, and Push Tag
+
+Push the release branch and open or reuse its PR. Wait for the configured
+required checks and CODEOWNER approval; a local agent review does not replace
+that GitHub gate. Keep the release fully prepared and report any unresolved
+approval requirement instead of changing branch rules or silently bypassing it.
+Squash with the exact release subject so the actual main commit satisfies the
+tag assertion. Refresh main after the merge and bind all remaining checks to
+that commit, which can differ from the candidate's branch SHA.
 
 ```bash
+git push -u origin HEAD || { echo "FAIL: release branch push failed"; exit 1; }
+PR_URL=$(gh pr view --json url --jq .url 2>/dev/null) ||
+  PR_URL=$(gh pr create --base main --title "chore: release vX.Y.Z" --body-file /tmp/release-notes.md) || exit 1
+# Reuse an existing PR instead of opening another one. After its required
+# checks and review are satisfied:
+gh pr merge "$PR_URL" --squash --subject "chore: release vX.Y.Z" || { echo "FAIL: release PR merge failed"; exit 1; }
+git fetch origin main || { echo "FAIL: main refresh failed"; exit 1; }
+git switch main || { echo "FAIL: cannot switch to main"; exit 1; }
+git merge --ff-only origin/main || { echo "FAIL: local main cannot fast-forward"; exit 1; }
 RELEASE_SHA=$(git rev-parse HEAD)
-git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
 
 # Bind the gate to the exact release commit. GitHub run registration is
 # asynchronous, so retry at most five times and log every attempt.
@@ -9447,13 +9814,13 @@ git push origin --delete vX.Y.Z
 | 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
 | 11 | Security audit (SARIF) | `audit_skills.py --sarif` | Valid SARIF 2.1.0 JSON |
 | 12 | Per-skill permissions | `audit_skills.py --permissions` | New broad-access skills justified in CHANGELOG |
-| 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh` | Exit 0, no output (mirrors ci.yml; publish.yml does NOT run it) |
+| 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh` | Exit 0, no output; mirrors the CI and publish hook gates |
 | 14 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
 | 15 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
 | 15a | Licensing gate | `npx bats tests/test_licensing.bats` | 7/7 — SPDX headers, LICENSE, NOTICE, npm `files`, manifest consistency |
 | 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
 | 17 | Commit | `git commit` | Clean working tree |
-| 18 | Push branch | `git push origin main` | Exact release commit is on `origin/main` |
+| 18 | Merge release PR | Push release branch, satisfy required checks/review, squash with release subject | Actual release commit is on `origin/main` |
 | 18a | Full branch CI | `gh run watch "$RUN_ID" --exit-status` plus matrix job assertions | Ubuntu and macOS Bats jobs both conclude `success` |
 | 19 | Tag | `git tag vX.Y.Z` | Tag exists only after green branch CI |
 | 19a | Tag is on tested SHA | `test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA"` | Exit 0 |
@@ -9821,9 +10188,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.10.1"
+version: "1.11.0"
 created: "2026-03-23"
-last_updated: "2026-09-06"
+last_updated: "2026-09-08"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, the explicit DSH target, skill tiers, and project integration."
 ---
 
@@ -10020,7 +10387,7 @@ Three tiers determine how to approach a task:
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with a known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-### `/workflow` types (15)
+### `/workflow` types (16)
 
 | Type | Use case |
 |------|----------|
@@ -10039,13 +10406,21 @@ Three tiers determine how to approach a task:
 | `infrastructure-change` | Docker, CI/CD, infra |
 | `application-deploy` | Deploy |
 | `proactive-troubleshooting` | Warning / trend |
+| `autonomous-development` | Route to `/autonomous-dev` for resumable task-to-PR delivery |
 
 ## Skill Classification
+
+`autonomous-dev` composes existing skills into a resumable task-to-PR process.
+Its SQLite helper stores per-session ownership, attempt history and hashed
+source/plan/report evidence outside the target repository. `prepare-test-env`
+supplies the shared QA environment contract. The active agent host executes
+project commands and tracker operations; the helpers do not launch an LLM or
+provide background execution. See [the usage guide](../howto/autonomous-development.md).
 
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 32 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 33 |
 | Knowledge | `user-invocable: false` | Claude auto-loads | 51 |
 
 ## Multi-Agent Execution
@@ -12674,9 +13049,9 @@ title: "Extension API Reference"
 category: reference
 service: ai-toolkit
 tags: [extension-api, inject-rule, inject-hook, inject-mcp, mcp-templates, integration, editors]
-version: "1.8.0"
+version: "1.8.1"
 created: "2026-04-07"
-last_updated: "2026-07-14"
+last_updated: "2026-09-08"
 description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, inject-mcp, remove-* variants, and editor-aware MCP template management."
 ---
 
@@ -12852,15 +13227,19 @@ npx @softspark/ai-toolkit inject-mcp ./conflict.json --force
 ```json
 {
   "name": "rag-mcp",
-  "description": "Multi-tenant RAG over knowledge bases",
+  "description": "Knowledge-base retrieval with semantic and hybrid search",
   "mcpServers": {
     "rag-mcp": {
       "type": "http",
-      "url": "http://localhost:8081/mcp/sse?secret_key=${RAG_MCP_SECRET_KEY}"
+      "url": "http://localhost:8081/mcp/sse"
     }
   }
 }
 ```
+
+This example matches the built-in RAG template's unauthenticated local endpoint.
+Technical service filters and a query-string key do not establish account or
+tenant isolation. See [MCP templates](mcp-templates.md) for the deployment boundary.
 
 **Source name derivation:** `rag-mcp-template.json` → `"rag-mcp-template"`. For URLs: `https://example.com/rag-mcp-template.json` → `"rag-mcp-template"`. Every server in the `mcpServers` block is tagged with `"_source": "<source-name>"` inside `~/.mcp.json` only; native editor configs receive the same servers **without** the `_source` field (some clients reject unknown keys).
 
@@ -14179,9 +14558,9 @@ title: "AI Toolkit - External Integrations"
 category: reference
 service: ai-toolkit
 tags: [integrations, rules, add-rule]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-03-26"
-last_updated: "2026-06-30"
+last_updated: "2026-09-08"
 description: "How external repos register rules that ai-toolkit syncs into Claude Code user-level rules and other editor configs."
 ---
 
@@ -14261,6 +14640,21 @@ Teaches Claude Code the Jira MCP tool set: `sync_tasks`, `read_cached_tasks`, `u
 cd /path/to/jira-mcp
 ai-toolkit add-rule ./jira-rules.md
 ```
+
+## Autonomous delivery profile
+
+`/autonomous-dev` can use the installed RAG and Jira connectors through an
+explicit project profile. `issueTracker` identifies Jira tasks, `codeHost`
+identifies the PR/CI repository and `knowledge` scopes technical KB retrieval.
+The readonly config preflight validates local shape and canonical Jira task
+identity; live tools remain responsible for freshness, language, transitions,
+permissions and repository mapping.
+
+The process carries a source-backed context in its hashed plan, reconciles Jira
+comment receipts on retry and distinguishes a ready PR from Jira completion or
+KB indexing. Connector credentials and instance routing stay in the connector's
+own configuration. See [the autonomous delivery guide](../howto/autonomous-development.md)
+and its shared stack contract for the maintained operational sequence.
 
 ---
 
@@ -16476,9 +16870,9 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-03-23"
-last_updated: "2026-09-06"
+last_updated: "2026-09-08"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
@@ -16551,7 +16945,9 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **explain** | `/explain` | medium | Explain architecture of a file/module using Mermaid diagrams |
 | **orchestrate** | `/orchestrate` | max | Custom multi-agent parallelism — Tier 3, native in Claude, Codex-adapted with semantic subagent guidance |
 | **swarm** | `/swarm` | max | Massive parallelism: map-reduce, consensus, relay — Tier 3 |
-| **workflow** | `/workflow` | max | 15 predefined multi-agent workflow types — Tier 2, Codex-adapted to native subagent orchestration |
+| **workflow** | `/workflow` | max | 16 workflow routes, including autonomous software delivery; adapted to the current client's orchestration |
+| **autonomous-dev** | `/autonomous-dev` | high | Brief/spec/issue/PR to verified ready PR; transactional run ownership, persistent attempts, commit-bound reports and resume |
+| **prepare-test-env** | `/prepare-test-env` | high | Source-bound QA environment and bounded HTTP readiness checks; browser evidence and owned cleanup |
 | **instinct-review** | `/instinct-review` | low | Review, curate, and manage learned instincts from past sessions |
 | **write-a-prd** | `/write-a-prd` | high | Create PRD through interactive interview, codebase exploration, and module design |
 | **prd-to-plan** | `/prd-to-plan` | high | Convert PRD into phased implementation plan using tracer-bullet vertical slices |
@@ -16767,7 +17163,7 @@ Compiles the full toolkit into a minimal system prompt for local Small Language 
 
 Profile `offline-slm` in `manifest.json` — installs core only, then compiles.
 
-### Executable Scripts (18 total, stdlib-only, JSON output)
+### Selected Executable Helpers (stdlib-only, JSON output)
 
 | Skill | Script | Purpose |
 |-------|--------|---------|
@@ -16781,6 +17177,9 @@ Profile `offline-slm` in `manifest.json` — installs core only, then compiles.
 | **ci** | `scripts/ci-detect.py` | Detect CI platform |
 | **fix** | `scripts/error-classifier.py` | Classify lint/test errors |
 | **pr** | `scripts/pr-summary.py` | Generate PR title/description |
+| **autonomous-dev** | `scripts/run-state.py` | Transactional run state, ownership, attempt limits and evidence integrity |
+| **autonomous-dev** | `scripts/delivery-config.py` | Readonly project profile validation and canonical Jira task identity |
+| **prepare-test-env** | `scripts/env-check.py` | Verify clean source identity and bounded HTTP readiness |
 | **review** | `scripts/diff-analyzer.py` | Parse git diff, categorize files |
 | **debug** | `scripts/error-parser.py` | Parse stack traces |
 | **explore** | `scripts/visualize.py` | Interactive HTML codebase tree |
@@ -16935,9 +17334,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.15.0"
+version: "1.15.1"
 created: "2026-04-23"
-last_updated: "2026-09-01"
+last_updated: "2026-09-08"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, 11 editors, and the explicit developer-preview DSH target."
 ---
 
@@ -16960,7 +17359,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `claude-code` |
 | Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
-| Changelog | https://code.claude.com/docs/en/changelog; GitHub release feed is authoritative when the generated page lags (current local/release: 2.1.206, 2026-07-10) |
+| Changelog | https://code.claude.com/docs/en/changelog; GitHub release feed is authoritative when the generated page lags (local version verified 2026-09-08: 2.1.263; [upstream release](https://github.com/anthropics/claude-code/releases/tag/v2.1.263) contains bug fixes and reliability improvements) |
 | Config paths | Settings and direct content: `~/.claude/settings.json`, `.claude/settings.json` (project, committed), `.claude/settings.local.json`, `CLAUDE.md`, `.claude/rules/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+). Native plugin root: `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `commands/*.md`, `agents/*.md`, `workflows/`, `output-styles/`, `themes/`, `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `monitors/monitors.json`, `bin/*`, `settings.json` |
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `DirectoryAdded`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
@@ -16998,17 +17397,17 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 |-------|-------|
 | ID | `dsh` |
 | Status | `developer-preview`, `explicit-only`. This is a SoftSpark-maintained community compatibility target. DeepSeek AI has not endorsed it. |
-| Reviewed version | DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. |
+| Reviewed version | DSH `0.1.2-rc.1`, `@softspark/dsh-codex@1.5.0`, and `@softspark/dsh-orchestrator@2.0.0`, with the exact Claude Agent SDK `0.3.263` profile override. |
 | Docs | https://deepseek-harness.github.io/deepseek-harness/ |
-| Release sources | https://github.com/deepseek-ai/deepseek-harness/releases and the reviewed [DSH 0.1.1-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2) |
-| Reviewed contracts | Tagged [CLI profile and plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md) and [skill discovery reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md) |
+| Release sources | https://github.com/deepseek-ai/deepseek-harness/releases and the reviewed [DSH 0.1.2-rc.1 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1) |
+| Reviewed contracts | Tagged [CLI profile and plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md) and [skill discovery reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md) |
 | Config paths | Project `.agents/skills/*/SKILL.md`; profile `$DSH_HOME/profiles/<profile>/package.json`; installed packages under `$DSH_HOME/profiles/<profile>/node_modules/@softspark/`; preset `$DSH_HOME/.agent-presets/softspark-orchestrator` |
 | Project generator | `scripts/generate_codex_skills.py` emits the shared Codex and DSH `.agents/skills` catalog. `ai-toolkit install --local --editors dsh` makes no `$DSH_HOME` write. |
 | Profile lifecycle | `scripts/install_steps/dsh.py` implements explicit `install`, `update`, `doctor`, and `uninstall` for one named profile. |
 | Selection boundary | Excluded from `--editors all`, auto-detection, defaults, default profiles, and global editor selection. |
 | Authentication | ai-toolkit accepts no provider API key and performs no login. Codex, Claude Code, and GitHub Copilot own authentication. Copilot Gemini usage consumes GitHub AI credits. |
 | State and recovery | State uses `AI_TOOLKIT_HOME`, then `SOFTSPARK_HOME`, then `~/.softspark/ai-toolkit/state.json`. Locks and compare-and-swap publication protect ownership. Doctor reports preserved recovery markers and drift. |
-| Upstream drift | Upstream has newer prereleases, including `0.1.2-alpha.2`. They remain unqualified until source review and isolated real-profile verification complete. Phase 3 real-profile evidence is pending. |
+| Upstream drift | DSH `0.1.2-rc.1` completed isolated lifecycle and delegation qualification on 2026-09-06, recorded in [DSH Compatibility](./dsh-compatibility.md#dsh-012-rc1-qualification). Other prereleases require separate source review and real-profile verification before the exact pins change. |
 
 See [DSH Compatibility](./dsh-compatibility.md) for commands, topology, subscription boundaries, lifecycle ownership, and limitations.
 

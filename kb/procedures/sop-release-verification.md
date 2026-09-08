@@ -3,9 +3,9 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif, dsh]
-version: "1.8.2"
+version: "1.8.3"
 created: "2026-04-08"
-last_updated: "2026-09-06"
+last_updated: "2026-09-08"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, explicit DSH lifecycle, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
@@ -53,8 +53,8 @@ The 14 core commands below must pass. Releases that change DSH must also complet
 
 ```bash
 # Pre-commit (Phase 0)
-python3 scripts/generate_agents_md.py > AGENTS.md           # 1. Regenerate AGENTS.md
-python3 scripts/generate_llms_txt.py > llms.txt             # 2. Regenerate llms.txt
+npm run generate:agents                                   # 1. Regenerate AGENTS.md without custom rules
+npm run generate:llms                                     # 2. Regenerate llms.txt + llms-full.txt
 python3 scripts/validate.py --strict                        # 3. Validation passed?
 npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 4. All tests passed? (single run, cached)
 
@@ -72,7 +72,7 @@ npm view @softspark/ai-toolkit@X.Y.Z --json | python3 -c "import json,sys; d=jso
 python3 scripts/claude_app.py verify                         # 13. Claude Chat/Cowork plugin contract valid?
 
 # Deep-coverage verification (Phase 9, v3.0.0+)
-META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
+META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py|generate_toolkit_rules_skills.py"
 diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE "$META" | sort -u) && echo "OK: registry matches"   # 14. Registry <-> generators drift?
 ```
 
@@ -85,9 +85,8 @@ counts but does NOT auto-regenerate — you must do it locally.
 
 ```bash
 # 1. Regenerate generated artifacts
-python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_llms_txt.py > llms.txt
-python3 scripts/generate_llms_txt.py --full > llms-full.txt
+npm run generate:agents
+npm run generate:llms
 
 # 2. Validate everything (catches stale counts, missing assets)
 python3 scripts/validate.py --strict
@@ -113,7 +112,7 @@ by the developer as part of their PR.
 
 **One-liner (copy-paste):**
 ```bash
-python3 scripts/generate_agents_md.py > AGENTS.md && python3 scripts/generate_llms_txt.py > llms.txt && python3 scripts/generate_llms_txt.py --full > llms-full.txt && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+npm run generate:agents && npm run generate:llms && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---
@@ -447,7 +446,7 @@ done
 `kb/reference/supported-tools-registry.md` should enumerate every per-editor `scripts/generate_*.py` we ship. Meta-generators (`generate_agents_md.py`, `generate_llms_txt.py`) are excluded — they produce docs/artifacts, not editor configs.
 
 ```bash
-META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py"
+META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py|generate_toolkit_rules_skills.py"
 REG=$(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u)
 FS=$(ls scripts/generate_*.py | grep -vE "$META" | sort -u)
 diff <(echo "$REG") <(echo "$FS") && echo "OK: registry matches filesystem" || echo "DRIFT: update supported-tools-registry.md"

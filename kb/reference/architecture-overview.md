@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.10.1"
+version: "1.11.0"
 created: "2026-03-23"
-last_updated: "2026-09-06"
+last_updated: "2026-09-08"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, the explicit DSH target, skill tiers, and project integration."
 ---
 
@@ -202,7 +202,7 @@ Three tiers determine how to approach a task:
 | **2 — Multi-agent workflow** | `/workflow <type>` | Cross-cutting task with a known pattern |
 | **3 — Custom parallelism** | `/orchestrate`, `/swarm` | No predefined workflow matches |
 
-### `/workflow` types (15)
+### `/workflow` types (16)
 
 | Type | Use case |
 |------|----------|
@@ -221,13 +221,21 @@ Three tiers determine how to approach a task:
 | `infrastructure-change` | Docker, CI/CD, infra |
 | `application-deploy` | Deploy |
 | `proactive-troubleshooting` | Warning / trend |
+| `autonomous-development` | Route to `/autonomous-dev` for resumable task-to-PR delivery |
 
 ## Skill Classification
+
+`autonomous-dev` composes existing skills into a resumable task-to-PR process.
+Its SQLite helper stores per-session ownership, attempt history and hashed
+source/plan/report evidence outside the target repository. `prepare-test-env`
+supplies the shared QA environment contract. The active agent host executes
+project commands and tracker operations; the helpers do not launch an LLM or
+provide background execution. See [the usage guide](../howto/autonomous-development.md).
 
 | Type | Field | Invocation | Count |
 |------|-------|-----------|-------|
 | Task | `disable-model-invocation: true` | User via `/skill` only | 32 |
-| Hybrid | (neither) | User via `/skill` + agent knowledge | 31 |
+| Hybrid | (neither) | User via `/skill` + agent knowledge | 33 |
 | Knowledge | `user-invocable: false` | Claude auto-loads | 51 |
 
 ## Multi-Agent Execution

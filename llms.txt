@@ -13,6 +13,7 @@
 
 - [Best Practices](kb/best-practices/README.md)
 - [No Hardcoded Counts in Secondary Docs](kb/best-practices/no-hardcoded-counts.md)
+- [Autonomous development in ai-toolkit](kb/history/completed/autonomous-development-plan.md)
 - [Plan: Deep Coverage v3.0 — 100% Native Surface Utilization](kb/history/completed/deep-coverage-v3-20260423.md)
 - [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/history/completed/drop-cascade-hooks-after-sunset-20260710.md)
 - [Plan: DeepSeek Harness (dsh) Integration (Superseded)](kb/history/completed/dsh-integration-plan-superseded.md)
@@ -31,6 +32,7 @@
 - [Retirement: rtk-pack](kb/history/completed/rtk-pack-retirement-20260727.md)
 - [Closed: Tool-Output Token Reduction](kb/history/completed/tool-output-token-reduction-closed-20260727.md)
 - [How-To Guides](kb/howto/README.md)
+- [Autonomous software development](kb/howto/autonomous-development.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
 - [SOP: Ecosystem Sync](kb/procedures/sop-ecosystem-sync.md)
 - [SOP: AI Toolkit Maintenance](kb/procedures/sop-maintenance.md)

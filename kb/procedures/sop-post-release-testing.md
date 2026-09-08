@@ -3,9 +3,9 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: ai-toolkit
 tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, isolation]
-version: "1.2.1"
+version: "1.2.2"
 created: "2026-07-26"
-last_updated: "2026-09-06"
+last_updated: "2026-09-08"
 description: "Smoke-test a published @softspark/ai-toolkit npm artifact in a disposable container or VM with its default HOME, no host settings or credential mounts, host-side configuration fingerprints, and retained evidence. Covers provenance, CLI, doctor, installed skill scripts, scanner wiring, and the plugin-pack lifecycle."
 ---
 
@@ -168,11 +168,11 @@ Install first, then judge doctor.
 
 ## Phase 4b: Skill scripts resolve and run from the installed copy
 
-23 skills ship an executable script under `scripts/`. A skill body invokes it
+Discover skills shipping executable scripts from the installed artifact rather
+than requiring a historical fixed count. A skill body invokes its helper
 through `${CLAUDE_SKILL_DIR}`, which only resolves once the skill is installed —
-so a wrong path is invisible in the working tree and invisible to `validate.py`,
-which checks that the file exists on disk, never that the documented command
-finds it.
+so presence in the working tree is insufficient. `validate.py` now checks
+documented script paths; this phase proves the installed command actually runs.
 
 This is exactly how four skills shipped with `$(dirname "$0")`, which expands to
 the shell's directory rather than the skill's. Every one of them had been broken

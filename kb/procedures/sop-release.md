@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.15.2"
+version: "1.15.3"
 created: "2026-04-10"
-last_updated: "2026-09-07"
+last_updated: "2026-09-08"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
@@ -57,12 +57,11 @@ python3 scripts/sync_version.py X.Y.Z          # if script exists, else manual
 
 # 3. Write CHANGELOG.md entry
 # 4. Regenerate artifacts
-python3 scripts/generate_agents_md.py > AGENTS.md
-python3 scripts/generate_llms_txt.py > llms.txt
-python3 scripts/generate_llms_txt.py --full > llms-full.txt
+npm run generate:agents
+npm run generate:llms
 
 # 5. Validate + audit + SARIF + shellcheck + test + ecosystem check
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && shellcheck --severity=warning app/hooks/*.sh && npm test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > /tmp/audit.sarif && shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh && npm test
 
 # 5a. Supply-chain standard (v2.8.0+) — non-negotiable
 grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --provenance"; exit 1; }
@@ -75,10 +74,19 @@ python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem
 # 5c. Licensing gate — SPDX headers, LICENSE, NOTICE, manifest consistency
 npx bats tests/test_licensing.bats || { echo "LICENSING GATE FAILED"; exit 1; }
 
-# 6. Commit, push branch, and wait for the exact commit's full CI
+# 6. Commit on a release branch, push it, and open the release PR
 git add -A && git commit -m "chore: release vX.Y.Z"
+git push -u origin HEAD || { echo "FAIL: release branch push failed"; exit 1; }
+PR_URL=$(gh pr view --json url --jq .url 2>/dev/null) ||
+  PR_URL=$(gh pr create --base main --title "chore: release vX.Y.Z" --body-file /tmp/release-notes.md) || exit 1
+# Wait for required PR checks and CODEOWNER approval. Merge with the exact
+# release subject; never bypass branch rules merely because a release is due.
+gh pr merge "$PR_URL" --squash --subject "chore: release vX.Y.Z" || { echo "FAIL: release PR merge failed"; exit 1; }
+git fetch origin main || { echo "FAIL: main refresh failed"; exit 1; }
+git switch main || { echo "FAIL: cannot switch to main"; exit 1; }
+git merge --ff-only origin/main || { echo "FAIL: local main cannot fast-forward"; exit 1; }
 RELEASE_SHA=$(git rev-parse HEAD)
-git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
+# The merge produces the commit that needs its own full push CI before tagging.
 RUN_ID=""
 for ATTEMPT in 1 2 3 4 5; do
   RUN_ID=$(gh run list --workflow ci.yml --event push --commit "$RELEASE_SHA" \
@@ -177,6 +185,11 @@ Follow [Semantic Versioning](https://semver.org/):
 | Breaking CLI change, removed skill, config format change | **major** | Rename `install` to `setup`, remove skill |
 
 **Rule:** When in doubt, bump minor.
+
+Prepare the candidate on a release branch based on the current `main`, reusing
+an existing release branch only when it contains this release's work. The
+repository requires PRs, required checks and CODEOWNER review. Prepare the PR
+body from the release notes before using the `--body-file` examples below.
 
 ---
 
@@ -363,10 +376,10 @@ python3 scripts/audit_skills.py --sarif > audit.sarif       # MANDATORY — GHAS
 python3 scripts/audit_skills.py --permissions               # review Bash/Write/Edit footprint
 
 # ShellCheck on hooks (added in 1.11.0). Mirrors the ci.yml "ShellCheck hooks"
-# job. NOT run by validate.py, npm test, OR publish.yml — so a hook with a
-# ShellCheck warning passes every other gate AND still publishes on tag while
-# turning main CI red. Run it here, before tagging.
-shellcheck --severity=warning app/hooks/*.sh && echo "OK: shellcheck clean"
+# job. validate.py and npm test do not run ShellCheck. publish.yml checks hooks
+# too, but its Ubuntu-only job does not replace the exact-commit branch-CI
+# gate including macOS. Run the local hook check here, before tagging.
+shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh && echo "OK: shellcheck clean"
 
 # Registry / generator drift (added in 1.10.0). Meta-generators excluded.
 META="generate_agents_md.py|generate_llms_txt.py|generate_language_rules_skills.py|generate_toolkit_rules_skills.py"
@@ -397,15 +410,15 @@ echo "ok: $(grep -c '^ok ' /tmp/npm-test.log) | not ok: $(grep -c '^not ok' /tmp
 - `audit_skills.py --ci`: `HIGH: 0 | WARN: 0` (INFO is acceptable)
 - `audit_skills.py --sarif`: valid JSON, non-empty `runs[0].tool.driver.rules`
 - `audit_skills.py --permissions`: review `Skills with Bash + Write + Edit` list — any newly-added skill with broad access MUST be justified in the CHANGELOG entry
-- `shellcheck --severity=warning app/hooks/*.sh`: no output, exit 0. A common false positive is `SC2034` on `INPUT` or env vars (e.g. `AI_TOOLKIT_HOOK_FORMAT`) that a *sourced* helper (`_hook-io.sh`) consumes — ShellCheck cannot see cross-file use. Fix with a `# shellcheck disable=SC2034` directive or `export`, matching `guard-destructive.sh`. Never tag with a red ShellCheck.
+- `shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh`: no output, exit 0. A common false positive is `SC2034` on `INPUT` or env vars (e.g. `AI_TOOLKIT_HOOK_FORMAT`) that a *sourced* helper (`_hook-io.sh`) consumes — ShellCheck cannot see cross-file use. Fix with a `# shellcheck disable=SC2034` directive or `export`, matching `guard-destructive.sh`. Never tag with a red ShellCheck.
 - Registry drift: `OK: registry matches filesystem`. If `DRIFT:` appears, add the missing `scripts/generate_*.py` rows to `kb/reference/supported-tools-registry.md` before tagging.
 - `npm test`: `1..N` with zero `not ok` (read from the cached `/tmp/npm-test.log`, do not rerun)
 
-> **Why this matters (v4.5.1 postmortem):** `publish.yml` runs only `validate.py` + `npm test`, so it published v4.5.0 even though the `main` CI `ShellCheck hooks` job was red on two `SC2034` warnings in a new hook. The publish workflow does **not** depend on the CI workflow. Until that is fixed, ShellCheck is a manual pre-tag gate — run it here every time.
+> **Why this matters (v4.5.1 postmortem):** the older publish workflow ran only `validate.py` and `npm test`, and published v4.5.0 despite a red ShellCheck job. The current workflow also checks hooks and security, but still runs independently of branch CI and only on Ubuntu. Local gates and the exact-commit Ubuntu/macOS branch-CI gate remain mandatory before tagging.
 
 **One-liner:**
 ```bash
-python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py|generate_toolkit_rules_skills\.py' | sort -u) && npm test
+python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && python3 scripts/audit_skills.py --sarif > audit.sarif && shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh && diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-registry.md | sort -u) <(ls scripts/generate_*.py | grep -vE 'generate_agents_md\.py|generate_llms_txt\.py|generate_language_rules_skills\.py|generate_toolkit_rules_skills\.py' | sort -u) && npm test
 ```
 
 **If tests fail:** Fix the issue, do NOT skip. Common failures:
@@ -522,11 +535,27 @@ git commit -m "chore: release vX.Y.Z"
 
 ---
 
-## Phase 7: Push Branch, Verify CI, Tag, and Push Tag
+## Phase 7: Merge the Release PR, Verify Main CI, Tag, and Push Tag
+
+Push the release branch and open or reuse its PR. Wait for the configured
+required checks and CODEOWNER approval; a local agent review does not replace
+that GitHub gate. Keep the release fully prepared and report any unresolved
+approval requirement instead of changing branch rules or silently bypassing it.
+Squash with the exact release subject so the actual main commit satisfies the
+tag assertion. Refresh main after the merge and bind all remaining checks to
+that commit, which can differ from the candidate's branch SHA.
 
 ```bash
+git push -u origin HEAD || { echo "FAIL: release branch push failed"; exit 1; }
+PR_URL=$(gh pr view --json url --jq .url 2>/dev/null) ||
+  PR_URL=$(gh pr create --base main --title "chore: release vX.Y.Z" --body-file /tmp/release-notes.md) || exit 1
+# Reuse an existing PR instead of opening another one. After its required
+# checks and review are satisfied:
+gh pr merge "$PR_URL" --squash --subject "chore: release vX.Y.Z" || { echo "FAIL: release PR merge failed"; exit 1; }
+git fetch origin main || { echo "FAIL: main refresh failed"; exit 1; }
+git switch main || { echo "FAIL: cannot switch to main"; exit 1; }
+git merge --ff-only origin/main || { echo "FAIL: local main cannot fast-forward"; exit 1; }
 RELEASE_SHA=$(git rev-parse HEAD)
-git push origin main || { echo "FAIL: release commit push failed"; exit 1; }
 
 # Bind the gate to the exact release commit. GitHub run registration is
 # asynchronous, so retry at most five times and log every attempt.
@@ -640,13 +669,13 @@ git push origin --delete vX.Y.Z
 | 10 | Security audit (CI mode) | `audit_skills.py --ci` | 0 HIGH |
 | 11 | Security audit (SARIF) | `audit_skills.py --sarif` | Valid SARIF 2.1.0 JSON |
 | 12 | Per-skill permissions | `audit_skills.py --permissions` | New broad-access skills justified in CHANGELOG |
-| 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh` | Exit 0, no output (mirrors ci.yml; publish.yml does NOT run it) |
+| 13 | ShellCheck hooks | `shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh` | Exit 0, no output; mirrors the CI and publish hook gates |
 | 14 | Provenance flag check | `grep -- '--provenance' .github/workflows/publish.yml` | Present |
 | 15 | Checksum-pin backfill | `sources.json` entries all have `sha256` | No unpinned URL sources |
 | 15a | Licensing gate | `npx bats tests/test_licensing.bats` | 7/7 — SPDX headers, LICENSE, NOTICE, npm `files`, manifest consistency |
 | 16 | Tests | `git add -A kb/` if the KB changed, then `npm test` | All pass |
 | 17 | Commit | `git commit` | Clean working tree |
-| 18 | Push branch | `git push origin main` | Exact release commit is on `origin/main` |
+| 18 | Merge release PR | Push release branch, satisfy required checks/review, squash with release subject | Actual release commit is on `origin/main` |
 | 18a | Full branch CI | `gh run watch "$RUN_ID" --exit-status` plus matrix job assertions | Ubuntu and macOS Bats jobs both conclude `success` |
 | 19 | Tag | `git tag vX.Y.Z` | Tag exists only after green branch CI |
 | 19a | Tag is on tested SHA | `test "$(git rev-parse vX.Y.Z)" = "$RELEASE_SHA"` | Exit 0 |

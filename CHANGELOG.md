@@ -7,6 +7,57 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.34.0 - Autonomous software delivery with RAG and Jira (2026-09-08)
+
+### Added
+
+- **Project roles:** explicit task-tracker, code-host and knowledge roles for autonomous delivery,
+  including a readonly configuration/Jira-identity preflight and the concrete
+  rag-mcp/jira-mcp refresh, provenance, transition and comment-receipt contracts.
+  Resume refreshes requirements and KB context independently of Git SHA;
+  ready PR, Jira completion and KB indexing remain distinct outcomes.
+- **`/autonomous-dev`** connects a brief, specification, issue or existing PR to
+  planning, implementation, review, project validation, application QA and
+  required CI. `/workflow autonomous-development` routes to the same process.
+- **Run journal:** `app/skills/autonomous-dev/scripts/run-state.py` provides per-session claims, durable recovery,
+  bounded attempts, real plan/report integrity and source-bound completion.
+  Run artifacts remain outside the target repository.
+- **`/prepare-test-env`** defines a shared QA environment contract and a bounded
+  HTTP checker with explicit source/runtime identity limitations. Both new
+  skills install through the existing native skill generators.
+- **Verification fixtures:** real Git/SQLite/HTTP tests and detached native installation checks
+  cover interrupted runs, competing claims, stale evidence and QA readiness.
+
+### Changed
+
+- **Skill catalog:** expanded from 114 to 116 skills. The new
+  `/autonomous-dev` and `/prepare-test-env` skills use Bash, Write and Edit to
+  perform authorized implementation, validation, run-artifact creation and test
+  environment preparation. They retain host approval controls and configured
+  model permissions. No bundled helper executes project commands. The journal
+  and configuration preflight make no network calls; the QA checker performs
+  bounded readiness requests to loopback or explicitly authorized HTTPS origins.
+- **Ecosystem baseline:** refreshed documentation snapshots and the observed
+  Claude Code version after class-A review; synchronized existing DSH registry
+  facts without changing its runtime, package pins or compatibility contract.
+- **Skill body budget:** retained the 18000-byte warning threshold because the
+  largest body remains 17197 bytes, below the threshold but not far enough to
+  lower it by 2000 bytes.
+
+### Fixed
+
+- `/pr` uses the project's actual validation commands and PR base, reuses an
+  existing branch PR, and preserves autonomous run identity. PR bodies use a
+  prepared body file and omit generated-by signatures.
+- The PR summary helper checks Git failures, safely resolves refs, discovers a
+  cached remote default branch, handles empty ranges and parses file names
+  without relying on human-readable diff statistics.
+- RAG examples describe knowledge retrieval without implying tenant isolation
+  or query-key authentication on the default unauthenticated local endpoint.
+- Release verification now excludes both skill meta-generators from editor
+  registry checks, describes the current publish gates and derives installed
+  script inventory from the artifact instead of a stale fixed count.
+
 ## v4.33.1 - Conflict gate stops flagging binaries (2026-09-07)
 
 ### Fixed

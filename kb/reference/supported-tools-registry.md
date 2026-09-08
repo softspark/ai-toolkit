@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.15.0"
+version: "1.15.1"
 created: "2026-04-23"
-last_updated: "2026-09-01"
+last_updated: "2026-09-08"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, 11 editors, and the explicit developer-preview DSH target."
 ---
 
@@ -28,7 +28,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | ID | `claude-code` |
 | Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
-| Changelog | https://code.claude.com/docs/en/changelog; GitHub release feed is authoritative when the generated page lags (current local/release: 2.1.206, 2026-07-10) |
+| Changelog | https://code.claude.com/docs/en/changelog; GitHub release feed is authoritative when the generated page lags (local version verified 2026-09-08: 2.1.263; [upstream release](https://github.com/anthropics/claude-code/releases/tag/v2.1.263) contains bug fixes and reliability improvements) |
 | Config paths | Settings and direct content: `~/.claude/settings.json`, `.claude/settings.json` (project, committed), `.claude/settings.local.json`, `CLAUDE.md`, `.claude/rules/*.md`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `~/.claude/themes/*.json` (v2.1.118+). Native plugin root: `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `commands/*.md`, `agents/*.md`, `workflows/`, `output-styles/`, `themes/`, `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `monitors/monitors.json`, `bin/*`, `settings.json` |
 | Our generators | — (Claude Code is the primary target; toolkit content ships directly as `.md` files and `settings.json` merges) |
 | Tracked hook events | Core: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `Notification`, `MessageDisplay`. Tool: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`. Turn: `Stop`, `StopFailure`, `UserPromptExpansion`. Subagent: `SubagentStart`, `SubagentStop`. Compaction: `PreCompact`, `PostCompact`. Permissions: `PermissionRequest`, `PermissionDenied`. Elicitation: `Elicitation`, `ElicitationResult`. Teams: `TaskCreated`, `TaskCompleted`, `TeammateIdle`. Worktrees/env: `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `DirectoryAdded`, `FileChanged`, `ConfigChange`. Setup: `Setup`, `InstructionsLoaded` |
@@ -66,17 +66,17 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 |-------|-------|
 | ID | `dsh` |
 | Status | `developer-preview`, `explicit-only`. This is a SoftSpark-maintained community compatibility target. DeepSeek AI has not endorsed it. |
-| Reviewed version | DSH `0.1.1-rc.2`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. |
+| Reviewed version | DSH `0.1.2-rc.1`, `@softspark/dsh-codex@1.5.0`, and `@softspark/dsh-orchestrator@2.0.0`, with the exact Claude Agent SDK `0.3.263` profile override. |
 | Docs | https://deepseek-harness.github.io/deepseek-harness/ |
-| Release sources | https://github.com/deepseek-ai/deepseek-harness/releases and the reviewed [DSH 0.1.1-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2) |
-| Reviewed contracts | Tagged [CLI profile and plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/apps/cli/reference/README.md) and [skill discovery reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.1-rc.2/docs/subsystems/skills.md) |
+| Release sources | https://github.com/deepseek-ai/deepseek-harness/releases and the reviewed [DSH 0.1.2-rc.1 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1) |
+| Reviewed contracts | Tagged [CLI profile and plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md) and [skill discovery reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md) |
 | Config paths | Project `.agents/skills/*/SKILL.md`; profile `$DSH_HOME/profiles/<profile>/package.json`; installed packages under `$DSH_HOME/profiles/<profile>/node_modules/@softspark/`; preset `$DSH_HOME/.agent-presets/softspark-orchestrator` |
 | Project generator | `scripts/generate_codex_skills.py` emits the shared Codex and DSH `.agents/skills` catalog. `ai-toolkit install --local --editors dsh` makes no `$DSH_HOME` write. |
 | Profile lifecycle | `scripts/install_steps/dsh.py` implements explicit `install`, `update`, `doctor`, and `uninstall` for one named profile. |
 | Selection boundary | Excluded from `--editors all`, auto-detection, defaults, default profiles, and global editor selection. |
 | Authentication | ai-toolkit accepts no provider API key and performs no login. Codex, Claude Code, and GitHub Copilot own authentication. Copilot Gemini usage consumes GitHub AI credits. |
 | State and recovery | State uses `AI_TOOLKIT_HOME`, then `SOFTSPARK_HOME`, then `~/.softspark/ai-toolkit/state.json`. Locks and compare-and-swap publication protect ownership. Doctor reports preserved recovery markers and drift. |
-| Upstream drift | Upstream has newer prereleases, including `0.1.2-alpha.2`. They remain unqualified until source review and isolated real-profile verification complete. Phase 3 real-profile evidence is pending. |
+| Upstream drift | DSH `0.1.2-rc.1` completed isolated lifecycle and delegation qualification on 2026-09-06, recorded in [DSH Compatibility](./dsh-compatibility.md#dsh-012-rc1-qualification). Other prereleases require separate source review and real-profile verification before the exact pins change. |
 
 See [DSH Compatibility](./dsh-compatibility.md) for commands, topology, subscription boundaries, lifecycle ownership, and limitations.
 

@@ -14,6 +14,16 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Agent, TeamCreate, TeamDelet
 
 $ARGUMENTS
 
+## Autonomous software delivery
+
+For `autonomous-development`, or an explicit request to carry a brief, spec,
+issue or existing PR through implementation, review, QA and required CI, invoke
+`/autonomous-dev` with the original task. It owns the run, durable state and
+completion gate; do not also start the generic workflow below or initialize a
+second run. Preserve existing approvals and inherited model/permission settings.
+Use `/autonomous-dev resume <run-id>` for an interrupted run and
+`/autonomous-dev status <run-id>` for read-only progress.
+
 ## Step 1 — Select workflow type
 
 ```
@@ -32,6 +42,7 @@ Boost test coverage?              → test-coverage
 Security assessment?              → security-audit
 Exploring unfamiliar codebase?    → codebase-onboarding
 Technical research / spike?       → spike
+Autonomous task-to-PR delivery?    → autonomous-development (autonomous-dev)
 ```
 
 ## Step 2 — Define success criteria (MANDATORY)

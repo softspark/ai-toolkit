@@ -1,6 +1,6 @@
 {
   "name": "rag-mcp",
-  "description": "Multi-tenant RAG over knowledge bases — semantic, hybrid, CRAG and multi-hop search via HTTP MCP",
+  "description": "Knowledge-base retrieval: semantic, hybrid, CRAG and multi-hop search via HTTP MCP",
   "mcpServers": {
     "rag-mcp": {
       "type": "http",
