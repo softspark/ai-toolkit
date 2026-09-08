@@ -105,7 +105,18 @@ docker exec "$SMOKE_CONTAINER" bash -lc \
 ```
 
 Install any additional prerequisite declared by the pack under test only inside
-the container. GNU coreutils supplies timeout; util-linux supplies the session
+the container. Claude app/plugin verification requires the `claude` CLI as well:
+set `CLAUDE_CLI_VERSION` to the exact version reviewed in this release's
+ecosystem snapshot, then install and record it inside the container:
+
+```bash
+: "${CLAUDE_CLI_VERSION:?Set the exact reviewed Claude Code version}"
+docker exec "$SMOKE_CONTAINER" npm install --global "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
+docker exec "$SMOKE_CONTAINER" claude --version
+```
+
+This local schema validator does not need provider credentials or login; do not
+copy authentication into the container. GNU coreutils supplies timeout; util-linux supplies the session
 recorder. Use docker cp for evidence transfer, not host temporary-directory bind
 mounts: a remote Docker daemon may not see the host's /private/tmp.
 

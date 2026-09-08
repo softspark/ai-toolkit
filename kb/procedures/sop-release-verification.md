@@ -39,6 +39,12 @@ Use the packed release candidate before publication and the exact npm version
 after publication; the installed package must be the source of runtime checks.
 Source validation and test commands still run from the matching release checkout.
 
+Official Claude app/plugin verification also requires the `claude` CLI inside
+the disposable environment. Install the exact Claude Code version reviewed for
+this release (recorded in the ecosystem snapshot) there, never on the operator's
+host. Local `claude plugin validate --strict` is schema validation and does not
+require a logged-in model session. Record the CLI version with the smoke evidence.
+
 A scratch project alone does not isolate home-scoped writes. In particular,
 the live Augment checks in Phase 9 write user settings. Execute them inside
 the disposable environment, retain logs outside it, and remove only resources

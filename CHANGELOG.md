@@ -56,7 +56,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   or query-key authentication on the default unauthenticated local endpoint.
 - Release verification now excludes both skill meta-generators from editor
   registry checks, describes the current publish gates and derives installed
-  script inventory from the artifact instead of a stale fixed count.
+  script inventory from the artifact instead of a stale fixed count. Its clean
+  smoke environment now explicitly includes the reviewed Claude CLI required
+  for official local plugin validation.
 
 ## v4.33.1 - Conflict gate stops flagging binaries (2026-09-07)
 
