@@ -7,6 +7,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.34.1 - MCP endpoint configuration repair (2026-09-10)
+
+### Fixed
+
+- **MCP endpoint URLs:** resolve `${NAME}` and `${NAME:-default}` during native
+  config generation in `scripts/mcp_editors.py` and the OpenCode generator,
+  while preserving source templates and placeholders in headers and arguments.
+- **Local template updates:** refresh registered local MCP templates during
+  `ai-toolkit update` so stale generated endpoints are repaired; missing sources
+  and ownership collisions preserve installed configuration.
+
+### Verification
+
+- Add nine regression tests for endpoint resolution, canonical source
+  preservation, native adapters, atomic failure, and install/update behavior.
+- Keep the skill body budget unchanged: the largest body remains 17197 bytes,
+  above the threshold for the next ratchet reduction.
+
 ## v4.34.0 - Autonomous software delivery with RAG and Jira (2026-09-08)
 
 ### Added

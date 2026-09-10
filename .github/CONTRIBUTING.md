@@ -66,8 +66,8 @@ npm run typecheck:py   # mypy --strict over the allowlist in mypy.ini
 New tests for Python modules go to `tests/python/`; bats remains for hooks,
 CLI surfaces, and anything observed from a shell.
 
-If you touched any hook script, also run ShellCheck yourself — CI runs it, but
-`validate.py`, `npm test`, and the publish workflow do not:
+If you touched any hook script, also run ShellCheck yourself. CI and the publish
+workflow run it, but `validate.py` and `npm test` do not:
 
 ```bash
 shellcheck --severity=warning app/hooks/*.sh

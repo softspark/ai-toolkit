@@ -3,9 +3,9 @@ title: "Extension API Reference"
 category: reference
 service: ai-toolkit
 tags: [extension-api, inject-rule, inject-hook, inject-mcp, mcp-templates, integration, editors]
-version: "1.8.1"
+version: "1.9.0"
 created: "2026-04-07"
-last_updated: "2026-09-08"
+last_updated: "2026-09-10"
 description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, inject-mcp, remove-* variants, and editor-aware MCP template management."
 ---
 
@@ -208,6 +208,13 @@ Copilot (`$COPILOT_HOME/mcp-config.json`, default
 (`~/.augment/settings.json`), and Codex CLI (`$CODEX_HOME/config.toml`, default
 `~/.codex/config.toml`). Per-editor failures are non-fatal; the command reports
 a warning and continues.
+
+**Local source refresh:** Local file paths are registered too. `ai-toolkit update`
+re-reads those files and propagates them through the native adapters. Missing
+files warn and leave installed config intact; a local refresh never forces an
+ownership collision. Portable endpoint variables are resolved when rendering
+native configs, while `.mcp.json` retains the source expressions. See
+[Portable endpoint variables](mcp-templates.md#portable-endpoint-variables).
 
 **Idempotency:** Re-running with the same source overwrites entries for that source cleanly -- no duplicates accumulate.
 

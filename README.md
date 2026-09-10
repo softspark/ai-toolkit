@@ -6,21 +6,16 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2014%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2023%20passing-success)](tests/)
 
-## What's New in v4.34.0
+## What's New in v4.34.1
 
-**v4.34.0** adds autonomous software delivery to the 116-skill catalog:
-
-- **`/autonomous-dev`** takes a brief, specification, Jira task or existing PR
-  through implementation, review, validation, QA and required CI, with durable
-  ownership, bounded attempts and resumable evidence.
-- **`/prepare-test-env`** supplies shared application QA provenance, readiness
-  checks and narrowly owned cleanup.
-- **RAG and Jira profiles** separate task tracking, knowledge and code hosting;
-  refresh requirements on resume and reconcile remote-write receipts.
-- **PR preparation** uses actual project checks and safely resolves Git refs,
-  empty ranges and changed-file names.
+- **Working MCP URLs:** native editor configs receive resolved endpoint
+  addresses from `${NAME}` and `${NAME:-default}` template expressions.
+- **Local template refresh:** `ai-toolkit update` re-reads registered local MCP
+  templates, repairing stale generated configuration such as `rag-mcp-legal`.
+- **Source preservation:** portable templates, credential placeholders,
+  unrelated settings and missing-source configurations remain intact.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

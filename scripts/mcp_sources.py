@@ -158,9 +158,3 @@ def unregister_source(mcp_dir: Path | None, template_name: str) -> bool:
         save_sources(mcp_dir, sources)
         return True
     return False
-
-
-def get_url_templates(mcp_dir: Path | None = None) -> dict[str, str]:
-    """Return {template_name: url} for all URL-sourced MCP templates."""
-    sources = load_sources(mcp_dir)
-    return {name: entry["url"] for name, entry in sources.items() if "url" in entry}

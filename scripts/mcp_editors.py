@@ -121,6 +121,7 @@ CODEX_MCP_BLOCK_START = "# >>> ai-toolkit managed Codex MCP servers >>>"
 CODEX_MCP_BLOCK_END = "# <<< ai-toolkit managed Codex MCP servers <<<"
 
 _TOML_BARE_KEY_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+_ENDPOINT_ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^{}]*))?\}")
 _CODEX_SHARED_SERVER_KEYS = frozenset(
     {
         "startup_timeout_sec",
@@ -560,7 +561,28 @@ def _rollback_config_update(update: ConfigUpdate) -> None:
     _atomic_write_bytes(update.path, update.original)
 
 
+def resolve_endpoint_url(value: str) -> str:
+    """Resolve portable endpoint variables once, without executing shell code."""
+    def replace(match: re.Match[str]) -> str:
+        name, default = match.groups()
+        resolved = os.environ.get(name) or default
+        if resolved is None:
+            raise ValueError(f"MCP endpoint environment variable '{name}' is unset or empty")
+        return resolved
+
+    return _ENDPOINT_ENV_RE.sub(replace, value)
+
+
+def _resolve_server_endpoints(server: dict) -> dict:
+    data = copy.deepcopy(server)
+    for key in ("url", "serverUrl", "httpUrl"):
+        if isinstance(data.get(key), str):
+            data[key] = resolve_endpoint_url(data[key])
+    return data
+
+
 def _normalize_server(editor: str, server: dict) -> dict:
+    server = _resolve_server_endpoints(server)
     if editor == "antigravity":
         return _normalize_antigravity_server(server)
     if editor == "claude-app":
@@ -733,7 +755,12 @@ def _prepare_merge_json_servers(
     if not isinstance(bucket, dict):
         raise ValueError(f"{path} has invalid mcpServers data")
     for key, value in servers.items():
-        bucket[key] = _normalize_server(editor, value)
+        # Claude's project config is also the portable source for later syncs.
+        bucket[key] = (
+            copy.deepcopy(value)
+            if editor == "claude" and path.name == ".mcp.json"
+            else _normalize_server(editor, value)
+        )
     content = (json.dumps(data, indent=2) + "\n").encode("utf-8")
     return ConfigUpdate(path=path, original=original, content=content)
 
@@ -803,7 +830,7 @@ def _normalize_toml_server(server: dict) -> dict:
     if not isinstance(server, dict):
         raise ValueError("Codex MCP server configuration must be an object")
 
-    source = copy.deepcopy(server)
+    source = _resolve_server_endpoints(server)
     source.pop("_source", None)
     _strip_compatible_codex_transport_type(source)
     if "tools" in source and not isinstance(source["tools"], dict):

@@ -3,9 +3,9 @@ title: "MCP Server Templates"
 category: reference
 service: ai-toolkit
 tags: [mcp, templates, servers, configuration, editors, inject-mcp, external-templates]
-version: "1.6.0"
+version: "1.7.0"
 created: "2026-04-07"
-last_updated: "2026-08-31"
+last_updated: "2026-09-10"
 description: "Reference for 28 built-in MCP server templates, external template injection via inject-mcp, and native editor MCP installation support."
 ---
 
@@ -126,6 +126,26 @@ Each template is a JSON file with the following structure:
 `rag-mcp` and `rag-mcp-legal` expose unauthenticated HTTP MCP endpoints by
 design. Keep the default localhost binding, use a VPN, or protect remote access
 with a restricted reverse proxy.
+
+### Portable endpoint variables
+
+Native config generation resolves `${NAME}` and `${NAME:-default}` in endpoint
+fields (`url`, `serverUrl`, `httpUrl`), including the Claude app bridge and
+OpenCode. Resolution uses the environment of the install/update process.
+An unset or empty variable uses its default; without a default, rendering fails
+with the variable name and does not write that editor's config. Expansion is a
+single text substitution, with no shell execution or recursive expansion.
+
+For example, `${RAG_MCP_LEGAL_URL:-http://localhost:8082/mcp/sse}` becomes
+`http://localhost:8082/mcp/sse` when the variable is unset. Set
+`RAG_MCP_LEGAL_URL` before installing or updating to use another endpoint.
+The canonical `.mcp.json` and source templates retain the expression so later
+updates can resolve it again. Client-specific expressions such as `${env:NAME}`
+are preserved, as are placeholders in arguments, environment maps and headers.
+
+`ai-toolkit update` re-reads registered local MCP templates as well as URL
+sources. A missing local file emits a warning and preserves installed config;
+local refresh does not force ownership conflicts with another source.
 
 ## Example: Adding GitHub and PostgreSQL
 
