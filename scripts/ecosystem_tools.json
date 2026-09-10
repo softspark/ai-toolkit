@@ -1,12 +1,14 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-09-01",
+  "last_updated": "2026-09-10",
   "tools": [
     {
       "id": "claude-code",
       "display_name": "Claude Code",
       "kind": "primary",
+      "reviewed_version": "2.1.267",
+      "release_review_note": "2026-09-10 class C: maxEffortLevel and --system-prompt-snapshot are optional runtime controls, not adopted by toolkit generators. Existing emitted hooks, agents and plugin formats require no migration. Reviewed https://github.com/anthropics/claude-code/releases/tag/v2.1.267.",
       "urls": {
         "docs": "https://code.claude.com/docs",
         "release_notes": "https://github.com/anthropics/claude-code/releases",
@@ -645,6 +647,8 @@
       "id": "codex-cli",
       "display_name": "Codex CLI",
       "kind": "editor",
+      "reviewed_version": "0.154.0",
+      "release_review_note": "2026-09-10 class C: optional native worktrees, inline questions, Windows daemon and model-picker features are not adopted as generated configuration. Removal of codex mcp-server requires no toolkit migration: no generator, installer, skill or documented command uses that entry point. Reviewed https://github.com/openai/codex/releases/tag/rust-v0.154.0.",
       "urls": {
         "docs": "https://learn.chatgpt.com/docs/codex/cli",
         "release_notes": "https://github.com/openai/codex/releases",

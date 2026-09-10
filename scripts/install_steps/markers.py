@@ -262,25 +262,29 @@ def refresh_url_hooks(target_dir: str | None = None) -> None:
             inject(str(cached_file), target, source_override=hook_name)
 
 
-def refresh_url_mcp(target_dir: str | None = None) -> None:
-    """Re-fetch all URL-sourced MCP templates and re-inject them.
+def refresh_mcp_templates(target_dir: str | None = None) -> None:
+    """Re-read registered local and URL MCP templates and re-inject them.
 
-    Called during ``ai-toolkit update`` to keep URL-sourced MCP templates
-    current. On fetch failure, warns and keeps the cached version.
+    Called during ``ai-toolkit update``. URL fetch failures use the cached
+    version; missing local sources leave their installed config in place.
     """
-    from mcp_sources import get_url_templates, register_url_source
+    from mcp_sources import load_sources, register_url_source
     from paths import EXTERNAL_MCP_DIR
     from url_fetch import fetch_url
     import json
 
-    url_templates = get_url_templates()
-    if not url_templates:
+    sources = load_sources()
+    if not sources:
         return
 
-    print("  Refreshing URL-sourced MCP templates...")
+    print("  Refreshing external MCP templates...")
     target = target_dir or str(Path.home())
 
-    for template_name, url in url_templates.items():
+    for template_name, source in sources.items():
+        if "url" not in source:
+            _refresh_local_mcp_template(template_name, source, target)
+            continue
+        url = source["url"]
         cached_file = EXTERNAL_MCP_DIR / f"{template_name}.json"
         try:
             data = fetch_url(url)
@@ -300,6 +304,20 @@ def refresh_url_mcp(target_dir: str | None = None) -> None:
         if cached_file.is_file():
             from inject_mcp_cli import inject
             inject(str(cached_file), target, source_override=template_name, force=True)
+
+
+def _refresh_local_mcp_template(name: str, source: dict, target: str) -> None:
+    """Refresh a local source while preserving ownership and missing files."""
+    from inject_mcp_cli import inject
+
+    path = source.get("path")
+    if not isinstance(path, str) or not Path(path).is_file():
+        print(f"  Warning: local MCP template '{name}' is missing; keeping installed config.")
+        return
+    try:
+        inject(path, target, source_override=name, force=False)
+    except (Exception, SystemExit) as exc:
+        print(f"  Warning: could not refresh local MCP template '{name}': {exc}")
 
 
 def _inject_rules_dry_run(rules_dir: Path) -> None:

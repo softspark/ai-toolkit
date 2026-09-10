@@ -28,6 +28,8 @@ import json
 import sys
 from pathlib import Path
 
+from mcp_editors import resolve_endpoint_url
+
 SCHEMA_URL = "https://opencode.ai/config.json"
 
 
@@ -53,7 +55,7 @@ def _translate_server(name: str, server: dict) -> dict:
     out: dict = {}
     if "url" in server:
         out["type"] = "remote"
-        out["url"] = server["url"]
+        out["url"] = resolve_endpoint_url(server["url"])
         if "headers" in server and isinstance(server["headers"], dict):
             out["headers"] = copy.deepcopy(server["headers"])
     elif "command" in server:

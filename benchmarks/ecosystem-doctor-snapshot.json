@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-09-08T10:19:20Z",
+  "last_run": "2026-09-10T08:11:13Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "d3017d1e2e9a921b",
+      "docs_hash": "c89553fa683bcd32",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "c1a63abb43d3c98d",
+      "docs_hash": "63808399074dd530",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -108,7 +108,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "ef7e0a89823c3718",
+      "docs_hash": "8de8234ba28023b8",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -174,10 +174,10 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.263 (Claude Code)"
+      "version": "2.1.267 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "7e299697f4c33610",
+      "docs_hash": "8c3fc8dff5f90d1f",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -225,7 +225,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "9236502b676571e4",
+      "docs_hash": "68c2ca5e05c6840d",
       "headings": [
         "API",
         "API Reference",
@@ -365,10 +365,10 @@
         "plugin marketplace": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.153.4"
+      "version": "codex-cli 0.154.0"
     },
     "cursor": {
-      "docs_hash": "b71a4e9a337185d3",
+      "docs_hash": "34ec3c9ac17a7745",
       "headings": [
         "Agent",
         "CLI",
@@ -401,7 +401,7 @@
       }
     },
     "dsh": {
-      "docs_hash": "217350a932acc7fb",
+      "docs_hash": "2f512e8581e200f5",
       "headings": [],
       "markers": {
         "Agent Preset": false,
@@ -412,7 +412,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "49e56808db7737d0",
+      "docs_hash": "2e10bdb9b1111411",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -453,7 +453,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "7eb63b9012fbcf04",
+      "docs_hash": "f1456fd93502a652",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -465,13 +465,12 @@
         "About cloud and local sandboxes for GitHub Copilot",
         "About custom agents",
         "Articles",
-        "Did you find what you needed?",
         "GitHub Copilot",
         "GitHub Copilot documentation",
         "Help and support",
-        "Help us make these docs great!",
-        "Legal",
-        "Still need help?"
+        "Help us make GitHub Docs great!",
+        "Still need help?",
+        "Was this Doc helpful?"
       ],
       "markers": {
         "AGENTS.md": false,
@@ -490,7 +489,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "8cbf9aaffb6b57bf",
+      "docs_hash": "9fe532d247c3e361",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -517,7 +516,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "8675f180c76f02dd",
+      "docs_hash": "c9f362f4e420a6d0",
       "headings": [
         "Add features",
         "Ask questions",
@@ -579,7 +578,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "c9f1d45fe190f606",
+      "docs_hash": "8c8b018f960b1a4d",
       "headings": [
         "Accounts",
         "Advanced",
