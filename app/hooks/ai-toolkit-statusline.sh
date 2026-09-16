@@ -143,7 +143,7 @@ if [ "${AI_TOOLKIT_STATUSLINE_NO_GIT:-0}" != "1" ] && \
 fi
 
 # ── Segment: context window as progress bar ────────────────────────────────
-# 10-cell bar with usage-shaded color: green <50%, yellow 50-79%, red ≥80%.
+# 10-cell bar with usage-shaded color: green <70%, orange 70-89%, red ≥90%.
 build_ctx_bar() {
     local pct=$1
     local cells=10

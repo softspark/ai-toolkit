@@ -83,6 +83,18 @@ teardown() {
     echo "$output" | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'files_included' in d and 'budget_tokens' in d"
 }
 
+@test "pack-codebase: token estimate uses the measured Claude density, not 4 chars per token" {
+    # 0.44 tokens per byte, measured on Claude Code tool output under the 4.7+
+    # tokenizer (kb/history/completed/token-usage-remeasurement-20260916.md).
+    # Four chars per token would report 550 for 2200 bytes and let a "100k"
+    # pack reach roughly 180k real tokens.
+    python3 -c "open('$TEST_TMP/src/sized.py', 'w').write('x = 1\n' * 366 + 'y=2\n')"
+    run $SCRIPT --root "$TEST_TMP" --include "src/sized.py" --budget 10k --json
+    [ "$status" -eq 0 ]
+    tokens=$(echo "$output" | python3 -c "import json,sys; print(json.load(sys.stdin)['files_included'][0]['tokens'])")
+    [ "$tokens" = "968" ]
+}
+
 # ── Truncation ───────────────────────────────────────────────────────────────
 
 @test "pack-codebase: large file gets truncated with marker" {

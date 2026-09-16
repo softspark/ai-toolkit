@@ -12,13 +12,22 @@ tags:
 doc_type: postmortem
 status: completed
 created: "2026-07-27"
-last_updated: "2026-07-27"
+last_updated: "2026-09-16"
 description: "Closes the tool-output token-reduction line of work after a third measurement. Decomposes 1189 real sessions by cost: 84% is context being fed to the model, 14.7% is responses. Tool output is a small lever by construction and three independent attempts have now hit the same ceiling. Records what shipped (a 20.2% rag-mcp response trim, worth 0.49% of cost), what was killed by its own kill number, and the three measurement errors made on the way."
 ---
 
 # Closed: Tool-Output Token Reduction
 
 **Read this before proposing a fourth attempt.**
+
+> **Re-measured on 2026-09-16.** The figures below could not be reproduced — the
+> harness was never committed and the corpus aged out — and several were wrong in
+> both directions: usage summed per transcript line rather than per request,
+> `bytes / 4` where the 4.7+ tokenizer measures about 0.44 tokens per byte, and
+> amplification that ignored compaction. The conclusion held: rtk v0.49.0 saves about
+> 2% of context tokens in sessions that do not compact, below a threshold fixed in
+> advance. Use [Token-Usage Re-Measurement](token-usage-remeasurement-20260916.md)
+> for numbers; keep this page for the reasoning.
 
 Three independent efforts have tried to cut tokens by shrinking what tools
 return. All three were competently built. All three measured out near zero.
@@ -183,6 +192,7 @@ projects, and neither is in this line of work.
 
 ## Related
 
+- [Token-Usage Re-Measurement](token-usage-remeasurement-20260916.md) — the September re-measurement of this page's numbers
 - [Output Filter Retirement](output-filter-retirement-20260726.md) — attempt one, 0.0000%
 - [rtk-pack Retirement](rtk-pack-retirement-20260727.md) — attempt two, 0.0615%
 - [rtk Pack Integration](rtk-pack-integration-20260726.md) — the Phase 0 ceiling calculation

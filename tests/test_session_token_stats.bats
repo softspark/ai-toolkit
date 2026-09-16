@@ -65,6 +65,38 @@ teardown() {
     [ "$displayed" = "1250" ]
 }
 
+# ── Request deduplication ───────────────────────────────────────────────────
+#
+# Claude Code writes one JSONL line per content block and repeats the request's
+# usage on each, so summing lines counts a three-block request three times. On a
+# real corpus that was 1.9 lines per request. The fixture carries one request in
+# three lines (output partial on the earlier two), one request written twice
+# under the same uuid, and a zero-usage <synthetic> error placeholder.
+
+@test "session-stats: counts a multi-block request once" {
+    run $SCRIPT --session "$FIXTURES/multi-block-request.jsonl" --json
+    [ "$status" -eq 0 ]
+    totals=$(echo "$output" | python3 -c 'import json,sys; t=json.load(sys.stdin)["totals"]; print(t["input"], t["output"], t["cache_create"], t["cache_read"])')
+    [ "$totals" = "110 100 1000 11000" ]
+}
+
+@test "session-stats: messages_counted counts requests, not lines" {
+    run $SCRIPT --session "$FIXTURES/multi-block-request.jsonl" --json
+    counted=$(echo "$output" | python3 -c 'import json,sys; print(json.load(sys.stdin)["totals"]["messages_counted"])')
+    [ "$counted" = "2" ]
+}
+
+@test "session-stats: latest session ignores subagent transcripts" {
+    mkdir -p "$TEST_TMP/proj/sess1/subagents"
+    cp "$FIXTURES/three-messages.jsonl" "$TEST_TMP/proj/sess1.jsonl"
+    sleep 0.1
+    cp "$FIXTURES/three-messages.jsonl" "$TEST_TMP/proj/sess1/subagents/agent-x.jsonl"
+    run $SCRIPT --project-dir "$TEST_TMP/proj" --json
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'sess1.jsonl'
+    ! echo "$output" | grep -q 'agent-x'
+}
+
 # ── Malformed input ──────────────────────────────────────────────────────────
 
 @test "session-stats: skips malformed JSON lines without crashing" {

@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-09-10T08:11:13Z",
+  "last_run": "2026-09-16T14:00:09Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "c89553fa683bcd32",
+      "docs_hash": "8316b770693f4f47",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "63808399074dd530",
+      "docs_hash": "362b9b8b9b66efb5",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -108,7 +108,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "8de8234ba28023b8",
+      "docs_hash": "badc6913134706d6",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -174,10 +174,10 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.267 (Claude Code)"
+      "version": "2.1.273 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "8c3fc8dff5f90d1f",
+      "docs_hash": "cef9570a9043f6d3",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -225,14 +225,15 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "68c2ca5e05c6840d",
+      "docs_hash": "af31f48c8916dd09",
       "headings": [
         "API",
         "API Reference",
         "Advertiser API",
         "Agent configuration",
+        "Agents API",
         "Agents SDK",
-        "Audio",
+        "Audio processing",
         "Available on",
         "Blog",
         "Bring visual context into the prompt",
@@ -240,6 +241,7 @@
         "Build a terminal workflow around Codex",
         "Build tool workflows",
         "Build with Codex",
+        "Build with voice",
         "Capabilities",
         "Categories",
         "ChatGPT Work",
@@ -254,7 +256,7 @@
         "Config file",
         "Connect external tools with MCP",
         "Connect tools and data",
-        "Connection methods",
+        "Connections",
         "Contribute",
         "Conversion specs",
         "Core concepts",
@@ -273,6 +275,7 @@
         "File Upload",
         "Fit Codex to your terminal",
         "Foundations",
+        "GPT-Live",
         "Get started",
         "Get started with Codex CLI",
         "Getting started",
@@ -298,6 +301,7 @@
         "Plugin and connector controls",
         "Programs",
         "Prompting",
+        "Realtime API",
         "Realtime and audio",
         "Reasoning",
         "Recent",
@@ -313,7 +317,6 @@
         "Search for current context",
         "Search the docs",
         "See what Codex CLI can do",
-        "Sessions and operations",
         "Set the boundaries for each run",
         "Spaces",
         "Specialized models",
@@ -368,7 +371,7 @@
       "version": "codex-cli 0.154.0"
     },
     "cursor": {
-      "docs_hash": "34ec3c9ac17a7745",
+      "docs_hash": "811c7843a53e3b33",
       "headings": [
         "Agent",
         "CLI",
@@ -409,10 +412,11 @@
         "dsh plugin": false,
         "profiles": false,
         "skills": true
-      }
+      },
+      "version": "0.1.5-rc.1"
     },
     "gemini-cli": {
-      "docs_hash": "2e10bdb9b1111411",
+      "docs_hash": "50ea1db721766844",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -453,7 +457,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "f1456fd93502a652",
+      "docs_hash": "9e82da1a237851cf",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -461,7 +465,6 @@
         "About agent apps",
         "About agent management",
         "About agent skills",
-        "About billing for GitHub Copilot in organizations and enterprises",
         "About cloud and local sandboxes for GitHub Copilot",
         "About custom agents",
         "Articles",
@@ -489,7 +492,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "9fe532d247c3e361",
+      "docs_hash": "8cbf9aaffb6b57bf",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -516,7 +519,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "c9f362f4e420a6d0",
+      "docs_hash": "af5669ce8789ca69",
       "headings": [
         "Add features",
         "Ask questions",
@@ -578,7 +581,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "8c8b018f960b1a4d",
+      "docs_hash": "81f9971f1b4f7a53",
       "headings": [
         "Accounts",
         "Advanced",

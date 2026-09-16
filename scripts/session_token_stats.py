@@ -5,12 +5,19 @@
 
 """Read Claude Code session JSONL files and report real token usage.
 
-Claude Code writes one JSONL line per message to:
+Claude Code writes session transcripts to:
     ~/.claude/projects/<sanitized-cwd>/<session-id>.jsonl
 
-Each message contains a `usage` block with input_tokens, output_tokens,
-cache_creation_input_tokens, and cache_read_input_tokens. This script
-parses those blocks and emits aggregate or per-session reports.
+It writes one line per content block, not per API request, and every line of a
+request repeats that request's `usage` block (input_tokens, output_tokens,
+cache_creation_input_tokens, cache_read_input_tokens). Usage is therefore read
+once per `requestId` (falling back to `message.id`), taking the largest
+output_tokens because earlier lines carry a partial count; a record written
+twice under one `uuid` is read once, and `<synthetic>` error placeholders are
+skipped. Summing lines instead overstated a real 15-session corpus by 1.9x
+(cache reads) to 2.6x (output), and `total` by about 2.6x. Subagent
+transcripts under `<session-id>/subagents/` are never picked as the latest
+session.
 
 Usage:
     python3 scripts/session_token_stats.py [options]
@@ -80,10 +87,14 @@ def find_project_dir(claude_dir: Path, cwd: str | None = None) -> Path | None:
 
 
 def find_latest_session(search_dir: Path) -> Path | None:
-    """Return the most-recently-modified .jsonl under search_dir, or None."""
+    """Return the most-recently-modified session .jsonl under search_dir, or None.
+
+    Subagent transcripts are excluded: while a subagent runs, its file is the
+    newest one, and reporting it would describe the subagent, not the session.
+    """
     if not search_dir.is_dir():
         return None
-    candidates = list(search_dir.rglob("*.jsonl"))
+    candidates = [p for p in search_dir.rglob("*.jsonl") if p.parent.name != "subagents"]
     if not candidates:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
@@ -144,14 +155,23 @@ def aggregate(
     session_file: Path,
     since: timedelta | None = None,
 ) -> dict[str, Any]:
-    """Sum token usage across a session, optionally filtered by recency."""
+    """Sum token usage across a session's API requests, optionally filtered by recency."""
     cutoff = datetime.now(timezone.utc) - since if since else None
     totals = {"input": 0, "output": 0, "cache_create": 0, "cache_read": 0}
     message_count = 0
-    counted = 0
+    requests: dict[str, dict[str, int]] = {}
+    seen_uuids: set[str] = set()
 
-    for message in iter_messages(session_file):
+    for index, message in enumerate(iter_messages(session_file)):
         message_count += 1
+        uuid = message.get("uuid")
+        if isinstance(uuid, str):
+            if uuid in seen_uuids:
+                continue
+            seen_uuids.add(uuid)
+        body = message.get("message") if isinstance(message.get("message"), dict) else {}
+        if body.get("model") == "<synthetic>":
+            continue
         if cutoff is not None:
             ts = message_timestamp(message)
             if ts is None or ts < cutoff:
@@ -159,9 +179,18 @@ def aggregate(
         usage = extract_usage(message)
         if usage is None:
             continue
+        # Lines without an id (older or hand-written transcripts) count individually.
+        key = message.get("requestId") or body.get("id") or f"line:{index}"
+        previous = requests.get(key)
+        if previous is None:
+            requests[key] = usage
+        else:
+            previous["output"] = max(previous["output"], usage["output"])
+
+    for usage in requests.values():
         for key, value in usage.items():
             totals[key] += value
-        counted += 1
+    counted = len(requests)
 
     totals["total"] = totals["input"] + totals["output"]
     totals["total_with_cache"] = (

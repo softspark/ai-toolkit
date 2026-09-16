@@ -40,8 +40,13 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-# Token estimate: 4 chars per token is the standard rough heuristic for English / code.
-CHARS_PER_TOKEN = 4
+# Token estimate for Claude's 4.7+ tokenizer. Measured, not the "4 chars per token"
+# heuristic: 0.44 tokens per byte on real Claude Code tool output (code, logs,
+# JSON), validated on a holdout half of the corpus, where 4 chars per token
+# undercounted by about 1.8x and let a 100k pack reach ~180k real tokens.
+# See kb/history/completed/token-usage-remeasurement-20260916.md. Prose tokenizes
+# less densely, so for a docs-heavy pack this errs on the side of fitting.
+TOKENS_PER_CHAR = 0.44
 
 DEFAULT_BUDGET = "100k"
 DEFAULT_MAX_FILE_BYTES = 8000
@@ -88,7 +93,7 @@ class FileEntry:
     body: str = ""
 
     def estimated_tokens(self) -> int:
-        return max(len(self.body) // CHARS_PER_TOKEN, 1) if self.body else 0
+        return max(round(len(self.body) * TOKENS_PER_CHAR), 1) if self.body else 0
 
 
 # ---------------------------------------------------------------------------

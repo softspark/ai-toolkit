@@ -6,16 +6,17 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2023%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2027%20passing-success)](tests/)
 
-## What's New in v4.34.1
+## What's New in v4.35.0
 
-- **Working MCP URLs:** native editor configs receive resolved endpoint
-  addresses from `${NAME}` and `${NAME:-default}` template expressions.
-- **Local template refresh:** `ai-toolkit update` re-reads registered local MCP
-  templates, repairing stale generated configuration such as `rag-mcp-legal`.
-- **Source preservation:** portable templates, credential placeholders,
-  unrelated settings and missing-source configurations remain intact.
+- **Honest session token counts:** `/briefing --tokens` counts each API request
+  once. Summing transcript lines had over-counted real sessions 1.9x to 2.6x.
+- **pack-codebase fits its budget:** token estimates use the measured density of
+  Claude's current tokenizer, so a 100k pack no longer reaches ~180k tokens.
+- **Re-measurement harness:** `benchmarks/token_usage/` measures what tool output
+  costs the context window and replays rtk offline; the verdict and method are
+  recorded in `kb/history/completed/token-usage-remeasurement-20260916.md`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

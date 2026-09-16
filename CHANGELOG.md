@@ -7,6 +7,49 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.35.0 - Token accounting repair and re-measurement harness (2026-09-16)
+
+### Fixed
+
+- **Session token counts:** `scripts/session_token_stats.py` reads usage once per
+  API request. Claude Code writes one transcript line per content block and
+  repeats the request's usage on each, so summing lines over-counted a real
+  15-session corpus 1.9x (cache reads) to 2.6x (output) — the figures
+  `/briefing --tokens` and its trend baseline showed. Repeated `uuid` records and
+  `<synthetic>` error placeholders are skipped, and a subagent transcript is no
+  longer picked as the latest session.
+- **pack-codebase token budget:** tokens are estimated at the measured 0.44 per
+  character for Claude's 4.7+ tokenizer instead of 4 characters per token, which
+  had let a 100k pack reach roughly 180k real tokens.
+- **Statusline comment:** the context bar's colour thresholds are documented as
+  the code applies them (70% and 90%).
+
+### Added
+
+- **`benchmarks/token_usage/`:** a committed harness for measuring context-window
+  and usage-limit consumption from local transcripts — request-level accounting,
+  holdout-validated attribution, forward simulation of compaction, and an offline
+  rtk replay. Writers refuse paths inside the repository. Record:
+  `kb/history/completed/token-usage-remeasurement-20260916.md`, which also
+  annotates the July tool-output closure whose figures it re-measured.
+
+### Ecosystem
+
+- Ecosystem doctor run for this minor release: 11 tools drifted since the
+  v4.34.1 snapshot, all class A (content edits with no heading delta) or class
+  C, so no generator changed. Claude Code 2.1.267 -> 2.1.273 adds the
+  `omitClaudeMd` agent frontmatter key, which the validator already tolerates
+  and no toolkit agent needs; Codex CLI's docs navigation gained OpenAI platform
+  headings (Realtime API, audio, voice) that add no Codex surface; Copilot
+  dropped a billing heading.
+
+### Verification
+
+- Five pytest modules for the harness, including mutation checks on the
+  transcript parser; four new bats cases that fail on the previous code.
+- Keep the skill body budget unchanged: the largest body remains 17197 bytes,
+  above the threshold for the next ratchet reduction.
+
 ## v4.34.1 - MCP endpoint configuration repair (2026-09-10)
 
 ### Fixed
