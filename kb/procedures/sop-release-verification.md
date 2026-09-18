@@ -3,9 +3,9 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif, dsh]
-version: "1.8.3"
+version: "1.8.4"
 created: "2026-04-08"
-last_updated: "2026-09-08"
+last_updated: "2026-09-18"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, explicit DSH lifecycle, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
@@ -22,7 +22,7 @@ Verifies all critical paths from the user's perspective.
 - As a smoke test in CI/CD
 
 **Prerequisites:**
-- Node.js >= 18, Python 3, `bats`, git
+- Node.js >= 18, Python 3, `bats`, GNU `parallel` (for `npm test`), git
 - The target version of `@softspark/ai-toolkit` installed in a disposable test environment
 
 **Time:** 10-15 minutes (full), 2 minutes (quick checklist)
@@ -528,6 +528,17 @@ ai-toolkit update          # or full re-install
 ```bash
 brew install bats-core     # macOS
 npm install -g bats        # cross-platform
+```
+
+### Tests fail: `parallel: command not found`
+
+`npm test` runs `bats --jobs 4`, which needs GNU parallel. Without it bats
+prints `Executed 0 instead of expected N tests` and exits non-zero.
+`python3 scripts/check_deps.py` lists it under Optional with the install command.
+
+```bash
+brew install parallel      # macOS
+sudo apt install parallel  # Debian/Ubuntu
 ```
 
 ### validate.py: stale counts

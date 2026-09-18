@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.36.1 - GNU parallel listed as a test dependency (2026-09-18)
+
+### Fixed
+
+- **`npm test` dependency is discoverable:** `npm test` runs `bats --jobs 4`,
+  which needs GNU parallel. Without it bats executes 0 tests and exits 1, and
+  nothing in the repo said so. `scripts/check_deps.py` now lists `parallel`
+  under Optional with install hints (brew, apt, dnf, pacman, apk, zypper), so
+  `python3 scripts/check_deps.py` prints the fix command. It stays optional:
+  installing and running the toolkit never needs it, and `doctor` results do
+  not change.
+- **Docs:** `.github/CONTRIBUTING.md` and `CLAUDE.md` name GNU parallel next to
+  `npm test`; the Release Verification SOP lists it under prerequisites and has
+  a troubleshooting entry for `parallel: command not found`.
+
+### Verification
+
+- `tests/python/test_check_deps.py`: two pytest cases (optional, not required;
+  apt install hint without failing the required check). Both fail on v4.36.0.
+
 ## v4.36.0 - Code Language golden rule (2026-09-18)
 
 ### Changed

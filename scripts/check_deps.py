@@ -131,6 +131,19 @@ OPTIONAL = [
         "reason": "Running toolkit test suite (npm test)",
     },
     {
+        "name": "parallel",
+        "check": "parallel",
+        "packages": {
+            "brew": "parallel",
+            "apt": "parallel",
+            "dnf": "parallel",
+            "pacman": "parallel",
+            "apk": "parallel",
+            "zypper": "gnu_parallel",
+        },
+        "reason": "GNU parallel for npm test (bats --jobs 4); without it bats executes 0 tests",
+    },
+    {
         "name": "pip-audit",
         "check": "pip-audit",
         "packages": {
