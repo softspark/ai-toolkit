@@ -28,7 +28,11 @@ Use dedicated tools — NEVER use Bash equivalents: `Read` not `cat`/`head`/`tai
 
 ## Language Match
 
-Respond in the same language the user writes in. If the user writes in Polish, respond in Polish. Do NOT switch to English unless the user does.
+Respond in the same language the user writes in. If the user writes in Polish, respond in Polish. Do NOT switch to English unless the user does. This covers chat replies only; code follows `Code Language`.
+
+## Code Language
+
+Code is ALWAYS written in English, like KB documentation: identifiers, comments, docstrings, log and error messages, CLI help and output. This holds when the user writes in another language and when the surrounding files are not in English. Do not copy their language. Exceptions: end-user copy in l10n/translation files follows the product locale, and existing non-English code you are not changing stays as it is unless the user asks for a translation.
 
 ## No Phantom Files
 

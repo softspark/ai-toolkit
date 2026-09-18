@@ -221,6 +221,13 @@ print('ok')
     [ -f "$TOOLKIT_DIR/app/hooks.json" ]
 }
 
+@test "golden-rules output style requires English code and scopes Language Match to chat" {
+    local style="$TOOLKIT_DIR/app/output-styles/golden-rules.md"
+    grep -q '^## Code Language$' "$style"
+    grep -q 'Code is ALWAYS written in English' "$style"
+    grep -q 'This covers chat replies only; code follows `Code Language`.' "$style"
+}
+
 @test "claude-code: only advisory Stop hooks run async, blocking ones stay synchronous" {
     python3 - "$TOOLKIT_DIR/app/hooks.json" <<'PY'
 import json, sys

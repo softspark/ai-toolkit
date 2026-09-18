@@ -7,6 +7,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.36.0 - Code Language golden rule (2026-09-18)
+
+### Changed
+
+- **Code Language golden rule:** the `golden-rules` output style requires code in
+  English (identifiers, comments, docstrings, log and error messages, CLI help
+  and output), matching the existing English-only rule for KB documentation.
+  It holds when the user writes in another language and when neighbouring files
+  are not in English. `Language Match` now states it covers chat replies only.
+  End-user copy in l10n files keeps the product locale.
+
+### Ecosystem
+
+- Ecosystem doctor run for this minor release: 10 tools drifted since the
+  v4.35.0 snapshot, all class A or C, so no generator changed. Claude Code
+  2.1.273 -> 2.1.276 adds `syncClaudeAiSkills` / `syncClaudeAiPlugins` account
+  settings (not adopted) and no hook event or config path; Gemini CLI's removed
+  "Uh oh!" heading was a GitHub error page, not documentation; the other eight
+  are content edits with no heading delta.
+
+### Verification
+
+- One new bats case asserts the section and the chat-only scope of
+  `Language Match`, and fails on the v4.35.0 style. Test count: 2027 -> 2028.
+
 ## v4.35.0 - Token accounting repair and re-measurement harness (2026-09-16)
 
 ### Fixed

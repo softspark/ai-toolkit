@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-09-16T14:00:09Z",
+  "last_run": "2026-09-18T16:35:40Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "8316b770693f4f47",
+      "docs_hash": "ecb67046f6f1e195",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "362b9b8b9b66efb5",
+      "docs_hash": "e0872f0c3f123ed6",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -108,7 +108,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "badc6913134706d6",
+      "docs_hash": "5ee98dcafb3d5699",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -174,10 +174,10 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.273 (Claude Code)"
+      "version": "2.1.276 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "cef9570a9043f6d3",
+      "docs_hash": "b9a1f77e62ec83c7",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -225,7 +225,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "af31f48c8916dd09",
+      "docs_hash": "ba0517be3ab8879d",
       "headings": [
         "API",
         "API Reference",
@@ -371,7 +371,7 @@
       "version": "codex-cli 0.154.0"
     },
     "cursor": {
-      "docs_hash": "811c7843a53e3b33",
+      "docs_hash": "4f2d2e39fd903e40",
       "headings": [
         "Agent",
         "CLI",
@@ -416,7 +416,7 @@
       "version": "0.1.5-rc.1"
     },
     "gemini-cli": {
-      "docs_hash": "50ea1db721766844",
+      "docs_hash": "c24d435f25c50f5a",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -428,7 +428,6 @@
         "Latest commit",
         "More options",
         "Navigation Menu",
-        "Uh oh!",
         "docs",
         "parent directory"
       ],
@@ -457,7 +456,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "9e82da1a237851cf",
+      "docs_hash": "8eb044fb1d357223",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -519,7 +518,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "af5669ce8789ca69",
+      "docs_hash": "25e92ce4ab59c1a0",
       "headings": [
         "Add features",
         "Ask questions",
@@ -581,7 +580,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "81f9971f1b4f7a53",
+      "docs_hash": "4aec8e874c5f7448",
       "headings": [
         "Accounts",
         "Advanced",
