@@ -45,7 +45,7 @@ Your PR must pass **all** CI jobs before review. Run them locally:
 
 ```bash
 # All of these must pass with zero errors:
-npm test                                # Test suite (bats tests/)
+npm test                                # Test suite (bats --jobs 4: needs bats + GNU parallel)
 python3 scripts/validate.py --strict    # Toolkit integrity + count drift
 python3 scripts/audit_skills.py --ci    # Security audit (0 HIGH findings)
 python3 scripts/evaluate_skills.py      # Skill evaluation

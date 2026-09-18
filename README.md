@@ -8,15 +8,17 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-2028%20passing-success)](tests/)
 
-## What's New in v4.36.0
+## What's New in v4.36.1
 
-- **Code is always in English:** the Golden Rules output style gains a
+- **`npm test` names its missing dependency:** `check_deps.py` lists GNU
+  parallel, which `bats --jobs 4` needs; without it the suite ran 0 tests.
+- **Code is always in English (v4.36.0):** the Golden Rules output style gains a
   `Code Language` rule. Identifiers, comments, docstrings, log messages and CLI
   output are English even when you chat in another language or the surrounding
   files are not, so the KB-documentation rule now has a code counterpart.
-- **Language Match is scoped to chat:** replies still follow your language; the
-  rule no longer reads as permission to write code in it. End-user l10n copy
-  keeps the product locale.
+- **Language Match is scoped to chat (v4.36.0):** replies still follow your
+  language; the rule no longer reads as permission to write code in it.
+  End-user l10n copy keeps the product locale.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

@@ -25,7 +25,7 @@ Stale counts = broken user trust. This is non-negotiable.
 
 ## Commands
 ```bash
-# Test:   npm test  (bats tests/)
+# Test:   npm test  (bats tests/ --jobs 4; needs GNU parallel, see check_deps.py)
 # Validate: python3 scripts/validate.py
 # Evaluate: python3 scripts/evaluate_skills.py
 # Audit:    python3 scripts/audit_skills.py --ci  (security scan, exit 1 on HIGH)
