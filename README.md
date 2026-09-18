@@ -6,17 +6,17 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2027%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2028%20passing-success)](tests/)
 
-## What's New in v4.35.0
+## What's New in v4.36.0
 
-- **Honest session token counts:** `/briefing --tokens` counts each API request
-  once. Summing transcript lines had over-counted real sessions 1.9x to 2.6x.
-- **pack-codebase fits its budget:** token estimates use the measured density of
-  Claude's current tokenizer, so a 100k pack no longer reaches ~180k tokens.
-- **Re-measurement harness:** `benchmarks/token_usage/` measures what tool output
-  costs the context window and replays rtk offline; the verdict and method are
-  recorded in `kb/history/completed/token-usage-remeasurement-20260916.md`.
+- **Code is always in English:** the Golden Rules output style gains a
+  `Code Language` rule. Identifiers, comments, docstrings, log messages and CLI
+  output are English even when you chat in another language or the surrounding
+  files are not, so the KB-documentation rule now has a code counterpart.
+- **Language Match is scoped to chat:** replies still follow your language; the
+  rule no longer reads as permission to write code in it. End-user l10n copy
+  keeps the product locale.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
