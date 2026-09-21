@@ -337,6 +337,18 @@ Solo-safe core: everything here holds whether one person or twenty merge into
 - Use different secrets per environment (dev/staging/prod).
 - Add `.env` to `.gitignore`. Use `.env.example` as a template.
 
+## Secrets at Rest
+- Never store a token, password, API key, client secret or licence key in the database in plaintext. A leaked dump must not hand out working credentials.
+- Value only compared (reset, verification, invitation, refresh, API tokens): store a keyed HMAC and look rows up by hashing the presented value. Passwords: a password hash.
+- Value read back (integration credentials, card tokens): authenticated encryption (AES-GCM, XChaCha20-Poly1305) with a key from the environment, never from the database.
+- Value read back and looked up: encrypt it, plus a keyed-HMAC blind-index column that carries the lookup and the unique constraint.
+- Put a key id in every ciphertext and hash, accept a previous key during rotation, and back the key up with the database. A lost key is lost data.
+- Queued and failed job payloads count: encrypt them when they carry live links or tokens. Redact the same values from audit and request logs.
+- Enforce it with a test that walks the ORM mapping and fails on a secret-looking column that is neither encrypted nor hashed. Recipes and the test template: `security-patterns` skill, `reference/secrets-at-rest.md`.
+
+## Commercial Messages (GDPR / ePrivacy)
+- Marketing e-mail/SMS goes only under the person's current consent for that channel and always carries a working opt-out; transactional messages need neither. Enforce both at the single send choke point (`security-patterns` skill, `reference/commercial-messages.md`).
+
 ## SQL Injection Prevention
 - Always use parameterized queries or ORM query builders.
 - Never concatenate user input into SQL strings.

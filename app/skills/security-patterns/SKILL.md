@@ -1,6 +1,6 @@
 ---
 name: security-patterns
-description: "App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP, LLM prompt injection. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, TLS, CSP, CORS, prompt injection, LLM output trust, tool permissions."
+description: "App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP, LLM prompt injection. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, encryption at rest, TLS, CSP, CORS, prompt injection, LLM output trust, tool permissions, marketing consent, unsubscribe."
 effort: medium
 user-invocable: false
 allowed-tools: Read
@@ -133,11 +133,16 @@ For input validation, client/backend contract parity, finite bounds and Unicode 
 
 For OAuth2 flows, CSRF protection, and audit logging, see [reference/oauth-csrf-audit.md](reference/oauth-csrf-audit.md).
 
+For tokens, passwords and keys stored in a database or queue (keyed hash vs encryption vs blind index, key ids and rotation, migrating plaintext, a coverage test over the ORM mapping), see [reference/secrets-at-rest.md](reference/secrets-at-rest.md).
+
+For marketing e-mail and SMS (commercial vs transactional classification, per-channel consent re-checked at send time, one-click opt-out), see [reference/commercial-messages.md](reference/commercial-messages.md).
+
 ## Rules
 
 - **MUST** validate input type, format and size at the trust boundary; domain logic must also enforce state-dependent invariants before side effects
 - **MUST** use parameterized queries (prepared statements) for every SQL interaction — string concatenation is SQL injection
 - **NEVER** store secrets (API keys, tokens, passwords) in code, config files, or git history — use the platform's secret manager
+- **NEVER** store a token, password or key in a database, queue or log in plaintext — keyed hash when only compared, encryption when read back ([reference/secrets-at-rest.md](reference/secrets-at-rest.md))
 - **NEVER** log passwords, tokens, PII, or PHI — even at debug level. Logs reach aggregation systems, backups, and disk snapshots.
 - **NEVER** roll your own crypto. Use vetted libraries (bcrypt/argon2 for passwords, libsodium for crypto) and accept their defaults.
 - **CRITICAL**: authentication (who you are) and authorization (what you can do) are distinct concerns. Confusing them produces privilege escalation bugs; AuthN passes → AuthZ still runs.

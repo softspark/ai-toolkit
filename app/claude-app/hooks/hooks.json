@@ -122,7 +122,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/loop-guard.sh\""
+            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" AI_TOOLKIT_HOOK_FORMAT=json \"${CLAUDE_PLUGIN_ROOT}/hooks/loop-guard.sh\""
           }
         ]
       },
@@ -132,6 +132,15 @@
           {
             "type": "command",
             "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/test-cohesion.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" AI_TOOLKIT_HOOK_FORMAT=json \"${CLAUDE_PLUGIN_ROOT}/hooks/secret-column-check.sh\""
           }
         ]
       },

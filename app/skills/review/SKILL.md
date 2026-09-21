@@ -120,6 +120,8 @@ After all reviewers complete:
 - [ ] A10: External URL handling validates scheme/host (SSRF prevention)
 - [ ] Cross-scope replay: can an identifier from one tenant/user/org be replayed in another?
 - [ ] Fails closed wherever the path affects security, money, or data retention
+- [ ] Secrets at rest: a new column, setting or queued payload holding a token, password or key is encrypted (read back) or keyed-hashed (only compared), and a test reads the raw stored value; see `reference/secrets-at-rest.md` in `security-patterns`
+- [ ] Commercial messages: a new message type is classified commercial or transactional in code; a commercial one re-checks current per-channel consent and carries an opt-out; see `reference/commercial-messages.md` in `security-patterns`
 
 ### API / Contract Changes
 - [ ] Backward compatibility preserved (no silent breaking changes)

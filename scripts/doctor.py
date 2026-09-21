@@ -82,6 +82,7 @@ EXPECTED_HOOKS = [
     "instructions-audit.sh",
     "post-tool-use.sh",
     "loop-guard.sh",
+    "secret-column-check.sh",
     "quality-check.sh",
     "quality-gate.sh",
     "revert-guard.sh",

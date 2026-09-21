@@ -206,6 +206,7 @@
     "revert-guard.sh",
     "save-session.sh",
     "search-tracker.sh",
+    "secret-column-check.sh",
     "session-end.sh",
     "session-start.sh",
     "stop-search-check.sh",

@@ -1116,3 +1116,81 @@ PY
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
+
+@test "hooks.json: advisory PostToolUse hooks run in JSON mode so Claude receives their context" {
+    # Plain mode is silent without AI_TOOLKIT_HOOK_VERBOSE, which left the
+    # loop-guard advisory unread after it stopped forcing JSON itself.
+    for hook in loop-guard.sh secret-column-check.sh; do
+        run jq -r --arg hook "$hook" '.hooks.PostToolUse[].hooks[].command | select(contains($hook))' "$TOOLKIT_DIR/app/hooks.json"
+        [ "$status" -eq 0 ]
+        [[ "$output" == "AI_TOOLKIT_HOOK_FORMAT=json "* ]]
+    done
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# secret-column-check.sh — plaintext secret column advisory
+# ─────────────────────────────────────────────────────────────────────────────
+
+run_secret_check() {
+    run bash -c "AI_TOOLKIT_DIR='$TOOLKIT_DIR' AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/secret-column-check.sh' < '$1'"
+}
+
+@test "secret-column-check: a plaintext Doctrine token column gets the secrets-at-rest advisory" {
+    cat > "$TEST_TMP/p.json" <<'JSON'
+{"session_id":"sc-doctrine","tool_name":"Edit","tool_input":{"file_path":"/p/src/Entity/Company.php","new_string":"    #[ORM\\Column(length: 255, nullable: true)]\n    private ?string $smsApiToken = null;"}}
+JSON
+    run_secret_check "$TEST_TMP/p.json"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"hookEventName":"PostToolUse"'* ]]
+    [[ "$output" == *"Secrets at rest"*"smsApiToken"* ]]
+}
+
+@test "secret-column-check: an encrypted column is not reported" {
+    cat > "$TEST_TMP/p.json" <<'JSON'
+{"session_id":"sc-enc","tool_name":"Edit","tool_input":{"file_path":"/p/src/Entity/Company.php","new_string":"    #[ORM\\Column(type: EncryptedTextType::NAME, nullable: true)]\n    private ?string $ksefAuthToken = null;"}}
+JSON
+    run_secret_check "$TEST_TMP/p.json"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "secret-column-check: SQL in a migration is scanned, every MultiEdit hunk too" {
+    cat > "$TEST_TMP/p.json" <<'JSON'
+{"session_id":"sc-multi","tool_name":"MultiEdit","tool_input":{"file_path":"/p/migrations/Version20260921.php","edits":[{"old_string":"a","new_string":"-- nothing"},{"old_string":"b","new_string":"$this->addSql(\"ALTER TABLE s ADD client_secret VARCHAR(255)\");"}]}}
+JSON
+    run_secret_check "$TEST_TMP/p.json"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"client_secret"*"SQL column"* ]]
+}
+
+@test "secret-column-check: the same file and column is reported once per session" {
+    cat > "$TEST_TMP/p.json" <<'JSON'
+{"session_id":"sc-once","tool_name":"Write","tool_input":{"file_path":"/p/prisma/schema.prisma","content":"model A {\n  apiKey String\n}"}}
+JSON
+    run_secret_check "$TEST_TMP/p.json"
+    [[ "$output" == *"apiKey"* ]]
+    run_secret_check "$TEST_TMP/p.json"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "secret-column-check: a non-schema file mentioning secrets stays silent" {
+    cat > "$TEST_TMP/p.json" <<'JSON'
+{"session_id":"sc-readme","tool_name":"Edit","tool_input":{"file_path":"/p/README.md","new_string":"api_key VARCHAR(64) token secret password"}}
+JSON
+    run_secret_check "$TEST_TMP/p.json"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "secret-column-check: minimal profile and CLAUDE_SKIP_SECRET_COLUMNS silence it" {
+    cat > "$TEST_TMP/p.json" <<'JSON'
+{"session_id":"sc-off","tool_name":"Edit","tool_input":{"file_path":"/p/app/models.py","new_string":"    smtp_password = models.CharField(max_length=255)"}}
+JSON
+    run bash -c "TOOLKIT_HOOK_PROFILE=minimal AI_TOOLKIT_DIR='$TOOLKIT_DIR' AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/secret-column-check.sh' < '$TEST_TMP/p.json'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    run bash -c "CLAUDE_SKIP_SECRET_COLUMNS=1 AI_TOOLKIT_DIR='$TOOLKIT_DIR' AI_TOOLKIT_HOOK_FORMAT=json bash '$HOOKS_DIR/secret-column-check.sh' < '$TEST_TMP/p.json'"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}

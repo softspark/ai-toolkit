@@ -7,6 +7,92 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.37.0 - Secrets at rest and commercial-message consent (2026-09-21)
+
+Minor release. Turns a production ruling (no token, password or key stored in
+plaintext; no marketing without consent and an opt-out) into a rule, skill
+recipes, review items and a lifecycle hook. Hook entries: 28 → 29.
+
+### Added
+
+- **`secret-column-check.sh`** — advisory `PostToolUse` hook
+  (`Edit|MultiEdit|Write`). When an edit to a schema, model or migration file
+  declares a column whose name looks like a token, secret, password or key and
+  nothing in that declaration marks it encrypted or hashed, it injects a
+  secrets-at-rest reminder. Detection is `scripts/secret_column_check.py`
+  (stdlib, mypy --strict, 33 unit tests) over SQL DDL, Doctrine, Laravel,
+  SQLAlchemy, Django, Prisma, Rails, TypeORM/Drizzle/Sequelize and JPA. Only the
+  text the edit wrote is scanned, each file + column is reported once per
+  session, and a shell prefilter keeps Python off edits that mention no secret
+  word. Run over the 427 entity and migration files of a production Symfony
+  project, it reported no current entity and flagged, in old migrations, exactly
+  the columns that had been created in plaintext. Silence with
+  `CLAUDE_SKIP_SECRET_COLUMNS=1` or `AI_TOOLKIT_DISABLED_HOOKS`. Claude Code
+  global hooks and the Claude app plugin (which now ships the scanner); editor
+  generators do not emit it.
+- **Secrets at rest rule** (`app/rules/common/security.md` 1.1.0): no token,
+  password or key in a database in plaintext. A compared value is stored as a
+  keyed HMAC, a value read back is encrypted, a value read back and looked up
+  gets both, keys carry an id and rotate with a previous key, and a test over
+  the ORM mapping enforces it. Comes from a production owner ruling of
+  2026-09-18.
+- **Commercial messages rule** (same file, one line so the always-on rule
+  stays short): marketing only under the current consent for that channel and
+  always with an opt-out, enforced at the single send choke point.
+- **`security-patterns` references:** `reference/secrets-at-rest.md` (hash vs
+  encrypt vs blind index, key ids and rotation, migrating plaintext, a
+  SQLAlchemy recipe and a coverage test over the ORM mapping, all executed
+  before shipping; the Doctrine and Messenger shape) and
+  `reference/commercial-messages.md` (classification with no default, consent
+  ledger re-checked at send time, one-click opt-out, the tests that prove it).
+  The skill links both, gains a NEVER rule on plaintext at rest and the
+  triggers `encryption at rest`, `marketing consent`, `unsubscribe`.
+- **`review` checklist:** two Security items, secrets at rest and commercial
+  messages.
+- **`verification-before-completion`:** a new gate counts only after it has
+  been seen failing on a planted violation (Common Failures row and a Key
+  Patterns block).
+
+### Fixed
+
+- **`loop-guard.sh` advisory reaches Claude again:** since the script stopped
+  forcing JSON output (for Codex), its Claude registration ran it in plain
+  mode, where informational context is silent without
+  `AI_TOOLKIT_HOOK_VERBOSE=1`. The repeated-action advisory was computed and
+  never shown. `app/hooks.json` (and the Claude app plugin hooks) now run it
+  with `AI_TOOLKIT_HOOK_FORMAT=json`, and a test pins JSON mode for both
+  advisory `PostToolUse` hooks. Codex output is unchanged.
+- **`claude-app` export test no longer fails after a local export:**
+  `tests/test_claude_app.bats` asserted that `ai-toolkit-claude-app.zip` does
+  not exist in the package directory, so the documented
+  `ai-toolkit claude-app export --verify` run from the repo root turned
+  `npm test` red. It now asserts that the test's own run did not create or
+  change that file.
+
+### Changed
+
+- `app/claude-app/skills/ai-toolkit-rules/SKILL.md`, `app/claude-app/hooks/hooks.json`
+  and `llms-full.txt` regenerated (`npm run generate:claude-app`,
+  `npm run generate:llms`); `app/surface.json` gains `secret-column-check.sh`
+  (additions only).
+- **Hook counts corrected:** `kb/reference/hooks-catalog.md` claimed 29 entries
+  while 28 were installed; README, `manifest.json`, the catalog and
+  `kb/reference/unique-features.md` now all say 29, which is the real count
+  with the new hook. The catalog's settings tree also lists `loop-guard.sh`,
+  which it had left out.
+
+### Ecosystem
+
+- Doctor run: 10 tools drifted, none needed a generator change. Claude Code
+  2.1.276 → 2.1.278, seven docs sites with content-only changes and an Augment
+  marker flip (Notification is still documented on the hooks page) are
+  class A. Codex CLI 0.155.0 dropped an "Events" heading (class A; every hook
+  event marker is still present) and added the `SessionStart` source `fork`
+  (openai/codex#44349), which the generated `startup|resume` matcher
+  deliberately leaves out because a forked thread inherits its parent's context
+  (class C, noted in `kb/reference/codex-cli-compatibility.md`). Snapshot
+  refreshed.
+
 ## v4.36.1 - GNU parallel listed as a test dependency (2026-09-18)
 
 ### Fixed

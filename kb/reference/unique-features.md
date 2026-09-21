@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-09-04"
+last_updated: "2026-09-21"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -21,7 +21,7 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
-**14 lifecycle events / 28 global hook entries:**
+**14 lifecycle events / 29 global hook entries:**
 
 | Event | Script | Action |
 |-------|--------|--------|
@@ -39,6 +39,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PostToolUse | `governance-capture.sh` | Log security-sensitive operations to JSONL |
 | PostToolUse | `loop-guard.sh` | Detect repeated successful actions and inject a reassessment advisory |
 | PostToolUse | `test-cohesion.sh` | Run cohesion-mapped tests after edits; block on failure (Art. VI.3) |
+| PostToolUse | `secret-column-check.sh` | Advisory: a schema/model/migration edit declares a secret-looking column with no encryption or hashing marker |
 | PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
 | Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
