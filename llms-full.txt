@@ -182,7 +182,7 @@
 - **ruby-rules**: Ruby coding rules: style, patterns, security, testing. Triggers: .rb, Gemfile, .gemspec, Rails, ActiveRecord, Sidekiq, RSpec, Sorbet, rubocop.
 - **rust-patterns**: Rust: ownership, lifetimes, async (Tokio), Result/anyhow/thiserror, traits, unsafe. Triggers: Rust, borrow checker, lifetime, Tokio, cargo, trait, impl, Result, unsafe, clippy.
 - **rust-rules**: Rust coding rules: style, patterns, security, testing. Triggers: .rs, Cargo.toml, Cargo.lock, Tokio, Axum, Serde, clippy, cargo test.
-- **security-patterns**: App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP, LLM prompt injection. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, TLS, CSP, CORS, prompt injection, LLM output trust, tool permissions.
+- **security-patterns**: App security: OWASP, authN/authZ, input validation, secrets, TLS, CSRF/XSS/SQLi, JWT, CSP, LLM prompt injection. Triggers: security, OWASP, auth, JWT, CSRF, XSS, SQL injection, secrets, encryption at rest, TLS, CSP, CORS, prompt injection, LLM output trust, tool permissions, marketing consent, unsubscribe.
 - **seo-validate**: SEO validator: meta/OG, Schema.org, hreflang, Core Web Vitals, crawlability. Triggers: SEO, meta tags, Schema.org, hreflang, LCP, INP, CLS, Core Web Vitals, sitemap, crawlability.
 - **skill-audit**: Scans skills/agents for security risks: dangerous patterns, secrets, excessive perms. Triggers: skill audit, security scan, agent audit, dangerous pattern.
 - **skill-creator**: Creates new skills from templates via guided workflow. Triggers: new skill, create skill, skill scaffold, skill template.
@@ -11387,7 +11387,7 @@ service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
 version: "1.1.0"
 created: "2026-04-12"
-last_updated: "2026-08-19"
+last_updated: "2026-09-21"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -11643,6 +11643,12 @@ Codex hooks must not force Claude-only JSON output fields such as
 `loop-guard.sh` run in quiet/plain mode under Codex; they keep side effects but
 do not emit hidden Claude-style context unless a future Codex runtime explicitly
 supports that schema.
+
+The generated `SessionStart` matcher is `startup|resume`. Since codex-cli
+0.155.0 a forked thread reports the source `fork` (openai/codex#44349) and
+inherits its parent's context, so the toolkit's start-up context deliberately
+does not run again for it. Not adopting `fork` is intentional; a spawned
+subagent still gets `SubagentStart`.
 
 If a future Codex runtime enables JSON context output for `UserPromptSubmit`,
 the output must be event-specific and include the event name alongside the
@@ -14070,9 +14076,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.12.0"
+version: "1.13.0"
 created: "2026-03-27"
-last_updated: "2026-09-04"
+last_updated: "2026-09-21"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -14507,6 +14513,46 @@ First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`.
 
 **Tunables:** `AI_TOOLKIT_LOOP_WINDOW`, `AI_TOOLKIT_LOOP_THRESHOLD`. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`; honours `AI_TOOLKIT_DISABLED_HOOKS`.
 
+The Claude registration runs it with `AI_TOOLKIT_HOOK_FORMAT=json`, because the
+plain-text advisory is silent without `AI_TOOLKIT_HOOK_VERBOSE=1`. From the
+release that stopped the script forcing JSON (for Codex) until v4.37.0 the
+Claude registration lacked that prefix, so the advisory never reached Claude.
+
+### PostToolUse (secrets at rest) — `secret-column-check.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PostToolUse` |
+| Matcher | `Edit\|MultiEdit\|Write` |
+| Script | `~/.softspark/ai-toolkit/hooks/secret-column-check.sh` (runs with `AI_TOOLKIT_HOOK_FORMAT=json`) |
+| Fires | After every file edit |
+
+**Action:** Advisory only, never blocks. When an edit to a schema, model or
+migration file declares a column whose name looks like a token, secret,
+password or key, and nothing on or directly above the declaration marks it
+encrypted or hashed, it injects a `PostToolUse` `additionalContext` reminder of
+the secrets-at-rest rule (`app/rules/common/security.md`, recipes in the
+`security-patterns` skill's `reference/secrets-at-rest.md`).
+
+Detection lives in `scripts/secret_column_check.py` (stdlib, unit-tested in
+`tests/python/test_secret_column_check.py`) and covers SQL DDL in `.sql` and
+migration files, Doctrine, Laravel, SQLAlchemy, Django, Prisma, Rails,
+TypeORM/Drizzle/Sequelize and JPA declarations. Only the text the edit wrote is
+scanned. Derived names (`*_hash`, `*_expires_at`, `*_length`) and a bare
+`password` column (a framework password hash) are ignored; a marker such as
+`EncryptedText`, `#[HashedToken]`, `#[BlindIndexOf]`, a TypeORM `transformer`
+or a JPA `@Convert` counts only within the same declaration. A shell prefilter
+skips Python for edits that mention no secret word. Each file + column is
+reported once per session; the state file keeps only 16-character hashes.
+
+It is a name-based reminder: a credential under a neutral name is not found.
+Project gates (a test over the ORM mapping) are the enforcement.
+
+**Overrides:** `CLAUDE_SKIP_SECRET_COLUMNS=1` (one-off). Skipped when
+`TOOLKIT_HOOK_PROFILE=minimal`; honours `AI_TOOLKIT_DISABLED_HOOKS`. Claude Code
+global hooks and the Claude app plugin only; editor-native hook generators do
+not emit it.
+
 ### PostToolUse (search-first tracker) — `search-tracker.sh`
 
 | Field | Value |
@@ -14633,6 +14679,8 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     ├── mcp-health.sh
     ├── user-prompt-submit.sh     # extended: arms search-required flag
     ├── post-tool-use.sh          # extended: appends edits to session state
+    ├── loop-guard.sh             # advisory: repeated identical actions
+    ├── secret-column-check.sh    # advisory: secret-looking column stored in plaintext
     ├── governance-capture.sh
     ├── test-cohesion.sh          # NEW: runs mapped tests after edits (Art. VI.3)
     ├── test-cohesion-map.json    # NEW: path → tests mapping
@@ -14657,7 +14705,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     ├── Notification       → notify-waiting.sh
     ├── PreToolUse         → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh, revert-guard.sh
     ├── UserPromptSubmit   → user-prompt-submit.sh, track-usage.sh
-    ├── PostToolUse        → post-tool-use.sh, governance-capture.sh, test-cohesion.sh, search-tracker.sh
+    ├── PostToolUse        → post-tool-use.sh, governance-capture.sh, loop-guard.sh, test-cohesion.sh, secret-column-check.sh, search-tracker.sh
     ├── Stop               → quality-check.sh, save-session.sh, quality-gate.sh, stop-search-check.sh
     ├── TaskCompleted      → quality-gate.sh
     ├── TeammateIdle       → echo (inline)
@@ -14781,7 +14829,7 @@ Devin CLI uses a **Claude-compatible** hook format (docs.devin.ai/cli/extensibil
 
 **Hook script not found:**
 ```bash
-ls ~/.softspark/ai-toolkit/hooks/     # should list 28 .sh files (plus _profile-check.sh + _locate-toolkit.sh + _hook-io.sh + _search-capability.sh helpers + test-cohesion-map.json)
+ls ~/.softspark/ai-toolkit/hooks/     # should list 28 .sh files (plus _profile-check.sh + _locate-toolkit.sh + _hook-io.sh + _search-capability.sh + _session-paths.sh helpers + test-cohesion-map.json)
 ai-toolkit update            # re-copies scripts
 ```
 
@@ -17981,7 +18029,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-09-04"
+last_updated: "2026-09-21"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -17998,7 +18046,7 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
-**14 lifecycle events / 28 global hook entries:**
+**14 lifecycle events / 29 global hook entries:**
 
 | Event | Script | Action |
 |-------|--------|--------|
@@ -18016,6 +18064,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PostToolUse | `governance-capture.sh` | Log security-sensitive operations to JSONL |
 | PostToolUse | `loop-guard.sh` | Detect repeated successful actions and inject a reassessment advisory |
 | PostToolUse | `test-cohesion.sh` | Run cohesion-mapped tests after edits; block on failure (Art. VI.3) |
+| PostToolUse | `secret-column-check.sh` | Advisory: a schema/model/migration edit declares a secret-looking column with no encryption or hashing marker |
 | PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
 | Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |

@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
 version: "1.1.0"
 created: "2026-04-12"
-last_updated: "2026-08-19"
+last_updated: "2026-09-21"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -261,6 +261,12 @@ Codex hooks must not force Claude-only JSON output fields such as
 `loop-guard.sh` run in quiet/plain mode under Codex; they keep side effects but
 do not emit hidden Claude-style context unless a future Codex runtime explicitly
 supports that schema.
+
+The generated `SessionStart` matcher is `startup|resume`. Since codex-cli
+0.155.0 a forked thread reports the source `fork` (openai/codex#44349) and
+inherits its parent's context, so the toolkit's start-up context deliberately
+does not run again for it. Not adopting `fork` is intentional; a spawned
+subagent still gets `SubagentStart`.
 
 If a future Codex runtime enables JSON context output for `UserPromptSubmit`,
 the output must be event-specific and include the event name alongside the

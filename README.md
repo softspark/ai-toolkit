@@ -6,19 +6,22 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2028%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2035%20passing-success)](tests/)
 
-## What's New in v4.36.1
+## What's New in v4.37.0
 
-- **`npm test` names its missing dependency:** `check_deps.py` lists GNU
-  parallel, which `bats --jobs 4` needs; without it the suite ran 0 tests.
-- **Code is always in English (v4.36.0):** the Golden Rules output style gains a
-  `Code Language` rule. Identifiers, comments, docstrings, log messages and CLI
-  output are English even when you chat in another language or the surrounding
-  files are not, so the KB-documentation rule now has a code counterpart.
-- **Language Match is scoped to chat (v4.36.0):** replies still follow your
-  language; the rule no longer reads as permission to write code in it.
-  End-user l10n copy keeps the product locale.
+- **Secrets at rest:** a new security rule (no token, password or key in a
+  database in plaintext) with `security-patterns` recipes: keyed hash vs
+  encryption vs blind index, key rotation, migrating plaintext, and a test
+  template that walks the ORM mapping.
+- **`secret-column-check` hook:** an edit that declares a secret-looking column
+  with no encryption or hashing marker gets a reminder, across SQL, Doctrine,
+  Laravel, SQLAlchemy, Django, Prisma, Rails, TypeORM and JPA.
+- **Commercial messages:** marketing only under current per-channel consent and
+  always with an opt-out, with a reference on enforcing both at one send point.
+- **Review and verification:** two new review checklist items, and a new gate
+  counts only after it has been seen failing once.
+- **Fixed:** the `loop-guard` advisory reaches Claude again.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -220,7 +223,7 @@ ai-toolkit/
 
 **Machine-enforced constitution** — 7-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
-**28 lifecycle hook entries:** Executable handlers across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, and search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
+**29 lifecycle hook entries:** Executable handlers across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, secrets-at-rest reminders, and search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
 
 **Security scanning** — `/skill-audit` for code-level risks, `/cve-scan` for dependency CVEs. Both CI-ready with exit codes.
 

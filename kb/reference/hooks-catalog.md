@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.12.0"
+version: "1.13.0"
 created: "2026-03-27"
-last_updated: "2026-09-04"
+last_updated: "2026-09-21"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -440,6 +440,46 @@ First-match-wins per file. Built-in runners: `bats`, `pytest`, `vitest`, `jest`.
 
 **Tunables:** `AI_TOOLKIT_LOOP_WINDOW`, `AI_TOOLKIT_LOOP_THRESHOLD`. Skipped when `TOOLKIT_HOOK_PROFILE=minimal`; honours `AI_TOOLKIT_DISABLED_HOOKS`.
 
+The Claude registration runs it with `AI_TOOLKIT_HOOK_FORMAT=json`, because the
+plain-text advisory is silent without `AI_TOOLKIT_HOOK_VERBOSE=1`. From the
+release that stopped the script forcing JSON (for Codex) until v4.37.0 the
+Claude registration lacked that prefix, so the advisory never reached Claude.
+
+### PostToolUse (secrets at rest) — `secret-column-check.sh`
+
+| Field | Value |
+|-------|-------|
+| Event | `PostToolUse` |
+| Matcher | `Edit\|MultiEdit\|Write` |
+| Script | `~/.softspark/ai-toolkit/hooks/secret-column-check.sh` (runs with `AI_TOOLKIT_HOOK_FORMAT=json`) |
+| Fires | After every file edit |
+
+**Action:** Advisory only, never blocks. When an edit to a schema, model or
+migration file declares a column whose name looks like a token, secret,
+password or key, and nothing on or directly above the declaration marks it
+encrypted or hashed, it injects a `PostToolUse` `additionalContext` reminder of
+the secrets-at-rest rule (`app/rules/common/security.md`, recipes in the
+`security-patterns` skill's `reference/secrets-at-rest.md`).
+
+Detection lives in `scripts/secret_column_check.py` (stdlib, unit-tested in
+`tests/python/test_secret_column_check.py`) and covers SQL DDL in `.sql` and
+migration files, Doctrine, Laravel, SQLAlchemy, Django, Prisma, Rails,
+TypeORM/Drizzle/Sequelize and JPA declarations. Only the text the edit wrote is
+scanned. Derived names (`*_hash`, `*_expires_at`, `*_length`) and a bare
+`password` column (a framework password hash) are ignored; a marker such as
+`EncryptedText`, `#[HashedToken]`, `#[BlindIndexOf]`, a TypeORM `transformer`
+or a JPA `@Convert` counts only within the same declaration. A shell prefilter
+skips Python for edits that mention no secret word. Each file + column is
+reported once per session; the state file keeps only 16-character hashes.
+
+It is a name-based reminder: a credential under a neutral name is not found.
+Project gates (a test over the ORM mapping) are the enforcement.
+
+**Overrides:** `CLAUDE_SKIP_SECRET_COLUMNS=1` (one-off). Skipped when
+`TOOLKIT_HOOK_PROFILE=minimal`; honours `AI_TOOLKIT_DISABLED_HOOKS`. Claude Code
+global hooks and the Claude app plugin only; editor-native hook generators do
+not emit it.
+
 ### PostToolUse (search-first tracker) — `search-tracker.sh`
 
 | Field | Value |
@@ -566,6 +606,8 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     ├── mcp-health.sh
     ├── user-prompt-submit.sh     # extended: arms search-required flag
     ├── post-tool-use.sh          # extended: appends edits to session state
+    ├── loop-guard.sh             # advisory: repeated identical actions
+    ├── secret-column-check.sh    # advisory: secret-looking column stored in plaintext
     ├── governance-capture.sh
     ├── test-cohesion.sh          # NEW: runs mapped tests after edits (Art. VI.3)
     ├── test-cohesion-map.json    # NEW: path → tests mapping
@@ -590,7 +632,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     ├── Notification       → notify-waiting.sh
     ├── PreToolUse         → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh, revert-guard.sh
     ├── UserPromptSubmit   → user-prompt-submit.sh, track-usage.sh
-    ├── PostToolUse        → post-tool-use.sh, governance-capture.sh, test-cohesion.sh, search-tracker.sh
+    ├── PostToolUse        → post-tool-use.sh, governance-capture.sh, loop-guard.sh, test-cohesion.sh, secret-column-check.sh, search-tracker.sh
     ├── Stop               → quality-check.sh, save-session.sh, quality-gate.sh, stop-search-check.sh
     ├── TaskCompleted      → quality-gate.sh
     ├── TeammateIdle       → echo (inline)
@@ -714,7 +756,7 @@ Devin CLI uses a **Claude-compatible** hook format (docs.devin.ai/cli/extensibil
 
 **Hook script not found:**
 ```bash
-ls ~/.softspark/ai-toolkit/hooks/     # should list 28 .sh files (plus _profile-check.sh + _locate-toolkit.sh + _hook-io.sh + _search-capability.sh helpers + test-cohesion-map.json)
+ls ~/.softspark/ai-toolkit/hooks/     # should list 28 .sh files (plus _profile-check.sh + _locate-toolkit.sh + _hook-io.sh + _search-capability.sh + _session-paths.sh helpers + test-cohesion-map.json)
 ai-toolkit update            # re-copies scripts
 ```
 

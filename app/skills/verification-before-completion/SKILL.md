@@ -69,6 +69,7 @@ When search, KB lookup, or tool calls come back with nothing relevant, the corre
 | Build succeeds | Build command: exit 0 | Linter passing, logs look good |
 | Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
 | Regression test works | Red-green cycle verified | Test passes once |
+| New gate works (lint rule, grep check, coverage/contract test) | Seen it fail once on a planted violation, with the expected message | It passes on the current code |
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
 | No dead code (Art. VI.1) | Grep for every removed/renamed symbol: 0 references | "I cleaned up what I touched" |
@@ -126,6 +127,12 @@ WRONG:    "Should pass now" / "Looks correct"
 ```
 CORRECT:  Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
 WRONG:    "I've written a regression test" (without red-green verification)
+```
+
+**New gates:**
+```
+CORRECT:  Add gate → Run (pass) → Plant one violation in a throwaway copy or fixture → Run (MUST FAIL, expected message) → Remove the plant → Run (pass)
+WRONG:    "Gate added, it's green" (a gate that has never been red may be checking nothing)
 ```
 
 **Requirements:**

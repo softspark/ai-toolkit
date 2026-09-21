@@ -42,6 +42,7 @@ REGISTERED_RULES_DIR = Path.home() / ".softspark" / "ai-toolkit" / "rules"
 
 PLUGIN_SCRIPT_FILES = (
     "paths.py",
+    "secret_column_check.py",
     "session_state.py",
     "test_cohesion.py",
     "version_check.py",

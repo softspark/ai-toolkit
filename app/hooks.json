@@ -135,7 +135,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/loop-guard.sh\""
+                        "command": "AI_TOOLKIT_HOOK_FORMAT=json \"$HOME/.softspark/ai-toolkit/hooks/loop-guard.sh\""
                     }
                 ]
             },
@@ -146,6 +146,16 @@
                     {
                         "type": "command",
                         "command": "\"$HOME/.softspark/ai-toolkit/hooks/test-cohesion.sh\""
+                    }
+                ]
+            },
+            {
+                "_source": "ai-toolkit",
+                "matcher": "Edit|MultiEdit|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "AI_TOOLKIT_HOOK_FORMAT=json \"$HOME/.softspark/ai-toolkit/hooks/secret-column-check.sh\""
                     }
                 ]
             },

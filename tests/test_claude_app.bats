@@ -108,10 +108,18 @@ PY
     [ -f "$TEST_TMP/out/rel.zip" ]
     [ -f "$TEST_TMP/out/rel-global-instructions.md" ]
     [ ! -e "$TOOLKIT_DIR/rel.zip" ]
+    # A developer's own `claude-app export` from the repo root legitimately
+    # leaves the default zip there (gitignored). What matters is that THIS run
+    # did not write it: absent stays absent, present stays byte-identical.
+    local package_zip="$TOOLKIT_DIR/ai-toolkit-claude-app.zip"
+    local before="absent"
+    [ -e "$package_zip" ] && before=$(cksum < "$package_zip")
     run $CLI claude-app export --no-custom-rules
     [ "$status" -eq 0 ]
     [ -f "$TEST_TMP/out/ai-toolkit-claude-app.zip" ]
-    [ ! -e "$TOOLKIT_DIR/ai-toolkit-claude-app.zip" ]
+    local after="absent"
+    [ -e "$package_zip" ] && after=$(cksum < "$package_zip")
+    [ "$after" = "$before" ]
 }
 
 @test "claude-app: official validator accepts clean staged plugin when available" {
