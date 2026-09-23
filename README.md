@@ -6,20 +6,20 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2059%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2068%20passing-success)](tests/)
 
-## What's New in v4.38.0
+## What's New in v4.39.0
 
-- **Codex:** portable plugin manifest with a compatibility overlay, MCP and
-  Interrupt hook support, and corrected Stop continuation and search tracking.
-- **Copilot:** skill invocation controls and hook responses compatible with
-  both CLI and VS Code.
-- **Claude:** current hook/skill schemas and detection of account-synced plugin
-  collisions with the global install.
-- **Other editors:** explicit allow decisions in Cursor permission hooks,
-  Devin/Windsurf deprecation guidance, and refreshed sources for all 14 tools.
-- **Agent lifecycle:** stop finished background agents after collecting their
-  final report; keep them running only when further work is planned.
+- **Current models:** dated GPT-6, Claude and Copilot guidance with explicit
+  client/API boundaries and preserved user model choices.
+- **Skills:** current effort and cache behavior, native structured outputs,
+  semantic validation and corrected moderation examples.
+- **Agents:** Responses API examples, scoped response caching, bounded fallback
+  and usage-based costs instead of hardcoded prices.
+- **Prompt portability:** Codex/Copilot adapters preserve API examples, metadata
+  and code literals while adapting runtime model instructions.
+- **Verification:** 2068 Bats and 456 Python tests; model-quality benchmarks are
+  separate from these offline contract checks.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

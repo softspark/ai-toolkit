@@ -308,6 +308,37 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "generate_copilot.py inherits runtime model choices without rewriting API examples" {
+    run python3 - "$TOOLKIT_DIR" "$BATS_TEST_TMPDIR" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_copilot import _render_agent, _render_skill_markdown
+
+skill = Path(sys.argv[2]) / "model-fixture"
+skill.mkdir()
+source = skill / "SKILL.md"
+example = '```python\nmodel = "claude-opus-4-8"\nprompt = "Use Opus."\n```\n'
+source.write_text(
+    '---\nname: model-fixture\ndescription: Model fixture\nmodel: opus\n'
+    'effort: high\nuser-invocable: true\ndisable-model-invocation: true\n---\n'
+    'Use Claude Sonnet 4.6 for each teammate.\n' + example,
+    encoding="utf-8",
+)
+for rendered in (_render_agent(source)[2], _render_skill_markdown(skill)[1]):
+    metadata, body = rendered.split("---", 2)[1:]
+    assert "\nmodel:" not in metadata and "\neffort:" not in metadata
+    assert "reasoningEffort:" not in metadata and "models:" not in metadata
+    assert "Use the current client's selected model and reasoning effort for each teammate." in body
+    assert example in body
+skill_metadata = _render_skill_markdown(skill)[1].split("---", 2)[1]
+assert "user-invocable: true" in skill_metadata
+assert "disable-model-invocation: true" in skill_metadata
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "generate_copilot.py materializes skill assets and vendors shared helpers" {
     [ -f "$COPILOT_TMP/.github/skills/ai-toolkit-review/scripts/diff-analyzer.py" ]
     [ -f "$COPILOT_TMP/.github/skills/ai-toolkit-clean-code/reference/python.md" ]

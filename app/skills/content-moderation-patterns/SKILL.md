@@ -8,159 +8,159 @@ allowed-tools: Read
 
 # Content Moderation Patterns
 
-Two-stage pattern that balances cost, latency, and quality: cheap deterministic filters first, then LLM classification only on survivors.
+Apply a versioned product policy with deterministic checks, a structured
+classifier, and a review path. Select the model using labeled workload results.
+No model family has a universal accuracy or cost advantage for moderation.
 
 ## Architecture
 
-```
-[ input ]
-   │
-   ▼
-[ pre-filter ]  ── (regex, allow/block lists, length check) ──► reject early
-   │
-   ▼
-[ LLM classifier ]  ── (Haiku, structured output) ──► categories + confidence
-   │
-   ▼
-[ decision router ]
-   ├── high confidence + policy violation → reject
-   ├── high confidence + clean → pass
-   └── low confidence or edge categories → human review queue
+```text
+input → size/format checks → policy checks → structured classifier → decision
+                                                              ├─ allow
+                                                              ├─ reject
+                                                              └─ human review
 ```
 
-## Pre-filter Stage (cheap)
+Treat submitted text as data, including any instructions it contains. Keep the
+classification policy in the system message. Request a short policy-grounded
+reason, not hidden reasoning.
 
-Catch the obvious cases before paying an LLM call:
+## Deterministic checks
+
+Use configured size limits and exact parsed hostname checks for URL policies.
+A prefix regex can mistakenly accept `allowed.example.attacker.test`.
 
 ```python
-BANNED_PATTERNS = [
-    re.compile(r"\b(banned_term_1|banned_term_2)\b", re.I),
-    re.compile(r"\bhttps?://(?!allowed-domain\.com)", re.I),  # external links
-]
+from urllib.parse import urlsplit
 
-def pre_filter(text: str) -> tuple[bool, str]:
-    if len(text) > 10_000:
-        return False, "too_long"
-    for pat in BANNED_PATTERNS:
-        if pat.search(text):
-            return False, f"banned_pattern:{pat.pattern}"
-    return True, "pass"
-```
 
-Roughly 40-70% of spammy input should die here. Log counts by rule so you can tune.
-
-## LLM Classifier Stage (Haiku)
-
-Use the smallest capable model. Haiku is usually right for moderation.
-
-```python
-CATEGORIES = ["harassment", "self_harm", "spam", "off_topic", "pii", "clean"]
-
-def classify(text: str) -> dict:
-    response = client.messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=256,
-        tools=[{
-            "name": "moderate",
-            "description": "Classify content against policy",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "categories": {
-                        "type": "array",
-                        "items": {"type": "string", "enum": CATEGORIES}
-                    },
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                    "reasoning": {"type": "string", "maxLength": 200}
-                },
-                "required": ["categories", "confidence", "reasoning"]
-            }
-        }],
-        tool_choice={"type": "tool", "name": "moderate"},
-        system=POLICY_DESCRIPTION,  # cached — stable across requests
-        messages=[{"role": "user", "content": text}]
+def is_allowed_url(value, allowed_hosts):
+    try:
+        parsed = urlsplit(value)
+        host = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme == "https"
+        and parsed.username is None
+        and parsed.password is None
+        and host is not None
+        and host.casefold() in allowed_hosts
+        and port in (None, 443)
     )
-    return extract_tool_result(response)
 ```
 
-**Cache the policy description** — it's the same on every call. See `prompt-caching-patterns`.
+This checks an already-extracted URL against normalized exact hostnames. It is
+not a general URL extractor or an SSRF defense. Evaluate false positives from
+keyword filters instead of assuming a fixed percentage of input should be blocked.
 
-## Category Design
+## Structured classifier
 
-- **Start with 5-8 categories**, not 50. Fewer = higher per-category accuracy.
-- **One `clean` category** — easier than trying to define "not bad"
-- **No overlapping categories** — `harassment` and `hate_speech` should be merged or clearly separated by specific criteria in the policy doc
-- **`unclear` / `needs_review` category** — gives the model a graceful escape hatch instead of forcing a wrong label
-
-## Threshold Router
+Use native `output_config.format`. Supply the selected model, policy and output
+budget from application configuration. The following taxonomy is an example;
+change its enum and routing thresholds together to match the product policy.
 
 ```python
-def route(classification: dict) -> str:
-    conf = classification["confidence"]
-    cats = set(classification["categories"])
+import json
 
-    if "clean" in cats and conf > 0.8:
-        return "pass"
-    if cats & BLOCK_CATEGORIES and conf > 0.85:
-        return "reject"
-    if cats & BLOCK_CATEGORIES:
-        return "human_review"
-    return "human_review"  # default to review on ambiguity
+MODERATION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "categories": {"type": "array", "items": {
+            "type": "string", "enum": ["clean", "needs_review", "spam", "harassment"],
+        }},
+        "confidence": {"type": "number"},
+        "reason": {"type": "string"},
+    },
+    "required": ["categories", "confidence", "reason"],
+    "additionalProperties": False,
+}
+
+
+def classify(client, model, policy, text, max_tokens):
+    response = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=policy,
+        output_config={"format": {"type": "json_schema", "schema": MODERATION_SCHEMA}},
+        messages=[{"role": "user", "content": text}],
+    )
+    if response.stop_reason != "end_turn":
+        raise ValueError(f"Classification incomplete: {response.stop_reason}")
+    blocks = [block.text for block in response.content if block.type == "text"]
+    if len(blocks) != 1:
+        raise ValueError("Expected one classification")
+    return json.loads(blocks[0])
 ```
 
-Thresholds belong in config, not code — they change as you learn.
+Apply local validation before routing. Refusal, truncation, invalid JSON or an
+API failure produces a review/error outcome, never an implicit allow.
+See `json-mode-patterns` for schema limitations and response checks.
 
-## Human-in-the-Loop
+A repeated `system` string is not automatically cached. If policy size and reuse
+justify it, explicitly configure caching as in `prompt-caching-patterns`.
+Do not generate heartbeat traffic to keep a cache warm.
 
-- All `human_review` cases go to a queue with the model's reasoning
-- Human decisions flow back into a dataset used to evaluate new model versions
-- Track disagreement rate between human and model — rising disagreement signals policy drift
+## Categories and decision routing
 
-## Evaluation Loop
+Define categories and blocking behavior in the product policy. Keep `clean`
+exclusive: a result containing both `clean` and a violation is inconsistent.
+Use `needs_review` for uncertainty. Thresholds come from calibration and policy,
+not the model's claim that its confidence is reliable.
 
-Build a golden set of ~500 examples per category with ground truth. Track:
-- **Precision per category** (of what we flagged, how much was truly bad)
-- **Recall per category** (of truly bad, how much we caught)
-- **False-positive cost** per category — harassment FP is cheap, "clean FP" (wrongly blocking good content) is expensive
+```python
+import math
 
-## Anti-patterns
 
-| Anti-pattern | Why it bites | Fix |
-|--------------|--------------|-----|
-| One huge prompt asking "is this okay?" | Unstable answers, no tracking | Structured categories + confidence |
-| Using Opus for moderation | 10x cost, no accuracy gain for this task | Haiku is fine |
-| Hiding policy in user message | Policy gets mixed with input | Policy in system prompt, cached |
-| Binary block/allow only | No signal for edge cases | Add review queue |
-| No audit trail | Can't improve | Log every decision with full classification |
+def route(classification, block_thresholds, allow_threshold):
+    if not isinstance(classification, dict) or set(classification) != {"categories", "confidence", "reason"}:
+        return "human_review"
+    if not isinstance(classification["reason"], str):
+        return "human_review"
+    confidence = classification.get("confidence")
+    categories = classification.get("categories")
+    if (type(confidence) not in (int, float)
+            or not 0 <= confidence <= 1 or not math.isfinite(confidence)):
+        return "human_review"
+    if not isinstance(categories, list) or not categories or not all(isinstance(c, str) for c in categories):
+        return "human_review"
+    categories = {category.casefold() for category in categories}
+    if categories - (set(block_thresholds) | {"clean", "needs_review"}):
+        return "human_review"
+    if "needs_review" in categories or ("clean" in categories and len(categories) != 1):
+        return "human_review"
+    if categories == {"clean"}:
+        return "pass" if confidence >= allow_threshold else "human_review"
+    if any(confidence >= block_thresholds[category] for category in categories):
+        return "reject"
+    return "human_review"
+```
 
-## Related
+Validate configuration thresholds as finite numbers in [0, 1] at startup.
+The example's category thresholds are policy-specific; it does not decide
+which categories your product must reject.
 
-- `security-patterns` — input validation at system boundaries
-- `prompt-caching-patterns` — cache the policy doc
-- `model-routing-patterns` — when to escalate from Haiku to Sonnet
-- Anthropic docs: https://docs.claude.com/en/docs/about-claude/use-case-guides/content-moderation
+## Evaluation and review
 
-## Rules
+Use held-out labeled examples covering language, context, quoted material, benign
+mentions and adversarial inputs. Track precision, recall, appeal outcomes and
+per-category error cost. Neither false positives nor false negatives are always
+cheaper; the product policy determines that trade-off.
 
-- **MUST** pre-filter the obvious cases (regex, deny-lists, length caps) before sending to an LLM — LLM moderation on a 500MB comment is unusable
-- **MUST** return a structured JSON classification (category, confidence, reason), not a prose verdict — prose breaks audit trails
-- **NEVER** ship a moderation pipeline without a human-in-the-loop escalation path for ambiguous cases
-- **NEVER** hide the policy in the user message; the policy belongs in the cached system prompt so it is versioned and auditable
-- **CRITICAL**: log every decision (input, category, confidence, model, policy version, timestamp) — moderation without an audit trail cannot be improved or appealed
-- **MANDATORY**: calibrate confidence thresholds per category; harassment FP is cheap, clean-content FP is expensive
+Send ambiguous cases to human review. Store decision metadata, policy/model
+versions and the minimum evidence needed for review under the application's
+retention and access controls. Do not indiscriminately log raw sensitive input.
 
-## Gotchas
+Refresh evaluations when the policy, model or input distribution changes.
+Run an offline comparison before deploying a new route or threshold.
 
-- False positives on clean content are **much more expensive** than false negatives on borderline content, in user-trust terms. Optimize for recall on hard-fail categories (CSAM, doxing) but precision on soft-fail categories (spam, rudeness).
-- Haiku is sufficient for most moderation classification; using Opus inflates cost 10× with no measurable accuracy gain on this task. Reach for Opus only for edge cases that Haiku consistently misclassifies.
-- Prompt caching on the policy doc only hits when the cache window is still warm (5 minutes). Bursty traffic with long quiet periods loses the cache every window — amortize by keeping a heartbeat call.
-- Structured JSON output via tool-use is more reliable than free-form JSON in the response — parse errors happen ~1-3% of the time with free-form, near zero with tool-use schemas.
-- The golden test set drifts. Policy changes, new attack patterns, and new product surfaces all invalidate old examples. Refresh quarterly or after any policy update.
+## Sources and related skills
 
-## When NOT to Load
+Reviewed 2026-09-23:
+- [Content moderation](https://platform.claude.com/docs/en/about-claude/use-case-guides/content-moderation)
+- [Structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+- [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 
-- For **structured JSON output** design in general — use `/json-mode-patterns`
-- For **security** input validation (SQLi, XSS) — use `/security-patterns`
-- For caching the policy doc mechanics — use `/prompt-caching-patterns`
-- For picking the model tier (Haiku vs Sonnet vs Opus) — use `/model-routing-patterns`
-- For moderation of voice/audio content — this skill covers text; audio adds a transcription failure mode not covered here
+Use `security-patterns` for application input security, `model-routing-patterns`
+for model evaluation and `prompt-caching-patterns` for policy caching.

@@ -323,6 +323,57 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "codex-skills: runtime tier directives trigger adaptation while API model examples stay literal" {
+    run python3 - "$TOOLKIT_DIR" "$BATS_TEST_TMPDIR" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from codex_skill_adapter import adapt_model_directives, build_codex_skill_text, is_codex_adapted_skill, sync_codex_skill
+
+root = Path(sys.argv[2])
+skill = root / "runtime-model"
+skill.mkdir()
+(skill / "reference").mkdir()
+(skill / "reference/api.md").write_text("Preserve resources.\n")
+source = skill / "SKILL.md"
+header = ('---\nname: runtime-model\ndescription: Use Opus API examples\n'
+          'allowed-tools: Read\nmodel: opus\neffort: high\nlicense: MIT\n---\n')
+examples = ('```python\nmodel = "claude-opus-4-8"\nprompt = "Use Opus."\n```\n'
+            '~~~yaml\nmodel: sonnet\nprompt: Use Sonnet.\n~~~\n'
+            'Literal example: `Use Haiku`.\n'
+            'Nested literal: ``literal ` Use Opus.``\n'
+            '``literal\nUse Opus.\n``\n'
+            '```python\ntext = """\n```text\nUse Opus.\n"""\n```\n')
+assert adapt_model_directives(examples) == examples
+assert adapt_model_directives("Use Opus\n5. Preserve this step.\n").endswith(
+    "\n5. Preserve this step.\n"
+)
+source.write_text(header + examples, encoding="utf-8")
+assert not is_codex_adapted_skill(source), "API examples must not require a runtime override"
+assert build_codex_skill_text(source) == header + examples
+destination = root / "installed"
+destination.mkdir()
+assert sync_codex_skill(skill, destination) == "linked"
+assert (destination / "runtime-model/SKILL.md").read_text() == header + examples
+assert (destination / "runtime-model/reference/api.md").read_text() == "Preserve resources.\n"
+source.write_text(
+    header + "Use Claude Opus 4.8.\n```\nUse Opus for each teammate.\n```\n" + examples,
+    encoding="utf-8",
+)
+assert is_codex_adapted_skill(source)
+assert sync_codex_skill(skill, destination) == "adapted"
+rendered = (destination / "runtime-model/SKILL.md").read_text()
+metadata = rendered.split("---", 2)[1]
+assert "\nmodel:" not in metadata and "\neffort:" not in metadata
+assert "Use the current client's selected model and reasoning effort." in rendered
+assert "Use the current client's selected model and reasoning effort for each teammate." in rendered
+assert examples in rendered
+assert (destination / "runtime-model/reference/api.md").read_text() == "Preserve resources.\n"
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "codex-skills: preserves user path and logical-name collisions" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$tmp" --enable >/dev/null

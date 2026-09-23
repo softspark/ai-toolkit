@@ -49,7 +49,6 @@ def _agent_body(agent_file: Path) -> str:
 def _render_opencode_agent(agent_file: Path) -> str:
     """Render a single opencode subagent .md file from an ai-toolkit agent."""
     description = frontmatter_field(agent_file, "description")
-    model = frontmatter_field(agent_file, "model")
     color = frontmatter_field(agent_file, "color")
 
     # Escape description for YAML quoted string
@@ -62,7 +61,6 @@ def _render_opencode_agent(agent_file: Path) -> str:
     # only stores a short alias (opus/sonnet/haiku) which is not mappable
     # without assuming a provider, so we deliberately omit it — opencode falls
     # back to the user's `default_agent` / top-level `model` config.
-    _ = model  # intentionally unused
     if color:
         lines.append(f"color: {color}")
     lines.append("---")

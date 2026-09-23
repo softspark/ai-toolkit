@@ -1,6 +1,6 @@
 ---
 name: json-mode-patterns
-description: "Structured JSON output from Claude: tool-use-as-JSON, schema, parsing, partial recovery. Triggers: JSON mode, structured output, schema validation, JSON parsing."
+description: "Structured JSON output from Claude: native JSON schemas, strict tools, local validation, refusal and truncation handling. Triggers: JSON mode, structured output, schema validation, JSON parsing."
 effort: medium
 user-invocable: false
 allowed-tools: Read
@@ -8,117 +8,101 @@ allowed-tools: Read
 
 # JSON Mode Patterns
 
-Claude does not have a dedicated `response_format: json` parameter like some other APIs. The idiomatic way to get guaranteed JSON is **tool use with a forced function call**. This skill documents that pattern plus fallbacks.
+Use native JSON outputs through `output_config.format` for a structured response.
+Use `strict: true` on a tool when its arguments need constrained decoding.
+Forcing a tool call alone does not guarantee schema compliance.
 
-## Preferred Pattern: Tool-as-Schema
+## Native JSON response
 
-Define a tool whose input schema IS the JSON shape you want, then force the model to call it.
-
-```python
-tools = [{
-    "name": "record_analysis",
-    "description": "Return the analysis as structured data",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "sentiment": {"type": "string", "enum": ["positive", "neutral", "negative"]},
-            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-            "themes": {"type": "array", "items": {"type": "string"}}
-        },
-        "required": ["sentiment", "confidence", "themes"]
-    }
-}]
-
-response = client.messages.create(
-    model="claude-opus-4-8",
-    max_tokens=1024,
-    tools=tools,
-    tool_choice={"type": "tool", "name": "record_analysis"},
-    messages=[{"role": "user", "content": text_to_analyze}]
-)
-
-# The structured result is in response.content
-for block in response.content:
-    if block.type == "tool_use" and block.name == "record_analysis":
-        result = block.input  # already a Python dict, schema-validated
-        break
-```
-
-Why this wins:
-- Schema is enforced at the API level
-- No regex or parsing from model text
-- Enums, min/max, required fields actually constrain the output
-
-## Fallback: Prompted JSON + Strict Parse
-
-When tool use is unavailable (some SDKs/proxies strip it):
+This example uses the current Messages API shape. The caller supplies the approved
+model and output budget. Numeric limits are checked locally because raw structured
+output schemas do not support `minimum` and `maximum`.
 
 ```python
-response = client.messages.create(
-    model="claude-opus-4-8",
-    max_tokens=1024,
-    system="You return ONLY valid JSON. No prose, no markdown fences.",
-    messages=[{
-        "role": "user",
-        "content": f"Extract as JSON matching this schema: {schema_str}\n\nInput: {text}"
-    }]
-)
-
 import json
-try:
-    result = json.loads(response.content[0].text)
-except json.JSONDecodeError:
-    # Claude sometimes wraps in ```json ... ```
-    result = json.loads(strip_markdown_fence(response.content[0].text))
+import math
+
+ANALYSIS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "sentiment": {"type": "string", "enum": ["positive", "neutral", "negative"]},
+        "confidence": {"type": "number"},
+        "themes": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["sentiment", "confidence", "themes"],
+    "additionalProperties": False,
+}
+
+
+def validate_analysis(result):
+    if not isinstance(result, dict) or set(result) != set(ANALYSIS_SCHEMA["required"]):
+        raise ValueError("Unexpected analysis fields")
+    sentiment = result["sentiment"]
+    if not isinstance(sentiment, str) or sentiment.casefold() not in {"positive", "neutral", "negative"}:
+        raise ValueError("Unknown sentiment")
+    confidence = result["confidence"]
+    if (type(confidence) not in (int, float)
+            or not 0 <= confidence <= 1 or not math.isfinite(confidence)):
+        raise ValueError("Confidence must be finite and between zero and one")
+    themes = result["themes"]
+    if not isinstance(themes, list) or not 1 <= len(themes) <= 10 or not all(isinstance(t, str) for t in themes):
+        raise ValueError("Expected one to ten theme strings")
+    return {**result, "sentiment": sentiment.casefold()}
+
+
+def analyze(client, model, text, max_tokens):
+    response = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": text}],
+        output_config={"format": {"type": "json_schema", "schema": ANALYSIS_SCHEMA}},
+    )
+    if response.stop_reason != "end_turn":
+        raise ValueError(f"Analysis incomplete: {response.stop_reason}")
+    blocks = [block.text for block in response.content if block.type == "text"]
+    if len(blocks) != 1:
+        raise ValueError("Expected one structured response")
+    return validate_analysis(json.loads(blocks[0]))
 ```
 
-Add a regex fallback that extracts the first `{...}` block if the model added a preface.
+Treat the returned confidence as an uncalibrated score until evaluated on labeled
+data. Schema compliance does not establish factual correctness.
 
-## Schema Design Rules
+## Strict tool arguments
 
-- **Favor enums** over free-form strings when values are known
-- **Mark required fields** aggressively — default-optional produces flaky output
-- **Use arrays of objects**, not parallel arrays (`[{name, value}]` over `{names: [], values: []}`)
-- **Shallow beats nested** — 2 levels of nesting max unless necessary
-- **Document each field** in the tool's `description` as well as the schema
+For a real tool, put `"strict": True` beside `name` and `input_schema`.
+Require `additionalProperties: False` on each object and validate business rules
+before executing any side effect. Check the expected tool name, content block type
+and `stop_reason == "tool_use"`.
 
-## Partial Output Recovery
+Forced `tool_choice` has thinking-mode restrictions. Verify the selected model's
+tool-choice contract before combining it with adaptive or extended thinking;
+do not silently disable thinking or change models to force a function call.
 
-Model hits `max_tokens` mid-JSON. Strategies:
+## Failure handling
 
-1. **Increase `max_tokens`** if the schema is genuinely large (most common cause).
-2. **Split the schema** — generate one field per call, merge.
-3. **Use streaming** and close unclosed braces if stop reason is `max_tokens`.
+- Check `refusal` and `max_tokens` before parsing. Neither is a successful structured result.
+- Retry only within the caller's approved attempt and token limits. Never increase a spending limit automatically.
+- Do not close truncated braces or extract the first regex-matched object and treat it as valid.
+- If a proxy lacks native structured outputs, parse the entire response and validate it locally; failure is an explicit error or review item.
+- For streaming, wait for completion and the final stop reason before validating assembled text.
 
-```python
-if response.stop_reason == "max_tokens":
-    # Either retry with higher budget or gracefully degrade
-    raise IncompleteOutputError(...)
-```
+## Schema and SDK details
 
-## Validation After Parse
+Raw schemas support a subset of JSON Schema. Numeric ranges, string length bounds,
+recursive schemas and most array-length constraints are unsupported. Apply these
+locally or use `client.messages.parse(output_format=YourPydanticModel)`, whose SDK
+helper translates the schema and validates the original model afterward.
 
-Even with tool schema enforcement, business rules aren't enforced by JSON Schema. Add a Pydantic/Zod layer:
+The SDK helper's `output_format` argument is not the raw Messages API field:
+`messages.create` uses `output_config.format`. No structured-output beta header
+is required. Check enum casing locally; avoid labels differing only by case.
 
-```python
-from pydantic import BaseModel, Field
+## Sources and related skills
 
-class Analysis(BaseModel):
-    sentiment: Literal["positive", "neutral", "negative"]
-    confidence: float = Field(ge=0, le=1)
-    themes: list[str] = Field(min_length=1, max_length=10)
+Reviewed 2026-09-23:
+- [Structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+- [Strict tool use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use)
 
-parsed = Analysis(**result)  # raises on violation
-```
-
-## Gotchas
-
-- **Tool call tokens count toward output budget** — a huge schema eats max_tokens fast
-- **`stop_reason == "tool_use"`** is success, not an error
-- **Streaming with tool use** requires handling `content_block_delta` events with `input_json_delta` deltas
-- **Model picks a different tool** than you expected if `tool_choice` is `"auto"` — always force the specific tool for JSON mode
-
-## Related
-
-- `claude-api` skill — Anthropic SDK essentials
-- Anthropic docs: https://docs.claude.com/en/docs/build-with-claude/structured-outputs
+Use `content-moderation-patterns` for decision routing and
+`model-routing-patterns` for choosing among approved models.

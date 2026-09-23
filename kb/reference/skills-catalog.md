@@ -3,13 +3,18 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.6.0"
+version: "1.7.0"
 created: "2026-03-23"
-last_updated: "2026-09-08"
+last_updated: "2026-09-23"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
 # Skills Catalog
+
+Model-specific guidance and client/API boundaries are recorded in
+[Model Compatibility](model-compatibility.md). Claude skill `model` and `effort`
+fields do not automatically configure Codex or Copilot. Preserve the active
+selection and verify available capabilities before applying an override.
 
 All functionality is unified under skills. Task and hybrid skills are user-invocable as slash commands. Knowledge skills provide domain patterns auto-loaded by agents.
 
@@ -158,7 +163,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **prompt-caching-patterns** | `skills/prompt-caching-patterns/` | Anthropic prompt caching: TTL, breakpoints, hit rate, anti-patterns |
 | **json-mode-patterns** | `skills/json-mode-patterns/` | Structured JSON output via tool-use; schema design; partial recovery |
 | **content-moderation-patterns** | `skills/content-moderation-patterns/` | Two-stage moderation: pre-filter + LLM classifier; categories; thresholds |
-| **model-routing-patterns** | `skills/model-routing-patterns/` | Haiku/Sonnet/Opus routing; escalation; sub-agent delegation; fallback |
+| **model-routing-patterns** | `skills/model-routing-patterns/` | Approved model routing; dated capabilities; effort/cache boundaries; validated escalation and fallback |
 
 ## Knowledge Skills - Process
 | Skill | Directory | Domain |

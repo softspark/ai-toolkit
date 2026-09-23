@@ -18,7 +18,7 @@ Create a new specialized agent following ai-toolkit conventions.
 1. **Capture role** -- what problem space should the agent own?
 2. **Define triggers** -- which keywords or task types should route to this agent?
 3. **Choose tools** -- minimal tool set, least privilege first
-4. **Choose model** -- `opus` for deep reasoning, `sonnet` for lighter pattern work
+4. **Choose model** -- preserve the approved tier or inherit the parent selection; verify available models and effort controls in the target client
 5. **Map supporting skills** -- which knowledge skills should the agent reference?
 6. **Write instructions** -- capabilities, constraints, escalation rules, deliverables
 7. **Validate** -- frontmatter, naming, skills references, tool whitelist
@@ -30,7 +30,7 @@ Create a new specialized agent following ai-toolkit conventions.
 name: agent-name
 description: "When to use this agent. Triggers: keyword1, keyword2."
 tools: Read, Write, Edit
-model: sonnet
+model: inherit
 skills: skill-one, skill-two
 ---
 ```
@@ -44,6 +44,11 @@ skills: skill-one, skill-two
 - **CRITICAL**: avoid tool bloat. Every extra tool widens blast radius; start from `Read` and justify additions one by one
 - Give the agent a clear boundary: what it owns and what it must escalate
 - Prefer specialized, narrow responsibility over generic "do everything" agents
+- `inherit` and Claude aliases are Claude Code choices, not cross-provider IDs.
+  An explicit tier needs a workload reason and an approved budget. Verify the
+  provider's current alias resolution instead of assuming a fixed model version.
+  Codex and Copilot generators preserve the host's selection unless a native
+  configuration explicitly overrides it; do not copy Claude model/effort fields.
 
 ## Agent Skeleton
 
@@ -52,7 +57,7 @@ skills: skill-one, skill-two
 name: {agent-name}
 description: "When to use this agent. Triggers: keyword1, keyword2."
 tools: Read, Edit
-model: sonnet
+model: inherit
 skills: relevant-skill
 ---
 
@@ -78,7 +83,7 @@ You are a specialized agent for {domain}.
 - [ ] Description includes trigger words and use cases
 - [ ] Tools are from the approved Claude Code tool set
 - [ ] Referenced skills exist
-- [ ] Model choice matches expected complexity
+- [ ] Model choice and supported effort match the approved workload and client
 - [ ] `scripts/validate.py` passes after adding the agent
 
 ## Gotchas
@@ -95,4 +100,3 @@ You are a specialized agent for {domain}.
 - For a **plugin pack** bundling multiple agents and skills — use `/plugin-creator`
 - To *modify* an existing agent — delegate to the `meta-architect` agent; this skill is create-only
 - When the task is really a workflow (orchestrator + N specialists) — reach for `/orchestrate` or `/workflow` before minting a new agent
-

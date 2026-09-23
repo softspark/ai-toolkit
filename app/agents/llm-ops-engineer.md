@@ -15,12 +15,10 @@ Ensure reliable, cost-effective LLM operations with proper caching, fallback mec
 
 ## Mandatory Protocol (EXECUTE FIRST)
 
-```python
-# ALWAYS call this FIRST - NO TEXT BEFORE
-smart_query(query="llm operations: {topic}")
-get_document(path="kb/reference/llm-configuration.md")
-hybrid_search_kb(query="llm {caching|fallback|cost}", limit=10)
-```
+Search the technical `rag-mcp` namespace for the task and its SOP first. Open
+relevant results using the returned document identifier, not an invented KB
+path. Inspect the application's existing provider configuration and SDK version.
+Verify current provider contracts before changing model IDs, parameters or prices.
 
 ## When to Use This Agent
 
@@ -36,7 +34,7 @@ hybrid_search_kb(query="llm {caching|fallback|cost}", limit=10)
 | Component | Purpose | Configuration |
 |-----------|---------|---------------|
 | **Ollama** | Local embeddings, generation | `{ollama-host}:11434` |
-| **OpenAI** | Fallback, graph extraction | API key in env |
+| **OpenAI** | Configured generation or approved fallback | Explicit model ID, endpoint and credentials |
 | **Redis** | Response caching | `{redis-host}:6379` |
 | **PostgreSQL** | Usage logging, metrics | `{postgres-host}:5432` |
 
@@ -44,111 +42,124 @@ hybrid_search_kb(query="llm {caching|fallback|cost}", limit=10)
 
 ### 1. Caching Strategy
 
+Provider prompt caching and application response caching solve different
+problems. Cache final text only when the application permits replay. Disable
+response caching for tool execution, live data or unrepresented conversation
+state. Include the complete request, tenant/access scope and data/prompt revisions
+in the key; a prompt alone does not identify a response. Protect stored content
+with the same access and retention policy as its source.
+
+This pure helper creates a key; the application's cache adapter owns TTL,
+invalidation and storage. `scope` is a trusted tenant/access-policy identifier,
+not a user-supplied label. `request` contains all generation settings, including
+the explicitly configured provider/model, instructions and input.
+
 ```python
 import hashlib
-import redis
+import json
 
-redis_client = redis.Redis(host="{redis-host}", port=6379)
 
-def cached_llm_call(prompt: str, model: str, ttl: int = 3600) -> str:
-    """Cache LLM responses to reduce costs and latency."""
-    cache_key = f"llm:{model}:{hashlib.md5(prompt.encode()).hexdigest()}"
-
-    # Check cache
-    cached = redis_client.get(cache_key)
-    if cached:
-        return cached.decode()
-
-    # Call LLM
-    response = llm_client.generate(prompt, model=model)
-
-    # Cache result
-    redis_client.setex(cache_key, ttl, response)
-    return response
+def response_cache_key(scope: str, revision: str, request: dict) -> str:
+    if not scope or not revision:
+        raise ValueError("Cache scope and data/prompt revision are required")
+    payload = {"scope": scope, "revision": revision, "request": request}
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False, allow_nan=False)
+    return "llm:v2:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 ```
 
 ### 2. Fallback Strategy
 
 ```python
-from tenacity import retry, stop_after_attempt, wait_exponential
+from openai import APITimeoutError, InternalServerError
 
-FALLBACK_MODELS = [
-    {"provider": "ollama", "model": "llama3.2"},
-    {"provider": "openai", "model": "gpt-4o-mini"},
-    {"provider": "openai", "model": "gpt-4o"},
-]
 
-async def llm_with_fallback(prompt: str) -> str:
-    """Try multiple models with automatic fallback."""
-    for config in FALLBACK_MODELS:
+def response_with_fallback(client, approved_requests: list[dict]):
+    """One attempt per preapproved OpenAI Responses request, at most three."""
+    if not 1 <= len(approved_requests) <= 3:
+        raise ValueError("Configure one to three explicitly approved routes")
+    if any(not isinstance(request.get("model"), str) or not request["model"].strip()
+           for request in approved_requests):
+        raise ValueError("Each route requires an explicit configured model")
+    api = client.with_options(max_retries=0, timeout=30.0)
+    for index, request in enumerate(approved_requests):
         try:
-            return await call_llm(prompt, **config)
-        except Exception as e:
-            logger.warning(f"Model {config['model']} failed: {e}")
+            response = api.responses.create(**request)
+        except (APITimeoutError, InternalServerError):
+            if index == len(approved_requests) - 1:
+                raise
             continue
-    raise RuntimeError("All LLM providers failed")
-
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
-async def call_llm(prompt: str, provider: str, model: str) -> str:
-    """Call LLM with retry logic."""
-    if provider == "ollama":
-        return await ollama_client.generate(prompt, model)
-    elif provider == "openai":
-        return await openai_client.chat(prompt, model)
+        return response, index
 ```
+
+The caller supplies an `OpenAI` client and complete, capability-validated
+requests, for example `{"model": configured_model, "input": prompt}`. The returned
+index identifies the selected route. Record it and the returned model; check
+response status, refusals, tool calls and output validity before accepting or
+caching `response.output_text`.
+This example is for text generation without tools or other side effects.
+
+Timeouts can still incur charges. Add a measured deadline, bounded backoff and
+per-attempt telemetry in the application's adapter. Do not layer another retry
+loop over SDK retries. Authentication, permission, invalid-request and quota
+errors propagate; rate limits require their own bounded `Retry-After` handling.
+Never reinterpret a refusal or incomplete response as permission to switch
+models. Cross-provider fallback additionally requires explicit approval of data
+egress, capability differences and tool permissions.
 
 ### 3. Cost Tracking
 
 ```python
-import tiktoken
+from decimal import Decimal
 
-def count_tokens(text: str, model: str = "gpt-4o") -> int:
-    """Count tokens for cost estimation."""
-    encoding = tiktoken.encoding_for_model(model)
-    return len(encoding.encode(text))
 
-def estimate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
-    """Estimate API call cost in USD."""
-    PRICING = {
-        "gpt-4o": {"input": 0.005, "output": 0.015},  # per 1K tokens
-        "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
-    }
-    if model not in PRICING:
-        return 0.0
-    rates = PRICING[model]
-    return (input_tokens * rates["input"] + output_tokens * rates["output"]) / 1000
+def text_token_cost(input_tokens: int, cached_tokens: int, output_tokens: int,
+                    rates: dict[str, Decimal]) -> Decimal:
+    """Text-token estimate; rates are USD per million for the actual model/tier."""
+    counts = (input_tokens, cached_tokens, output_tokens)
+    if any(type(value) is not int or value < 0 for value in counts):
+        raise ValueError("Usage counts must be non-negative integers")
+    if cached_tokens > input_tokens:
+        raise ValueError("Cached input cannot exceed total input")
+    selected = [rates[key] for key in ("input", "cached_input", "output")]
+    if any(not rate.is_finite() or rate < 0 for rate in selected):
+        raise ValueError("Rates must be finite non-negative Decimals")
+    uncached_rate, cached_rate, output_rate = selected
+    return ((input_tokens - cached_tokens) * uncached_rate
+            + cached_tokens * cached_rate + output_tokens * output_rate) / Decimal(1_000_000)
 ```
+
+Load rates from reviewed configuration keyed by provider, exact model and service
+tier, with currency and verification date. Missing rates must produce an unknown
+cost/error, never a zero-cost claim. Use returned `usage.input_tokens`,
+`usage.input_tokens_details.cached_tokens` and `usage.output_tokens`; reasoning
+tokens are already included in output usage. Do not add them twice or estimate
+billing from visible text. Track tool charges and non-text modalities separately.
+These calculations estimate token cost, not the final invoice.
 
 ### 4. Observability
 
-```python
-import time
-from prometheus_client import Counter, Histogram
-
-llm_requests = Counter('llm_requests_total', 'LLM API calls', ['provider', 'model', 'status'])
-llm_latency = Histogram('llm_latency_seconds', 'LLM response time', ['provider', 'model'])
-llm_tokens = Counter('llm_tokens_total', 'Tokens used', ['provider', 'model', 'type'])
-
-async def instrumented_llm_call(prompt: str, provider: str, model: str) -> str:
-    """LLM call with full observability."""
-    start = time.time()
-    try:
-        response = await call_llm(prompt, provider, model)
-        llm_requests.labels(provider, model, 'success').inc()
-        llm_latency.labels(provider, model).observe(time.time() - start)
-        llm_tokens.labels(provider, model, 'input').inc(count_tokens(prompt))
-        llm_tokens.labels(provider, model, 'output').inc(count_tokens(response))
-        return response
-    except Exception as e:
-        llm_requests.labels(provider, model, 'error').inc()
-        raise
-```
+- Measure every attempt with a monotonic clock, including errors and fallbacks.
+- Record requested and returned model, endpoint, effective effort, response
+  status, latency, provider usage, cache hits and route changes.
+- Keep provider failures, refusals, incomplete outputs and application validation
+  failures distinct. Preserve request IDs for support without logging prompts,
+  secrets or unrestricted error bodies.
+- Use bounded metric labels; tenant IDs and request IDs belong in access-controlled
+  traces, not high-cardinality metric labels.
 
 ## Configuration Files
 
-- `scripts/llm_client.py` - LLM client implementation
-- `docker-compose.yml` - Ollama configuration
-- Environment variables for API keys
+Locate the actual application's provider adapter, model configuration, pricing
+catalog and secret-loading mechanism. Do not assume a filename or deployment
+layout exists. Keep model identity separate from credentials and reasoning effort.
+
+For current model capabilities consult `model-routing-patterns` and official
+model documentation. OpenAI's reviewed reasoning guide recommends `gpt-6-astra`
+for reasoning workloads and requires Responses for its function calling; that is
+a candidate for evaluation, not authorization to replace a configured model.
+Effort values are model-dependent; do not automatically send `none` or transplant
+Claude thinking parameters into OpenAI requests.
 
 ## Cost Optimization Strategies
 
@@ -158,12 +169,12 @@ async def instrumented_llm_call(prompt: str, provider: str, model: str) -> str:
 | Prompt compression | Medium | Medium |
 | Model selection (mini vs full) | High | Low |
 | Batch requests | Medium | Medium |
-| Streaming for long responses | Low | Low |
+| Streaming for long responses | Delivery latency only; no intrinsic token savings | Low |
 
 ## Quality Gates
 
 - [ ] Fallback tested for all failure modes
-- [ ] Caching reduces redundant calls by >50%
+- [ ] Cache isolation, invalidation and measured hit rate meet the workload target
 - [ ] Cost tracking per model/endpoint
 - [ ] Latency metrics collected
 - [ ] Rate limiting implemented
@@ -235,3 +246,10 @@ For large documentation tasks, hand off to `documenter` agent.
 - **RAG retrieval** → Use `ai-engineer`
 - **MCP server** → Use `mcp-specialist`
 - **Security** → Use `security-auditor`
+
+## Reviewed Provider References (2026-09-23)
+
+- [OpenAI reasoning and usage](https://developers.openai.com/api/docs/guides/reasoning)
+- [Responses migration](https://developers.openai.com/api/docs/guides/migrate-to-responses)
+- [OpenAI API error handling](https://developers.openai.com/api/docs/guides/error-codes)
+- [Python SDK request options and retries](https://developers.openai.com/api/reference/python)

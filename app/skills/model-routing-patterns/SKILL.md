@@ -1,6 +1,6 @@
 ---
 name: model-routing-patterns
-description: "Multi-model pipelines (Haiku/Sonnet/Opus): cost routing, escalation, fallback chains. Triggers: model routing, Haiku, Sonnet, Opus, escalation, fallback chain."
+description: "Capability-aware model routing for Codex, Copilot, Claude and provider APIs. Triggers: model routing, model selection, reasoning effort, approved fallback, cost, escalation."
 effort: medium
 user-invocable: false
 allowed-tools: Read
@@ -8,134 +8,105 @@ allowed-tools: Read
 
 # Model Routing Patterns
 
-Three Claude tiers. Using Opus for everything is 10-40x more expensive than it needs to be. Using Haiku for everything loses accuracy on hard tasks. The craft is routing.
+Choose routes from measured quality, latency and cost under the user's approved
+model and spending policy. An explicit model choice overrides automatic routing.
+This skill never authorizes a model-tier, permission or budget change.
 
-## Model Characteristics (2026)
+Apply the same policy across Codex, Copilot and Claude: retain the model selected
+by the native client. Provider API IDs, editor picker labels and agent aliases
+are separate namespaces; do not translate between them by resemblance. For a
+cross-provider application route, validate capabilities and availability on each
+provider, and obtain authorization before transferring data or changing spend.
+The project inventory is `kb/reference/model-compatibility.md`.
 
-| Model | $/1M in·out | Cost (rel.) | Strengths | When |
-|-------|-------------|-------------|-----------|------|
-| Haiku 4.5 | $1 / $5 | 1x | Classification, extraction, simple tools, moderation | Bulk processing, triage, labels |
-| Sonnet 5 | $3 / $15 | ~3x | General coding, reasoning, most agent tasks | Default workhorse |
-| Opus 4.8 | $5 / $25 | ~5x | Complex reasoning, orchestration, architecture, large context | Hard, rare, high-stakes |
-| Fable 5 | $10 / $50 | ~10x | Most demanding long-horizon agentic work | Only when explicitly chosen |
+## Reviewed model reference (2026-09-23)
 
-Prices are per 1M tokens; ratios are approximate and shift between releases. Re-check pricing before committing a production path.
+| Model | Claude API ID | API effort default |
+|-------|---------------|--------------------|
+| Claude Opus 5.5 | `claude-opus-5-5` | `medium` |
+| Claude Fable 5.1 | `claude-fable-5-1` | `high` |
+| Claude Sonnet 5 | `claude-sonnet-5` | `high` |
+| Claude Haiku 4.5 | `claude-haiku-4-5-20251001` | Effort unsupported |
 
-> **Fable 5 is not the default "best model".** Its price sits above Opus-tier, and Opus 4.8 is state-of-the-art on planning/orchestration at half the input and output cost. Reach for Fable 5 only when the user explicitly asks for it or a benchmarked task genuinely needs it — for "use the strongest model", the target is `claude-opus-4-8`.
+These are dated identifiers, not a runtime upgrade policy. Check the provider's
+model availability and current [pricing](https://platform.claude.com/docs/en/about-claude/pricing)
+before estimating costs. Do not encode universal cost ratios or declare a model
+best for every workload. Preserve a user-specified older model while supported;
+surface retirement or availability problems explicitly.
 
-## Effort — the cheaper lever before swapping models
+## Effort and caching
 
-On Fable 5 / Opus 4.8 / Sonnet 5, `output_config.effort` (`low` | `medium` | `high` | `xhigh` | `max`) controls thinking depth and token spend **without changing the model** — so it does not invalidate the prompt cache the way a mid-session model swap does. Tune effort first; drop to a cheaper model only when effort alone can't hit the cost target.
+Opus 5.5, Fable 5.1 and Sonnet 5 support `low`, `medium`, `high`, `xhigh`, and
+`max`. Effort is a behavior control, not a hard spending cap. Opus 5.5 and Fable
+5.1 use always-on adaptive thinking; a small output limit can truncate the answer.
 
-| Effort | Use for |
-|--------|---------|
-| `low` | Latency-sensitive, non-intelligence-sensitive: chat, simple lookups, cheap subagents |
-| `medium` | Cost-conscious step-down from the default |
-| `high` | Default for most intelligence-sensitive work (a good quality/cost balance) |
-| `xhigh` | Hardest coding and agentic tasks (Claude Code's default) |
-| `max` | Correctness matters more than cost; test for diminishing returns |
+Changing top-level `output_config.effort` invalidates message cache blocks, with
+model-dependent effects on earlier caches. Supported per-message effort changes
+can preserve the prefix. Do not assume effort tuning is cache-neutral.
 
-In our agents, effort is set per skill/agent frontmatter (`effort:`), not swapped at runtime. Combine effort routing with model routing: e.g. `sonnet` at `high` often beats `opus` at `low` for cost-equal quality — benchmark before committing.
+Keep the configured agent/skill effort. An approved application experiment may
+compare effort settings, recording total thinking/output usage and completion
+quality at the same task budget.
 
-## Pattern 1 — Complexity Router (pre-classify)
+## Pattern 1: explicit task routing
 
-Cheap model classifies the request, then routes to the right tier:
-
-```python
-def route(user_message: str) -> str:
-    complexity = classify_with_haiku(user_message)  # returns: simple | medium | hard
-    return {"simple": "haiku", "medium": "sonnet", "hard": "opus"}[complexity]
-```
-
-Good when ~60% of traffic is simple. Overhead: one Haiku call per request (~100 tokens).
-
-## Pattern 2 — Confidence-Based Escalation
-
-Try the cheap model first, escalate only when it hesitates:
-
-```python
-def solve(problem: str):
-    haiku = call_haiku(problem)
-    if haiku.confidence > 0.85:
-        return haiku.answer
-    sonnet = call_sonnet(problem + haiku.reasoning)
-    if sonnet.confidence > 0.8:
-        return sonnet.answer
-    return call_opus(problem)
-```
-
-Haiku must be prompted to output confidence (e.g. via tool-use structured output — see `json-mode-patterns`). Pure self-reported confidence is noisy; combine with a heuristic (output length, tool calls, hedging words).
-
-## Pattern 3 — Sub-agent Delegation (Opus orchestrates, Haiku workers)
-
-Orchestrator reasons about the plan, workers execute atomic steps:
-
-```
-Opus (planner)
-  ├── Haiku (extract_dates_from_doc_1)
-  ├── Haiku (extract_dates_from_doc_2)
-  ├── Haiku (extract_dates_from_doc_3)
-  └── Opus (synthesize all extractions into timeline)
-```
-
-Real example: `/orchestrate` in ai-toolkit runs Opus as planner, subagents (model per agent's frontmatter) as workers. See `app/agents/*.md` — each agent sets `model:` explicitly.
-
-## Pattern 4 — Fallback Chain (resilience, not cost)
-
-When primary is rate-limited or errors, degrade gracefully:
+Use application configuration reviewed for the workload. Labels such as
+"classification" or "architecture" are evaluation slices, not proof that one
+family is sufficient or necessary.
 
 ```python
-def call_with_fallback(messages):
-    for model in ["claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"]:
-        try:
-            return client.messages.create(model=model, messages=messages, ...)
-        except (RateLimitError, OverloadedError):
-            continue
-    raise AllModelsExhausted()
+def choose_model(task, routes, allowed_models, explicit_model=None):
+    candidate = explicit_model if explicit_model is not None else routes.get(task)
+    if candidate is None or candidate not in allowed_models:
+        raise ValueError("No approved model for this request")
+    return candidate
 ```
 
-Useful in production, not for cost optimization — you lose quality on fallback.
+Start with the selected model. Add a separate classification call only when
+measured routing savings exceed its latency and token cost.
 
-## Pattern 5 — Task-Specific Routing
+## Pattern 2: validation-based escalation
 
-Skip generic complexity scoring when you know the task type:
+Evaluate a result with task-specific checks: schema validation, failing tests,
+retrieval evidence, or human labels. A model's self-reported confidence is not a
+calibrated probability. Do not pass hidden reasoning between models; pass the
+problem, relevant evidence, and a short failure summary.
 
-| Task | Route |
-|------|-------|
-| Commit message from diff | Haiku |
-| Summarize 5-10 lines | Haiku |
-| Classify intent | Haiku |
-| Fix a failing test | Sonnet |
-| Write new feature | Sonnet |
-| Code review, architecture decision | Opus |
-| Multi-agent orchestration | Opus |
-| Complex debugging across systems | Opus |
+Escalate only along an approved route with a bounded attempt count. If no
+approved route remains, report failure or send the item for human review.
 
-Encode this as a map in code, not a prompt.
+## Pattern 3: delegation within configured roles
 
-## Anti-patterns
+A planner can split independent tasks between workers when the task and client
+permit it. Use each agent's configured model and tools. Do not rewrite frontmatter
+or force a cheaper worker because a generic diagram suggests it.
 
-| Anti-pattern | Consequence | Fix |
-|--------------|-------------|-----|
-| Opus for everything | 10-40x bill | Start with Sonnet, measure, demote |
-| Haiku for code review | Misses subtle bugs | Sonnet minimum for code quality |
-| Router overhead > savings | Haiku classifier eats the margin | Skip router if >80% of traffic is one tier |
-| Different prompts per tier | Maintenance nightmare | Same prompt, just swap model |
-| No telemetry | Can't optimize | Log model + tokens + cost per request |
+Compare end-to-end quality and cost, including planning, handoffs and synthesis.
+More agents do not inherently save tokens.
+
+## Pattern 4: resilience fallback
+
+Retry transient failures within the existing retry policy before considering a
+different model. The official SDK may already retry requests; avoid multiplying
+its retries with another unbounded loop.
+
+A fallback must preserve the user's model requirement, context limits, structured
+output support and tool permissions. If changing models is not authorized, stop
+with the original model's error. Record every actual fallback and its reason.
 
 ## Measuring
 
-Track per-route:
-- Cost per request
-- Latency p50/p95
-- Quality score (human-labeled or auto-evaluated)
-- Escalation rate (how often you fell back to a bigger model)
+Track model ID, effort, policy version, attempts, latency, cache reads/writes and
+total billable tokens. Evaluate quality per task type and language using held-out
+examples. Set acceptance criteria before changing the route; do not use fixed
+confidence thresholds, traffic percentages or cost multipliers as universal rules.
 
-Target: move the Pareto curve — cheaper at equal quality OR better at equal cost.
+## Sources and related skills
 
-## Related
+Reviewed 2026-09-23:
+- [Claude model overview](https://platform.claude.com/docs/en/models/overview)
+- [Effort](https://platform.claude.com/docs/en/build-with-claude/effort)
+- [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 
-- `llm-ops-engineer` agent — production routing strategy
-- `prompt-caching-patterns` — stack caching on top of routing
-- `json-mode-patterns` — structured confidence from Haiku
-- Anthropic cookbook: https://github.com/anthropics/claude-cookbooks — see "sub-agents" notebook
+Use `prompt-caching-patterns` for cache design and `json-mode-patterns` for
+structured results. Use the `llm-ops-engineer` agent for application routing.

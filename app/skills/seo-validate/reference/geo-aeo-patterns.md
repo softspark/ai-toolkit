@@ -15,9 +15,14 @@ Traditional SEO ranks pages. AEO targets AI-synthesized answers that cite or par
 | Engine | Mechanism |
 |--------|-----------|
 | Google AI Overviews | Retrieval-augmented summarization over organic index |
-| Bing Copilot | GPT-4 grounded on Bing index; inline citations |
+| Microsoft Copilot | Selectable models and web-grounded responses with source links; availability varies by mode and subscription |
 | Perplexity | Real-time retrieval + LLM synthesis; explicit source cards |
-| ChatGPT Search | OpenAI web retrieval; used in ChatGPT Plus |
+| ChatGPT Search | Web retrieval with linked sources; verify current account/client availability |
+
+Do not assume a search product uses one fixed underlying model. Microsoft
+documents multiple model choices and web-grounded citations in its
+[transparency note](https://support.microsoft.com/en-us/privacy/microsoft-copilot/transparency-note)
+(reviewed 2026-09-23).
 
 **Difference from classic SEO:** AI engines do not rank pages against each other — they extract the most useful fragment. A page ranked #8 with a direct-answer paragraph can beat #1 in AI responses.
 

@@ -51,8 +51,41 @@ for source, output in zip(sources, generated, strict=True):
             fields[key] = value.strip().strip('"').strip("'")
     assert data["name"] == fields["name"]
     assert data["description"] == fields["description"]
-    assert data["developer_instructions"] == body.lstrip("\n").rstrip() + "\n"
+    expected_body = body.lstrip("\n").rstrip() + "\n"
+    if "Use Opus" not in expected_body and "Use Sonnet" not in expected_body:
+        assert data["developer_instructions"] == expected_body
+    assert "Use Opus" not in data["developer_instructions"]
     assert output.name == f"ai-toolkit-{data['name']}.toml"
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex: generated agents inherit model settings and preserve API examples" {
+    run python3 - "$TOOLKIT_DIR" "$BATS_TEST_TMPDIR" <<'PY'
+import sys
+import tomllib
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import generate_codex_agents as generator
+
+root = Path(sys.argv[2])
+source = root / "sources"
+source.mkdir()
+api_example = '```python\nmodel = "claude-opus-4-8"\nprompt = "Use Opus."\n```\n'
+(source / "reviewer.md").write_text(
+    '---\nname: reviewer\ndescription: Reviewer\nmodel: opus\neffort: high\n'
+    'tools: Read\n---\nUse Opus 4.8 for each teammate.\n' + api_example,
+    encoding="utf-8",
+)
+generator.agents_dir = source
+generator.generate(root / "project")
+data = tomllib.loads((root / "project/.codex/agents/ai-toolkit-reviewer.toml").read_text())
+assert set(data) == {"name", "description", "developer_instructions"}, data
+body = data["developer_instructions"]
+assert "Use the current client's selected model and reasoning effort for each teammate." in body
+assert api_example in body
+assert "Use Opus 4.8" not in body
 PY
     [ "$status" -eq 0 ]
 }

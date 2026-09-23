@@ -57,14 +57,31 @@ AI/ML integration specialist for production systems, including RAG pipeline desi
 ## Decision Framework
 
 ### Model Selection
-| Task | Model Type | Example |
-|------|------------|---------|
-| Classification | Small, fast | GPT-4o-mini, Claude Haiku |
-| Generation | Medium | GPT-4o, Claude Sonnet |
-| Complex reasoning | Large | Claude Opus, GPT-4 |
-| Local/private | Open | Llama, Mistral |
+| Task | Selection criteria | Verify before adoption |
+|------|--------------------|------------------------|
+| Classification | Lowest-cost candidate that meets measured accuracy | Schema adherence and difficult-label evaluation |
+| Generation | Quality/latency balance for the target audience | Grounding, output format and context limits |
+| Complex reasoning and tools | Reasoning quality and reliable tool use | Supported endpoint, effort values and tool contracts |
+| Local/private | Approved deployment and data boundary | Hardware fit, licensing and quality on the same fixtures |
 
-For current Claude model IDs, cost tiers, and fallback chains see the `model-routing-patterns` skill — the single source of truth that gets bumped with each Anthropic release.
+Use `model-routing-patterns` for the reviewed model catalog, then check the
+provider's current documentation and the deployment's available models. Exact
+API IDs, client aliases such as `opus`, and a model's reasoning effort are
+different settings. Preserve an explicitly requested model and approved fallback
+policy; do not silently switch providers, models or agent permissions.
+
+For new OpenAI reasoning evaluations, the reviewed guide recommends
+`gpt-6-astra`. Its tool calling uses Responses, not Chat Completions, and it does
+not accept `reasoning.effort: "none"`. Check effort support for each exact model.
+Use `client.responses.create(...)`, handle response status and structured output
+items, and preserve tool-call IDs and reasoning items through multi-step flows.
+`response.output_text` is the SDK text convenience field, not a substitute for
+handling tool calls or refusals. Do not migrate an existing integration solely
+because an example uses a newer model.
+
+Claude thinking and sampling settings are also model-dependent. Use the selected
+model's documented Messages API configuration; do not translate OpenAI parameter
+names or reuse an older `budget_tokens` example without checking compatibility.
 
 ### Embedding Selection
 | Use Case | Model |
@@ -73,6 +90,10 @@ For current Claude model IDs, cost tiers, and fallback chains see the `model-rou
 | Code search | code-embedding models |
 | Multilingual | multilingual-e5-large |
 | Cost-sensitive | local sentence-transformers |
+
+Treat these as candidates, not an automatic embedding upgrade. Record the exact
+model, vector dimensions and preprocessing revision; changing the embedding space
+requires a migration and retrieval evaluation before replacing an index.
 
 ## RAG-MCP MCP Tools Reference
 
@@ -83,6 +104,10 @@ For current Claude model IDs, cost tiers, and fallback chains see the `model-rou
 | **Admin** | `make evaluate-rag`, `make knowledge-gaps`, `make index`, `make stats` |
 
 ### Tool Selection Guide
+
+Use these operations on the technical `rag-mcp` server. The examples describe
+tool calls, not imported Python SDK functions. Select documents from actual
+search results; never substitute a guessed filesystem path for a KB identifier.
 
 ```python
 # Default - auto-routing, use 90% of time
@@ -97,8 +122,8 @@ multi_hop_search(query="nginx vs varnish for Magento cache", max_hops=3)
 # Raw hybrid search
 hybrid_search_kb(query="specific keyword", service="nginx", limit=10)
 
-# Full document content
-get_document(path="kb/reference/architecture.md")
+# Full document content: selected_result is an actual search result
+get_document(path=selected_result["kb_id"])
 ```
 
 ## KB Integration
@@ -170,3 +195,10 @@ For large documentation tasks, hand off to `documenter` agent.
 
 - **LLM operations** → Use `llm-ops-engineer`
 - **MCP server** → Use `mcp-specialist`
+
+## Reviewed Provider References (2026-09-23)
+
+- [OpenAI reasoning models](https://developers.openai.com/api/docs/guides/reasoning)
+- [Responses migration](https://developers.openai.com/api/docs/guides/migrate-to-responses)
+- [Claude model overview](https://platform.claude.com/docs/en/models/overview)
+- [Claude prompting and thinking compatibility](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices)

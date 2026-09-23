@@ -146,6 +146,28 @@ plugin browsing and installation.
 Sources: [Codex plugin packaging](https://developers.openai.com/plugins/build/plugins),
 [plugin availability](https://learn.chatgpt.com/docs/plugins).
 
+## Models and Reasoning Effort
+
+Generated custom-agent TOML contains only `name`, `description`, and
+`developer_instructions`. It does not translate Claude `model` aliases or skill
+`effort` into Codex settings. User-authored Codex agent files can override
+`model` and `model_reasoning_effort`; otherwise Codex resolves explicit spawn
+settings, `[agents]` defaults, and the parent session. The installer preserves
+user-owned agent files.
+
+Imperative Claude tier directives such as “Use Opus” are adapted to retain the
+current client's model and effort in skills and agent bodies. Fenced API
+examples and inline code remain literal. This prevents a workflow from silently
+selecting a provider or increasing the user's model tier.
+
+Portable native skills may retain source frontmatter. The official Codex skill
+contract does not document Claude `model` or `effort` as runtime selectors; their
+presence is not a model-selection guarantee. Already-adapted wrappers emit
+`name` and `description`. No universal model ID or effort is pinned.
+
+Sources: [Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents),
+[Codex skill contract](https://learn.chatgpt.com/docs/build-skills).
+
 ## Skill Translation Model
 
 Two delivery modes are used for Codex:

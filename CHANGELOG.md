@@ -7,6 +7,40 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v4.39.0 - Current-model skills and prompt compatibility (2026-09-23)
+
+Minor release. Updates model-aware skills, agent examples and prompt adapters
+while preserving user-selected runtime models and existing permission tiers.
+The model refresh passed 2068 Bats tests and 456 Python tests. Validation covers
+documented contracts and deterministic logic, not live model-quality benchmarks.
+
+### Changed
+
+- **Model guidance**: Refreshed active Claude model IDs and documented current
+  Codex/OpenAI, Copilot and Claude selection/effort boundaries with dated sources.
+  Kept existing agent tiers and user-selected runtime models; new agent templates
+  inherit the parent selection unless an explicit tier is approved.
+- **API skills and agents**: Updated Responses and native structured-output
+  examples, cache behavior, semantic output validation, approved fallback,
+  tenant-scoped response caching and usage-based cost calculations. Removed
+  hardcoded rates and unsupported universal performance claims.
+- **Prompt portability**: Adapted imperative Claude tier choices in Codex and
+  Copilot prompts while preserving metadata-only mentions, code literals and
+  provider API examples. Fixed multiline/backtick/fence preservation cases.
+- **Model review SOP**: Added model/prompt review to ecosystem sync and separated
+  offline contract validation from live model-quality evaluations.
+
+### Ecosystem
+
+- **Current model contracts (class B)**: Added dated GPT-6/Claude/Copilot model
+  and effort guidance, including Claude Opus 5.5 and Fable 5.1, native structured
+  outputs and provider-specific cache behavior. Updated the shared Claude API map.
+- **Prompt preservation (class B)**: Extended Codex/Copilot adaptation without
+  corrupting provider API examples, inline literals or metadata-only references.
+- **Permission and body-budget review**: No new skill permission grants or tier
+  overrides; 14 broad-access skills remain. Body thresholds stay unchanged because
+  the largest canonical skill remains 17197 bytes against the 18000-byte warning.
+
 ## v4.38.0 - Editor compatibility refresh (2026-09-23)
 
 Minor release. Updates Codex, GitHub Copilot and Claude contracts after a
