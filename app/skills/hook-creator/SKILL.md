@@ -56,6 +56,13 @@ Create a new Claude Code hook following ai-toolkit conventions.
 | `PreCompact` | Before context compaction; can block with exit 2 or `{"decision":"block"}` | any | Context preservation |
 | `PostCompact` | After compaction completes | any | Re-inject state that was summarized away |
 
+### Model changes
+
+| Event | Fires When | Matcher | Typical Use |
+|-------|-----------|---------|-------------|
+| `PreModelSwitch` | Before a user/client model switch; exit 2 or `decision: "block"` cancels it | canonical target model | Model policy; requires Claude Code 2.1.251+ |
+| `PostModelSwitch` | After the session model changes; cannot block | canonical target model | Model-specific context; requires Claude Code 2.1.251+ |
+
 ### Permissions & elicitation
 
 | Event | Fires When | Matcher | Typical Use |
@@ -89,7 +96,7 @@ Create a new Claude Code hook following ai-toolkit conventions.
 | Event | Fires When | Matcher | Typical Use |
 |-------|-----------|---------|-------------|
 | `Setup` | First-run / initialization | any | Project bootstrap |
-| `InstructionsLoaded` | CLAUDE.md / AGENTS.md loaded into context | any | Verify presence of mandatory rules |
+| `InstructionsLoaded` | CLAUDE.md or `.claude/rules/*.md` loaded into context | load reason | Verify presence of mandatory rules |
 
 ## Hook Handler Types
 
@@ -101,9 +108,17 @@ Claude Code supports five handler `type` values in `hooks.json`:
 | `http` | Call a local or remote HTTP endpoint | `url` |
 | `prompt` | Inject a prompt to the fast inline model and use its verdict | `prompt` |
 | `agent` | Spawn an experimental tool-using subagent to evaluate the event | `prompt` |
-| `mcp_tool` | Invoke an MCP tool directly (no subprocess) | `server`, `tool`, `arguments` |
+| `mcp_tool` | Invoke an already-connected MCP tool | `server`, `tool`; optional `input` object |
 
 `command` remains the default and ai-toolkit's hook entries all use it. The other types are documented here so you can author them by hand when needed.
+
+`PermissionRequest` accepts `prompt` hooks but skips `agent` hooks. Both model-switch
+events accept `command`, `http`, and `mcp_tool` only. MCP tool hooks use `input`
+for arguments; `arguments` is not a supported handler field. MCP hooks on
+`SessionStart` cannot run at launch before servers connect, and `Setup` always
+skips them. Use command hooks for required initialization.
+
+Source: https://code.claude.com/docs/en/hooks (reviewed 2026-09-23).
 
 ## Workflow
 
@@ -120,7 +135,7 @@ Claude Code supports five handler `type` values in `hooks.json`:
 - Shebang: `#!/bin/bash`
 - Header comment: script name, purpose, event, matcher
 - Respect `TOOLKIT_HOOK_PROFILE` env var (`minimal` = skip non-essential hooks)
-- Always `exit 0` on success (non-zero blocks the operation for Pre* hooks)
+- Exit 0 on success; use exit 2 for a blocking verdict on supported events. Other non-zero codes generally report an error without blocking.
 - Output goes to Claude's context as plain text
 - No external dependencies -- bash builtins and coreutils only
 - Keep output concise -- hooks fire frequently

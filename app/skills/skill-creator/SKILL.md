@@ -24,23 +24,39 @@ Create a new skill following the Agent Skills standard.
 
 ## Frontmatter Reference
 
+This table describes Claude Code skill fields. ai-toolkit requires `name` and
+`description` for portable catalog entries even though Claude Code can infer them.
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | yes | Lowercase, hyphens only, max 64 chars |
 | `description` | string | yes | Third person, max 1024 chars, include key terms |
-| `effort` | low/medium/high/xhigh/max | no | Controls model thinking budget (xhigh added for Opus 4.7) |
+| `effort` | low/medium/high/xhigh/max | no | Override effort for the invoking turn; supported levels depend on the model |
 | `disable-model-invocation` | bool | no | `true` = only user can trigger (task skills) |
 | `user-invocable` | bool | no | `false` = knowledge skill, Claude auto-loads |
-| `allowed-tools` | csv or YAML list | no | Restrict tool access for safety; YAML-style lists accepted |
-| `disallowedTools` | csv or YAML list | no | Block specific tools (plugin-shipped agents) |
-| `model` | string | no | Override default model (accepts full IDs like `claude-opus-4-8`) |
+| `allowed-tools` | string or YAML list | no | Pre-approve tools for the invoking turn; does not restrict the available tools |
+| `disallowed-tools` | string or YAML list | no | Remove tools for the invoking turn |
+| `model` | string | no | Override the model for the invoking turn, or use `inherit` |
 | `context` | string | no | `fork` to run in isolated subagent |
 | `agent` | string | no | Agent type to use when `context: fork` |
-| `skills` | csv | no | Auto-load skills for the invoked subagent |
 | `argument-hint` | string | no | Shown in autocomplete, e.g. `"[target]"` |
-| `hooks` | object | no | Lifecycle hooks (`PreToolUse`, `PostToolUse`, `Stop`) scoped to the skill invocation |
-| `maxTurns` | int | no | Cap turns when skill spawns a subagent |
-| `memory` | user/project/local | no | Persistent memory scope (agents only) |
+| `arguments` | string or YAML list | no | Named positional arguments, substituted as `$name` in the body |
+| `when_to_use` | string | no | Additional trigger context appended to the description |
+| `background` | bool | no | With `context: fork`, `false` waits for the subagent result; default `true` |
+| `hooks` | object | no | Hooks registered at invocation and retained for the session; `once` limits a handler to one run |
+| `paths` | string or YAML list | no | File globs limiting automatic activation |
+| `shell` | bash/powershell | no | Shell for dynamic context commands |
+| `metadata` | object | no | Custom metadata for external tooling |
+| `license` | string | no | Skill license |
+| `compatibility` | string | no | Runtime requirements, up to 500 characters |
+
+`disallowedTools`, `maxTurns`, `memory`, and `skills` belong to agent frontmatter,
+not skill frontmatter. Put them on the agent referenced by a forked skill.
+Direct claude.ai skill uploads and the Skills API accept only `name`, `description`,
+`license`, `compatibility`, `metadata`, and `allowed-tools`; Claude Code plugin
+skills support the full table. See the
+[official skill reference](https://code.claude.com/docs/en/skills#frontmatter-reference)
+(reviewed 2026-09-23).
 
 ## Classification Guide
 

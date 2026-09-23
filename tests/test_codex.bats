@@ -298,13 +298,12 @@ PY
     [ "$status" -eq 0 ]
 }
 
-@test "codex: hooks.json uses only upstream-supported event names (11 events)" {
-    # Per codex-rs/config/src/hook_config.rs HookEventName the accepted keys
-    # are the 11 below. Verify no unsupported event sneaks in.
+@test "codex: hooks.json uses only upstream-supported event names (12 events)" {
+    # https://learn.chatgpt.com/docs/hooks documents these 12 lifecycle events.
     run python3 -c "
 import json
-supported = {'PreToolUse','PostToolUse','PermissionRequest','PreCompact','PostCompact','SessionStart','SessionEnd','UserPromptSubmit','SubagentStart','SubagentStop','Stop'}
-assert len(supported) == 11
+supported = {'PreToolUse','PostToolUse','PermissionRequest','PreCompact','PostCompact','SessionStart','SessionEnd','UserPromptSubmit','SubagentStart','SubagentStop','Stop','Interrupt'}
+assert len(supported) == 12
 data = json.load(open('$CX_DIR/.codex/hooks.json'))
 events = set(data['hooks'].keys())
 extra = events - supported
@@ -417,13 +416,18 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
-@test "codex: Pre/PostToolUse entries use the Bash matcher (upstream limitation)" {
+@test "codex: tool hooks keep shell guards and track MCP searches separately" {
     run python3 -c "
 import json
 data = json.load(open('$CX_DIR/.codex/hooks.json'))
 for evt in ('PreToolUse', 'PostToolUse'):
     for entry in data['hooks'].get(evt, []):
-        assert entry.get('matcher') == 'Bash', f'{evt} matcher != Bash: {entry}'
+        for handler in entry['hooks']:
+            if 'search-tracker.sh' in handler['command']:
+                assert evt == 'PostToolUse'
+                assert entry.get('matcher', '').startswith('^mcp__')
+            else:
+                assert entry.get('matcher') == 'Bash', f'{evt} matcher != Bash: {entry}'
 print('ok')
 "
     [ "$status" -eq 0 ]

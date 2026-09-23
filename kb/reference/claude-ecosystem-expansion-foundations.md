@@ -3,9 +3,9 @@ title: "Claude Ecosystem Expansion Foundations"
 category: reference
 service: ai-toolkit
 tags: [benchmark, claude-code, ecosystem, hooks, plugins, architecture]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-03-27"
-last_updated: "2026-08-19"
+last_updated: "2026-09-23"
 description: "Reference summary of the ecosystem signals and implementation foundations adopted in ai-toolkit, including runtime-aware plugin packaging."
 ---
 
@@ -41,6 +41,16 @@ Claude Code reads filesystem configuration such as `~/.claude/rules` and
 separate Cowork global-instructions file. Plugin skills work in Chat and Cowork;
 hooks and sub-agents are Cowork-only.
 
+Within the Claude app, that runtime split still applies. Account-enabled plugins
+also sync into terminal Claude Code 2.1.273+ when signed in with a Claude account.
+They load from `~/.claude/plugins/synced/` as `<name>@synced`, without a marketplace
+install record. With a global toolkit install, check for duplicate hooks before
+enabling the exported plugin in both places. Users can disable an optional synced
+copy with `claude plugin disable ai-toolkit@synced`; organization-required plugins
+need an administrator decision. See
+[plugin sync](https://code.claude.com/docs/en/plugins-reference#plugins-synced-from-claude-ai)
+and [Claude app plugins](https://support.claude.com/en/articles/13837440-use-plugins-in-claude).
+
 ### 2. Broader lifecycle coverage
 
 The validator tracks the complete current Claude Code hook schema. Tracking an
@@ -52,6 +62,7 @@ Tracked schema events:
 - `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`
 - `Stop`, `StopFailure`, `UserPromptExpansion`
 - `SubagentStart`, `SubagentStop`, `PreCompact`, `PostCompact`
+- `PreModelSwitch`, `PostModelSwitch`
 - `PermissionRequest`, `PermissionDenied`, `Elicitation`, `ElicitationResult`
 - `TaskCreated`, `TaskCompleted`, `TeammateIdle`
 - `WorktreeCreate`, `WorktreeRemove`, `CwdChanged`, `DirectoryAdded`, `FileChanged`, `ConfigChange`

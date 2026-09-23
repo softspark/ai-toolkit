@@ -65,6 +65,66 @@ open(path, "w", encoding="utf-8").write(json.dumps(data, indent=2) + "\n")
 PY
 }
 
+register_synced_plugin() {
+    # The cache hierarchy below synced/ is opaque; discover by manifest name.
+    local name="${1:-ai-toolkit}"
+    mkdir -p "$TEST_TMP/.claude/plugins/synced/opaque-account/opaque-item/.claude-plugin"
+    printf '{"name":"%s","version":"1.0.0"}\n' "$name" \
+        > "$TEST_TMP/.claude/plugins/synced/opaque-account/opaque-item/.claude-plugin/plugin.json"
+}
+
+@test "doctor detects a synced toolkit without an installed plugin registry" {
+    register_synced_plugin
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py"
+    [[ "$output" == *"ai-toolkit@synced cache found next to global hooks: potential double-load"* ]]
+    [[ "$output" == *"claude plugin list"* ]]
+    [[ "$output" != *"SKIP: no Claude Code plugin registry"* ]]
+}
+
+@test "doctor --fix leaves synced plugin policy and settings unchanged" {
+    register_synced_plugin
+    local before
+    before="$(cksum < "$TEST_TMP/.claude/settings.json")"
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py" --fix
+    [[ "$output" == *"organization-required plugin needs an administrator decision"* ]]
+    [[ "$output" == *"--fix does not change synced plugins"* ]]
+    [[ "$output" != *"FIXED: disabled ai-toolkit@synced"* ]]
+    [ "$(cksum < "$TEST_TMP/.claude/settings.json")" = "$before" ]
+}
+
+@test "doctor reports synced disable preference without asserting organization policy" {
+    register_synced_plugin
+    python3 - "$TEST_TMP/.claude/settings.json" <<'PY'
+import json, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+data['enabledPlugins'] = {'ai-toolkit@synced': False}
+path.write_text(json.dumps(data))
+PY
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py"
+    [[ "$output" == *"ai-toolkit@synced has a disabled user preference"* ]]
+    [[ "$output" == *"organization policy is not inspected"* ]]
+    [[ "$output" != *"potential double-load"* ]]
+}
+
+@test "doctor ignores unrelated synced plugins" {
+    register_synced_plugin frontend-design
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py"
+    [[ "$output" != *"ai-toolkit@synced"* ]]
+}
+
+@test "doctor ignores malformed synced manifests and symlinks outside the cache" {
+    register_synced_plugin
+    local manifest="$TEST_TMP/.claude/plugins/synced/opaque-account/opaque-item/.claude-plugin/plugin.json"
+    printf 'not json' > "$manifest"
+    mkdir -p "$TEST_TMP/outside/.claude-plugin"
+    printf '{"name":"ai-toolkit"}' > "$TEST_TMP/outside/.claude-plugin/plugin.json"
+    ln -s "$TEST_TMP/outside" "$TEST_TMP/.claude/plugins/synced/external"
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py"
+    [[ "$output" != *"ai-toolkit@synced"* ]]
+}
+
 @test "doctor skips the check when no plugin registry exists" {
     rm -f "$TEST_TMP/.claude/plugins/installed_plugins.json"
     run python3 "$TOOLKIT_DIR/scripts/doctor.py"

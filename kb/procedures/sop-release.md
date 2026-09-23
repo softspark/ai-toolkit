@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.15.3"
+version: "1.15.4"
 created: "2026-04-10"
-last_updated: "2026-09-08"
+last_updated: "2026-09-23"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
@@ -68,8 +68,8 @@ grep -q -- '--provenance' .github/workflows/publish.yml || { echo "MISSING --pro
 grep -q 'id-token: write'   .github/workflows/publish.yml || { echo "MISSING id-token: write"; exit 1; }
 python3 scripts/audit_skills.py --permissions   # review Bash/Write/Edit footprint
 
-# 5b. Ecosystem gate — snapshot must be current before tag
-python3 scripts/ecosystem_doctor.py --offline --check || { echo "STALE ecosystem snapshot — re-run doctor"; exit 1; }
+# 5b. Registry/generator integrity; online review above establishes freshness
+python3 scripts/ecosystem_doctor.py --offline --check || { echo "INVALID ecosystem registry or generators"; exit 1; }
 
 # 5c. Licensing gate — SPDX headers, LICENSE, NOTICE, manifest consistency
 npx bats tests/test_licensing.bats || { echo "LICENSING GATE FAILED"; exit 1; }
@@ -170,7 +170,10 @@ This writes the new baseline to `benchmarks/ecosystem-doctor-snapshot.json`. Com
 python3 scripts/ecosystem_doctor.py --offline --check
 ```
 
-Must exit `0`. If it exits `1`, the snapshot is stale — rerun Phase 0.3 or review the remaining drift.
+Must exit `0`. This offline check verifies declared generator paths; it does not
+fetch documentation or establish snapshot freshness. The online review and
+snapshot refresh in Phases 0.1 through 0.3 remain required. Diagnose the reported
+error instead of treating every offline failure as a stale snapshot.
 
 ---
 

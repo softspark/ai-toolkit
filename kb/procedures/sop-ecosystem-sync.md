@@ -3,9 +3,9 @@ title: "SOP: Ecosystem Sync"
 category: procedures
 service: ai-toolkit
 tags: [sop, ecosystem, editors, generators, drift-detection, sync]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-04-23"
-last_updated: "2026-08-31"
+last_updated: "2026-09-23"
 description: "Quarterly or event-triggered sync procedure for the 14 registry tools: Claude Code, Claude app, explicit-preview DSH, and 11 default editor integrations."
 ---
 
@@ -82,6 +82,16 @@ The report classifies every tool into:
 
 For every drifting tool, read its docs URL and classify the change into exactly one bucket:
 
+Also read the feature references for priority integrations even when their
+landing page has no structural drift. Hook payloads, skill frontmatter and
+plugin schemas can change without affecting that page. Keep a dated
+`documentation_review` on each registry entry with `date`, `classes`, `note`
+and official `sources`. Each finding has one class; a tool can have several
+findings and therefore several classes. Record source-access gaps explicitly.
+
+The doctor's `version_probe` reports a locally installed binary, not the latest
+vendor release. Keep release review metadata separate from this observation.
+
 | Drift class | What it means | Action owner |
 |-------------|---------------|--------------|
 | **A. Cosmetic reword** | Prose edited, same feature set | Update snapshot (`--update`), no code change |
@@ -150,6 +160,8 @@ Fields to consider updating:
 - `our_generators` — if a new generator was added
 - `capability_markers` — if a new feature was adopted
 - `version_probe.command` — if the CLI binary was renamed
+- `documentation_review` — dated dispositions and feature references, including
+  unchanged targets and explicitly unverified contracts
 
 After editing, increment `last_updated` in the registry and save the snapshot:
 
@@ -199,7 +211,7 @@ Recommended commit messages by class:
 
 ## Gotchas
 
-- **First run has no baseline.** On a machine where `benchmarks/ecosystem-doctor-snapshot.json` does not exist, every tool shows as clean (no prior state to diff against). Run `--update` once to seed, then run again to see real drift.
+- **First run has no baseline.** Without `benchmarks/ecosystem-doctor-snapshot.json`, fetched headings are compared with an empty list and can appear as added. This is baseline discovery, not proof of a vendor change. Review the sources before seeding with `--update`.
 - **Documentation sites use client-side rendering.** Aider, opencode, and Antigravity serve most content via JavaScript. `urllib` fetches the bare HTML skeleton — the doctor only sees a few headings. Combine the automated check with a manual visit to the docs on these tools.
 - **Release notes pages change structure more often than docs.** Cursor and Windsurf refactor their changelog layouts periodically; a heading delta from a changelog page is often a presentation change, not a feature change. Classify as A when in doubt.
 - **Version probes require the CLI to be installed locally.** `gemini --version`, `aider --version`, etc. are skipped silently when the binary isn't on `$PATH`. The snapshot therefore omits version drift for tools you haven't installed — that is intentional, not a bug.

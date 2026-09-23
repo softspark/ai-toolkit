@@ -3,10 +3,10 @@ title: "AI Toolkit - GitHub Copilot Compatibility"
 category: reference
 service: ai-toolkit
 tags: [copilot, compatibility, install, skills, prompts, instructions, agents, hooks]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-07-15"
-last_updated: "2026-07-15"
-description: "Reference for how ai-toolkit integrates with GitHub Copilot — the five .github/ surfaces, their runtime context-loading semantics, and why the same skill is emitted as both a prompt file and a skill directory."
+last_updated: "2026-09-23"
+description: "GitHub Copilot instructions, agents, skills, prompts and hooks, with CLI, cloud agent and VS Code compatibility boundaries."
 ---
 
 # AI Toolkit - GitHub Copilot Compatibility
@@ -33,11 +33,11 @@ config-path and capability tracking by `kb/reference/supported-tools-registry.md
 | Native agents | `.github/agents/ai-toolkit-*.agent.md` | Custom agents in the agent picker |
 | Portable skills | `.github/skills/ai-toolkit-*/SKILL.md` (+ `reference/`, `scripts/`) | Agent Skills, injected on demand |
 | Lifecycle hooks | `.github/hooks/ai-toolkit.json` + runtime | Version-1 Copilot hooks (profile ≥ `standard`) |
-| Shared rules | root `AGENTS.md` | Read by Copilot code review and CLI |
+| Shared rules | root `AGENTS.md` | Read by CLI, cloud agent, VS Code Chat and GitHub.com code review |
 
 ## Surface Loading Semantics
 
-The five customization surfaces do **not** all cost context the same way. This
+The customization surfaces do **not** all cost context the same way. This
 is the practical difference that governs token usage and any perceived
 "double loading":
 
@@ -47,43 +47,32 @@ is the practical difference that governs token usage and any perceived
 | `*.instructions.md` with `applyTo: "**"` | Every request (glob matches all files) | Effectively always-on |
 | `*.instructions.md` with a scoped glob (e.g. `**/*.py`) | Only when a matching file is in context | Path-scoped |
 | `*.prompt.md` | **Only** when the user runs `/<name>` | None until invoked |
-| `SKILL.md` | **Only** when Copilot chooses to use the skill (progressive disclosure) | None until triggered |
-| `*.agent.md` | Only when that agent is selected in the picker | None until selected |
+| `SKILL.md` | Body loads on relevant automatic or explicit invocation | Name and description participate in discovery |
+| `*.agent.md` | When selected or delegated to as a custom agent | Discovery metadata; body on use |
 
 Instructions are auto-added to requests as soon as their `applyTo` glob matches;
-skills and prompts are pull-based, never injected passively.
+skill bodies and prompt bodies load on demand. Skill discovery metadata still
+uses context; progressive disclosure does not mean zero passive cost.
 
 ## Prompt ↔ Skill Duplication
 
-Every user-invocable skill is emitted **both** as a `.github/prompts/*.prompt.md`
-(so it is available as a `/slash-command`) **and** as a
-`.github/skills/<name>/SKILL.md` directory (so Copilot can auto-trigger it with
-its bundled `scripts/` and `reference/` assets). The two bodies are byte-identical
-after their frontmatter and Copilot execution-notes header; the differences are:
+Profiles with prompts retain existing `/ai-toolkit-<name>` prompt entry points.
+Native skills also support slash invocation by their `name`, such as `/review`,
+in current VS Code and Copilot CLI. Prefer the native skill when it needs bundled
+scripts or references: a prompt file does not carry the skill directory.
 
-- the prompt carries only a `description`; the skill adds `name` and bundles the
-  runnable assets the prompt does not ship;
-- the prompt's execution note treats the current request as task input, the
-  skill's note resolves relative paths against its own directory.
+The generator preserves the source skill's `user-invocable` and
+`disable-model-invocation` booleans. VS Code documents these controls explicitly:
+`user-invocable: false` hides the slash entry; `disable-model-invocation: true`
+prevents automatic selection. Omitted fields retain the client's defaults.
+The CLI guide documents slash invocation but does not specify these booleans;
+do not treat them as a cross-client permission boundary. Source Claude tool
+allowlists are not copied into Copilot tool preapprovals.
 
-**This is intentional, not a stale leftover, and does not cause a persistent
-double-load:**
-
-- Neither surface is always-on. The prompt loads only on explicit `/invoke`; the
-  skill loads only on trigger. Neither sits in `copilot-instructions.md` or in an
-  always-matching `applyTo`, so the shared body carries **zero** passive context
-  cost.
-- The same skill is registered from a **single** root (`.github/skills`), not
-  duplicated across `.claude/skills` or `.agents/skills` in the same repo, so
-  there is no duplicate skill registration.
-- The one edge case is a single turn where the user runs `/<name>` **and** Copilot
-  autonomously pulls the matching skill in the same request. That is a one-shot
-  redundancy of identical text — wasted tokens for that turn only, with no
-  conflicting instructions and no persistent effect.
-
-Neither surface can replace the other: the prompt has no bundled scanner or
-reference material, and the skill directory is not exposed as a slash command.
-The body is duplicated so each surface is self-contained.
+Prompt and skill bodies come from the same source with different execution
+notes. Their full bodies load only when used; selecting both in one turn can
+repeat instructions. Keeping prompts preserves existing entry points and does
+not imply that native skills lack slash commands.
 
 ## Compatibility Read Paths
 
@@ -91,9 +80,10 @@ Copilot also discovers project `.claude/skills` and `.agents/skills`, and
 personal `~/.agents/skills`. ai-toolkit still materializes self-contained native
 skills under `.github/skills` (and under the active Copilot config root for
 global installs) so that bundled assets and helper scripts remain available and
-`COPILOT_HOME` sessions do not depend on fallback discovery. The toolkit does not
-write the same skill into two roots at once, so fallback discovery never produces
-a duplicate registration.
+`COPILOT_HOME` sessions do not depend on fallback discovery. VS Code additionally
+documents personal `~/.claude/skills`. Installing several editor integrations can
+leave equivalent skills in more than one discovery root; inspect the client's
+loaded skills rather than assuming these roots are mutually exclusive.
 
 ## Generated, Git-Ignored Artifacts
 
@@ -107,10 +97,12 @@ and listed in `.gitignore`:
 - `.github/skills/`
 - `.github/hooks/`
 
-Deleting them locally is safe (they are untracked and ignored); the next
-`ai-toolkit install --editors copilot` or generator run recreates them. The
-generator also cleans stale managed entries and byte-exact historical ai-toolkit
-files while preserving user-authored files.
+The next `ai-toolkit install --editors copilot` or generator run recreates managed
+files. These directories can also contain user-authored files; being ignored by
+Git does not make an entire directory disposable. The generator cleans stale
+managed entries and byte-exact historical ai-toolkit files while preserving
+user-authored files. Cloud agent can read only files present in its checkout;
+ignored local output is not automatically available to a cloud job.
 
 ## Install & Profiles
 
@@ -154,6 +146,59 @@ running the generators directly:
 - Prompt and skill bodies strip Claude-only interpolation (`$ARGUMENTS`,
   `CLAUDE_SKILL_DIR`) and delegation APIs; hooks use the GitHub version-1 schema
   with camelCase event names.
+
+## Hook Runtime Boundaries
+
+The generated version-1 JSON remains the CLI/cloud format. VS Code also reads
+that format, maps camelCase events and platform commands, and supplies its own
+snake_case payload fields. CLI also accepts PascalCase configuration and can
+send the same input shape, so `hook_event_name` does not identify the client.
+The runtime preserves flat permission/context fields and adds an equivalent
+`hookSpecificOutput` envelope for PascalCase input. Terminal protection
+recognizes CLI `bash`/`powershell` and VS Code terminal tools. File-change
+reminders filter VS Code tool names locally because its hook matchers are
+currently ignored.
+Stop decisions preserve both output forms and respect `stop_hook_active` in
+either input format; the existing bounded retry counter remains a fallback.
+
+The CLI reference describes a single `JSON.parse` of hook output. VS Code's
+[hook result parser](https://github.com/microsoft/vscode/blob/main/extensions/copilot/src/extension/chat/vscode-node/chatHookService.ts)
+retains non-common fields and reads event output from `hookSpecificOutput`.
+Both views carry the same decision and context in one JSON object.
+
+CLI/cloud keep their top-level decision and context fields. Cloud hooks execute
+in an ephemeral noninteractive Linux environment; CLI notification and permission
+events do not provide equivalent cloud behavior. VS Code's documented event
+list does not include `postToolUseFailure`, so that recovery hook remains a
+CLI/cloud capability. No second hook config is emitted, avoiding duplicate
+execution in clients that read both formats.
+
+## Reviewed Upstream Contracts (2026-09-23)
+
+- [Instruction support matrix](https://docs.github.com/en/copilot/reference/custom-instructions-support):
+  CLI reads repository, scoped and personal instructions; GitHub.com code review
+  reads scoped instructions and `AGENTS.md`. VS Code code review currently lists
+  only repository-wide instructions, so it must not inherit that GitHub.com claim.
+- [VS Code skills](https://code.visualstudio.com/docs/agent-customization/agent-skills):
+  slash invocation, invocation controls, supported roots and progressive loading.
+- [Copilot CLI skills](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills):
+  CLI discovery, slash usage and tool preapproval distinction.
+- [VS Code hooks](https://code.visualstudio.com/docs/agent-customization/hooks) and
+  [payload reference](https://code.visualstudio.com/docs/agents/reference/hooks-reference):
+  CLI configuration import, editor payloads and event-specific responses.
+- [GitHub hooks reference](https://docs.github.com/en/copilot/reference/hooks-reference):
+  CLI/cloud configuration and execution differences. Enterprise policy hooks,
+  HTTP hooks and direct `exec` entries are available but are not emitted by this
+  command-hook generator.
+- [Custom agents](https://docs.github.com/en/copilot/reference/custom-agents-configuration):
+  the body limit is 30,000 characters, not UTF-8 bytes. `infer` is retired; the
+  generator does not emit it and requires no migration. IDE `handoffs` and
+  `argument-hint` are not portable cloud agent settings.
+
+SOP classification: skill invocation controls are **B** (integrated); VS Code
+hook runtime adaptation is **F** (integrated); redirected documentation paths
+are **A**. Retired `infer` is **D**, but no toolkit output uses it. Enterprise
+policy and HTTP hook surfaces are **C** (not adopted).
 
 ## Verification
 

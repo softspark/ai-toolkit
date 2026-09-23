@@ -6,22 +6,20 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2035%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2059%20passing-success)](tests/)
 
-## What's New in v4.37.0
+## What's New in v4.38.0
 
-- **Secrets at rest:** a new security rule (no token, password or key in a
-  database in plaintext) with `security-patterns` recipes: keyed hash vs
-  encryption vs blind index, key rotation, migrating plaintext, and a test
-  template that walks the ORM mapping.
-- **`secret-column-check` hook:** an edit that declares a secret-looking column
-  with no encryption or hashing marker gets a reminder, across SQL, Doctrine,
-  Laravel, SQLAlchemy, Django, Prisma, Rails, TypeORM and JPA.
-- **Commercial messages:** marketing only under current per-channel consent and
-  always with an opt-out, with a reference on enforcing both at one send point.
-- **Review and verification:** two new review checklist items, and a new gate
-  counts only after it has been seen failing once.
-- **Fixed:** the `loop-guard` advisory reaches Claude again.
+- **Codex:** portable plugin manifest with a compatibility overlay, MCP and
+  Interrupt hook support, and corrected Stop continuation and search tracking.
+- **Copilot:** skill invocation controls and hook responses compatible with
+  both CLI and VS Code.
+- **Claude:** current hook/skill schemas and detection of account-synced plugin
+  collisions with the global install.
+- **Other editors:** explicit allow decisions in Cursor permission hooks,
+  Devin/Windsurf deprecation guidance, and refreshed sources for all 14 tools.
+- **Agent lifecycle:** stop finished background agents after collecting their
+  final report; keep them running only when further work is planned.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -117,7 +115,10 @@ ai-toolkit claude-app export --verify
 ```
 
 Re-export and re-upload after toolkit or registered-rule updates. Skills work
-in Chat and Cowork; hooks and sub-agents are active only in Cowork.
+in Chat and Cowork; within the Claude app, hooks and sub-agents run in Cowork.
+Account-enabled plugins also sync to Claude Code terminal sessions from 2.1.273.
+The doctor reports possible collisions with the global install; required
+organization plugins need an administrator decision.
 
 ### Native Codex Plugin
 
@@ -135,6 +136,9 @@ from `/plugins` in Codex CLI and start a new session. Review and trust the
 bundled hooks before use. The ZIP includes plugin-local persona definitions,
 the briefing helper, the skill-audit helper and its local imports, and other
 referenced skill resources. Export rejects symlinked output paths and ancestors.
+The archive contains portable root `plugin.json` with OpenAI metadata under
+`extensions.com.openai`, plus the `.codex-plugin/plugin.json` compatibility
+manifest for older clients. Verification checks that both manifests agree.
 Codex IDE does not support plugins.
 
 ### Install Profiles

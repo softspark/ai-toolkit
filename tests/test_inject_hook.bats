@@ -502,6 +502,9 @@ PY
   "hooks": {
     "Stop": [
       {"hooks": [{"type": "command", "command": "echo user"}]}
+    ],
+    "Interrupt": [
+      {"matcher": "[", "hooks": [{"type": "command", "command": "echo interrupted", "timeout": 1}]}
     ]
   }
 }
@@ -522,10 +525,13 @@ from generate_codex_hooks import SUPPORTED_EVENTS
 from inject_hook_cli import CODEX_EVENTS, _codex_owner
 
 assert CODEX_EVENTS == SUPPORTED_EVENTS
-assert len(CODEX_EVENTS) == 11
+assert len(CODEX_EVENTS) == 12
 with open(sys.argv[1]) as handle:
     data = json.load(handle)
 assert data["hooks"]["Stop"][0]["hooks"][0]["command"] == "echo user"
+assert data["hooks"]["Interrupt"] == [
+    {"matcher": "[", "hooks": [{"type": "command", "command": "echo interrupted", "timeout": 1}]}
+]
 handler = data["hooks"]["SessionEnd"][0]["hooks"][0]
 owner = _codex_owner("session-end")
 assert handler["command"] == f"AI_TOOLKIT_HOOK_OWNER={owner} echo bye", handler

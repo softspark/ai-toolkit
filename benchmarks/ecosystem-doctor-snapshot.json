@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-09-21T08:44:30Z",
+  "last_run": "2026-09-23T06:56:37Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "3be52681fbce8e14",
+      "docs_hash": "5a541514fadfa722",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -51,7 +51,7 @@
         "Auggie CLI": true,
         "MCP": true,
         "Next Edit": false,
-        "Notification": false,
+        "Notification": true,
         "PostToolUse": false,
         "PreToolUse": false,
         "SKILL.md": false,
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "11be625b214db0d9",
+      "docs_hash": "44ac32d27a8bb6ef",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -108,7 +108,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "252a4c96561d5564",
+      "docs_hash": "0de4f3bfc321179a",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -137,10 +137,12 @@
         "PermissionDenied": false,
         "PermissionRequest": false,
         "PostCompact": false,
+        "PostModelSwitch": false,
         "PostToolBatch": false,
         "PostToolUse": false,
         "PostToolUseFailure": false,
         "PreCompact": false,
+        "PreModelSwitch": false,
         "PreToolUse": false,
         "SKILL.md": false,
         "SessionEnd": false,
@@ -174,10 +176,10 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.278 (Claude Code)"
+      "version": "2.1.280 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "3d93f1b1192ead49",
+      "docs_hash": "5628c6d8b521e0ff",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -225,7 +227,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "d7abd03c0e3ffdd9",
+      "docs_hash": "9d3e2db6f8360b23",
       "headings": [
         "API",
         "API Reference",
@@ -347,6 +349,7 @@
         "AGENTS.md": true,
         "PLUGIN_ROOT": false,
         "config.toml": false,
+        "hook event: Interrupt": false,
         "hook event: PermissionRequest": false,
         "hook event: PostCompact": false,
         "hook event: PostToolUse": false,
@@ -360,17 +363,19 @@
         "hook event: UserPromptSubmit": false,
         "hook handler: agent": false,
         "hook handler: command": false,
+        "hook handler: mcp_tool": false,
         "hook handler: prompt": false,
         "hooks": true,
         "hooks/hooks.json": false,
         "mcp_servers": false,
         "plugin marketplace": false,
+        "plugin.json": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.155.0"
+      "version": "codex-cli 0.155.1"
     },
     "cursor": {
-      "docs_hash": "02c1018192798e90",
+      "docs_hash": "645cb51edd102bd0",
       "headings": [
         "Agent",
         "CLI",
@@ -415,7 +420,7 @@
       "version": "0.1.5-rc.1"
     },
     "gemini-cli": {
-      "docs_hash": "35bac68c1c70fb20",
+      "docs_hash": "4d121c5d062fb9a3",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -455,7 +460,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "6c18621753db8722",
+      "docs_hash": "a5a6fbc42a3f3403",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -483,14 +488,16 @@
         "applyTo": false,
         "copilot-instructions.md": false,
         "custom agents": true,
+        "disable-model-invocation": false,
         "instructions.md": false,
         "prompt files": true,
         "skills": true,
+        "user-invocable": false,
         "~/.copilot/": false
       }
     },
     "google-antigravity": {
-      "docs_hash": "9fe532d247c3e361",
+      "docs_hash": "8cbf9aaffb6b57bf",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -517,7 +524,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "7834332672a9547c",
+      "docs_hash": "52fa57cfe160bd56",
       "headings": [
         "Add features",
         "Ask questions",
@@ -579,7 +586,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "63c7f24899ac48f7",
+      "docs_hash": "1b76e5d87cc84fd1",
       "headings": [
         "Accounts",
         "Advanced",
@@ -616,7 +623,7 @@
         "AGENTS.md": true,
         "Cascade": true,
         "MCP": true,
-        "SKILL.md": false,
+        "SKILL.md": true,
         "always_on": false,
         "glob": true,
         "hooks": true,

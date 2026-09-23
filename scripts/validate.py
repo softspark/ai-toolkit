@@ -57,6 +57,8 @@ VALID_HOOK_EVENTS = frozenset({
     "SubagentStart", "SubagentStop",
     # Compaction
     "PreCompact", "PostCompact",
+    # Session model changes
+    "PreModelSwitch", "PostModelSwitch",
     # Permissions & elicitation
     "PermissionRequest", "PermissionDenied",
     "Elicitation", "ElicitationResult",
@@ -77,7 +79,7 @@ VALID_HOOK_TYPES = frozenset({
     "mcp_tool",
 })
 
-PROMPT_AGENT_HOOK_EVENTS = frozenset({
+PROMPT_HOOK_EVENTS = frozenset({
     "PermissionDenied",
     "PermissionRequest",
     "PostToolBatch",
@@ -93,12 +95,13 @@ PROMPT_AGENT_HOOK_EVENTS = frozenset({
     "UserPromptSubmit",
 })
 
+AGENT_HOOK_EVENTS = PROMPT_HOOK_EVENTS - {"PermissionRequest"}
 HTTP_HOOK_EVENTS = VALID_HOOK_EVENTS - {"SessionStart", "Setup"}
 
 HOOK_TYPE_EVENTS = {
-    "agent": PROMPT_AGENT_HOOK_EVENTS,
+    "agent": AGENT_HOOK_EVENTS,
     "http": HTTP_HOOK_EVENTS,
-    "prompt": PROMPT_AGENT_HOOK_EVENTS,
+    "prompt": PROMPT_HOOK_EVENTS,
 }
 
 HOOK_REQUIRED_FIELDS = {
@@ -106,7 +109,7 @@ HOOK_REQUIRED_FIELDS = {
     "http": ("url",),
     "prompt": ("prompt",),
     "agent": ("prompt",),
-    "mcp_tool": ("server", "tool", "arguments"),
+    "mcp_tool": ("server", "tool"),
 }
 
 # The taxonomy. `app/skills/documentation-standards/SKILL.md` documents the same
@@ -1149,6 +1152,12 @@ def _validate_hook_handler(event: str, hook: dict, vr: ValidationResult) -> None
     for field in HOOK_REQUIRED_FIELDS.get(hook_type, ()):
         if field not in hook:
             vr.error(f"{event}: hook type '{hook_type}' missing required field '{field}'")
+
+    if hook_type == "mcp_tool":
+        if "arguments" in hook:
+            vr.error(f"{event}: mcp_tool uses optional 'input', not 'arguments'")
+        if "input" in hook and not isinstance(hook["input"], dict):
+            vr.error(f"{event}: mcp_tool 'input' must be an object")
 
 
 def _validate_hook_entries(event: str, entries: object, vr: ValidationResult) -> None:

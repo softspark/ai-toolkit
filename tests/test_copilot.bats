@@ -123,7 +123,7 @@ for path in files:
     }
     assert keys == {"name", "description"}, (path, keys)
     assert "<!-- ai-toolkit-managed: github-copilot -->" in body, path
-    assert len(body.encode("utf-8")) <= 30_000, path
+    assert len(body) <= 30_000, path
     assert not forbidden.search(body), path
 PY
     [ "$status" -eq 0 ]
@@ -251,13 +251,59 @@ for path in files:
         for line in parts[1].splitlines()
         if ":" in line
     }
-    assert keys == {"name", "description"}, (path, keys)
+    assert {"name", "description"} <= keys, (path, keys)
+    assert keys <= {"name", "description", "user-invocable", "disable-model-invocation"}, (path, keys)
     assert "<!-- ai-toolkit-managed: github-copilot -->" in parts[2], path
     assert "GitHub Copilot skill execution notes" in parts[2], path
     assert not forbidden.search(parts[2]), path
 assert not list(root.rglob("__pycache__"))
 assert not list(root.rglob("*.pyc"))
 assert not [path for path in root.rglob("*") if path.is_symlink()]
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "generate_copilot.py preserves skill invocation controls in generated directories" {
+    run python3 - "$TOOLKIT_DIR" "$COPILOT_TMP/.github/skills" <<'PY'
+import sys
+from pathlib import Path
+
+toolkit, root = map(Path, sys.argv[1:])
+sys.path.insert(0, str(toolkit / "scripts"))
+from frontmatter import frontmatter_field
+
+for source in (toolkit / "app/skills").glob("*/SKILL.md"):
+    name = frontmatter_field(source, "name")
+    if not name:
+        continue
+    generated = root / f"ai-toolkit-{name}" / "SKILL.md"
+    for field in ("user-invocable", "disable-model-invocation"):
+        assert frontmatter_field(generated, field) == frontmatter_field(source, field), (name, field)
+assert frontmatter_field(root / "ai-toolkit-night-watch/SKILL.md", "disable-model-invocation") == "true"
+assert frontmatter_field(root / "ai-toolkit-clean-code/SKILL.md", "user-invocable") == "false"
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "generate_copilot.py counts custom agent limit in characters rather than UTF-8 bytes" {
+    run python3 - "$TOOLKIT_DIR" "$BATS_TEST_TMPDIR" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_copilot import _render_agent
+
+source = Path(sys.argv[2]) / "unicode-agent.md"
+header = '---\nname: unicode-agent\ndescription: Unicode agent\n---\n'
+source.write_text(header + "ą" * 16000, encoding="utf-8")
+assert "ą" * 16000 in _render_agent(source)[2]
+source.write_text(header + "ą" * 30000, encoding="utf-8")
+try:
+    _render_agent(source)
+except ValueError as error:
+    assert "30000 characters" in str(error)
+else:
+    raise AssertionError("Oversized agent accepted")
 PY
     [ "$status" -eq 0 ]
 }

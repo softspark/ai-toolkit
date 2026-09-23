@@ -2116,6 +2116,35 @@ def _apply_asset_removal(
         print(f"    WARN preserved changed or user-owned plugin asset: {path}")
 
 
+def _prune_removed_script_directory(
+    transaction: PluginFileTransaction, plan: AssetRemovalPlan, name: str,
+) -> None:
+    """Prune only the pinned directory of scripts this transaction removed."""
+    root = (TOOLKIT_DATA_DIR / "plugin-scripts" / name).absolute()
+    script = next((path for _key, path, _before in plan.removable if path.parent == root), None)
+    if script is None:
+        return
+    pins = transaction.mutations[script].ancestors
+    try:
+        directory = _open_pinned_parent(script, pins)
+        try:
+            if os.listdir(directory):
+                return  # User files, caches, or another consumer still owns content.
+            parent = _open_pinned_parent(root, pins[:-1])
+            try:
+                current = os.stat(root.name, dir_fd=parent, follow_symlinks=False)
+                if (current.st_dev, current.st_ino) != (pins[-1].device, pins[-1].inode):
+                    raise RuntimeError(f"Plugin script directory identity changed: {root}")
+                os.rmdir(root.name, dir_fd=parent)
+            finally:
+                os.close(parent)
+        finally:
+            os.close(directory)
+    except (OSError, RuntimeError) as error:
+        # Removal is already committed. Never roll it back for optional pruning.
+        print(f"    WARN preserved plugin script directory: {root}: {error}")
+
+
 def _remove_owned_plugin_assets(state: dict | None, name: str, editor: str) -> None:
     """Delete the hook and script files this pack installed for ``editor``.
 
@@ -3526,10 +3555,13 @@ def _remove_pack_locked(
         if transaction_snapshots is not None:
             _after_plugin_state_write(state, editor, name, "remove")
             transaction_snapshots.commit()
-        return True
     except Exception as error:
         _rollback_plugin_transaction(transaction_snapshots, error)
         raise
+    if transaction_snapshots is not None and transaction_reports is None:
+        # Nested remove+install must retain the directory pins for outer rollback.
+        _prune_removed_script_directory(transaction_snapshots, asset_removal_plan, name)
+    return True
 
 
 def pack_update_pending(name: str, editor: str) -> tuple[bool, str, str]:

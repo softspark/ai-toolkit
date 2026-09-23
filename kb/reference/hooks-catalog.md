@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.13.0"
+version: "1.15.0"
 created: "2026-03-27"
-last_updated: "2026-09-21"
+last_updated: "2026-09-23"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -20,6 +20,15 @@ ai-toolkit provides 29 global hook entries across 14 lifecycle events that enfor
 `scripts/validate.py` validates both event names and handler shapes before release. The accepted lifecycle surface includes `PostToolUseFailure`, `PostToolBatch`, and `UserPromptExpansion` in addition to the installed ai-toolkit events below.
 
 Supported handler types are `command`, `http`, `prompt`, `agent`, and `mcp_tool`. ai-toolkit ships command hooks by default; non-command handlers are validated so external consumers can safely inject richer hook definitions through `inject-hook`.
+
+The 2026-09-23 schema review adds `PreModelSwitch` and `PostModelSwitch`
+(Claude Code 2.1.251+), without installing model-switch handlers. These accept
+command, HTTP and MCP handlers. `PreModelSwitch` can block a requested switch;
+`PostModelSwitch` observes the resulting model change. The validator rejects
+`agent` handlers on `PermissionRequest`, where `prompt` remains supported.
+MCP handlers require `server` and `tool`, with an optional `input` object;
+the incorrect `arguments` field is rejected. See the
+[official hook contract](https://code.claude.com/docs/en/hooks).
 
 ## Installation
 
@@ -502,7 +511,8 @@ permission allowlists do not count as providers. Codex Stop enforcement also
 scans the recent `$CODEX_HOME/log/codex-tui.log` window (default
 `~/.codex/log/codex-tui.log`) for `ToolCall:
 mcp__...__smart_query` and `tool.name="smart_query"`-style entries because
-Codex MCP tool calls may not fire the shared `PostToolUse` tracker. Together
+older clients may omit native MCP `PostToolUse` events. Current Codex output
+also wires MCP searches directly to this tracker. Together
 the hooks enforce the global CLAUDE.md GOLDEN RULE without breaking
 offline/no-RAG installs and without cross-session interference when multiple
 runtime windows run in parallel.
@@ -706,7 +716,7 @@ Cursor hooks follow the native [version-1 hooks contract](https://cursor.com/doc
 - **Cloud:** cloud agents load only repository `.cursor/hooks.json`; they cannot read user-level `~/.cursor/hooks.json`. Project commands call the adjacent self-contained `.cursor/hooks/ai-toolkit/cursor_hook.py` runtime and contain no host `~/.softspark` dependency.
 - **Events:** the generator emits the complete documented Agent, Tab, and workspace lifecycle event set, including Cursor 3.11 conversation events `beforeSubmitPrompt`, `afterAgentResponse`, `afterAgentThought`, `subagentStart`, `subagentStop`, `preCompact`, and `stop`.
 - **Schema:** managed entries use only documented `command`, `timeout`, and `loop_limit` fields. Regeneration recognizes the runtime command as its ownership marker and removes legacy `_source: ai-toolkit` entries without emitting that non-standard key again.
-- **Safety:** destructive shell commands return Cursor's native `permission: deny` response and exit 2. A failed detected quality gate returns a bounded `followup_message`; `stop` and `subagentStop` declare `loop_limit: 5`, with an earlier three-failure circuit breaker in the runtime.
+- **Safety:** destructive shell commands return Cursor's native `permission: deny` response and exit 2. All six permission hooks return explicit `permission: allow` for accepted requests, because invalid or empty JSON can block a permitted action. A failed detected quality gate returns a bounded `followup_message`; `stop` and `subagentStop` declare `loop_limit: 5`, with an earlier three-failure circuit breaker in the runtime.
 - **Preservation:** unrelated top-level settings and user hook entries survive regeneration. Config and runtime replacement is staged and rejects symlinked destinations or a user-owned runtime collision.
 
 ### GitHub Copilot hooks (`.github/hooks/ai-toolkit.json`)
@@ -717,6 +727,7 @@ Copilot hooks follow GitHub's native [hooks reference](https://docs.github.com/e
 - **File shape:** top-level `version: 1` plus a `hooks` object containing camelCase events.
 - **Runtime:** `ai-toolkit.json` calls the adjacent self-contained `ai-toolkit/copilot_hook.py`; local hooks do not depend on a package checkout or `~/.softspark` scripts.
 - **Native decisions:** `preToolUse` returns `permissionDecision`, `permissionDecisionReason`, and optional `modifiedArgs`. `agentStop` returns `decision` plus `reason`. Context events use `additionalContext`.
+- **VS Code compatibility:** PascalCase payloads carry the same flat result plus a `hookSpecificOutput` envelope. Copilot CLI can send the same input shape, so the runtime does not infer the host from casing. It recognizes native editor terminal/file tools and honors `stop_hook_active`.
 - **Failure semantics:** the runtime uses GitHub's event-specific stdout and exit-code contracts. It does not reuse Claude's generic exit-2 blocking behavior.
 - **Loop safety:** a failing `agentStop` quality gate can block twice; the third consecutive failure opens the circuit so the session cannot loop forever.
 - **Ownership:** generated configs carry `AI_TOOLKIT_HOOK_OWNER=ai-toolkit`; unrelated hook files are not edited.
@@ -727,7 +738,9 @@ Codex hooks follow the native [Codex hooks contract](https://learn.chatgpt.com/d
 
 - **Locations:** repository hooks live in `.codex/hooks.json`; user hooks live in `$CODEX_HOME/hooks.json` (default `~/.codex/hooks.json`). Project hooks load only for a trusted `.codex` layer.
 - **Assets:** repository commands use self-contained `.codex/hooks/*`; user commands use `$CODEX_HOME/ai-toolkit-hooks/*`. They do not call Claude's `~/.softspark/ai-toolkit/hooks/` paths.
-- **Events:** Codex documents 11 events. ai-toolkit wires 10: `SessionStart`, `SessionEnd`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact` remains a valid event for injected command hooks but is intentionally unwired in the base bundle.
+- **Events:** Codex documents 12 events. ai-toolkit wires 10: `SessionStart`, `SessionEnd`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact` and `Interrupt` are accepted but intentionally unwired in the base bundle. Existing string matchers on `Stop`, `UserPromptSubmit`, and `Interrupt` are preserved even though Codex ignores them.
+- **Handler compatibility:** generated hooks remain commands. User `mcp_tool` handlers are preserved with required `server`/`tool` and optional object `input`; `SessionEnd` remains command-only. `Interrupt` and `SessionEnd` timeouts cannot exceed three seconds.
+- **Search and continuation:** MCP search calls trigger `search-tracker.sh` through native `PostToolUse`. The bounded TUI-log fallback remains for clients without that event. The Stop adapter returns `decision: block` plus `reason` to request another turn; `continue: false` would stop execution instead.
 - **Session end:** `SessionEnd` runs the self-contained `session-end.sh` asset with a three-second timeout. Its result is advisory, so the adapter records the handoff without emitting steering output.
 - **Compaction:** `PreCompact` runs `codex-pre-compact.sh`, a Codex-native reminder that refers to the active `AGENTS.md` chain, plan, and git state. It does not run Claude's `pre-compact.sh` or `pre-compact-save.sh` payload adapters.
 - **Ownership:** native JSON contains no private `_source` keys. Core handlers carry `AI_TOOLKIT_HOOK_OWNER=ai-toolkit` in their command; plugin and external handlers use exact source-specific command markers.

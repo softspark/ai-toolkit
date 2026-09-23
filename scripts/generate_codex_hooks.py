@@ -66,6 +66,7 @@ SUPPORTED_EVENTS = frozenset(
         "SubagentStart",
         "SubagentStop",
         "Stop",
+        "Interrupt",
     }
 )
 
@@ -80,6 +81,9 @@ HANDLER_KEYS = frozenset(
         "additionalContextLimit",
         "async",
     }
+)
+MCP_HANDLER_KEYS = frozenset(
+    {"type", "server", "tool", "input", "timeout", "statusMessage"}
 )
 
 # Format: event -> (matcher, executable asset). Empty matchers are omitted.
@@ -97,6 +101,13 @@ CODEX_HOOKS: dict[str, list[tuple[str, str]]] = {
     "PostToolUse": [
         ("Bash", "governance-capture.sh"),
         ("Bash", "loop-guard.sh"),
+        (
+            (
+                "^mcp__.*__(smart_query|hybrid_search_kb|crag_search|"
+                "multi_hop_search|verify_answer)$"
+            ),
+            "search-tracker.sh",
+        ),
     ],
     "PermissionRequest": [
         ("Bash", "guard-destructive.sh"),
@@ -136,8 +147,8 @@ HELPER_ASSETS = frozenset(
 )
 
 CODEX_STOP_SEARCH_ADAPTER = r"""#!/usr/bin/env bash
-# Convert the shared Stop search guard's legacy decision object into Codex's
-# documented Stop output fields.
+# Normalize the shared search guard to Codex's continuation decision. Using
+# continue:false would stop the turn instead of asking it to perform the search.
 INPUT=$(cat)
 OUTPUT=$(printf '%s' "$INPUT" | "$(dirname "$0")/stop-search-check.sh")
 STATUS=$?
@@ -146,7 +157,7 @@ STATUS=$?
 if printf '%s' "$OUTPUT" | jq -e '.decision == "block"' >/dev/null 2>&1; then
     REASON=$(printf '%s' "$OUTPUT" | jq -r '.reason // "Hook requested another turn."')
     jq -nc --arg reason "$REASON" \
-        '{"continue":false,"stopReason":$reason,"systemMessage":$reason}'
+        '{"decision":"block","reason":$reason}'
 else
     printf '%s\n' "$OUTPUT"
 fi
@@ -344,13 +355,12 @@ def _validate_matcher_group(event: str, group: Any) -> None:
     if matcher is not None:
         if not isinstance(matcher, str):
             raise ValueError(f"Codex {event} matcher must be a string")
-        re.compile(matcher)
-    if event in {"UserPromptSubmit", "Stop"} and "matcher" in group:
-        raise ValueError(f"Codex {event} does not support matchers")
+        if event not in {"UserPromptSubmit", "Stop", "Interrupt"} and matcher != "*":
+            re.compile(matcher)
 
     handlers = group["hooks"]
     if not isinstance(handlers, list) or not handlers:
-        raise ValueError(f"Codex {event} matcher group must have command handlers")
+        raise ValueError(f"Codex {event} matcher group must have handlers")
     for handler in handlers:
         _validate_handler(event, handler)
 
@@ -358,31 +368,49 @@ def _validate_matcher_group(event: str, group: Any) -> None:
 def _validate_handler(event: str, handler: Any) -> None:
     if not isinstance(handler, dict):
         raise ValueError(f"Codex {event} handler must be an object")
-    unknown = set(handler) - HANDLER_KEYS
+    handler_type = handler.get("type")
+    allowed = MCP_HANDLER_KEYS if handler_type == "mcp_tool" else HANDLER_KEYS
+    unknown = set(handler) - allowed
     if unknown:
         raise ValueError(f"Unknown Codex {event} handler keys: {sorted(unknown)}")
-    command = handler.get("command")
-    if (
-        handler.get("type") != "command"
-        or not isinstance(command, str)
-        or not command.strip()
-    ):
-        raise ValueError(f"Codex {event} supports executable command handlers only")
+    if handler_type == "command":
+        _validate_command_handler(event, handler)
+    elif handler_type == "mcp_tool":
+        _validate_mcp_handler(event, handler)
+    else:
+        raise ValueError(f"Codex {event} supports command and mcp_tool handlers only")
     if "timeout" in handler:
         timeout = handler["timeout"]
         if type(timeout) is not int or timeout <= 0:
             raise ValueError(f"Codex {event} timeout must be a positive integer")
-        if event == "SessionEnd" and timeout > 3:
-            raise ValueError("Codex SessionEnd timeout cannot exceed 3 seconds")
+        if event in {"SessionEnd", "Interrupt"} and timeout > 3:
+            raise ValueError(f"Codex {event} timeout cannot exceed 3 seconds")
+    if "statusMessage" in handler and not isinstance(handler["statusMessage"], str):
+        raise ValueError(f"Codex {event} statusMessage must be a string")
+
+
+def _validate_mcp_handler(event: str, handler: dict[str, Any]) -> None:
+    if event == "SessionEnd":
+        raise ValueError("Codex SessionEnd does not support mcp_tool handlers")
+    for key in ("server", "tool"):
+        if not isinstance(handler.get(key), str) or not handler[key].strip():
+            raise ValueError(f"Codex {event} mcp_tool {key} must be a non-empty string")
+    if "input" in handler and not isinstance(handler["input"], dict):
+        raise ValueError(f"Codex {event} mcp_tool input must be an object")
+
+
+def _validate_command_handler(event: str, handler: dict[str, Any]) -> None:
+    command = handler.get("command")
+    if not isinstance(command, str) or not command.strip():
+        raise ValueError(f"Codex {event} command must be a non-empty string")
     if "additionalContextLimit" in handler:
         context_limit = handler["additionalContextLimit"]
         if type(context_limit) is not int or context_limit < 0:
             raise ValueError(
                 f"Codex {event} additionalContextLimit must be a non-negative integer"
             )
-    for key in ("commandWindows", "statusMessage"):
-        if key in handler and not isinstance(handler[key], str):
-            raise ValueError(f"Codex {event} {key} must be a string")
+    if "commandWindows" in handler and not isinstance(handler["commandWindows"], str):
+        raise ValueError(f"Codex {event} commandWindows must be a string")
     if "async" in handler and not isinstance(handler["async"], bool):
         raise ValueError(f"Codex {event} async must be boolean")
 

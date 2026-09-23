@@ -7,9 +7,46 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v4.38.0 - Editor compatibility refresh (2026-09-23)
+
+Minor release. Updates Codex, GitHub Copilot and Claude contracts after a
+source-backed review of all 14 integrations. Existing compatibility paths remain
+available. Skills: 116; agents: 44; Bats tests: 2035 → 2059.
+
+### Ecosystem
+
+- **Codex plugins (class B)**: Added portable root `plugin.json` alongside the
+  existing `.codex-plugin/plugin.json` compatibility manifest. Export verification
+  checks that the two manifests agree.
+- **Codex hooks (classes B/F)**: Added preservation of `mcp_tool` and `Interrupt`
+  handlers and ignored matchers. Fixed Stop continuation decisions and connected
+  MCP searches to the native search tracker in `scripts/generate_codex_hooks.py`.
+- **GitHub Copilot (classes B/F)**: Preserved skill invocation controls, corrected
+  the custom-agent character limit, and adapted permission/context/Stop responses
+  for both CLI and VS Code in the Copilot generators.
+- **Claude (classes B/F)**: Added model-switch hook schema support, corrected MCP
+  hook and skill metadata, and diagnosed account-synced plugin collisions without
+  automatically disabling organization-required plugins.
+- **Cursor (class B)**: Fixed successful permission hooks to return explicit
+  allow JSON while retaining destructive-command and wrong-home denials.
+- **Devin/Windsurf (class D)**: Added a workflow-deprecation notice while retaining
+  compatibility output. Refreshed secondary-tool sources, review dispositions and
+  all ecosystem snapshots. Cline's upstream reference still labels TaskComplete
+  and PreCompact as coming soon; emitted files do not guarantee event availability.
+
+### Verification
+
+- **Regression coverage**: Added native payload, merge-preservation, package
+  manifest, synced-plugin and removal tests; 2059 Bats and 436 Python tests pass.
+- **Permission review**: No new skill permission grants; the broad-access skill
+  inventory remains 14. Skill body thresholds stay unchanged: the largest body
+  is 17197 bytes against the 18000-byte warning threshold.
 
 ### Changed
+
+- **Plugin removal**: Fixed empty shared-script directories left after the final
+  Cursor/Gemini consumer removes a pack, including `--editor all`. Cleanup runs
+  after transaction commit and preserves user files, caches and replaced paths.
 
 - **Constitution Article V.3, Stop Finished Agents** — a background or
   teammate agent is stopped (Claude Code: `TaskStop`) as soon as the
