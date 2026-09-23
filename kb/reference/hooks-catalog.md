@@ -312,7 +312,7 @@ edit-state cleanup still run.
 | Matcher | *(all)* |
 | Fires | Agent Teams teammate going idle |
 
-**Action:** Reminds teammate to verify: files modified, tests written, docs updated.
+**Action:** Reminds teammate to verify: files modified, tests written, docs updated. Reminds the coordinator to stop the agent (`TaskStop`) once it has the agent's final report, unless more work will be sent to it (constitution Article V.3).
 
 ---
 

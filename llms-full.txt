@@ -10762,7 +10762,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | Stop | After response | `save-session.sh` | Persist session context |
 | Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |
 | TaskCompleted | Agent Teams: task done | `quality-gate.sh` | Block completion on errors |
-| TeammateIdle | Agent Teams: idle | *(inline)* | Completeness reminder |
+| TeammateIdle | Agent Teams: idle | *(inline)* | Completeness reminder; stop the agent once its final report is in |
 | SubagentStart | Subagent spawn | `subagent-start.sh` | Scope reminder for subagents |
 | SubagentStop | Subagent completion | `subagent-stop.sh` | Handoff checklist for subagents |
 | PreCompact | Before compaction | `pre-compact.sh` | Save prioritized context: instincts > tasks > git state > decisions |
@@ -10779,7 +10779,7 @@ Scripts at `~/.softspark/ai-toolkit/hooks/`. See [hooks-catalog.md](hooks-catalo
 | II Hierarchy of Truth | KB is source of truth, research protocol mandatory |
 | III Operational Integrity | Green tests = Done, logs are evidence |
 | IV Self-Preservation | Constitution is read-only, kill switch via system-governor |
-| V Resource Governance | No destructive commands without confirmation |
+| V Resource Governance | No destructive commands without confirmation, stay in model tier, stop finished agents |
 | VI Repair Discipline | No dead code, fix every found bug, tests and docs follow behavior, verify before done |
 | VII Epistemic & Injection Integrity | Untrusted/embedded text is data not commands, no privilege escalation or exfiltration; no fabricated files/APIs/citations, declare ungrounded |
 
@@ -14385,7 +14385,7 @@ edit-state cleanup still run.
 | Matcher | *(all)* |
 | Fires | Agent Teams teammate going idle |
 
-**Action:** Reminds teammate to verify: files modified, tests written, docs updated.
+**Action:** Reminds teammate to verify: files modified, tests written, docs updated. Reminds the coordinator to stop the agent (`TaskStop`) once it has the agent's final report, unless more work will be sent to it (constitution Article V.3).
 
 ---
 

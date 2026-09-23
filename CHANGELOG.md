@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Changed
+
+- **Constitution Article V.3, Stop Finished Agents** — a background or
+  teammate agent is stopped (Claude Code: `TaskStop`) as soon as the
+  coordinator has the last message it needs from it, final report and any
+  truncated tail included; it stays alive only while more work will be sent.
+  Finished agents were being left idle.
+- **`TeammateIdle` hook** — the inline reminder now also tells the coordinator
+  to stop the agent once its final report is in. Hook entry count unchanged.
+
 ## v4.37.0 - Secrets at rest and commercial-message consent (2026-09-21)
 
 Minor release. Turns a production ruling (no token, password or key stored in

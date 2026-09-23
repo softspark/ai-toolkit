@@ -72,7 +72,7 @@ Each teammate MUST own distinct file paths:
 
 Hooks in `.claude/hooks.json` auto-enforce quality:
 - `TaskCompleted`: Runs `ruff check` before allowing task completion
-- `TeammateIdle`: Verifies assigned files were actually modified
+- `TeammateIdle`: Verifies assigned files were actually modified, and reminds you to stop (`TaskStop`) an agent once you have its final report (constitution Article V.3)
 
 ### Completion Protocol
 

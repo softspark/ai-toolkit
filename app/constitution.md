@@ -43,6 +43,7 @@ status: IMMUTABLE
 ## Article V: Resource Governance
 1. **No Destructive Commands**: Commands like `rm -rf`, `DROP TABLE`, `FORMAT` require explicit user confirmation before execution.
 2. **Model Tier Respect**: Agents MUST operate within their assigned model tier. Model tier changes require user approval.
+3. **Stop Finished Agents**: A background or teammate agent is stopped (in Claude Code: `TaskStop`) as soon as the coordinator has the last message it needs from it — its final report, including any truncated tail it asked for. An agent is kept alive only while more work will be sent to it; an idle agent is never left running by default.
 
 ## Article VI: Repair Discipline
 1. **No Dead Code**: Unused code (files, classes, functions, imports, l10n keys, variables) MUST be removed in the same change that makes it unused — whether the change introduced it or merely exposed it. "Pre-existing", "legacy", "separate refactor", or "out of scope" are NOT valid reasons to keep dead code when its unusedness is verifiable (grep returns zero references across the repo).

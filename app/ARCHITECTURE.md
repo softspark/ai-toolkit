@@ -346,7 +346,7 @@ Lead Session (You)
 | `Stop` | After Claude response | Multi-language quality check + saves session context |
 | `Stop` | After Claude response | Blocks skipped search-first only when a real MCP/Web search provider is configured, with Codex log fallback |
 | `TaskCompleted` | Teammate marks task done | Multi-language lint + type check (blocking) |
-| `TeammateIdle` | Teammate goes idle | Reminds to verify completeness |
+| `TeammateIdle` | Teammate goes idle | Reminds to verify completeness and to stop the agent once its final report is in |
 | `SubagentStart` | Subagent starts | Scope reminder for spawned subagents |
 | `SubagentStop` | Subagent completes | Handoff checklist for spawned subagents |
 | `Notification` | Claude notification | OS notification |
