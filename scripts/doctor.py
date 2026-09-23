@@ -773,7 +773,10 @@ def _registered_toolkit_plugins(registry: dict) -> list[str]:
     plugins = registry.get("plugins", {})
     if not isinstance(plugins, dict):
         return []
-    return [key for key in plugins if str(key).split("@", 1)[0] == "ai-toolkit"]
+    return [
+        key for key in plugins
+        if str(key).split("@", 1)[0] == "ai-toolkit" and key != "ai-toolkit@synced"
+    ]
 
 
 def _registered_plugin_versions(registry: dict, keys: list[str]) -> dict[str, str]:
@@ -838,6 +841,47 @@ def disable_toolkit_plugins_for_claude_code() -> list[str]:
     return active
 
 
+def _synced_toolkit_manifest_exists() -> bool:
+    """Find a toolkit manifest without assuming the account cache layout."""
+    root = CLAUDE_DIR / "plugins" / "synced"
+    if not root.is_dir() or root.is_symlink():
+        return False
+    for path in root.rglob(".claude-plugin/plugin.json"):
+        try:
+            path.resolve().relative_to(root.resolve())
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(manifest, dict) and manifest.get("name") == "ai-toolkit":
+            return True
+    return False
+
+
+def _check_synced_plugin_double_load(dr: DiagResult) -> bool:
+    """Account cache is evidence of a potential collision, not runtime state."""
+    if not _synced_toolkit_manifest_exists():
+        return False
+    try:
+        settings = json.loads((CLAUDE_DIR / "settings.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        settings = {}
+    if not isinstance(settings, dict):
+        settings = {}
+    enabled = settings.get("enabledPlugins", {})
+    disabled = isinstance(enabled, dict) and enabled.get("ai-toolkit@synced") is False
+    if disabled or settings.get("syncClaudeAiPlugins") is False:
+        dr.skip("ai-toolkit@synced has a disabled user preference; verify effective "
+                "state with `claude plugin list` (organization policy is not inspected)")
+    elif _installed_toolkit_hook_count(settings)[0] == 0:
+        dr.ok("ai-toolkit@synced cache found without global hooks")
+    else:
+        dr.warn("ai-toolkit@synced cache found next to global hooks: potential double-load; "
+                "confirm with `claude plugin list`. For an optional plugin, run "
+                "`claude plugin disable ai-toolkit@synced`; an organization-required "
+                "plugin needs an administrator decision (--fix does not change synced plugins)")
+    return True
+
+
 def check_plugin_double_load(dr: DiagResult, fix_mode: bool) -> None:
     """Warn when the Claude app plugin and the global install both feed Claude Code.
 
@@ -850,8 +894,10 @@ def check_plugin_double_load(dr: DiagResult, fix_mode: bool) -> None:
     print()
     print("## 11. Plugin Double-Load")
 
+    found_synced = _check_synced_plugin_double_load(dr)
     if not PLUGIN_REGISTRY.is_file():
-        dr.skip("no Claude Code plugin registry")
+        if not found_synced:
+            dr.skip("no Claude Code plugin registry")
         return
     try:
         registry = json.loads(PLUGIN_REGISTRY.read_text(encoding="utf-8"))

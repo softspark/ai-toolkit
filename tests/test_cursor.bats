@@ -275,6 +275,79 @@ PY
     rm -rf "$tmp"
 }
 
+@test "cursor hooks: permission events explicitly allow ordinary native requests" {
+    python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$BATS_TEST_TMPDIR" >/dev/null
+    run python3 - "$BATS_TEST_TMPDIR" <<'PY'
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+root = Path(sys.argv[1])
+hooks = json.loads((root / ".cursor/hooks.json").read_text())["hooks"]
+requests = {
+    "beforeShellExecution": {"command": "git status --short"},
+    "preToolUse": {"tool_name": "Shell", "tool_input": {"command": "git status --short"}},
+    "beforeReadFile": {"file_path": str(root / "README.md")},
+    "beforeTabFileRead": {"file_path": str(root / "README.md")},
+    "beforeMCPExecution": {"tool_name": "search", "tool_input": "{}"},
+    "subagentStart": {"subagent_type": "explore", "task": "Read the README"},
+}
+for event, payload in requests.items():
+    payload["hook_event_name"] = event
+    result = subprocess.run(
+        ["sh", "-c", hooks[event][0]["command"]], cwd=root,
+        input=json.dumps(payload), text=True, capture_output=True, check=False,
+    )
+    assert result.returncode == 0, (event, result.stderr)
+    assert json.loads(result.stdout) == {"permission": "allow"}, (event, result.stdout)
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "cursor hooks: native preToolUse still denies destructive shell input" {
+    python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$BATS_TEST_TMPDIR" >/dev/null
+    run python3 "$BATS_TEST_TMPDIR/.cursor/hooks/ai-toolkit/cursor_hook.py" pre-tool-use <<'JSON'
+{"tool_name":"Shell","tool_input":{"command":"rm -rf /tmp/unsafe-cursor-test"}}
+JSON
+    [ "$status" -eq 2 ]
+    python3 - "$output" <<'PY'
+import json
+import sys
+
+assert json.loads(sys.argv[1])["permission"] == "deny"
+PY
+}
+
+@test "cursor hooks: permission events deny paths belonging to another home" {
+    python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$BATS_TEST_TMPDIR" >/dev/null
+    run python3 - "$BATS_TEST_TMPDIR" <<'PY'
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+root = Path(sys.argv[1])
+hooks = json.loads((root / ".cursor/hooks.json").read_text())["hooks"]
+foreign_path = str(Path("/home") / (Path.home().name + "-other") / "README.md")
+requests = {
+    "preToolUse": {"tool_name": "Read", "tool_input": {"file_path": foreign_path}},
+    "beforeReadFile": {"file_path": foreign_path},
+    "beforeTabFileRead": {"file_path": foreign_path},
+}
+for event, payload in requests.items():
+    result = subprocess.run(
+        ["sh", "-c", hooks[event][0]["command"]], cwd=root,
+        input=json.dumps(payload), text=True, capture_output=True, check=False,
+    )
+    assert result.returncode == 2, (event, result.stderr)
+    response = json.loads(result.stdout)
+    assert response["permission"] == "deny", (event, response)
+    assert "active home" in response["user_message"], response
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "cursor hooks: observational conversation events are fail-open and silent" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$tmp" >/dev/null

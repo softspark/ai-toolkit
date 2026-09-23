@@ -27,6 +27,7 @@ expected = frozenset({
     'MessageDisplay', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure',
     'PostToolBatch', 'Stop', 'StopFailure', 'UserPromptExpansion',
     'SubagentStart', 'SubagentStop', 'PreCompact', 'PostCompact',
+    'PreModelSwitch', 'PostModelSwitch',
     'PermissionRequest', 'PermissionDenied', 'Elicitation',
     'ElicitationResult', 'TaskCreated', 'TaskCompleted', 'TeammateIdle',
     'WorktreeCreate', 'WorktreeRemove', 'CwdChanged', 'FileChanged',
@@ -69,7 +70,7 @@ print('ok')
 
 @test "hook-creator SKILL.md documents the new hook events added in Claude Code 2.1.x" {
     skill="$TOOLKIT_DIR/app/skills/hook-creator/SKILL.md"
-    for ev in MessageDisplay DirectoryAdded StopFailure PostCompact PermissionDenied Elicitation ElicitationResult TaskCreated WorktreeCreate WorktreeRemove CwdChanged FileChanged ConfigChange InstructionsLoaded; do
+    for ev in MessageDisplay DirectoryAdded StopFailure PostCompact PreModelSwitch PostModelSwitch PermissionDenied Elicitation ElicitationResult TaskCreated WorktreeCreate WorktreeRemove CwdChanged FileChanged ConfigChange InstructionsLoaded; do
         grep -q "\`${ev}\`" "$skill" || { echo "Missing \`${ev}\` row in hook-creator/SKILL.md" >&2; return 1; }
     done
 }
@@ -109,7 +110,7 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
-@test "claude-code: prompt and agent hook types share the exact supported event set" {
+@test "claude-code: PermissionRequest permits prompt hooks but rejects agent hooks" {
     run python3 -c "
 import contextlib
 import io
@@ -124,20 +125,64 @@ expected = frozenset({
     'UserPromptSubmit',
 })
 assert HOOK_TYPE_EVENTS['prompt'] == expected
-assert HOOK_TYPE_EVENTS['agent'] == expected
+assert HOOK_TYPE_EVENTS['agent'] == expected - {'PermissionRequest'}
 
-for hook_type, event in (('agent', 'PreToolUse'), ('prompt', 'TaskCreated')):
+for hook_type, event in (('agent', 'PreToolUse'), ('prompt', 'TaskCreated'), ('prompt', 'PermissionRequest')):
     valid = ValidationResult()
     _validate_hook_handler(event, {'type': hook_type, 'prompt': 'Check \$ARGUMENTS'}, valid)
     assert valid.errors == 0
 
-for hook_type in ('prompt', 'agent'):
+for hook_type, event in (('prompt', 'SessionStart'), ('agent', 'SessionStart'), ('agent', 'PermissionRequest')):
     invalid = ValidationResult()
     with contextlib.redirect_stdout(io.StringIO()):
-        _validate_hook_handler('SessionStart', {'type': hook_type, 'prompt': 'No'}, invalid)
+        _validate_hook_handler(event, {'type': hook_type, 'prompt': 'No'}, invalid)
     assert invalid.errors == 1
 print('ok')
 "
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
+@test "claude-code: hook manifest validates model switches and optional MCP input" {
+    run python3 - "$TOOLKIT_DIR/scripts" <<'PY'
+import contextlib
+import io
+import json
+import sys
+import tempfile
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from validate import ValidationResult, validate_hook_events
+
+def validate(handler, event):
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / 'app').mkdir()
+        (root / 'app/hooks.json').write_text(json.dumps({
+            'hooks': {event: [{'hooks': [handler]}]},
+        }))
+        result = ValidationResult()
+        with contextlib.redirect_stdout(io.StringIO()):
+            validate_hook_events(root, result)
+        return result.errors
+
+for event in ('PreModelSwitch', 'PostModelSwitch'):
+    for handler in (
+        {'type': 'command', 'command': 'echo reviewed'},
+        {'type': 'http', 'url': 'https://hooks.example.test'},
+        {'type': 'mcp_tool', 'server': 'policy', 'tool': 'check'},
+        {'type': 'mcp_tool', 'server': 'policy', 'tool': 'check', 'input': {'model': '${to_model}'}},
+    ):
+        assert validate(handler, event) == 0, (event, handler)
+    for kind in ('agent', 'prompt'):
+        assert validate({'type': kind, 'prompt': 'Check policy'}, event) == 1
+
+base = {'type': 'mcp_tool', 'server': 'policy', 'tool': 'check'}
+assert validate({**base, 'arguments': {}}, 'PreToolUse') == 1
+assert validate({**base, 'input': []}, 'PreToolUse') == 1
+assert validate({'type': 'mcp_tool', 'server': 'policy'}, 'PreToolUse') == 1
+print('ok')
+PY
     [ "$status" -eq 0 ]
     [ "$output" = "ok" ]
 }
@@ -177,13 +222,17 @@ print('ok')
 
 # ── skill-creator frontmatter reference ─────────────────────────────────────
 
-@test "skill-creator SKILL.md references the new frontmatter fields Claude Code accepts" {
+@test "skill-creator documents skill tool permissions separately from agent frontmatter" {
     skill="$TOOLKIT_DIR/app/skills/skill-creator/SKILL.md"
     # xhigh effort level (Opus 4.7) — plain string, not backticked.
     grep -q 'xhigh' "$skill" || { echo "Missing xhigh effort level" >&2; return 1; }
     # Field names in the frontmatter reference table are backticked.
-    for field in 'disallowedTools' 'memory' 'skills' 'maxTurns'; do
+    for field in 'disallowed-tools' 'arguments' 'when_to_use' 'paths' 'background'; do
         grep -q "\`${field}\`" "$skill" || { echo "Missing \`${field}\` row in skill-creator/SKILL.md" >&2; return 1; }
+    done
+    grep -q 'Pre-approve tools for the invoking turn' "$skill"
+    for field in disallowedTools memory skills maxTurns; do
+        ! grep -q "^| \`${field}\` |" "$skill"
     done
 }
 

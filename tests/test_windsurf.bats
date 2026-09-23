@@ -80,6 +80,14 @@ teardown_file() {
     [ -d "$WS_TMP/.windsurf/workflows" ]
 }
 
+@test "windsurf: workflow generation reports upstream skill migration" {
+    run python3 "$TOOLKIT_DIR/scripts/generate_windsurf_rules.py" "$BATS_TEST_TMPDIR"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"workflows are deprecated in favor of skills"* ]]
+    [ -d "$BATS_TEST_TMPDIR/.devin/workflows" ]
+    [ -d "$BATS_TEST_TMPDIR/.windsurf/workflows" ]
+}
+
 @test "windsurf: at least 10 workflow files are emitted" {
     count=$(ls "$WS_TMP/.windsurf/workflows"/ai-toolkit-*.md 2>/dev/null | wc -l | xargs)
     [ "$count" -ge 10 ]

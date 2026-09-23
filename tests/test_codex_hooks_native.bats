@@ -46,7 +46,7 @@ from generate_codex_hooks import SUPPORTED_EVENTS
 supported = {
     "PreToolUse", "PostToolUse", "PermissionRequest", "PreCompact",
     "PostCompact", "SessionStart", "UserPromptSubmit", "SubagentStart",
-    "SubagentStop", "Stop", "SessionEnd",
+    "SubagentStop", "Stop", "SessionEnd", "Interrupt",
 }
 assert SUPPORTED_EVENTS == supported, SUPPORTED_EVENTS
 data = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
@@ -56,7 +56,7 @@ assert "PostCompact" not in data["hooks"]
 for event, groups in data["hooks"].items():
     for group in groups:
         assert set(group) in ({"hooks"}, {"matcher", "hooks"}), (event, group)
-        if event in {"PreToolUse", "PostToolUse", "PermissionRequest"}:
+        if event in {"PreToolUse", "PermissionRequest"}:
             assert group.get("matcher") == "Bash", (event, group)
         if event in {"UserPromptSubmit", "Stop"}:
             assert "matcher" not in group, (event, group)
@@ -859,7 +859,188 @@ PY
     [ "$status" -eq 0 ]
 }
 
-@test "codex-hooks-native: validator enforces the current command-only schema" {
+@test "codex-hooks-native: generation preserves MCP handlers, wildcard matchers, and Interrupt hooks" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_ROOT" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_codex_hooks import generate
+
+project = Path(sys.argv[2])
+hooks_path = project / ".codex/hooks.json"
+hooks_path.parent.mkdir()
+mcp_group = {"matcher": "*", "hooks": [{
+    "type": "mcp_tool", "server": "scanner", "tool": "scan_patch",
+    "input": {"patch": "${tool_input.command}", "nested": [True, {"count": 3}]},
+    "timeout": 30, "statusMessage": "Scanning edited files",
+}]}
+interrupt_group = {"hooks": [{
+    "type": "command", "command": "echo '{}'", "timeout": 3, "async": True,
+}]}
+original = {"hooks": {"PostToolUse": [mcp_group], "Interrupt": [interrupt_group]}}
+hooks_path.write_text(json.dumps(original), encoding="utf-8")
+generate(project)
+generated = json.loads(hooks_path.read_text(encoding="utf-8"))
+assert generated["hooks"]["PostToolUse"][0] == mcp_group
+assert generated["hooks"]["Interrupt"] == [interrupt_group]
+generate(project)
+assert json.loads(hooks_path.read_text(encoding="utf-8")) == generated
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-hooks-native: preserves ignored string matchers without compiling them" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_ROOT" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_codex_hooks import generate
+
+project = Path(sys.argv[2])
+hooks_path = project / ".codex/hooks.json"
+hooks_path.parent.mkdir()
+original = {"hooks": {
+    event: [{"matcher": matcher, "hooks": [{
+        "type": "command", "command": "echo '{}'", "timeout": 1,
+    }]}]
+    for event, matcher in (
+        ("Interrupt", "*"), ("Stop", "[ignored"), ("UserPromptSubmit", "*ignored"),
+    )
+}}
+hooks_path.write_text(json.dumps(original), encoding="utf-8")
+generate(project)
+generated = json.loads(hooks_path.read_text(encoding="utf-8"))
+for event, groups in original["hooks"].items():
+    assert generated["hooks"][event][0] == groups[0], generated
+generate(project)
+assert json.loads(hooks_path.read_text(encoding="utf-8")) == generated
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-hooks-native: invalid MCP or Interrupt definitions leave the installation untouched" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_ROOT" <<'PY'
+import copy
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from generate_codex_hooks import generate
+
+project = Path(sys.argv[2])
+hooks_path = project / ".codex/hooks.json"
+hooks_path.parent.mkdir()
+valid = {"type": "mcp_tool", "server": "scanner", "tool": "scan_patch"}
+invalid = [
+    ("PostToolUse", {**valid, key: value})
+    for key, value in [
+        ("server", ""), ("server", True), ("tool", " "), ("tool", None),
+        ("input", []), ("input", None), ("async", True), ("command", "echo hi"),
+        ("timeout", True), ("additionalContextLimit", 5), ("statusMessage", 1),
+    ]
+]
+invalid += [
+    ("SessionEnd", valid),
+    ("Interrupt", {"type": "command", "command": "echo '{}'", "timeout": 4}),
+]
+for event, handler in invalid:
+    original = json.dumps({"hooks": {event: [{"hooks": [copy.deepcopy(handler)]}]}})
+    hooks_path.write_text(original, encoding="utf-8")
+    try:
+        generate(project)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError((event, handler))
+    assert hooks_path.read_text(encoding="utf-8") == original
+    assert not (project / ".codex/hooks").exists()
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-hooks-native: Stop search guard requests continuation and remains one-shot" {
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_hooks.py" "$TEST_ROOT" >/dev/null
+    run python3 - "$TEST_ROOT" <<'PY'
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+project = Path(sys.argv[1])
+home = project / "test-home"
+state = home / ".softspark/ai-toolkit/state"
+state.mkdir(parents=True)
+flag = state / "search-required-codex-test.flag"
+flag.write_text("0\nInvestigate the generator\n", encoding="utf-8")
+env = {
+    **os.environ, "HOME": str(home), "CODEX_HOME": str(home / ".codex"),
+    "AI_TOOLKIT_SEARCH_FIRST": "strict", "CLAUDE_SKIP_SEARCH_FIRST": "0",
+    "TOOLKIT_HOOK_PROFILE": "standard", "AI_TOOLKIT_DISABLED_HOOKS": "",
+    "AI_TOOLKIT_HOOK_FORMAT": "json",
+}
+command = [str(project / ".codex/hooks/codex-stop-search-check.sh")]
+payload = json.dumps({"session_id": "codex-test", "hook_event_name": "Stop"})
+result = subprocess.run(command, input=payload, env=env, text=True, capture_output=True, check=True)
+output = json.loads(result.stdout)
+assert set(output) == {"decision", "reason"}, output
+assert output["decision"] == "block", output
+assert "search tool" in output["reason"], output
+assert not flag.exists()
+repeated = subprocess.run(command, input=payload, env=env, text=True, capture_output=True, check=True)
+assert repeated.stdout == "", repeated
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-hooks-native: MCP search completion clears only its session flag before Stop" {
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_hooks.py" "$TEST_ROOT" >/dev/null
+    run python3 - "$TEST_ROOT" <<'PY'
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+project = Path(sys.argv[1])
+document = json.loads((project / ".codex/hooks.json").read_text())
+groups = document["hooks"]["PostToolUse"]
+search = [group for group in groups if "search-tracker.sh" in group["hooks"][0]["command"]]
+assert len(search) == 1, groups
+matcher = re.compile(search[0]["matcher"])
+for name in ("smart_query", "hybrid_search_kb", "crag_search", "multi_hop_search", "verify_answer"):
+    assert matcher.search(f"mcp__rag_mcp__{name}")
+for unrelated in ("Bash", "WebSearch", "mcp__files__get_document", "mcp__rag__smart_query_extra"):
+    assert not matcher.search(unrelated), unrelated
+home = project / "test-home"
+state = home / ".softspark/ai-toolkit/state"
+state.mkdir(parents=True)
+flag = state / "search-required-current.flag"
+other = state / "search-required-other.flag"
+flag.write_text("0\nquestion\n")
+other.write_text("0\nother question\n")
+env = {**os.environ, "HOME": str(home), "TOOLKIT_HOOK_PROFILE": "standard",
+       "AI_TOOLKIT_DISABLED_HOOKS": ""}
+result = subprocess.run(
+    [str(project / ".codex/hooks/search-tracker.sh")],
+    input=json.dumps({"session_id": "current", "hook_event_name": "PostToolUse",
+                      "tool_name": "mcp__rag_mcp__smart_query"}),
+    env=env, text=True, capture_output=True, check=True,
+)
+assert result.stdout == "", result
+assert not flag.exists()
+assert other.exists()
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-hooks-native: validator enforces the command handler schema" {
     run python3 - "$TOOLKIT_DIR" <<'PY'
 import copy
 import sys

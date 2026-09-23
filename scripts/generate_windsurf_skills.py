@@ -5,9 +5,10 @@
 
 """Generate a Devin/Windsurf skill pointer.
 
-Current Devin docs list ``.windsurf/skills/`` as a supported cross-tool skill
-path and do not list ``.devin/skills/``. Pass an explicit ``skill_root`` for a
-single alternate location (used by the legacy HOME-scoped Windsurf install).
+Current Devin docs support both ``.devin/skills/`` and ``.windsurf/skills/``.
+Keep one pointer under the latter so older Windsurf clients discover it too,
+without registering duplicate skills. Pass an explicit ``skill_root`` for a
+single alternate location (used by the HOME-scoped Windsurf install).
 """
 from __future__ import annotations
 

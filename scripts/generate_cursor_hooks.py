@@ -179,6 +179,7 @@ def _before_shell(payload: dict[str, Any]) -> None:
     reason = _destructive_reason(_command_text(payload))
     if reason:
         _deny(reason)
+    _emit({"permission": "allow"})
 
 
 def _pre_tool_use(payload: dict[str, Any]) -> None:
@@ -191,12 +192,14 @@ def _pre_tool_use(payload: dict[str, Any]) -> None:
         reason = _destructive_reason(_command_text(arguments))
     if reason:
         _deny(reason)
+    _emit({"permission": "allow"})
 
 
 def _before_read(payload: dict[str, Any]) -> None:
     reason = _wrong_home_reason(payload.get("file_path", payload))
     if reason:
         _deny(reason)
+    _emit({"permission": "allow"})
 
 
 def _quality_command(cwd: Path) -> tuple[str, list[str]] | None:
@@ -277,6 +280,8 @@ def main() -> None:
         _pre_tool_use(payload)
     elif action == "before-read":
         _before_read(payload)
+    elif action in {"before-mcp", "subagent-start"}:
+        _emit({"permission": "allow"})
     elif action == "stop":
         _stop(payload)
 

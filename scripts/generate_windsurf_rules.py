@@ -163,6 +163,11 @@ CONFIG_TREES: tuple[str, ...] = (".devin", ".windsurf")
 
 def _write_workflows(target_dir: Path, *, cleanup: bool = True) -> None:
     """Write ``workflows/*.md`` slash-command files to both config trees."""
+    print(
+        "  Compatibility: Devin workflows are deprecated in favor of skills; "
+        "retaining workflows for older clients. "
+        "See https://docs.devin.ai/desktop/changelog (2026-07-29)."
+    )
     for tree in CONFIG_TREES:
         workflows_dir = target_dir / tree / "workflows"
         workflows_dir.mkdir(parents=True, exist_ok=True)

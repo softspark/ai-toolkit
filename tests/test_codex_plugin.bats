@@ -36,6 +36,7 @@ archive = Path(sys.argv[1])
 package = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 with zipfile.ZipFile(archive) as plugin:
     names = set(plugin.namelist())
+    assert "plugin.json" in names
     assert ".codex-plugin/plugin.json" in names
     assert "skills/debug/SKILL.md" in names
     assert "hooks/hooks.json" in names
@@ -47,6 +48,13 @@ with zipfile.ZipFile(archive) as plugin:
     assert manifest["version"] == package["version"]
     assert manifest["skills"] == "./skills/"
     assert "hooks" not in manifest
+    portable = json.loads(plugin.read("plugin.json"))
+    assert portable["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+    assert portable["name"] == manifest["name"]
+    assert portable["version"] == package["version"]
+    assert "skills" not in portable
+    assert "interface" not in portable
+    assert portable["extensions"]["com.openai"] == {"interface": manifest["interface"]}
 PY
     [ "$status" -eq 0 ]
 }
@@ -305,6 +313,43 @@ assert any("default hooks/hooks.json" in error for error in errors), errors
 assert any("not executable" in error for error in errors), errors
 assert any("contains a symlink" in error for error in errors), errors
 assert any("differ from the canonical" in error for error in errors), errors
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "codex-plugin: portable manifest rejects invalid schema and diverging compatibility metadata" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_TMP" <<'PY'
+import copy
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import codex_plugin
+
+plugin = Path(sys.argv[2]) / "portable-plugin"
+codex_plugin.stage_plugin(plugin)
+manifest_path = plugin / "plugin.json"
+original = json.loads(manifest_path.read_text(encoding="utf-8"))
+assert codex_plugin.validate_staged_plugin(plugin) == []
+invalid = [
+    {"$schema": "https://example.invalid/schema.json"},
+    {"name": "different-plugin"},
+    {"version": "0.0.0"},
+    {"skills": "./other-skills/"},
+    {"extensions": {"com.openai": None}},
+    {"extensions": {"com.openai": {"hooks": "../outside.json"}}},
+]
+for change in invalid:
+    manifest = copy.deepcopy(original)
+    manifest.update(change)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    errors = codex_plugin.validate_staged_plugin(plugin)
+    assert any("portable plugin manifest" in error for error in errors), (change, errors)
+
+manifest_path.rename(plugin / "saved-manifest.json")
+errors = codex_plugin.validate_staged_plugin(plugin)
+assert "missing regular portable plugin manifest" in errors, errors
 PY
     [ "$status" -eq 0 ]
 }

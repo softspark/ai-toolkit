@@ -229,6 +229,49 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "copilot-hooks: VS Code payloads receive native decisions and scoped context" {
+    python3 "$TOOLKIT_DIR/scripts/generate_copilot_hooks.py" "$TEST_ROOT/project" >/dev/null
+    runtime="$TEST_ROOT/project/.github/hooks/ai-toolkit/copilot_hook.py"
+    run python3 - "$runtime" <<'PY'
+import json
+import subprocess
+import sys
+
+def invoke(action, event, **fields):
+    result = subprocess.run(
+        [sys.executable, sys.argv[1], action],
+        input=json.dumps({"hook_event_name": event, **fields}),
+        text=True, capture_output=True, check=True,
+    )
+    return json.loads(result.stdout) if result.stdout else {}
+
+for tool in ("run_in_terminal", "runTerminalCommand", "Bash"):
+    denied = invoke("pre-tool-use", "PreToolUse", tool_name=tool,
+                    tool_input={"command": "git reset --hard"})
+    assert denied["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert denied["permissionDecision"] == "deny"
+    assert denied["permissionDecisionReason"] == denied["hookSpecificOutput"]["permissionDecisionReason"]
+    assert denied["hookSpecificOutput"]["hookEventName"] == "PreToolUse"
+    assert not invoke("pre-tool-use", "PreToolUse", tool_name=tool,
+                      tool_input={"command": "git status"})
+for action, event, fields in (
+    ("session-start", "SessionStart", {}),
+    ("subagent-start", "SubagentStart", {}),
+    ("post-tool-use", "PostToolUse", {"tool_name": "replace_string_in_file"}),
+    ("post-tool-use", "PostToolUse", {"tool_name": "edit"}),
+    ("post-tool-use", "PostToolUse", {"tool_name": "create"}),
+    ("post-tool-use", "PostToolUse", {"tool_name": "Write"}),
+):
+    response = invoke(action, event, **fields)
+    output = response["hookSpecificOutput"]
+    assert output["hookEventName"] == event
+    assert output["additionalContext"]
+    assert response["additionalContext"] == output["additionalContext"]
+assert not invoke("post-tool-use", "PostToolUse", tool_name="read_file")
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "copilot-hooks: context events and failure event follow native output contracts" {
     python3 "$TOOLKIT_DIR/scripts/generate_copilot_hooks.py" "$TEST_ROOT/project" >/dev/null
     runtime="$TEST_ROOT/project/.github/hooks/ai-toolkit/copilot_hook.py"
@@ -286,6 +329,30 @@ for output in outputs[:2]:
     assert parsed["decision"] == "block"
     assert "fixture quality failure" in parsed["reason"]
 assert outputs[2] == ""
+payload = {"hook_event_name": "Stop", "session_id": "vscode-quality", "cwd": project}
+result = subprocess.run(
+    [sys.executable, runtime, "agent-stop"], input=json.dumps(payload),
+    text=True, capture_output=True, env=os.environ, check=True,
+)
+response = json.loads(result.stdout)
+decision = response["hookSpecificOutput"]
+assert decision["hookEventName"] == "Stop"
+assert decision["decision"] == "block"
+assert "fixture quality failure" in decision["reason"]
+assert response["decision"] == decision["decision"]
+assert response["reason"] == decision["reason"]
+payload["stop_hook_active"] = True
+result = subprocess.run(
+    [sys.executable, runtime, "agent-stop"], input=json.dumps(payload),
+    text=True, capture_output=True, env=os.environ, check=True,
+)
+assert result.stdout == "", result
+payload = {"sessionId": "cli-quality", "cwd": project, "stop_hook_active": True}
+result = subprocess.run(
+    [sys.executable, runtime, "agent-stop"], input=json.dumps(payload),
+    text=True, capture_output=True, env=os.environ, check=True,
+)
+assert result.stdout == "", result
 PY
     [ "$status" -eq 0 ]
 }

@@ -94,3 +94,97 @@ assert 'memory-pack' not in json.dumps(d.get('hooks', {}))"
     [ "$(_ownership)" = "claude" ]
     [ "$(_residue)" -eq 4 ]
 }
+
+@test "plugin remove all prunes the script directory after the last runtime" {
+    python3 "$TOOLKIT_DIR/scripts/plugin.py" install --editor all memory-pack >/dev/null 2>&1
+    run python3 "$TOOLKIT_DIR/scripts/plugin.py" remove --editor all memory-pack
+    [ "$status" -eq 0 ]
+    [ "$(_ownership)" = "none" ]
+    [ "$(_residue)" -eq 0 ]
+    [ ! -e "$SOFTSPARK_HOME/ai-toolkit/plugin-scripts/memory-pack" ]
+}
+
+@test "plugin Cursor and Gemini removal prune their final owned script directory" {
+    for editor in cursor gemini; do
+        python3 "$TOOLKIT_DIR/scripts/plugin.py" install --editor "$editor" memory-pack >/dev/null 2>&1
+        run python3 "$TOOLKIT_DIR/scripts/plugin.py" remove --editor "$editor" memory-pack
+        [ "$status" -eq 0 ]
+        [ ! -e "$SOFTSPARK_HOME/ai-toolkit/plugin-scripts/memory-pack" ]
+    done
+}
+
+@test "plugin JSON runtime removal retains user files and generated caches" {
+    python3 "$TOOLKIT_DIR/scripts/plugin.py" install --editor cursor memory-pack >/dev/null 2>&1
+    local scripts="$SOFTSPARK_HOME/ai-toolkit/plugin-scripts/memory-pack"
+    mkdir -p "$scripts/__pycache__"
+    printf 'user content\n' > "$scripts/notes.txt"
+    printf 'cache content\n' > "$scripts/__pycache__/example.pyc"
+    run python3 "$TOOLKIT_DIR/scripts/plugin.py" remove --editor cursor memory-pack
+    [ "$status" -eq 0 ]
+    [ ! -e "$scripts/init_db.py" ]
+    [ "$(cat "$scripts/notes.txt")" = "user content" ]
+    [ "$(cat "$scripts/__pycache__/example.pyc")" = "cache content" ]
+}
+
+@test "plugin JSON update failure preserves directory identity for outer rollback" {
+    python3 "$TOOLKIT_DIR/scripts/plugin.py" install --editor cursor memory-pack >/dev/null 2>&1
+    run python3 - "$TOOLKIT_DIR/scripts" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[1])
+import plugin
+
+scripts = plugin.TOOLKIT_DATA_DIR / 'plugin-scripts/memory-pack'
+before = {path.name: path.read_bytes() for path in scripts.iterdir()}
+identity = scripts.stat().st_ino
+state = plugin.PLUGINS_STATE_FILE.read_bytes()
+
+def fail_install(*args, **kwargs):
+    raise RuntimeError('injected install failure')
+
+plugin._install_pack_locked = fail_install
+try:
+    plugin.update_pack('memory-pack', 'cursor', force=True)
+except RuntimeError as error:
+    assert str(error) == 'injected install failure', error
+else:
+    raise AssertionError('update should fail')
+assert scripts.stat().st_ino == identity
+assert {path.name: path.read_bytes() for path in scripts.iterdir()} == before
+assert plugin.PLUGINS_STATE_FILE.read_bytes() == state
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "plugin postcommit pruning preserves a swapped script directory and symlink" {
+    run python3 - "$TOOLKIT_DIR/scripts" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[1])
+import plugin
+
+prune = plugin._prune_removed_script_directory
+for editor, symlink in (('cursor', False), ('gemini', True)):
+    assert plugin.install_pack('memory-pack', editor)
+    root = plugin.TOOLKIT_DATA_DIR / 'plugin-scripts/memory-pack'
+    saved = root.with_name('saved-' + editor)
+    target = root.with_name('user-' + editor)
+
+    def replace_before_pruning(transaction, plan, name):
+        root.rename(saved)
+        if symlink:
+            target.mkdir()
+            root.symlink_to(target, target_is_directory=True)
+        else:
+            root.mkdir()
+        prune(transaction, plan, name)
+
+    plugin._prune_removed_script_directory = replace_before_pruning
+    assert plugin.remove_pack('memory-pack', editor)
+    assert root.is_dir() and saved.is_dir()
+    assert root.is_symlink() == symlink
+    assert 'memory-pack' not in plugin._installed_for(plugin.load_state(), editor)
+    # Move the preserved replacement aside before the next independent case.
+    root.rename(root.with_name('preserved-' + editor))
+PY
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"WARN preserved plugin script directory"* ]]
+}

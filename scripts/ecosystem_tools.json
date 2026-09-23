@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-09-10",
+  "last_updated": "2026-09-23",
   "tools": [
     {
       "id": "claude-code",
@@ -35,7 +35,8 @@
         ".lsp.json",
         "monitors/monitors.json",
         "bin/*",
-        "settings.json"
+        "settings.json",
+        "~/.claude/plugins/synced/"
       ],
       "our_generators": [],
       "status_note": "Claude Code auto-discovers native plugin skills, commands, agents, workflows, output styles, themes, hooks, MCP servers, LSP servers, monitors, executables, and root settings. ai-toolkit's primary install emits its existing rules, skills, agents, and hooks; plugin workflows, output styles, themes, monitors, LSP servers, channels, and root plugin settings are recognized class C surfaces that ai-toolkit does not generate. Themes and monitors are experimental, and plugin settings support only agent and subagentStatusLine.",
@@ -89,11 +90,26 @@
         "hook handler: prompt",
         "hook handler: agent",
         "hook handler: mcp_tool",
-        "hook handler: http"
+        "hook handler: http",
+        "PreModelSwitch",
+        "PostModelSwitch"
       ],
       "version_probe": {
         "kind": "command",
         "command": "claude --version"
+      },
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "B",
+          "F"
+        ],
+        "note": "Accept model-switch hook events and current MCP input schema; correct skill metadata and recognize account-synced plugins.",
+        "sources": [
+          "https://code.claude.com/docs/en/hooks",
+          "https://code.claude.com/docs/en/skills",
+          "https://code.claude.com/docs/en/plugins-reference"
+        ]
       }
     },
     {
@@ -130,7 +146,18 @@
         "sub-agents",
         "MCP"
       ],
-      "version_probe": null
+      "version_probe": null,
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "F"
+        ],
+        "note": "Account plugins sync to Claude Code terminal sessions from 2.1.273. Manual app export/upload remains necessary. Initial doctor fetch returned HTTP 429; preserve last-known-good snapshot on fetch errors.",
+        "sources": [
+          "https://support.claude.com/en/articles/13837440-use-plugins-in-claude",
+          "https://code.claude.com/docs/en/plugins-reference#plugins-synced-from-claude-ai"
+        ]
+      }
     },
     {
       "id": "dsh",
@@ -180,6 +207,17 @@
       "version_probe": {
         "kind": "command",
         "command": "dsh --version"
+      },
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A",
+          "C"
+        ],
+        "note": "Reviewed the pinned release; keep explicit-preview selection and separately qualified package pins. No automatic migration to other prereleases.",
+        "sources": [
+          "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1"
+        ]
       }
     },
     {
@@ -234,7 +272,17 @@
         "skills",
         "plugins"
       ],
-      "version_probe": null
+      "version_probe": null,
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "B"
+        ],
+        "note": "Permission hooks must return valid JSON on success. Emit permission:allow for all six permission events, retaining destructive-command denials.",
+        "sources": [
+          "https://cursor.com/docs/hooks"
+        ]
+      }
     },
     {
       "id": "windsurf",
@@ -260,7 +308,9 @@
         "~/.codeium/windsurf/memories/global_rules.md",
         "~/.codeium/windsurf/skills/*/SKILL.md",
         "~/.codeium/windsurf/mcp_config.json",
-        "~/.codeium/windsurf/global_workflows/*.md"
+        "~/.codeium/windsurf/global_workflows/*.md",
+        ".devin/skills/*/SKILL.md",
+        "~/.config/devin/skills/*/SKILL.md"
       ],
       "our_generators": [
         "scripts/generate_windsurf.py",
@@ -268,7 +318,7 @@
         "scripts/generate_windsurf_skills.py",
         "scripts/generate_devin_hooks.py"
       ],
-      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary rules/workflows/hooks tree; legacy .windsurf rules remain a read fallback. Cascade and its .windsurf/hooks.json format ended on 2026-07-01, so ai-toolkit now emits only .devin/hooks.v1.json. Current Devin skill docs list eight scanned paths (.agents/skills recommended, plus .devin/skills, .github/skills, .claude/skills, .cursor/skills, .codex/skills, .cognition/skills, .windsurf/skills); ai-toolkit emits a single canonical pointer under .windsurf/skills and no longer also writes .devin/skills. Devin CLI also imports ~/.claude/settings.json hooks when read_config_from.claude is enabled.",
+      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary rules/workflows/hooks tree; legacy .windsurf rules remain a read fallback. Cascade and its .windsurf/hooks.json format ended on 2026-07-01, so ai-toolkit now emits only .devin/hooks.v1.json. Current Devin skill docs list project .agents/skills, .devin/skills and .windsurf/skills, and user ~/.agents/skills, ~/.config/devin/skills and ~/.codeium/<channel>/skills; ai-toolkit emits a single canonical pointer under .windsurf/skills and no longer also writes .devin/skills. Devin CLI also imports ~/.claude/settings.json hooks when read_config_from.claude is enabled.",
       "capability_markers": [
         "Cascade",
         "windsurfrules",
@@ -283,7 +333,21 @@
         "memories",
         "hooks"
       ],
-      "version_probe": null
+      "version_probe": null,
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A",
+          "C",
+          "D"
+        ],
+        "note": "Native Devin and compatibility skill locations remain supported. Workflows are deprecated in favor of skills; preserve compatible workflow output with a deprecation notice. Plugin marketplace and optional skill permission grants are not adopted.",
+        "sources": [
+          "https://docs.devin.ai/cli/extensibility/skills/overview",
+          "https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks",
+          "https://docs.devin.ai/desktop/changelog"
+        ]
+      }
     },
     {
       "id": "github-copilot",
@@ -327,9 +391,24 @@
         "MCP",
         "skills",
         "CLI hooks",
-        "~/.copilot/"
+        "~/.copilot/",
+        "user-invocable",
+        "disable-model-invocation"
       ],
-      "version_probe": null
+      "version_probe": null,
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "B",
+          "F"
+        ],
+        "note": "Preserve skill invocation controls; enforce custom-agent character limit; normalize VS Code hook payloads and decisions separately from CLI/cloud.",
+        "sources": [
+          "https://docs.github.com/en/copilot/reference/hooks-reference",
+          "https://code.visualstudio.com/docs/agent-customization/hooks",
+          "https://code.visualstudio.com/docs/agent-customization/agent-skills"
+        ]
+      }
     },
     {
       "id": "gemini-cli",
@@ -387,6 +466,17 @@
       "version_probe": {
         "kind": "command",
         "command": "gemini --version"
+      },
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A",
+          "C"
+        ],
+        "note": "Current hook reference still documents the existing eleven-event lifecycle. No Stop event or implicit migration to a different runtime. Optional extensions remain not adopted.",
+        "sources": [
+          "https://geminicli.com/docs/hooks/"
+        ]
       }
     },
     {
@@ -440,7 +530,21 @@
         "AGENTS.md",
         "plugins"
       ],
-      "version_probe": null
+      "version_probe": null,
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A",
+          "C"
+        ],
+        "note": "Refresh customization sources; native skills and SDK/CLI-only plugins retain their separate scopes. .clineignore deprecation does not affect toolkit output, which does not generate that file. The upstream repository confirms the executable-hook input/output schema, but still labels TaskComplete and PreCompact as coming soon; emitted files do not prove runtime event availability.",
+        "sources": [
+          "https://docs.cline.bot/customization/skills",
+          "https://docs.cline.bot/customization/plugins",
+          "https://docs.cline.bot/resources/deprecations",
+          "https://github.com/cline/cline/blob/main/.clinerules/hooks/README.md"
+        ]
+      }
     },
     {
       "id": "roo-code",
@@ -482,7 +586,17 @@
         "roleDefinition",
         "groups"
       ],
-      "version_probe": null
+      "version_probe": null,
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A"
+        ],
+        "note": "Zoo custom-mode schema remains compatible with current .roomodes output. Keep Roo compatibility paths and distinguish frozen Roo docs from the successor.",
+        "sources": [
+          "https://docs.zoocode.dev/features/custom-modes"
+        ]
+      }
     },
     {
       "id": "aider",
@@ -520,6 +634,16 @@
       "version_probe": {
         "kind": "command",
         "command": "aider --version"
+      },
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A"
+        ],
+        "note": "Configuration options still support read conventions and existing generated switches. No required output migration found in the options reference.",
+        "sources": [
+          "https://aider.chat/docs/config/options.html"
+        ]
       }
     },
     {
@@ -576,7 +700,18 @@
         "Notification",
         "ACP Mode"
       ],
-      "version_probe": null
+      "version_probe": null,
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A",
+          "C"
+        ],
+        "note": "Notification remains listed in the common event enum without a dedicated handler contract; do not wire a speculative event. Existing hook configuration remains supported.",
+        "sources": [
+          "https://docs.augmentcode.com/cli/hooks"
+        ]
+      }
     },
     {
       "id": "google-antigravity",
@@ -641,7 +776,17 @@
         "global agents",
         "serverUrl"
       ],
-      "version_probe": null
+      "version_probe": null,
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A"
+        ],
+        "note": "Official hook reference still specifies the existing five native events and camelCase payloads. Refresh snapshot and clarify that current docs can be read through the web index.",
+        "sources": [
+          "https://antigravity.google/docs/hooks"
+        ]
+      }
     },
     {
       "id": "codex-cli",
@@ -668,7 +813,8 @@
         ".codex-plugin/plugin.json",
         "hooks/hooks.json",
         "skills/*/SKILL.md",
-        ".agents/plugins/marketplace.json"
+        ".agents/plugins/marketplace.json",
+        "plugin.json"
       ],
       "our_generators": [
         "scripts/generate_codex.py",
@@ -703,11 +849,26 @@
         "hooks/hooks.json",
         "PLUGIN_ROOT",
         "/plugins",
-        "plugin marketplace"
+        "plugin marketplace",
+        "hook event: Interrupt",
+        "hook handler: mcp_tool",
+        "plugin.json"
       ],
       "version_probe": {
         "kind": "command",
         "command": "codex --version"
+      },
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "B",
+          "F"
+        ],
+        "note": "Add portable root plugin.json while retaining the Codex compatibility manifest. Accept Interrupt and mcp_tool configuration, wildcard matchers and current Stop continuation semantics; track native MCP searches.",
+        "sources": [
+          "https://developers.openai.com/plugins/build/plugins",
+          "https://learn.chatgpt.com/docs/hooks"
+        ]
       }
     },
     {
@@ -771,6 +932,18 @@
       "version_probe": {
         "kind": "command",
         "command": "opencode --version"
+      },
+      "documentation_review": {
+        "date": "2026-09-23",
+        "classes": [
+          "A",
+          "C"
+        ],
+        "note": "Stable skill discovery and tool/session plugin events remain supported. Keep stable generator; no speculative v2 API migration.",
+        "sources": [
+          "https://opencode.ai/docs/plugins/",
+          "https://opencode.ai/docs/skills/"
+        ]
       }
     }
   ]

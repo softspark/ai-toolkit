@@ -62,6 +62,8 @@ VALID_HOOK_EVENTS = frozenset(
         "SubagentStop",
         "PreCompact",
         "PostCompact",
+        "PreModelSwitch",
+        "PostModelSwitch",
         "PermissionRequest",
         "PermissionDenied",
         "Elicitation",

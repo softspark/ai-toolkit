@@ -3,9 +3,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-04-12"
-last_updated: "2026-09-21"
+last_updated: "2026-09-23"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -87,6 +87,7 @@ ai-toolkit codex-plugin verify
 The deterministic archive has this root layout:
 
 ```text
+plugin.json
 .codex-plugin/plugin.json
 skills/*/SKILL.md
 skills/persona/personas/*.md
@@ -99,9 +100,14 @@ constitution.md
 LICENSE
 ```
 
-The manifest name is `ai-toolkit`, its version comes from `package.json`, and
-`skills` points to `./skills/`. It intentionally omits a `hooks` field because
-Codex discovers the default `hooks/hooks.json` file. Every bundled hook command
+Root `plugin.json` declares the Agent Plugins 1.0.0 schema and places presentation
+metadata under `extensions.com.openai.interface`. Its name is `ai-toolkit` and
+its version comes from `package.json`. Portable skills use the fixed `skills/`
+directory. The archive retains `.codex-plugin/plugin.json` with
+`skills: "./skills/"` for older clients; both manifests carry identical metadata.
+The inline OpenAI extension replaces the compatibility overlay on current
+clients, so verification rejects divergent manifests. Both omit a `hooks` field
+to discover the default `hooks/hooks.json` file. Every bundled hook command
 uses `${PLUGIN_ROOT}/hooks/...`; no command depends on a git root, `CODEX_HOME`,
 or the toolkit's global-install hook directory. Executable modes, archive order,
 and timestamps are fixed so identical sources produce identical ZIP bytes.
@@ -114,8 +120,8 @@ source-toolkit references; unclassified paths fail validation. The skill-audit
 command uses the staged helper, whose local imports are bundled at plugin root.
 
 `verify` stages a clean plugin under a temporary directory and checks the
-manifest, component paths, skills, exact canonical command-only hooks,
-executable assets, `SessionEnd` timeout, and symlink safety. The check is
+portable and compatibility manifests, component paths, skills, exact canonical
+command-only hooks, executable assets, `SessionEnd` timeout, and symlink safety. The check is
 self-contained: it does not execute mutable validators selected from `$HOME`
 or environment-provided paths, add a marketplace, install a plugin, or write
 under `~/.agents` or `~/.codex`.
@@ -190,7 +196,7 @@ even when its tool list is otherwise portable. Examples include:
 ## Hook Compatibility
 
 Codex does not expose the full Claude hook event surface. The current native
-contract defines 11 events; the Codex hook generator wires 10 of them:
+contract defines 12 events; the Codex hook generator wires 10 of them:
 
 - `SessionStart`
 - `PreToolUse`
@@ -203,8 +209,9 @@ contract defines 11 events; the Codex hook generator wires 10 of them:
 - `SessionEnd`
 - `Stop`
 
-`PostCompact` is the one enum event left unwired (its only hook was the removed
-environment-snapshot probe). Claude-only events such as `TaskCompleted`,
+`PostCompact` and `Interrupt` remain unwired; existing user handlers are preserved.
+`Interrupt` is advisory and accepts command timeouts of one to three seconds.
+Claude-only events such as `TaskCompleted`,
 `TeammateIdle`, and `Notification` have no Codex equivalent and are not
 available in `.codex/hooks.json`.
 
@@ -222,12 +229,17 @@ values are also preserved. Booleans, negative values, and non-integers are
 rejected before any file is changed. `SessionEnd` timeouts above three seconds
 are rejected.
 
-Only executable `type: "command"` handlers are accepted. The current official
-hooks page says `prompt` and `agent` handlers are parsed but skipped, and does
-not establish an executable `mcp_tool` handler schema. Codex CLI 0.148.0 release
-notes mention MCP hooks, which conflicts with that page. Toolkit support stays
-command-only until OpenAI confirms the native config schema and execution
-semantics in the canonical hooks documentation.
+Generated toolkit hooks remain command-only. Merges also preserve documented
+`mcp_tool` handlers with required `server` and `tool`, optional object `input`,
+`timeout`, and `statusMessage`. MCP handlers are synchronous and unavailable for
+`SessionEnd`. Invalid handlers are rejected before writing; `prompt` and `agent`
+handlers remain unsupported. The documented `*` match-all matcher is accepted.
+String matchers on `UserPromptSubmit`, `Stop`, and `Interrupt` are preserved
+without regex validation because Codex ignores them.
+
+The Stop search adapter returns `decision: "block"` with `reason` to request a
+continuation. It must not return `continue: false`, which stops the turn. The
+search reminder remains one-shot.
 
 The generator merges these Codex-compatible events into project or user
 `hooks.json`, preserving unrelated user handlers and replacing only commands
@@ -310,8 +322,10 @@ Known limits:
 - No native Codex equivalent of tmux-backed Agent Teams lifecycle events
 - No separate task object model equivalent to Claude `Task*` APIs
 - Hook event coverage is narrower than Claude Code
-- MCP search tool calls may not fire the shared `PostToolUse` search tracker,
-  so `stop-search-check.sh` also checks `$CODEX_HOME/log/codex-tui.log` (default
+- MCP `PostToolUse` hooks clear the pending search flag through the generated
+  `search-tracker.sh` handler. Hosted tools such as WebSearch do not emit these
+  events, and specialized tool paths may opt out. `stop-search-check.sh` retains
+  a fallback check of `$CODEX_HOME/log/codex-tui.log` (default
   `~/.codex/log/codex-tui.log`) for
   `smart_query`, `hybrid_search_kb`, `crag_search`, `multi_hop_search`, and
   `verify_answer` calls after the search-first flag timestamp before blocking.

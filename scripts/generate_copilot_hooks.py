@@ -25,7 +25,6 @@ from typing import Any
 import secure_fs
 from secure_fs import SecureDestination, run_secure_transaction
 
-
 OWNER_KEY = "AI_TOOLKIT_HOOK_OWNER"
 OWNER_VALUE = "ai-toolkit"
 SCRIPT_MARKER = "# ai-toolkit-managed: github-copilot-hook"
@@ -121,6 +120,17 @@ def _payload() -> dict[str, Any]:
 
 def _emit(value: dict[str, Any]) -> None:
     print(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
+
+
+def _emit_event(payload: dict[str, Any], value: dict[str, Any]) -> None:
+    """Keep CLI fields even when the input uses the shared PascalCase shape."""
+    event = payload.get("hook_event_name")
+    if event in {"PreToolUse", "PostToolUse", "SessionStart", "SubagentStart", "Stop"}:
+        # PascalCase input is also supported by CLI. Preserve its flat output
+        # while exposing the identical result through VS Code's envelope.
+        _emit({**value, "hookSpecificOutput": {"hookEventName": event, **value}})
+        return
+    _emit(value)
 
 
 def _session_id(payload: dict[str, Any]) -> str:
@@ -231,10 +241,14 @@ def _pre_tool_use(payload: dict[str, Any]) -> None:
     arguments = _tool_args(payload)
     reason = _wrong_home_reason(arguments)
     tool_name = str(payload.get("toolName") or payload.get("tool_name") or "")
-    if reason is None and tool_name.lower() in {"bash", "powershell"}:
+    if reason is None and tool_name.lower() in {
+        "bash", "powershell", "run_in_terminal", "runterminalcommand",
+    }:
         reason = _destructive_reason(_command_text(arguments))
     if reason:
-        _emit({"permissionDecision": "deny", "permissionDecisionReason": reason})
+        _emit_event(payload, {
+            "permissionDecision": "deny", "permissionDecisionReason": reason,
+        })
 
 
 def _quality_command(cwd: Path) -> tuple[str, list[str]] | None:
@@ -258,6 +272,8 @@ def _quality_command(cwd: Path) -> tuple[str, list[str]] | None:
 
 
 def _agent_stop(payload: dict[str, Any]) -> None:
+    if payload.get("stop_hook_active"):
+        return
     cwd_value = payload.get("cwd") or os.getcwd()
     cwd = Path(str(cwd_value))
     if not cwd.is_dir():
@@ -295,7 +311,7 @@ def _agent_stop(payload: dict[str, Any]) -> None:
     reason = f"{label} failed. Fix the errors and verify again before finishing."
     if detail:
         reason += f"\n\n{detail}"
-    _emit({"decision": "block", "reason": reason})
+    _emit_event(payload, {"decision": "block", "reason": reason})
 
 
 def main() -> None:
@@ -303,7 +319,7 @@ def main() -> None:
     payload = _payload()
     if event == "session-start":
         _clear_quality_state(payload)
-        _emit({
+        _emit_event(payload, {
             "additionalContext": (
                 "AI Toolkit: follow the repository and personal Copilot "
                 "instructions, use relevant skills, keep tests and docs aligned, "
@@ -313,7 +329,16 @@ def main() -> None:
     elif event == "pre-tool-use":
         _pre_tool_use(payload)
     elif event == "post-tool-use":
-        _emit({
+        # VS Code ignores matchers; CLI can also deliver this input shape.
+        if payload.get("hook_event_name") == "PostToolUse" and payload.get(
+            "tool_name"
+        ) not in {
+            "create_file", "replace_string_in_file", "multi_replace_string_in_file",
+            "edit_notebook_file", "apply_patch", "editFiles", "createFile",
+            "create", "edit", "str_replace_editor", "Write", "Edit",
+        }:
+            return
+        _emit_event(payload, {
             "additionalContext": (
                 "A file-changing tool completed. Run the relevant validation and "
                 "tests, and update affected documentation before finishing."
@@ -326,7 +351,7 @@ def main() -> None:
         )
         raise SystemExit(2)
     elif event == "subagent-start":
-        _emit({
+        _emit_event(payload, {
             "additionalContext": (
                 "Stay within the delegated scope, cite concrete evidence, and return "
                 "explicit validation notes with any edits."
@@ -551,7 +576,7 @@ def _write_transaction(outputs: list[tuple[Path, bytes, int]]) -> None:
                     destination.unlink(missing_ok=True)
                 else:
                     os.replace(backup, destination)
-            except Exception as rollback_error:  # pragma: no cover
+            except Exception as rollback_error:  # noqa: BLE001 - finish all rollback attempts
                 rollback_errors.append(rollback_error)
         if rollback_errors:
             raise RuntimeError(

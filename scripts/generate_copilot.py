@@ -9,12 +9,12 @@ This generator produces five repository customization surfaces without
 subscription-tier gating or server-side MCP configuration:
 
 1. ``.github/copilot-instructions.md`` — always-on repository instructions.
-   Supported by GitHub.com Copilot Chat, Copilot cloud agent, and VS Code
+   Supported by GitHub.com Copilot Chat, Copilot CLI/cloud agent, and VS Code
    Copilot. Generated to stdout by default (backwards compatible).
 
 2. ``.github/instructions/*.instructions.md`` — path-specific instructions.
    Each file has ``applyTo`` frontmatter with a glob pattern. Supported
-   by VS Code Copilot and Copilot cloud agent / code review on GitHub.com.
+   by VS Code Copilot Chat, Copilot CLI and cloud agent / code review on GitHub.com.
    Written only when ``generate()`` is called with a target directory.
 
 3. ``.github/prompts/*.prompt.md`` — prompt files (slash commands).
@@ -58,6 +58,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import secure_fs
 from dir_rules_shared import (
     LANG_GLOBS,
     PREFIX,
@@ -75,17 +76,15 @@ from emission import (
 )
 from frontmatter import frontmatter_field
 from generator_base import render_generator
-import secure_fs
 from secure_fs import SecureDestination, run_secure_transaction
-
 
 MANAGED_MARKER = "<!-- ai-toolkit-managed: github-copilot -->"
 SKILL_MANIFEST = ".ai-toolkit-managed-files"
-MAX_AGENT_BODY_BYTES = 30_000
+MAX_AGENT_BODY_CHARS = 30_000
 _AGENT_START_RE = re.compile(r"\bAgent\s*\(")
 _TASK_CALL_RE = re.compile(
     r"\bTask(?:Create|List|Update|Get|Output|Stop)\s*\([^)]*\)",
-    re.S,
+    re.DOTALL,
 )
 _SAFE_NAME_RE = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 _FORBIDDEN_COPILOT_BODY_RE = re.compile(
@@ -102,7 +101,7 @@ def _load_legacy_managed_hashes() -> dict[str, frozenset[str]]:
     manifest = Path(__file__).with_name("copilot_legacy_hashes.json")
     value = json.loads(manifest.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise ValueError(f"Invalid Copilot legacy hash manifest: {manifest}")
+        raise TypeError(f"Invalid Copilot legacy hash manifest: {manifest}")
     result: dict[str, frozenset[str]] = {}
     for name, hashes in value.items():
         valid_name = (
@@ -492,9 +491,9 @@ def _render_agent(agent_file: Path) -> tuple[str, str, str]:
         include_execution_note=False,
     ).rstrip()
     body_with_marker = f"{MANAGED_MARKER}\n\n{body}\n"
-    if len(body_with_marker.encode("utf-8")) > MAX_AGENT_BODY_BYTES:
+    if len(body_with_marker) > MAX_AGENT_BODY_CHARS:
         raise ValueError(
-            f"Copilot agent body exceeds {MAX_AGENT_BODY_BYTES} bytes: {agent_file}"
+            f"Copilot agent body exceeds {MAX_AGENT_BODY_CHARS} characters: {agent_file}"
         )
     content = "\n".join([
         "---",
@@ -909,6 +908,14 @@ def _render_skill_markdown(skill_dir: Path) -> tuple[str, str]:
         raise ValueError(f"Invalid Copilot skill name: {skill_file}")
     if not description:
         raise ValueError(f"Missing Copilot skill description: {skill_file}")
+    invocation_fields = []
+    for field in ("user-invocable", "disable-model-invocation"):
+        value = frontmatter_field(skill_file, field)
+        if not value:
+            continue
+        if value not in {"true", "false"}:
+            raise ValueError(f"Copilot skill {field} must be a boolean: {skill_file}")
+        invocation_fields.append(f"{field}: {value}")
     body = _portable_copilot_body(
         _read_markdown_body(skill_file),
         include_execution_note=False,
@@ -923,6 +930,7 @@ def _render_skill_markdown(skill_dir: Path) -> tuple[str, str]:
         "---",
         f"name: {name}",
         f"description: {json.dumps(description, ensure_ascii=False)}",
+        *invocation_fields,
         "---",
         "",
         MANAGED_MARKER,
@@ -1193,22 +1201,22 @@ def _desired_instruction_files(
         apply_to = ",".join(LANG_GLOBS.get(language, ())) or "**"
         new_name = f"{PREFIX}lang-{language}.instructions.md"
         instruction_files[new_name] = (
-            lambda fn, name, pattern: lambda: _instructions_file(
+            lambda fn=content_fn, name=language, pattern=apply_to: _instructions_file(
                 fn(),
                 apply_to=pattern,
                 description=f"{name.title()} language rules",
             )
-        )(content_fn, language, apply_to)
+        )
     for filename, content_fn in build_registered_rules(rules_dir).items():
         stem = filename.removeprefix(f"{PREFIX}custom-").removesuffix(".md")
         new_name = f"{PREFIX}custom-{stem}.instructions.md"
         instruction_files[new_name] = (
-            lambda fn, name: lambda: _instructions_file(
+            lambda fn=content_fn, name=stem: _instructions_file(
                 fn(),
                 apply_to="**",
                 description=f"Custom rule: {name}",
             )
-        )(content_fn, stem)
+        )
     desired: dict[str, tuple[str, str]] = {}
     for name, content_fn in instruction_files.items():
         content = content_fn()

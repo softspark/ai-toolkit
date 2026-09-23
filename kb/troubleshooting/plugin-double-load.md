@@ -4,7 +4,7 @@ category: troubleshooting
 service: ai-toolkit
 tags: [plugin, claude-app, hooks, duplication, doctor]
 created: "2026-08-21"
-last_updated: "2026-08-21"
+last_updated: "2026-09-23"
 description: "Every toolkit hook fires twice and skills and agents load twice after the Claude app plugin ZIP is uploaded on a machine that already has the global install. Cause: the app registers the plugin under ~/.claude/plugins, which Claude Code also reads."
 ---
 
@@ -26,6 +26,14 @@ The Claude app writes uploaded plugins into
 as well, so Claude Code loads the plugin on top of the global install. The
 bundle carries the same catalog as `~/.claude`, and plugin hooks merge with user
 hooks without deduplication.
+
+Claude Code 2.1.273+ also downloads account-enabled plugins under
+`~/.claude/plugins/synced/` when signed in with a Claude account. They use the
+`ai-toolkit@synced` identity and have no `installed_plugins.json` entry. Doctor
+therefore checks manifests inside the synced cache as well. A cache file alone
+does not prove the plugin is active: another source can take precedence and
+organization policy can override user preferences. Doctor reports a potential
+collision and asks you to verify it with `claude plugin list`.
 
 Confirmed in a Claude Code debug log (`claude --debug -p ...`, then read
 `~/.claude/debug/latest`):
@@ -71,6 +79,15 @@ That sets the plugin to `false` in `enabledPlugins` and leaves the global
 install authoritative. Claude Code then logs
 `enabled=false; will NOT register, plugin is disabled`, and plugin skills and
 agents drop to 0.
+
+This automatic fix applies to registered local/marketplace copies. For an
+optional synced copy confirmed by `claude plugin list`, use
+`claude plugin disable ai-toolkit@synced`. Organization-required synced plugins
+cannot be disabled locally; contact the administrator to decide which toolkit
+installation to retain. Doctor never changes a synced plugin through `--fix`.
+A disabled user preference is reported as a preference, not proof of effective
+organization policy. See the
+[official synced-plugin contract](https://code.claude.com/docs/en/plugins-reference#plugins-synced-from-claude-ai).
 
 The global install is the richer surface for Claude Code: it delivers rules as
 real files under `~/.claude/rules/`, which are always in context, while the

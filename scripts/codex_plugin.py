@@ -242,6 +242,18 @@ def render_manifest() -> str:
     return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
 
 
+def _portable_manifest(compatibility: dict[str, Any]) -> dict[str, Any]:
+    """Use fixed portable components and an inline OpenAI presentation overlay."""
+    manifest = {
+        "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+        **compatibility,
+    }
+    manifest.pop("skills", None)
+    interface = manifest.pop("interface")
+    manifest["extensions"] = {"com.openai": {"interface": interface}}
+    return manifest
+
+
 def _bare_script_references(text: str) -> set[str]:
     return set(_BARE_SCRIPT_REFERENCE_RE.findall(text))
 
@@ -399,7 +411,13 @@ def stage_plugin(destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=False)
     manifest_path = destination / ".codex-plugin" / "plugin.json"
     manifest_path.parent.mkdir(parents=True)
-    manifest_path.write_text(render_manifest(), encoding="utf-8")
+    compatibility = render_manifest()
+    manifest_path.write_text(compatibility, encoding="utf-8")
+    portable = _portable_manifest(json.loads(compatibility))
+    (destination / "plugin.json").write_text(
+        json.dumps(portable, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
     _stage_skills(destination / "skills")
     _stage_plugin_scripts(destination / "scripts")
@@ -503,6 +521,27 @@ def _validate_manifest(plugin_dir: Path, errors: list[str]) -> None:
         missing = sorted(required_interface - set(interface))
         if missing:
             errors.append(f"plugin manifest interface fields are missing: {missing}")
+    if isinstance(interface, dict):
+        _validate_portable_manifest(plugin_dir, manifest, errors)
+
+
+def _validate_portable_manifest(
+    plugin_dir: Path, compatibility: dict[str, Any], errors: list[str]
+) -> None:
+    manifest = _load_json_object(
+        plugin_dir / "plugin.json", "portable plugin manifest", errors
+    )
+    if manifest is None:
+        return
+    # The inline OpenAI object replaces the compatibility overlay, so divergent
+    # manifests would give old and new clients different metadata or hooks.
+    expected = _portable_manifest(compatibility)
+    if manifest != expected:
+        errors.append(
+            "portable plugin manifest must match compatibility metadata, "
+            "the Agent Plugins schema, and the inline OpenAI interface; "
+            "skills and hooks must use default discovery"
+        )
 
 
 def _validate_skills(plugin_dir: Path, errors: list[str]) -> None:
