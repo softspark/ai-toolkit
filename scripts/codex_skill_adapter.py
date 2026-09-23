@@ -49,6 +49,9 @@ _FRONTMATTER_RE = re.compile(r"\A---\n(?P<frontmatter>.*?)\n---\n?(?P<body>.*)\Z
 _AGENT_START_RE = re.compile(r"\bAgent\s*\(")
 _TASK_API_RE = re.compile(r"\bTask(?:Create|List|Update|Get|Output|Stop)\b")
 _POSITIONAL_ARGUMENT_RE = re.compile(r"\$([1-9])\b")
+_MODEL_DIRECTIVE_RE = re.compile(
+    r"\bUse (?:Claude )?(?:Opus|Sonnet|Haiku)(?:[ \t]+\d+(?:\.\d+)*)?\b"
+)
 _PLATFORM_LABELS = {"codex": "Codex", "opencode": "OpenCode"}
 _UNSUPPORTED_DIRECTORY_FSYNC_ERRNOS = frozenset({
     errno.EBADF,
@@ -133,6 +136,8 @@ client-independent guidance:
 - Track progress using the planning mechanism available in the current client
   or an explicit local checklist.
 - Treat a team as coordinated {label}-native subagents with non-overlapping work.
+- Keep the user's current model and reasoning effort. Do not translate Claude
+  tier names into another provider's models or silently escalate a delegated model.
 - Resolve `./` paths in command examples from the installed skill directory
   that contains this `SKILL.md` file.
 """
@@ -205,6 +210,10 @@ def is_codex_adapted_skill(skill_file: Path) -> bool:
     if set(skill_tools(skill_file)) & CLAUDE_ONLY_TOOLS:
         return True
     text = skill_file.read_text(encoding="utf-8")
+    match = _FRONTMATTER_RE.match(text)
+    body = match.group("body") if match else text
+    if adapt_model_directives(body) != body:
+        return True
     if any(token in text for token in _ADAPTATION_BODY_TOKENS):
         return True
     if _AGENT_START_RE.search(text) or _TASK_API_RE.search(text):
@@ -1136,6 +1145,7 @@ def _render_frontmatter(entries: list[tuple[str, str]]) -> str:
 
 def _adapt_body(body: str, platform: str) -> str:
     label = _PLATFORM_LABELS.get(platform)
+    body = adapt_model_directives(body)
     body = _replace_agent_calls(body, label)
     subagents = f"{label}-native subagents" if label else "available subagents"
     body = body.replace("Agent Teams", f"coordinated {subagents}")
@@ -1150,6 +1160,62 @@ def _adapt_body(body: str, platform: str) -> str:
             body,
         )
     return f"{_translation_note(platform).strip()}\n\n{body.strip()}\n"
+
+
+def adapt_model_directives(body: str) -> str:
+    """Remove Claude runtime tier orders without rewriting fenced API examples."""
+    lines: list[str] = []
+    prose: list[str] = []
+    fence: str | None = None
+    is_prompt_fence = False
+    for line in body.splitlines(keepends=True):
+        marker = re.match(r"^\s*(`{3,}|~{3,})(.*)$", line)
+        if marker:
+            if prose:
+                lines.append(_adapt_model_prose("".join(prose)))
+                prose.clear()
+            value = marker.group(1)
+            if fence is None:
+                fence = value
+                is_prompt_fence = marker.group(2).strip().lower() in {
+                    "", "text", "plaintext", "markdown", "md", "prompt",
+                }
+            elif (
+                value[0] == fence[0]
+                and len(value) >= len(fence)
+                and not marker.group(2).strip()
+            ):
+                fence = None
+            lines.append(line)
+            continue
+        if fence is None or is_prompt_fence:
+            prose.append(line)
+        else:
+            lines.append(line)
+    if prose:
+        lines.append(_adapt_model_prose("".join(prose)))
+    return "".join(lines)
+
+
+def _adapt_model_prose(line: str) -> str:
+    """Rewrite prose while preserving inline code with matching delimiter runs."""
+    rendered: list[str] = []
+    cursor = 0
+    while opening := re.search(r"`+", line[cursor:]):
+        start, end = cursor + opening.start(), cursor + opening.end()
+        rendered.append(_replace_model_directive(line[cursor:start]))
+        delimiter = re.escape(opening.group())
+        closing = re.search(rf"(?<!`){delimiter}(?!`)", line[end:])
+        cursor = end + closing.end() if closing else end
+        rendered.append(line[start:cursor])
+    rendered.append(_replace_model_directive(line[cursor:]))
+    return "".join(rendered)
+
+
+def _replace_model_directive(prose: str) -> str:
+    return _MODEL_DIRECTIVE_RE.sub(
+        "Use the current client's selected model and reasoning effort", prose
+    )
 
 
 def _replace_agent_calls(body: str, label: str | None) -> str:

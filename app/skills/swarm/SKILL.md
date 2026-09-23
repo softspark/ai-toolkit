@@ -41,7 +41,9 @@ Agent(subagent_type="tech-lead",               prompt="[problem] — approach fr
 Agent(subagent_type="performance-optimizer",   prompt="[problem] — approach from performance angle. Output: solution + confidence 0.0–1.0")
 ```
 
-After all complete: pick winner by confidence score, note dissents.
+After all complete: compare evidence and acceptance criteria, record dissent,
+and validate the proposed result. Self-reported confidence is advisory; it is
+not a calibrated probability and must not decide the winner on its own.
 
 ### Relay
 Sequential chain — each agent depends on the previous output. Launch **one at a time**, wait for completion before next.
@@ -78,7 +80,7 @@ Agent(
 1. **Collect** all agent outputs into a uniform format (JSON or Markdown sections)
 2. **De-duplicate** identical findings across agents
 3. **Synthesize** unique insights into one report
-4. **For Consensus mode**: weighted voting — each agent returns confidence 0.0–1.0, winner is highest-confidence solution; record dissents from agents that scored below winner
+4. **For Consensus mode**: assess each proposal against shared evidence and acceptance criteria; investigate conflicting findings and record dissent. Confidence scores alone cannot choose the result.
 5. **Generate** final swarm report
 
 ### File ownership during aggregation

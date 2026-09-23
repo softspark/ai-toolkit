@@ -36,6 +36,7 @@
 - [Autonomous software development](kb/howto/autonomous-development.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
 - [Ecosystem sync, 2026-09-23](kb/planning/ecosystem-sync-20260923.md)
+- [Model compatibility refresh](kb/planning/model-compatibility-refresh-20260923.md)
 - [SOP: Ecosystem Sync](kb/procedures/sop-ecosystem-sync.md)
 - [SOP: AI Toolkit Maintenance](kb/procedures/sop-maintenance.md)
 - [SOP: Post-Release Testing](kb/procedures/sop-post-release-testing.md)
@@ -69,6 +70,7 @@
 - [MCP Server Templates](kb/reference/mcp-templates.md)
 - [Medplum Documentation Map](kb/reference/medplum-docs-map.md)
 - [Merge-Friendly Install Model](kb/reference/merge-friendly-install-model.md)
+- [Model compatibility for skills and agents](kb/reference/model-compatibility.md)
 - [AI Toolkit - opencode Compatibility](kb/reference/opencode-compatibility.md)
 - [Plugin Pack Conventions](kb/reference/plugin-pack-conventions.md)
 - [Quick Wins Implementation Summary](kb/reference/quick-wins-implementation-summary.md)
@@ -141,7 +143,7 @@
 - **introspect**: Agent self-debugging and recovery. Use when stuck in loops, making repeated errors, or quality degrades. Triggers: introspect, self-debug, stuck, loop, why failing.
 - **java-patterns**: Java: Spring Boot, CompletableFuture, records, sealed types, JPA/Hibernate, virtual threads. Triggers: Java, Spring, JPA, Hibernate, Maven, Gradle, virtual thread, sealed class.
 - **java-rules**: Java coding rules: style, patterns, security, testing. Triggers: .java, pom.xml, build.gradle, Spring, Spring Boot, JPA, Hibernate, JUnit, Maven, Gradle.
-- **json-mode-patterns**: Structured JSON output from Claude: tool-use-as-JSON, schema, parsing, partial recovery. Triggers: JSON mode, structured output, schema validation, JSON parsing.
+- **json-mode-patterns**: Structured JSON output from Claude: native JSON schemas, strict tools, local validation, refusal and truncation handling. Triggers: JSON mode, structured output, schema validation, JSON parsing.
 - **kotlin-patterns**: Kotlin: coroutines, Flow, sealed/data classes, null safety, Ktor, Compose, KMP. Triggers: Kotlin, coroutine, Flow, suspend, Ktor, Jetpack Compose, KMP, kotlinx.
 - **kotlin-rules**: Kotlin coding rules: style, patterns, security, testing. Triggers: .kt, .kts, build.gradle.kts, Ktor, Jetpack Compose, coroutines, kotlinx.
 - **lint**: Runs linter+typechecker with auto-detected toolchain (ruff/mypy, eslint/tsc, phpstan, golangci-lint, clippy). Triggers: lint, typecheck, static analysis.
@@ -151,7 +153,7 @@
 - **mem-search**: Searches past coding sessions for observations, decisions, context. Triggers: mem-search, recall session, past work, prior decisions, session history.
 - **migrate**: Run/create DB migrations (Alembic, Prisma, Laravel, Django, Flyway, Drizzle); checks backup. Triggers: apply migration, rollback, generate migration.
 - **migration-patterns**: Zero-downtime DB migrations: expand-contract, double-write, backfill, blue-green. Triggers: migration, schema change, backfill, ALTER TABLE, online DDL.
-- **model-routing-patterns**: Multi-model pipelines (Haiku/Sonnet/Opus): cost routing, escalation, fallback chains. Triggers: model routing, Haiku, Sonnet, Opus, escalation, fallback chain.
+- **model-routing-patterns**: Capability-aware model routing for Codex, Copilot, Claude and provider APIs. Triggers: model routing, model selection, reasoning effort, approved fallback, cost, escalation.
 - **night-watch**: Autonomous maintenance (dep updates, dead code, small refactors) in isolated branch, off-hours. Triggers: night watch, autonomous maintenance, dep updates.
 - **observability-patterns**: Observability: structured logs, metrics (RED/USE), tracing, SLO/SLI. Triggers: logging, metrics, Prometheus, Grafana, OpenTelemetry, trace, monitoring.
 - **onboard**: Sets up ai-toolkit in a project: symlinks, CLAUDE.md, intent interview. Triggers: onboard, setup project, install ai-toolkit, migrate project.
@@ -7612,6 +7614,111 @@ Python 3.12 environment with `requirements-dev.txt` is used for typechecking.
 
 ---
 
+## kb/planning/model-compatibility-refresh-20260923.md
+
+---
+title: "Model compatibility refresh, 2026-09-23"
+category: planning
+service: ai-toolkit
+tags: [models, skills, agents, compatibility, prompting]
+version: "1.0.0"
+created: "2026-09-23"
+last_updated: "2026-09-23"
+description: "Source-backed review and validation plan for current-model skill and agent guidance."
+---
+
+# Model compatibility refresh
+
+## Objective and scope
+
+Adapt active skills, agent instructions and client adapters to current model
+contracts. Prioritize Codex/OpenAI, GitHub Copilot and Claude. Keep historical
+release records intact and preserve explicit user model choices and permissions.
+
+## Plan
+
+1. Inventory active model IDs, pricing assumptions, effort controls and prompt
+   guidance; compare them with official sources dated at review time.
+2. Correct Claude API skills and provider-specific output/cache assumptions.
+3. Correct OpenAI examples, prompting and cost handling in agent instructions.
+4. Adapt runtime model directives for Codex/Copilot without confusing API
+   examples with instructions to select a session model.
+5. Align orchestration guidance and authoring templates; document client/API
+   boundaries in the shared model compatibility reference.
+6. Regenerate artifacts, review independent findings and run validation, audits,
+   meaningful example/adapter regressions and the full project suites.
+
+## Success criteria
+
+- Active guidance uses verified current contracts or explicit configured model
+  inputs, rather than claiming that one model or effort level fits every client.
+- Examples handle incomplete/refused/malformed outputs and pricing units safely.
+- Translated agents preserve the client's selected model; API code examples
+  retain their provider meaning and resource references still resolve.
+- Tests establish generated-output behavior and pure example logic without
+  contacting paid model APIs or altering installed user configurations.
+- Final evidence distinguishes contract validation from live model-quality evals.
+
+## Pre-mortem
+
+- API identifiers can differ from UI names and client availability: verify each
+  surface separately and preserve the existing selection when unsupported.
+- A sweeping replacement can corrupt API examples or historical records: use
+  narrow adapters and an explicit inventory, with preservation regressions.
+- Prices and aliases drift: date snapshots, link primary sources and require
+  configured rates for calculations rather than silently estimating zero.
+- More effort or a more expensive model can worsen cost without helping quality:
+  retain approved tiers and require measured evidence for routing changes.
+- Passing schema tests is not evidence of model quality: record live-evaluation
+  status explicitly instead of claiming unmeasured improvements.
+
+## Evidence
+
+The active catalog and generator mappings were searched for model IDs, model-tier
+orders, prices, effort, cache assumptions and reasoning instructions. Historical
+CHANGELOG entries and preservation-test literals intentionally retain older IDs.
+The dated source matrix is [Model Compatibility](../reference/model-compatibility.md).
+
+| Surface | Change |
+|---------|--------|
+| Claude API skills | Current model reference, model-specific effort/cache behavior, closed structured-output schemas and local semantic checks |
+| LLM operations agent | Actual Responses SDK call, bounded approved fallback, scoped cache identity and configured per-million-token rates |
+| AI/prompt agents | Capability-based selection and verifiable results instead of blanket chain-of-thought or model-name recommendations |
+| Orchestration and creators | Preserve configured models and budgets; new agent templates inherit; consensus uses evidence rather than confidence alone |
+| Codex/Copilot adapters | Rewrite imperative Claude tier orders in prompt text, preserve API examples and code literals, leave native metadata-only mentions intact |
+| Secondary surfaces | Current shared Claude API map, removal of unused OpenCode model read, corrected Microsoft Copilot model assumption |
+| Maintenance | Model/prompt review is now explicit in ecosystem sync; catalog docs link the shared reference |
+
+## Review findings resolved
+
+- Metadata containing a model name no longer forces a native skill wrapper.
+- API fences, repeated backticks and multiline inline literals remain unchanged.
+- A numbered list following a tier name is not consumed as a model version.
+- Oversized integer confidence values reach validation/review rather than raising
+  an unhandled floating-point overflow.
+- New Python fixtures have SPDX attribution; streaming is described as latency
+  behavior rather than inherent token-cost reduction.
+
+## Verification
+
+- Related Codex/native-skill/Copilot suites: 107 passed.
+- Claude API pattern fixtures: 6 passed, including invalid output and URL cases.
+- Full Python suite: 456 passed.
+- Strict mypy allowlist, repository Ruff rules, ShellCheck, source compilation,
+  skill audit, skill evaluation and protected public-surface check: passed.
+- Artifact regeneration: passed with the required write permission for generated
+  `.agents` outputs. Existing skill/agent catalog counts and permissions remain.
+- Full Bats suite: 2068 passed, exit 0; log retained at
+  `/private/tmp/ai-toolkit-model-refresh-bats.log`.
+- Final strict validation: passed with zero errors and warnings.
+
+No paid provider calls or live multi-model quality/cost benchmarks were run.
+These checks establish documented contract compatibility and deterministic
+behavior, not measured model-quality improvements. This work is included in the
+4.39.0 release candidate; publication follows the release SOP.
+
+---
+
 ## kb/procedures/sop-ecosystem-sync.md
 
 ---
@@ -7619,7 +7726,7 @@ title: "SOP: Ecosystem Sync"
 category: procedures
 service: ai-toolkit
 tags: [sop, ecosystem, editors, generators, drift-detection, sync]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-04-23"
 last_updated: "2026-09-23"
 description: "Quarterly or event-triggered sync procedure for the 14 registry tools: Claude Code, Claude app, explicit-preview DSH, and 11 default editor integrations."
@@ -7707,6 +7814,26 @@ findings and therefore several classes. Record source-access gaps explicitly.
 
 The doctor's `version_probe` reports a locally installed binary, not the latest
 vendor release. Keep release review metadata separate from this observation.
+
+### Model and prompt review
+
+Client compatibility does not establish model compatibility. During a full sync,
+also review active skills, agents and concrete model mappings against the current
+provider and client documentation. Start with
+[model compatibility](../reference/model-compatibility.md) and inventory model
+IDs, prices, effort/thinking controls, structured-output schemas and cache claims.
+
+- Separate API model IDs from client labels and Claude aliases. Verify availability
+  for the actual provider/account rather than copying another client's picker.
+- Preserve explicit user choices and approved tiers. A new model release does not
+  authorize changing an active agent's model, tool permissions or budget.
+- Check examples for deprecated endpoints, unsupported parameters, invalid output
+  handling, pricing units and unsafe fallback. Keep historical release records.
+- Test adapters with native metadata, resource files and API/code literals; do
+  not let a model name in an example turn into a runtime override.
+- Record dated sources and the review result. Offline contract tests establish
+  formatting and deterministic logic; quality/cost improvements require separate
+  live evals with representative tasks and an approved budget.
 
 | Drift class | What it means | Action owner |
 |-------------|---------------|--------------|
@@ -10217,13 +10344,19 @@ title: "AI Toolkit - Agents Catalog"
 category: reference
 service: ai-toolkit
 tags: [agents, catalog, roles, ai-development]
-version: "1.4.2"
+version: "1.4.3"
 created: "2026-03-23"
-last_updated: "2026-04-09"
+last_updated: "2026-09-23"
 description: "Complete catalog of specialized agents with roles, models, and use cases."
 ---
 
 # Agents Catalog
+
+The model column describes configured Claude tiers, not fixed API versions.
+Aliases resolve through the active provider/client configuration. Codex and
+Copilot generated agents preserve the host's selected model rather than copying
+Claude aliases. See [Model Compatibility](model-compatibility.md) for the dated
+model reference, effort boundaries and validation limits.
 
 ## By Category
 
@@ -11685,6 +11818,28 @@ plugin browsing and installation.
 Sources: [Codex plugin packaging](https://developers.openai.com/plugins/build/plugins),
 [plugin availability](https://learn.chatgpt.com/docs/plugins).
 
+## Models and Reasoning Effort
+
+Generated custom-agent TOML contains only `name`, `description`, and
+`developer_instructions`. It does not translate Claude `model` aliases or skill
+`effort` into Codex settings. User-authored Codex agent files can override
+`model` and `model_reasoning_effort`; otherwise Codex resolves explicit spawn
+settings, `[agents]` defaults, and the parent session. The installer preserves
+user-owned agent files.
+
+Imperative Claude tier directives such as “Use Opus” are adapted to retain the
+current client's model and effort in skills and agent bodies. Fenced API
+examples and inline code remain literal. This prevents a workflow from silently
+selecting a provider or increasing the user's model tier.
+
+Portable native skills may retain source frontmatter. The official Codex skill
+contract does not document Claude `model` or `effort` as runtime selectors; their
+presence is not a model-selection guarantee. Already-adapted wrappers emit
+`name` and `description`. No universal model ID or effort is pinned.
+
+Sources: [Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents),
+[Codex skill contract](https://learn.chatgpt.com/docs/build-skills).
+
 ## Skill Translation Model
 
 Two delivery modes are used for Codex:
@@ -12748,6 +12903,33 @@ running the generators directly:
   argument; multi-surface emission with a target directory).
 - `scripts/generate_copilot_hooks.py` — version-1 hook config plus a
   self-contained repository/config-root runtime.
+
+## Models and Reasoning Effort
+
+Toolkit-generated agent and skill frontmatter does not copy Claude `model` or
+`effort` values. Runtime tier directives in prose retain the current client's
+selection; fenced API examples and inline code keep their original model IDs.
+
+Copilot model controls differ by surface:
+
+- CLI custom agents support `model`, `models`, `modelPolicy`, and
+  `reasoningEffort`. Explicit calls and user `subagents` settings take precedence
+  over authored defaults, followed by the parent session. Auto uses the resolved
+  session model. The toolkit leaves these fields unset.
+- VS Code supports agent `model` selection, including an ordered fallback list;
+  omission uses the current model picker selection.
+- The shared GitHub.com agent contract documents a scalar `model` with default
+  inheritance when omitted; it does not establish CLI `models` or effort fields
+  for cloud agent.
+
+Use the client's available-model picker before selecting a model. In current
+Copilot CLI, `/model` changes the session by default; persistence requires an
+explicit scope such as `--global`. A public model announcement does not establish
+availability for every account or client.
+
+Sources: [CLI model and agent reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference),
+[VS Code custom agents](https://code.visualstudio.com/docs/agent-customization/custom-agents),
+[cloud agent configuration](https://docs.github.com/en/copilot/reference/custom-agents-configuration).
 
 ## Behavioral Limits
 
@@ -16773,6 +16955,94 @@ Project-local setup uses the same preservation approach for files that should re
 
 ---
 
+## kb/reference/model-compatibility.md
+
+---
+title: "Model compatibility for skills and agents"
+category: reference
+service: ai-toolkit
+tags: [models, skills, agents, codex, copilot, claude, effort]
+version: "1.0.0"
+created: "2026-09-23"
+last_updated: "2026-09-23"
+description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."
+---
+
+# Model compatibility for skills and agents
+
+Reviewed 2026-09-23. These are documentation snapshots, not a guarantee that a
+model is enabled on a particular account. Check the active client's picker and
+policy before selecting a model. Preserve a user's explicit choice; do not
+replace a tiered workflow with a single flagship model.
+
+## Runtime selection and API examples are different surfaces
+
+| Surface | Selection contract | Toolkit behavior |
+|---------|--------------------|------------------|
+| Claude Code | Named models and `opus`/`sonnet`/`haiku` aliases; resolution depends on provider and configuration | Existing agent tiers remain aliases; skill and agent frontmatter are Claude-specific unless an adapter explicitly maps them |
+| Codex | Client model picker/configuration and native custom-agent configuration | Generated agents omit model overrides, preserving the host's selection; Claude skill `effort` is not a Codex reasoning setting |
+| Copilot | Account/client model availability, picker and supported custom-agent configuration | Generated agents omit provider-specific model defaults; Claude aliases are not portable Copilot model IDs |
+| API examples | Explicit provider model ID plus that model's endpoint and capability contract | Receive configured models, budgets and rates; application fallback must use an approved compatible set |
+
+Claude aliases do not imply the same concrete model on every provider. The
+current Claude Code reference maps Anthropic API `opus` to Opus 5.5 and `sonnet`
+to Sonnet 5, while other providers can resolve differently. See
+[Claude Code model configuration](https://code.claude.com/docs/en/model-config).
+
+## Reviewed model families
+
+| Provider/surface | Current examples at review time | Important boundary |
+|------------------|---------------------------------|--------------------|
+| OpenAI API | `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` | Use Responses for reasoning with tools; Astra rejects `none` effort, while Sol/Luna allow it |
+| Codex | GPT-6 Astra/Sol/Luna, according to account/client availability | Start from the selected/default effort; higher reasoning and orchestration modes are explicit choices |
+| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-haiku-4-5-20251001` | Opus 5.5 defaults to medium effort, Fable/Sonnet to high; Haiku does not support effort |
+| GitHub Copilot | Offers models from multiple providers, including current GPT-6 and Claude families | Plan, organization policy and client determine the actual list; utility models are not selectable session models |
+
+Sources: [OpenAI migration guidance](https://developers.openai.com/api/docs/guides/latest-model),
+[Codex models](https://learn.chatgpt.com/docs/models),
+[Claude models](https://platform.claude.com/docs/en/models/overview),
+[Claude effort](https://platform.claude.com/docs/en/build-with-claude/effort),
+[Copilot availability](https://docs.github.com/en/copilot/reference/ai-models/supported-models).
+
+Retirement is also surface-specific. At this review date, Codex with ChatGPT
+sign-in has retired GPT-5.4/mini and announces GPT-5.5 retirement for 2026-10-14.
+That notice does not retire those models from the OpenAI API or establish
+Copilot availability. Check the relevant account/client instead of applying
+one product's retirement list globally. See the Codex models reference above.
+
+## Effort, caching and prompting
+
+- Preserve effective effort when supported. An API's `reasoning.effort`,
+  Claude's `output_config.effort`, and an editor's reasoning control are not
+  interchangeable schemas. Do not forward unsupported sampling parameters to
+  reasoning requests.
+- Changing effort does not universally preserve cache. Use the provider's
+  documented per-message update mechanism where supported; re-check cache
+  invalidation rules for ordinary request-level changes.
+- Ask for a concrete result, constraints, evidence and acceptance criteria.
+  Avoid blanket requests to expose chain-of-thought, unsupported universal
+  performance claims, or unconditional maximum effort for every reviewer.
+- A failed task is a signal to inspect context and evidence. Escalate to another
+  model only within an approved routing policy; uncertainty scores alone do not
+  establish which output is correct.
+
+## Cost and validation
+
+Keep pricing outside executable prompt examples. Resolve current rates for the
+actual model and account, use explicit per-million-token units, and record input,
+cached input and output usage where the API reports them. Unknown rates must be
+reported rather than treated as free usage. API dollar rates do not describe
+Copilot credits or subscription plan usage.
+
+Contract tests cover emitted metadata, resource preservation, fake-client
+request shapes and deterministic parsing/calculation behavior. They do not
+measure the quality, latency or actual token spend of every model. Live evals
+require representative tasks, available models and an explicitly bounded budget.
+
+See [review plan and evidence](../planning/model-compatibility-refresh-20260923.md).
+
+---
+
 ## kb/reference/opencode-compatibility.md
 
 ---
@@ -17409,13 +17679,18 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.6.0"
+version: "1.7.0"
 created: "2026-03-23"
-last_updated: "2026-09-08"
+last_updated: "2026-09-23"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
 ---
 
 # Skills Catalog
+
+Model-specific guidance and client/API boundaries are recorded in
+[Model Compatibility](model-compatibility.md). Claude skill `model` and `effort`
+fields do not automatically configure Codex or Copilot. Preserve the active
+selection and verify available capabilities before applying an override.
 
 All functionality is unified under skills. Task and hybrid skills are user-invocable as slash commands. Knowledge skills provide domain patterns auto-loaded by agents.
 
@@ -17564,7 +17839,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **prompt-caching-patterns** | `skills/prompt-caching-patterns/` | Anthropic prompt caching: TTL, breakpoints, hit rate, anti-patterns |
 | **json-mode-patterns** | `skills/json-mode-patterns/` | Structured JSON output via tool-use; schema design; partial recovery |
 | **content-moderation-patterns** | `skills/content-moderation-patterns/` | Two-stage moderation: pre-filter + LLM classifier; categories; thresholds |
-| **model-routing-patterns** | `skills/model-routing-patterns/` | Haiku/Sonnet/Opus routing; escalation; sub-agent delegation; fallback |
+| **model-routing-patterns** | `skills/model-routing-patterns/` | Approved model routing; dated capabilities; effort/cache boundaries; validated escalation and fallback |
 
 ## Knowledge Skills - Process
 | Skill | Directory | Domain |

@@ -27,6 +27,12 @@ Create a new skill following the Agent Skills standard.
 This table describes Claude Code skill fields. ai-toolkit requires `name` and
 `description` for portable catalog entries even though Claude Code can infer them.
 
+Only set `model` or `effort` when the skill deliberately needs an approved
+override. Omission inherits the session choice in Claude Code. Check supported
+effort levels for the selected model; these fields do not configure Codex or
+Copilot reasoning. Refer to `kb/reference/model-compatibility.md` for the current
+client/API boundaries and verify actual account availability before pinning IDs.
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | yes | Lowercase, hyphens only, max 64 chars |

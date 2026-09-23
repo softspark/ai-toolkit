@@ -264,7 +264,7 @@ installed. See `kb/howto/autonomous-development.md` for the public contract.
 | `prompt-caching-patterns` | Anthropic prompt caching: TTL, breakpoints, hit rate |
 | `json-mode-patterns` | Structured JSON output via tool-use forcing |
 | `content-moderation-patterns` | Two-stage moderation: pre-filter + LLM classifier |
-| `model-routing-patterns` | Haiku/Sonnet/Opus routing, escalation, fallback |
+| `model-routing-patterns` | Approved model routing, effort/cache boundaries, evidence-based escalation and fallback |
 
 ### Knowledge Skills - Process (5)
 | Skill | Purpose |

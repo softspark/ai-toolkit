@@ -93,13 +93,15 @@ Before dispatching the implementer, gather:
 
 Use the `Agent` tool with the [implementer prompt template](reference/implementer-prompt.md).
 
-Select model based on task complexity:
+Keep the agent's configured model and effort by default. If the user has approved
+model routing, select an available, capability-compatible route using this
+workload guide; do not infer permission to change tier or spending from task size:
 
 | Task Type | Model | Examples |
 |-----------|-------|---------|
-| Mechanical | Cheapest available | Rename, move, config change, 1-2 files with clear spec |
-| Integration | Standard | Wire up existing components, add endpoint using established patterns |
-| Design/Complex | Most capable | New architecture, complex algorithms, cross-cutting concerns |
+| Mechanical | Approved low-latency route | Rename, move, config change, 1-2 files with clear spec |
+| Integration | Approved balanced route | Wire up existing components, add endpoint using established patterns |
+| Design/Complex | Approved higher-capability route, if evals justify it | New architecture, complex algorithms, cross-cutting concerns |
 
 ### 2c. Handle Implementer Status
 
@@ -110,7 +112,7 @@ The implementer reports one of four statuses:
 | **DONE** | Proceed to spec review |
 | **DONE_WITH_CONCERNS** | Read concerns. If they relate to correctness or scope violations, address them before review. If observational only (style preference, future improvement), note them and proceed to spec review |
 | **NEEDS_CONTEXT** | Provide the missing context the implementer identified. Re-dispatch with the same task plus the additional context |
-| **BLOCKED** | Assess the blocker. Context problem: re-dispatch with better context. Task too complex for selected model: re-dispatch with more capable model. Plan is wrong or ambiguous: escalate to user for clarification |
+| **BLOCKED** | Assess the blocker. Context problem: re-dispatch with better context. Capability problem: use a compatible route only within an approved model/budget policy, otherwise ask. Plan is wrong or ambiguous: escalate to user for clarification |
 
 ### 2d. Spec Review (Stage 1)
 
@@ -178,21 +180,16 @@ After all tasks complete, produce:
 
 ## Model Selection Guidance
 
-Before dispatching each subagent, assess the task:
+Before dispatching, check the configured agent model, user choice, client
+availability, tool/output capabilities and budget. Keep those settings unless
+an override is explicitly approved. An API model ID is not an editor picker
+label, and a Claude alias is not a portable identifier for another provider.
 
-```
-Is the task mechanical (rename, config, boilerplate)?
-    --> Use cheapest model
-
-Does the task integrate existing patterns (1-3 files)?
-    --> Use standard model
-
-Does the task require design decisions or span 4+ files?
-    --> Use most capable model
-
-Is it a review task?
-    --> Always use most capable model (reviews catch what implementers miss)
-```
+For an approved routing experiment, compare representative mechanical,
+integration, design and review tasks at fixed acceptance criteria. Review
+quality depends on evidence and coverage, not simply the highest-priced model.
+Use `model-routing-patterns` and `kb/reference/model-compatibility.md`; do not
+select a universally cheapest or most capable model from a static prompt table.
 
 ## Review Order Rule
 

@@ -137,6 +137,33 @@ running the generators directly:
 - `scripts/generate_copilot_hooks.py` — version-1 hook config plus a
   self-contained repository/config-root runtime.
 
+## Models and Reasoning Effort
+
+Toolkit-generated agent and skill frontmatter does not copy Claude `model` or
+`effort` values. Runtime tier directives in prose retain the current client's
+selection; fenced API examples and inline code keep their original model IDs.
+
+Copilot model controls differ by surface:
+
+- CLI custom agents support `model`, `models`, `modelPolicy`, and
+  `reasoningEffort`. Explicit calls and user `subagents` settings take precedence
+  over authored defaults, followed by the parent session. Auto uses the resolved
+  session model. The toolkit leaves these fields unset.
+- VS Code supports agent `model` selection, including an ordered fallback list;
+  omission uses the current model picker selection.
+- The shared GitHub.com agent contract documents a scalar `model` with default
+  inheritance when omitted; it does not establish CLI `models` or effort fields
+  for cloud agent.
+
+Use the client's available-model picker before selecting a model. In current
+Copilot CLI, `/model` changes the session by default; persistence requires an
+explicit scope such as `--global`. A public model announcement does not establish
+availability for every account or client.
+
+Sources: [CLI model and agent reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference),
+[VS Code custom agents](https://code.visualstudio.com/docs/agent-customization/custom-agents),
+[cloud agent configuration](https://docs.github.com/en/copilot/reference/custom-agents-configuration).
+
 ## Behavioral Limits
 
 - Prompt files are available only in VS Code, Visual Studio, and JetBrains IDEs;

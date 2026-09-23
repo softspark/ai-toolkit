@@ -59,6 +59,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import secure_fs
+from codex_skill_adapter import adapt_model_directives
 from dir_rules_shared import (
     LANG_GLOBS,
     PREFIX,
@@ -324,11 +325,7 @@ def _portable_copilot_body(body: str, *, include_execution_note: bool) -> str:
         lambda match: f"Load the `{match.group(1)}` skill if it is available",
         body,
     )
-    body = re.sub(
-        r"\bUse (?:Opus|Sonnet|Haiku)(?:\s+[0-9.]+)?\b",
-        "Use the model selected by the current Copilot client",
-        body,
-    )
+    body = adapt_model_directives(body)
     body = body.replace(
         ".github/agents/{name}.md",
         ".github/agents/ai-toolkit-{name}.agent.md",

@@ -37,7 +37,8 @@ Create an agent team for this task:
 - Teammate 1 ({role}): "{focused task description}". Files: {owned paths}
 - Teammate 2 ({role}): "{focused task description}". Files: {owned paths}
 - Teammate 3 ({role}): "{focused task description}". Files: {owned paths}
-Use Opus for each teammate. Require plan approval before changes.
+Keep each teammate's configured model and effort within the approved budget.
+Do not substitute a model without user authorization. Require plan approval before changes.
 ```
 
 ### Teammate Context (MANDATORY)
@@ -158,7 +159,7 @@ smart_query("[task description in English]")  # or hybrid_search_kb()
 | `ml-engineer` | ML | Model training, MLOps |
 | `nlp-engineer` | NLP | NER, text classification, NLP pipelines |
 | `llm-ops-engineer` | LLM Ops | LLM caching, fallback, cost optimization |
-| `prompt-engineer` | Prompts | Prompt design, chain-of-thought |
+| `prompt-engineer` | Prompts | Prompt design, reasoning controls, verifiable outputs |
 | `data-scientist` | Data Science | Statistics, EDA, A/B testing |
 | `search-specialist` | Search | Search optimization, relevance tuning |
 | `code-reviewer` | Code Quality | Code review, quality, security |

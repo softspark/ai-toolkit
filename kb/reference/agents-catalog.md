@@ -3,13 +3,19 @@ title: "AI Toolkit - Agents Catalog"
 category: reference
 service: ai-toolkit
 tags: [agents, catalog, roles, ai-development]
-version: "1.4.2"
+version: "1.4.3"
 created: "2026-03-23"
-last_updated: "2026-04-09"
+last_updated: "2026-09-23"
 description: "Complete catalog of specialized agents with roles, models, and use cases."
 ---
 
 # Agents Catalog
+
+The model column describes configured Claude tiers, not fixed API versions.
+Aliases resolve through the active provider/client configuration. Codex and
+Copilot generated agents preserve the host's selected model rather than copying
+Claude aliases. See [Model Compatibility](model-compatibility.md) for the dated
+model reference, effort boundaries and validation limits.
 
 ## By Category
 

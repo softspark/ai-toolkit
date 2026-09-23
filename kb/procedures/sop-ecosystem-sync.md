@@ -3,7 +3,7 @@ title: "SOP: Ecosystem Sync"
 category: procedures
 service: ai-toolkit
 tags: [sop, ecosystem, editors, generators, drift-detection, sync]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-04-23"
 last_updated: "2026-09-23"
 description: "Quarterly or event-triggered sync procedure for the 14 registry tools: Claude Code, Claude app, explicit-preview DSH, and 11 default editor integrations."
@@ -91,6 +91,26 @@ findings and therefore several classes. Record source-access gaps explicitly.
 
 The doctor's `version_probe` reports a locally installed binary, not the latest
 vendor release. Keep release review metadata separate from this observation.
+
+### Model and prompt review
+
+Client compatibility does not establish model compatibility. During a full sync,
+also review active skills, agents and concrete model mappings against the current
+provider and client documentation. Start with
+[model compatibility](../reference/model-compatibility.md) and inventory model
+IDs, prices, effort/thinking controls, structured-output schemas and cache claims.
+
+- Separate API model IDs from client labels and Claude aliases. Verify availability
+  for the actual provider/account rather than copying another client's picker.
+- Preserve explicit user choices and approved tiers. A new model release does not
+  authorize changing an active agent's model, tool permissions or budget.
+- Check examples for deprecated endpoints, unsupported parameters, invalid output
+  handling, pricing units and unsafe fallback. Keep historical release records.
+- Test adapters with native metadata, resource files and API/code literals; do
+  not let a model name in an example turn into a runtime override.
+- Record dated sources and the review result. Offline contract tests establish
+  formatting and deterministic logic; quality/cost improvements require separate
+  live evals with representative tasks and an approved budget.
 
 | Drift class | What it means | Action owner |
 |-------------|---------------|--------------|
