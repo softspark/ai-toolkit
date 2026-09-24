@@ -278,9 +278,16 @@ def render_text(report: list[dict]) -> str:
     return "\n".join(out)
 
 
-def update_snapshot(snapshot: dict, reports: list[dict]) -> dict:
-    """Merge doctor reports back into the snapshot for the next run."""
-    snapshot.setdefault("tools", {})
+def update_snapshot(snapshot: dict, reports: list[dict], registry_ids: set[str]) -> dict:
+    """Merge doctor reports back into the snapshot for the next run.
+
+    Baselines for tools no longer in the registry are dropped.
+    """
+    snapshot["tools"] = {
+        tool_id: state
+        for tool_id, state in snapshot.get("tools", {}).items()
+        if tool_id in registry_ids
+    }
     for r in reports:
         if r.get("errors"):
             continue  # do not overwrite last-known-good state with error state
@@ -313,6 +320,7 @@ def main() -> None:
     snapshot = load_snapshot()
 
     tools = registry.get("tools", [])
+    registry_ids = {t["id"] for t in tools}
     if args.tool:
         tools = [t for t in tools if t["id"] == args.tool]
         if not tools:
@@ -323,7 +331,7 @@ def main() -> None:
     reports = [check_tool(t, snapshot_tools.get(t["id"], {}), args.offline) for t in tools]
 
     if args.update:
-        snapshot = update_snapshot(snapshot, reports)
+        snapshot = update_snapshot(snapshot, reports, registry_ids)
         save_snapshot(snapshot)
 
     # Strip internal fields before serializing

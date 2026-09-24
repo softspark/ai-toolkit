@@ -18,6 +18,7 @@ from frontmatter import frontmatter_field
 from secure_fs import (
     SecureDestination,
     SecureTransaction,
+    apply_owned_edits,
     lexical_absolute,
     nearest_existing_root,
     run_secure_transaction,
@@ -161,30 +162,35 @@ def generate(
     )
 
 
-def cleanup(target_dir: Path) -> int:
-    """Remove only managed Gemini agent files from ``target_dir``."""
+def _owned_agent_edit(content: bytes) -> bytes | None:
+    return None if _is_managed(content) else content
+
+
+def _apply(target_dir: Path, *, dry_run: bool) -> int:
     target = lexical_absolute(target_dir)
     if target.is_symlink() or not target.is_dir():
         raise RuntimeError(f"Unsafe Gemini target directory: {target}")
-    output_dir = target / ".gemini" / "agents"
-    stale = _stale_files(output_dir, set())
-    if not stale:
-        return 0
-    trusted_root = nearest_existing_root(target)
-    destinations = [
-        SecureDestination(path, trusted_root, f"Gemini agent {path.name}")
-        for path in stale
-    ]
+    gemini_dir = target / ".gemini"
+    if gemini_dir.is_symlink():
+        raise RuntimeError(f"Unsafe Gemini agents path: {gemini_dir}")
+    output_dir = gemini_dir / "agents"
+    return apply_owned_edits(
+        {path: _owned_agent_edit for path in _stale_files(output_dir, set())},
+        target,
+        label="Gemini agent",
+        prune=(output_dir, gemini_dir),
+        dry_run=dry_run,
+    )
 
-    def apply(transaction: SecureTransaction) -> int:
-        removed = 0
-        for destination in destinations:
-            if _is_managed(transaction.initial_content(destination)):
-                transaction.unlink(destination)
-                removed += 1
-        return removed
 
-    return run_secure_transaction(destinations, apply)
+def discover(target_dir: Path) -> int:
+    """Count managed Gemini agent files ``cleanup`` would remove."""
+    return _apply(target_dir, dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Remove only managed Gemini agent files from ``target_dir``."""
+    return _apply(target_dir, dry_run=False)
 
 
 def main() -> None:

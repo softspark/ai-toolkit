@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from codex_skill_adapter import build_opencode_skill_text, is_codex_adapted_skill
 from emission import skills_dir
 from frontmatter import frontmatter_field
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 COMMAND_PREFIX = "ai-toolkit-"
 
@@ -144,6 +145,47 @@ def generate(
 
     removed = _cleanup_stale(commands_out)
     return written, removed
+
+
+def _managed_edits(base: Path) -> dict[Path, OwnedEdit]:
+    """Select ``commands/ai-toolkit-*.md``; the prefix is reserved for the toolkit."""
+    commands_out = base / "commands"
+    for path in (base, commands_out):
+        if path.is_symlink():
+            raise RuntimeError(f"Refusing symlinked OpenCode path: {path}")
+    if not commands_out.is_dir():
+        return {}
+    return {
+        path: lambda _content: None
+        for path in sorted(commands_out.glob(f"{COMMAND_PREFIX}*.md"))
+        if path.is_file()
+    }
+
+
+def cleanup(target_dir: Path, config_root: Path | None = None) -> int:
+    """Remove generated OpenCode commands and return how many were removed.
+
+    ``config_root`` selects the global layout (``~/.config/opencode``);
+    otherwise ``target_dir/.opencode`` is used. User commands are untouched.
+    """
+    base = config_root if config_root is not None else target_dir / ".opencode"
+    return apply_owned_edits(
+        _managed_edits(base),
+        lexical_absolute(target_dir),
+        label="OpenCode command",
+        prune=(base / "commands", base),
+    )
+
+
+def discover(target_dir: Path, config_root: Path | None = None) -> int:
+    """Count the files :func:`cleanup` would remove, without side effects."""
+    base = config_root if config_root is not None else target_dir / ".opencode"
+    return apply_owned_edits(
+        _managed_edits(base),
+        lexical_absolute(target_dir),
+        label="OpenCode command",
+        dry_run=True,
+    )
 
 
 def main() -> None:

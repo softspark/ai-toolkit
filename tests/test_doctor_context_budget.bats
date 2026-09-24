@@ -57,6 +57,15 @@ _write_claude_json() {
     echo "$output" | grep -q 'user memory: 2 always-loaded files'
 }
 
+@test "doctor context budget: a path-scoped user rule is not counted as always-loaded" {
+    _write_claude_json 500
+    printf -- '---\npaths:\n  - "**/*"\n---\n# Always\n' > "$HOME/.claude/rules/ai-toolkit-always.md"
+    printf -- '---\npaths:\n  - "**/tests/**"\n---\n# Scoped\n' > "$HOME/.claude/rules/ai-toolkit-scoped.md"
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py"
+    echo "$output" | grep -q 'user memory: 3 always-loaded files'
+    echo "$output" | grep -q '1 path-scoped rule(s) load on demand'
+}
+
 @test "doctor context budget: lists zero-use skills, splits language skills, names the override key" {
     _write_claude_json 500
     run python3 "$TOOLKIT_DIR/scripts/doctor.py"

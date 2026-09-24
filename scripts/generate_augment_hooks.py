@@ -38,6 +38,9 @@ import os
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from secure_fs import apply_owned_edits, lexical_absolute
+
 HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_FORMAT=json "$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
 
@@ -158,6 +161,78 @@ def generate(target_dir: Path) -> Path:
         json.dump(settings, f, indent=4, ensure_ascii=False, sort_keys=True)
         f.write("\n")
     return path
+
+
+def _strip_settings(content: bytes) -> tuple[bytes | None, int]:
+    """Strip ai-toolkit hook groups; ``None`` when nothing else remains."""
+    try:
+        settings = json.loads(content)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return content, 0
+    if not isinstance(settings, dict) or not isinstance(settings.get("hooks"), dict):
+        return content, 0
+    hooks = settings["hooks"]
+    count = sum(
+        1
+        for entries in hooks.values()
+        if isinstance(entries, list)
+        for entry in entries
+        if _is_toolkit_entry(entry)
+    )
+    if not count:
+        return content, 0
+    survivors = strip_toolkit_hooks(hooks)
+    if survivors:
+        settings["hooks"] = survivors
+    else:
+        settings.pop("hooks")
+    if not settings:
+        return None, count
+    rendered = json.dumps(settings, indent=4, ensure_ascii=False, sort_keys=True)
+    return (rendered + "\n").encode("utf-8"), count
+
+
+def _apply(target_dir: Path, *, dry_run: bool) -> int:
+    """Run the settings edit and return the hook groups it strips.
+
+    The count is taken from the same pinned bytes the edit rewrites.
+    """
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Augment target directory: {target}")
+    aug_dir = target / ".augment"
+    if aug_dir.is_symlink():
+        raise RuntimeError(f"Refusing symlinked Augment settings directory: {aug_dir}")
+    path = aug_dir / "settings.json"
+    stripped: list[int] = []
+
+    def edit(content: bytes) -> bytes | None:
+        updated, count = _strip_settings(content)
+        stripped.append(count)
+        return updated
+
+    apply_owned_edits(
+        {path: edit} if path.is_file() else {},
+        target,
+        label="Augment settings.json",
+        prune=(aug_dir,),
+        dry_run=dry_run,
+    )
+    return sum(stripped)
+
+
+def discover(target_dir: Path) -> int:
+    """Count ai-toolkit hook groups in ``<target_dir>/.augment/settings.json``."""
+    return _apply(target_dir, dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Strip ai-toolkit hook groups and return how many were removed.
+
+    ``target_dir`` is HOME for both install scopes. User hook groups and
+    other settings are preserved; the file is deleted only when empty.
+    """
+    return _apply(target_dir, dry_run=False)
 
 
 def main() -> None:

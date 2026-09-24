@@ -160,67 +160,6 @@
       }
     },
     {
-      "id": "dsh",
-      "display_name": "DeepSeek Harness",
-      "kind": "harness",
-      "status": "developer-preview",
-      "selection_policy": "explicit-only",
-      "reviewed_version": "0.1.2-rc.1",
-      "excluded_from": [
-        "editors-all",
-        "auto-detect",
-        "defaults"
-      ],
-      "urls": {
-        "docs": "https://deepseek-harness.github.io/deepseek-harness/",
-        "release_notes": "https://github.com/deepseek-ai/deepseek-harness/releases",
-        "reviewed_release": "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1",
-        "reviewed_cli_docs": "https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md",
-        "reviewed_skill_docs": "https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md"
-      },
-      "config_paths": [
-        ".agents/skills/*/SKILL.md",
-        "$DSH_HOME/profiles/<profile>/package.json",
-        "$DSH_HOME/profiles/<profile>/node_modules/@softspark/dsh-*",
-        "$DSH_HOME/.agent-presets/softspark-orchestrator"
-      ],
-      "our_generators": [
-        "scripts/generate_codex_skills.py"
-      ],
-      "our_lifecycle": [
-        "scripts/install_steps/dsh.py"
-      ],
-      "lifecycle_commands": [
-        "ai-toolkit dsh install --profile web",
-        "ai-toolkit dsh update --profile web",
-        "ai-toolkit dsh doctor --profile web",
-        "ai-toolkit dsh uninstall --profile web"
-      ],
-      "status_note": "Community compatibility target maintained by SoftSpark. DeepSeek AI has not endorsed this integration. ai-toolkit reuses its native skill generator for project .agents/skills output and manages exact @softspark/dsh-codex@1.5.0 and @softspark/dsh-orchestrator@2.0.0 packages only through explicit profile lifecycle commands. The lifecycle targets DSH 0.1.2-rc.1. Other prereleases require separate qualification before these pins change.",
-      "capability_markers": [
-        "Developer preview",
-        "profiles",
-        "dsh plugin",
-        "skills",
-        "Agent Preset"
-      ],
-      "version_probe": {
-        "kind": "command",
-        "command": "dsh --version"
-      },
-      "documentation_review": {
-        "date": "2026-09-23",
-        "classes": [
-          "A",
-          "C"
-        ],
-        "note": "Reviewed the pinned release; keep explicit-preview selection and separately qualified package pins. No automatic migration to other prereleases.",
-        "sources": [
-          "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1"
-        ]
-      }
-    },
-    {
       "id": "cursor",
       "display_name": "Cursor",
       "kind": "editor",

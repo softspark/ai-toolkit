@@ -74,7 +74,7 @@ const COMMANDS = {
   update: 'Re-apply toolkit with saved modules from state.json (use --local for project-local only)',
   status: 'Show installed modules, version, profile, and registered external rules/hooks',
   reset: 'Wipe and recreate project-local configs from scratch (requires --local)',
-  uninstall: 'Remove ai-toolkit from ~/.claude/',
+  uninstall: 'Remove everything ai-toolkit installed, incl. registered projects and ~/.softspark/ai-toolkit (archived first; --local for one project)',
   'add-rule': 'Register a rule file or URL in ~/.softspark/ai-toolkit/rules/ (URL rules auto-refresh on update)',
   'remove-rule': 'Unregister a rule and remove its generated Claude rule file',
   'inject-hook': 'Inject external hooks (file or URL) into ~/.claude/settings.json (URL hooks auto-refresh on update)',
@@ -83,7 +83,6 @@ const COMMANDS = {
   'remove-mcp': 'Remove injected MCP servers by source name from ~/.mcp.json and all editor configs',
   validate: 'Verify toolkit integrity',
   doctor: 'Check install health, hooks, and artifact drift',
-  dsh: 'Manage the explicit DeepSeek Harness profile integration',
   eject: 'Export standalone config (no symlinks, no toolkit dependency)',
   benchmark: 'Benchmark toolkit (--my-config to compare your setup vs defaults vs ecosystem)',
   'benchmark-ecosystem': 'Generate ecosystem benchmark snapshot (GitHub metadata + offline fallback)',
@@ -125,6 +124,7 @@ const COMMANDS = {
   'claude-app': 'Export or verify the uploadable Claude Chat/Desktop/Cowork plugin',
   'codex-plugin': 'Export or verify the native Codex CLI plugin package',
   'antigravity-plugin': 'Export or verify the native Google Antigravity plugin package',
+  dsh: 'Retired: prints manual cleanup steps for DSH profiles (removed in the next minor)',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
   'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, opencode, llms)',
   help: 'Show this help message',
@@ -312,7 +312,6 @@ function showHelp() {
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
   console.log('  --lang <list>   Explicitly select language rules (e.g. typescript, go,python)');
   console.log('  --editors <list> Install editor configs: cursor,windsurf,cline,roo,aider,augment,copilot,antigravity,codex,opencode (or "all")');
-  console.log('                  dsh (explicit project target; requires --local; excluded from "all")');
   console.log('                  Default with --local: auto-detect from existing project files');
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --language-skills <s>  detected (default): turn off <lang>-rules/<lang>-patterns skills for languages');
@@ -386,11 +385,6 @@ function showHelp() {
   console.log('                                Remove from .mcp.json or native editor configs');
   console.log('\nOptions for doctor:');
   console.log('  --fix           Auto-repair detected issues');
-  console.log('\nOptions for dsh:');
-  console.log('  dsh install --profile web [--dry-run]');
-  console.log('  dsh update --profile web [--dry-run]');
-  console.log('  dsh doctor --profile web');
-  console.log('  dsh uninstall --profile web [--dry-run] [--yes]');
   console.log('\nOptions for stats:');
   console.log('  --summary       Show aggregated product telemetry (usage coverage, top skills, unused catalog)');
   console.log('  --json          Emit raw stats, or machine-readable telemetry when combined with --summary');
@@ -722,6 +716,21 @@ function handleUpdate(args) {
 }
 
 /** @type {Record<string, (args: string[]) => void>} */
+/**
+ * Retired in 5.0.0. Kept for one release as a warning (deprecation path in
+ * BACKWARD_COMPATIBILITY.md) so scripts calling it do not start failing.
+ */
+function handleRetiredDsh() {
+  console.error([
+    'Warning: `ai-toolkit dsh` is retired. ai-toolkit no longer manages DeepSeek Harness profiles.',
+    'To remove what an earlier `ai-toolkit dsh install --profile <name>` added:',
+    '  dsh plugin --profile <name> remove @softspark/dsh-codex',
+    '  dsh plugin --profile <name> remove @softspark/dsh-orchestrator',
+    '  rm -rf "${DSH_HOME:-$HOME/.dsh}/.agent-presets/softspark-orchestrator"',
+    'Details: kb/reference/dsh-compatibility.md',
+  ].join('\n'));
+}
+
 const SPECIAL_HANDLERS = {
   'status':       handleStatus,
   'update':       handleUpdate,
@@ -731,9 +740,9 @@ const SPECIAL_HANDLERS = {
   'sync':         handleSync,
   'mcp':          handleMcp,
   'config':       handleConfig,
-  'dsh':          (args) => run(path.join(TOOLKIT_DIR, 'scripts', 'install_steps', 'dsh.py'), args),
   'projects':     (args) => run(scriptPath('projects_cli.py'), args),
   'plugin':       (args) => run(scriptPath('plugin.py'), args),
+  'dsh':          handleRetiredDsh,
   'remove-rule':  handleRemoveRule,
   'add-rule':     handleAddRule,
   'inject-hook':  handleInjectHook,

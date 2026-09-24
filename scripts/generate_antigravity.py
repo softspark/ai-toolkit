@@ -36,14 +36,18 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from codex_skill_adapter import ADAPTED_MARKERS
 from dir_rules_shared import (
     STANDARD_RULES,
     STANDARD_WORKFLOWS,
     build_language_rules,
     build_registered_rules,
+    rule_scope,
     write_rules,
 )
 from emission import emit_skills_bullets
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
+from skill_pointer import owned_pointer_edit
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +141,96 @@ def generate(target_dir: Path, *,
     write_rules(target_dir, STANDARD_WORKFLOWS, ".agents/workflows")
     if emit_skill_pointer:
         _write_skill_pointer(target_dir)
+
+
+# ---------------------------------------------------------------------------
+# Cleanup
+# ---------------------------------------------------------------------------
+
+LOCAL_RULE_ROOTS = (".agents/rules", ".agents/workflows")
+LOCAL_SKILL_ROOTS = (".agents/skills", ".agent/skills")
+GLOBAL_SKILL_ROOTS = (".gemini/config/skills", ".gemini/antigravity-cli/skills")
+
+def _is_managed_rule_name(name: str) -> bool:
+    # Same ``ai-toolkit-*`` ownership rule ``write_rules`` uses to prune stale
+    # files; these rule and workflow files carry no in-file marker.
+    return name.endswith(".md") and rule_scope(name) is not None
+
+
+def _remove(_content: bytes) -> None:
+    return None
+
+
+def _apply(target_dir: Path, global_install: bool, *, dry_run: bool) -> int:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Antigravity target directory: {target}")
+    edits: dict[Path, OwnedEdit] = {}
+    leaves: list[Path] = []
+    if not global_install:
+        for rel in LOCAL_RULE_ROOTS:
+            root = target / rel
+            for directory in (root.parent, root):
+                if directory.is_symlink():
+                    raise RuntimeError(
+                        f"Refusing symlinked Antigravity rules directory: {directory}"
+                    )
+            leaves.append(root)
+            if root.is_dir():
+                edits.update({
+                    path: _remove
+                    for path in sorted(root.iterdir())
+                    if _is_managed_rule_name(path.name)
+                    and path.is_file() and not path.is_symlink()
+                })
+    for rel in GLOBAL_SKILL_ROOTS if global_install else LOCAL_SKILL_ROOTS:
+        pointer_dir = target / rel / POINTER_SKILL_NAME
+        leaves.append(pointer_dir)
+        # A symlinked pointer directory is skipped. One carrying a Codex (or
+        # legacy DSH) adapter marker belongs to the shared ``.agents/skills`` surface
+        # that uninstall cleans separately.
+        if pointer_dir.is_symlink() or not (pointer_dir / "SKILL.md").is_file():
+            continue
+        if any(
+            (pointer_dir / marker).exists() or (pointer_dir / marker).is_symlink()
+            for marker in ADAPTED_MARKERS
+        ):
+            continue
+        edits[pointer_dir / "SKILL.md"] = owned_pointer_edit
+    prune = {
+        directory
+        for leaf in leaves
+        for directory in (leaf, *leaf.parents)
+        if target in directory.parents
+    }
+    return apply_owned_edits(
+        edits,
+        target,
+        label="Antigravity",
+        prune=tuple(prune),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path, *, global_install: bool = False) -> int:
+    """Count managed Antigravity rules, workflows, and skill pointers.
+
+    Local (``target_dir`` = project): ``.agents/rules/ai-toolkit-*.md``,
+    ``.agents/workflows/ai-toolkit-*.md``, and the catalogue pointer in
+    ``.agents/skills/`` and ``.agent/skills/``. Global (``target_dir`` =
+    HOME): the pointer in ``~/.gemini/config/skills/`` and
+    ``~/.gemini/antigravity-cli/skills/``.
+    """
+    return _apply(target_dir, global_install, dry_run=True)
+
+
+def cleanup(target_dir: Path, *, global_install: bool = False) -> int:
+    """Remove what ``discover`` counts and return the number of files removed.
+
+    Hooks and native agents have their own ``cleanup`` in
+    ``generate_antigravity_hooks`` and ``generate_antigravity_agents``.
+    """
+    return _apply(target_dir, global_install, dry_run=False)
 
 
 def main() -> None:

@@ -1,25 +1,25 @@
 # ai-toolkit
 
-> AI coding toolkit with machine-enforced safety, 116 skills, 44 agents, lifecycle hooks, persona presets, opt-in plugin packs, and benchmark tooling. DSH is available as a separate explicit developer-preview target.
+> AI coding toolkit with machine-enforced safety, 116 skills, 44 agents, lifecycle hooks, persona presets, opt-in plugin packs, and benchmark tooling.
 
 [![CI](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/ai-toolkit/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2068%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1910%20passing-success)](tests/)
 
-## What's New in v4.39.0
+## What's New in v5.0.0
 
-- **Current models:** dated GPT-6, Claude and Copilot guidance with explicit
-  client/API boundaries and preserved user model choices.
-- **Skills:** current effort and cache behavior, native structured outputs,
-  semantic validation and corrected moderation examples.
-- **Agents:** Responses API examples, scoped response caching, bounded fallback
-  and usage-based costs instead of hardcoded prices.
-- **Prompt portability:** Codex/Copilot adapters preserve API examples, metadata
-  and code literals while adapting runtime model instructions.
-- **Verification:** 2068 Bats and 456 Python tests; model-quality benchmarks are
-  separate from these offline contract checks.
+- **Rules load once:** common rules and the constitution install at user level
+  (`~/.claude/rules/`), so projects under a registered workspace folder no
+  longer load them twice. The global constitution now actually loads.
+- **`uninstall` removes everything:** registered projects, every editor surface,
+  toolkit settings, plugin packs, injected hooks and MCP servers, and
+  `~/.softspark/ai-toolkit` (archived to `~/ai-toolkit-backup-<time>.tar.gz`
+  first). Toolkit hooks no longer keep running after uninstall.
+- **Breaking: DSH support retired.** `--editors dsh` and `ai-toolkit dsh` only
+  warn for this release; old DSH project skills migrate on `update`.
+- **Verification:** 1910 Bats and 596 Python tests, green on macOS and Ubuntu.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -77,22 +77,7 @@ ai-toolkit install --local --editors cursor,aider # + specific editors
 ai-toolkit update --local                         # auto-detects editors
 ```
 
-### DSH Developer Preview
-
-DSH has separate project and profile ownership:
-
-```bash
-# Generic local outputs plus DSH-specific .agents/skills. No DSH_HOME write.
-ai-toolkit install --local --editors dsh
-
-# Explicit profile lifecycle.
-ai-toolkit dsh install --profile web
-ai-toolkit dsh update --profile web
-ai-toolkit dsh doctor --profile web
-ai-toolkit dsh uninstall --profile web --yes
-```
-
-DSH is excluded from `--editors all`, auto-detection, and defaults. Its only DSH-specific project output is `.agents/skills`; the normal `--local` Claude files, detected language rules, and other generic project outputs still apply. Project and profile `--dry-run` commands are read-only. The lifecycle targets DSH `0.1.2-rc.1`, `@softspark/dsh-codex@1.5.0`, and `@softspark/dsh-orchestrator@2.0.0`. Update the DSH runtime before updating this profile integration. Codex, Claude Code, and GitHub Copilot own their logins. ai-toolkit accepts no provider API keys, and GitHub AI credits apply to the Copilot Gemini route. See [DSH Compatibility](kb/reference/dsh-compatibility.md) for the exact contract and version-specific qualification evidence.
+DeepSeek Harness (DSH) support is retired: `--editors dsh` is ignored with a warning and `ai-toolkit dsh ...` only prints manual cleanup steps. `ai-toolkit update --local` cleans up old DSH project skills, and DSH profiles are removed with DSH itself. See [DSH Compatibility (retired)](kb/reference/dsh-compatibility.md).
 
 ### Plugin Management
 
@@ -177,7 +162,6 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Google Antigravity | Project `.agents/{rules,workflows,skills,agents,hooks}/`; user `~/.gemini/config/{skills,agents,hooks}/`; opt-in native plugin export | ✅ | project + user |
 | Codex CLI | Project: `AGENTS.md` + `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
 | opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins,skills}/*` + `opencode.{json,jsonc}` | ✅ | project + global (`~/.config/opencode/`) |
-| DeepSeek Harness | Project `.agents/skills/*`; explicit profile packages and `$DSH_HOME/.agent-presets/softspark-orchestrator` | no bridge | project + explicit named profile |
 
 > Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed, except for MCP servers, which `ai-toolkit mcp install --editor claude-app --scope global` writes straight to `claude_desktop_config.json`. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
 
@@ -376,7 +360,7 @@ Jira completion and KB indexing as explicit project lifecycle outcomes.
 | Codex CLI Compatibility | [kb/reference/codex-cli-compatibility.md](kb/reference/codex-cli-compatibility.md) |
 | opencode Compatibility | [kb/reference/opencode-compatibility.md](kb/reference/opencode-compatibility.md) |
 | GitHub Copilot Compatibility | [kb/reference/copilot-compatibility.md](kb/reference/copilot-compatibility.md) |
-| DSH Compatibility | [kb/reference/dsh-compatibility.md](kb/reference/dsh-compatibility.md) |
+| DSH Compatibility (retired) | [kb/reference/dsh-compatibility.md](kb/reference/dsh-compatibility.md) |
 | Maintenance SOP | [kb/procedures/sop-maintenance.md](kb/procedures/sop-maintenance.md) |
 
 ---

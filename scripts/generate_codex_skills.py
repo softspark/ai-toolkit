@@ -13,8 +13,7 @@ on disk, so this generator syncs every skill in ``app/skills/`` into
 
 The standalone generator keeps ``enable_codex_skills=False`` as a compatibility
 default. Selecting Codex in the main installer installs this catalog
-automatically; ``--codex-skills`` remains an explicit refresh option. DSH
-reuses the same one-level managed surface without receiving other Codex config.
+automatically; ``--codex-skills`` remains an explicit refresh option.
 
 Implementation:
   * Native Codex-compatible skills are symlinked to canonical ``app/skills``.

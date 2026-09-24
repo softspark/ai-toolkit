@@ -29,6 +29,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import emit_skills_bullets
+from secure_fs import apply_owned_edits, lexical_absolute
+from skill_pointer import owned_pointer_edit
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +93,36 @@ def generate(target_dir: Path, *, emit_skill_pointer: bool = True) -> None:
     """
     if emit_skill_pointer:
         _write_skill_pointer(target_dir)
+
+
+def _apply(target_dir: Path, *, dry_run: bool) -> int:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Augment target directory: {target}")
+    pointer_dir = target / ".augment" / "skills" / POINTER_SKILL_NAME
+    # A symlinked pointer directory is not ours to follow: skip it.
+    edits = (
+        {pointer_dir / "SKILL.md": owned_pointer_edit}
+        if not pointer_dir.is_symlink() and (pointer_dir / "SKILL.md").is_file()
+        else {}
+    )
+    return apply_owned_edits(
+        edits,
+        target,
+        label="Augment skill pointer",
+        prune=(pointer_dir, pointer_dir.parent, target / ".augment"),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path) -> int:
+    """Return 1 when the managed Augment catalogue pointer is present."""
+    return _apply(target_dir, dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Remove only the managed Augment catalogue pointer."""
+    return _apply(target_dir, dry_run=False)
 
 
 def main() -> None:

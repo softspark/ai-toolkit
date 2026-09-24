@@ -3,19 +3,19 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.16.0"
+version: "1.17.0"
 created: "2026-04-23"
-last_updated: "2026-09-23"
-description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, 11 editors, and the explicit developer-preview DSH target."
+last_updated: "2026-09-24"
+description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
 # Supported Tools Registry
 
 The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view. Update it whenever the JSON changes. The [2026-09-23 review](../planning/ecosystem-sync-20260923.md) records source-backed classifications for every target; local CLI versions are observations, not claims about the latest upstream release.
 
-## Tool Count: 14
+## Tool Count: 13
 
-1 primary runtime, 1 Claude app target, 11 editor integrations, and 1 explicit developer-preview harness target.
+1 primary runtime, 1 Claude app target, and 11 editor integrations. The DeepSeek Harness (`dsh`) target was retired on 2026-09-24; see [DSH Compatibility (retired)](./dsh-compatibility.md).
 
 ---
 
@@ -55,30 +55,6 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Runtime split | Skills work in Chat (web/Desktop) and Cowork. App hooks and sub-agents run in Cowork. Plugins enabled on the account also sync to Claude Code terminal sessions from 2.1.273, under `~/.claude/plugins/synced/` with `@synced` IDs. Claude app does **not** scan Claude Code's `~/.claude/rules/`, `CLAUDE.md`, or `~/.claude/settings.json`. |
 | MCP | `ai-toolkit mcp install --editor claude-app --scope global <template>` writes `claude_desktop_config.json` directly -- no plugin involved. Entries are validated by the app as `{command, args, env}`; remote endpoints belong to the separate UI-managed `remoteMcpServers` surface, so HTTP/SSE templates are bridged through `mcp-remote`. Restart the app to load a change. |
 | Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. Account sync does not upload local toolkit updates; the doctor diagnoses possible duplicate loading without automatically disabling organization-required plugins. MCP config is the exception -- it updates from the CLI like any other editor. |
-
----
-
-## Explicit Developer-Preview Harness
-
-### DeepSeek Harness
-
-| Field | Value |
-|-------|-------|
-| ID | `dsh` |
-| Status | `developer-preview`, `explicit-only`. This is a SoftSpark-maintained community compatibility target. DeepSeek AI has not endorsed it. |
-| Reviewed version | DSH `0.1.2-rc.1`, `@softspark/dsh-codex@1.5.0`, and `@softspark/dsh-orchestrator@2.0.0`, with the exact Claude Agent SDK `0.3.263` profile override. |
-| Docs | https://deepseek-harness.github.io/deepseek-harness/ |
-| Release sources | https://github.com/deepseek-ai/deepseek-harness/releases and the reviewed [DSH 0.1.2-rc.1 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1) |
-| Reviewed contracts | Tagged [CLI profile and plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md) and [skill discovery reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md) |
-| Config paths | Project `.agents/skills/*/SKILL.md`; profile `$DSH_HOME/profiles/<profile>/package.json`; installed packages under `$DSH_HOME/profiles/<profile>/node_modules/@softspark/`; preset `$DSH_HOME/.agent-presets/softspark-orchestrator` |
-| Project generator | `scripts/generate_codex_skills.py` emits the shared Codex and DSH `.agents/skills` catalog. `ai-toolkit install --local --editors dsh` makes no `$DSH_HOME` write. |
-| Profile lifecycle | `scripts/install_steps/dsh.py` implements explicit `install`, `update`, `doctor`, and `uninstall` for one named profile. |
-| Selection boundary | Excluded from `--editors all`, auto-detection, defaults, default profiles, and global editor selection. |
-| Authentication | ai-toolkit accepts no provider API key and performs no login. Codex, Claude Code, and GitHub Copilot own authentication. Copilot Gemini usage consumes GitHub AI credits. |
-| State and recovery | State uses `AI_TOOLKIT_HOME`, then `SOFTSPARK_HOME`, then `~/.softspark/ai-toolkit/state.json`. Locks and compare-and-swap publication protect ownership. Doctor reports preserved recovery markers and drift. |
-| Upstream drift | DSH `0.1.2-rc.1` completed isolated lifecycle and delegation qualification on 2026-09-06, recorded in [DSH Compatibility](./dsh-compatibility.md#dsh-012-rc1-qualification). Other prereleases require separate source review and real-profile verification before the exact pins change. |
-
-See [DSH Compatibility](./dsh-compatibility.md) for commands, topology, subscription boundaries, lifecycle ownership, and limitations.
 
 ---
 

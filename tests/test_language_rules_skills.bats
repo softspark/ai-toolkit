@@ -7,8 +7,12 @@
 #
 # Per-language rules ship as `<lang>-rules` knowledge skills generated from
 # `app/rules/<lang>/*.md`. Common rules ship as Claude Code path-scoped
-# `.claude/rules/ai-toolkit-*.md` files, with CLAUDE.md kept as a compact
-# index. This test guards both halves.
+# `ai-toolkit-*.md` rule files: user-level from the global install, and in the
+# project only for a rule the global install does not provide. CLAUDE.md is
+# kept as a compact index. This test guards both halves.
+#
+# HOME is a per-test directory: whether a project gets rule copies depends on
+# what ~/.claude/rules holds, and the developer's real one must not decide it.
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 SKILLS_DIR="$TOOLKIT_DIR/app/skills"
@@ -17,10 +21,24 @@ RULES_DIR="$TOOLKIT_DIR/app/rules"
 setup() {
     TEST_PROJECT="$(mktemp -d)"
     mkdir -p "$TEST_PROJECT/.claude"
+    TEST_HOME="$(mktemp -d)"
+    export HOME="$TEST_HOME"
 }
 
 teardown() {
-    rm -rf "$TEST_PROJECT"
+    rm -rf "$TEST_PROJECT" "$TEST_HOME"
+}
+
+# Write the user-level common rules a global install with profile $1 writes.
+_global_rules() {
+    PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import common_rule_sources, render_common_rule
+root = Path('$TEST_HOME') / '.claude' / 'rules'
+root.mkdir(parents=True, exist_ok=True)
+for stem, body, paths in common_rule_sources('$1'):
+    (root / f'ai-toolkit-{stem}.md').write_text(render_common_rule(body, paths))
+"
 }
 
 # ── Skill presence and frontmatter ───────────────────────────────────────────
@@ -211,6 +229,56 @@ _inject_language_rules(Path('$TEST_PROJECT'), ['rules-common', 'rules-python'])
     done
     count="$(grep -c '<!-- TOOLKIT:language-rules START -->' "$TEST_PROJECT/.claude/CLAUDE.md")"
     [ "$count" -eq 1 ]
+}
+
+@test "inject_language_rules: no project copies when the global install provides them" {
+    _global_rules standard
+    mkdir -p "$TEST_PROJECT/.claude/rules"
+    # A project installed before the move carries its own copies
+    echo "old" > "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md"
+    echo "old" > "$TEST_PROJECT/.claude/rules/ai-toolkit-testing.md"
+    echo "user" > "$TEST_PROJECT/.claude/rules/team-rule.md"
+    cd "$TEST_PROJECT"
+    PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import _inject_language_rules
+_inject_language_rules(Path('$TEST_PROJECT'), ['rules-common', 'rules-python'])
+"
+    # Claude Code loads ~/.claude/rules and every parent .claude/rules, so a
+    # project copy would load each rule twice
+    [ ! -f "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md" ]
+    [ ! -f "$TEST_PROJECT/.claude/rules/ai-toolkit-testing.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/team-rule.md" ]
+    idx="$TEST_PROJECT/.claude/CLAUDE.md"
+    grep -q '^Always-on: .*`~/.claude/rules/ai-toolkit-security.md`' "$idx"
+    grep -q '^Path-scoped: .*`~/.claude/rules/ai-toolkit-testing.md`' "$idx"
+}
+
+@test "inject_language_rules: a nested project and its parent carry no copies" {
+    _global_rules standard
+    mkdir -p "$TEST_PROJECT/child/.claude"
+    for dir in "$TEST_PROJECT" "$TEST_PROJECT/child"; do
+        PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import _inject_language_rules
+_inject_language_rules(Path('$dir'), ['rules-common'])
+"
+    done
+    run find "$TEST_PROJECT" -name 'ai-toolkit-*.md'
+    [ -z "$output" ]
+}
+
+@test "inject_language_rules: a strict project under a standard global install gets git-team only" {
+    _global_rules standard
+    cd "$TEST_PROJECT"
+    PYTHONPATH="$TOOLKIT_DIR/scripts" python3 -c "
+from pathlib import Path
+from install_steps.ai_tools import _inject_language_rules
+_inject_language_rules(Path('$TEST_PROJECT'), ['rules-common'], profile='strict')
+"
+    run find "$TEST_PROJECT/.claude/rules" -name 'ai-toolkit-*.md'
+    [ "$output" = "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md" ]
+    grep -q '^Always-on: .*`.claude/rules/ai-toolkit-git-team.md`' "$TEST_PROJECT/.claude/CLAUDE.md"
 }
 
 @test "inject_language_rules: removes stale managed common rules only" {

@@ -31,9 +31,11 @@ from dir_rules_shared import (
     rule_code_style,
     rule_quality_standards,
     rule_security,
+    rule_scope,
     rule_testing,
     rule_workflow,
 )
+from secure_fs import apply_owned_edits, lexical_absolute
 
 
 def _augment_wrap(content: str, *, description: str,
@@ -134,6 +136,50 @@ def generate(target_dir: Path, *,
     for filename, content_fn in all_rules.items():
         (out_dir / filename).write_text(content_fn(), encoding="utf-8")
         print(f"  Generated: .augment/rules/{filename}")
+
+
+def _is_managed_rule(content: bytes) -> bool:
+    """Match the Augment frontmatter ``_augment_wrap`` emits."""
+    return content.startswith(b"---\ntype: ")
+
+
+def _owned_rule_edit(content: bytes) -> bytes | None:
+    return None if _is_managed_rule(content) else content
+
+
+def _apply(target_dir: Path, *, dry_run: bool) -> int:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Augment target directory: {target}")
+    rules_dir = target / ".augment" / "rules"
+    for directory in (rules_dir.parent, rules_dir):
+        if directory.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Augment rules directory: {directory}")
+    files = sorted(
+        path for path in rules_dir.iterdir()
+        if path.name.endswith(".md") and rule_scope(path.name) is not None
+        and path.is_file() and not path.is_symlink()
+    ) if rules_dir.is_dir() else []
+    return apply_owned_edits(
+        {path: _owned_rule_edit for path in files},
+        target,
+        label="Augment rule",
+        prune=(rules_dir, rules_dir.parent),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path) -> int:
+    """Count managed ``.augment/rules/ai-toolkit-*.md`` files.
+
+    ``ai-toolkit.md`` (marker-injected) belongs to ``generate_augment``.
+    """
+    return _apply(target_dir, dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Remove the managed per-category Augment rule files."""
+    return _apply(target_dir, dry_run=False)
 
 
 def main() -> None:

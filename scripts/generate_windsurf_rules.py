@@ -50,8 +50,10 @@ from dir_rules_shared import (
     build_language_rules,
     build_registered_rules,
     cleanup_stale,
+    rule_scope,
     write_rules,
 )
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +207,51 @@ def generate(target_dir: Path, *,
 
     if emit_workflows:
         _write_workflows(target_dir, cleanup=cleanup)
+
+
+def _remove(_content: bytes) -> None:
+    return None
+
+
+def _cleanup_plan(
+    target_dir: Path,
+) -> tuple[Path, dict[Path, OwnedEdit], tuple[Path, ...]]:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Windsurf target directory: {target}")
+    edits: dict[Path, OwnedEdit] = {}
+    prune: list[Path] = []
+    for tree in CONFIG_TREES:
+        for subdir in ("rules", "workflows"):
+            directory = target / tree / subdir
+            if directory.is_symlink():
+                raise RuntimeError(f"Refusing symlinked Windsurf directory: {directory}")
+            prune.append(directory)
+            if not directory.is_dir():
+                continue
+            # Same ownership rule as cleanup_stale(): the ai-toolkit- prefix.
+            for path in sorted(directory.iterdir()):
+                if rule_scope(path.name) and not path.is_symlink() and path.is_file():
+                    edits[path] = _remove
+        prune.append(target / tree)
+    return target, edits, tuple(prune)
+
+
+def discover(target_dir: Path) -> int:
+    """Count ai-toolkit rule and workflow files in ``.devin/`` and ``.windsurf/``."""
+    target, edits, _ = _cleanup_plan(target_dir)
+    return apply_owned_edits(edits, target, label="Windsurf rule", dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Remove ai-toolkit rules and workflows from both Devin/Windsurf trees.
+
+    Covers ``.devin/{rules,workflows}`` and ``.windsurf/{rules,workflows}``;
+    user files without the ``ai-toolkit-`` prefix stay. Emptied directories
+    are pruned. Returns the number of files removed.
+    """
+    target, edits, prune = _cleanup_plan(target_dir)
+    return apply_owned_edits(edits, target, label="Windsurf rule", prune=prune)
 
 
 def main() -> None:

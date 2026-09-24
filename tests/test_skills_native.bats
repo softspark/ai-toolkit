@@ -30,6 +30,26 @@ teardown_file() {
     rm -rf "$B3_GEMINI" "$B3_AUGMENT" "$B3_CODEX_OFF" "$B3_CODEX_ON"
 }
 
+# Rewrite a Codex skill surface into the layout releases with DSH support
+# wrote: $2 is "dsh" (DSH-only owner) or "shared" (Codex and DSH owners).
+legacy_skill_surface() {
+    python3 - "$1" "$2" <<'PY'
+import sys
+from pathlib import Path
+
+agents = Path(sys.argv[1]) / ".agents"
+kind = sys.argv[2]
+marker = {"dsh": ".ai-toolkit-dsh-adapted", "shared": ".ai-toolkit-shared-adapted"}[kind]
+wrappers = sorted((agents / "skills").glob("*/.ai-toolkit-codex-adapted"))
+assert wrappers, "no adapted wrappers to convert"
+for codex_marker in wrappers:
+    codex_marker.rename(codex_marker.with_name(marker))
+    (codex_marker.parent / "SKILL.md").write_text("legacy portable rendering\n")
+owners = "dsh\n" if kind == "dsh" else "codex\ndsh\n"
+(agents / ".ai-toolkit-skill-owners").write_text(owners)
+PY
+}
+
 surface_fingerprint() {
     python3 - "$1" <<'PY'
 import hashlib
@@ -563,12 +583,12 @@ PY
     rm -rf "$tmp"
 }
 
-@test "codex-skills: standalone catalog sync rolls back a failed DSH transition" {
+@test "codex-skills: standalone catalog sync rolls back a failed legacy DSH transition" {
     tmp="$(mktemp -d)"
-    mkdir -p "$tmp/home" "$tmp/project"
-    (cd "$tmp/project" && HOME="$tmp/home" \
-        python3 "$TOOLKIT_DIR/scripts/install.py" \
-        --local --editors dsh >/dev/null)
+    mkdir -p "$tmp/project"
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" \
+        "$tmp/project" --enable >/dev/null
+    legacy_skill_surface "$tmp/project" dsh
     printf '%s\n' 'preserve user addition' > \
         "$tmp/project/.agents/skills/orchestrate/user-added.txt"
     before=$(surface_fingerprint "$tmp/project/.agents")
@@ -606,6 +626,52 @@ PY
     [ "$(cat "$tmp/project/.agents/.ai-toolkit-skill-owners")" = 'dsh' ]
     grep -q 'preserve user addition' \
         "$tmp/project/.agents/skills/orchestrate/user-added.txt"
+    rm -rf "$tmp"
+}
+
+@test "codex-skills: install --editors codex converges a legacy shared Codex/DSH surface" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/home" "$tmp/project"
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" \
+        "$tmp/project" --enable >/dev/null
+    legacy_skill_surface "$tmp/project" shared
+    printf '%s\n' 'preserve user addition' > \
+        "$tmp/project/.agents/skills/orchestrate/user-added.txt"
+
+    run bash -c "cd '$tmp/project' && HOME='$tmp/home' python3 \
+        '$TOOLKIT_DIR/scripts/install.py' --local --editors codex --skip-register"
+
+    [ "$status" -eq 0 ]
+    skills="$tmp/project/.agents/skills"
+    [ "$(cat "$tmp/project/.agents/.ai-toolkit-skill-owners")" = 'codex' ]
+    [ -z "$(find "$skills" \( -name '.ai-toolkit-dsh-adapted' \
+        -o -name '.ai-toolkit-shared-adapted' \) -print -quit)" ]
+    [ -f "$skills/orchestrate/$ADAPTED_MARKER" ]
+    [ -z "$(grep 'legacy portable rendering' "$skills/orchestrate/SKILL.md")" ]
+    grep -q 'Codex Translation Layer' "$skills/orchestrate/SKILL.md"
+    grep -q 'preserve user addition' "$skills/orchestrate/user-added.txt"
+    rm -rf "$tmp"
+}
+
+@test "codex-skills: install without codex removes a legacy DSH-only surface" {
+    tmp="$(mktemp -d)"
+    mkdir -p "$tmp/home" "$tmp/project"
+    python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" \
+        "$tmp/project" --enable >/dev/null
+    legacy_skill_surface "$tmp/project" dsh
+    mkdir -p "$tmp/project/.agents/skills/user-skill"
+    printf '%s\n' '---' 'name: user-skill' 'description: User owned.' '---' \
+        > "$tmp/project/.agents/skills/user-skill/SKILL.md"
+
+    run bash -c "cd '$tmp/project' && HOME='$tmp/home' python3 \
+        '$TOOLKIT_DIR/scripts/install.py' --local --skip-register"
+
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'retired DSH skills from .agents/skills/'
+    [ ! -e "$tmp/project/.agents/.ai-toolkit-skill-owners" ]
+    [ -f "$tmp/project/.agents/skills/user-skill/SKILL.md" ]
+    [ "$(ls -A "$tmp/project/.agents/skills")" = 'user-skill' ]
+    [ ! -e "$tmp/project/.codex" ]
     rm -rf "$tmp"
 }
 

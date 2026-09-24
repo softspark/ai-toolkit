@@ -35,6 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import skills_dir
 from frontmatter import frontmatter_field
+from secure_fs import apply_owned_edits, lexical_absolute
 
 COMMAND_PREFIX = "ai-toolkit-"
 
@@ -135,6 +136,57 @@ def generate(
 
     removed = _cleanup_stale(commands_out)
     return written, removed
+
+
+_COMMAND_FRONTMATTER_KEYS = (b"description: ", b"argument-hint: ")
+
+
+def _is_managed_command(content: bytes) -> bool:
+    """Match the frontmatter ``_render_augment_command`` emits: only the
+    ``description`` and ``argument-hint`` keys, then a blank line."""
+    if not content.startswith(b"---\n"):
+        return False
+    end = content.find(b"\n---\n", 3)
+    if end < 0:
+        return False
+    keys = content[4:end].split(b"\n") if end > 3 else []
+    return all(line.startswith(_COMMAND_FRONTMATTER_KEYS) for line in keys if line)
+
+
+def _owned_command_edit(content: bytes) -> bytes | None:
+    return None if _is_managed_command(content) else content
+
+
+def _apply(target_dir: Path, config_root: Path | None, *, dry_run: bool) -> int:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Augment target directory: {target}")
+    base = lexical_absolute(config_root) if config_root is not None else target / ".augment"
+    commands_out = base / "commands"
+    for directory in (base, commands_out):
+        if directory.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Augment commands directory: {directory}")
+    files = sorted(
+        path for path in commands_out.glob(f"{COMMAND_PREFIX}*.md")
+        if path.is_file() and not path.is_symlink()
+    ) if commands_out.is_dir() else []
+    return apply_owned_edits(
+        {path: _owned_command_edit for path in files},
+        target,
+        label="Augment command",
+        prune=(commands_out, base) if base != target else (commands_out,),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path, *, config_root: Path | None = None) -> int:
+    """Count managed ``ai-toolkit-*.md`` commands ``cleanup`` would remove."""
+    return _apply(target_dir, config_root, dry_run=True)
+
+
+def cleanup(target_dir: Path, *, config_root: Path | None = None) -> int:
+    """Remove every managed Augment command; user commands are preserved."""
+    return _apply(target_dir, config_root, dry_run=False)
 
 
 def main() -> None:

@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import agents_dir
 from frontmatter import frontmatter_field
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 AGENT_PREFIX = "ai-toolkit-"
 
@@ -111,6 +112,47 @@ def generate(
 
     removed = _cleanup_stale(agents_out)
     return written, removed
+
+
+def _managed_edits(base: Path) -> dict[Path, OwnedEdit]:
+    """Select ``agents/ai-toolkit-*.md``; the prefix is reserved for the toolkit."""
+    agents_out = base / "agents"
+    for path in (base, agents_out):
+        if path.is_symlink():
+            raise RuntimeError(f"Refusing symlinked OpenCode path: {path}")
+    if not agents_out.is_dir():
+        return {}
+    return {
+        path: lambda _content: None
+        for path in sorted(agents_out.glob(f"{AGENT_PREFIX}*.md"))
+        if path.is_file()
+    }
+
+
+def cleanup(target_dir: Path, config_root: Path | None = None) -> int:
+    """Remove generated OpenCode subagents and return how many were removed.
+
+    ``config_root`` selects the global layout (``~/.config/opencode``);
+    otherwise ``target_dir/.opencode`` is used. User agents are untouched.
+    """
+    base = config_root if config_root is not None else target_dir / ".opencode"
+    return apply_owned_edits(
+        _managed_edits(base),
+        lexical_absolute(target_dir),
+        label="OpenCode agent",
+        prune=(base / "agents", base),
+    )
+
+
+def discover(target_dir: Path, config_root: Path | None = None) -> int:
+    """Count the files :func:`cleanup` would remove, without side effects."""
+    base = config_root if config_root is not None else target_dir / ".opencode"
+    return apply_owned_edits(
+        _managed_edits(base),
+        lexical_absolute(target_dir),
+        label="OpenCode agent",
+        dry_run=True,
+    )
 
 
 def main() -> None:

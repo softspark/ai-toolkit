@@ -17,6 +17,12 @@ from _common import (
     _strip_section,
     _trim_trailing_blanks,
 )
+from frontmatter import split_frontmatter
+from install_steps.ai_tools import (
+    CONSTITUTION_RULE,
+    common_rule_sources,
+    render_common_rule,
+)
 
 
 GLOBAL_RULES_SECTION = "global-rules"
@@ -24,9 +30,14 @@ GLOBAL_RULES_SECTION = "global-rules"
 
 def install_marker_files(claude_dir: Path, only: str, skip: str,
                          dry_run: bool) -> None:
-    """Inject constitution.md, ARCHITECTURE.md via markers."""
+    """Inject ARCHITECTURE.md via markers.
+
+    The constitution is a user-level rule now (``inject_rules``); nothing
+    imported ``~/.claude/constitution.md``, so it never loaded from there.
+    """
+    if not dry_run:
+        _retire_global_constitution_file(claude_dir)
     marker_files = [
-        ("constitution.md", "constitution", "constitution"),
         ("ARCHITECTURE.md", "architecture", "architecture"),
     ]
     for filename, component, section in marker_files:
@@ -47,10 +58,38 @@ def install_marker_files(claude_dir: Path, only: str, skip: str,
         print(f"  Injected: .claude/{filename}")
 
 
+def _retire_global_constitution_file(claude_dir: Path) -> None:
+    """Strip the toolkit section from the old ``~/.claude/constitution.md``."""
+    legacy = claude_dir / "constitution.md"
+    if legacy.is_symlink():
+        legacy.unlink()
+        print("  Removed: .claude/constitution.md (legacy symlink)")
+        return
+    if not legacy.is_file():
+        return
+    original = legacy.read_text(encoding="utf-8")
+    stripped = _strip_section(original, "constitution")
+    if stripped == original:
+        return
+    if stripped.strip():
+        legacy.write_text(stripped, encoding="utf-8")
+        print("  Stripped: .claude/constitution.md (user content preserved)")
+    else:
+        legacy.unlink()
+        print("  Removed: .claude/constitution.md (now rules/ai-toolkit-constitution.md)")
+
+
 def inject_rules(claude_dir: Path, target_dir: Path, rules_dir: Path,
                  only: str, skip: str, dry_run: bool,
-                 refresh_urls: bool = False) -> None:
+                 refresh_urls: bool = False,
+                 profile: str = "standard") -> None:
     """Install Claude Code user-level rules.
+
+    Besides the standalone toolkit rules and registered rules, the common
+    rules (``app/rules/common``) and the constitution are user-level rules:
+    they apply to every project, and Claude Code also loads project
+    ``.claude/rules/`` from parent directories, so project copies would load
+    them twice or more.
 
     When refresh_urls is True, re-fetches URL-sourced rules before injection.
     Only the global install path should set this to True (once per update).
@@ -58,7 +97,7 @@ def inject_rules(claude_dir: Path, target_dir: Path, rules_dir: Path,
     claude_md = claude_dir / "CLAUDE.md"
 
     if dry_run:
-        _inject_rules_dry_run(rules_dir)
+        _inject_rules_dry_run(rules_dir, profile, only, skip)
         return
 
     # Refresh URL-sourced rules before injection (global update only)
@@ -95,14 +134,31 @@ def inject_rules(claude_dir: Path, target_dir: Path, rules_dir: Path,
                 _remove_legacy_rule_marker(target_dir, rule_name)
                 expected.add(output_name)
                 rules_synced.append(rule_name)
+        for stem, body, paths in common_rule_sources(profile):
+            output_name = f"ai-toolkit-{_safe_rule_name(stem)}"
+            _write_rule_text(claude_dir, output_name, render_common_rule(body, paths))
+            expected.add(output_name)
+            rules_synced.append(stem)
 
+    install_constitution = should_install("constitution", only, skip)
+    constitution_src = app_dir / "constitution.md"
+    if install_constitution and constitution_src.is_file():
+        _, body = split_frontmatter(constitution_src.read_text(encoding="utf-8"))
+        _write_rule_text(claude_dir, CONSTITUTION_RULE, body.lstrip("\n").rstrip() + "\n")
+        expected.add(CONSTITUTION_RULE)
+
+    # `--skip rules` leaves the rule files and their index alone; the
+    # constitution is its own component and is written either way.
     if not install_toolkit_rules and not rules_synced:
         return
+    if install_constitution and constitution_src.is_file():
+        rules_synced.append("constitution")
 
     removed = _cleanup_managed_claude_rules(
         claude_dir,
         expected,
         cleanup_toolkit_rules=install_toolkit_rules,
+        keep_constitution=not install_constitution,
     )
     _inject_global_rules_index(claude_md, sorted(expected), rules_synced)
 
@@ -122,11 +178,17 @@ def _write_claude_rule_file(
     output_name: str,
 ) -> None:
     """Write a managed user-level rule under ``~/.claude/rules``."""
+    _write_rule_text(
+        claude_dir,
+        output_name,
+        source_file.read_text(encoding="utf-8").rstrip() + "\n",
+    )
+
+
+def _write_rule_text(claude_dir: Path, output_name: str, content: str) -> None:
     rules_root = claude_dir / "rules"
     rules_root.mkdir(parents=True, exist_ok=True)
-    dst = rules_root / f"{output_name}.md"
-    content = source_file.read_text(encoding="utf-8").rstrip() + "\n"
-    dst.write_text(content, encoding="utf-8")
+    (rules_root / f"{output_name}.md").write_text(content, encoding="utf-8")
 
 
 def _remove_legacy_rule_marker(target_dir: Path, rule_name: str) -> None:
@@ -139,6 +201,7 @@ def _cleanup_managed_claude_rules(
     expected: set[str],
     *,
     cleanup_toolkit_rules: bool,
+    keep_constitution: bool = False,
 ) -> int:
     """Remove stale ai-toolkit-managed user-level rule files only."""
     rules_root = claude_dir / "rules"
@@ -148,6 +211,8 @@ def _cleanup_managed_claude_rules(
     removed = 0
     for path in sorted(rules_root.glob("ai-toolkit-*.md")):
         if path.stem in expected:
+            continue
+        if keep_constitution and path.stem == CONSTITUTION_RULE:
             continue
         if not cleanup_toolkit_rules and not path.stem.startswith("ai-toolkit-registered-"):
             continue
@@ -320,12 +385,15 @@ def _refresh_local_mcp_template(name: str, source: dict, target: str) -> None:
         print(f"  Warning: could not refresh local MCP template '{name}': {exc}")
 
 
-def _inject_rules_dry_run(rules_dir: Path) -> None:
+def _inject_rules_dry_run(rules_dir: Path, profile: str = "standard",
+                          only: str = "", skip: str = "") -> None:
     rules_src = app_dir / "rules"
-    rule_names = " ".join(
-        f.stem for f in sorted(rules_src.glob("*.md"))
-    ) if rules_src.is_dir() else ""
-    print(f"  Would generate: ~/.claude/rules/ai-toolkit-*.md ({rule_names})")
+    names = [f.stem for f in sorted(rules_src.glob("*.md"))] if rules_src.is_dir() else []
+    if should_install("rules", only, skip):
+        names += [stem for stem, _, _ in common_rule_sources(profile)]
+    if should_install("constitution", only, skip):
+        names.append("constitution")
+    print(f"  Would generate: ~/.claude/rules/ai-toolkit-*.md ({' '.join(names)})")
     if rules_dir.is_dir():
         registered = list(rules_dir.glob("*.md"))
         if registered:

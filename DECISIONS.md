@@ -382,3 +382,109 @@ Test organisation follows: logic that lives in Python is tested in
 that must be observed from a shell. New tests for Python modules go to pytest;
 existing bats tests migrate when the code they cover is touched, not in a
 sweep.
+
+## What applies everywhere is installed once, at user level (2026-09-24)
+
+A new project under `~/External` loaded `ai-toolkit-coding-style`,
+`-git-workflow` and `-security` twice: once from its own `.claude/rules/`, once
+from `~/External/.claude/rules/`. `~/External` is a workspace folder, not a
+repository, and had been installed with `--local` like a project. Claude Code
+loads `.claude/rules/` from parent directories as it does `CLAUDE.md`, so every
+project under a registered parent paid for the same rules twice, plus a second
+copy of the constitution through the parent's `CLAUDE.md` import.
+
+Three fixes were weighed. Refusing to install into a parent of a registered
+project blocks monorepos where both levels are real projects. Skipping a
+project copy when a parent already has one depends on install order and still
+leaves the parent's `CLAUDE.md` and constitution loading everywhere below it.
+Moving what applies to every project to user level removes the duplicate by
+construction, and it was chosen:
+
+- The global install writes the common rules (with their `paths` scoping,
+  filtered by the install profile) and the constitution as
+  `~/.claude/rules/ai-toolkit-*.md`. User-level rules load in every project,
+  and `paths` scoping works there: verified with a probe rule scoped to
+  `**/*.zzz`, which loaded only after such a file was read. The official
+  documentation does not say either way.
+- `install --local` writes a project copy only of a rule the global install
+  does not provide, judged by the files present in `~/.claude/rules/`: all of
+  them without a global install, `git-team` for a `strict` project under a
+  `standard` global install. `.claude/constitution.md` stays only for
+  project-owned amendments (`extends`, Article VIII+) or without a global
+  install, and its `CLAUDE.md` import is added or removed to match.
+- Managed copies are removed on the next run, so `update` converges every
+  registered project.
+- `~/.claude/constitution.md` was marker-injected by every global install and
+  imported by nothing, so the constitution never loaded from it. It is now
+  migrated to the rule file.
+- `uninstall` removes `~/.claude/rules/ai-toolkit-*.md` and strips the toolkit
+  sections of `~/.claude/CLAUDE.md`. Both used to be kept on purpose; with the
+  constitution and the always-on rules living there, keeping them would load
+  them in every session after the toolkit was gone.
+
+Other editors keep their per-project outputs: their global and local semantics
+differ, and Codex reads nothing above the repository root.
+
+## `uninstall` removes everything the toolkit installed (2026-09-24)
+
+`uninstall` used to remove only what it could attribute with certainty inside
+`~/.claude/` and a few editor roots. It left the hooks merged into
+`~/.claude/settings.json` and the scripts they run, so the toolkit kept acting
+after it was "uninstalled". It also left most editor outputs,
+`~/.softspark/ai-toolkit/`, and every registered project, which the next
+`update` re-installed. The owner's decision is that uninstall removes all of
+it.
+
+- Shared files (`settings.json`, `CLAUDE.md`, `AGENTS.md`, editor configs)
+  still lose only what the toolkit can be shown to own: tags, markers,
+  generator headers, the toolkit hooks directory in a command, or a scalar
+  setting that still holds the toolkit's value.
+- `~/.softspark/ai-toolkit/` holds user data as well as install output:
+  session history, compaction snapshots, usage stats, the governance log, the
+  plugin memory database, registered rules, hooks and MCP templates.
+  Constitution Article III.2 requires approval and a verified backup before
+  logs are deleted. The directory is therefore archived to
+  `~/ai-toolkit-backup-<time>.tar.gz` (mode 0600), the archive is re-read and
+  compared with the directory listing, and only then is the directory deleted,
+  as the last step so a failure rolls back everything else.
+- Global uninstall runs the local uninstall in every registered project before
+  touching the user level. An unsafe project stops the run before any change,
+  so the registry is never lost while projects still carry the install.
+- `enabledPlugins` entries that turn the Claude app plugin off for Claude Code
+  are left as they are: removing them would re-enable the toolkit through the
+  plugin.
+- Plugin packs, `inject-hook` hooks and `inject-mcp` servers are removed
+  before the data directory, because their ownership records live there. Only
+  source names recorded in the registries count; an unregistered `_source`
+  may belong to another tool.
+- MCP servers that `install --local` mirrors from the user's `.mcp.json` into
+  editor configs stay: they are the user's servers. Editor config files are
+  rewritten, never deleted (`~/.claude.json` is Claude Code's own state).
+- Editor cleanup is best effort: a surface behind a symlinked root is reported
+  and left, instead of blocking the rest of the uninstall.
+
+## DSH integration retired (2026-09-24)
+
+The owner decided to drop DeepSeek Harness support entirely. It was an
+explicit developer-preview target with its own profile lifecycle
+(`scripts/install_steps/dsh.py`, exact package pins, preset copying, locks,
+rollback and recovery markers). The capability is removed in 5.0.0, a major
+version. The names are protected CLI surface (`BACKWARD_COMPATIBILITY.md`), so
+they follow the deprecation path for one release instead of failing:
+`--editors dsh` warns and is ignored, and `ai-toolkit dsh ...` prints the
+manual cleanup steps and exits 0. Both stubs go in the next minor.
+
+Migration choices:
+
+- Project skills are cleaned up, not orphaned. `.agents/skills` surfaces with
+  a `dsh` owner marker stay recognised as toolkit-managed: a surface shared
+  with Codex is re-rendered Codex-only on `update` / `install --local`, a
+  DSH-only surface is removed, and `uninstall` removes both.
+- A registered project listing `dsh` in its editors is not an error; the
+  entry is dropped, so old registries keep working.
+- DSH profiles under `$DSH_HOME` are not touched; the ownership-checked
+  lifecycle code that changed them is gone. Users remove `@softspark/dsh-codex`,
+  `@softspark/dsh-orchestrator` and the `softspark-orchestrator` preset with
+  DSH itself; `kb/reference/dsh-compatibility.md` has the commands.
+- History stays: `kb/history/` and `kb/planning/` keep the DSH plans and
+  review records unchanged.

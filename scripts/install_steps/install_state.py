@@ -11,7 +11,6 @@ import errno
 import hashlib
 import json
 import os
-import re
 import secrets
 import stat
 import sys
@@ -26,34 +25,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from paths import EXTERNAL_HOOKS_DIR, RULES_DIR, STATE_FILE
 
-_DSH_RECORD_KEYS = {
-    "dsh_home",
-    "profile",
-    "packages",
-    "package_trees",
-    "preset_path",
-    "preset_hash",
-    "owned",
-    "installed_at",
-    "last_updated",
-}
-_DSH_EXPECTED_UNSET = object()
-_STATE_CAS_RETRIES = 5
 _STATE_LOCK_TIMEOUT_SECONDS = 2.0
 _STATE_LOCK_POLL_SECONDS = 0.025
-
-
-@dataclass(frozen=True)
-class DshStateSnapshot:
-    path: Path
-    existed: bool
-    content: bytes
-    mode: int
-    document: dict
-    profile: str
-    profile_record: dict | None
-    state_parent_device: int | None = None
-    state_parent_inode: int | None = None
+# Top-level key of the retired DSH profile lifecycle; dropped on the next write.
+LEGACY_DSH_STATE_KEY = "dsh"
 
 
 @dataclass(frozen=True)
@@ -64,122 +39,6 @@ class _StateWriterContext:
     parent_descriptor: int | None
     parent_device: int | None
     parent_inode: int | None
-    secure: bool
-
-
-def _validate_dsh_tree_inventory(value: object) -> bool:
-    if not isinstance(value, dict) or set(value) != {"digest", "entries"}:
-        return False
-    if not re.fullmatch(r"[0-9a-f]{64}", str(value.get("digest", ""))):
-        return False
-    entries = value.get("entries")
-    if not isinstance(entries, list) or not entries:
-        return False
-    paths: list[str] = []
-    for entry in entries:
-        if not isinstance(entry, dict):
-            return False
-        kind = entry.get("type")
-        expected_keys = {"type", "path", "mode"}
-        if kind == "file":
-            expected_keys.update({"size", "sha256"})
-        elif kind == "symlink":
-            expected_keys.add("target")
-        elif kind != "directory":
-            return False
-        if set(entry) != expected_keys:
-            return False
-        path = entry.get("path")
-        mode = entry.get("mode")
-        if (
-            not isinstance(path, str)
-            or not path
-            or path.startswith("/")
-            or ".." in Path(path).parts
-            or not isinstance(mode, int)
-            or isinstance(mode, bool)
-            or not 0 <= mode <= 0o7777
-        ):
-            return False
-        if kind == "file" and (
-            not isinstance(entry.get("size"), int)
-            or isinstance(entry.get("size"), bool)
-            or entry["size"] < 0
-            or not re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256", "")))
-        ):
-            return False
-        if kind == "symlink" and not isinstance(entry.get("target"), str):
-            return False
-        paths.append(path)
-    try:
-        sorted_paths = sorted(paths, key=lambda item: item.encode("utf-8"))
-    except UnicodeError:
-        return False
-    return (
-        entries[0].get("path") == "."
-        and entries[0].get("type") == "directory"
-        and len(paths) == len(set(paths))
-        and paths == sorted_paths
-    )
-
-
-def _validate_dsh_profiles(dsh: object) -> dict[str, dict]:
-    if not isinstance(dsh, dict) or set(dsh) != {"profiles"}:
-        raise ValueError("invalid DSH lifecycle state")
-    profiles = dsh.get("profiles")
-    if not isinstance(profiles, dict):
-        raise ValueError("invalid DSH lifecycle state")
-    for name, record in profiles.items():
-        if not isinstance(name, str) or not isinstance(record, dict):
-            raise ValueError("invalid DSH lifecycle state")
-        if (
-            set(record) == _DSH_RECORD_KEYS - {"package_trees"}
-            and record.get("profile") == name
-        ):
-            raise ValueError(
-                f"invalid DSH package inventory for profile '{name}'; "
-                "run 'ai-toolkit dsh doctor' and reinstall"
-            )
-        if set(record) != _DSH_RECORD_KEYS or record.get("profile") != name:
-            raise ValueError(f"invalid DSH lifecycle state for profile '{name}'")
-        packages = record.get("packages")
-        if (
-            not isinstance(packages, dict)
-            or not packages
-            or not all(
-                isinstance(package, str)
-                and package
-                and isinstance(version, str)
-                and version
-                for package, version in packages.items()
-            )
-        ):
-            raise ValueError(
-                "invalid DSH ownership state for 'packages' "
-                f"in profile '{name}'"
-            )
-        package_trees = record.get("package_trees")
-        if (
-            not isinstance(package_trees, dict)
-            or set(package_trees) != set(packages)
-            or not all(
-                _validate_dsh_tree_inventory(inventory)
-                for inventory in package_trees.values()
-            )
-        ):
-            raise ValueError(
-                "invalid DSH ownership state for 'package_trees' "
-                f"in profile '{name}'; "
-                "run 'ai-toolkit dsh doctor' and reinstall"
-            )
-        if record.get("owned") is not True:
-            raise ValueError(f"invalid DSH lifecycle state for profile '{name}'")
-        for key in ("dsh_home", "preset_path", "installed_at", "last_updated"):
-            if not isinstance(record.get(key), str) or not record[key]:
-                raise ValueError(f"invalid DSH lifecycle state for profile '{name}'")
-        if not re.fullmatch(r"[0-9a-f]{64}", str(record.get("preset_hash", ""))):
-            raise ValueError(f"invalid DSH lifecycle state for profile '{name}'")
-    return profiles
 
 
 def _load_sources(sources_file: Path, key: str) -> list[tuple[str, str, str, str]]:
@@ -225,11 +84,6 @@ def _state_path() -> Path:
     return STATE_FILE
 
 
-def get_state_path() -> Path:
-    """Expose the canonical override-aware state path to lifecycle clients."""
-    return _state_path()
-
-
 def _unsafe_state_root() -> Path | None:
     path = _state_path()
     for candidate in (path.parent.parent, path.parent):
@@ -238,10 +92,6 @@ def _unsafe_state_root() -> Path | None:
         if candidate.exists() and not candidate.is_dir():
             return candidate
     return None
-
-
-def _state_lock_path() -> Path:
-    return _state_path().parent / ".state.lock"
 
 
 def _prepare_state_parent() -> None:
@@ -315,20 +165,10 @@ def _release_state_lock(
 
 
 @contextmanager
-def _state_writer_lock(
-    *,
-    secure: bool = False,
-    expected_path: Path | None = None,
-    expected_parent_identity: tuple[int, int] | None = None,
-) -> Iterator[_StateWriterContext]:
+def _state_writer_lock() -> Iterator[_StateWriterContext]:
     """Hold the bounded cooperative lock for one complete state transaction."""
-    if secure and not _secure_state_mutation_supported():
-        raise OSError("secure ai-toolkit state mutation requires Linux, WSL, or macOS")
-    if expected_path is None:
-        _prepare_state_parent()
-        state_path = _state_path()
-    else:
-        state_path = expected_path
+    _prepare_state_parent()
+    state_path = _state_path()
     lock_path = state_path.parent / ".state.lock"
     deadline = time.monotonic() + _STATE_LOCK_TIMEOUT_SECONDS
     descriptor: int | None = None
@@ -342,14 +182,6 @@ def _state_writer_lock(
         os.fstat(parent_descriptor) if parent_descriptor is not None else None
     )
     try:
-        if expected_parent_identity is not None:
-            if parent_metadata is None or (
-                parent_metadata.st_dev,
-                parent_metadata.st_ino,
-            ) != expected_parent_identity:
-                raise OSError(
-                    "ai-toolkit state parent identity changed; both roots were preserved"
-                )
         while descriptor is None:
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
             if hasattr(os, "O_NOFOLLOW"):
@@ -397,7 +229,7 @@ def _state_writer_lock(
                         _release_state_lock(
                             lock_path,
                             identity,
-                            secure=secure,
+                            secure=False,
                             parent_descriptor=parent_descriptor,
                         )
                 raise
@@ -415,7 +247,6 @@ def _state_writer_lock(
                 parent_inode=(
                     parent_metadata.st_ino if parent_metadata is not None else None
                 ),
-                secure=secure,
             )
             if parent_descriptor is not None and not _state_parent_path_matches(
                 context.path.parent,
@@ -439,13 +270,9 @@ def _state_writer_lock(
 
 @dataclass(frozen=True)
 class _OpenedStableStateFile:
-    path: Path
-    descriptor: int
-    parent_descriptor: int | None
     content: bytes
     metadata: os.stat_result
     digest: str
-    secure: bool
 
 
 def _state_file_signature(metadata: os.stat_result) -> tuple[int, ...]:
@@ -527,20 +354,6 @@ def _state_name_exists(context: _StateWriterContext, name: str) -> bool:
     return True
 
 
-def _named_state_metadata(
-    opened: _OpenedStableStateFile,
-) -> os.stat_result:
-    if opened.secure:
-        if opened.parent_descriptor is None:
-            raise OSError("secure ai-toolkit state parent is unavailable")
-        return os.stat(
-            opened.path.name,
-            dir_fd=opened.parent_descriptor,
-            follow_symlinks=False,
-        )
-    return opened.path.stat(follow_symlinks=False)
-
-
 @contextmanager
 def _open_stable_state_file(
     path: Path,
@@ -613,13 +426,9 @@ def _open_stable_state_file(
         ):
             raise OSError("ai-toolkit state identity changed")
         yield _OpenedStableStateFile(
-            path=path,
-            descriptor=descriptor,
-            parent_descriptor=opened_parent_descriptor,
             content=content,
             metadata=opened,
             digest=hashlib.sha256(content).hexdigest(),
-            secure=secure,
         )
     finally:
         if descriptor is not None:
@@ -647,51 +456,6 @@ def _opened_state_revision(
         opened.metadata.st_ino,
         opened.digest,
     )
-
-
-def _verify_open_state_after_mode_change(
-    opened: _OpenedStableStateFile,
-    *,
-    expected_mode: int,
-    expected_digest: str,
-) -> bool:
-    """Verify a mode-restored descriptor still owns the named state path."""
-    try:
-        before_read = os.fstat(opened.descriptor)
-        if (
-            not stat.S_ISREG(before_read.st_mode)
-            or (before_read.st_dev, before_read.st_ino)
-            != (opened.metadata.st_dev, opened.metadata.st_ino)
-            or stat.S_IMODE(before_read.st_mode) != expected_mode
-        ):
-            return False
-        os.lseek(opened.descriptor, 0, os.SEEK_SET)
-        content = _read_declared_state_size(
-            opened.descriptor,
-            declared_size=before_read.st_size,
-            path=opened.path,
-        )
-        after_read = os.fstat(opened.descriptor)
-        named_after = _named_state_metadata(opened)
-        signature = _state_file_signature(before_read)
-        parent_matches = not opened.secure or (
-            opened.parent_descriptor is not None
-            and _state_parent_path_matches(
-                opened.path.parent,
-                opened.parent_descriptor,
-            )
-        )
-        return (
-            stat.S_ISREG(after_read.st_mode)
-            and stat.S_ISREG(named_after.st_mode)
-            and _state_file_signature(after_read) == signature
-            and _state_file_signature(named_after) == signature
-            and stat.S_IMODE(named_after.st_mode) == expected_mode
-            and hashlib.sha256(content).hexdigest() == expected_digest
-            and parent_matches
-        )
-    except OSError:
-        return False
 
 
 def load_state() -> dict:
@@ -779,11 +543,6 @@ def _secure_state_mutation_supported() -> bool:
     except (AttributeError, OSError):
         return False
     return True
-
-
-def secure_dsh_state_mutation_supported() -> bool:
-    """Report whether ownership-sensitive DSH state mutation is available."""
-    return _secure_state_mutation_supported()
 
 
 def _open_state_parent(path: Path) -> int:
@@ -888,19 +647,14 @@ def _secure_publish_state(
     *,
     parent_descriptor: int | None = None,
     transaction: _StateWriterContext | None = None,
-    binding_validator: Callable[[], None] | None = None,
 ) -> bool:
     """Publish state atomically without destroying a raced inode."""
     if transaction is not None:
         _assert_state_writer_binding(transaction)
-    if binding_validator is not None:
-        binding_validator()
     if not expected_revision[0]:
         try:
             if transaction is not None:
                 _assert_state_writer_binding(transaction)
-            if binding_validator is not None:
-                binding_validator()
             _state_rename_operation(
                 temporary,
                 path,
@@ -912,8 +666,6 @@ def _secure_publish_state(
             return False
         if transaction is not None:
             _assert_state_writer_binding(transaction)
-        if binding_validator is not None:
-            binding_validator()
         return True
     try:
         current = (
@@ -931,8 +683,6 @@ def _secure_publish_state(
         return False
     if transaction is not None:
         _assert_state_writer_binding(transaction)
-    if binding_validator is not None:
-        binding_validator()
     _state_rename_operation(
         temporary,
         path,
@@ -963,8 +713,6 @@ def _secure_publish_state(
         )
         if transaction is not None:
             _assert_state_writer_binding(transaction)
-        if binding_validator is not None:
-            binding_validator()
         return True
     except (OSError, KeyboardInterrupt):
         temporary_exists = (
@@ -1090,7 +838,7 @@ def _portable_cleanup_private_file(
     path: Path,
     identity: tuple[int, int],
 ) -> None:
-    """Clean a private temporary on platforms without DSH secure primitives."""
+    """Clean a private temporary on platforms without secure state primitives."""
     if not path.exists() and not path.is_symlink():
         return
     metadata = path.stat(follow_symlinks=False)
@@ -1100,134 +848,6 @@ def _portable_cleanup_private_file(
     ):
         raise OSError(f"state temporary identity changed; preserved at {path}")
     path.unlink()
-
-
-def _save_state_cas(
-    state: dict,
-    expected_revision: tuple[bool, int, int, str],
-    *,
-    transaction: _StateWriterContext,
-    binding_validator: Callable[[], None] | None = None,
-) -> bool:
-    """Atomically save only while the captured state revision is still current."""
-    if not _secure_state_mutation_supported():
-        raise OSError("secure ai-toolkit state mutation requires Linux, WSL, or macOS")
-    path = transaction.path
-    _assert_state_writer_binding(transaction)
-    if binding_validator is not None:
-        binding_validator()
-    payload = json.dumps(state, indent=2) + "\n"
-    descriptor, temporary, temporary_identity = _create_state_temporary(
-        transaction,
-        prefix=".state.dsh-cas-",
-        suffix=".tmp",
-    )
-    try:
-        os.fchmod(descriptor, 0o600)
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        _assert_state_writer_binding(transaction)
-        if binding_validator is not None:
-            binding_validator()
-        published = _secure_publish_state(
-            temporary,
-            path,
-            expected_revision,
-            parent_descriptor=transaction.parent_descriptor,
-            transaction=transaction,
-            binding_validator=binding_validator,
-        )
-        _assert_state_writer_binding(transaction)
-        return published
-    finally:
-        _secure_cleanup_private_file(
-            temporary,
-            temporary_identity,
-            parent_descriptor=transaction.parent_descriptor,
-        )
-
-
-def _current_dsh_profile(state: dict, profile: str) -> dict | None:
-    dsh = state.get("dsh")
-    if dsh is None:
-        return None
-    return _validate_dsh_profiles(dsh).get(profile)
-
-
-def _replace_dsh_profile_cas(
-    profile: str,
-    *,
-    expected_profile: object,
-    replacement: dict | None,
-    preserve_installed_at: bool = False,
-    allow_already_replaced: bool = False,
-    binding_validator: Callable[[], None] | None = None,
-    state_snapshot: DshStateSnapshot | None = None,
-) -> dict | None:
-    expected_parent_identity = (
-        None
-        if state_snapshot is None
-        else (
-            state_snapshot.state_parent_device,
-            state_snapshot.state_parent_inode,
-        )
-    )
-    if expected_parent_identity is not None and None in expected_parent_identity:
-        raise ValueError("DSH state snapshot is missing its parent identity")
-    with _state_writer_lock(
-        secure=True,
-        expected_path=state_snapshot.path if state_snapshot is not None else None,
-        expected_parent_identity=expected_parent_identity,
-    ) as transaction:
-        for _attempt in range(_STATE_CAS_RETRIES):
-            if binding_validator is not None:
-                binding_validator()
-            state, revision = _load_state_revision_strict(
-                secure=True,
-                transaction=transaction,
-            )
-            current = _current_dsh_profile(state, profile)
-            if allow_already_replaced and current == replacement:
-                return current
-            if (
-                expected_profile is not _DSH_EXPECTED_UNSET
-                and current != expected_profile
-            ):
-                raise ValueError(f"concurrent DSH state change for profile '{profile}'")
-            dsh = state.get("dsh")
-            actual_replacement = replacement
-            if actual_replacement is not None and preserve_installed_at:
-                actual_replacement = dict(actual_replacement)
-                if current is not None:
-                    actual_replacement["installed_at"] = current["installed_at"]
-            if actual_replacement is None:
-                if current is None:
-                    raise ValueError("invalid DSH lifecycle state")
-                if dsh is not None:
-                    profiles = _validate_dsh_profiles(dsh)
-                    profiles.pop(profile, None)
-                    if not profiles:
-                        state.pop("dsh", None)
-            else:
-                if dsh is None:
-                    dsh = {"profiles": {}}
-                    state["dsh"] = dsh
-                profiles = _validate_dsh_profiles(dsh)
-                profiles[profile] = actual_replacement
-            if binding_validator is not None:
-                binding_validator()
-            if _save_state_cas(
-                state,
-                revision,
-                transaction=transaction,
-                binding_validator=binding_validator,
-            ):
-                if binding_validator is not None:
-                    binding_validator()
-                return actual_replacement
-    raise ValueError("concurrent ai-toolkit state updates prevented DSH state write")
 
 
 def _write_state_locked(
@@ -1287,6 +907,7 @@ def _mutate_state(mutator: Callable[[dict], None]) -> None:
             secure=transaction.parent_descriptor is not None,
             transaction=transaction,
         )
+        state.pop(LEGACY_DSH_STATE_KEY, None)
         mutator(state)
         _write_state_locked(state, transaction=transaction)
 
@@ -1301,21 +922,6 @@ def save_state(state: dict) -> None:
         current.update(state)
 
     _mutate_state(merge)
-
-
-def get_installed_modules() -> list[str]:
-    """Return list of installed module names from state, or empty list."""
-    state = load_state()
-    modules = state.get("installed_modules", [])
-    if isinstance(modules, list):
-        return modules
-    return []
-
-
-def get_installed_profile() -> str:
-    """Return the profile name from state, or empty string."""
-    state = load_state()
-    return state.get("profile", "")
 
 
 def get_mcp_templates() -> list[str]:
@@ -1345,368 +951,6 @@ def remove_mcp_template(name: str) -> None:
         state["mcp_templates"] = sorted(templates)
 
     _mutate_state(update)
-
-
-def get_dsh_profile(profile: str) -> dict | None:
-    """Return one DSH lifecycle record when its stored shape is valid."""
-    state = _load_state_strict(secure=True)
-    dsh = state.get("dsh")
-    if dsh is None:
-        return None
-    profiles = _validate_dsh_profiles(dsh)
-    record = profiles.get(profile)
-    if record is None:
-        return None
-    return record
-
-
-def capture_dsh_profile_snapshot(
-    profile: str,
-    *,
-    expected_profile: dict | None,
-    binding_validator: Callable[[], None] | None = None,
-) -> DshStateSnapshot:
-    """Capture canonical DSH substate under the shared state writer lock."""
-    with _state_writer_lock(secure=True) as transaction:
-        if binding_validator is not None:
-            binding_validator()
-        path = transaction.path
-        _assert_state_writer_binding(transaction)
-        if not _state_name_exists(transaction, path.name):
-            state: dict = {}
-            current = _current_dsh_profile(state, profile)
-            if current != expected_profile:
-                raise ValueError("ai-toolkit DSH state changed before transaction")
-            snapshot = DshStateSnapshot(
-                path,
-                False,
-                b"",
-                0o600,
-                state,
-                profile,
-                current,
-                transaction.parent_device,
-                transaction.parent_inode,
-            )
-            if binding_validator is not None:
-                binding_validator()
-            return snapshot
-        try:
-            with _open_stable_state_file(
-                path,
-                secure=True,
-                parent_descriptor=transaction.parent_descriptor,
-            ) as opened:
-                state = _decode_state_document(opened.content)
-                current = _current_dsh_profile(state, profile)
-                if current != expected_profile:
-                    raise ValueError("ai-toolkit DSH state changed before transaction")
-                snapshot = DshStateSnapshot(
-                    path,
-                    True,
-                    opened.content,
-                    stat.S_IMODE(opened.metadata.st_mode),
-                    state,
-                    profile,
-                    current,
-                    transaction.parent_device,
-                    transaction.parent_inode,
-                )
-                if binding_validator is not None:
-                    binding_validator()
-                return snapshot
-        except OSError as error:
-            raise ValueError("malformed or unsafe ai-toolkit state file") from error
-
-
-def dsh_profile_matches_snapshot(snapshot: DshStateSnapshot) -> bool:
-    """Compare one DSH profile through the state root pinned by its snapshot."""
-    expected_parent_identity = (
-        snapshot.state_parent_device,
-        snapshot.state_parent_inode,
-    )
-    if None in expected_parent_identity:
-        raise ValueError("DSH state snapshot is missing its parent identity")
-    with _state_writer_lock(
-        secure=True,
-        expected_path=snapshot.path,
-        expected_parent_identity=expected_parent_identity,
-    ) as transaction:
-        state = _load_state_strict(secure=True, transaction=transaction)
-        return _current_dsh_profile(state, snapshot.profile) == snapshot.profile_record
-
-
-def _secure_remove_state(
-    path: Path,
-    expected_revision: tuple[bool, int, int, str],
-    *,
-    transaction: _StateWriterContext,
-    binding_validator: Callable[[], None] | None = None,
-) -> bool:
-    _assert_state_writer_binding(transaction)
-    if binding_validator is not None:
-        binding_validator()
-    recovery = path.parent / (
-        f".state.dsh-remove-{os.getpid()}-{secrets.token_hex(12)}"
-    )
-    try:
-        _state_rename_operation(
-            path,
-            recovery,
-            exchange=False,
-            source_parent_descriptor=transaction.parent_descriptor,
-            destination_parent_descriptor=transaction.parent_descriptor,
-        )
-    except FileNotFoundError:
-        return not expected_revision[0]
-    try:
-        if (
-            _path_revision(
-                recovery,
-                parent_descriptor=transaction.parent_descriptor,
-            )
-            != expected_revision
-        ):
-            _state_rename_operation(
-                recovery,
-                path,
-                exchange=False,
-                source_parent_descriptor=transaction.parent_descriptor,
-                destination_parent_descriptor=transaction.parent_descriptor,
-            )
-            return False
-        if transaction.parent_descriptor is None:
-            raise OSError("secure ai-toolkit state parent is unavailable")
-        if binding_validator is not None:
-            binding_validator()
-        os.unlink(recovery.name, dir_fd=transaction.parent_descriptor)
-        _assert_state_writer_binding(transaction)
-        if binding_validator is not None:
-            binding_validator()
-        return True
-    except (OSError, KeyboardInterrupt):
-        if transaction.parent_descriptor is None:
-            raise
-        if _descriptor_name_exists(
-            transaction.parent_descriptor,
-            recovery.name,
-        ) and not _descriptor_name_exists(transaction.parent_descriptor, path.name):
-            try:
-                _state_rename_operation(
-                    recovery,
-                    path,
-                    exchange=False,
-                    source_parent_descriptor=transaction.parent_descriptor,
-                    destination_parent_descriptor=transaction.parent_descriptor,
-                )
-            except OSError:
-                pass
-        raise
-
-
-def restore_dsh_profile_snapshot(
-    snapshot: DshStateSnapshot,
-    *,
-    expected_profile: dict | None,
-    binding_validator: Callable[[], None] | None = None,
-) -> Path | None:
-    """Restore transaction-owned DSH substate without clobbering other writers."""
-    try:
-        restore_dsh_profile(
-            snapshot.profile,
-            expected_profile=expected_profile,
-            previous_profile=snapshot.profile_record,
-            binding_validator=binding_validator,
-            state_snapshot=snapshot,
-        )
-        expected_parent_identity = (
-            snapshot.state_parent_device,
-            snapshot.state_parent_inode,
-        )
-        if None in expected_parent_identity:
-            return snapshot.path
-        with _state_writer_lock(
-            secure=True,
-            expected_path=snapshot.path,
-            expected_parent_identity=expected_parent_identity,
-        ) as transaction:
-            if binding_validator is not None:
-                binding_validator()
-            if not snapshot.existed:
-                state, revision = _load_state_revision_strict(
-                    secure=True,
-                    transaction=transaction,
-                )
-                if (
-                    _current_dsh_profile(state, snapshot.profile)
-                    != snapshot.profile_record
-                ):
-                    return snapshot.path
-                if state != snapshot.document:
-                    return None
-                if state or not revision[0]:
-                    return None
-                if binding_validator is not None:
-                    binding_validator()
-                return (
-                    None
-                    if _secure_remove_state(
-                        snapshot.path,
-                        revision,
-                        transaction=transaction,
-                        binding_validator=binding_validator,
-                    )
-                    else snapshot.path
-                )
-            with _open_stable_state_file(
-                snapshot.path,
-                secure=True,
-                parent_descriptor=transaction.parent_descriptor,
-            ) as opened:
-                state = _decode_state_document(opened.content)
-                revision = _opened_state_revision(opened)
-                if (
-                    _current_dsh_profile(state, snapshot.profile)
-                    != snapshot.profile_record
-                ):
-                    return snapshot.path
-                if state != snapshot.document:
-                    return None
-                if opened.content == snapshot.content:
-                    if stat.S_IMODE(opened.metadata.st_mode) != snapshot.mode:
-                        if binding_validator is not None:
-                            binding_validator()
-                        os.fchmod(opened.descriptor, snapshot.mode)
-                        if binding_validator is not None:
-                            binding_validator()
-                    return (
-                        None
-                        if _verify_open_state_after_mode_change(
-                            opened,
-                            expected_mode=snapshot.mode,
-                            expected_digest=hashlib.sha256(
-                                snapshot.content
-                            ).hexdigest(),
-                        )
-                        else snapshot.path
-                    )
-            descriptor, temporary, temporary_identity = _create_state_temporary(
-                transaction,
-                prefix=".state.dsh-rollback-",
-                suffix=".tmp",
-            )
-            try:
-                os.fchmod(descriptor, snapshot.mode)
-                with os.fdopen(descriptor, "wb") as stream:
-                    stream.write(snapshot.content)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                if binding_validator is not None:
-                    binding_validator()
-                return (
-                    None
-                    if _secure_publish_state(
-                        temporary,
-                        snapshot.path,
-                        revision,
-                        parent_descriptor=transaction.parent_descriptor,
-                        transaction=transaction,
-                        binding_validator=binding_validator,
-                    )
-                    else snapshot.path
-                )
-            finally:
-                _secure_cleanup_private_file(
-                    temporary,
-                    temporary_identity,
-                    parent_descriptor=transaction.parent_descriptor,
-                )
-    except (OSError, ValueError, KeyboardInterrupt):
-        return snapshot.path
-
-
-def record_dsh_profile(
-    *,
-    dsh_home: Path,
-    profile: str,
-    packages: dict[str, str],
-    package_trees: dict[str, dict[str, object]],
-    preset_path: Path,
-    preset_hash: str,
-    expected_profile: object = _DSH_EXPECTED_UNSET,
-    updated_at: str | None = None,
-    binding_validator: Callable[[], None] | None = None,
-    state_snapshot: DshStateSnapshot | None = None,
-) -> dict:
-    """Record ownership of one successfully installed DSH profile surface."""
-    now = updated_at or _now_iso()
-    if isinstance(expected_profile, dict):
-        previous = expected_profile
-    else:
-        previous = {}
-    installed_at = (
-        previous.get("installed_at", now) if isinstance(previous, dict) else now
-    )
-    record = {
-        "dsh_home": str(dsh_home),
-        "profile": profile,
-        "packages": dict(sorted(packages.items())),
-        "package_trees": {
-            package: package_trees[package] for package in sorted(package_trees)
-        },
-        "preset_path": str(preset_path),
-        "preset_hash": preset_hash,
-        "owned": True,
-        "installed_at": installed_at,
-        "last_updated": now,
-    }
-    stored = _replace_dsh_profile_cas(
-        profile,
-        expected_profile=expected_profile,
-        replacement=record,
-        preserve_installed_at=expected_profile is _DSH_EXPECTED_UNSET,
-        binding_validator=binding_validator,
-        state_snapshot=state_snapshot,
-    )
-    if stored is None:
-        raise ValueError("invalid DSH lifecycle state")
-    return stored
-
-
-def remove_dsh_profile(
-    profile: str,
-    *,
-    expected_profile: object = _DSH_EXPECTED_UNSET,
-    binding_validator: Callable[[], None] | None = None,
-    state_snapshot: DshStateSnapshot | None = None,
-) -> None:
-    """Forget one DSH profile record while preserving unrelated state."""
-    _replace_dsh_profile_cas(
-        profile,
-        expected_profile=expected_profile,
-        replacement=None,
-        binding_validator=binding_validator,
-        state_snapshot=state_snapshot,
-    )
-
-
-def restore_dsh_profile(
-    profile: str,
-    *,
-    expected_profile: dict | None,
-    previous_profile: dict | None,
-    binding_validator: Callable[[], None] | None = None,
-    state_snapshot: DshStateSnapshot | None = None,
-) -> None:
-    """Rollback one transaction-owned DSH substate without replacing other keys."""
-    _replace_dsh_profile_cas(
-        profile,
-        expected_profile=expected_profile,
-        replacement=previous_profile,
-        allow_already_replaced=True,
-        binding_validator=binding_validator,
-        state_snapshot=state_snapshot,
-    )
 
 
 # Default global install: Claude only — no other editors unless --editors is used

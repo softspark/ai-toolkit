@@ -44,6 +44,20 @@ def build_pointer_skill(editor_name: str) -> str:
     )
 
 
+def is_pointer_skill(content: bytes) -> bool:
+    """Return True when SKILL.md bytes are an ai-toolkit catalogue pointer."""
+    return f"name: {POINTER_SKILL_NAME}\n".encode() in content and (
+        b"This workspace uses ai-toolkit with " in content
+        # Body still emitted by the Gemini, Antigravity and Augment generators.
+        or b"This workspace uses the ai-toolkit. " in content
+    )
+
+
+def owned_pointer_edit(content: bytes) -> bytes | None:
+    """Owned edit for ``secure_fs.apply_owned_edits``: drop managed pointers."""
+    return None if is_pointer_skill(content) else content
+
+
 def write_pointer_skill(target_dir: Path, skill_root: str, editor_name: str) -> Path:
     """Write a pointer skill under ``skill_root/<pointer>/SKILL.md``."""
     skill_dir = target_dir / skill_root / POINTER_SKILL_NAME

@@ -43,6 +43,19 @@ _LOAD_RETRY_DELAY = 0.05  # 50ms
 _LOCK_TIMEOUT = 30.0
 _LOCK_RETRY_DELAY = 0.01
 
+# Retired editor targets older releases recorded; ignored on read, dropped on write.
+LEGACY_RETIRED_EDITORS = frozenset({"dsh"})
+
+
+def active_editors(editors: object) -> list[str]:
+    """Return recorded editors that are still supported, in stored order."""
+    if not isinstance(editors, list):
+        return []
+    return [
+        editor for editor in editors
+        if isinstance(editor, str) and editor not in LEGACY_RETIRED_EDITORS
+    ]
+
 
 @contextlib.contextmanager
 def _registry_lock() -> Generator[None, None, None]:
@@ -197,7 +210,9 @@ def register_project(
                     # Clear extends if project no longer uses it
                     pass
                 if editors is not None:
-                    p["editors"] = sorted(set(editors))
+                    p["editors"] = sorted(set(active_editors(editors)))
+                elif isinstance(p.get("editors"), list):
+                    p["editors"] = active_editors(p["editors"])
                 save_registry(projects)
                 return False
 
@@ -208,7 +223,7 @@ def register_project(
             "last_updated": now,
             "profile": profile or "standard",
             "extends": extends or "",
-            "editors": sorted(set(editors)) if editors else [],
+            "editors": sorted(set(active_editors(editors))),
         })
         save_registry(projects)
         return True

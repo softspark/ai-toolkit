@@ -6,9 +6,9 @@
 # Tests for the top-level rule skills.
 #
 # The rules were reachable only as Claude Code user-level files, with the
-# global CLAUDE.md carrying a pointer instead of their content. DeepSeek
-# Harness reads AGENTS.md / CLAUDE.md and has no rules-directory support, so
-# under DSH every rule was inert. Shipping them as skills fixes that, and the
+# global CLAUDE.md carrying a pointer instead of their content. A client that
+# reads only AGENTS.md / CLAUDE.md and has no rules-directory support sees every
+# rule as inert. Shipping them as skills fixes that, and the
 # description is what carries the obligation: the skill catalogue injects it
 # into every session whether or not the body is loaded.
 
@@ -58,9 +58,9 @@ GENERATOR="$TOOLKIT_DIR/scripts/generate_toolkit_rules_skills.py"
     done
 }
 
-@test "toolkit rules: names are DSH-legal kebab-case with no namespace colon" {
-    # DSH validates a skill name with /^[a-z0-9]+(?:-[a-z0-9]+)*$/ and refuses
-    # anything else, so a colon in a name makes the skill unloadable there.
+@test "toolkit rules: names are Agent Skills kebab-case with no namespace colon" {
+    # Agent Skills clients expect /^[a-z0-9]+(?:-[a-z0-9]+)*$/ skill names; a
+    # colon in a name can make the skill unloadable there.
     for rule in "$RULES_DIR"/*.md; do
         [ -f "$rule" ] || continue
         stem="$(basename "$rule" .md)"

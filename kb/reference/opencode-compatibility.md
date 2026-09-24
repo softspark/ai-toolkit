@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [opencode, compatibility, install, skills, hooks, mcp, plugins]
 version: "1.1.0"
 created: "2026-04-16"
-last_updated: "2026-08-19"
+last_updated: "2026-09-24"
 description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, Agent Skills, subagents, slash commands, JS plugin hooks, and MCP config."
 ---
 
@@ -150,16 +150,19 @@ The installer detects opencode as configured when any of these markers exist:
 
 ## Uninstall & Reset
 
-`scripts/install_steps/ai_tools.py` cleanup only removes ai-toolkit-marked artifacts:
+`ai-toolkit uninstall` calls each generator's `cleanup()` (`--local` for the
+project, global for `~/.config/opencode/`). They remove only ai-toolkit-owned
+artifacts:
 
-- Generated `.opencode/agents/ai-toolkit-*.md`
-- Generated `.opencode/commands/ai-toolkit-*.md`
-- Manifest-owned files under generated `.opencode/skills/<name>/` directories
-- Generated `.opencode/plugins/ai-toolkit-hooks.js`
-- Managed markers from `AGENTS.md`
-- `mcp` key entries injected by the toolkit (user keys preserved)
+- Generated `agents/ai-toolkit-*.md` and `commands/ai-toolkit-*.md`
+- Manifest-owned files under generated `skills/<name>/` directories
+- `plugins/ai-toolkit-hooks.js`, when it still carries the generated header
+- Managed marker sections in `AGENTS.md` (the file is deleted only when nothing else is left)
+- `opencode.json`, only when it holds nothing but the toolkit's `$schema` (and an empty `mcp`)
 
+`mcp` entries are copies of the user's own `.mcp.json` and stay.
 User-authored opencode files and user-authored `opencode.json` keys are never deleted.
+`reset --local` removes the generated agents, commands and plugin.
 
 Native skill cleanup removes only manifest-owned files. A user-owned skill or
 an extra file inside a formerly managed directory is preserved. The native

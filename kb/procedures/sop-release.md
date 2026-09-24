@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.15.4"
+version: "1.15.5"
 created: "2026-04-10"
-last_updated: "2026-09-23"
+last_updated: "2026-09-24"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
@@ -604,7 +604,8 @@ git push origin refs/tags/vX.Y.Z
 
 **Why branch CI comes before the tag (v4.30.2 postmortem).** The publish
 workflow runs only on Ubuntu and can publish while the separate macOS matrix job
-is red. `v4.30.2` exposed this with a macOS-only DSH timing failure. A release
+is red. `v4.30.2` exposed this with a macOS-only timing failure in the since-retired DSH
+lifecycle tests. A release
 commit must therefore pass the complete Ubuntu/macOS branch workflow before its
 tag exists; a successful publish workflow is not a substitute for green CI.
 

@@ -24,6 +24,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from secure_fs import apply_owned_edits
+
 
 SOURCE_TAG = "ai-toolkit"
 SCHEMA_VERSION = 1
@@ -489,6 +492,87 @@ def generate(target_dir: Path) -> Path:
     return config_path
 
 
+def _is_toolkit_shell(document: dict[str, Any]) -> bool:
+    """Return True for a manifest holding nothing but the generated skeleton."""
+    rest = {key: value for key, value in document.items() if key != "version"}
+    return document.get("version", SCHEMA_VERSION) == SCHEMA_VERSION and (
+        not rest or rest == {"hooks": {}}
+    )
+
+
+def _strip_config(content: bytes, *, runtime_owned: bool) -> bytes | None:
+    """Owned edit for hooks.json: drop toolkit entries, delete an empty shell.
+
+    A bare ``{"version": 1}`` is deleted only while the managed runtime is
+    present too: that pair is what an earlier toolkit cleanup left behind.
+    """
+    try:
+        document = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"Refusing to rewrite invalid Cursor hooks JSON: {error}") from error
+    if not isinstance(document, dict):
+        return content
+    hooks = document.get("hooks")
+    survivors = strip_toolkit_hooks(hooks) if isinstance(hooks, dict) else hooks
+    if survivors == hooks:
+        return None if runtime_owned and _is_toolkit_shell(document) else content
+    if survivors:
+        document["hooks"] = survivors
+    else:
+        document.pop("hooks", None)
+    if _is_toolkit_shell(document):
+        return None
+    return (
+        json.dumps(document, indent=4, ensure_ascii=False, sort_keys=True) + "\n"
+    ).encode("utf-8")
+
+
+def _remove_managed_runtime(content: bytes) -> bytes | None:
+    return None if SCRIPT_MARKER.encode() in content[:256] else content
+
+
+def _apply_cleanup(target_dir: Path, *, dry_run: bool) -> int:
+    target = Path(target_dir).expanduser().absolute()
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Cursor target directory: {target}")
+    cursor_dir = target / ".cursor"
+    assets_dir = cursor_dir / "hooks" / "ai-toolkit"
+    runtime_path = assets_dir / SCRIPT_NAME
+    runtime_owned = _is_managed_runtime(runtime_path)
+    return apply_owned_edits(
+        {
+            # hooks.json first: invalid JSON aborts before the runtime its
+            # remaining entries may still call is removed.
+            cursor_dir / "hooks.json": (
+                lambda content: _strip_config(content, runtime_owned=runtime_owned)
+            ),
+            runtime_path: _remove_managed_runtime,
+        },
+        target,
+        label="Cursor hooks",
+        prune=(assets_dir, assets_dir.parent, cursor_dir),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path) -> int:
+    """Count Cursor hook artifacts :func:`cleanup` would rewrite or remove."""
+    return _apply_cleanup(target_dir, dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Remove this toolkit's Cursor hooks for an uninstall or profile downgrade.
+
+    Strips toolkit entries from ``.cursor/hooks.json`` (user and plugin-pack
+    entries stay), deletes the file when only the generated ``version`` shell
+    is left, removes the marker-owned runtime in ``.cursor/hooks/ai-toolkit/``
+    and prunes the directories it leaves empty. The same layout serves the
+    user scope when ``target_dir`` is the home directory. Returns the number
+    of files rewritten or removed; invalid JSON raises ``ValueError``.
+    """
+    return _apply_cleanup(target_dir, dry_run=False)
+
+
 def main() -> None:
     target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
     path = generate(target)
@@ -499,47 +583,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-def _cleanup_config_path(target_dir: Path) -> Path | None:
-    return Path(target_dir).expanduser() / ".cursor" / "hooks.json"
-
-
-def _cleanup_write(path: Path, document: dict) -> None:
-    path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def cleanup(target_dir: Path) -> None:
-    """Strip this toolkit's hook entries for an uninstall or profile downgrade.
-
-    Only entries tagged with SOURCE_TAG are removed; user and plugin-pack
-    entries are left in place. The file is deleted only when nothing survives,
-    so an uninstall does not take a user's own configuration with it.
-    """
-    config = _cleanup_config_path(target_dir)
-    if config is None or not config.is_file() or config.is_symlink():
-        return
-    try:
-        with open(config, encoding="utf-8") as handle:
-            document = json.load(handle)
-    except (OSError, json.JSONDecodeError):
-        return
-    if not isinstance(document, dict):
-        return
-
-    hooks = document.get("hooks")
-    if not isinstance(hooks, dict):
-        return
-    survivors = strip_toolkit_hooks(hooks)
-    if survivors == hooks:
-        return
-
-    if survivors:
-        document["hooks"] = survivors
-    else:
-        document.pop("hooks", None)
-
-    if document:
-        _cleanup_write(config, document)
-    else:
-        config.unlink()

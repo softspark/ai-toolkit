@@ -48,6 +48,7 @@ from dir_rules_shared import (
     rule_testing,
     rule_workflow,
 )
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +162,43 @@ def generate(target_dir: Path, *,
     for filename, content_fn in all_rules.items():
         (out_dir / filename).write_text(content_fn(), encoding="utf-8")
         print(f"  Generated: .cursor/rules/{filename}")
+
+
+def _cleanup_plan(target_dir: Path) -> tuple[Path, dict[Path, OwnedEdit], tuple[Path, ...]]:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Cursor target directory: {target}")
+    rules_dir = target / ".cursor" / "rules"
+    if rules_dir.is_symlink():
+        raise RuntimeError(f"Refusing symlinked Cursor rules directory: {rules_dir}")
+    # Same ownership rule as the stale sweep in generate(): the ai-toolkit-
+    # prefix plus the .mdc suffix. Symlinked entries are never ours.
+    files = sorted(
+        path for path in rules_dir.glob(f"{PREFIX}*.mdc")
+        if not path.is_symlink() and path.is_file()
+    ) if rules_dir.is_dir() else []
+    edits: dict[Path, OwnedEdit] = {path: _remove for path in files}
+    return target, edits, (rules_dir, target / ".cursor")
+
+
+def _remove(_content: bytes) -> None:
+    return None
+
+
+def discover(target_dir: Path) -> int:
+    """Count ai-toolkit-managed ``.cursor/rules/ai-toolkit-*.mdc`` files."""
+    target, edits, _ = _cleanup_plan(target_dir)
+    return apply_owned_edits(edits, target, label="Cursor rule", dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Remove ai-toolkit ``.mdc`` rules and prune emptied rule directories.
+
+    User rules and plugin-owned ``plugin-*.mdc`` files are left in place.
+    Returns the number of files removed.
+    """
+    target, edits, prune = _cleanup_plan(target_dir)
+    return apply_owned_edits(edits, target, label="Cursor rule", prune=prune)
 
 
 def main() -> None:

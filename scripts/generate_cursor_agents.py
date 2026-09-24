@@ -41,6 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import agents_dir
 from frontmatter import frontmatter_field
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 AGENT_PREFIX = "ai-toolkit-"
 
@@ -116,6 +117,47 @@ def generate(
 
     removed = _cleanup_stale(agents_out)
     return written, removed
+
+
+def _remove(_content: bytes) -> None:
+    return None
+
+
+def _cleanup_plan(
+    target_dir: Path, config_root: Path | None
+) -> tuple[Path, dict[Path, OwnedEdit], tuple[Path, ...]]:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Cursor target directory: {target}")
+    base = lexical_absolute(config_root) if config_root is not None else target / ".cursor"
+    agents_out = base / "agents"
+    for directory in (base, agents_out):
+        if directory.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Cursor agents directory: {directory}")
+    # Same ownership rule as _cleanup_stale(): the ai-toolkit- filename prefix.
+    files = sorted(
+        path for path in agents_out.glob(f"{AGENT_PREFIX}*.md")
+        if not path.is_symlink() and path.is_file()
+    ) if agents_out.is_dir() else []
+    prune = (agents_out, base) if base != target else (agents_out,)
+    return target, {path: _remove for path in files}, prune
+
+
+def discover(target_dir: Path, config_root: Path | None = None) -> int:
+    """Count ai-toolkit-managed Cursor agent files."""
+    target, edits, _ = _cleanup_plan(target_dir, config_root)
+    return apply_owned_edits(edits, target, label="Cursor agent", dry_run=True)
+
+
+def cleanup(target_dir: Path, config_root: Path | None = None) -> int:
+    """Remove every ``ai-toolkit-*.md`` Cursor agent; keep user agents.
+
+    Uses the same layout as :func:`generate`: ``target_dir/.cursor/agents``
+    by default, ``config_root/agents`` when given (must live under
+    ``target_dir``). Returns the number of files removed.
+    """
+    target, edits, prune = _cleanup_plan(target_dir, config_root)
+    return apply_owned_edits(edits, target, label="Cursor agent", prune=prune)
 
 
 def main() -> None:

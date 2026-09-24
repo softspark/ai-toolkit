@@ -7,6 +7,100 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v5.0.0 - User-level rules, complete uninstall, DSH retired (2026-09-24)
+
+Major release. Retiring DSH removes a capability behind protected CLI names,
+which now only warn for one release. Common rules and the constitution move to
+user level, and `uninstall` removes everything the toolkit installed. The release
+passed 1910 Bats tests and 596 Python tests on macOS and Ubuntu.
+
+### Changed
+
+- **Rules that apply everywhere are installed once, at user level.** The global
+  install writes the common rules (with their `paths` scoping, filtered by the
+  install profile) and the constitution to `~/.claude/rules/ai-toolkit-*.md`.
+  `install --local` no longer copies them into projects: Claude Code loads
+  `.claude/rules/` from parent directories, so a project under a registered
+  parent (a workspace folder installed with `--local`) loaded every rule twice.
+  A project still gets a copy of a rule the global install lacks (every one
+  without a global install, `git-team` for a `strict` project under a
+  `standard` global install), and `.claude/constitution.md` only for `extends`
+  amendments or without a global install. The next `update` removes the
+  managed copies from every registered project, and the `@.claude/constitution.md`
+  import from `CLAUDE.md` when nothing is left to import.
+- **`uninstall` removes everything the toolkit installed.** Global uninstall
+  first runs the local uninstall in every registered project, then removes the
+  user-level install: `~/.claude/rules/ai-toolkit-*.md`, the toolkit sections
+  of `~/.claude/CLAUDE.md`, the shipped output styles, every editor surface the
+  installer writes (each generator now has a `discover`/`cleanup` pair built on
+  one ownership-checked helper, `secure_fs.apply_owned_edits`), installed
+  plugin packs, hooks and MCP servers added with `inject-hook`/`inject-mcp`,
+  and the settings it put in `~/.claude/settings.json`
+  (`outputStyle`, `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`,
+  `skillListingBudgetFraction` and its own `skillOverrides`, each only while it
+  still holds the toolkit's value). Last, it archives `~/.softspark/ai-toolkit`
+  (hook scripts, state, registry, session history, logs, plugins) to
+  `~/ai-toolkit-backup-<time>.tar.gz`, verifies the archive and deletes the
+  directory. `uninstall --local` also removes `.softspark-toolkit.lock.json`,
+  `.softspark-toolkit-extends.json`, the fallback `pre-commit` hook (restoring
+  `pre-commit.backup`), `CLAUDE.md` and `.claude/settings.local.json` while
+  they are unchanged from the template, and unregisters the project. User
+  content in shared files is preserved.
+- **`doctor` counts only always-on rules as resident context.** Path-scoped
+  user rules are reported separately as loading on demand.
+
+### Removed
+
+- **BREAKING: DeepSeek Harness (DSH) support is gone.** The toolkit no longer
+  installs DSH project skills or manages DSH profiles. Following the
+  deprecation path, the names survive this release only as warnings:
+  `--editors dsh` is ignored with a warning, and `ai-toolkit dsh ...` prints
+  the manual cleanup steps and exits 0. Both stubs go in the next minor.
+- **Migration is automatic for projects.** A `.agents/skills` surface written
+  for DSH is still recognised as toolkit-managed: `update` or
+  `install --local` re-renders a surface shared with Codex (owners `codex` +
+  `dsh`) as Codex-only and removes a DSH-only surface (owner `dsh`), and
+  `ai-toolkit uninstall` removes both. A registered project that lists `dsh`
+  among its editors is not an error; the entry is dropped.
+- **DSH profiles are left alone.** Packages and presets that
+  `ai-toolkit dsh install` put under `$DSH_HOME` (default `~/.dsh`) are no
+  longer managed by the toolkit. Remove them with DSH itself, per profile:
+  `dsh plugin --profile web remove @softspark/dsh-codex`,
+  `dsh plugin --profile web remove @softspark/dsh-orchestrator`, then delete
+  `$DSH_HOME/.agent-presets/softspark-orchestrator`. Details, including the
+  leftover Claude Agent SDK pnpm override, are in
+  `kb/reference/dsh-compatibility.md`, now a retirement note.
+- Docs, SOPs and the supported-tools registry drop the DSH target (13
+  registry tools instead of 14); release verification loses its DSH phase.
+
+### Fixed
+
+- **The global constitution now loads.** Every global install marker-injected
+  `~/.claude/constitution.md`, which nothing imported. It is migrated to
+  `~/.claude/rules/ai-toolkit-constitution.md`; user text in the old file is
+  kept.
+- **Toolkit hooks kept running after `uninstall`.** Uninstall stripped only the
+  legacy `~/.claude/hooks.json`, while installs merge hooks and the status line
+  into `~/.claude/settings.json`, and it left the hook scripts in place. Claude
+  Code drops the `_source` tag when it rewrites `settings.json`, so uninstall
+  now also matches toolkit hook signatures, and uninstall and
+  `merge-hooks.py strip` both drop any handler or status line that runs a
+  script from the toolkit hooks directory.
+- **`ecosystem_doctor.py --update` kept baselines for removed tools.** The
+  snapshot now drops tools no longer in `scripts/ecosystem_tools.json`.
+
+### Ecosystem
+
+- **Drift review (class A only)**: 11 of 13 tools showed documentation edits
+  without heading changes; Claude Code 2.1.281 and Codex CLI 0.156.1 are patch
+  updates. No generator change needed; snapshot refreshed.
+- **DSH removed from the registry (class D)**: 14 tools become 13.
+- **Permission and body-budget review**: no new skill permission grants; 14
+  broad-access skills remain. Body thresholds stay unchanged: the largest
+  skill is still 17197 bytes against the 18000-byte warning.
+
+---
+
 ## v4.39.0 - Current-model skills and prompt compatibility (2026-09-23)
 
 Minor release. Updates model-aware skills, agent examples and prompt adapters

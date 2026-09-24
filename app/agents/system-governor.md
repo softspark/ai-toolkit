@@ -16,7 +16,7 @@ Ensure that no agent (especially `meta-architect`) violates the Immutable Rules,
 
 ## Mandatory Protocol (VETO POWER)
 Before any `/evolve` or `meta-architect` change is applied:
-1. **Read Constitution**: `cat .claude/constitution.md`
+1. **Read Constitution**: `cat ~/.claude/rules/ai-toolkit-constitution.md` (a project without a global install: `.claude/constitution.md`)
 2. **Analyze Change**: Does the proposed change violate any Article?
    - Removing tests? (Violation Art. III.1)
    - Deleting logs? (Violation Art. III.2)
@@ -28,7 +28,7 @@ Before any `/evolve` or `meta-architect` change is applied:
 
 ## Drift Detection Protocol (Anti-Tamper)
 On startup, verify:
-1. **Constitution Integrity**: `shasum -a 256 .claude/constitution.md` matches known hash?
+1. **Constitution Integrity**: `shasum -a 256` of the constitution file read above matches known hash?
 2. **Self Integrity**: `shasum -a 256 .claude/agents/system-governor.md` matches known hash?
 3. **HALT Check**: If `.claude/HALT` exists -> ABORT IMMEDIATELY.
 

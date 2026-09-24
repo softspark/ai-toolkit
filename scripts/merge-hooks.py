@@ -16,8 +16,10 @@ inject: Reads toolkit hooks (tagged with "_source": "ai-toolkit"),
         Creates target with just {"hooks": ...} if missing.
 
 strip:  Removes all entries with "_source": "ai-toolkit" from target's
-        "hooks" key. Removes the "hooks" key if empty. Never deletes
-        the target file (it may contain other settings).
+        "hooks" key, handlers running a script from the toolkit hooks
+        directory, and the toolkit statusLine. Removes the "hooks" key if
+        empty. Never deletes the target file (it may contain other
+        settings).
 
 Exit codes:
     0  success
@@ -258,12 +260,45 @@ def cmd_inject(toolkit_path: str, target_path: str) -> None:
     save_json(target_path, target_settings)
 
 
+# Uninstall deletes the toolkit hooks directory, so any handler that runs a
+# script from it is both toolkit-owned and dead afterwards. Claude Code drops
+# the "_source" tag when it rewrites settings.json; the path survives.
+TOOLKIT_HOOKS_PATH = ".softspark/ai-toolkit/hooks/"
+
+
+def _runs_toolkit_script(handler: object) -> bool:
+    return isinstance(handler, dict) and TOOLKIT_HOOKS_PATH in str(
+        handler.get("command", "")
+    )
+
+
+def _without_toolkit_handlers(hooks: dict) -> dict:
+    """Drop handlers that run toolkit hook scripts; keep the rest of an entry."""
+    result: dict = {}
+    for event, entries in hooks.items():
+        if not isinstance(entries, list):
+            result[event] = entries
+            continue
+        kept = []
+        for entry in entries:
+            if not isinstance(entry, dict) or not isinstance(entry.get("hooks"), list):
+                kept.append(entry)
+                continue
+            handlers = [h for h in entry["hooks"] if not _runs_toolkit_script(h)]
+            if handlers:
+                kept.append({**entry, "hooks": handlers})
+        if kept:
+            result[event] = kept
+    return result
+
+
 def cmd_strip(target_path: str) -> None:
     """Remove all ai-toolkit hook entries from a target settings file.
 
-    Removes entries tagged with the ai-toolkit source marker. If no hooks
-    remain, the ``hooks`` key is removed from the settings. Handles
-    legacy symlink targets by deleting the symlink.
+    Removes entries tagged with the ai-toolkit source marker and handlers
+    that run a script from the toolkit hooks directory. If no hooks remain,
+    the ``hooks`` key is removed from the settings. Handles legacy symlink
+    targets by deleting the symlink.
 
     Args:
         target_path: Path to the target settings JSON file.
@@ -281,7 +316,7 @@ def cmd_strip(target_path: str) -> None:
         print(f"Error parsing target settings: {e}", file=sys.stderr)
         sys.exit(2)
 
-    result = strip_toolkit(target_settings.get("hooks", {}))
+    result = _without_toolkit_handlers(strip_toolkit(target_settings.get("hooks", {})))
     if result:
         target_settings["hooks"] = result
     else:
@@ -289,7 +324,9 @@ def cmd_strip(target_path: str) -> None:
 
     # Strip toolkit-installed statusLine (user-customized one is preserved).
     sl = target_settings.get("statusLine")
-    if isinstance(sl, dict) and sl.get("_source") == SOURCE_TAG:
+    if isinstance(sl, dict) and (
+        sl.get("_source") == SOURCE_TAG or _runs_toolkit_script(sl)
+    ):
         target_settings.pop("statusLine", None)
 
     save_json(target_path, target_settings)

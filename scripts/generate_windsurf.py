@@ -14,6 +14,73 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_base import render_generator
+from injection import strip_owned_sections
+from secure_fs import apply_owned_edits, lexical_absolute
+
+# Marker-injected rule files, relative to the target, with the directories
+# pruned when stripping one leaves them empty.
+LOCAL_RULE_FILES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (".windsurfrules", ()),
+)
+GLOBAL_RULE_FILES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        ".codeium/windsurf/memories/global_rules.md",
+        (".codeium/windsurf/memories", ".codeium/windsurf", ".codeium"),
+    ),
+    (".config/devin/AGENTS.md", (".config/devin",)),
+)
+
+
+def _surfaces(scope: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    if scope == "local":
+        return LOCAL_RULE_FILES
+    if scope == "global":
+        return GLOBAL_RULE_FILES
+    if scope == "both":
+        return LOCAL_RULE_FILES + GLOBAL_RULE_FILES
+    raise ValueError(f"Unknown Windsurf cleanup scope: {scope!r}")
+
+
+def _apply(target_dir: Path, scope: str, *, dry_run: bool) -> int:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Windsurf target directory: {target}")
+    changed = 0
+    errors: list[str] = []
+    # One transaction per file: a refused surface (for example a symlinked
+    # ~/.config) must not block stripping the others.
+    for relative, prune in _surfaces(scope):
+        try:
+            changed += apply_owned_edits(
+                {target / relative: strip_owned_sections},
+                target,
+                label="Windsurf rules",
+                prune=tuple(target / directory for directory in prune),
+                dry_run=dry_run,
+            )
+        except (OSError, RuntimeError, ValueError) as error:
+            errors.append(f"{relative}: {error}")
+    if errors:
+        raise RuntimeError("; ".join(errors))
+    return changed
+
+
+def discover(target_dir: Path, *, scope: str = "both") -> int:
+    """Count Windsurf/Devin rule files that hold ai-toolkit TOOLKIT sections."""
+    return _apply(target_dir, scope, dry_run=True)
+
+
+def cleanup(target_dir: Path, *, scope: str = "both") -> int:
+    """Strip ai-toolkit sections from Windsurf/Devin rule files.
+
+    ``scope`` selects ``local`` (``.windsurfrules``), ``global``
+    (``.codeium/windsurf/memories/global_rules.md`` and
+    ``.config/devin/AGENTS.md``), or ``both``. A file left with no user text
+    is deleted. Returns the number of files rewritten or removed; symlinked
+    files are skipped, and a refused surface raises after the others ran.
+    """
+    return _apply(target_dir, scope, dry_run=False)
+
 
 if __name__ == "__main__":
     render_generator({

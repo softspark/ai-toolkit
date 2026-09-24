@@ -20,6 +20,39 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_base import render_generator
+from injection import strip_owned_sections
+from secure_fs import apply_owned_edits, lexical_absolute
+
+
+def _apply(target_dir: Path, *, dry_run: bool) -> int:
+    """Strip ai-toolkit sections from ``.augment/rules/ai-toolkit.md``.
+
+    The same relative path serves both scopes: ``target_dir`` is HOME for
+    the global install and the project for a legacy local install.
+    """
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Augment target directory: {target}")
+    rules_dir = target / ".augment" / "rules"
+    path = rules_dir / "ai-toolkit.md"
+    return apply_owned_edits(
+        {path: strip_owned_sections} if path.is_file() else {},
+        target,
+        label="Augment ai-toolkit.md",
+        prune=(rules_dir, rules_dir.parent),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path) -> int:
+    """Return 1 when ai-toolkit.md holds ai-toolkit marker sections, else 0."""
+    return _apply(target_dir, dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Strip ai-toolkit sections from ai-toolkit.md; delete it only when empty."""
+    return _apply(target_dir, dry_run=False)
+
 
 if __name__ == "__main__":
     render_generator({

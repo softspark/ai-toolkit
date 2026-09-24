@@ -72,6 +72,7 @@ from install_steps.ai_tools import inject_with_rules
 from paths import HOOKS_DIR as _HOOKS_DIR
 from paths import RULES_DIR, TOOLKIT_DATA_DIR
 from mcp_editors import ConfigUpdate, apply_config_updates
+from secure_fs import lexical_absolute
 from plugin_mcp import (
     PluginMcpInstallPlan,
     PluginMcpRemovalPlan,
@@ -3562,6 +3563,47 @@ def _remove_pack_locked(
         # Nested remove+install must retain the directory pins for outer rollback.
         _prune_removed_script_directory(transaction_snapshots, asset_removal_plan, name)
     return True
+
+
+def _require_module_data_dir(data_dir: Path) -> None:
+    # Every ownership record and path here derives from the module-level data
+    # dir; removing against another one would read the wrong records.
+    if lexical_absolute(data_dir) != lexical_absolute(TOOLKIT_DATA_DIR):
+        raise ValueError(
+            f"plugin data dir mismatch: {data_dir} (module uses {TOOLKIT_DATA_DIR})"
+        )
+
+
+def _installed_pairs(state: dict) -> list[tuple[str, str]]:
+    return [
+        (name, editor)
+        for editor in VALID_EDITORS
+        for name in _installed_for(state, editor)
+    ]
+
+
+def discover_installed(data_dir: Path) -> int:
+    """Count installed ``(pack, runtime)`` pairs recorded in plugin state."""
+    _require_module_data_dir(data_dir)
+    return len(_installed_pairs(load_state()))
+
+
+def remove_all_installed(data_dir: Path) -> int:
+    """Remove every installed pack from every runtime recorded in plugin state.
+
+    Runs the regular :func:`remove_pack` path per pair, so hooks, rules,
+    ``plugin-*`` sections, MCP entries and shared assets are removed only
+    through their ownership records and transactions. Must run before
+    ``data_dir`` is deleted. ``data_dir`` must equal the module's
+    ``TOOLKIT_DATA_DIR`` (``ValueError`` otherwise). The Claude app plugin
+    (``enabledPlugins``) is a different surface and is never touched.
+    Returns the number of pairs removed; a pair whose manifest is gone stays
+    recorded and is not counted.
+    """
+    _require_module_data_dir(data_dir)
+    return sum(
+        1 for name, editor in _installed_pairs(load_state()) if remove_pack(name, editor)
+    )
 
 
 def pack_update_pending(name: str, editor: str) -> tuple[bool, str, str]:

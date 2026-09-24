@@ -39,6 +39,9 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from secure_fs import apply_owned_edits, lexical_absolute
+
 HOOKS_PREFIX = '"$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
 
@@ -132,6 +135,111 @@ def generate(target_dir: Path) -> Path:
         json.dump(merged, f, indent=4, ensure_ascii=False, sort_keys=True)
         f.write("\n")
     return path
+
+
+HOOKS_FILE = ".devin/hooks.v1.json"
+# Cascade hooks retired on 2026-07-01; older installs wrote them here.
+RETIRED_HOOKS_FILE = ".windsurf/hooks.json"
+# Every toolkit handler runs a script from this directory, which uninstall
+# deletes. A handler whose ``_source`` tag an editor dropped still names it.
+TOOLKIT_HOOKS_PATH = ".softspark/ai-toolkit/hooks/"
+
+
+def _is_toolkit_handler(handler: object) -> bool:
+    return isinstance(handler, dict) and (
+        handler.get("_source") == SOURCE_TAG
+        or TOOLKIT_HOOKS_PATH in str(handler.get("command", ""))
+    )
+
+
+def _strip_for_uninstall(hooks: dict) -> dict:
+    """Drop toolkit matcher-groups and toolkit handlers inside user groups."""
+    kept: dict = {}
+    for event, entries in strip_toolkit_hooks(hooks).items():
+        if not isinstance(entries, list):
+            kept[event] = entries
+            continue
+        survivors = []
+        for entry in entries:
+            handlers = entry.get("hooks") if isinstance(entry, dict) else None
+            if not isinstance(handlers, list):
+                survivors.append(entry)
+                continue
+            remaining = [h for h in handlers if not _is_toolkit_handler(h)]
+            if remaining:
+                survivors.append({**entry, "hooks": remaining})
+        if survivors:
+            kept[event] = survivors
+    return kept
+
+
+def _load_json(content: bytes, label: str) -> object:
+    try:
+        return json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"Refusing to rewrite invalid {label}: {error}") from error
+
+
+def _dump(document: dict) -> bytes:
+    return (
+        json.dumps(document, indent=4, ensure_ascii=False, sort_keys=True) + "\n"
+    ).encode("utf-8")
+
+
+def _strip_hooks_file(content: bytes) -> bytes | None:
+    """Owned edit for hooks.v1.json, whose whole document is the hooks object."""
+    document = _load_json(content, HOOKS_FILE)
+    if not isinstance(document, dict):
+        return content
+    survivors = _strip_for_uninstall(document)
+    if survivors == document:
+        return content
+    return _dump(survivors) if survivors else None
+
+
+def _strip_retired_hooks_file(content: bytes) -> bytes | None:
+    """Owned edit for the retired Cascade file, which wraps hooks in a key."""
+    document = _load_json(content, RETIRED_HOOKS_FILE)
+    if not isinstance(document, dict) or not isinstance(document.get("hooks"), dict):
+        return content
+    survivors = _strip_for_uninstall(document["hooks"])
+    if survivors == document["hooks"]:
+        return content
+    remaining = {key: value for key, value in document.items() if key != "hooks"}
+    if survivors:
+        remaining["hooks"] = survivors
+    return _dump(remaining) if remaining else None
+
+
+def _apply(target_dir: Path, *, dry_run: bool) -> int:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Devin target directory: {target}")
+    return apply_owned_edits(
+        {
+            target / HOOKS_FILE: _strip_hooks_file,
+            target / RETIRED_HOOKS_FILE: _strip_retired_hooks_file,
+        },
+        target,
+        label="Devin hooks",
+        prune=(target / ".devin", target / ".windsurf"),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path) -> int:
+    """Count Devin/Cascade hook files that hold ai-toolkit hook entries."""
+    return _apply(target_dir, dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Strip ai-toolkit hooks from ``.devin/hooks.v1.json`` and ``.windsurf/hooks.json``.
+
+    User matcher-groups and handlers are kept; a file left empty is deleted.
+    Invalid JSON raises ``ValueError`` instead of being overwritten. Returns
+    the number of files rewritten or removed.
+    """
+    return _apply(target_dir, dry_run=False)
 
 
 def main() -> None:

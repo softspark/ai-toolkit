@@ -50,10 +50,16 @@ teardown() {
     grep -q '"_source".*"ai-toolkit"' "$TEST_PROJECT/.claude/settings.json"
     [ ! -f "$TEST_PROJECT/.claude/hooks.json" ]
 
-    # Constitution + ARCHITECTURE injected (not symlinked)
-    [ -f "$TEST_PROJECT/.claude/constitution.md" ]
-    [ ! -L "$TEST_PROJECT/.claude/constitution.md" ]
-    grep -q "<!-- TOOLKIT:constitution START -->" "$TEST_PROJECT/.claude/constitution.md"
+    # Constitution is a user-level rule; nothing imports a bare constitution.md
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-constitution.md" ]
+    grep -q '^# .*The Constitution' "$TEST_PROJECT/.claude/rules/ai-toolkit-constitution.md"
+    ! grep -q '^title:' "$TEST_PROJECT/.claude/rules/ai-toolkit-constitution.md"
+    [ ! -e "$TEST_PROJECT/.claude/constitution.md" ]
+    # Common rules are user-level too, with their paths scoping
+    grep -q '  - "\*\*/tests/\*\*"' "$TEST_PROJECT/.claude/rules/ai-toolkit-testing.md"
+    grep -q '  - "\*\*/\*"$' "$TEST_PROJECT/.claude/rules/ai-toolkit-security.md"
+    [ ! -f "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md" ]
+    # ARCHITECTURE injected (not symlinked)
     [ -f "$TEST_PROJECT/.claude/ARCHITECTURE.md" ]
     [ ! -L "$TEST_PROJECT/.claude/ARCHITECTURE.md" ]
     grep -q "<!-- TOOLKIT:architecture START -->" "$TEST_PROJECT/.claude/ARCHITECTURE.md"
@@ -131,12 +137,59 @@ SETTINGS
     grep -q '"_source".*"ai-toolkit"' "$TEST_PROJECT/.claude/settings.json"
 }
 
-@test "install.py preserves user content in constitution.md" {
+@test "install.py moves the toolkit constitution out of constitution.md, keeping user content" {
     mkdir -p "$TEST_PROJECT/.claude"
-    echo "# My custom rules" > "$TEST_PROJECT/.claude/constitution.md"
+    printf '%s\n' '# My custom rules' \
+        '<!-- TOOLKIT:constitution START -->' '# old toolkit copy' \
+        '<!-- TOOLKIT:constitution END -->' > "$TEST_PROJECT/.claude/constitution.md"
     python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" >/dev/null 2>&1
     grep -q "My custom rules" "$TEST_PROJECT/.claude/constitution.md"
-    grep -q "<!-- TOOLKIT:constitution START -->" "$TEST_PROJECT/.claude/constitution.md"
+    ! grep -q "<!-- TOOLKIT:constitution START -->" "$TEST_PROJECT/.claude/constitution.md"
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-constitution.md" ]
+}
+
+@test "install.py removes a constitution.md that held only the toolkit copy" {
+    mkdir -p "$TEST_PROJECT/.claude"
+    printf '%s\n' '<!-- TOOLKIT:constitution START -->' '# old toolkit copy' \
+        '<!-- TOOLKIT:constitution END -->' > "$TEST_PROJECT/.claude/constitution.md"
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" >/dev/null 2>&1
+    [ ! -e "$TEST_PROJECT/.claude/constitution.md" ]
+}
+
+@test "install --local under a global install: nested projects load each rule once" {
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TMP_HOME" >/dev/null 2>&1
+    [ -f "$TMP_HOME/.claude/rules/ai-toolkit-coding-style.md" ]
+    mkdir -p "$TEST_PROJECT/child/.claude/rules"
+    echo 'x = 1' > "$TEST_PROJECT/child/app.py"
+    # Copies a local install wrote before the move, plus a user rule
+    echo old > "$TEST_PROJECT/child/.claude/rules/ai-toolkit-security.md"
+    echo mine > "$TEST_PROJECT/child/.claude/rules/team.md"
+    (cd "$TEST_PROJECT" && python3 "$TOOLKIT_DIR/scripts/install.py" --local --skip-register >/dev/null 2>&1)
+    (cd "$TEST_PROJECT/child" && python3 "$TOOLKIT_DIR/scripts/install.py" --local --skip-register >/dev/null 2>&1)
+
+    # Claude Code loads ~/.claude/rules and every parent .claude/rules:
+    # no project may carry a toolkit rule or the toolkit constitution
+    run find "$TEST_PROJECT" -name 'ai-toolkit-*.md'
+    [ -z "$output" ]
+    [ ! -e "$TEST_PROJECT/.claude/constitution.md" ]
+    [ ! -e "$TEST_PROJECT/child/.claude/constitution.md" ]
+    ! grep -q '@.claude/constitution.md' "$TEST_PROJECT/child/CLAUDE.md"
+    [ -f "$TEST_PROJECT/child/.claude/rules/team.md" ]
+}
+
+@test "install --local without a global install keeps the project self-contained" {
+    echo 'x = 1' > "$TEST_PROJECT/app.py"
+    (cd "$TEST_PROJECT" && python3 "$TOOLKIT_DIR/scripts/install.py" --local --skip-register >/dev/null 2>&1)
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md" ]
+    grep -q '<!-- TOOLKIT:constitution START -->' "$TEST_PROJECT/.claude/constitution.md"
+    grep -q '^@.claude/constitution.md$' "$TEST_PROJECT/CLAUDE.md"
+}
+
+@test "install.py writes the strict-only git-team rule under the strict profile" {
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" --profile strict >/dev/null 2>&1
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md" ]
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" --profile standard >/dev/null 2>&1
+    [ ! -f "$TEST_PROJECT/.claude/rules/ai-toolkit-git-team.md" ]
 }
 
 @test "install.py writes registered global rules as Claude user-level rule files" {
@@ -172,13 +225,13 @@ RULE
     [ ! -f "$TEST_PROJECT/.claude/CLAUDE.md" ] || ! grep -q '<!-- TOOLKIT:global-rules START -->' "$TEST_PROJECT/.claude/CLAUDE.md"
 }
 
-@test "install.py upgrades old constitution.md symlink to injection" {
+@test "install.py replaces an old constitution.md symlink with the user-level rule" {
     mkdir -p "$TEST_PROJECT/.claude"
     ln -s "$TOOLKIT_DIR/app/constitution.md" "$TEST_PROJECT/.claude/constitution.md"
     python3 "$TOOLKIT_DIR/scripts/install.py" "$TEST_PROJECT" >/dev/null 2>&1
-    [ -f "$TEST_PROJECT/.claude/constitution.md" ]
+    [ ! -e "$TEST_PROJECT/.claude/constitution.md" ]
     [ ! -L "$TEST_PROJECT/.claude/constitution.md" ]
-    grep -q "<!-- TOOLKIT:constitution START -->" "$TEST_PROJECT/.claude/constitution.md"
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-constitution.md" ]
 }
 
 @test "install.py merges with existing agents and skills directories" {

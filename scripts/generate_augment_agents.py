@@ -48,6 +48,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import agents_dir
 from frontmatter import frontmatter_field
+from secure_fs import apply_owned_edits, lexical_absolute
 
 AGENT_PREFIX = "ai-toolkit-"
 
@@ -148,6 +149,47 @@ def generate(
 
     removed = _cleanup_stale(agents_out)
     return written, removed
+
+
+def _is_managed_agent(content: bytes) -> bool:
+    """Match the frontmatter shape ``_render_augment_agent`` emits."""
+    return content.startswith(b"---\nname: ") and b"\ndisabled_tools: []\n---\n" in content
+
+
+def _owned_agent_edit(content: bytes) -> bytes | None:
+    return None if _is_managed_agent(content) else content
+
+
+def _apply(target_dir: Path, config_root: Path | None, *, dry_run: bool) -> int:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Augment target directory: {target}")
+    base = lexical_absolute(config_root) if config_root is not None else target / ".augment"
+    agents_out = base / "agents"
+    for directory in (base, agents_out):
+        if directory.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Augment agents directory: {directory}")
+    files = sorted(
+        path for path in agents_out.glob(f"{AGENT_PREFIX}*.md")
+        if path.is_file() and not path.is_symlink()
+    ) if agents_out.is_dir() else []
+    return apply_owned_edits(
+        {path: _owned_agent_edit for path in files},
+        target,
+        label="Augment agent",
+        prune=(agents_out, base) if base != target else (agents_out,),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path, *, config_root: Path | None = None) -> int:
+    """Count managed ``ai-toolkit-*.md`` agents ``cleanup`` would remove."""
+    return _apply(target_dir, config_root, dry_run=True)
+
+
+def cleanup(target_dir: Path, *, config_root: Path | None = None) -> int:
+    """Remove every managed Augment agent; user agents are preserved."""
+    return _apply(target_dir, config_root, dry_run=False)
 
 
 def main() -> None:

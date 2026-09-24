@@ -1,6 +1,6 @@
 ---
 title: "The Immutable Constitution of the System"
-last_updated: "2026-06-15"
+last_updated: "2026-09-24"
 status: IMMUTABLE
 ---
 
@@ -37,7 +37,7 @@ status: IMMUTABLE
 3. **Identity Protection**: Agents cannot change their own `model` or `tools` permissions without User Approval.
 
 ## Article IV: Self-Preservation
-1. **Constitution Inviolability**: This file (`.claude/constitution.md`) is Read-Only for all agents except the User.
+1. **Constitution Inviolability**: This constitution is Read-Only for all agents except the User, wherever it is installed (`~/.claude/rules/ai-toolkit-constitution.md` globally, `.claude/constitution.md` in a project without a global install).
 2. **Kill Switch**: If `system-governor` detects a constitutional violation, it MUST halt the offending agent immediately.
 
 ## Article V: Resource Governance
