@@ -7,7 +7,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v5.0.1 - Pre-commit gate fix, local release gates (2026-09-24)
+
+Patch release. The fallback pre-commit hook no longer reports a failed linter as
+passed. Releases now run every gate locally through `npm run release`, and
+GitHub Actions only publishes the tag.
 
 ### Fixed
 

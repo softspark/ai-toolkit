@@ -8,18 +8,17 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1936%20passing-success)](tests/)
 
-## What's New in v5.0.0
+## What's New in v5.0.1
 
-- **Rules load once:** common rules and the constitution install at user level
-  (`~/.claude/rules/`), so projects under a registered workspace folder no
-  longer load them twice. The global constitution now actually loads.
-- **`uninstall` removes everything:** registered projects, every editor surface,
-  toolkit settings, plugin packs, injected hooks and MCP servers, and
-  `~/.softspark/ai-toolkit` (archived to `~/ai-toolkit-backup-<time>.tar.gz`
-  first). Toolkit hooks no longer keep running after uninstall.
-- **Breaking: DSH support retired.** `--editors dsh` and `ai-toolkit dsh` only
-  warn for this release; old DSH project skills migrate on `update`.
-- **Verification:** 1910 Bats and 596 Python tests, green on macOS and Ubuntu.
+- **The fallback pre-commit hook blocks on a failed linter.** It used to print
+  "Pre-commit checks passed" even when PHPStan crashed, because the checker it
+  called always exited 0. It now fails on a failed or crashed checker and says
+  when nothing ran. PHPStan gets an explicit memory limit.
+- **Releases gate locally.** `npm run release -- X.Y.Z` runs validate, the
+  audits, ShellCheck, bats on macOS and in Linux, and the Python floor, then
+  tags and pushes. GitHub Actions only publishes the tag.
+- Still in v5.0.0: user-level rules and constitution, a complete `uninstall`,
+  DSH retired.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
