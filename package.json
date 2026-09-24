@@ -42,6 +42,7 @@
   },
   "scripts": {
     "prepublishOnly": "npm run generate:all && python3 scripts/validate.py --strict && npm test",
+    "release": "bash scripts/release.sh",
     "test": "bats tests/ --jobs 4 --no-parallelize-within-files",
     "validate": "python3 scripts/validate.py",
     "evaluate": "python3 scripts/evaluate_skills.py",
@@ -90,6 +91,7 @@
     "scripts/",
     "!scripts/**/__pycache__",
     "!scripts/**/*.pyc",
+    "!scripts/release.sh",
     "kb/**/*.md",
     "benchmarks/",
     "!benchmarks/**/__pycache__",

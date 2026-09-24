@@ -86,8 +86,9 @@ diff <(grep -oE 'scripts/generate_[a-z_]+\.py' kb/reference/supported-tools-regi
 
 ## Phase 0: Pre-Commit & Pre-Push (2 min)
 
-Run these commands **before every commit and push to main**. CI validates
-counts but does NOT auto-regenerate — you must do it locally.
+Run these commands **before every commit and push to main**. No GitHub
+workflow tests pushes; the release script validates counts at tag time but does
+NOT regenerate for you — you must do it locally.
 
 ```bash
 # 1. Regenerate generated artifacts
@@ -112,9 +113,9 @@ git add -p  # stage your other changes
 git commit -m "feat: your change description"
 ```
 
-**Why local?** Branch protection on `main` requires PRs and status checks.
-CI cannot push directly to `main`, so generated artifacts must be committed
-by the developer as part of their PR.
+**Why local?** CI only publishes tags and never commits, so generated
+artifacts must be committed by the developer. `scripts/release.sh` fails when
+`generate:all` would change a committed file.
 
 **One-liner (copy-paste):**
 ```bash
@@ -230,7 +231,7 @@ python3 scripts/audit_skills.py --ci
 - [ ] `Errors: 0 | Warnings: 0` → `VALIDATION PASSED`
 
 **Verify audit_skills.py:**
-- [ ] `HIGH: 0` (MUST be zero — CI fails otherwise)
+- [ ] `HIGH: 0` (MUST be zero — the release script fails otherwise)
 - [ ] `WARN: 0`
 - [ ] `INFO: N` (acceptable — broad-access skills: orchestrate, swarm, workflow)
 
@@ -319,7 +320,7 @@ python3 -c "import json; d=json.load(open('/tmp/audit.sarif')); assert d['versio
 
 **Verify:**
 - [ ] Valid SARIF 2.1.0
-- [ ] In the publishing repo, the CI job uploads `audit.sarif` via `github/codeql-action/upload-sarif@v3` so findings appear in the Security tab
+- [ ] In the publishing repo, `scripts/release.sh` (step 7) uploads the release's `audit.sarif` to code scanning for `refs/tags/vX.Y.Z`, so findings appear in the Security tab
 
 ### 8.3 Per-skill permissions report
 

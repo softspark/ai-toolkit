@@ -478,17 +478,20 @@ Review the diff to confirm that all generated files (`AGENTS.md`, `llms.txt`, pl
 configs) reflect the current state. If `generate:all` produced unexpected changes,
 investigate before staging.
 
-### 6. Commit and tag
+### 6. Commit and release
 
 ```bash
 git add -A
 git commit -m "chore: release vX.Y.Z"
-git tag vX.Y.Z
-git push origin main --tags
+npm run release -- X.Y.Z
 ```
 
-The publish workflow (`.github/workflows/publish.yml`) picks up the tag, runs full
-validation + tests, regenerates AGENTS.md + llms.txt, and publishes to npm.
+`scripts/release.sh` runs every gate (macOS host plus Linux containers), tags,
+pushes `main` and the single tag ref, and watches the publish. The publish
+workflow (`.github/workflows/publish.yml`) only asserts the tag matches
+`package.json`, regenerates the shipped files and publishes to npm; it runs no
+tests. Never tag by hand and never `git push --tags`. Full procedure:
+[sop-release.md](sop-release.md).
 
 ## Model Tiers
 

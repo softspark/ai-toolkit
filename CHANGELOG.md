@@ -35,6 +35,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   fixture set it inside a command substitution, so the assignment was lost and
   the tests ran against the operator's installed `quality-check.sh`.
 
+### Changed
+
+- **Releases run every gate locally; GitHub Actions only publishes the tag.**
+  `ci.yml` is gone, so nothing runs on a branch push or a pull request.
+  `npm run release -- X.Y.Z` (`scripts/release.sh`, not shipped) checks the
+  preconditions and version files, runs validate, evaluate, the audits,
+  ShellCheck and the bats suite on the host, then bats in an `ubuntu:24.04`
+  container as a non-root user and the Python floor (3.11: syntax, imports,
+  pytest, ruff, mypy) and 3.13 in containers, packs and smoke-installs the
+  tarball, tags, pushes `main` and the single tag ref, watches `publish.yml`,
+  checks npm provenance and uploads the audit SARIF to code scanning.
+  `--dry-run` stops before the tag, `--gates-only` checks a branch.
+  `publish.yml` now only asserts that the tag equals `package.json`, generates
+  the shipped files and publishes; its actions are pinned by SHA.
+  `kb/procedures/sop-release.md` describes the new procedure; the release
+  branch, PR and branch-CI wait are gone.
+
 ### Added
 
 - 23 Bats cases: 16 for `quality-check.sh` in `tests/test_hooks.bats` (failing

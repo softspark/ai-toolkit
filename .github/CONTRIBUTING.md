@@ -8,9 +8,9 @@ how to contribute: workflow, branching, commits, and the checks your PR must pas
 1. **Fork** the repository and clone your fork
 2. **Create a branch** from `main`: `git checkout -b feat/my-change`
 3. **Make your changes** — follow the conventions below
-4. **Run all checks** locally (see CI Requirements)
+4. **Run all checks** locally (see Required Checks)
 5. **Push** to your fork and open a **Pull Request** against `main`
-6. The maintainer will review, request any needed corrections, and merge after the required checks pass
+6. The maintainer will review, run the checks locally, request any needed corrections, and merge
 
 Update affected documentation in the same pull request as the behavior change. Keep README tables and badges, CHANGELOG, manifests, KB references, and generated integration instructions consistent. Run the applicable generators and `python3 scripts/validate.py --strict` before requesting review.
 
@@ -39,9 +39,11 @@ test: add bats tests for doctor command
 - Keep the subject line under 72 characters
 - No `WIP` commits in the final PR
 
-## CI Requirements
+## Required Checks
 
-Your PR must pass **all** CI jobs before review. Run them locally:
+No GitHub workflow tests pull requests: CI only publishes release tags, and the
+maintainer runs every gate locally before a release. Run these before asking for
+review:
 
 ```bash
 # All of these must pass with zero errors:
@@ -66,17 +68,18 @@ npm run typecheck:py   # mypy --strict over the allowlist in mypy.ini
 New tests for Python modules go to `tests/python/`; bats remains for hooks,
 CLI surfaces, and anything observed from a shell.
 
-If you touched any hook script, also run ShellCheck yourself. CI and the publish
-workflow run it, but `validate.py` and `npm test` do not:
+If you touched any hook script, also run ShellCheck yourself. `validate.py` and
+`npm test` do not:
 
 ```bash
 shellcheck --severity=warning app/hooks/*.sh
 ```
 
-Additionally, CI runs:
-- **ShellCheck** on all hook scripts (`app/hooks/*.sh`)
-- **Python syntax check** on all scripts
-- **Required files check** (LICENSE, CHANGELOG, SECURITY, etc.)
+The maintainer's release gate (`npm run release -- X.Y.Z`, see
+`kb/procedures/sop-release.md`) additionally runs the Python syntax and import
+checks on Python 3.11 and 3.13, the required-files check, and the bats suite in
+an Ubuntu container. `npm run release -- X.Y.Z --gates-only` runs the same set
+on your branch without tagging (needs Docker).
 
 ## What to Contribute
 

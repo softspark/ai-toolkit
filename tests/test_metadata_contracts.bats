@@ -222,32 +222,77 @@ PY
     grep -q "$version" "$TOOLKIT_DIR/CHANGELOG.md"
 }
 
-@test "publish workflow gates and generates the package before npm publish" {
-    python3 - "$TOOLKIT_DIR/.github/workflows/publish.yml" \
-        "$TOOLKIT_DIR/.github/workflows/ci.yml" <<'PY'
+@test "publish workflow only asserts the tag, builds and publishes" {
+    # Local Release Gates, Publish-Only CI (kb/procedures/sop-release.md):
+    # every gate runs in scripts/release.sh before the tag exists, so the
+    # tag workflow must not re-run any of them.
+    python3 - "$TOOLKIT_DIR/.github/workflows/publish.yml" <<'PY'
+import re
 import sys
 from pathlib import Path
 
 workflow = Path(sys.argv[1]).read_text(encoding="utf-8")
-ci_workflow = Path(sys.argv[2]).read_text(encoding="utf-8")
 required_in_order = [
-    "npm ci",
+    "tags:",
+    'test "$GITHUB_REF_NAME" = "v$PKG_VERSION"',
     "npm run generate:all",
-    "python3 scripts/validate.py --strict",
-    "python3 scripts/audit_skills.py --ci",
-    "python3 scripts/audit_skills.py --sarif > audit.sarif",
-    "shellcheck --severity=warning app/hooks/*.sh",
-    "npm test",
     "npm publish --access public --ignore-scripts --provenance",
+    "softprops/action-gh-release@",
 ]
 positions = [workflow.index(command) for command in required_in_order]
 assert positions == sorted(positions), positions
-assert "github/codeql-action/upload-sarif@" in workflow
-assert "sarif_file: audit.sarif" in workflow
 assert "id-token: write" in workflow
-assert "fetch-depth: 0" in workflow
-assert "fetch-depth: 0" in ci_workflow
+for gate in ("npm test", "bats tests", "validate.py", "audit_skills.py",
+             "shellcheck --", "evaluate_skills.py", "pytest", "upload-sarif"):
+    assert gate not in workflow, f"publish.yml re-runs a local gate: {gate}"
+for uses in re.findall(r"uses:\s*(\S+)", workflow):
+    assert re.search(r"@[0-9a-f]{40}$", uses), f"action not pinned by SHA: {uses}"
 PY
+}
+
+@test "no workflow runs on branch pushes or pull requests" {
+    python3 - "$TOOLKIT_DIR/.github/workflows" <<'PY'
+import sys
+from pathlib import Path
+
+workflows = sorted(Path(sys.argv[1]).glob("*.y*ml"))
+assert [p.name for p in workflows] == ["publish.yml"], [p.name for p in workflows]
+for path in workflows:
+    text = path.read_text(encoding="utf-8")
+    assert "pull_request" not in text, f"{path.name} triggers on pull requests"
+    assert "branches:" not in text, f"{path.name} triggers on branch pushes"
+PY
+}
+
+@test "release script is the npm release entry point and stays out of the package" {
+    python3 - "$TOOLKIT_DIR/package.json" <<'PY'
+import json
+import sys
+
+package = json.load(open(sys.argv[1], encoding="utf-8"))
+assert package["scripts"]["release"] == "bash scripts/release.sh", package["scripts"].get("release")
+assert "!scripts/release.sh" in package["files"], package["files"]
+PY
+    [ -x "$TOOLKIT_DIR/scripts/release.sh" ]
+    # One tag by full ref, never --tags; Linux bats in a throwaway container.
+    grep -q 'git push origin "refs/tags/$TAG"' "$TOOLKIT_DIR/scripts/release.sh"
+    ! grep -qE 'git push[^#]*--tags' "$TOOLKIT_DIR/scripts/release.sh"
+    grep -q 'LINUX_IMAGE="ubuntu:24.04"' "$TOOLKIT_DIR/scripts/release.sh"
+}
+
+@test "release script rejects a non-semver version and unknown options" {
+    # grep, not a bare [[ ]]: bash 3.2 bats does not fail on the latter.
+    run bash "$TOOLKIT_DIR/scripts/release.sh" 1.2
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -qF "not a semver X.Y.Z version: 1.2"
+
+    run bash "$TOOLKIT_DIR/scripts/release.sh" 1.2.3 --bogus
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -qF "unknown option: --bogus"
+
+    run bash "$TOOLKIT_DIR/scripts/release.sh"
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -qF "missing version"
 }
 
 @test "architecture-overview.md does not contain hardcoded agent count in description" {

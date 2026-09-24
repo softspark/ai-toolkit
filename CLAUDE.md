@@ -14,7 +14,7 @@ Shared AI development toolkit for Claude Code, Claude Chat/Cowork, and 11 editor
 **Every change to skills, agents, hooks, or editors MUST be reflected in ALL docs:**
 README.md, CLAUDE.md, ARCHITECTURE.md, package.json, plugin.json, skills-catalog.md, architecture-overview.md, llms.txt, AGENTS.md.
 Run `python3 scripts/validate.py --strict` + `python3 scripts/audit_skills.py --ci` before every commit.
-When you touch any `app/hooks/*.sh`, ALSO run `shellcheck --severity=warning app/hooks/*.sh` — it runs in `ci.yml` but NOT in `validate.py`, `npm test`, or `publish.yml`, so a hook lint failure can publish on tag while turning `main` CI red (v4.5.1 postmortem).
+When you touch any `app/hooks/*.sh`, ALSO run `shellcheck --severity=warning app/hooks/*.sh` — it is NOT part of `validate.py` or `npm test`. No GitHub workflow runs tests or lint: CI only publishes a tag, and every gate (ShellCheck included) runs locally in `npm run release -- X.Y.Z` (`scripts/release.sh`, see `kb/procedures/sop-release.md`).
 Stale counts = broken user trust. This is non-negotiable.
 
 ## Tech Stack
@@ -30,7 +30,8 @@ Stale counts = broken user trust. This is non-negotiable.
 # Evaluate: python3 scripts/evaluate_skills.py
 # Audit:    python3 scripts/audit_skills.py --ci  (security scan, exit 1 on HIGH)
 # Split gate: python3 scripts/check_split.py <skill> --before <pre-split SKILL.md>  (run after every body -> reference/ split; proves no code/section/description was lost)
-# Shellcheck: shellcheck --severity=warning app/hooks/*.sh  (hook lint; required before tagging, not run by publish.yml)
+# Shellcheck: shellcheck --severity=warning app/hooks/*.sh  (hook lint; also run by scripts/release.sh)
+# Release:  npm run release -- X.Y.Z [--dry-run|--gates-only]  (all gates incl. Linux bats in Docker, then tag + push + watch publish; the only way to tag)
 # Benchmark: python3 scripts/benchmark_ecosystem.py --offline
 # Harvest: python3 scripts/harvest_ecosystem.py --offline
 # Generate: python3 scripts/generate_agents_md.py > AGENTS.md
@@ -53,7 +54,7 @@ Stale counts = broken user trust. This is non-negotiable.
 # Codex:   ai-toolkit codex-hooks         (generate .codex/hooks.json for Codex CLI)
 # Deps:    python3 scripts/check_deps.py  (check system dependencies, OS-specific install hints)
 # Dev tooling (repo only, never shipped): python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-# Python unit tests: npm run test:py   (pytest tests/python; runs in ci.yml python-quality)
+# Python unit tests: npm run test:py   (pytest tests/python; scripts/release.sh runs it with ruff and mypy on Python 3.11 in Docker)
 # Lint:   npm run lint:py    (ruff E,F; the rule set is the package.json script, not a config file)
 # Types:  npm run typecheck:py  (mypy --strict over the allowlist in mypy.ini; add a file when it passes, never remove one)
 # No pyproject.toml here on purpose: quality-gate.sh reads one as "Python project, ruff check ." and this repo is npm-first (pytest.ini / mypy.ini instead)
