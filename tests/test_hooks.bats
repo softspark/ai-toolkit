@@ -457,6 +457,222 @@ PY
     [ "$status" -eq 0 ]
 }
 
+# quality-check.sh has two modes. Advisory (Stop hook) never blocks. --blocking
+# (git pre-commit) exits 0 = passed, 1 = failed or crashed, 3 = skipped, so a
+# checker that failed, crashed or never ran cannot read as a pass.
+
+# Writes an executable stub that logs its args to $TEST_TMP/args.log, prints
+# $3 (optional) and exits $2.
+stub_tool() {
+    local path="$1" code="$2" line="${3:-}"
+    mkdir -p "$(dirname "$path")"
+    {
+        printf '#!/usr/bin/env bash\n'
+        printf 'echo "$*" >> "%s/args.log"\n' "$TEST_TMP"
+        if [ -n "$line" ]; then
+            printf 'echo "%s"\n' "$line"
+        fi
+        printf 'exit %s\n' "$code"
+    } > "$path"
+    chmod +x "$path"
+}
+
+# Runs quality-check.sh from $TEST_TMP/project with stubs first on PATH and the
+# operator's opt-outs cleared.
+run_quality_check() {
+    cd "$TEST_TMP/project"
+    run env -u AI_TOOLKIT_DISABLED_HOOKS -u AI_TOOLKIT_PHPSTAN_MEMORY \
+        PATH="$TEST_TMP/bin:$PATH" bash "$HOOKS_DIR/quality-check.sh" "$@"
+}
+
+@test "quality-check: advisory mode shows a failing checker but still exits 0" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 1 "advisory finding"
+
+    run_quality_check
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "advisory finding"
+}
+
+@test "quality-check: --blocking fails and names the tool when the checker exits non-zero" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 1 "src/Foo.php:10 undefined variable"
+
+    run_quality_check --blocking
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q "undefined variable"
+    echo "$output" | grep -q "PHPStan: FAILED (exit 1)"
+}
+
+# The observed failure: the worker died on the host memory limit. The old
+# `phpstan ... | head -15 || true` handed head's status to the hook.
+@test "quality-check: --blocking fails on a PHPStan worker crash" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 1 "Child process error (exit code 255): PHPStan process crashed because it reached configured PHP memory limit: 128M"
+
+    run_quality_check --blocking
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q "Child process error"
+    echo "$output" | grep -q "PHPStan: FAILED"
+}
+
+@test "quality-check: --blocking fails on a crash message even when PHPStan exits 0" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 0 "Child process error (exit code 255): worker died"
+
+    run_quality_check --blocking
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q "crash reported in the output"
+}
+
+@test "quality-check: --blocking exits 0 and says passed when the checker passes" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 0
+
+    run_quality_check --blocking
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "PHPStan: passed"
+}
+
+@test "quality-check: --blocking reports skipped (exit 3), not passed, with no supported project" {
+    mkdir -p "$TEST_TMP/project"
+
+    run_quality_check --blocking
+    [ "$status" -eq 3 ]
+    echo "$output" | grep -q "skipped (no supported checker"
+    [ -z "$(echo "$output" | grep "passed")" ]
+}
+
+@test "quality-check: --blocking reports skipped when the checker is not executable" {
+    mkdir -p "$TEST_TMP/project/vendor/bin"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    printf '#!/usr/bin/env bash\nexit 1\n' > vendor/bin/phpstan
+
+    run_quality_check --blocking
+    [ "$status" -eq 3 ]
+    echo "$output" | grep -q "PHPStan: skipped (vendor/bin/phpstan not found or not executable)"
+}
+
+@test "quality-check: --blocking reports skipped when a Python project never configured ruff" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    printf '[tool.pytest.ini_options]\ntestpaths = ["tests"]\n' > pyproject.toml
+    stub_tool "$TEST_TMP/bin/ruff" 1 "should not run"
+
+    run_quality_check --blocking
+    [ "$status" -eq 3 ]
+    echo "$output" | grep -q "ruff: skipped (not configured"
+    [ ! -f "$TEST_TMP/args.log" ]
+}
+
+@test "quality-check: --blocking fails when a configured ruff finds errors" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch pyproject.toml ruff.toml
+    stub_tool "$TEST_TMP/bin/ruff" 1 "bad.py:1:1: F401 unused import"
+
+    run_quality_check --blocking
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q "ruff: FAILED (exit 1)"
+}
+
+@test "quality-check: --blocking reports skipped (exit 3) under the minimal profile" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 1 "would fail"
+
+    TOOLKIT_HOOK_PROFILE=minimal run_quality_check --blocking
+    [ "$status" -eq 3 ]
+    echo "$output" | grep -q "quality-check: skipped (TOOLKIT_HOOK_PROFILE=minimal"
+    [ ! -f "$TEST_TMP/args.log" ]
+}
+
+@test "quality-check: --blocking reports skipped (exit 3) when the hook is disabled" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 1 "would fail"
+
+    run env AI_TOOLKIT_DISABLED_HOOKS=quality-check PATH="$TEST_TMP/bin:$PATH" \
+        bash "$HOOKS_DIR/quality-check.sh" --blocking
+    [ "$status" -eq 3 ]
+    [ ! -f "$TEST_TMP/args.log" ]
+}
+
+@test "quality-check: host PHPStan gets an explicit --memory-limit of 1G by default" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 0
+
+    run_quality_check --blocking
+    [ "$status" -eq 0 ]
+    [ "$(cat "$TEST_TMP/args.log")" = "analyse --memory-limit=1G" ]
+}
+
+@test "quality-check: AI_TOOLKIT_PHPSTAN_MEMORY overrides the PHPStan memory limit" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 0
+
+    run env AI_TOOLKIT_PHPSTAN_MEMORY=512M PATH="$TEST_TMP/bin:$PATH" \
+        bash "$HOOKS_DIR/quality-check.sh" --blocking
+    [ "$status" -eq 0 ]
+    [ "$(cat "$TEST_TMP/args.log")" = "analyse --memory-limit=512M" ]
+}
+
+@test "quality-check: advisory mode passes the memory limit too" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 0
+
+    run_quality_check
+    [ "$status" -eq 0 ]
+    [ "$(cat "$TEST_TMP/args.log")" = "analyse --memory-limit=1G" ]
+}
+
+# A repo that names its PHPStan target owns the memory limit and, in container
+# setups, the PHP binary. The host vendor/bin/phpstan must not run instead.
+@test "quality-check: prefers the repo's Makefile PHPStan target over host phpstan" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    printf 'php-stan:\n\tvendor/bin/phpstan analyse --memory-limit=2G\n' > Makefile
+    stub_tool "$TEST_TMP/bin/make" 0
+    stub_tool vendor/bin/phpstan 1 "host phpstan must not run"
+
+    run_quality_check --blocking
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "PHPStan (make php-stan): passed"
+    [ "$(cat "$TEST_TMP/args.log")" = "-s php-stan" ]
+}
+
+@test "quality-check: a failing Makefile PHPStan target blocks" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    printf 'stan:\n\ttrue\n' > Makefile
+    stub_tool "$TEST_TMP/bin/make" 2 "make: *** [stan] Error 1"
+
+    run_quality_check --blocking
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q "PHPStan (make stan): FAILED (exit 2)"
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # session-start.sh
 # ═══════════════════════════════════════════════════════════════════════════════

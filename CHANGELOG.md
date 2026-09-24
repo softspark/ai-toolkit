@@ -7,6 +7,42 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- **The fallback pre-commit hook no longer reports a failed or crashed linter
+  as "Pre-commit checks passed".** It called `quality-check.sh`, the advisory
+  Stop-hook script, which pipes the linter into `head -15` (the pipeline's
+  status is `head`'s) and always ends in `exit 0`. A PHPStan run that died with
+  `Child process error ... reached configured PHP memory limit: 128M` on the
+  host still let the commit through. The hook now calls
+  `quality-check.sh --blocking`: exit 1 when the checker fails or crashes (the
+  output names the tool and its exit code), exit 3 when nothing ran, printed as
+  `skipped (reason)` and never as "passed". A missing `quality-check.sh` is a
+  skip too, and the hook blocks on any status it does not recognise. Advisory
+  Stop behaviour is unchanged. Existing projects pick the new hook up on
+  `ai-toolkit update`.
+- **PHPStan runs with an explicit `--memory-limit`** (`1G`, override with
+  `AI_TOOLKIT_PHPSTAN_MEMORY`) instead of the host `php.ini` 128M, in both
+  modes. When the `Makefile` defines a `php-stan`, `phpstan` or `stan` target,
+  `quality-check.sh` runs that instead, so the repo's own memory limit and PHP
+  runtime apply.
+- **`--blocking` gates Python projects on ruff only when they configured it**
+  (`ruff.toml`, `.ruff.toml` or `[tool.ruff]`), the same rule `quality-gate.sh`
+  follows, so a bare `pyproject.toml` does not start blocking commits.
+- **`tests/test_install_git_hooks.bats` now really redirects `HOME`.** The
+  fixture set it inside a command substitution, so the assignment was lost and
+  the tests ran against the operator's installed `quality-check.sh`.
+
+### Added
+
+- 23 Bats cases: 16 for `quality-check.sh` in `tests/test_hooks.bats` (failing
+  checker, PHPStan crash with exit 1 and with exit 0, skipped versus passed,
+  minimal profile, disabled hook, memory-limit flag and override, Makefile
+  target) and 7 in `tests/test_install_git_hooks.bats`, two of them end to end
+  with the real hook and script.
+
 ## v5.0.0 - User-level rules, complete uninstall, DSH retired (2026-09-24)
 
 Major release. Retiring DSH removes a capability behind protected CLI names,

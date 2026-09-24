@@ -204,11 +204,21 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 **Action:** Runs language-appropriate linter:
 - Python: `ruff check .`
 - TypeScript: `npx tsc --noEmit`
-- PHP: `vendor/bin/phpstan analyse`
+- PHP: the repo's `make php-stan` / `phpstan` / `stan` target when the `Makefile` defines one, else `vendor/bin/phpstan analyse --memory-limit=${AI_TOOLKIT_PHPSTAN_MEMORY:-1G}`. The explicit limit replaces the host `php.ini` default (128M), on which parallel PHPStan workers crash
 - Dart: `dart analyze`
 - Go: `go vet ./...`
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
+
+**Two modes.** As the Stop hook it is advisory: it prints the first 15 lines of output and always exits 0. The git pre-commit fallback (`scripts/install_git_hooks.py`) calls it as `quality-check.sh --blocking`, where a checker that failed, crashed or never ran cannot read as a pass:
+
+| Exit | Meaning | Line printed |
+|------|---------|--------------|
+| `0` | The checker ran and passed | `[ai-toolkit] <tool>: passed` |
+| `1` | The checker exited non-zero, or (PHPStan) printed a worker crash such as `Child process error` even with exit 0 | `[ai-toolkit] <tool>: FAILED (exit N)` |
+| `3` | Nothing ran: no supported project, tool missing or not executable, ruff not configured (no `ruff.toml`, `.ruff.toml` or `[tool.ruff]`), profile `minimal`, or hook listed in `AI_TOOLKIT_DISABLED_HOOKS` | `[ai-toolkit] <tool>: skipped (reason)` |
+
+The pre-commit hook blocks the commit on `1` and on any status it does not know, and prints `Pre-commit gate: conflict scan passed, quality check skipped.` instead of `Pre-commit checks passed.` on `3` or when `quality-check.sh` is not installed. Earlier versions called the advisory mode, whose pipeline (`checker | head -15 || true`) dropped the checker's status, so a crashed PHPStan still ended in "Pre-commit checks passed". A project's `.git/hooks/pre-commit` is a generated copy: run `ai-toolkit update` to refresh it.
 
 ### Stop (session save) — `save-session.sh`
 

@@ -37,17 +37,35 @@ if [ -n "$CONFLICTS" ]; then
     exit 1
 fi
 
-# 2. Call the global quality-check if it exists
+# 2. Run the global quality-check in blocking mode. Without --blocking it is the
+# advisory Stop-hook script and exits 0 whatever the linter did.
+# Exit 0 = the checker ran and passed, 3 = nothing ran (it printed the reason),
+# any other status = the checker failed or crashed (it printed which one).
+# A missing script is a skip, never a pass.
 QUALITY_CHECK="$HOME/.softspark/ai-toolkit/hooks/quality-check.sh"
+QUALITY_RESULT="passed"
 if [ -x "$QUALITY_CHECK" ]; then
-    if ! "$QUALITY_CHECK"; then
-        echo "ERROR: Linter or type checks failed."
-        echo "   Use 'git commit --no-verify' if you absolutely must bypass this."
-        exit 1
-    fi
+    "$QUALITY_CHECK" --blocking
+    QUALITY_STATUS=$?
+    case "$QUALITY_STATUS" in
+        0) ;;
+        3) QUALITY_RESULT="skipped" ;;
+        *)
+            echo "ERROR: Linter or type checks failed (quality-check.sh exit $QUALITY_STATUS, see above)."
+            echo "   Use 'git commit --no-verify' if you absolutely must bypass this."
+            exit 1
+            ;;
+    esac
+else
+    echo "[ai-toolkit] quality-check: skipped ($QUALITY_CHECK is not installed)"
+    QUALITY_RESULT="skipped"
 fi
 
-echo "[ai-toolkit] Pre-commit checks passed."
+if [ "$QUALITY_RESULT" = "skipped" ]; then
+    echo "[ai-toolkit] Pre-commit gate: conflict scan passed, quality check skipped."
+else
+    echo "[ai-toolkit] Pre-commit checks passed."
+fi
 exit 0
 """
 
