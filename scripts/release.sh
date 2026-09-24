@@ -27,6 +27,9 @@ readonly PY_FLOOR_IMAGE="python:3.11-slim"
 readonly PY_CEILING_IMAGE="python:3.13-slim"
 readonly WAIT_ATTEMPTS=5
 readonly WAIT_SECONDS=30
+# npm lists a new version 3 to 6 minutes after the publish job ends (v5.0.0
+# and v5.0.1 both took about 5); 20 x 30 s leaves margin.
+readonly NPM_WAIT_ATTEMPTS=20
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly REPO_ROOT
@@ -414,10 +417,10 @@ find_publish_run() {
 
 verify_npm() {
     local attempt published provenance
-    for attempt in $(seq 1 "$WAIT_ATTEMPTS"); do
+    for attempt in $(seq 1 "$NPM_WAIT_ATTEMPTS"); do
         published="$(npm view "$PKG_NAME@$VERSION" version 2>/dev/null || true)"
         [ "$published" = "$VERSION" ] && break
-        echo "  waiting for npm to list $PKG_NAME@$VERSION ($attempt/$WAIT_ATTEMPTS)"
+        echo "  waiting for npm to list $PKG_NAME@$VERSION ($attempt/$NPM_WAIT_ATTEMPTS)"
         sleep "$WAIT_SECONDS"
     done
     [ "$published" = "$VERSION" ] || die "$PKG_NAME@$VERSION is not on npm"
