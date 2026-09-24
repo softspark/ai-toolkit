@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.5.0"
+version: "3.6.0"
 created: "2026-03-26"
-last_updated: "2026-09-04"
+last_updated: "2026-09-24"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -86,9 +86,8 @@ Claude Code's default global install writes these managed surfaces:
 - `~/.claude/agents/*.md` — per-file symlinks to toolkit agents.
 - `~/.claude/skills/*/` — per-directory symlinks to toolkit skills.
 - `~/.claude/settings.json` — merged hook configuration and global settings.
-- `~/.claude/constitution.md` — marker-injected safety constitution.
 - `~/.claude/ARCHITECTURE.md` — marker-injected architecture reference.
-- `~/.claude/rules/ai-toolkit-*.md` — toolkit rules from `app/rules/*.md`.
+- `~/.claude/rules/ai-toolkit-*.md` — toolkit rules from `app/rules/*.md`, the common rules from `app/rules/common/*.md` (with `paths` frontmatter, filtered by the install profile), and `ai-toolkit-constitution.md`, the safety constitution. An older install wrote `~/.claude/constitution.md`, which nothing imported; `install` strips its toolkit section and deletes the file when nothing else is left.
 - `~/.claude/rules/ai-toolkit-registered-*.md` — rules registered with `ai-toolkit add-rule`.
 - `~/.claude/CLAUDE.md` — compact index pointing at the managed rule files.
 
@@ -148,7 +147,7 @@ These files still stay local to a repository as part of the core install model:
 - `.cursor/mcp.json`
 - `.roo/mcp.json`
 - `.github/mcp.json`
-- `.claude/constitution.md`
+- `.claude/constitution.md`, only for project-owned text (extends amendments, Article VIII+) or when no global install exists
 - project `AGENTS.md`
 - project `.agents/rules/*.md`
 - project `.agents/skills/*`
@@ -172,7 +171,7 @@ These files still stay local to a repository as part of the core install model:
 - `.git/hooks/pre-commit` (fallback)
 - project-specific documentation or safety overlays
 
-Project-local Claude Code language rules live in `.claude/rules/ai-toolkit-*.md` with `paths` frontmatter. They are separate from the global user-level `~/.claude/rules/ai-toolkit-*.md` files above.
+Whatever applies to every project is installed once, at user level, and never copied into a project. Claude Code loads `~/.claude/rules/` in every project and also loads `.claude/rules/` from parent directories, so a project copy of a common rule or of the constitution loaded twice, and once more for every registered parent directory, such as a workspace folder installed with `--local` above its projects. `install --local` therefore writes `.claude/rules/ai-toolkit-*.md` only for a common rule the global install does not provide (every one without a global install; `git-team` for a `strict` project under a `standard` global install), and `.claude/constitution.md` only for project-owned amendments or without a global install. It removes the managed copies an older install left, and the `@.claude/constitution.md` import from `CLAUDE.md` once nothing is left to import. The decision is made from the files present in `~/.claude/rules/`, so the next `update` converges every registered project. See [Language Rules](language-rules.md).
 
 Claude Code hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`. Editor-native generators may emit project-local hook files when that editor documents them; Copilot uses `.github/hooks/*.json` and Codex uses `.codex/hooks.json`.
 

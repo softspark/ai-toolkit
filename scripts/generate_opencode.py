@@ -27,7 +27,9 @@ from emission import (
     print_toolkit_start,
 )
 from frontmatter import frontmatter_field
+from injection import strip_owned_sections
 from paths import RULES_DIR
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 
 def _emit_agents() -> str:
@@ -62,6 +64,35 @@ def _emit_skills() -> str:
             continue
         lines.append(f"- **{name}**: {description}")
     return "\n".join(lines)
+
+
+def _cleanup_plan(
+    target_dir: Path, config_root: Path | None
+) -> tuple[Path, dict[Path, OwnedEdit], tuple[Path, ...]]:
+    target = lexical_absolute(target_dir)
+    base = lexical_absolute(config_root) if config_root is not None else target
+    if base.is_symlink():
+        raise RuntimeError(f"Refusing symlinked OpenCode path: {base}")
+    path = base / "AGENTS.md"
+    edits = {path: strip_owned_sections} if path.is_file() else {}
+    return target, edits, () if base == target else (base,)
+
+
+def cleanup(target_dir: Path, config_root: Path | None = None) -> int:
+    """Strip TOOLKIT sections from ``AGENTS.md``; delete it when nothing remains.
+
+    ``config_root`` selects the global ``~/.config/opencode/AGENTS.md``;
+    otherwise ``target_dir/AGENTS.md`` (shared with Codex) is used. Returns 1
+    when the file was rewritten or removed, else 0.
+    """
+    target, edits, prune = _cleanup_plan(target_dir, config_root)
+    return apply_owned_edits(edits, target, label="OpenCode AGENTS.md", prune=prune)
+
+
+def discover(target_dir: Path, config_root: Path | None = None) -> int:
+    """Return 1 when :func:`cleanup` would change ``AGENTS.md``, without side effects."""
+    target, edits, _ = _cleanup_plan(target_dir, config_root)
+    return apply_owned_edits(edits, target, label="OpenCode AGENTS.md", dry_run=True)
 
 
 def main() -> None:

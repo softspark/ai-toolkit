@@ -56,7 +56,7 @@
 - [Plan: Competitive Features — ai-toolkit](kb/reference/competitive-features-implementation.md)
 - [AI Toolkit - GitHub Copilot Compatibility](kb/reference/copilot-compatibility.md)
 - [Distribution Model](kb/reference/distribution-model.md)
-- [DSH Compatibility](kb/reference/dsh-compatibility.md)
+- [DSH Compatibility (Retired)](kb/reference/dsh-compatibility.md)
 - [Enterprise Config Inheritance Guide](kb/reference/enterprise-config-guide.md)
 - [Extension API Reference](kb/reference/extension-api.md)
 - [Global Install Model](kb/reference/global-install-model.md)
@@ -7726,10 +7726,10 @@ title: "SOP: Ecosystem Sync"
 category: procedures
 service: ai-toolkit
 tags: [sop, ecosystem, editors, generators, drift-detection, sync]
-version: "1.4.0"
+version: "1.5.0"
 created: "2026-04-23"
-last_updated: "2026-09-23"
-description: "Quarterly or event-triggered sync procedure for the 14 registry tools: Claude Code, Claude app, explicit-preview DSH, and 11 default editor integrations."
+last_updated: "2026-09-24"
+description: "Quarterly or event-triggered sync procedure for the 13 registry tools: Claude Code, Claude app, and 11 default editor integrations."
 ---
 
 # SOP: Ecosystem Sync
@@ -7749,7 +7749,7 @@ Keeps ai-toolkit aligned with the tools it integrates with. When an editor adds 
 ## Quick Reference
 
 ```bash
-# Full check (all 14 registry tools, online)
+# Full check (all 13 registry tools, online)
 python3 scripts/ecosystem_doctor.py --format text
 
 # Single tool
@@ -7771,12 +7771,10 @@ python3 scripts/ecosystem_doctor.py --offline --format text
 
 | File | Purpose |
 |------|---------|
-| `scripts/ecosystem_tools.json` | Authoritative registry: 14 tools with doc URLs, config paths, our generators, capability markers |
+| `scripts/ecosystem_tools.json` | Authoritative registry: 13 tools with doc URLs, config paths, our generators, capability markers |
 | `benchmarks/ecosystem-doctor-snapshot.json` | Last-seen state (headings, content hash, markers, version) — updated via `--update` |
 | `scripts/ecosystem_doctor.py` | Drift detector |
 | `kb/reference/supported-tools-registry.md` | Human-readable view of the registry |
-
-DSH is counted because the ecosystem doctor tracks its upstream documentation and reviewed version. It remains an explicit developer-preview target, not a default editor integration, and stays outside `--editors all` and auto-detection.
 
 ---
 
@@ -8020,9 +8018,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.5.0"
+version: "3.6.0"
 created: "2026-03-23"
-last_updated: "2026-09-04"
+last_updated: "2026-09-24"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -8042,7 +8040,9 @@ ai-toolkit install --local
 By default, `--local` installs Claude Code configs only:
 - `CLAUDE.md` — project-specific rules template (only if missing)
 - `.claude/settings.local.json` — MCP servers, env vars, permissions (only if missing, initialized with MCP defaults)
-- `.claude/constitution.md` — toolkit constitution **injected** via markers (preserves user content)
+- `.claude/CLAUDE.md` — compact language-rules index
+
+Common rules and the constitution are not copied into the project: the global install writes them to `~/.claude/rules/`, which Claude Code loads in every project, and a project copy would load them twice (more under a registered parent directory). `--local` writes `.claude/rules/ai-toolkit-*.md` and `.claude/constitution.md` only for what the global install does not provide, and removes the copies an older install left.
 
 To also install editor configs, use `--editors`:
 
@@ -8106,10 +8106,9 @@ What `install` and `update` do (merge-friendly — user content never overwritte
 | `agents/*.md` | Per-file symlinks into `~/.claude/agents/` | User file with same name preserved (toolkit skipped) |
 | `skills/*/` | Per-directory symlinks into `~/.claude/skills/` | User dir with same name preserved |
 | `settings.json` hooks | JSON merge via `merge-hooks.py` | User hooks + settings preserved, toolkit entries tagged `_source: ai-toolkit` |
-| `constitution.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
-| `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | Same as above |
+| `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
 | `CLAUDE.md` | Compact index for managed global rules | User content outside toolkit markers untouched |
-| `rules/ai-toolkit-*.md` | File-based Claude Code user-level rules from `app/rules/*.md` and registered rules | `ai-toolkit-*` prefix reserved for installer-managed files |
+| `rules/ai-toolkit-*.md` | File-based Claude Code user-level rules from `app/rules/*.md`, `app/rules/common/*.md` (with `paths`), registered rules, and `ai-toolkit-constitution.md` | `ai-toolkit-*` prefix reserved for installer-managed files |
 
 Re-running updates only toolkit content. Old whole-directory symlinks are auto-upgraded to per-file on next run.
 
@@ -8516,17 +8515,45 @@ validation + tests, regenerates AGENTS.md + llms.txt, and publishes to npm.
 ## Uninstall
 
 ```bash
-ai-toolkit uninstall    # strips toolkit components from ~/.claude/
+ai-toolkit uninstall            # everything: registered projects, user level, data directory
+ai-toolkit uninstall --local    # one project, then unregisters it
 ```
 
-What `uninstall` does:
-- Removes per-file agent symlinks (user agents preserved)
-- Removes per-directory skill symlinks (user skills preserved)
-- Strips toolkit hook entries from `settings.json` (user hooks + settings preserved)
-- Strips toolkit markers from `constitution.md` and `ARCHITECTURE.md` (user content preserved; empty files removed)
-- `~/.claude/CLAUDE.md` preserved (contains your custom content + compact toolkit index)
-- `~/.claude/rules/` preserved unless explicitly removed
-- Empty `agents/` and `skills/` directories cleaned up
+`uninstall` removes everything the toolkit installed. It lists every component
+and asks once before changing anything (`--yes` skips the question).
+
+Order of a global uninstall:
+1. **Registered projects.** Each project in `projects.json` that still exists gets the local uninstall below, in its own rollback transaction. A project that cannot be handled safely (for example a symlinked `.claude/`) stops the run before anything changes.
+2. **User level:**
+   - agent and skill symlinks in `~/.claude/`
+   - `~/.claude/rules/ai-toolkit-*.md`, a prefix reserved for the installer. The constitution and the always-on rules live there.
+   - toolkit sections of `~/.claude/CLAUDE.md` and `ARCHITECTURE.md`. Your own content and plugin sections stay.
+   - the shipped output styles
+   - every editor surface the installer writes: Codex, Copilot, Cline, Cursor, Windsurf/Devin, Gemini, Antigravity, Augment, OpenCode, Roo, Aider
+   - built-in MCP template servers recorded in `state.json`
+   - plugin packs, through the plugin lifecycle's own `remove` for every recorded pack and runtime
+   - hooks and MCP servers added with `inject-hook` / `inject-mcp`, matched by the source names in their registries. Their registries live in the data directory, so `remove-hook` / `remove-mcp` could not reach them afterwards. Editor config files keep their other content and are never deleted.
+3. **`~/.claude/settings.json`:**
+   - Hook entries and the status line are removed when tagged `_source: ai-toolkit`, when they match a toolkit hook signature, or when they run a script from `~/.softspark/ai-toolkit/hooks/`. Claude Code drops the tag when it rewrites the file, so the tag alone is not enough.
+   - `outputStyle`, `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`, `skillListingBudgetFraction` and the `skillOverrides` the toolkit recorded are removed only while they still hold the toolkit's value.
+   - `enabledPlugins` stays. Removing it would re-enable the Claude app plugin.
+4. **`~/.softspark/ai-toolkit/`**, which holds hook scripts, state, the registry, session history, compaction snapshots, stats, the governance log, plugins and `memory.db`:
+   - It is first archived to `~/ai-toolkit-backup-<time>.tar.gz` (mode 0600).
+   - The archive is re-read and compared with the directory before anything is deleted.
+   - This step runs last, so a failure here rolls every other change back.
+
+`uninstall --local` also removes:
+- `.softspark-toolkit.lock.json` and `.softspark-toolkit-extends.json`
+- the fallback `.git/hooks/pre-commit`. A `pre-commit.backup` is put back in its place.
+- `CLAUDE.md` and `.claude/settings.local.json` while they are unchanged from the template. Otherwise only the `@.claude/constitution.md` import is removed, and only when no project-owned constitution text remains.
+
+It then unregisters the project.
+
+Kept on purpose:
+- `.softspark-toolkit.json`, your project config
+- MCP mirrors of your own `.mcp.json` in editor configs
+
+Editor cleanup is best effort. A surface that cannot be cleaned safely, for example behind a symlinked root, is listed as `WARN` and left in place.
 
 ---
 
@@ -9069,11 +9096,11 @@ suggestion; the scope and the summary are yours.
 title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
-tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif, dsh]
-version: "1.8.4"
+tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
+version: "1.9.0"
 created: "2026-04-08"
-last_updated: "2026-09-18"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, explicit DSH lifecycle, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
+last_updated: "2026-09-24"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
 # SOP: Release Verification
@@ -9122,7 +9149,7 @@ files parse or that a second install is idempotent.
 
 ## Quick Checklist (TL;DR)
 
-The 14 core commands below must pass. Releases that change DSH must also complete Phase 10.
+The 14 core commands below must pass.
 
 ```bash
 # Pre-commit (Phase 0)
@@ -9265,7 +9292,8 @@ cd - && rm -rf /tmp/ai-toolkit-verify
 **Verify "Project-local" section:**
 - [ ] Would create: CLAUDE.md
 - [ ] Would create: .claude/settings.local.json
-- [ ] Would inject: .claude/constitution.md
+- [ ] Would inject: .claude/constitution.md only without a global install
+- [ ] Would generate: .claude/rules/ai-toolkit-*.md only for common rules the global install does not provide
 - [ ] Editors: all 11 listed (copilot, cursor, windsurf, cline, roo, aider, augment, antigravity, codex, gemini, opencode)
 - [ ] Would generate configs for each editor (legacy + directory-based)
 - [ ] Would install: .git/hooks/pre-commit
@@ -9541,38 +9569,6 @@ app-native rules skill, bundled agents/skills, and plugin-relative Cowork hooks.
 
 ---
 
-## Phase 10: Explicit DSH Qualification (v4.30.0+)
-
-Run this phase whenever the release changes the `dsh` target, package pins, preset lifecycle, or DSH compatibility documentation. Use a new task-specific `DSH_HOME`; never replace `HOME` or reuse a regular profile.
-
-Prerequisites: DSH `0.1.2-rc.1`, pnpm `>=11.7.0,<12.0.0`, Codex logged in through ChatGPT, Claude Code logged in natively, and GitHub Copilot CLI logged in natively. Do not supply provider API keys. The lifecycle automatically installs the scoped Claude Agent SDK `0.3.263` override and checks the actual provider and SDK metadata; no manual vendor configuration is needed.
-
-```bash
-DSH_SMOKE_ROOT="$(mktemp -d)"
-export DSH_HOME="$DSH_SMOKE_ROOT/dsh-home"
-export AI_TOOLKIT_HOME="$DSH_SMOKE_ROOT/toolkit-state"
-mkdir -p "$DSH_HOME"
-
-ai-toolkit dsh install --profile web
-ai-toolkit dsh doctor --profile web
-DSH_TELEMETRY_DISABLED=1 dsh --profile web --host 127.0.0.1 --port 0 --no-open
-```
-
-In a new `softspark-orchestrator` session, select the `codex` provider and run two standalone marker prompts:
-
-1. `subagent_claude_code` returns an exact child marker, then the Codex parent returns its exact completion marker.
-2. `subagent_gemini_copilot` returns an exact child marker, then the Codex parent returns its exact completion marker.
-
-Stop DSH, then remove only the managed profile artifacts:
-
-```bash
-ai-toolkit dsh uninstall --profile web --yes
-```
-
-**Verify:** both tool results have `isError=false`, both turns end as `completed`, `doctor` reports `Claude SDK: compatible (0.3.263)` and no recovery requirement before uninstall, and an unrelated preset fixture remains unchanged. The task-specific `AI_TOOLKIT_HOME` keeps lifecycle state separate from the operator's installation; `HOME` remains unchanged. Preserve only redacted event sequence evidence; never attach credentials, auth files, or full private prompts.
-
----
-
 ## Troubleshooting
 
 ### `ai-toolkit: command not found`
@@ -9653,9 +9649,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck]
-version: "1.15.4"
+version: "1.15.5"
 created: "2026-04-10"
-last_updated: "2026-09-23"
+last_updated: "2026-09-24"
 description: "Step-by-step checklist for preparing a new ai-toolkit release — ecosystem-sync drift check, version sync, changelog, artifact regeneration, validation, branch CI, and tagging. Run BEFORE every git tag. Includes mandatory Provenance, SARIF, checksum-pin, ShellCheck, licensing, exact-tag assertions, and a green Ubuntu/macOS branch-CI gate before any release tag is created."
 ---
 
@@ -10254,7 +10250,8 @@ git push origin refs/tags/vX.Y.Z
 
 **Why branch CI comes before the tag (v4.30.2 postmortem).** The publish
 workflow runs only on Ubuntu and can publish while the separate macOS matrix job
-is red. `v4.30.2` exposed this with a macOS-only DSH timing failure. A release
+is red. `v4.30.2` exposed this with a macOS-only timing failure in the since-retired DSH
+lifecycle tests. A release
 commit must therefore pass the complete Ubuntu/macOS branch workflow before its
 tag exists; a successful publish workflow is not a substitute for green CI.
 
@@ -10702,17 +10699,17 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.11.0"
+version: "1.13.0"
 created: "2026-03-23"
-last_updated: "2026-09-08"
-description: "Architecture of ai-toolkit: install ownership, runtime adapters, the explicit DSH target, skill tiers, and project integration."
+last_updated: "2026-09-24"
+description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
 ---
 
 # AI Toolkit Architecture
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, compatible assistants, and the explicit developer-preview DSH target. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
+Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, and compatible assistants. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
 
 ## Design Principles
 
@@ -10735,7 +10732,7 @@ ai-toolkit/
     claude-app/              # Generated app-only rules skill, hooks, instructions
     hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
-    constitution.md          # Immutable safety rules, 7 articles (marker-injected)
+    constitution.md          # Immutable safety rules, 7 articles (-> ~/.claude/rules/ai-toolkit-constitution.md)
     ARCHITECTURE.md          # System architecture reference (marker-injected)
     CLAUDE.md.template       # Template for project CLAUDE.md (used by init)
     settings.local.json.template
@@ -10744,7 +10741,7 @@ ai-toolkit/
     plugins/                 # Experimental opt-in plugin packs + optional modules
   scripts/                   # All scripts
     install.py               # Global installer → ~/.claude/ (--local for project-local setup)
-    uninstall.py             # Removes toolkit components from ~/.claude/
+    uninstall.py             # Removes everything installed; archives ~/.softspark/ai-toolkit first
     inject_rule_cli.py       # Injects a rule into CLAUDE.md (delegates to inject_section_cli.py)
     inject_section_cli.py    # Marker-based content injection (canonical implementation)
     _common.py               # Shared helper for generators (frontmatter, agents/skills emission)
@@ -10792,31 +10789,32 @@ Machine (global)                              Project (local)
   agents/*.md    → per-file symlinks             rules/     ← registered rules
   skills/*/      → per-dir symlinks              hooks/     ← hook scripts (copied)
   settings.json  ← hooks merged here
-  constitution.md ← marker injection            my-project/
-  ARCHITECTURE.md ← marker injection              CLAUDE.md            ← project index
-  CLAUDE.md       ← compact rule index            .claude/
-  rules/*.md      ← Claude user-level rules
-                                                    settings.local.json  ← MCP, perms
-                                                    constitution.md     ← marker injection
+  ARCHITECTURE.md ← marker injection            my-project/
+  CLAUDE.md       ← compact rule index            CLAUDE.md            ← project index
+  rules/*.md      ← Claude user-level rules:      .claude/
+    toolkit, common (paths-scoped),                 settings.local.json  ← MCP, perms
+    constitution                                    rules/ai-toolkit-*.md ← only rules the
+                                                      global install lacks
 ```
+
+Claude Code loads `~/.claude/rules/` in every project and `.claude/rules/` from parent directories too, so a rule or the constitution that applies everywhere lives only at user level; a project copy would load it twice.
 
 | Component | Strategy | Collision handling |
 |-----------|----------|-------------------|
 | `agents/*.md` | Per-file symlinks | User file with same name wins (toolkit skipped) |
 | `skills/*/` | Per-directory symlinks | User dir with same name wins (toolkit skipped) |
 | `settings.json` hooks | JSON merge via `merge-hooks.py` | User hooks + settings preserved, toolkit entries tagged with `_source` |
-| `constitution.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
-| `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | Same as above |
+| `rules/ai-toolkit-*.md` | Managed files, including `ai-toolkit-constitution.md` | The `ai-toolkit-*` prefix is reserved; any other filename is the user's |
+| `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
 | `CLAUDE.md` | Marker injection via `inject_rule_cli.py` | Same as above |
 
 **`ai-toolkit install`** — run once per machine, merges toolkit into `~/.claude/`. Auto-upgrades old whole-directory symlinks.
 
 **`ai-toolkit update`** — re-apply after `npm install -g @softspark/ai-toolkit@latest` or after `add-rule` / `remove-rule`. Same as `install` but semantically correct for update flows.
 
-**`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, constitution.md, language rules). Editor configs are opt-in via `--editors`:
+**`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, the language rules index); common rules and the constitution only when the global install does not provide them. Editor configs are opt-in via `--editors`:
 - `--editors all` — install all 11 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex, Gemini, opencode)
 - `--editors cursor,aider` — install only selected editors
-- `--editors dsh` requires explicit selection. Its DSH-specific output is project `.agents/skills`; the normal `--local` Claude files, detected language rules, and generic project outputs still apply. DSH is excluded from `all`, auto-detection, and defaults.
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
 Each editor gets its documented directory-based format. Copilot receives root
@@ -10839,9 +10837,7 @@ packs can layer their rules, skills, and hooks onto that Codex user target.
 
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
 
-DSH profile mutation is also outside generic installation. `ai-toolkit dsh install|update|doctor|uninstall --profile web` names both the integration and profile. It manages only `@softspark/dsh-codex@1.0.0`, `@softspark/dsh-orchestrator@1.0.1`, the released preset, and their ownership record. Vendor CLIs own login and credentials. DSH `0.1.1-rc.2` is the only reviewed host version.
-
-Both DSH preview paths are read-only. Project `--dry-run` resolves `extends` without persisting its lockfile and changes no project or `DSH_HOME` entry. Profile lifecycle `--dry-run` changes no package, preset, state, profile, or authentication surface.
+The DeepSeek Harness (DSH) target and the `ai-toolkit dsh` profile lifecycle were retired on 2026-09-24. Local install and uninstall still recognise `.agents/skills` surfaces carrying a legacy `dsh` owner marker so they can be migrated or removed; see `kb/reference/dsh-compatibility.md`.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers`
 entries into `.claude/settings.local.json` plus any selected editors with
@@ -10854,14 +10850,10 @@ project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
 |---------|--------|-------------|
 | `install` | `~/.claude/` | First-time: per-file symlinks + JSON merge + marker injection + rules |
 | `install --local` | `./` | Claude Code configs + editors via `--editors` (auto-detect or explicit) |
-| `install --local --editors dsh` | `./` | Generic local outputs plus the shared `.agents/skills` catalog; no DSH profile writes |
-| `dsh install|update --profile <name>` | `$DSH_HOME/profiles/<name>` | Exact SoftSpark package and preset lifecycle |
-| `dsh doctor --profile <name>` | DSH profile and ai-toolkit state | Read-only runtime, ownership, drift, and recovery diagnostics |
-| `dsh uninstall --profile <name>` | Managed DSH package, preset, and state entries | Ownership-checked removal that preserves unrelated profile content |
 | `claude-app export` | output ZIP + Markdown | Uploadable Claude Chat/Cowork plugin and global instructions |
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
-| `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
+| `uninstall` | registered projects, `~/.claude/`, editors, `~/.softspark/ai-toolkit/` | Removes everything installed; archives the data directory first (user content in shared files preserved) |
 | `add-rule <file>` | `~/.softspark/ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
 | `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/rules/` | Unregister rule and remove generated Claude rule file |
 | `mcp add <name...>` | `./.mcp.json` | Merge canonical MCP template(s) into project config |
@@ -10961,16 +10953,6 @@ surface or tmux-backed Agent Teams lifecycle. Plugin packs reuse the same
 translation and hook-compatibility model when targeting the global Codex layer.
 
 See `kb/reference/codex-cli-compatibility.md` for the detailed mapping.
-
-### DSH Explicit Target
-
-The DSH target reuses the Codex `.agents/skills` emitter. Canonical skill ownership stays under `app/skills`. DSH invocation metadata is validated before emission because invalid camel-case fields, non-boolean invocation values, and nested discovery entries fail closed upstream.
-
-The profile lifecycle is a separate transaction boundary. It stores exact package-tree and preset identity under the shared ai-toolkit state path selected by `AI_TOOLKIT_HOME`, `SOFTSPARK_HOME`, or the default `~/.softspark/ai-toolkit`. A DSH lifecycle lock plus state compare-and-swap checks protect concurrent writers. Collision or rollback ambiguity preserves user data and reports doctor-visible recovery paths.
-
-Codex remains the parent model through its local app server. The released preset adds one-shot Claude Code and GitHub Copilot Gemini delegation tools. ai-toolkit does not handle provider API keys or login state. GitHub Copilot policy and AI credits apply to the Gemini route. Direct Google, Antigravity, and Gemini API-key routes are unsupported.
-
-See `kb/reference/dsh-compatibility.md` for the exact command, version, authentication, and recovery contract. Real-profile Phase 3 qualification is pending.
 
 ## MCP Rendering Layer
 
@@ -11491,7 +11473,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-09-04"
+last_updated: "2026-09-24"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -11512,7 +11494,7 @@ Usage: ai-toolkit <command> [options]
 | `update --local` | Re-apply + auto-detect editors from existing project files |
 | `reset --local` | Wipe all project-local configs and recreate from scratch (clean slate) |
 | `status` | Show installed modules and version |
-| `uninstall` | Remove toolkit from `~/.claude/` |
+| `uninstall` | Remove everything the toolkit installed: every registered project, `~/.claude/` and editor surfaces, toolkit settings, and `~/.softspark/ai-toolkit/` (archived to `~/ai-toolkit-backup-<time>.tar.gz` first). `--local` removes one project and unregisters it |
 | `validate` | Verify toolkit integrity (`--strict` for CI-grade, warnings = errors) |
 | `doctor` | Diagnose install health, hooks, quick-win assets, artifact drift, context budget (est. resident tokens of the skill/agent listings and user rules, plus skills with zero recorded use; read-only, prints the `skillOverrides` key to paste), and permission rules (`permissions.allow` wildcards on interpreters, task runners, package installs, `gh api`, `curl`, `git fetch`, destructive commands; warns only, never edits) |
 | `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |
@@ -13084,260 +13066,66 @@ This model gives:
 ## kb/reference/dsh-compatibility.md
 
 ---
-title: "AI Toolkit - DSH Compatibility"
+title: "AI Toolkit - DSH Compatibility (Retired)"
 category: reference
 service: ai-toolkit
-tags: [dsh, deepseek-harness, subscriptions, lifecycle, compatibility]
-version: "1.8.0"
+tags: [dsh, deepseek-harness, retired, migration]
+version: "2.0.0"
 created: "2026-08-31"
-last_updated: "2026-09-06"
-description: "Compatibility contract for project skills and the explicit SoftSpark package lifecycle in DeepSeek Harness."
+last_updated: "2026-09-24"
+status: retired
+description: "Retired: ai-toolkit no longer supports DeepSeek Harness. Migration behaviour for old DSH project skills and manual removal of DSH profiles."
 ---
 
-# DSH Compatibility
+# DSH Compatibility (Retired)
 
 ## Summary
 
-ai-toolkit supports DeepSeek Harness as an explicit developer-preview target. The integration is maintained by SoftSpark as a community compatibility layer. DeepSeek AI has not endorsed it.
+DeepSeek Harness (DSH) support was removed in 5.0.0 on 2026-09-24 by decision of the repository owner (see `DECISIONS.md`, "DSH integration retired"). Both entry points no longer do anything. Following the deprecation path in `BACKWARD_COMPATIBILITY.md`, they stay for that one release as warnings, so scripts that call them keep working:
 
-The 4.33.0 lifecycle targets DSH `0.1.2-rc.1`, with the exact package pair below. Other upstream prereleases require their own qualification. Historical marker roundtrips from 2026-09-01 used DSH `0.1.1-rc.2`; version-specific evidence is recorded under Qualification below.
+- `ai-toolkit install --local --editors dsh`: prints a warning, ignores `dsh`, installs the other editors.
+- `ai-toolkit dsh install|update|doctor|uninstall --profile <name>`: prints the manual cleanup steps below and exits 0.
 
-## Project vs Profile Outputs
+Both stubs are removed in the next minor release.
 
-| Surface | Command | Managed output | Explicit non-output |
-|---|---|---|---|
-| Project install | `ai-toolkit install --local --editors dsh` | `CLAUDE.md`, `.claude/settings.local.json`, `.claude/constitution.md`, detected language rules, other generic local outputs, and the DSH-specific one-level `.agents/skills/<name>/SKILL.md` catalog with bundled resources | No `$DSH_HOME` writes, npm package changes, profile changes, preset changes, or credential reads |
-| DSH profile | `ai-toolkit dsh install --profile web` | Two exact npm dependencies, the scoped Claude SDK override and missing profile initialization files, the released `softspark-orchestrator` preset, and ai-toolkit ownership state | No project files, provider login, API keys, unrelated plugins, or user presets |
+## What the toolkit still does
 
-DSH is excluded from `--editors all`, auto-detection, default profiles, and default editor selection. Naming `dsh` without `--local` is not a supported project install route.
+The toolkit keeps just enough knowledge of DSH to clean up after itself:
 
-Project `--dry-run` resolves and validates `extends`, then plans the generic local outputs and `.agents/skills` catalog without creating, changing, or deleting a project entry. It does not create or update `.softspark-toolkit.lock.json`, and it does not mutate `DSH_HOME`, packages, profiles, state, or authentication.
-
-## Local and Global Commands
-
-```bash
-# Generic local outputs plus DSH-specific project skills
-ai-toolkit install --local --editors dsh
-
-# Read-only project preview
-ai-toolkit install --local --editors dsh --dry-run
-
-# Explicit machine profile lifecycle
-ai-toolkit dsh install --profile web
-ai-toolkit dsh update --profile web
-ai-toolkit dsh doctor --profile web
-ai-toolkit dsh uninstall --profile web --yes
-```
-
-The DSH profile defaults to `web` when `--profile` is omitted. `DSH_HOME` selects the DSH root and defaults to `~/.dsh`. Profile mutation is never an implicit side effect of local installation, global installation, update, or generic uninstall.
-
-## Exact Pins
-
-| Component | Reviewed version | Role |
-|---|---:|---|
-| DeepSeek Harness | `0.1.2-rc.1` | Profile host and plugin manager |
-| pnpm | `>=11.7.0,<12.0.0` | Package manager used by the DSH plugin command |
-| `@softspark/dsh-codex` | `1.5.0` | Codex parent provider through local `codex app-server` |
-| `@softspark/dsh-orchestrator` | `2.0.0` | Claude Code and GitHub Copilot Gemini delegation bundle plus released preset |
-| Claude Agent SDK | `0.3.263` | Exact profile override for the DSH Claude provider's bundled CLI |
-
-Install and update use exact package arguments with `--save-exact`. Arbitrary DSH prereleases and unpinned SoftSpark packages are outside this contract.
-
-Install and update also configure the exact profile selector
-`@deepseek-ai/dsh-subagent-claude-code@0.1.2-rc.1>@anthropic-ai/claude-agent-sdk`
-to `0.3.263`. DSH's original SDK `0.3.241` embeds Claude Code `2.1.241`, which
-current models reject even when the standalone Claude command is up to date.
-The override is applied through pnpm's JSON configuration API. Unrelated
-settings and overrides are preserved; an incompatible SDK override or an
-explicit non-hoisted package layout fails with guidance before modification.
-The installed SDK's actual package metadata is checked before state is committed.
-
-Upgrade the DSH runtime to `0.1.2-rc.1` before running this release's profile
-update. Ownership records for the earlier exact package pair remain valid and
-are migrated by `ai-toolkit dsh update`. On failure, rollback uses the versions
-recorded before the operation. The optional `dsh-file-preview` and
-`dsh-process-console` UI bundles are separate profile additions; their `2.0.0`
-line targets the new DSH client APIs, and the toolkit preserves them as unrelated
-dependencies.
-
-The reviewed DSH tag declares `pnpm@11.7.0`. The isolated cold-install environment used Corepack pnpm `11.24.0`, so the lifecycle accepts stable pnpm releases from `11.7.0` through the end of major 11. Before it creates the lifecycle lock or changes a profile, it resolves exact DSH and pnpm command paths from the minimal child `PATH`, records their command and resolved-file identities, and runs their version probes with a five-second bound. Missing, nonzero, timed-out, malformed, or unsupported pnpm probes fail with no package, preset, state, or lifecycle artifact.
-
-## Subscription and Authentication Boundaries
-
-ai-toolkit does not log in to a model provider, accept a provider API key, read a vendor credential store, copy tokens, or add credentials to state. Each vendor CLI owns authentication:
-
-| Route | Login owner | Subscription or billing boundary |
+| Existing state | Command | Result |
 |---|---|---|
-| Codex parent | `codex login` and `codex login status` | ChatGPT subscription managed by Codex |
-| Claude delegate | `claude auth login` | Claude Max or Pro managed by Claude Code |
-| Gemini delegate | `copilot login` | Active GitHub Copilot plan and GitHub AI credits |
+| `.agents/skills` surface with owners `codex` + `dsh` | `ai-toolkit update --local` or `ai-toolkit install --local` | Re-rendered as a Codex-only surface |
+| `.agents/skills` surface with owner `dsh` only | `ai-toolkit update --local` or `ai-toolkit install --local` | Removed |
+| Either of the above | `ai-toolkit uninstall` | Removed |
+| Registered project listing `dsh` in its editors | any command reading the project registry | Not an error; the `dsh` entry is dropped |
 
-Lifecycle subprocesses receive only `HOME`, the validated `DSH_HOME`, `PATH`, and locale or temporary-directory settings when present. Provider and registry secret environment variables are not forwarded. Vendor CLI output is not copied into lifecycle error messages.
+Codex keeps using `.agents/skills`; nothing changes for Codex-only projects.
 
-## DSH, Codex, Claude, and Copilot Topology
+## Removing an old DSH profile
 
-```text
-DSH session using SoftSpark Orchestrator
-  |
-  +-> @softspark/dsh-codex
-  |     -> local codex app-server
-  |     -> Codex-owned ChatGPT authentication and parent thread
-  |
-  +-> subagent_claude_code
-  |     -> DSH Claude Code provider
-  |     -> Claude Code native login
-  |
-  +-> subagent_gemini_copilot
-        -> GitHub Copilot CLI ACP server
-        -> Gemini 3.6 Flash under GitHub policy and AI credits
-```
-
-Codex is the parent provider. The preset keeps the optional Codex subagent row disabled. Claude Code and Copilot Gemini receive bounded standalone delegation tasks.
-
-## Invocation Metadata and Shared Skill Ownership
-
-DSH and Codex share the project `.agents/skills` output. `app/skills/<name>/` remains canonical. `scripts/generate_codex_skills.py` emits native links or adapted wrappers, so ai-toolkit does not maintain a second DSH-specific skill catalog.
-
-DSH discovers one-level `<name>/SKILL.md` bundles and flat `<name>.md` entries. Names must use lowercase kebab-case. The required fields are `name` and `description`. Optional invocation fields use `user-invocable` and `disable-model-invocation` with boolean values. Camel-case spellings or invalid boolean values fail closed and remove the skill from discovery. Nested `SKILL.md` entries are not supported, but resources inside a valid bundle remain available.
-
-The preset owns the session composition and external delegation tools. It does not copy the 44 ai-toolkit agent definitions into 44 DSH presets or subagents.
-
-## Lifecycle State and Recovery
-
-State resolves in this order:
-
-1. `$AI_TOOLKIT_HOME/state.json` when `AI_TOOLKIT_HOME` is set.
-2. `$SOFTSPARK_HOME/ai-toolkit/state.json` when `SOFTSPARK_HOME` is set.
-3. `~/.softspark/ai-toolkit/state.json` by default.
-
-The DSH record stores the canonical DSH home, profile, exact package versions, package-tree identity, preset path, preset hash, ownership flags, and timestamps. It stores no package contents, prompts, credentials, authentication paths, or child-process environment.
-
-The published npm packages own their installed code. The canonical preset source is `@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator` inside the exact installed package. ai-toolkit copies and verifies that tree. It does not reconstruct the preset.
-
-Missing profile initialization files are created exclusively under pinned
-directories using the qualified DSH profile schema before invoking the external
-configuration command. A file appearing concurrently is never adopted as owned,
-even when its bytes match. The transaction snapshots `pnpm-workspace.yaml` bytes, mode and file identity in
-addition to package state. Ordinary failures restore that prestate through the
-same guarded file restoration used for the profile manifest. Default profile
-files created during initialization are removed only while their recorded
-identities still match. Unexpected settings changes or ambiguous failed
-external writes remain preserved behind a recovery marker. Configuration
-contents are never copied into lifecycle state, receipts, or error messages.
-
-Mutations first take a nonblocking exclusive POSIX `flock` on the already pinned `DSH_HOME` directory descriptor, then claim the bounded canonical lifecycle lock and use the shared state lock with compare-and-swap publication. Directory locking is independent of the replaceable lock filename. It remains held across sentinel scans, package and preset mutation, normal canonical-lock release, or recovery-sentinel creation plus file and directory `fsync`. A competing lifecycle must acquire the same directory lock before it can scan recovery state or claim the canonical name. The immutable prerequisite record is revalidated after lock acquisition and before every package mutation or package rollback. A replaced or removed executable, or a new earlier `pnpm` PATH shadow, blocks the command. The verified pnpm command directory is placed first in the child PATH so DSH's literal `pnpm` lookup resolves to the probed command. Install, update, and uninstall verify the profile manifest, package trees, preset identity, and unrelated dependencies before and after each external package-manager command. Rollback restores the immutable pre-operation target. It does not reinterpret concurrent bytes as owned data.
-
-Each DSH plugin add, update, remove, or rollback command has a 300-second process bound, separate from the short prerequisite probe. This bound accommodates cold package resolution without promising registry or network latency. Every mutation starts DSH in a dedicated POSIX session and process group. A timeout or interruption signals the complete group, escalates from `SIGTERM` to `SIGKILL` when needed, and waits for confirmed group exit before rollback. If exit cannot be confirmed, package rollback is blocked and deterministic inspection steps are reported. Child stdout and stderr remain suppressed from user-facing errors.
-
-Process-group signals are allowed only while the unreaped DSH supervisor still binds its PID to that group. If the supervisor identity is lost before escalation, the lifecycle fails closed instead of signaling a group identifier that the operating system could reuse. Before `Popen`, the calling thread blocks `SIGINT` with `pthread_sigmask`. It restores the previous mask only inside a catchable region that covers `communicate`, final PGID inspection, and command postconditions, then restores the mask again in `finally`. Any `BaseException` after spawn runs full process-tree teardown before propagation. Repeated `SIGINT` cannot escape the bounded TERM, KILL, and wait sequence.
-
-An unconfirmed process-tree exit first verifies that `$DSH_HOME/.ai-toolkit-lifecycle.lock` still names the held inode, then creates and syncs a transaction-unique process-tree recovery sentinel. It rewrites the canonical lock as a recovery gate only while that identity remains exact. A removed or renamed lock leaves the sentinel as the gate; a foreign replacement is neither overwritten nor deleted. Install, update, and uninstall scan these sentinels before and after claiming the canonical lock, so recovery blocks DSH invocation even when the original lock name was displaced. `doctor` reports every gate's process-group identifier, original profile path, and exact artifact path. ai-toolkit never clears these gates automatically: the operator must verify that the recorded process group has exited, inspect the profile, and only then remove every named recovery artifact.
-
-An identity conflict preserves the conflicting path and creates a doctor-visible recovery marker instead of deleting or replacing it. User plugins, dependencies, presets, profile patches, and unrelated state keys remain outside ai-toolkit ownership. Secure mutation and process-tree termination require POSIX primitives available on Linux, WSL, and macOS. Native Windows mutation is unsupported and fails before the lifecycle lock.
-
-Profile lifecycle `--dry-run` is read-only. It runs the bounded DSH and pnpm prerequisite probes, but it does not create state, acquire a lock, invoke the plugin manager, or create profile paths. It can therefore report a missing or unsupported prerequisite without leaving lifecycle output.
-
-## Unsupported Google, Antigravity, and API-Key Routes
-
-This integration does not provide direct Google AI Pro or Ultra login, Gemini CLI OAuth, Antigravity login, Gemini API keys, DeepSeek API keys, Anthropic API keys, or OpenAI API keys. Gemini is available only through the GitHub Copilot CLI ACP route described above.
-
-The first native target also excludes DSH hook bridging, MCP bridging, arbitrary preset import, automatic profile selection, and full ai-toolkit agent mapping. Generic `ai-toolkit uninstall` does not mutate DSH profiles.
-
-## Behavioral Limits
-
-- Claude Code and Copilot delegation are one-shot child tasks. Each child receives the task and workspace directory, not the parent conversation history.
-- Copilot runs with no available tools, rejects permission requests, disables built-in MCP servers, remote control, custom instructions, and auto-update, and uses a 30-credit session cap.
-- Child effects completed before cancellation are not rolled back.
-- Workspace content selected by a vendor CLI may leave the machine under that vendor's product terms and account policy.
-- Codex owns its built-in tools, sandbox, approval policy, thread state, and model execution. ai-toolkit does not reproduce those controls inside DSH.
-- Existing DSH sessions keep the preset generation with which they started. Restart DSH and open a new session after install or update.
-
-## Uninstall, Update, and Doctor
-
-`ai-toolkit dsh update` changes only a recorded profile whose managed package and preset identities match state. It installs the current reviewed pins, then publishes the new state after all postconditions pass.
-
-`ai-toolkit dsh doctor` is read-only. It reports the DSH runtime version, pnpm availability and version, package pins, package-tree and preset ownership, state consistency, lifecycle lock recovery artifacts, staging paths, and recovery markers. A recovery marker keeps `Recovery needed: yes` visible until the operator resolves the named paths.
-
-Doctor also checks the required SDK override and installed SDK version. It
-queries pnpm directly only when the profile directory exists. It never uses
-`dsh plugin` for inspection, because that command initializes missing profiles.
-
-`ai-toolkit dsh uninstall --yes` removes only the recorded SoftSpark packages, preset, and profile state. Drift or ownership ambiguity stops removal. Unrelated profile dependencies, patch files, presets, and state keys remain unchanged.
-
-Successful uninstall retains the scoped SDK compatibility setting and the
-profile's pnpm layout. They are runtime prerequisites for a later reinstall,
-not ownership of the user's entire profile. Failed operations restore their
-pre-operation configuration unless concurrent edits make that unsafe.
-
-## Verification
-
-Run the static and isolated checks without modifying a regular DSH profile:
+Profiles set up by `ai-toolkit dsh install` live under `$DSH_HOME` (default `~/.dsh`). The toolkit no longer reads, updates or removes them. If you no longer want the SoftSpark packages there, remove them with DSH itself. For the default `web` profile:
 
 ```bash
-bats tests/test_ecosystem_doctor.bats
-bats tests/test_dsh.bats
-python3 scripts/ecosystem_doctor.py --tool dsh --offline --format text
-python3 scripts/validate.py --strict
-
-ai-toolkit install --local --editors dsh --dry-run
-ai-toolkit dsh install --profile web --dry-run
-ai-toolkit dsh update --profile web --dry-run
-ai-toolkit dsh doctor --profile web
-ai-toolkit dsh uninstall --profile web --dry-run --yes
+dsh plugin --profile web remove @softspark/dsh-codex
+dsh plugin --profile web remove @softspark/dsh-orchestrator
+rm -rf "${DSH_HOME:-$HOME/.dsh}/.agent-presets/softspark-orchestrator"
 ```
 
-### Historical qualification, 2026-09-01
+Repeat the two `plugin remove` lines for any other profile name you installed. Stop running DSH sessions first.
 
-The earlier DSH `0.1.1-rc.2` package pair completed real-profile qualification
-with a task-specific `DSH_HOME`, exact published package artifacts, and native
-vendor logins. The pre-tag candidate and registry package produced successful
-child and parent markers through `subagent_claude_code` and
-`subagent_gemini_copilot`. No provider API key was supplied or handled; the
-isolated processes stopped and the unrelated profile fixture remained intact.
+Notes:
 
-### DSH 0.1.2-rc.1 qualification
+- The preset directory `softspark-orchestrator` was a copy of `@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator`. Delete it only if you did not edit it and want it gone.
+- `ai-toolkit dsh install` also set a pnpm override for `@anthropic-ai/claude-agent-sdk` (version `0.3.263`) under the `@deepseek-ai/dsh-subagent-claude-code` selector in the profile's `pnpm-workspace.yaml`. It is harmless to keep. Remove it by hand if you want the profile back to its DSH default.
+- Old `dsh` ownership records in `~/.softspark/ai-toolkit/state.json` are no longer used.
 
-On 2026-09-06, the installed 4.33.0 candidate completed install, doctor,
-update, doctor, a controlled second-package failure with real pnpm rollback,
-doctor and uninstall against the published Codex 1.5.0/orchestrator 2.0.0
-pair. Rollback preserved the manifest, pnpm settings, ownership state and
-unrelated preset byte for byte. Doctor reported the exact package versions,
-Claude SDK 0.3.263 and no recovery requirement. Uninstall removed the managed
-packages, preset and profile ownership while retaining the unrelated preset
-and runtime SDK prerequisite. Both state roots were disposable; HOME stayed
-unchanged.
+## History
 
-The composed web host returned the Claude and Gemini child markers through
-the Codex parent. Browser checks covered cancellation, restart, the native
-child transcript and preservation of the parent session. The DSH package
-verification records retain those runtime results and their separate exact
-registry signature/provenance checks.
+The design, qualification evidence and pins of the removed integration are kept for reference:
 
-The toolkit candidate also passed 1,989 Bats and 354 Python tests. An
-unmounted disposable container passed global install, status, doctor, local
-installation for all editors, repeated installation, eject and the official
-Claude 2.1.263 plugin validator. Exact published toolkit artifact results are
-recorded on the 4.33.0 release page after publication.
-
-## Preview and Upstream Drift
-
-DeepSeek Harness is a developer preview with compatibility-breaking changes.
-On 2026-09-06, npm `latest` pointed to `0.1.2-rc.1`. GitHub also listed
-`0.1.3-alpha.1`, but that exact CLI version was absent from npm. It is outside
-this lifecycle contract.
-
-Use the registry doctor to detect documentation, capability-marker, and local version changes. A new upstream version requires source review, focused fixture updates, isolated real-profile qualification, and explicit pin changes before support moves.
-
-## Sources
-
-- [DeepSeek Harness documentation](https://deepseek-harness.github.io/deepseek-harness/)
-- [DeepSeek Harness releases](https://github.com/deepseek-ai/deepseek-harness/releases)
-- [Reviewed DSH 0.1.2-rc.1 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1)
-- [Reviewed DSH package-manager declaration](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/package.json)
-- [Reviewed DSH CLI profile and plugin contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md)
-- [Reviewed DSH skill discovery contract](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md)
-- [PATH: kb/reference/manifest-install.md]
 - [PATH: kb/history/completed/dsh-native-install-target-plan.md]
+- [PATH: kb/history/completed/dsh-integration-plan-superseded.md]
+- The last version of this document before retirement is in git history (v1.8.1, toolkit v4.39.0).
 
 ---
 
@@ -14016,9 +13804,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.5.0"
+version: "3.6.0"
 created: "2026-03-26"
-last_updated: "2026-09-04"
+last_updated: "2026-09-24"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -14099,9 +13887,8 @@ Claude Code's default global install writes these managed surfaces:
 - `~/.claude/agents/*.md` — per-file symlinks to toolkit agents.
 - `~/.claude/skills/*/` — per-directory symlinks to toolkit skills.
 - `~/.claude/settings.json` — merged hook configuration and global settings.
-- `~/.claude/constitution.md` — marker-injected safety constitution.
 - `~/.claude/ARCHITECTURE.md` — marker-injected architecture reference.
-- `~/.claude/rules/ai-toolkit-*.md` — toolkit rules from `app/rules/*.md`.
+- `~/.claude/rules/ai-toolkit-*.md` — toolkit rules from `app/rules/*.md`, the common rules from `app/rules/common/*.md` (with `paths` frontmatter, filtered by the install profile), and `ai-toolkit-constitution.md`, the safety constitution. An older install wrote `~/.claude/constitution.md`, which nothing imported; `install` strips its toolkit section and deletes the file when nothing else is left.
 - `~/.claude/rules/ai-toolkit-registered-*.md` — rules registered with `ai-toolkit add-rule`.
 - `~/.claude/CLAUDE.md` — compact index pointing at the managed rule files.
 
@@ -14161,7 +13948,7 @@ These files still stay local to a repository as part of the core install model:
 - `.cursor/mcp.json`
 - `.roo/mcp.json`
 - `.github/mcp.json`
-- `.claude/constitution.md`
+- `.claude/constitution.md`, only for project-owned text (extends amendments, Article VIII+) or when no global install exists
 - project `AGENTS.md`
 - project `.agents/rules/*.md`
 - project `.agents/skills/*`
@@ -14185,7 +13972,7 @@ These files still stay local to a repository as part of the core install model:
 - `.git/hooks/pre-commit` (fallback)
 - project-specific documentation or safety overlays
 
-Project-local Claude Code language rules live in `.claude/rules/ai-toolkit-*.md` with `paths` frontmatter. They are separate from the global user-level `~/.claude/rules/ai-toolkit-*.md` files above.
+Whatever applies to every project is installed once, at user level, and never copied into a project. Claude Code loads `~/.claude/rules/` in every project and also loads `.claude/rules/` from parent directories, so a project copy of a common rule or of the constitution loaded twice, and once more for every registered parent directory, such as a workspace folder installed with `--local` above its projects. `install --local` therefore writes `.claude/rules/ai-toolkit-*.md` only for a common rule the global install does not provide (every one without a global install; `git-team` for a `strict` project under a `standard` global install), and `.claude/constitution.md` only for project-owned amendments or without a global install. It removes the managed copies an older install left, and the `@.claude/constitution.md` import from `CLAUDE.md` once nothing is left to import. The decision is made from the files present in `~/.claude/rules/`, so the next `update` converges every registered project. See [Language Rules](language-rules.md).
 
 Claude Code hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`. Editor-native generators may emit project-local hook files when that editor documents them; Copilot uses `.github/hooks/*.json` and Codex uses `.codex/hooks.json`.
 
@@ -15366,19 +15153,19 @@ title: "Language Rules System"
 category: reference
 service: ai-toolkit
 tags: [rules, languages, coding-style, testing, patterns, security]
-version: "2.2.0"
+version: "2.3.0"
 created: "2026-04-07"
-last_updated: "2026-09-06"
-description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus common rules installed as Claude Code path-scoped project rules."
+last_updated: "2026-09-24"
+description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus common rules installed as Claude Code path-scoped user-level rules, with project copies only for what the global install lacks."
 ---
 
 # Language Rules System
 
 ## Overview
 
-ai-toolkit ships rule content for 13 languages/platforms plus a language-agnostic common set. Source files live under `app/rules/` and are split into two delivery channels by `ai-toolkit install --local`:
+ai-toolkit ships rule content for 13 languages/platforms plus a language-agnostic common set. Source files live under `app/rules/` and are split into two delivery channels:
 
-- **Common rules** (`app/rules/common/*.md`): full content is written to `.claude/rules/ai-toolkit-*.md` with Claude Code `paths` frontmatter. The project's `.claude/CLAUDE.md` keeps only a compact `<!-- TOOLKIT:language-rules START -->` index. This follows Claude Code's current guidance to keep `CLAUDE.md` concise and move larger instruction sets into scoped rules.
+- **Common rules** (`app/rules/common/*.md`): the global install (`ai-toolkit install` / `update`) writes full content to `~/.claude/rules/ai-toolkit-*.md` with Claude Code `paths` frontmatter; user-level rules load in every project and `paths` scoping works there. `install --local` writes a project copy only of a rule the global install does not provide. The project's `.claude/CLAUDE.md` keeps only a compact `<!-- TOOLKIT:language-rules START -->` index. This follows Claude Code's current guidance to keep `CLAUDE.md` concise and move larger instruction sets into scoped rules.
 - **Per-language rules** (`app/rules/<lang>/*.md`): emitted at build time as `<lang>-rules` knowledge skills under `app/skills/`. Each skill is `user-invocable: false`, so Claude loads it via the Agent Skills progressive-disclosure mechanism only when its description triggers match (file extensions, framework names, or matching keywords in the prompt).
 
 The skills are generated from the rule files via `python3 scripts/generate_language_rules_skills.py`, which is idempotent and rerun-safe. Other editors (Cursor, Windsurf, Cline, Roo, Augment, Codex, Copilot, Antigravity, Gemini, opencode) still receive the full per-language rule content via their own generators in `scripts/dir_rules_shared.py::build_language_rules()` — Claude is the only target where the per-language content is now skill-delivered rather than inlined.
@@ -15509,10 +15296,10 @@ ai-toolkit install --local --modules core,agents
 
 The `--lang` flag accepts comma-separated language names and converts them to `rules-<lang>` modules. Common aliases are supported: `go` → `golang`, `c++` → `cpp`, `c#`/`cs` → `csharp`. Using `--lang` implies `--local` and disables auto-detection.
 
-Common rules are installed as path-scoped Claude Code rule files:
+Common rules are installed as path-scoped Claude Code user-level rule files by the global install:
 
 ```
-.claude/rules/
+~/.claude/rules/
 ├── ai-toolkit-coding-style.md
 ├── ai-toolkit-git-team.md        # --profile strict only
 ├── ai-toolkit-git-workflow.md
@@ -15521,7 +15308,18 @@ Common rules are installed as path-scoped Claude Code rule files:
 └── ai-toolkit-testing.md
 ```
 
-A source rule may also carry `profiles:` (same block-list form). `git-team` declares `profiles: ["strict"]`: branching, pull-request, and review conventions for teams, kept out of `standard` so a solo maintainer who releases straight to `main` is not told to open PRs against themselves. Rerunning `install --local` with a different profile adds or removes the managed file. Only the Claude Code local install honours `profiles`; the Claude app export, `compile-slm`, and editor `lang-common` bundles still receive every common rule (see `DECISIONS.md`, 2026-09-04).
+They are not copied into projects. Claude Code loads `~/.claude/rules/` in every project and also loads `.claude/rules/` from parent directories, so a project copy loaded every rule twice, and once more for each registered parent directory (a workspace folder installed with `--local` above its projects). `install --local` writes a project copy only of a rule the global install does not provide, decided by the files actually present in `~/.claude/rules/`:
+
+| Global install | Project | Project `.claude/rules/ai-toolkit-*.md` |
+|---|---|---|
+| present, `standard` | `standard` | none |
+| present, `standard` | `strict` | `ai-toolkit-git-team.md` only |
+| present, `strict` | any | none |
+| absent | any | every rule the project profile ships, as before |
+
+Managed project copies the global install now provides are removed on the next `install --local` or `update`, so existing projects converge. User-authored files in `.claude/rules/` are never touched.
+
+A source rule may also carry `profiles:` (same block-list form). `git-team` declares `profiles: ["strict"]`: branching, pull-request, and review conventions for teams, kept out of `standard` so a solo maintainer who releases straight to `main` is not told to open PRs against themselves. The global install filters by its own profile, a project install by the project's; rerunning either with a different profile adds or removes the managed file. Only the Claude Code installs honour `profiles`; the Claude app export, `compile-slm`, and editor `lang-common` bundles still receive every common rule (see `DECISIONS.md`, 2026-09-04).
 
 Each file's `paths` frontmatter is copied from the source rule in `app/rules/common/<category>.md`. A source rule without a `paths` block is always-on:
 
@@ -15550,14 +15348,16 @@ The project `CLAUDE.md` receives only a compact index between a single named mar
 <!-- TOOLKIT:language-rules START -->
 # Language Rules
 
-Common ai-toolkit rules live in `.claude/rules/ai-toolkit-*.md`
-with Claude Code `paths` frontmatter instead of expanding this
-CLAUDE.md. Always-on rules load in every session; path-scoped rules
-load only when a matching file is touched.
+Common ai-toolkit rules load as Claude Code rules with `paths`
+frontmatter instead of expanding this CLAUDE.md: from
+`~/.claude/rules/` when the global install provides them, from this
+project's `.claude/rules/` only for a rule it does not. Always-on
+rules load in every session; path-scoped rules load only when a
+matching file is touched.
 
-Always-on: `.claude/rules/ai-toolkit-coding-style.md`, ...
+Always-on: `~/.claude/rules/ai-toolkit-coding-style.md`, ...
 
-Path-scoped: `.claude/rules/ai-toolkit-performance.md`, ...
+Path-scoped: `~/.claude/rules/ai-toolkit-performance.md`, ...
 
 Language-specific rules live in `<lang>-rules` knowledge skills (e.g.
 `python-rules`, `typescript-rules`) and load automatically when their
@@ -15567,7 +15367,7 @@ Detected languages: `python-rules`, `typescript-rules`.
 <!-- TOOLKIT:language-rules END -->
 ```
 
-Re-running `install --local` is idempotent — the existing block is replaced, not duplicated, and only managed `.claude/rules/ai-toolkit-*.md` files are refreshed. User-authored `.claude/rules/*.md` files are preserved. Per-language rules are not injected into `CLAUDE.md` for Claude — they are loaded contextually via their respective `<lang>-rules` knowledge skills.
+Re-running `install --local` is idempotent — the existing block is replaced, not duplicated, and only managed `.claude/rules/ai-toolkit-*.md` files are written or removed. User-authored `.claude/rules/*.md` files are preserved. Per-language rules are not injected into `CLAUDE.md` for Claude — they are loaded contextually via their respective `<lang>-rules` knowledge skills.
 
 ### Generating language-rules skills
 
@@ -15614,10 +15414,10 @@ Language rules are tracked as modules in `manifest.json`:
 | | Common rules | Per-language rules | Other skills |
 |---|---|---|---|
 | Source | `app/rules/common/` | `app/rules/<lang>/` | `app/skills/<name>/SKILL.md` |
-| Delivery to Claude | Path-scoped `.claude/rules/ai-toolkit-*.md` files (`--local`) + compact `CLAUDE.md` index | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
+| Delivery to Claude | Path-scoped user-level `~/.claude/rules/ai-toolkit-*.md` files (global install), project copies only for rules the global install lacks, + compact `CLAUDE.md` index | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
 | Visibility | Always-on (`coding-style`, `git-workflow`, `security`) or loaded when a matching file is touched (`testing`, `performance`) | Loaded when triggers match (file extensions, framework names) | Loaded when triggers match |
 | Scope | Language-agnostic standards (security, git, testing, perf, style) | Per-language coding-style, frameworks, patterns, security, testing | Domain skills (testing, debugging, RAG, etc.) |
-| Install | `ai-toolkit install --local` | Global install (skills directory is symlinked); skills for languages no registered project uses are turned off via `skillOverrides` (`--language-skills detected`, the default) unless `--language-skills all` was chosen | Global install |
+| Install | Global install; `ai-toolkit install --local` only fills gaps | Global install (skills directory is symlinked); skills for languages no registered project uses are turned off via `skillOverrides` (`--language-skills detected`, the default) unless `--language-skills all` was chosen | Global install |
 | Other editors | Inlined into editor-specific rule files | Inlined into editor-specific rule files (still full content, not skills) | N/A |
 
 Per-language content delivered as a knowledge skill is the same Markdown that other editors receive inlined. The split exists only for Claude, where the Agent Skills progressive-disclosure mechanism keeps the system prompt small.
@@ -15789,11 +15589,11 @@ source, cross-verify against a second independent copy, and only then write
 title: "Manifest-Driven Install System"
 category: reference
 service: ai-toolkit
-tags: [install, manifest, modules, profiles, auto-detect, state-tracking, dsh]
-version: "1.16.0"
+tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
+version: "1.17.0"
 created: "2026-04-07"
-last_updated: "2026-09-01"
-description: "Reference for manifest-driven project installation, explicit DSH profile lifecycle management, and ownership state in ~/.softspark/ai-toolkit/state.json."
+last_updated: "2026-09-24"
+description: "Reference for manifest-driven project installation and install state in ~/.softspark/ai-toolkit/state.json."
 ---
 
 # Manifest-Driven Install System
@@ -15906,63 +15706,9 @@ ai-toolkit status
 
 Re-applies installed modules, skipping files whose content hash has not changed since last install. Implemented in `scripts/install_steps/install_state.py`.
 
-## Explicit DSH Profile Lifecycle
+## Retired DSH Profile Lifecycle
 
-The DSH project target and the DSH profile lifecycle are separate operations:
-
-```bash
-# Generic local outputs plus DSH-specific project skills. No DSH profile change.
-ai-toolkit install --local --editors dsh
-
-# Read-only project plan, including extends resolution.
-ai-toolkit install --local --editors dsh --dry-run
-
-# Explicit global DSH profile mutation. The default profile is web.
-ai-toolkit dsh install --profile web
-ai-toolkit dsh update --profile web
-ai-toolkit dsh doctor --profile web
-ai-toolkit dsh uninstall --profile web --yes
-```
-
-The project command is explicit-only. DSH is excluded from `--editors all`, auto-detection, default profiles, and default editor selection. Its DSH-specific output is `.agents/skills`; the generic `--local` Claude files, detected language rules, and other project outputs still apply. It never writes below `DSH_HOME`.
-
-Project `--dry-run` resolves and validates `extends` without persisting `.softspark-toolkit.lock.json`, then plans every generic and DSH-specific project output without changing the project tree. Existing lock bytes and metadata remain unchanged. It also makes no DSH package, profile, state, or authentication change.
-
-`DSH_HOME` selects the DSH root. The default is `~/.dsh`. It must resolve to an absolute, non-symlink managed root. Profile identifiers accept 1 to 64 lowercase letters, digits, periods, underscores, or hyphens.
-
-The lifecycle supports DSH `0.1.1-rc.2`, stable pnpm `>=11.7.0,<12.0.0`, `@softspark/dsh-codex@1.0.0`, and `@softspark/dsh-orchestrator@1.0.1`. The DSH tag declares `pnpm@11.7.0`, while isolated cold-install qualification used Corepack pnpm `11.24.0`. It invokes the plugin manager with bounded argv-array subprocesses:
-
-```text
-dsh plugin --profile web add @softspark/dsh-codex@1.0.0 --save-exact
-dsh plugin --profile web add @softspark/dsh-orchestrator@1.0.1 --save-exact
-```
-
-The orchestrator preset is copied from the installed package:
-
-```text
-$DSH_HOME/profiles/web/node_modules/@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator
-  -> $DSH_HOME/.agent-presets/softspark-orchestrator
-```
-
-The lifecycle refuses unowned same-name plugins and presets. An unchanged owned install is idempotent. Update and uninstall require every recorded package-tree entry and the preset tree to match current bytes, types, paths, links, and POSIX modes. Generic `ai-toolkit uninstall` does not mutate DSH profiles or remove their ownership state. Use `ai-toolkit dsh uninstall` explicitly.
-
-The persisted `packages` map is the ownership baseline, not the desired version target. Its key set must contain exactly the two managed package names, each value must be an exact version, and its keys must match the stored package-tree inventories. After a reviewed pin bump, `update` verifies the on-disk manifest and trees against those recorded versions, installs the current reviewed pins, and replaces the state record only after all postconditions pass. `uninstall` verifies and removes the recorded owned package names even when the current reviewed pins are newer. Rollback always restores the exact versions captured before the operation.
-
-A zero exit status from DSH is not sufficient to commit a lifecycle operation. Immediately before and after every plugin add or remove, ai-toolkit rereads the profile manifest and the complete managed package trees under the lifecycle lock. A changed, malformed, unexpected, or newly introduced managed entry stops the next external mutation and preserves the concurrent bytes. The managed packages must have the exact recorded pins or be fully absent for uninstall. Dependency entries outside the two managed package names must remain unchanged. A false-success postcondition leaves ownership state uncommitted.
-
-Each stored package inventory uses a domain-separated SHA-256 over stable, length-prefixed records. A record contains the entry type, relative path, POSIX mode, and type-specific metadata. Regular-file metadata contains the byte length and per-file SHA-256. Symlink metadata contains the target text. Traversal is bounded to 100,000 entries and 128 levels, never follows symlinks, and rejects special files. The state stores hashes and metadata only. It stores no package contents, credentials, authentication paths, or child-process environment.
-
-Rollback gives every package-manager recovery command an explicit target derived from the immutable pre-operation snapshot. The target contains the managed package inventory, the exact target package tree, the unchanged non-target package trees, and the pre-operation unrelated dependencies. A successful child exit is accepted only when all four match. A post-command observation is evidence, never a new target. Target drift or unreadable state blocks every later package-manager recovery call, preserves the current bytes, creates a transaction-unique doctor-visible recovery marker, and prints `ai-toolkit dsh doctor --profile <name>` plus deterministic manual inspection paths. This rule applies to install, update, and uninstall rollback.
-
-Before the first mutation, the lifecycle resolves exact DSH and pnpm command paths from the minimal child `PATH`. It records each command path, resolved path, device, inode, type, mode, size, timestamps, and symlink target when applicable. It runs both version probes with a five-second bound and requires pnpm to parse inside the supported range. Missing, nonzero, timed-out, malformed, or unsupported pnpm probes fail before the lifecycle lock and leave no package, preset, state, or lock artifact.
-
-Profile lifecycle `--dry-run` performs read-only runtime, package-manager, and ownership preflight. It prints the exact planned argv and paths. It does not acquire a lifecycle or state lock, create a directory, write state, or start a package-manager mutation. Mutating install, update, and uninstall operations first acquire a nonblocking exclusive POSIX `flock` on the pinned `DSH_HOME` directory descriptor, then hold `$DSH_HOME/.ai-toolkit-lifecycle.lock` from preflight through mutation, rollback, cleanup, and recovery. The directory lock is independent of that replaceable filename. It remains held while a recovery sentinel is created with `O_EXCL` and while both its file and parent directory are synced; release occurs only after normal canonical-lock release or durable sentinel publication. Every competing lifecycle must acquire the same directory lock before sentinel scans and canonical claim. Lock acquisition pins the exact lexical `DSH_HOME` parent and root directory descriptors and passes that one resolved home through the full operation. The prerequisite record is revalidated after the lock and before every package mutation or rollback. Replacement, removal, in-place identity drift, and a new earlier PATH shadow fail closed. The verified pnpm command directory leads the child PATH. Every internal mutation and each external DSH command verifies that the lexical path still names the pinned device, inode, and directory kind. Preset parents, staging trees, recovery containers, copied children, and recovery markers are opened by walking from that root descriptor with no-follow operations. Creation, copy, cleanup, and recovery use descriptor-relative system calls and retain the parent and child device and inode identities through postcondition checks. A mismatch blocks state success and later package commands, preserves both roots, and reports recovery. The child process receives only the verified canonical path. The canonical lock is claimed as a regular non-symlink with exclusive descriptor-relative creation and waits for at most one second. A write, `fsync`, close, or interruption during lock initialization removes only the captured lock inode. If that cleanup cannot complete, the command reports a doctor-visible lock recovery artifact and the next lifecycle command remains fail-closed. Release uses the pinned root descriptor, atomically relocates the lock without replacement, and deletes it only after its device and inode still match the transaction. A displaced root never redirects lock cleanup into its replacement. `doctor` is read-only and does not acquire the lifecycle lock.
-
-If process-tree termination cannot be confirmed, the lifecycle does not enter package rollback or normal lock release. Before writing recovery metadata it verifies that the canonical lock still names the held device and inode, then creates and syncs a transaction-unique `unconfirmed-process-tree` sentinel in the pinned DSH root. It rewrites the held inode only after a second canonical identity check. A removed or renamed canonical lock therefore leaves the recognized sentinel, while a foreign replacement remains byte-identical. Lock acquisition checks process-tree sentinels before and after claiming the canonical name, and every later install, update, or uninstall fails before DSH invocation. `doctor` prints the recorded process group, original profile path, and every exact gate file. Recovery is deliberately manual: verify that the process group has exited, inspect the preserved profile, and only then remove every named gate. Group signaling is permitted only while the unreaped DSH supervisor still binds the group identifier; after that identity is lost, the command preserves the gate rather than risk signaling a reused PGID. Repeated `SIGINT` is deferred or retried through the bounded TERM, KILL, and wait sequence.
-
-Doctor reports runtime compatibility, pnpm availability and version, installed package versions, complete package-tree ownership, preset ownership and hash drift, state consistency, legacy recovery collisions, transaction-unique recovery containers, preserved staging, and whether recovery is required.
-
-The lifecycle never runs login commands, reads vendor credential stores, accepts provider API keys, or forwards provider and registry secret environment variables. Codex, Claude Code, and GitHub Copilot own login state. GitHub AI credits apply to Copilot Gemini delegation. Direct Google AI Pro or Ultra, Gemini CLI OAuth, Antigravity, and Gemini API-key routes are unsupported. Prerequisite probes have a five-second bound. DSH plugin mutations and package rollback commands have a separate 300-second bound suitable for cold resolution, without promising registry or network latency. Each mutation uses a dedicated POSIX session and process group on Linux, WSL, or macOS. The calling thread blocks `SIGINT` with `pthread_sigmask` before `Popen`, restores its previous mask inside one catchable region covering communication and final PGID checks, and restores the mask in `finally`. Every `BaseException` after spawn triggers complete process-tree teardown before propagation. Timeout and interruption require confirmed group exit before rollback; an unconfirmed exit blocks rollback. POSIX directory `flock`, process groups, and thread signal masks are mandatory mutation primitives. Native Windows mutation is unsupported and fails before lifecycle writes. Failed child-process stdout and stderr are never included in user-facing errors. Errors expose only the safe command outcome, such as exit status, timeout, or interruption. Recovery argv contains only the validated DSH executable, profile, fixed package names, and exact pinned versions.
+`ai-toolkit install --local --editors dsh` and `ai-toolkit dsh install|update|doctor|uninstall` were removed on 2026-09-24. Project `.agents/skills` surfaces written for DSH are migrated by `update` / `install --local` and removed by `ai-toolkit uninstall`. DSH profiles are not touched by the toolkit any more. Remove them with DSH itself as described in [DSH Compatibility (retired)](dsh-compatibility.md).
 
 ## State Tracking
 
@@ -15976,60 +15722,15 @@ Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
   "last_updated": "2026-04-07T10:00:00Z",
   "file_hashes": {
     "app/hooks/session-start.sh": "abc123..."
-  },
-  "dsh": {
-    "profiles": {
-      "web": {
-        "dsh_home": "/Users/example/.dsh",
-        "profile": "web",
-        "packages": {
-          "@softspark/dsh-codex": "1.0.0",
-          "@softspark/dsh-orchestrator": "1.0.1"
-        },
-        "package_trees": {
-          "@softspark/dsh-codex": {
-            "digest": "<canonical-tree-sha256>",
-            "entries": [
-              {"type": "directory", "path": ".", "mode": 493},
-              {"type": "file", "path": "package.json", "mode": 420, "size": 53, "sha256": "<file-sha256>"}
-            ]
-          },
-          "@softspark/dsh-orchestrator": {
-            "digest": "<canonical-tree-sha256>",
-            "entries": [
-              {"type": "directory", "path": ".", "mode": 493}
-            ]
-          }
-        },
-        "preset_path": "/Users/example/.dsh/.agent-presets/softspark-orchestrator",
-        "preset_hash": "<sha256>",
-        "owned": true,
-        "installed_at": "2026-08-29T08:00:00Z",
-        "last_updated": "2026-08-29T08:00:00Z"
-      }
-    }
   }
 }
 ```
 
 - `installed_modules` — used by `update` to know which modules to re-apply
 - `file_hashes` — used to skip unchanged files during `update`
-- `dsh.profiles` records the DSH home, profile, exact package versions, canonical package-tree inventories, preset path and hash, ownership, and timestamps
 - The file is written after every successful install or update
 
-Every shared state writer uses the canonical path from `AI_TOOLKIT_HOME`, `SOFTSPARK_HOME`, or the default `~/.softspark/ai-toolkit/state.json` and cooperates through the same bounded `.state.lock`. Where the host provides descriptor-relative atomic primitives, the lock context pins the state parent device and inode. Transaction reads, snapshots, compare-and-swap merges, private temporary creation, writes, `fsync`, publication, mode changes, cleanup, and lock release then address entries relative to that same open parent descriptor. A DSH lifecycle snapshot also records this parent identity and requires the final install, update, uninstall, and rollback state transaction to reopen that exact lexical path and match the same device and inode. The lexical parent binding is checked before publication and release. Replacing the state directory therefore fails without publishing into the replacement or losing either root. Generic install, MCP, and editor state writers retain the portable state contract on every supported Python platform. They use this pinned atomic publisher when available and otherwise publish a private temporary with the platform's atomic replacement primitive while holding the shared lock.
-
-DSH ownership mutation has a stricter platform gate. It requires Linux, WSL, or macOS support for pinned-directory, no-follow, no-replace, and atomic-exchange operations. The lifecycle checks both its DSH filesystem primitives and the state publisher before it creates the state root, state lock, lifecycle lock, temporary, or profile artifact. Secure state lock creation addresses `.state.lock` relative to a pinned no-follow parent descriptor and keeps that descriptor open through release. DSH state publication uses an atomic exchange for an existing file or a no-replace rename for first creation. The writer validates the displaced device, inode, and content digest before cleanup. A mismatched inode is restored or preserved for manual recovery instead of being overwritten or deleted. A bounded retry merges unrelated concurrent state keys. A concurrent change to the same DSH profile is preserved and reported as a recovery conflict.
-
-Records created before package-tree inventories were introduced are intentionally not migrated by assumption. `doctor` reports the invalid ownership state. Reinstall the explicit DSH integration after inspecting or removing the old record. Update and uninstall never claim unknown package bytes as owned.
-
-DSH mutations snapshot the profile manifest, managed package trees, base-directory existence, prior state, and preset before the first external mutation. Interruption and cleanup failure run the same rollback as package failure. Cleanup uses an entry-level inventory of device, inode, kind, digest, and symlink target. Snapshot recreation walks every ancestor without following symlinks, pins the destination parent, and uses descriptor-relative no-clobber creation for files, directories, and symlinks. File and directory modes are restored with `fchmod` only after pinning the exact inode. Post-creation and post-mode checks bind type, inode, mode, digest, and link target to the pinned parent. Unsupported primitives fail before any write, and an inode or ancestor mismatch remains untouched and doctor-visible. Manifest removal, manifest restoration, and transaction-created profile-directory pruning first relocate the candidate without replacement through pinned parent descriptors, then validate the moved inode and content before cleanup. A mismatch remains at its concurrent path or in a reported recovery container. Cleanup never unlinks, replaces, or removes a concurrently substituted file, symlink, or directory. A transaction-created `.agent-presets` parent is removed only when its identity is unchanged and it remains empty.
-
-Update and uninstall revalidate the owned preset identity and content immediately before relocation. The transaction atomically claims a private mode-0700 recovery container with a cryptographically random suffix, then moves the preset to its previously absent `managed-preset` child. It never replaces a caller-provided recovery path. The relocated payload remains bound to the captured device, inode, kind, digest, and symlink target; that same identity is checked immediately and again before every restore or removal. A byte-identical replacement is therefore preserved and reported instead of being treated as transaction-owned. Managed dependency entries must contain exact semantic versions; malformed or non-string values fail before DSH is invoked. A clean-profile rollback removes transaction-created manifest and base directories when they remain unchanged. Existing profile manifests are restored byte-for-byte, and missing pre-existing package entries are recreated without overwriting collisions.
-
-If byte-identical rollback cannot finish, the command returns nonzero and prints every exact safely quoted residual path plus deterministic recovery steps. One failed package recovery command does not authorize the next package command: the loop immediately rechecks the rollback-blocked flag and complete package identity after success or failure, records doctor and inspection actions, and stops package mutation on drift. Independent preset cleanup and state restoration still run, so their failures are aggregated without replacing the original error. Every surviving staging or recovery path remains listed and doctor-visible, so no operation reports success while its owned recovery data survives. Update staging cleanup removes only transaction-owned entries and reports every surviving staging path, including concurrent additions. Package-filesystem and cleanup residuals create transaction-unique `.softspark-orchestrator.ai-toolkit-package.<token>` containers. `ai-toolkit dsh doctor --profile <name>` reports `Recovery needed: yes` until manual recovery is complete.
-
-Real-profile qualification with the published packages and native subscription logins remains pending Phase 3. Static, fixture, and dry-run success is not evidence that this qualification has completed.
+Every shared state writer uses the canonical path from `AI_TOOLKIT_HOME`, `SOFTSPARK_HOME`, or the default `~/.softspark/ai-toolkit/state.json` and cooperates through the same bounded `.state.lock`. Where the host provides descriptor-relative atomic primitives, the lock context pins the state parent device and inode. Transaction reads, snapshots, compare-and-swap merges, private temporary creation, writes, `fsync`, publication, mode changes, cleanup, and lock release then address entries relative to that same open parent descriptor. The lexical parent binding is checked before publication and release. Replacing the state directory therefore fails without publishing into the replacement or losing either root. Generic install, MCP, and editor state writers retain the portable state contract on every supported Python platform. They use this pinned atomic publisher when available and otherwise publish a private temporary with the platform's atomic replacement primitive while holding the shared lock.
 
 ## Implementation Files
 
@@ -16038,7 +15739,6 @@ Real-profile qualification with the published packages and native subscription l
 | `manifest.json` | Module and profile definitions |
 | `scripts/install_steps/detect_language.py` | Auto-detect project language from marker files |
 | `scripts/install_steps/install_state.py` | Read/write `~/.softspark/ai-toolkit/state.json` |
-| `scripts/install_steps/dsh.py` | Explicit DSH install, update, doctor, uninstall, and recovery lifecycle |
 
 ## Backward Compatibility
 
@@ -16056,7 +15756,7 @@ No existing install scripts or CI configurations need changes.
 - [PATH: kb/reference/language-rules.md] — language rules structure and auto-detection detail
 - [PATH: kb/reference/mcp-templates.md] — MCP server templates (the `mcp-templates` module)
 - [PATH: kb/reference/architecture-overview.md] — overall install model
-- [PATH: kb/reference/dsh-compatibility.md] - DSH commands, topology, authentication, and preview limits
+- [PATH: kb/reference/dsh-compatibility.md] - retired DSH integration and manual profile cleanup
 
 ---
 
@@ -16069,7 +15769,7 @@ service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor, antigravity]
 version: "1.4.0"
 created: "2026-04-12"
-last_updated: "2026-08-21"
+last_updated: "2026-09-24"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -16165,6 +15865,20 @@ unsupported legacy `httpUrl` field before any file in the transaction changes.
 roots. They never relocate project files.
 
 Global-only clients are configured explicitly via `ai-toolkit mcp install --editor ...`.
+
+## Uninstall
+
+`ai-toolkit uninstall` removes MCP servers the toolkit can show it added:
+
+- Built-in template servers installed with `mcp install --scope global`. Their
+  template names are recorded in `state.json` (`mcp_templates`). An entry goes
+  only while its value still equals what the toolkit wrote for that editor.
+  Codex entries are matched only inside the managed block.
+- Servers added with `inject-mcp`, by their recorded source.
+
+The mirrors that `install --local` copies from your `.mcp.json` into editor
+configs stay, and so does `.mcp.json` itself. They are your servers, not
+toolkit content.
 
 ## Related
 
@@ -16899,9 +16613,9 @@ title: "Merge-Friendly Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, merge, hooks, injection, symlinks]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-27"
-last_updated: "2026-03-28"
+last_updated: "2026-09-24"
 description: "Reference description of how ai-toolkit preserves user content while installing toolkit components."
 ---
 
@@ -16920,9 +16634,10 @@ Instead of replacing entire directories or files, the installer uses merge-frien
 | `agents/*.md` | per-file symlinks | preserved; user file wins on name conflict |
 | `skills/*/` | per-directory symlinks | preserved; user directory wins on name conflict |
 | `settings.json` hooks | JSON merge with `_source: ai-toolkit` | preserved; toolkit entries removable |
-| `constitution.md` | marker injection | preserved outside markers |
+| `rules/ai-toolkit-*.md` (incl. `ai-toolkit-constitution.md`) | managed files, reserved prefix | other filenames in `rules/` untouched |
 | `ARCHITECTURE.md` | marker injection | preserved outside markers |
 | `CLAUDE.md` | marker injection | preserved outside markers |
+| legacy `constitution.md` | toolkit section stripped on install | preserved outside markers; removed when empty |
 
 ## Why this model exists
 
@@ -17052,7 +16767,7 @@ service: ai-toolkit
 tags: [opencode, compatibility, install, skills, hooks, mcp, plugins]
 version: "1.1.0"
 created: "2026-04-16"
-last_updated: "2026-08-19"
+last_updated: "2026-09-24"
 description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, Agent Skills, subagents, slash commands, JS plugin hooks, and MCP config."
 ---
 
@@ -17197,16 +16912,19 @@ The installer detects opencode as configured when any of these markers exist:
 
 ## Uninstall & Reset
 
-`scripts/install_steps/ai_tools.py` cleanup only removes ai-toolkit-marked artifacts:
+`ai-toolkit uninstall` calls each generator's `cleanup()` (`--local` for the
+project, global for `~/.config/opencode/`). They remove only ai-toolkit-owned
+artifacts:
 
-- Generated `.opencode/agents/ai-toolkit-*.md`
-- Generated `.opencode/commands/ai-toolkit-*.md`
-- Manifest-owned files under generated `.opencode/skills/<name>/` directories
-- Generated `.opencode/plugins/ai-toolkit-hooks.js`
-- Managed markers from `AGENTS.md`
-- `mcp` key entries injected by the toolkit (user keys preserved)
+- Generated `agents/ai-toolkit-*.md` and `commands/ai-toolkit-*.md`
+- Manifest-owned files under generated `skills/<name>/` directories
+- `plugins/ai-toolkit-hooks.js`, when it still carries the generated header
+- Managed marker sections in `AGENTS.md` (the file is deleted only when nothing else is left)
+- `opencode.json`, only when it holds nothing but the toolkit's `$schema` (and an empty `mcp`)
 
+`mcp` entries are copies of the user's own `.mcp.json` and stay.
 User-authored opencode files and user-authored `opencode.json` keys are never deleted.
+`reset --local` removes the generated agents, commands and plugin.
 
 Native skill cleanup removes only manifest-owned files. A user-owned skill or
 an extra file inside a formerly managed directory is preserved. The native
@@ -18148,19 +17866,19 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.16.0"
+version: "1.17.0"
 created: "2026-04-23"
-last_updated: "2026-09-23"
-description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, 11 editors, and the explicit developer-preview DSH target."
+last_updated: "2026-09-24"
+description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
 # Supported Tools Registry
 
 The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view. Update it whenever the JSON changes. The [2026-09-23 review](../planning/ecosystem-sync-20260923.md) records source-backed classifications for every target; local CLI versions are observations, not claims about the latest upstream release.
 
-## Tool Count: 14
+## Tool Count: 13
 
-1 primary runtime, 1 Claude app target, 11 editor integrations, and 1 explicit developer-preview harness target.
+1 primary runtime, 1 Claude app target, and 11 editor integrations. The DeepSeek Harness (`dsh`) target was retired on 2026-09-24; see [DSH Compatibility (retired)](./dsh-compatibility.md).
 
 ---
 
@@ -18200,30 +17918,6 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Runtime split | Skills work in Chat (web/Desktop) and Cowork. App hooks and sub-agents run in Cowork. Plugins enabled on the account also sync to Claude Code terminal sessions from 2.1.273, under `~/.claude/plugins/synced/` with `@synced` IDs. Claude app does **not** scan Claude Code's `~/.claude/rules/`, `CLAUDE.md`, or `~/.claude/settings.json`. |
 | MCP | `ai-toolkit mcp install --editor claude-app --scope global <template>` writes `claude_desktop_config.json` directly -- no plugin involved. Entries are validated by the app as `{command, args, env}`; remote endpoints belong to the separate UI-managed `remoteMcpServers` surface, so HTTP/SSE templates are bridged through `mcp-remote`. Restart the app to load a change. |
 | Install/update | Export the ZIP, upload it from `Customize > Plugins`, then paste the generated global-instructions file into `Settings > Cowork > Global instructions`. Re-export/re-upload after toolkit updates. Account sync does not upload local toolkit updates; the doctor diagnoses possible duplicate loading without automatically disabling organization-required plugins. MCP config is the exception -- it updates from the CLI like any other editor. |
-
----
-
-## Explicit Developer-Preview Harness
-
-### DeepSeek Harness
-
-| Field | Value |
-|-------|-------|
-| ID | `dsh` |
-| Status | `developer-preview`, `explicit-only`. This is a SoftSpark-maintained community compatibility target. DeepSeek AI has not endorsed it. |
-| Reviewed version | DSH `0.1.2-rc.1`, `@softspark/dsh-codex@1.5.0`, and `@softspark/dsh-orchestrator@2.0.0`, with the exact Claude Agent SDK `0.3.263` profile override. |
-| Docs | https://deepseek-harness.github.io/deepseek-harness/ |
-| Release sources | https://github.com/deepseek-ai/deepseek-harness/releases and the reviewed [DSH 0.1.2-rc.1 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1) |
-| Reviewed contracts | Tagged [CLI profile and plugin reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md) and [skill discovery reference](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md) |
-| Config paths | Project `.agents/skills/*/SKILL.md`; profile `$DSH_HOME/profiles/<profile>/package.json`; installed packages under `$DSH_HOME/profiles/<profile>/node_modules/@softspark/`; preset `$DSH_HOME/.agent-presets/softspark-orchestrator` |
-| Project generator | `scripts/generate_codex_skills.py` emits the shared Codex and DSH `.agents/skills` catalog. `ai-toolkit install --local --editors dsh` makes no `$DSH_HOME` write. |
-| Profile lifecycle | `scripts/install_steps/dsh.py` implements explicit `install`, `update`, `doctor`, and `uninstall` for one named profile. |
-| Selection boundary | Excluded from `--editors all`, auto-detection, defaults, default profiles, and global editor selection. |
-| Authentication | ai-toolkit accepts no provider API key and performs no login. Codex, Claude Code, and GitHub Copilot own authentication. Copilot Gemini usage consumes GitHub AI credits. |
-| State and recovery | State uses `AI_TOOLKIT_HOME`, then `SOFTSPARK_HOME`, then `~/.softspark/ai-toolkit/state.json`. Locks and compare-and-swap publication protect ownership. Doctor reports preserved recovery markers and drift. |
-| Upstream drift | DSH `0.1.2-rc.1` completed isolated lifecycle and delegation qualification on 2026-09-06, recorded in [DSH Compatibility](./dsh-compatibility.md#dsh-012-rc1-qualification). Other prereleases require separate source review and real-profile verification before the exact pins change. |
-
-See [DSH Compatibility](./dsh-compatibility.md) for commands, topology, subscription boundaries, lifecycle ownership, and limitations.
 
 ---
 

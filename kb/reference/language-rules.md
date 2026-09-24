@@ -3,19 +3,19 @@ title: "Language Rules System"
 category: reference
 service: ai-toolkit
 tags: [rules, languages, coding-style, testing, patterns, security]
-version: "2.2.0"
+version: "2.3.0"
 created: "2026-04-07"
-last_updated: "2026-09-06"
-description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus common rules installed as Claude Code path-scoped project rules."
+last_updated: "2026-09-24"
+description: "Reference for the language-specific rules system: 13 per-language rule sets shipped as knowledge skills, plus common rules installed as Claude Code path-scoped user-level rules, with project copies only for what the global install lacks."
 ---
 
 # Language Rules System
 
 ## Overview
 
-ai-toolkit ships rule content for 13 languages/platforms plus a language-agnostic common set. Source files live under `app/rules/` and are split into two delivery channels by `ai-toolkit install --local`:
+ai-toolkit ships rule content for 13 languages/platforms plus a language-agnostic common set. Source files live under `app/rules/` and are split into two delivery channels:
 
-- **Common rules** (`app/rules/common/*.md`): full content is written to `.claude/rules/ai-toolkit-*.md` with Claude Code `paths` frontmatter. The project's `.claude/CLAUDE.md` keeps only a compact `<!-- TOOLKIT:language-rules START -->` index. This follows Claude Code's current guidance to keep `CLAUDE.md` concise and move larger instruction sets into scoped rules.
+- **Common rules** (`app/rules/common/*.md`): the global install (`ai-toolkit install` / `update`) writes full content to `~/.claude/rules/ai-toolkit-*.md` with Claude Code `paths` frontmatter; user-level rules load in every project and `paths` scoping works there. `install --local` writes a project copy only of a rule the global install does not provide. The project's `.claude/CLAUDE.md` keeps only a compact `<!-- TOOLKIT:language-rules START -->` index. This follows Claude Code's current guidance to keep `CLAUDE.md` concise and move larger instruction sets into scoped rules.
 - **Per-language rules** (`app/rules/<lang>/*.md`): emitted at build time as `<lang>-rules` knowledge skills under `app/skills/`. Each skill is `user-invocable: false`, so Claude loads it via the Agent Skills progressive-disclosure mechanism only when its description triggers match (file extensions, framework names, or matching keywords in the prompt).
 
 The skills are generated from the rule files via `python3 scripts/generate_language_rules_skills.py`, which is idempotent and rerun-safe. Other editors (Cursor, Windsurf, Cline, Roo, Augment, Codex, Copilot, Antigravity, Gemini, opencode) still receive the full per-language rule content via their own generators in `scripts/dir_rules_shared.py::build_language_rules()` — Claude is the only target where the per-language content is now skill-delivered rather than inlined.
@@ -146,10 +146,10 @@ ai-toolkit install --local --modules core,agents
 
 The `--lang` flag accepts comma-separated language names and converts them to `rules-<lang>` modules. Common aliases are supported: `go` → `golang`, `c++` → `cpp`, `c#`/`cs` → `csharp`. Using `--lang` implies `--local` and disables auto-detection.
 
-Common rules are installed as path-scoped Claude Code rule files:
+Common rules are installed as path-scoped Claude Code user-level rule files by the global install:
 
 ```
-.claude/rules/
+~/.claude/rules/
 ├── ai-toolkit-coding-style.md
 ├── ai-toolkit-git-team.md        # --profile strict only
 ├── ai-toolkit-git-workflow.md
@@ -158,7 +158,18 @@ Common rules are installed as path-scoped Claude Code rule files:
 └── ai-toolkit-testing.md
 ```
 
-A source rule may also carry `profiles:` (same block-list form). `git-team` declares `profiles: ["strict"]`: branching, pull-request, and review conventions for teams, kept out of `standard` so a solo maintainer who releases straight to `main` is not told to open PRs against themselves. Rerunning `install --local` with a different profile adds or removes the managed file. Only the Claude Code local install honours `profiles`; the Claude app export, `compile-slm`, and editor `lang-common` bundles still receive every common rule (see `DECISIONS.md`, 2026-09-04).
+They are not copied into projects. Claude Code loads `~/.claude/rules/` in every project and also loads `.claude/rules/` from parent directories, so a project copy loaded every rule twice, and once more for each registered parent directory (a workspace folder installed with `--local` above its projects). `install --local` writes a project copy only of a rule the global install does not provide, decided by the files actually present in `~/.claude/rules/`:
+
+| Global install | Project | Project `.claude/rules/ai-toolkit-*.md` |
+|---|---|---|
+| present, `standard` | `standard` | none |
+| present, `standard` | `strict` | `ai-toolkit-git-team.md` only |
+| present, `strict` | any | none |
+| absent | any | every rule the project profile ships, as before |
+
+Managed project copies the global install now provides are removed on the next `install --local` or `update`, so existing projects converge. User-authored files in `.claude/rules/` are never touched.
+
+A source rule may also carry `profiles:` (same block-list form). `git-team` declares `profiles: ["strict"]`: branching, pull-request, and review conventions for teams, kept out of `standard` so a solo maintainer who releases straight to `main` is not told to open PRs against themselves. The global install filters by its own profile, a project install by the project's; rerunning either with a different profile adds or removes the managed file. Only the Claude Code installs honour `profiles`; the Claude app export, `compile-slm`, and editor `lang-common` bundles still receive every common rule (see `DECISIONS.md`, 2026-09-04).
 
 Each file's `paths` frontmatter is copied from the source rule in `app/rules/common/<category>.md`. A source rule without a `paths` block is always-on:
 
@@ -187,14 +198,16 @@ The project `CLAUDE.md` receives only a compact index between a single named mar
 <!-- TOOLKIT:language-rules START -->
 # Language Rules
 
-Common ai-toolkit rules live in `.claude/rules/ai-toolkit-*.md`
-with Claude Code `paths` frontmatter instead of expanding this
-CLAUDE.md. Always-on rules load in every session; path-scoped rules
-load only when a matching file is touched.
+Common ai-toolkit rules load as Claude Code rules with `paths`
+frontmatter instead of expanding this CLAUDE.md: from
+`~/.claude/rules/` when the global install provides them, from this
+project's `.claude/rules/` only for a rule it does not. Always-on
+rules load in every session; path-scoped rules load only when a
+matching file is touched.
 
-Always-on: `.claude/rules/ai-toolkit-coding-style.md`, ...
+Always-on: `~/.claude/rules/ai-toolkit-coding-style.md`, ...
 
-Path-scoped: `.claude/rules/ai-toolkit-performance.md`, ...
+Path-scoped: `~/.claude/rules/ai-toolkit-performance.md`, ...
 
 Language-specific rules live in `<lang>-rules` knowledge skills (e.g.
 `python-rules`, `typescript-rules`) and load automatically when their
@@ -204,7 +217,7 @@ Detected languages: `python-rules`, `typescript-rules`.
 <!-- TOOLKIT:language-rules END -->
 ```
 
-Re-running `install --local` is idempotent — the existing block is replaced, not duplicated, and only managed `.claude/rules/ai-toolkit-*.md` files are refreshed. User-authored `.claude/rules/*.md` files are preserved. Per-language rules are not injected into `CLAUDE.md` for Claude — they are loaded contextually via their respective `<lang>-rules` knowledge skills.
+Re-running `install --local` is idempotent — the existing block is replaced, not duplicated, and only managed `.claude/rules/ai-toolkit-*.md` files are written or removed. User-authored `.claude/rules/*.md` files are preserved. Per-language rules are not injected into `CLAUDE.md` for Claude — they are loaded contextually via their respective `<lang>-rules` knowledge skills.
 
 ### Generating language-rules skills
 
@@ -251,10 +264,10 @@ Language rules are tracked as modules in `manifest.json`:
 | | Common rules | Per-language rules | Other skills |
 |---|---|---|---|
 | Source | `app/rules/common/` | `app/rules/<lang>/` | `app/skills/<name>/SKILL.md` |
-| Delivery to Claude | Path-scoped `.claude/rules/ai-toolkit-*.md` files (`--local`) + compact `CLAUDE.md` index | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
+| Delivery to Claude | Path-scoped user-level `~/.claude/rules/ai-toolkit-*.md` files (global install), project copies only for rules the global install lacks, + compact `CLAUDE.md` index | Generated as `<lang>-rules` knowledge skills, loaded contextually | Loaded contextually by description match |
 | Visibility | Always-on (`coding-style`, `git-workflow`, `security`) or loaded when a matching file is touched (`testing`, `performance`) | Loaded when triggers match (file extensions, framework names) | Loaded when triggers match |
 | Scope | Language-agnostic standards (security, git, testing, perf, style) | Per-language coding-style, frameworks, patterns, security, testing | Domain skills (testing, debugging, RAG, etc.) |
-| Install | `ai-toolkit install --local` | Global install (skills directory is symlinked); skills for languages no registered project uses are turned off via `skillOverrides` (`--language-skills detected`, the default) unless `--language-skills all` was chosen | Global install |
+| Install | Global install; `ai-toolkit install --local` only fills gaps | Global install (skills directory is symlinked); skills for languages no registered project uses are turned off via `skillOverrides` (`--language-skills detected`, the default) unless `--language-skills all` was chosen | Global install |
 | Other editors | Inlined into editor-specific rule files | Inlined into editor-specific rule files (still full content, not skills) | N/A |
 
 Per-language content delivered as a knowledge skill is the same Markdown that other editors receive inlined. The split exists only for Claude, where the Agent Skills progressive-disclosure mechanism keeps the system prompt small.

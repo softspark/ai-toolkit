@@ -78,16 +78,38 @@ teardown() {
     [ ! -f "$TEST_PROJECT/.claude/constitution.md" ]
 }
 
-@test "uninstall.py preserves user content in constitution.md" {
-    printf "# My rules\n" > "$TEST_PROJECT/.claude/constitution.tmp"
-    cat "$TEST_PROJECT/.claude/constitution.md" >> "$TEST_PROJECT/.claude/constitution.tmp"
-    mv "$TEST_PROJECT/.claude/constitution.tmp" "$TEST_PROJECT/.claude/constitution.md"
+@test "uninstall.py preserves user content in a legacy constitution.md" {
+    printf '%s\n' '# My rules' '<!-- TOOLKIT:constitution START -->' '# toolkit copy' \
+        '<!-- TOOLKIT:constitution END -->' > "$TEST_PROJECT/.claude/constitution.md"
 
     python3 "$TOOLKIT_DIR/scripts/uninstall.py" "$TEST_PROJECT" --yes >/dev/null 2>&1
 
     [ -f "$TEST_PROJECT/.claude/constitution.md" ]
     grep -q "My rules" "$TEST_PROJECT/.claude/constitution.md"
     ! grep -q "<!-- TOOLKIT:" "$TEST_PROJECT/.claude/constitution.md"
+}
+
+@test "uninstall.py removes toolkit rule files and keeps user rules" {
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-constitution.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-security.md" ]
+    printf '# mine\n' > "$TEST_PROJECT/.claude/rules/my-rule.md"
+
+    python3 "$TOOLKIT_DIR/scripts/uninstall.py" "$TEST_PROJECT" --yes >/dev/null 2>&1
+
+    run find "$TEST_PROJECT/.claude/rules" -name 'ai-toolkit-*.md'
+    [ -z "$output" ]
+    [ -f "$TEST_PROJECT/.claude/rules/my-rule.md" ]
+}
+
+@test "uninstall.py strips the toolkit rules index from CLAUDE.md and keeps user text" {
+    printf '# My notes\n\n' | cat - "$TEST_PROJECT/.claude/CLAUDE.md" > "$TEST_PROJECT/.claude/CLAUDE.tmp"
+    mv "$TEST_PROJECT/.claude/CLAUDE.tmp" "$TEST_PROJECT/.claude/CLAUDE.md"
+    grep -q '<!-- TOOLKIT:global-rules START -->' "$TEST_PROJECT/.claude/CLAUDE.md"
+
+    python3 "$TOOLKIT_DIR/scripts/uninstall.py" "$TEST_PROJECT" --yes >/dev/null 2>&1
+
+    grep -q '# My notes' "$TEST_PROJECT/.claude/CLAUDE.md"
+    ! grep -q '<!-- TOOLKIT:global-rules' "$TEST_PROJECT/.claude/CLAUDE.md"
 }
 
 @test "uninstall.py is idempotent" {
@@ -416,6 +438,166 @@ PY
 @test "uninstall.py removes empty skills/ directory after cleanup" {
     python3 "$TOOLKIT_DIR/scripts/uninstall.py" "$TEST_PROJECT" --yes >/dev/null 2>&1
     [ ! -d "$TEST_PROJECT/.claude/skills" ]
+}
+
+write_toolkit_settings() {
+    mkdir -p "$TMP_HOME/.claude/output-styles"
+    cp "$TOOLKIT_DIR/app/output-styles/"*.md "$TMP_HOME/.claude/output-styles/"
+    printf '%s\n' '---' 'name: Mine' '---' > "$TMP_HOME/.claude/output-styles/mine.md"
+    # Untagged toolkit entries: Claude Code drops "_source" when it rewrites
+    # settings.json, so ownership has to come from the toolkit script path.
+    cat > "$TMP_HOME/.claude/settings.json" <<'EOF'
+{
+    "model": "opus",
+    "outputStyle": "Golden Rules",
+    "skillListingBudgetFraction": 0.02,
+    "env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1", "USER_VAR": "x"},
+    "skillOverrides": {"php-rules": "off", "my-skill": "off"},
+    "statusLine": {"type": "command", "command": "bash \"$HOME/.softspark/ai-toolkit/hooks/ai-toolkit-statusline.sh\""},
+    "hooks": {
+        "PreToolUse": [
+            {"matcher": "Bash", "hooks": [
+                {"type": "command", "command": "bash \"$HOME/.softspark/ai-toolkit/hooks/guard-destructive.sh\""},
+                {"type": "command", "command": "echo user-chained"}
+            ]},
+            {"matcher": "Edit", "hooks": [{"type": "command", "command": "echo user"}]}
+        ],
+        "Stop": [
+            {"_source": "ai-toolkit", "matcher": "", "hooks": [{"type": "command", "command": "echo tagged"}]}
+        ]
+    }
+}
+EOF
+    python3 - "$TMP_HOME/.softspark/ai-toolkit/state.json" <<'PY'
+import json, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+state = json.loads(path.read_text()) if path.is_file() else {}
+state["managed_skill_overrides"] = ["php-rules"]
+path.write_text(json.dumps(state))
+PY
+}
+
+@test "uninstall --global strips every toolkit setting and keeps user settings" {
+    write_toolkit_settings
+
+    run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+    [ "$status" -eq 0 ]
+
+    run python3 - "$TMP_HOME/.claude/settings.json" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1]))
+assert data == {
+    "model": "opus",
+    "env": {"USER_VAR": "x"},
+    "skillOverrides": {"my-skill": "off"},
+    "hooks": {"PreToolUse": [
+        {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo user-chained"}]},
+        {"matcher": "Edit", "hooks": [{"type": "command", "command": "echo user"}]},
+    ]},
+}, data
+PY
+    [ "$status" -eq 0 ]
+    [ ! -e "$TMP_HOME/.claude/output-styles/golden-rules.md" ]
+    [ -f "$TMP_HOME/.claude/output-styles/mine.md" ]
+}
+
+@test "uninstall --global keeps a user's own output style and budget" {
+    write_toolkit_settings
+    python3 - "$TMP_HOME/.claude/settings.json" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1]))
+data.update(outputStyle="Mine", skillListingBudgetFraction=0.05)
+json.dump(data, open(sys.argv[1], "w"))
+PY
+
+    run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+    [ "$status" -eq 0 ]
+    [ "$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["outputStyle"], d["skillListingBudgetFraction"])' \
+        "$TMP_HOME/.claude/settings.json")" = "Mine 0.05" ]
+}
+
+@test "uninstall --global archives the data directory, then removes it" {
+    mkdir -p "$TMP_HOME/.softspark/ai-toolkit/sessions/repo" "$TMP_HOME/.softspark/other-tool"
+    printf '%s\n' "session history" > "$TMP_HOME/.softspark/ai-toolkit/sessions/repo/session-context.md"
+
+    run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+    [ "$status" -eq 0 ]
+    [ ! -e "$TMP_HOME/.softspark/ai-toolkit" ]
+    [ -d "$TMP_HOME/.softspark/other-tool" ]
+    local archive
+    archive="$(ls "$TMP_HOME"/ai-toolkit-backup-*.tar.gz)"
+    [ "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$archive")" = "0o600" ]
+    [ "$(tar -xzOf "$archive" ai-toolkit/sessions/repo/session-context.md)" = "session history" ]
+    tar -tzf "$archive" | grep -q '^ai-toolkit/state.json$'
+}
+
+@test "uninstall --global uninstalls every registered project, then drops the registry" {
+    local project
+    project="$(mktemp -d)"
+    mkdir -p "$project/.git/hooks" "$project/.claude/rules"
+    python3 "$TOOLKIT_DIR/scripts/install_git_hooks.py" "$project" >/dev/null
+    printf '%s\n' '#!/bin/sh' 'echo user hook' > "$project/.git/hooks/pre-commit.backup"
+    { cat "$TOOLKIT_DIR/app/CLAUDE.md.template"; printf '\n%s\n%s\n' '## Project Constitution' '@.claude/constitution.md'; } \
+        > "$project/CLAUDE.md"
+    cp "$TOOLKIT_DIR/app/mcp-defaults.json" "$project/.claude/settings.local.json"
+    printf '%s\n' '{}' > "$project/.softspark-toolkit.lock.json"
+    printf '%s\n' 'rule' > "$project/.claude/rules/ai-toolkit-security.md"
+    printf '%s\n' 'mine' > "$project/.claude/rules/mine.md"
+    printf '{"projects": [{"path": "%s"}]}\n' "$project" > "$TMP_HOME/.softspark/ai-toolkit/projects.json"
+
+    run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Registered project: $project (local)"* ]]
+    [ "$(cat "$project/.git/hooks/pre-commit")" = "$(printf '%s\n' '#!/bin/sh' 'echo user hook')" ]
+    [ ! -e "$project/.git/hooks/pre-commit.backup" ]
+    [ ! -e "$project/CLAUDE.md" ]
+    [ ! -e "$project/.claude/settings.local.json" ]
+    [ ! -e "$project/.softspark-toolkit.lock.json" ]
+    [ ! -e "$project/.claude/rules/ai-toolkit-security.md" ]
+    [ -f "$project/.claude/rules/mine.md" ]
+    [ ! -e "$TMP_HOME/.softspark/ai-toolkit" ]
+    rm -rf "$project"
+}
+
+@test "uninstall --global stops before any change when a registered project is unsafe" {
+    local project outside
+    project="$(mktemp -d)"
+    outside="$(mktemp -d)"
+    ln -s "$outside" "$project/.claude"
+    printf '{"projects": [{"path": "%s"}]}\n' "$project" > "$TMP_HOME/.softspark/ai-toolkit/projects.json"
+    write_toolkit_settings
+    local before
+    before="$(shasum "$TMP_HOME/.claude/settings.json")"
+
+    run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Refusing symlinked Claude configuration root"* ]]
+    [ "$(shasum "$TMP_HOME/.claude/settings.json")" = "$before" ]
+    [ -f "$TMP_HOME/.softspark/ai-toolkit/projects.json" ]
+    [ -z "$(ls "$TMP_HOME" | grep ai-toolkit-backup)" ]
+    rm -rf "$project" "$outside"
+}
+
+@test "uninstall --local keeps edited project files, strips the import, and unregisters" {
+    local project
+    project="$(cd "$(mktemp -d)" && pwd -P)"
+    mkdir -p "$project/.claude"
+    printf '%s\n' '# My project' '' '## Project Constitution' '@.claude/constitution.md' > "$project/CLAUDE.md"
+    printf '%s\n' '{"mcpServers": {"mine": {"command": "x"}}}' > "$project/.claude/settings.local.json"
+    printf '%s\n' '{}' > "$project/.softspark-toolkit-extends.json"
+    printf '{"projects": [{"path": "%s"}, {"path": "/elsewhere"}]}\n' "$project" \
+        > "$TMP_HOME/.softspark/ai-toolkit/projects.json"
+
+    run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --local --yes --target "$project"
+    [ "$status" -eq 0 ]
+    [ "$(cat "$project/CLAUDE.md")" = "# My project" ]
+    grep -q '"mine"' "$project/.claude/settings.local.json"
+    [ ! -e "$project/.softspark-toolkit-extends.json" ]
+    [ "$(python3 -c 'import json,sys; print([p["path"] for p in json.load(open(sys.argv[1]))["projects"]])' \
+        "$TMP_HOME/.softspark/ai-toolkit/projects.json")" = "['/elsewhere']" ]
+    [ -f "$TMP_HOME/.softspark/ai-toolkit/state.json" ]
+    rm -rf "$project"
 }
 
 @test "uninstall.py handles old-style directory symlink" {

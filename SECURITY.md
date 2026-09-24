@@ -47,8 +47,6 @@ Published Python runtime scripts use the standard library. Explicit commands can
 
 Installation manages the files required by the selected developer-tool integrations, using generated files, copies, and symlinks as appropriate. Its scope includes project and user configuration locations, depending on the command and target. Review the command's dry-run output and ownership checks before changing an existing installation.
 
-DSH package installation and updates are explicit profile lifecycle operations. They invoke the supported package manager and preserve unrelated profile dependencies and files. Vendor authentication stays with the vendor's own CLI; the toolkit does not implement a credential broker.
-
 ## GitHub Security Advisories
 
 For confirmed vulnerabilities, we use [GitHub Security Advisories](https://github.com/softspark/ai-toolkit/security/advisories) to:

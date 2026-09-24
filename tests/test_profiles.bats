@@ -54,7 +54,7 @@ teardown() {
     [ "$status" -eq 0 ]
     [ -d "$TEST_PROJECT/.claude/agents" ]
     [ -d "$TEST_PROJECT/.claude/skills" ]
-    [ -f "$TEST_PROJECT/.claude/constitution.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-constitution.md" ]
 }
 
 @test "install --profile strict installs everything" {
@@ -62,7 +62,7 @@ teardown() {
     [ "$status" -eq 0 ]
     [ -d "$TEST_PROJECT/.claude/agents" ]
     [ -d "$TEST_PROJECT/.claude/skills" ]
-    [ -f "$TEST_PROJECT/.claude/constitution.md" ]
+    [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-constitution.md" ]
 }
 
 @test "install --profile strict installs git hooks when .git exists" {

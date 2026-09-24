@@ -5,7 +5,6 @@
 """Install global and project-local AI tool configs."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
 import shutil
 import subprocess
@@ -15,10 +14,11 @@ from _common import app_dir, inject_section, toolkit_dir
 from frontmatter import FrontmatterError, parse_frontmatter, split_frontmatter
 from codex_skill_adapter import (
     cleanup_codex_skills,
+    has_legacy_dsh_skill_surface,
     managed_skill_surface_transaction,
+    remove_legacy_dsh_skill_surface,
     skill_surface_owners,
     sync_codex_skill,
-    sync_dsh_skill,
     unmanaged_codex_skill_names,
 )
 from mcp_editors import sync_project_mcp_to_editors
@@ -29,6 +29,7 @@ from output_filter_retirement import (
 from injection import (
     collapse_blank_runs as _collapse_blank_runs,
     strip_all_sections as _strip_all_sections,
+    strip_section as _strip_section,
     trim_trailing_blanks as _trim_trailing_blanks,
 )
 
@@ -755,40 +756,11 @@ def run_script(script_name: str, *args: str, capture: bool = False) -> str:
     return result.stdout if capture else ""
 
 
-@dataclass(frozen=True, slots=True)
-class EditorCapability:
-    """Selection policy for one ``--editors`` target."""
-
-    include_in_all: bool = True
-    requires_local: bool = False
-
-
-EDITOR_CAPABILITIES = {
-    "copilot": EditorCapability(),
-    "cursor": EditorCapability(),
-    "windsurf": EditorCapability(),
-    "cline": EditorCapability(),
-    "roo": EditorCapability(),
-    "aider": EditorCapability(),
-    "augment": EditorCapability(),
-    "antigravity": EditorCapability(),
-    "codex": EditorCapability(),
-    "gemini": EditorCapability(),
-    "opencode": EditorCapability(),
-    "dsh": EditorCapability(include_in_all=False, requires_local=True),
-}
-
-SELECTABLE_EDITORS = list(EDITOR_CAPABILITIES)
+# All known editor identifiers for --editors flag
 ALL_EDITORS = [
-    editor
-    for editor, capability in EDITOR_CAPABILITIES.items()
-    if capability.include_in_all
+    "copilot", "cursor", "windsurf", "cline", "roo",
+    "aider", "augment", "antigravity", "codex", "gemini", "opencode",
 ]
-LOCAL_ONLY_EDITORS = {
-    editor
-    for editor, capability in EDITOR_CAPABILITIES.items()
-    if capability.requires_local
-}
 
 # Map of project files/dirs → editor names for auto-detection
 _EDITOR_MARKERS: dict[str, str] = {
@@ -952,21 +924,18 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
         print("  Removed: .claude/hooks.json (legacy)")
     print("  Note: hooks are merged into global ~/.claude/settings.json only (not project-local)")
 
-    constitution_src = app_dir / "constitution.md"
-    if constitution_src.is_file():
-        inject_section(
-            constitution_src,
-            cwd / ".claude" / "constitution.md",
-            "constitution",
-        )
-        print("  Injected: .claude/constitution.md")
+    user_rules = user_rules_dir()
+    _sync_local_constitution(cwd, user_rules)
 
     # Apply extends: inject base rules and constitution amendments
     if merged_config:
         _apply_extends_config(cwd, merged_config)
 
+    _reconcile_constitution_import(cwd)
+
     # Inject language-specific rules into project CLAUDE.md
-    _inject_language_rules(cwd, language_modules, profile=profile)
+    _inject_language_rules(cwd, language_modules, profile=profile,
+                           user_rules=user_rules)
 
     # Install editor configs only for resolved editors
     _create_local_ai_tool_configs(cwd, rules_dir, resolved_editors,
@@ -1062,21 +1031,99 @@ def _apply_extends_config(cwd: Path, merged: dict) -> None:
         print("  Saved: .softspark-toolkit-extends.json (resolution metadata)")
 
 
+def user_rules_dir() -> Path:
+    """Claude Code user-level rules directory, resolved at call time."""
+    return Path.home() / ".claude" / "rules"
+
+
+CONSTITUTION_RULE = "ai-toolkit-constitution"
+_CONSTITUTION_IMPORT = "@.claude/constitution.md"
+_CONSTITUTION_HEADING = "## Project Constitution"
+
+
+def _sync_local_constitution(cwd: Path, user_rules: Path) -> None:
+    """Keep the toolkit constitution out of the project when it is global.
+
+    The global install writes it as ``~/.claude/rules/ai-toolkit-constitution.md``,
+    which Claude Code loads in every project. A project copy on top of that
+    loads the same articles twice, and once more for every registered parent
+    directory. Without a global install the project still needs its own copy.
+    """
+    local = cwd / ".claude" / "constitution.md"
+    if not (user_rules / f"{CONSTITUTION_RULE}.md").is_file():
+        constitution_src = app_dir / "constitution.md"
+        if constitution_src.is_file():
+            inject_section(constitution_src, local, "constitution")
+            print("  Injected: .claude/constitution.md (no global install found)")
+        return
+    if local.is_file() and not local.is_symlink():
+        original = local.read_text(encoding="utf-8")
+        stripped = _strip_section(original, "constitution")
+        if stripped != original:
+            local.write_text(stripped, encoding="utf-8")
+            print("  Migrated: toolkit constitution now loads from ~/.claude/rules/")
+
+
+def _reconcile_constitution_import(cwd: Path) -> None:
+    """Import ``.claude/constitution.md`` exactly when it has content.
+
+    What remains locally after the global move is project-owned: extends
+    amendments (Article VIII+) or text a user added. An empty file and its
+    import are removed so the project does not point at nothing.
+    """
+    local = cwd / ".claude" / "constitution.md"
+    claude_md = cwd / "CLAUDE.md"
+    has_content = (
+        local.is_file()
+        and not local.is_symlink()
+        and bool(local.read_text(encoding="utf-8").strip())
+    )
+    if local.is_file() and not local.is_symlink() and not has_content:
+        local.unlink()
+        print("  Removed: .claude/constitution.md (empty after migration)")
+    if not claude_md.is_file():
+        return
+    text = claude_md.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    imported = any(line.strip() == _CONSTITUTION_IMPORT for line in lines)
+    if has_content and not imported:
+        suffix = "" if text.endswith("\n") or not text else "\n"
+        claude_md.write_text(
+            f"{text}{suffix}\n{_CONSTITUTION_HEADING}\n{_CONSTITUTION_IMPORT}\n",
+            encoding="utf-8",
+        )
+        print("  Added: CLAUDE.md import of .claude/constitution.md")
+    elif not has_content and imported:
+        kept: list[str] = []
+        for line in lines:
+            if line.strip() == _CONSTITUTION_IMPORT:
+                if kept and kept[-1].strip() == _CONSTITUTION_HEADING:
+                    kept.pop()
+                continue
+            kept.append(line)
+        claude_md.write_text(
+            _collapse_blank_runs("\n".join(kept).rstrip("\n") + "\n"),
+            encoding="utf-8",
+        )
+        print("  Removed: CLAUDE.md import of .claude/constitution.md")
+
+
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None,
-                           profile: str = "standard") -> None:
+                           profile: str = "standard",
+                           user_rules: Path | None = None) -> None:
     """Install Claude language-rule entrypoints for a project.
 
     Per-language rules (``app/rules/<lang>/``) are NOT injected here -- they
     ship as ``<lang>-rules`` knowledge skills under ``app/skills/`` and load
     contextually via the Agent Skills progressive-disclosure mechanism.
 
-    Common rules are written as Claude Code rules under ``.claude/rules/``.
-    Each source rule's ``paths`` frontmatter decides whether it is always-on
-    (``**/*``: coding-style, git-workflow, security) or path-scoped (testing,
-    performance load only for matching files). Current Claude Code guidance
-    targets under 200 lines per ``CLAUDE.md`` file; keeping rule bodies out
-    of it and scoping the ones that are file-type specific keeps startup
-    context smaller.
+    Common rules are Claude Code user-level rules: the global install writes
+    them to ``~/.claude/rules/``, which loads in every project. Claude Code
+    also loads ``.claude/rules/`` from parent directories, so a project copy
+    would load each rule twice, and again for every registered parent. The
+    project gets a copy only of a rule the global install does not provide:
+    all of them without a global install, ``git-team`` for a ``strict``
+    project under a ``standard`` global install.
     """
     if not language_modules:
         return
@@ -1086,7 +1133,10 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None,
     if not common_dir.is_dir():
         return
 
-    rule_files = _sync_claude_common_rules(cwd, common_dir, profile)
+    rule_files = _sync_claude_common_rules(
+        cwd, common_dir, profile,
+        user_rules=user_rules if user_rules is not None else user_rules_dir(),
+    )
 
     # Detect requested per-language modules so we can name the linked skills
     # in the marker block. The modules themselves are not inlined.
@@ -1099,10 +1149,12 @@ def _inject_language_rules(cwd: Path, language_modules: list[str] | None,
 
     lines: list[str] = ["# Language Rules", ""]
     lines.append(
-        "Common ai-toolkit rules live in `.claude/rules/ai-toolkit-*.md` "
-        "with Claude Code `paths` frontmatter instead of expanding this "
-        "CLAUDE.md. Always-on rules load in every session; path-scoped rules "
-        "load only when a matching file is touched."
+        "Common ai-toolkit rules load as Claude Code rules with `paths` "
+        "frontmatter instead of expanding this CLAUDE.md: from "
+        "`~/.claude/rules/` when the global install provides them, from this "
+        "project's `.claude/rules/` only for a rule it does not. Always-on "
+        "rules load in every session; path-scoped rules load only when a "
+        "matching file is touched."
     )
     always_on = [p for p, on in rule_files if on]
     scoped = [p for p, on in rule_files if not on]
@@ -1168,53 +1220,80 @@ def _rule_source(src: Path) -> tuple[str, list[str], list[str]]:
     )
 
 
+def common_rule_sources(profile: str = "standard",
+                        common_dir: Path | None = None) -> list[tuple[str, str, list[str]]]:
+    """``(stem, body, paths)`` for every common rule ``profile`` ships.
+
+    A ``profiles`` frontmatter restricts the rule to those install profiles
+    (``git-team`` ships with ``strict`` only).
+    """
+    source_dir = common_dir if common_dir is not None else app_dir / "rules" / "common"
+    sources: list[tuple[str, str, list[str]]] = []
+    for src in sorted(source_dir.glob("*.md")):
+        body, paths, gate = _rule_source(src)
+        if gate and profile not in gate:
+            continue
+        sources.append((src.stem, body, paths))
+    return sources
+
+
+def render_common_rule(body: str, paths: list[str]) -> str:
+    """A Claude Code rule file: ``paths`` frontmatter, then the rule body."""
+    return "\n".join([
+        "---",
+        "paths:",
+        *[f'  - "{p}"' for p in paths],
+        "---",
+        "",
+        body.lstrip("\n").rstrip(),
+        "",
+    ])
+
+
 def _sync_claude_common_rules(cwd: Path, common_dir: Path,
-                              profile: str = "standard") -> list[tuple[str, bool]]:
-    """Write common ai-toolkit rules as Claude Code path-scoped rules.
+                              profile: str = "standard",
+                              user_rules: Path | None = None) -> list[tuple[str, bool]]:
+    """Write the project copies of common rules the global install lacks.
 
     Each source rule's ``paths`` frontmatter decides its scope; rules
-    without one are always-on. A ``profiles`` frontmatter restricts the rule
-    to those install profiles (``git-team`` ships with ``strict`` only); a
-    managed file whose rule no longer applies is removed, so switching profile
-    on a rerun converges. Returns ``(relative path, always_on)`` pairs.
+    without one are always-on. A managed project file whose rule is now
+    provided globally, or no longer applies to the profile, is removed, so an
+    update converges. Returns ``(path, always_on)`` pairs for every rule that
+    loads in this project, user-level ones as ``~/.claude/rules/...``.
 
     Only ``ai-toolkit-*.md`` files are managed. User-authored files in
     ``.claude/rules/`` are preserved.
     """
+    global_dir = user_rules if user_rules is not None else user_rules_dir()
     rules_dir = cwd / ".claude" / "rules"
-    rules_dir.mkdir(parents=True, exist_ok=True)
 
-    source_files: list[tuple[Path, str, list[str]]] = []
-    for src in sorted(common_dir.glob("*.md")):
-        body, paths, gate = _rule_source(src)
-        if gate and profile not in gate:
-            continue
-        source_files.append((src, body, paths))
-    expected = {f"ai-toolkit-{src.stem}.md" for src, _, _ in source_files}
-    for stale in sorted(rules_dir.glob("ai-toolkit-*.md")):
-        if stale.name not in expected:
-            stale.unlink()
+    local: list[tuple[str, str, list[str]]] = []
+    loaded: list[tuple[str, bool]] = []
+    for stem, body, paths in common_rule_sources(profile, common_dir):
+        name = f"ai-toolkit-{stem}.md"
+        always_on = paths == ALWAYS_ON_RULE_PATHS
+        if (global_dir / name).is_file():
+            loaded.append((f"~/.claude/rules/{name}", always_on))
+        else:
+            local.append((stem, body, paths))
+            loaded.append(((Path(".claude") / "rules" / name).as_posix(), always_on))
 
-    written: list[tuple[str, bool]] = []
-    for src, body, paths in source_files:
-        body = body.lstrip("\n").rstrip()
-        rel = Path(".claude") / "rules" / f"ai-toolkit-{src.stem}.md"
-        target = cwd / rel
-        target.write_text(
-            "\n".join([
-                "---",
-                "paths:",
-                *[f'  - "{p}"' for p in paths],
-                "---",
-                "",
-                body,
-                "",
-            ]),
-            encoding="utf-8",
+    expected = {f"ai-toolkit-{stem}.md" for stem, _, _ in local}
+    if rules_dir.is_dir():
+        for stale in sorted(rules_dir.glob("ai-toolkit-*.md")):
+            if stale.name not in expected:
+                stale.unlink()
+        if not expected and not any(rules_dir.iterdir()):
+            rules_dir.rmdir()
+
+    if local:
+        rules_dir.mkdir(parents=True, exist_ok=True)
+    for stem, body, paths in local:
+        (rules_dir / f"ai-toolkit-{stem}.md").write_text(
+            render_common_rule(body, paths), encoding="utf-8",
         )
-        written.append((rel.as_posix(), paths == ALWAYS_ON_RULE_PATHS))
 
-    return written
+    return loaded
 
 
 def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
@@ -1228,8 +1307,10 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
     else:
         print("  Would create: CLAUDE.md (if missing)")
         print("  Would create: .claude/settings.local.json (if missing)")
-        print("  Would inject: .claude/constitution.md")
-        print("  Would generate: .claude/rules/ai-toolkit-*.md")
+        print("  Would inject: .claude/constitution.md only without a global install "
+              "(otherwise it loads from ~/.claude/rules/)")
+        print("  Would generate: .claude/rules/ai-toolkit-*.md only for common rules "
+              "the global install does not provide")
 
     add_copilot_dir = profile in {"standard", "strict", "full"}
     add_gemini_hooks = profile in {"standard", "strict", "full"}
@@ -1310,8 +1391,8 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         print("  Would generate: .agents/skills/ Codex skills")
         if codex_skills:
             print("  Would refresh: .agents/skills/ via --codex-skills")
-    if "dsh" in eds:
-        print("  Would generate: .agents/skills/ DSH-compatible managed skills")
+    elif has_legacy_dsh_skill_surface(Path.cwd()):
+        print("  Would remove: retired DSH-only .agents/skills/ managed skills")
     if not eds:
         print("  No editors selected (use --editors <list> or --editors all)")
 
@@ -1407,14 +1488,8 @@ def _create_local_settings(cwd: Path, reset: bool) -> None:
         print("  Kept: .claude/settings.local.json (already exists)")
 
 
-def _install_agent_skills(cwd: Path, *, target: str) -> None:
-    """Install all skills to the managed ``.agents/skills`` surface.
-
-    Codex-only installs retain Codex-specific wrappers. DSH-only and shared
-    Codex/DSH installs use portable wrappers that retain DSH invocation fields.
-    """
-    if target not in {"codex", "dsh", "shared"}:
-        raise ValueError(f"Unsupported agent skill target: {target}")
+def _install_codex_skills(cwd: Path) -> None:
+    """Install all skills to the managed Codex ``.agents/skills`` surface."""
     skills_src = app_dir / "skills"
     if not skills_src.is_dir():
         return
@@ -1436,14 +1511,7 @@ def _install_agent_skills(cwd: Path, *, target: str) -> None:
                 skipped += 1
                 continue
 
-            if target == "codex":
-                mode = sync_codex_skill(skill_dir, skills_dst)
-            else:
-                mode = sync_dsh_skill(
-                    skill_dir,
-                    skills_dst,
-                    shared=target == "shared",
-                )
+            mode = sync_codex_skill(skill_dir, skills_dst)
             if mode == "linked":
                 linked += 1
             elif mode == "adapted":
@@ -1452,8 +1520,7 @@ def _install_agent_skills(cwd: Path, *, target: str) -> None:
                 skipped += 1
 
         cleanup_codex_skills(skills_dst, skills_src, user_names)
-        owners = {"codex", "dsh"} if target == "shared" else {target}
-        transaction.commit(owners)
+        transaction.commit({"codex"})
 
     print(
         f"  Installed: {linked + adapted} skills to .agents/skills/"
@@ -1461,14 +1528,12 @@ def _install_agent_skills(cwd: Path, *, target: str) -> None:
     )
 
 
-def _install_codex_skills(cwd: Path) -> None:
-    """Install the Codex-specific managed skill surface."""
-    _install_agent_skills(cwd, target="codex")
-
-
-def _install_dsh_skills(cwd: Path, *, shared: bool = False) -> None:
-    """Install DSH-portable skills, optionally shared with Codex."""
-    _install_agent_skills(cwd, target="shared" if shared else "dsh")
+def _remove_legacy_dsh_skills(cwd: Path) -> None:
+    """Drop a `.agents/skills` surface left by the retired DSH target."""
+    if not has_legacy_dsh_skill_surface(cwd):
+        return
+    removed = remove_legacy_dsh_skill_surface(cwd, app_dir / "skills")
+    print(f"  Removed: {removed} retired DSH skills from .agents/skills/")
 
 
 def _install_codex_agents(cwd: Path, *, config_root: Path | None = None) -> None:
@@ -1679,19 +1744,14 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         print("  Created: .codex/hooks.json")
         # .codex/agents/ -- native Codex custom-agent definitions
         _install_codex_agents(cwd)
-    if {"codex", "dsh"}.issubset(eds):
-        # The clients share one discovery directory. A joint install therefore
-        # converges on one portable rendering instead of depending on list order.
-        _install_dsh_skills(cwd, shared=True)
-    elif "codex" in eds:
+        # A legacy shared Codex/DSH surface converges on Codex-only here.
         _install_codex_skills(cwd)
         # --codex-skills explicitly re-runs the same Codex skill sync path.
         if codex_skills:
             _try_generator("generate_codex_skills", cwd,
                            enable_codex_skills=True)
-    elif "dsh" in eds:
-        # DSH receives only the shared skill surface, without Codex config.
-        _install_dsh_skills(cwd)
+    else:
+        _remove_legacy_dsh_skills(cwd)
 
     if "gemini" in eds:
         # GEMINI.md — marker injection from the shared generator output

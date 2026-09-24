@@ -134,6 +134,39 @@ def _strip_sections(
     return "".join(result)
 
 
+def strip_owned_sections(content: bytes) -> bytes | None:
+    """Drop every toolkit-owned TOOLKIT section from a marker-injected file.
+
+    ``plugin-*`` sections are kept: plugin removal owns them through its own
+    ownership records. Shaped as an owned edit for
+    ``secure_fs.apply_owned_edits``: returns the input unchanged when it holds
+    no owned section (or is not UTF-8), the remaining text when some survives,
+    and ``None`` when nothing but toolkit sections and blank lines was there,
+    so the file can be removed.
+    """
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        return content
+    owned = {
+        match.group("section")
+        for line in text.splitlines()
+        if (match := _MARKER_RE.fullmatch(line.rstrip("\r"))) is not None
+        and not match.group("section").startswith("plugin-")
+    }
+    if not owned:
+        return content
+    stripped = _strip_sections(text, owned)
+    if stripped == text:
+        return content
+    # Drop leading blank lines, trailing blanks and long blank runs so every
+    # uninstall path leaves identical bytes behind.
+    remaining = collapse_blank_runs(trim_trailing_blanks(stripped.lstrip("\n")))
+    if not remaining.strip():
+        return None
+    return (remaining + "\n").encode("utf-8")
+
+
 def trim_trailing_blanks(text: str) -> str:
     """Remove trailing blank lines from text."""
     lines = text.splitlines()

@@ -213,37 +213,69 @@ def _cleanup_write(path: Path, document: dict) -> None:
     _write_settings_atomic(path, document)
 
 
-def cleanup(target_dir: Path) -> None:
+def _cleanup_plan(target_dir: Path) -> tuple[Path, dict, int] | None:
+    """Return (config, stripped document, stripped entry count) or ``None``.
+
+    A symlinked ``.gemini`` directory or ``settings.json`` is skipped rather
+    than followed, and unreadable JSON is left alone.
+    """
+    config = _cleanup_config_path(target_dir)
+    if config is None or config.parent.is_symlink():
+        return None
+    if not config.is_file() or config.is_symlink():
+        return None
+    try:
+        with open(config, encoding="utf-8") as handle:
+            document = json.load(handle)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(document, dict):
+        return None
+
+    hooks = document.get("hooks")
+    if not isinstance(hooks, dict):
+        return None
+    count = sum(
+        1
+        for entries in hooks.values()
+        if isinstance(entries, list)
+        for entry in entries
+        if _is_toolkit_entry(entry)
+    )
+    if not count:
+        return None
+    survivors = strip_toolkit_hooks(hooks)
+    if survivors:
+        document["hooks"] = survivors
+    else:
+        document.pop("hooks", None)
+    return config, document, count
+
+
+def discover(target_dir: Path) -> int:
+    """Count ai-toolkit hook entries ``cleanup`` would strip."""
+    plan = _cleanup_plan(target_dir)
+    return 0 if plan is None else plan[2]
+
+
+def cleanup(target_dir: Path) -> int:
     """Strip this toolkit's hook entries for an uninstall or profile downgrade.
 
     Only entries tagged with SOURCE_TAG are removed; user and plugin-pack
     entries are left in place. The file is deleted only when nothing survives,
     so an uninstall does not take a user's own configuration with it.
+    Returns the number of hook entries stripped.
     """
-    config = _cleanup_config_path(target_dir)
-    if config is None or not config.is_file() or config.is_symlink():
-        return
-    try:
-        with open(config, encoding="utf-8") as handle:
-            document = json.load(handle)
-    except (OSError, json.JSONDecodeError):
-        return
-    if not isinstance(document, dict):
-        return
-
-    hooks = document.get("hooks")
-    if not isinstance(hooks, dict):
-        return
-    survivors = strip_toolkit_hooks(hooks)
-    if survivors == hooks:
-        return
-
-    if survivors:
-        document["hooks"] = survivors
-    else:
-        document.pop("hooks", None)
-
+    plan = _cleanup_plan(target_dir)
+    if plan is None:
+        return 0
+    config, document, count = plan
     if document:
         _cleanup_write(config, document)
     else:
         config.unlink()
+        try:
+            config.parent.rmdir()
+        except OSError:
+            pass
+    return count

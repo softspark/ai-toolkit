@@ -168,6 +168,49 @@ assert data['projects'][0]['path'].endswith('proj-b')
     [ -f "$TEST_DIR/proj-override/.devin/hooks.v1.json" ]
 }
 
+@test "update_projects: retired dsh editor is dropped and its skill surfaces converge" {
+    local root
+    root="$(cd "$TEST_DIR" && pwd -P)"
+    for spec in 'proj-dsh:dsh' 'proj-shared:shared'; do
+        local project="$root/${spec%%:*}"
+        mkdir -p "$project"
+        python3 "$TOOLKIT_DIR/scripts/generate_codex_skills.py" "$project" --enable >/dev/null
+        # Rewrite into the layout releases with DSH support left behind.
+        python3 - "$project" "${spec#*:}" <<'PY'
+import sys
+from pathlib import Path
+
+agents = Path(sys.argv[1]) / ".agents"
+kind = sys.argv[2]
+marker = {"dsh": ".ai-toolkit-dsh-adapted", "shared": ".ai-toolkit-shared-adapted"}[kind]
+for codex_marker in (agents / "skills").glob("*/.ai-toolkit-codex-adapted"):
+    codex_marker.rename(codex_marker.with_name(marker))
+(agents / ".ai-toolkit-skill-owners").write_text("dsh\n" if kind == "dsh" else "codex\ndsh\n")
+PY
+    done
+    printf '{"projects":[{"path":"%s","profile":"standard","editors":["dsh"]},{"path":"%s","profile":"standard","editors":["codex","dsh"]}]}' \
+        "$root/proj-dsh" "$root/proj-shared" > "$AI_TOOLKIT_HOME/projects.json"
+
+    run python3 "$TOOLKIT_DIR/scripts/update_projects.py" --skip agents,skills,hooks
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q 'Updated: 2/2'
+    [ ! -e "$root/proj-dsh/.agents/.ai-toolkit-skill-owners" ]
+    [ ! -e "$root/proj-dsh/.agents/skills/orchestrate" ]
+    [ "$(cat "$root/proj-shared/.agents/.ai-toolkit-skill-owners")" = 'codex' ]
+    [ -f "$root/proj-shared/.agents/skills/orchestrate/.ai-toolkit-codex-adapted" ]
+    python3 - "$AI_TOOLKIT_HOME/projects.json" "$root" <<'PY'
+import json
+import sys
+
+projects = json.load(open(sys.argv[1]))["projects"]
+editors = {entry["path"]: entry["editors"] for entry in projects}
+assert editors == {
+    f"{sys.argv[2]}/proj-dsh": [],
+    f"{sys.argv[2]}/proj-shared": ["codex"],
+}, editors
+PY
+}
+
 @test "update_projects: skips stale projects" {
     mkdir -p "$TEST_DIR/proj-ok" "$TEST_DIR/proj-gone"
     cd "$TEST_DIR/proj-ok"

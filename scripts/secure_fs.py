@@ -575,3 +575,79 @@ def run_secure_transaction(
         raise
     finally:
         transaction.close()
+
+
+OwnedEdit = Callable[[bytes], bytes | None]
+
+
+def apply_owned_edits(
+    edits: dict[Path, OwnedEdit],
+    trusted_root: Path,
+    *,
+    label: str,
+    prune: tuple[Path, ...] = (),
+    dry_run: bool = False,
+) -> int:
+    """Apply ownership-checked edits to existing regular files.
+
+    Each callable receives the bytes captured through the pinned parent
+    descriptor and returns them unchanged to keep the file, new bytes to
+    rewrite it in place (mode preserved), or ``None`` to unlink it. Missing
+    and symlinked files are skipped; a symlinked or non-directory ancestor is
+    refused. After at least one change, each existing directory in ``prune``
+    is removed deepest first when empty. ``dry_run`` pins and evaluates the
+    same selection without mutating anything. Returns the number of files
+    rewritten or removed (or that would be).
+    """
+    candidates = {
+        path: edit
+        for path, edit in edits.items()
+        if not lexical_absolute(path).is_symlink()
+    }
+    destinations = {
+        path: SecureDestination(path, trusted_root, f"{label} {path.name}")
+        for path in candidates
+    }
+    anchors = {
+        directory: SecureDestination(
+            directory.parent / ".ai-toolkit-prune-anchor",
+            trusted_root,
+            f"{label} directory {directory.name}",
+        )
+        for directory in prune
+        if directory.is_dir() and not directory.is_symlink()
+    }
+    transaction = SecureTransaction([*destinations.values(), *anchors.values()])
+    changed = 0
+    try:
+        for path, destination in destinations.items():
+            original = transaction.initial_content(destination)
+            if original is None:
+                continue
+            updated = candidates[path](original)
+            if updated == original:
+                continue
+            changed += 1
+            if dry_run:
+                continue
+            if updated is None:
+                transaction.unlink(destination)
+            else:
+                transaction.atomic_write(destination, updated)
+    except BaseException as error:
+        try:
+            transaction.rollback()
+        except Exception as rollback_error:
+            transaction.close()
+            raise RuntimeError(
+                f"Secure mutation failed and rollback was incomplete: {rollback_error}"
+            ) from error
+        transaction.close()
+        raise
+    try:
+        if changed and not dry_run:
+            for directory in sorted(anchors, key=lambda item: len(item.parts), reverse=True):
+                transaction.rmdir_empty(anchors[directory], Path(directory.name))
+    finally:
+        transaction.close()
+    return changed

@@ -8,9 +8,15 @@
 The default scope is the current user's global install. ``--local`` targets a
 project, while an explicit legacy positional target scans both project and
 home-style locations for backward compatibility. Only files, symlinks, JSON
-handlers, and marker blocks with verifiable ai-toolkit ownership are removed.
-Global scope also removes validated recovery files left behind by the v4.16.x
-tool-output filter while keeping foreign content in the same session trees.
+handlers, settings, and marker blocks with verifiable ai-toolkit ownership are
+removed from shared locations.
+
+Global scope first runs the local uninstall in every registered project, then
+removes the user-level install and, last, the toolkit data directory
+(``~/.softspark/ai-toolkit``: hook scripts, state, registry, session history,
+logs, plugins). That directory is archived to
+``~/ai-toolkit-backup-<time>.tar.gz`` and the archive is verified before
+anything in it is deleted.
 
 Usage:
     python3 scripts/uninstall.py [--yes] [--local|--global] [--target DIR]
@@ -21,14 +27,15 @@ from __future__ import annotations
 import argparse
 import copy
 import importlib
+import importlib.util
 import json
 import os
 import re
 import secrets
 import stat
-import subprocess
 import sys
-import tempfile
+import tarfile
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -43,6 +50,8 @@ from codex_skill_adapter import (
     skill_surface_owners,
 )
 from injection import strip_all_sections, strip_section, trim_trailing_blanks
+from install_steps.hooks import SKILL_LISTING_BUDGET_DEFAULT, TOOLKIT_ENV_VARS
+from install_steps.skill_scope import STATE_MANAGED_KEY
 # Retirement cleanup for the v4.16.x tool-output filter. The runtime package
 # that wrote those files is gone; output_filter_retirement re-states its
 # ownership rules as self-contained constants for both install and uninstall.
@@ -564,16 +573,126 @@ def _managed_links(directory: Path, pattern: str | None = None) -> list[Path]:
     ]
 
 
-def _discover_claude_hooks(claude_dir: Path) -> list[tuple[str, str]]:
+def _merge_hooks() -> Any:
+    """Load ``merge-hooks.py``; its hyphenated name rules out a plain import."""
+    spec = importlib.util.spec_from_file_location(
+        "ai_toolkit_merge_hooks",
+        toolkit_dir / "scripts" / "merge-hooks.py",
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load scripts/merge-hooks.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _toolkit_hooks() -> dict[str, Any]:
+    data = _load_json(app_dir / "hooks.json", "toolkit hooks file")
+    hooks = data.get("hooks") if data is not None else None
+    return hooks if isinstance(hooks, dict) else {}
+
+
+def _toolkit_style_names() -> dict[str, str]:
+    """Map each shipped output style file name to its ``name:`` value."""
+    styles: dict[str, str] = {}
+    for path in sorted((app_dir / "output-styles").glob("*.md")):
+        match = re.search(r"^name:\s*(.+?)\s*$", path.read_text(encoding="utf-8"), re.MULTILINE)
+        if match:
+            styles[path.name] = match.group(1).strip("'\"")
+    return styles
+
+
+def _without_toolkit_settings(
+    data: dict[str, Any],
+    managed_overrides: set[str],
+) -> tuple[dict[str, Any], list[str]]:
+    """Return ``data`` minus every setting the toolkit wrote, and their keys.
+
+    Hooks and statusLine are matched by tag, toolkit signature, or a command
+    under the toolkit hooks directory. Scalar settings are removed only while
+    they still hold the value the toolkit set, so a user's own choice stays.
+    """
+    updated = copy.deepcopy(data)
+    changed: list[str] = []
+    merge_hooks = _merge_hooks()
+    hooks = updated.get("hooks")
+    if isinstance(hooks, dict):
+        stripped = merge_hooks._without_toolkit_handlers(
+            merge_hooks.strip_toolkit(hooks, _toolkit_hooks())
+        )
+        if stripped != hooks:
+            changed.append("hooks")
+            if stripped:
+                updated["hooks"] = stripped
+            else:
+                updated.pop("hooks")
+    status_line = updated.get("statusLine")
+    if isinstance(status_line, dict) and (
+        status_line.get("_source") == merge_hooks.SOURCE_TAG
+        or merge_hooks._runs_toolkit_script(status_line)
+    ):
+        updated.pop("statusLine")
+        changed.append("statusLine")
+    if updated.get("outputStyle") in set(_toolkit_style_names().values()):
+        updated.pop("outputStyle")
+        changed.append("outputStyle")
+    env = updated.get("env")
+    if isinstance(env, dict):
+        for key, value in TOOLKIT_ENV_VARS.items():
+            if env.get(key) == value:
+                env.pop(key)
+                changed.append(f"env.{key}")
+        if not env:
+            updated.pop("env")
+    if updated.get("skillListingBudgetFraction") == SKILL_LISTING_BUDGET_DEFAULT:
+        updated.pop("skillListingBudgetFraction")
+        changed.append("skillListingBudgetFraction")
+    overrides = updated.get("skillOverrides")
+    if isinstance(overrides, dict):
+        owned = sorted(
+            name for name in managed_overrides if overrides.get(name) == "off"
+        )
+        for name in owned:
+            overrides.pop(name)
+        if owned:
+            changed.append(f"skillOverrides ({len(owned)})")
+        if not overrides:
+            updated.pop("skillOverrides")
+    return updated, changed
+
+
+def _managed_skill_overrides(data_dir: Path | None) -> set[str]:
+    state = _load_json(data_dir / "state.json", "toolkit state") if data_dir else None
+    names = state.get(STATE_MANAGED_KEY, []) if state is not None else []
+    return {name for name in names if isinstance(name, str)} if isinstance(names, list) else set()
+
+
+def _discover_claude_hooks(
+    claude_dir: Path,
+    managed_overrides: set[str],
+) -> list[tuple[str, str]]:
+    found: list[tuple[str, str]] = []
     hooks_file = claude_dir / "hooks.json"
     if hooks_file.is_symlink() and _is_toolkit_link(hooks_file):
-        return [(f"Symlink: hooks.json -> {hooks_file.readlink()} (legacy)", "hooks-link")]
-    if hooks_file.is_symlink() or not hooks_file.is_file():
+        found.append((f"Symlink: hooks.json -> {hooks_file.readlink()} (legacy)", "hooks-link"))
+    for name in ("hooks.json", "settings.json"):
+        data = _load_json(claude_dir / name, f"Claude {name}")
+        if data is None:
+            continue
+        _, changed = _without_toolkit_settings(data, managed_overrides)
+        if changed:
+            found.append((f"Merged: {name} ({', '.join(changed)})", "settings"))
+    return found
+
+
+def _toolkit_output_styles(claude_dir: Path) -> list[Path]:
+    styles_dir = claude_dir / "output-styles"
+    if not styles_dir.is_dir() or styles_dir.is_symlink():
         return []
-    content = hooks_file.read_text(encoding="utf-8")
-    if '"_source"' in content and '"ai-toolkit"' in content:
-        return [("Merged: hooks.json (toolkit entries)", "hooks-merged")]
-    return []
+    return [
+        styles_dir / name for name in _toolkit_style_names()
+        if (styles_dir / name).is_file() and not (styles_dir / name).is_symlink()
+    ]
 
 
 def _discover_output_filter_policy(claude_dir: Path) -> list[tuple[str, str]]:
@@ -606,7 +725,52 @@ def _discover_claude_markers(claude_dir: Path) -> list[tuple[str, str]]:
     return found
 
 
-def discover_components(claude_dir: Path) -> list[tuple[str, str]]:
+def _managed_rule_files(claude_dir: Path) -> list[Path]:
+    """``rules/ai-toolkit-*.md``: the prefix is reserved for the toolkit."""
+    rules_root = claude_dir / "rules"
+    if not rules_root.is_dir() or rules_root.is_symlink():
+        return []
+    return sorted(
+        path for path in rules_root.glob("ai-toolkit-*.md")
+        if path.is_file() and not path.is_symlink()
+    )
+
+
+def _discover_claude_rules(claude_dir: Path) -> list[tuple[str, str]]:
+    found: list[tuple[str, str]] = []
+    rules = _managed_rule_files(claude_dir)
+    if rules:
+        found.append((f"Rules: rules/ai-toolkit-*.md ({len(rules)} file(s))", "claude-rules"))
+    claude_md = claude_dir / "CLAUDE.md"
+    if (
+        not claude_md.is_symlink()
+        and claude_md.is_file()
+        and "<!-- TOOLKIT:" in claude_md.read_text(encoding="utf-8")
+    ):
+        found.append(("Injected: CLAUDE.md (toolkit sections)", "claude-md"))
+    return found
+
+
+def _remove_claude_rules(claude_dir: Path, trusted_root: Path) -> None:
+    rules = _managed_rule_files(claude_dir)
+    for path in rules:
+        _safe_unlink(path, trusted_root)
+    if rules:
+        print(f"  Removed: {len(rules)} .claude/rules/ai-toolkit-*.md rule file(s)")
+    _prune_empty(claude_dir / "rules", trusted_root=trusted_root)
+    # Plugin-owned sections belong to installed plugins, not to the toolkit.
+    if _strip_instruction_file(
+        claude_dir / "CLAUDE.md",
+        preserve_plugins=True,
+        trusted_root=trusted_root,
+    ):
+        print("  Stripped: .claude/CLAUDE.md (user content preserved)")
+
+
+def discover_components(
+    claude_dir: Path,
+    managed_overrides: set[str] | None = None,
+) -> list[tuple[str, str]]:
     """Find verifiably managed Claude Code components."""
     found = _discover_claude_link_directories(claude_dir)
     agent_links = _managed_links(claude_dir / "agents", "*.md")
@@ -615,8 +779,12 @@ def discover_components(claude_dir: Path) -> list[tuple[str, str]]:
     skill_links = _managed_links(claude_dir / "skills")
     if skill_links:
         found.append((f"Symlinks: skills/ ({len(skill_links)} toolkit directories)", "skill-link"))
-    found.extend(_discover_claude_hooks(claude_dir))
+    found.extend(_discover_claude_hooks(claude_dir, managed_overrides or set()))
+    styles = _toolkit_output_styles(claude_dir)
+    if styles:
+        found.append((f"Copied: output-styles/ ({len(styles)} toolkit styles)", "output-styles"))
     found.extend(_discover_claude_markers(claude_dir))
+    found.extend(_discover_claude_rules(claude_dir))
     found.extend(_discover_output_filter_policy(claude_dir))
     return found
 
@@ -648,27 +816,42 @@ def _remove_claude_links(
     _prune_empty(directory, trusted_root=trusted_root)
 
 
-def _remove_claude_hooks(claude_dir: Path, trusted_root: Path) -> None:
+def _remove_claude_hooks(
+    claude_dir: Path,
+    trusted_root: Path,
+    managed_overrides: set[str],
+) -> None:
     hooks_file = claude_dir / "hooks.json"
     if hooks_file.is_symlink() and _is_toolkit_link(hooks_file):
         _safe_unlink(hooks_file, trusted_root)
         print("  Removed: .claude/hooks.json (managed legacy symlink)")
-    elif not hooks_file.is_symlink() and hooks_file.is_file():
-        content = hooks_file.read_text(encoding="utf-8")
-        if '"_source"' in content and '"ai-toolkit"' in content:
-            merge_hooks = toolkit_dir / "scripts" / "merge-hooks.py"
-            metadata = _safe_lstat(hooks_file, trusted_root)
-            mode = stat.S_IMODE(metadata.st_mode) if metadata is not None else 0o644
-            with tempfile.TemporaryDirectory(prefix="ai-toolkit-uninstall-") as directory:
-                temporary = Path(directory) / "hooks.json"
-                temporary.write_text(content, encoding="utf-8")
-                subprocess.run(
-                    ["python3", str(merge_hooks), "strip", str(temporary)],
-                    check=True,
-                )
-                updated = temporary.read_bytes()
-            _atomic_write_bytes(hooks_file, updated, mode, trusted_root)
-            print("  Stripped: .claude/hooks.json (user hooks preserved)")
+    for name in ("hooks.json", "settings.json"):
+        path = claude_dir / name
+        data = _load_json(path, f"Claude {name}")
+        if data is None:
+            continue
+        updated, changed = _without_toolkit_settings(data, managed_overrides)
+        if not changed:
+            continue
+        if updated:
+            _atomic_write_text(
+                path,
+                json.dumps(updated, indent=4, ensure_ascii=False) + "\n",
+                trusted_root,
+            )
+            print(f"  Stripped: .claude/{name} ({', '.join(changed)}; user settings preserved)")
+        else:
+            _safe_unlink(path, trusted_root)
+            print(f"  Removed: .claude/{name} (held only toolkit settings)")
+
+
+def _remove_output_styles(claude_dir: Path, trusted_root: Path) -> None:
+    styles = _toolkit_output_styles(claude_dir)
+    for path in styles:
+        _safe_unlink(path, trusted_root)
+    if styles:
+        print(f"  Removed: {len(styles)} .claude/output-styles/ toolkit style(s)")
+    _prune_empty(claude_dir / "output-styles", trusted_root=trusted_root)
 
 
 def _remove_claude_markers(claude_dir: Path, trusted_root: Path) -> None:
@@ -685,7 +868,11 @@ def _remove_claude_markers(claude_dir: Path, trusted_root: Path) -> None:
             print(f"  Stripped: .claude/{item} (user content preserved)")
 
 
-def remove_components(claude_dir: Path, trusted_root: Path) -> None:
+def remove_components(
+    claude_dir: Path,
+    trusted_root: Path,
+    managed_overrides: set[str] | None = None,
+) -> None:
     """Remove only verifiably managed Claude Code components."""
     _remove_claude_link_directories(claude_dir, trusted_root)
     _remove_claude_links(
@@ -700,9 +887,12 @@ def remove_components(claude_dir: Path, trusted_root: Path) -> None:
         "skill",
         trusted_root,
     )
-    _remove_claude_hooks(claude_dir, trusted_root)
+    _remove_claude_hooks(claude_dir, trusted_root, managed_overrides or set())
+    _remove_output_styles(claude_dir, trusted_root)
     _remove_claude_markers(claude_dir, trusted_root)
+    _remove_claude_rules(claude_dir, trusted_root)
     _remove_output_filter_policy(claude_dir, trusted_root)
+    _prune_empty(claude_dir, trusted_root=trusted_root)
 
 
 # ---------------------------------------------------------------------------
@@ -1191,6 +1381,224 @@ def _remove_recovery(sessions_root: Path) -> None:
     print(f"  Removed: {removed} output-filter recovery file(s)")
 
 
+# ---------------------------------------------------------------------------
+# Toolkit data directory (~/.softspark/ai-toolkit) and registered projects
+# ---------------------------------------------------------------------------
+
+def _data_dir(target: Path, scope: str) -> Path | None:
+    """Resolve the toolkit data directory the way ``paths.py`` does."""
+    if scope == "local":
+        return None
+    fallback = target / ".softspark" / "ai-toolkit"
+    if scope != "global":
+        return fallback
+    configured = os.environ.get("AI_TOOLKIT_HOME")
+    if configured:
+        return _configured_home("AI_TOOLKIT_HOME", fallback, strict_absolute=True)
+    softspark = _configured_home("SOFTSPARK_HOME", target / ".softspark", strict_absolute=True)
+    return softspark / "ai-toolkit"
+
+
+def _data_files(data_dir: Path) -> list[Path]:
+    """Every entry below ``data_dir``, without following symlinks."""
+    entries: list[Path] = []
+    for root, directories, files in os.walk(data_dir, followlinks=False):
+        base = Path(root)
+        entries.extend(base / name for name in (*directories, *files))
+    return entries
+
+
+def _discover_data_dir(data_dir: Path | None) -> list[tuple[str, str]]:
+    if data_dir is None or not data_dir.is_dir() or data_dir.is_symlink():
+        return []
+    count = len(_data_files(data_dir))
+    return [(
+        f"Data: {data_dir} ({count} entries: hook scripts, state, session history, "
+        "logs, plugins; archived before removal)",
+        "data-dir",
+    )]
+
+
+def _archive_data_dir(data_dir: Path, target: Path) -> Path:
+    """Write and verify a ``tar.gz`` of the whole data directory."""
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    archive = target / f"ai-toolkit-backup-{stamp}.tar.gz"
+    suffix = 1
+    while archive.exists() or archive.is_symlink():
+        archive = target / f"ai-toolkit-backup-{stamp}-{suffix}.tar.gz"
+        suffix += 1
+    expected = {
+        (Path(data_dir.name) / path.relative_to(data_dir)).as_posix()
+        for path in _data_files(data_dir)
+    } | {data_dir.name}
+    with tarfile.open(archive, "x:gz", dereference=False) as bundle:
+        bundle.add(data_dir, arcname=data_dir.name, recursive=True)
+    os.chmod(archive, 0o600)
+    with tarfile.open(archive, "r:gz") as bundle:
+        archived = set(bundle.getnames())
+    missing = expected - archived
+    if missing:
+        raise RuntimeError(
+            f"backup {archive} is missing {len(missing)} entr(y/ies), "
+            f"e.g. {sorted(missing)[0]}; nothing was removed from {data_dir}"
+        )
+    return archive
+
+
+def _remove_tree(root: Path, trusted_root: Path) -> None:
+    """Delete ``root`` bottom-up; symlinks are unlinked, never followed."""
+    for current, directories, files in os.walk(root, topdown=False, followlinks=False):
+        base = Path(current)
+        for name in files:
+            _safe_unlink(base / name, trusted_root)
+        for name in directories:
+            path = base / name
+            if path.is_symlink():
+                _safe_unlink(path, trusted_root)
+            else:
+                _safe_rmdir(path, trusted_root)
+    _safe_rmdir(root, trusted_root)
+
+
+def _remove_data_dir(data_dir: Path, target: Path) -> None:
+    trusted_root = data_dir.parent
+    archive = _archive_data_dir(data_dir, target)
+    print(f"  Archived: {data_dir} -> {archive}")
+    try:
+        _remove_tree(data_dir, trusted_root)
+    except (OSError, RuntimeError) as error:
+        raise RuntimeError(
+            f"data directory removal failed ({error}); restore it from {archive}"
+        ) from error
+    print(f"  Removed: {data_dir}")
+    if trusted_root.name == ".softspark":
+        # Shared with other SoftSpark tools; removed only when nothing is left.
+        _prune_empty(trusted_root, trusted_root=trusted_root.parent)
+
+
+def _registered_projects(data_dir: Path | None, target: Path) -> list[Path]:
+    """Registered project roots that still exist, excluding the home itself."""
+    if data_dir is None:
+        return []
+    registry = _load_json(data_dir / "projects.json", "project registry")
+    entries = registry.get("projects", []) if registry is not None else []
+    projects: list[Path] = []
+    for entry in entries if isinstance(entries, list) else []:
+        raw = entry.get("path") if isinstance(entry, dict) else None
+        if not isinstance(raw, str) or not raw:
+            continue
+        path = Path(raw)
+        if (
+            path.is_absolute()
+            and path.is_dir()
+            and not path.is_symlink()
+            and _lexical_absolute(path) != _lexical_absolute(target)
+        ):
+            projects.append(path)
+    return sorted(set(projects))
+
+
+# ---------------------------------------------------------------------------
+# Project-local files outside .claude/
+# ---------------------------------------------------------------------------
+
+PRE_COMMIT_MARKER = "ai-toolkit fallback pre-commit hook"
+GENERATED_PROJECT_FILES = (".softspark-toolkit.lock.json", ".softspark-toolkit-extends.json")
+_CONSTITUTION_IMPORT_LINES = ("## Project Constitution", "@.claude/constitution.md")
+
+
+def _pre_commit_hook(target: Path) -> Path | None:
+    hook = target / ".git" / "hooks" / "pre-commit"
+    return hook if _has_marker(hook, PRE_COMMIT_MARKER, lines=3) else None
+
+
+def _without_constitution_import(text: str) -> str:
+    kept = [line for line in text.splitlines() if line.strip() not in _CONSTITUTION_IMPORT_LINES]
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip() + "\n"
+
+
+def _project_claude_md_update(target: Path) -> tuple[Path, str | None] | None:
+    """Root ``CLAUDE.md`` after removing what the toolkit put there.
+
+    Returns ``(path, None)`` when the file is an untouched template, the new
+    text when only the constitution import has to go, and ``None`` otherwise.
+    """
+    path = target / "CLAUDE.md"
+    if path.is_symlink() or not path.is_file():
+        return None
+    original = path.read_text(encoding="utf-8")
+    if (target / ".claude" / "constitution.md").is_file() and "<!-- TOOLKIT:" not in (
+        (target / ".claude" / "constitution.md").read_text(encoding="utf-8")
+    ):
+        return None  # project-owned constitution text still needs its import
+    updated = _without_constitution_import(original)
+    template = app_dir / "CLAUDE.md.template"
+    if template.is_file() and updated == _without_constitution_import(
+        template.read_text(encoding="utf-8")
+    ):
+        return path, None
+    if updated.strip() != original.strip():
+        return path, updated
+    return None
+
+
+def _default_settings_local(path: Path) -> bool:
+    data = _load_json(path, "project settings.local.json")
+    if data is None:
+        return False
+    defaults = _load_json(app_dir / "mcp-defaults.json", "MCP defaults")
+    return data in ({"mcpServers": {}, "env": {}}, defaults)
+
+
+def _discover_project_files(target: Path) -> list[tuple[str, str]]:
+    found: list[tuple[str, str]] = []
+    for name in GENERATED_PROJECT_FILES:
+        path = target / name
+        if path.is_file() and not path.is_symlink():
+            found.append((f"Generated: {name}", "project-file"))
+    if _pre_commit_hook(target) is not None:
+        found.append(("Installed: .git/hooks/pre-commit (toolkit fallback)", "pre-commit"))
+    update = _project_claude_md_update(target)
+    if update is not None:
+        what = "unchanged template" if update[1] is None else "constitution import"
+        found.append((f"Generated: CLAUDE.md ({what})", "project-claude-md"))
+    if _default_settings_local(target / ".claude" / "settings.local.json"):
+        found.append(("Generated: .claude/settings.local.json (unchanged defaults)", "settings-local"))
+    return found
+
+
+def _remove_project_files(target: Path) -> None:
+    for name in GENERATED_PROJECT_FILES:
+        path = target / name
+        if path.is_file() and not path.is_symlink():
+            _safe_unlink(path, target)
+            print(f"  Removed: {name}")
+    hook = _pre_commit_hook(target)
+    if hook is not None:
+        _safe_unlink(hook, target)
+        backup = hook.with_name("pre-commit.backup")
+        if backup.is_file() and not backup.is_symlink():
+            with _open_mutation_parent(hook, target) as (parent_fd, _):
+                os.rename(backup.name, hook.name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            print("  Restored: .git/hooks/pre-commit from pre-commit.backup")
+        else:
+            print("  Removed: .git/hooks/pre-commit (toolkit fallback)")
+    update = _project_claude_md_update(target)
+    if update is not None:
+        path, text = update
+        if text is None:
+            _safe_unlink(path, target)
+            print("  Removed: CLAUDE.md (unchanged toolkit template)")
+        else:
+            _atomic_write_text(path, text, target)
+            print("  Stripped: CLAUDE.md (constitution import; user content preserved)")
+    settings_local = target / ".claude" / "settings.local.json"
+    if _default_settings_local(settings_local):
+        _safe_unlink(settings_local, target)
+        print("  Removed: .claude/settings.local.json (unchanged defaults)")
+        _prune_empty(target / ".claude", trusted_root=target)
+
+
 def _configured_home(env_name: str, fallback: Path, *, strict_absolute: bool) -> Path:
     value = os.environ.get(env_name)
     if not value:
@@ -1308,8 +1716,13 @@ def _transaction_specs(
         (claude / "skills", True),
         (claude / "commands", True),
         (claude / "hooks.json", False),
+        (claude / "settings.json", False),
+        (claude / "output-styles", True),
         (claude / "constitution.md", False),
         (claude / "ARCHITECTURE.md", False),
+        (claude / "rules", True),
+        (claude / "CLAUDE.md", False),
+        (claude / "settings.local.json", False),
         (claude / _OUTPUT_FILTER_POLICY_NAME, False),
         (claude / _OUTPUT_FILTER_OWNER_NAME, False),
     ):
@@ -1345,6 +1758,15 @@ def _transaction_specs(
             (root / "hooks", True),
         ):
             add(path, recursive, trusted_root)
+    if scope in {"local", "both"}:
+        hooks_dir = target / ".git" / "hooks"
+        for path in (
+            target / "CLAUDE.md",
+            hooks_dir / "pre-commit",
+            hooks_dir / "pre-commit.backup",
+            *(target / name for name in GENERATED_PROJECT_FILES),
+        ):
+            add(path, False, target)
     for config_root in _opencode_config_roots(target, scope):
         root = config_root if config_root is not None else target / ".opencode"
         add(root / "skills", True, target)
@@ -1359,9 +1781,10 @@ def _transaction_specs(
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Remove only ai-toolkit-managed Claude, Codex, Copilot, Cline, OpenCode, "
-            "and leftover v4.16.x recovery data while preserving user-owned "
-            "content."
+            "Remove everything ai-toolkit installed: Claude Code and editor "
+            "surfaces, settings it wrote, and (global) every registered "
+            "project plus the toolkit data directory, archived first. "
+            "User-owned content in shared files is preserved."
         ),
         epilog=(
             "Global Codex and Copilot locations honor CODEX_HOME and "
@@ -1495,31 +1918,206 @@ def _cleanup_cline_surfaces(target: Path, scope: str) -> None:
     cleanup_cline_skills(target)
 
 
-def _remove_editor_managed_surfaces(target: Path, scope: str) -> None:
-    """Strip managed editor surfaces that have no primary uninstall path.
+_LOCAL_EDITOR_SURFACES: tuple[tuple[str, str, dict[str, Any]], ...] = (
+    ("Cursor rules", "generate_cursor_rules", {}),
+    ("Cursor rule files", "generate_cursor_mdc", {}),
+    ("Cursor agents", "generate_cursor_agents", {}),
+    ("Cursor skills", "generate_cursor_skills", {}),
+    ("Cursor hooks", "generate_cursor_hooks", {}),
+    ("Windsurf rules", "generate_windsurf", {"scope": "local"}),
+    ("Windsurf/Devin rule files", "generate_windsurf_rules", {}),
+    ("Windsurf skills", "generate_windsurf_skills", {"scope": "local"}),
+    ("Devin hooks", "generate_devin_hooks", {}),
+    ("Gemini instructions", "generate_gemini", {}),
+    ("Gemini commands", "generate_gemini_commands", {}),
+    ("Gemini skills", "generate_gemini_skills", {}),
+    ("Gemini agents", "generate_gemini_agents", {}),
+    ("Gemini hooks", "generate_gemini_hooks", {}),
+    ("Antigravity rules", "generate_antigravity", {}),
+    ("Antigravity hooks", "generate_antigravity_hooks", {}),
+    ("Antigravity agents", "generate_antigravity_agents", {}),
+    ("Augment instructions", "generate_augment", {}),
+    ("Augment rule files", "generate_augment_rules", {}),
+    ("Augment agents", "generate_augment_agents", {}),
+    ("Augment commands", "generate_augment_commands", {}),
+    ("Augment skills", "generate_augment_skills", {}),
+    ("OpenCode agents", "generate_opencode_agents", {}),
+    ("OpenCode commands", "generate_opencode_commands", {}),
+    ("OpenCode plugin", "generate_opencode_plugin", {}),
+    ("OpenCode config", "generate_opencode_json", {}),
+    ("OpenCode instructions", "generate_opencode", {}),
+    ("Roo rules", "generate_roo_rules", {}),
+    ("Roo modes", "generate_roo_modes", {}),
+    ("Aider config", "generate_aider_conf", {}),
+    ("Aider conventions", "generate_conventions", {}),
+)
 
-    Cursor, Gemini, and OpenCode compatibility cleanup remains best effort.
+
+def _global_editor_surfaces(home: Path) -> tuple[tuple[str, str, dict[str, Any]], ...]:
+    opencode = home / ".config" / "opencode"
+    return (
+        ("Cursor hooks", "generate_cursor_hooks", {}),
+        ("Windsurf/Devin global rules", "generate_windsurf", {"scope": "global"}),
+        ("Windsurf skills", "generate_windsurf_skills", {"scope": "global"}),
+        ("Gemini instructions", "generate_gemini", {"global_install": True}),
+        ("Gemini commands", "generate_gemini_commands", {}),
+        ("Gemini skills", "generate_gemini_skills", {}),
+        ("Gemini agents", "generate_gemini_agents", {}),
+        ("Gemini hooks", "generate_gemini_hooks", {}),
+        ("Antigravity skills", "generate_antigravity", {"global_install": True}),
+        ("Antigravity hooks", "generate_antigravity_hooks", {"global_install": True}),
+        ("Antigravity agents", "generate_antigravity_agents",
+         {"config_root": home / ".gemini" / "config"}),
+        ("Augment instructions", "generate_augment", {}),
+        ("Augment agents", "generate_augment_agents", {}),
+        ("Augment commands", "generate_augment_commands", {}),
+        ("Augment hooks", "generate_augment_hooks", {}),
+        ("OpenCode agents", "generate_opencode_agents", {"config_root": opencode}),
+        ("OpenCode commands", "generate_opencode_commands", {"config_root": opencode}),
+        ("OpenCode plugin", "generate_opencode_plugin", {"config_root": opencode}),
+        ("OpenCode config", "generate_opencode_json",
+         {"output_path": opencode / "opencode.json"}),
+        ("OpenCode instructions", "generate_opencode", {"config_root": opencode}),
+        ("Roo rules", "generate_roo_rules", {"output_root": home / ".roo" / "rules"}),
+        ("Aider config", "generate_aider_conf", {}),
+        ("Aider conventions", "generate_conventions", {"global_install": True}),
+    )
+
+
+def _editor_surfaces(target: Path, scope: str) -> list[tuple[str, str, dict[str, Any]]]:
+    """``(label, generator module, kwargs)`` for each editor surface to clean.
+
+    Each generator owns its ``discover``/``cleanup`` pair and the ownership
+    rule behind it (markers, generated headers, ``ai-toolkit-`` prefixes).
+    Augment hooks are cleaned at global scope only: a local install writes
+    them into the shared ``~/.augment/settings.json``.
+    """
+    surfaces: list[tuple[str, str, dict[str, Any]]] = []
+    if scope in {"local", "both"}:
+        surfaces.extend(_LOCAL_EDITOR_SURFACES)
+    if scope in {"global", "both"}:
+        surfaces.extend(_global_editor_surfaces(target))
+    unique: dict[tuple[str, str], tuple[str, str, dict[str, Any]]] = {}
+    for label, module, kwargs in surfaces:
+        unique.setdefault((module, repr(sorted(kwargs.items()))), (label, module, kwargs))
+    return list(unique.values())
+
+
+def _discover_editor_surfaces(
+    target: Path,
+    scope: str,
+) -> tuple[list[tuple[str, str]], list[str]]:
+    found: list[tuple[str, str]] = []
+    warnings: list[str] = []
+    for label, module_name, kwargs in _editor_surfaces(target, scope):
+        try:
+            count = importlib.import_module(module_name).discover(target, **kwargs)
+        except (OSError, RuntimeError, ValueError) as error:
+            warnings.append(f"{label}: {error}")
+            continue
+        if count:
+            found.append((f"Managed: {label} ({count})", "editor"))
+    return found, warnings
+
+
+def _mcp_template_home(target: Path) -> Path | None:
+    """``None`` lets mcp_editors honor CODEX_HOME/COPILOT_HOME for the real home."""
+    return None if _lexical_absolute(target) == _lexical_absolute(Path.home()) else target
+
+
+def _recorded_mcp_templates(data_dir: Path | None) -> list[str]:
+    state = _load_json(data_dir / "state.json", "toolkit state") if data_dir else None
+    names = state.get("mcp_templates", []) if state is not None else []
+    return [name for name in names if isinstance(name, str)] if isinstance(names, list) else []
+
+
+def _discover_mcp_templates(target: Path, data_dir: Path | None) -> list[tuple[str, str]]:
+    names = _recorded_mcp_templates(data_dir)
+    if not names:
+        return []
+    from mcp_editors import discover_template_servers
+
+    count = discover_template_servers(names, home=_mcp_template_home(target))
+    return [(f"Merged: MCP servers from templates {', '.join(names)} ({count})", "mcp")] if count else []
+
+
+def _remove_mcp_templates(target: Path, data_dir: Path | None) -> None:
+    names = _recorded_mcp_templates(data_dir)
+    if not names:
+        return
+    from mcp_editors import cleanup_template_servers
+
+    removed = cleanup_template_servers(names, home=_mcp_template_home(target))
+    if removed:
+        print(f"  Removed: {removed} MCP server entr(y/ies) from templates {', '.join(names)}")
+
+
+_INJECTED_SOURCES = (
+    ("inject-hook hooks", "inject_hook_cli"),
+    ("inject-mcp servers", "inject_mcp_cli"),
+)
+
+
+def _discover_plugins(data_dir: Path | None) -> tuple[list[tuple[str, str]], list[str]]:
+    """Plugin packs installed with ``ai-toolkit plugin install``.
+
+    Their hooks, rules, sections and scripts are tracked in the data
+    directory, so they are removed through the plugin lifecycle before it goes.
+    """
+    if data_dir is None or not data_dir.is_dir():
+        return [], []
+    from plugin import discover_installed
+
+    try:
+        count = discover_installed(data_dir)
+    except ValueError as error:
+        return [], [f"plugin packs: {error}"]
+    return ([(f"Installed: plugin packs ({count} pack/runtime pairs)", "plugins")]
+            if count else []), []
+
+
+def _remove_plugins(plan: _Plan) -> None:
+    if not any(kind == "plugins" for _, kind in plan.components) or plan.data_dir is None:
+        return
+    from plugin import remove_all_installed
+
+    removed = remove_all_installed(plan.data_dir)
+    print(f"  Removed: {removed} plugin pack/runtime pair(s)")
+
+
+def _discover_injected(target: Path, data_dir: Path | None) -> list[tuple[str, str]]:
+    """Entries added by ``inject-hook``/``inject-mcp``, whose registry lives in
+    the data directory: once that is gone, ``remove-*`` can no longer reach them."""
+    if data_dir is None or not data_dir.is_dir():
+        return []
+    found: list[tuple[str, str]] = []
+    for label, module_name in _INJECTED_SOURCES:
+        count = importlib.import_module(module_name).discover_injected(target, data_dir)
+        if count:
+            found.append((f"Injected: {label} ({count})", "injected"))
+    return found
+
+
+def _remove_injected(target: Path, data_dir: Path | None) -> None:
+    if data_dir is None or not data_dir.is_dir():
+        return
+    for label, module_name in _INJECTED_SOURCES:
+        removed = importlib.import_module(module_name).cleanup_injected(target, data_dir)
+        if removed:
+            print(f"  Removed: {removed} {label}")
+
+
+def _remove_editor_managed_surfaces(target: Path, scope: str) -> None:
+    """Strip every managed editor surface outside the Codex/Copilot roots.
+
+    Editor cleanup is best effort: a surface that cannot be cleaned safely
+    (for example behind a symlinked root) is reported and left in place.
     Cline cleanup is transactional and fail-closed so the outer uninstall can
     roll every managed Cline root back after a partial failure.
     """
-    for module_name, label, surface in (
-        ("generate_cursor_hooks", "Cursor", "hook entries"),
-        ("generate_gemini_hooks", "Gemini", "hook entries"),
-        ("generate_gemini_agents", "Gemini", "agents"),
-    ):
-        try:
-            module = importlib.import_module(module_name)
-            cleanup = getattr(module, "cleanup", None)
-            if cleanup is None:
-                continue
-            cleanup(target)
-        except (ImportError, OSError, RuntimeError, ValueError) as error:
-            print(f"  WARN could not clean {label} {surface}: {error}")
-        else:
-            print(f"  Cleaned: {label} {surface}")
-
     from generate_opencode_skills import cleanup as cleanup_opencode_skills
 
+    # Skills first, so the later OpenCode passes can prune an emptied root.
     for config_root in _opencode_config_roots(target, scope):
         try:
             cleanup_opencode_skills(target, config_root=config_root)
@@ -1528,7 +2126,27 @@ def _remove_editor_managed_surfaces(target: Path, scope: str) -> None:
         else:
             print("  Cleaned: OpenCode skills")
 
+    for label, module_name, kwargs in _editor_surfaces(target, scope):
+        try:
+            removed = importlib.import_module(module_name).cleanup(target, **kwargs)
+        except (ImportError, OSError, RuntimeError, ValueError) as error:
+            print(f"  WARN could not clean {label}: {error}")
+        else:
+            if removed:
+                print(f"  Cleaned: {label} ({removed})")
+
     _cleanup_cline_surfaces(target, scope)
+    cline_documents = target / "Documents" / "Cline"
+    _prune_empty(
+        *(target / ".cline" / name for name in ("hooks", "rules", "skills")),
+        target / ".cline",
+        *(target / ".clinerules" / name for name in ("hooks", "workflows")),
+        target / ".clinerules",
+        cline_documents / "Hooks",
+        cline_documents / "Rules",
+        cline_documents,
+        trusted_root=target,
+    )
     print("  Cleaned: Cline native surfaces")
 
 
@@ -1554,26 +2172,13 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(1)
 
     try:
-        claude, codex, copilot = _surface_roots(target, scope)
-        _preflight(target, claude, codex, copilot)
-        components = discover_components(claude)
-        for surface in codex:
-            components.extend(_discover_codex(surface))
-        for surface in copilot:
-            components.extend(_discover_copilot(surface))
-        components.extend(_discover_opencode_skills(target, scope))
-        components.extend(_discover_cline_surfaces(target, scope))
-        recovery_root = (
-            target / ".softspark" / "ai-toolkit" / "sessions"
-            if scope in {"global", "both"}
-            else None
-        )
-        recovery_components = (
-            _discover_recovery(recovery_root)
-            if recovery_root is not None
-            else []
-        )
-        components.extend(recovery_components)
+        plan = _plan(target, scope)
+        project_plans = [
+            _plan(project, "local")
+            for project in (
+                _registered_projects(plan.data_dir, target) if scope == "global" else []
+            )
+        ]
     except (OSError, RuntimeError, UnicodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         raise SystemExit(1) from error
@@ -1582,16 +2187,33 @@ def main(argv: list[str] | None = None) -> None:
     print("======================")
     print(f"Target: {target} ({scope})")
     print()
-    for description, _ in components:
+    for description, _ in plan.components:
         print(f"  {description}")
+    for project_plan in project_plans:
+        if project_plan.components:
+            print()
+            print(f"Registered project: {project_plan.target} (local)")
+            for description, _ in project_plan.components:
+                print(f"  {description}")
+    warnings = [w for p in (plan, *project_plans) for w in p.warnings]
+    if warnings:
+        print()
+        print("Cannot be cleaned safely, left in place:")
+        for warning in warnings:
+            print(f"  WARN {warning}")
 
-    if not components:
+    total = len(plan.components) + sum(len(p.components) for p in project_plans)
+    if not total:
         print("No toolkit components found. Nothing to remove.")
+        if scope == "local":
+            _unregister_project(target)
         return
 
     print()
-    print(f"Found {len(components)} managed component group(s).")
+    print(f"Found {total} managed component group(s).")
     print("User-owned files, handlers, skills, and plugin-owned Codex hooks are preserved.")
+    if plan.data_dir is not None and plan.data_dir.is_dir():
+        print(f"The data directory is archived to {target}/ai-toolkit-backup-<time>.tar.gz first.")
     print()
     if not args.yes:
         try:
@@ -1609,35 +2231,115 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Error: {error}", file=sys.stderr)
         raise SystemExit(1) from error
 
+    # Projects first: a project failure stops before the global install, the
+    # registry, and the data directory are touched.
+    for project_plan in project_plans:
+        if project_plan.components:
+            print()
+            print(f"Project: {project_plan.target}")
+            _execute(project_plan)
+    if project_plans:
+        print()
+    _execute(plan)
+    if scope == "local":
+        _unregister_project(target)
+
+    print()
+    print("Managed toolkit components removed successfully.")
+    print("To reinstall: npm install -g @softspark/ai-toolkit && ai-toolkit install")
+
+
+@dataclass
+class _Plan:
+    target: Path
+    scope: str
+    claude: Path
+    codex: list[CodexSurface]
+    copilot: list[CopilotSurface]
+    components: list[tuple[str, str]]
+    managed_overrides: set[str]
+    recovery_root: Path | None
+    recovery_components: list[tuple[str, str]]
+    data_dir: Path | None
+    warnings: list[str]
+
+
+def _plan(target: Path, scope: str) -> _Plan:
+    """Discover everything one target holds, without changing anything."""
+    claude, codex, copilot = _surface_roots(target, scope)
+    _preflight(target, claude, codex, copilot)
+    data_dir = _data_dir(target, scope)
+    if data_dir is not None:
+        _assert_regular_root(data_dir, "toolkit data directory")
+    managed_overrides = _managed_skill_overrides(data_dir)
+    components = discover_components(claude, managed_overrides)
+    for surface in codex:
+        components.extend(_discover_codex(surface))
+    for surface in copilot:
+        components.extend(_discover_copilot(surface))
+    components.extend(_discover_opencode_skills(target, scope))
+    components.extend(_discover_cline_surfaces(target, scope))
+    editor_components, warnings = _discover_editor_surfaces(target, scope)
+    components.extend(editor_components)
+    components.extend(_discover_mcp_templates(target, data_dir))
+    components.extend(_discover_injected(target, data_dir))
+    plugin_components, plugin_warnings = _discover_plugins(data_dir)
+    components.extend(plugin_components)
+    warnings.extend(plugin_warnings)
+    if scope in {"local", "both"}:
+        components.extend(_discover_project_files(target))
+    recovery_root = data_dir / "sessions" if data_dir is not None else None
+    recovery_components = (
+        _discover_recovery(recovery_root) if recovery_root is not None else []
+    )
+    components.extend(recovery_components)
+    components.extend(_discover_data_dir(data_dir))
+    return _Plan(
+        target, scope, claude, codex, copilot, components,
+        managed_overrides, recovery_root, recovery_components, data_dir, warnings,
+    )
+
+
+def _execute(plan: _Plan) -> None:
+    """Apply one plan in its own rollback transaction; exit 1 on failure."""
+    target, claude = plan.target, plan.claude
     transaction: _UninstallTransaction | None = None
     try:
         transaction = _UninstallTransaction(
             _transaction_specs(
                 claude,
-                codex,
-                copilot,
+                plan.codex,
+                plan.copilot,
                 target=target,
-                scope=scope,
+                scope=plan.scope,
             )
         )
-        _preflight(target, claude, codex, copilot)
-        remove_components(claude, target)
-        for surface in codex:
+        _preflight(target, claude, plan.codex, plan.copilot)
+        # Before the toolkit settings pass, so a settings.json left holding
+        # only toolkit keys is deleted instead of rewritten as ``{}``.
+        _remove_plugins(plan)
+        _remove_injected(target, plan.data_dir)
+        remove_components(claude, target, plan.managed_overrides)
+        for surface in plan.codex:
             _preflight(target, claude, [surface], [])
             _remove_codex(surface)
-        for surface in copilot:
+        for surface in plan.copilot:
             _preflight(target, claude, [], [surface])
             _remove_copilot(surface)
-        # Cursor and Gemini configs have no primary uninstall branch. These
-        # cleanups strip only managed hook entries and Gemini agent files,
-        # leaving user-authored, plugin-owned, and unrelated settings intact.
-        _remove_editor_managed_surfaces(target, scope)
-        if recovery_root is not None and recovery_components:
+        _remove_editor_managed_surfaces(target, plan.scope)
+        _remove_mcp_templates(target, plan.data_dir)
+        if plan.scope in {"local", "both"}:
+            _remove_project_files(target)
+        if plan.recovery_root is not None and plan.recovery_components:
             # The recovery API preflights its complete tree before the first
             # unlink. A later I/O fault can still leave recovery partially
             # cleaned; the transaction restores every other runtime surface.
-            _remove_recovery(recovery_root)
-    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+            _remove_recovery(plan.recovery_root)
+        if plan.data_dir is not None and plan.data_dir.is_dir():
+            # Last, and archived first: a failure here rolls back every other
+            # surface, and the archive holds whatever was already deleted.
+            _remove_data_dir(plan.data_dir, target)
+    except (OSError, RuntimeError, tarfile.TarError) as error:
         rollback_error: RuntimeError | None = None
         if transaction is not None:
             try:
@@ -1653,9 +2355,16 @@ def main(argv: list[str] | None = None) -> None:
             print(f"Error: uninstall stopped and rolled back: {error}", file=sys.stderr)
         raise SystemExit(1) from error
 
-    print()
-    print("Managed toolkit components removed successfully.")
-    print("To reinstall: npm install -g @softspark/ai-toolkit && ai-toolkit install")
+
+def _unregister_project(target: Path) -> None:
+    from paths import PROJECTS_FILE
+
+    if not PROJECTS_FILE.is_file():
+        return
+    from install_steps.project_registry import unregister_project
+
+    if unregister_project(target):
+        print(f"  Unregistered: {target} from {PROJECTS_FILE}")
 
 
 if __name__ == "__main__":

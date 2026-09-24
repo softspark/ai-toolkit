@@ -56,7 +56,7 @@
 - [Plan: Competitive Features — ai-toolkit](kb/reference/competitive-features-implementation.md)
 - [AI Toolkit - GitHub Copilot Compatibility](kb/reference/copilot-compatibility.md)
 - [Distribution Model](kb/reference/distribution-model.md)
-- [DSH Compatibility](kb/reference/dsh-compatibility.md)
+- [DSH Compatibility (Retired)](kb/reference/dsh-compatibility.md)
 - [Enterprise Config Inheritance Guide](kb/reference/enterprise-config-guide.md)
 - [Extension API Reference](kb/reference/extension-api.md)
 - [Global Install Model](kb/reference/global-install-model.md)

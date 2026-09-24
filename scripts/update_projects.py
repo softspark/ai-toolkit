@@ -21,7 +21,12 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from install_steps.project_registry import get_active_projects, prune_stale, register_project
+from install_steps.project_registry import (
+    active_editors,
+    get_active_projects,
+    prune_stale,
+    register_project,
+)
 
 
 def _update_project(project: dict[str, Any], install_script: str, extra_args: list[str]) -> dict:
@@ -31,7 +36,7 @@ def _update_project(project: dict[str, Any], install_script: str, extra_args: li
 
     # Pass saved editors from registry so update re-installs the same editors
     cmd_args = ["python3", install_script, "--local"] + extra_args
-    project_editors = project.get("editors", [])
+    project_editors = active_editors(project.get("editors", []))
     has_editor_override = any(
         arg == "--editors" or arg.startswith("--editors=")
         for arg in extra_args

@@ -37,7 +37,7 @@ from unittest.mock import patch
 import doctor
 
 runtime, timeout = sys.argv[1:]
-doctor.AI_RUNTIME_BINARIES = (("dsh", "DSH"),)
+doctor.AI_RUNTIME_BINARIES = (("codex", "Codex"),)
 doctor.AI_RUNTIME_VERSION_TIMEOUT_SECONDS = float(timeout)
 result = doctor.DiagResult()
 discovered = None if runtime == "MISSING" else runtime
@@ -171,10 +171,10 @@ PY
 }
 
 @test "doctor: AI runtime probe executes the discovered path and preserves prerelease semver" {
-    runtime="$TEST_TMP/dsh-exact"
+    runtime="$TEST_TMP/codex-exact"
     cat > "$runtime" <<'SH'
 #!/bin/sh
-printf '%s\n' 'dsh 0.1.1-rc.2+build.7'
+printf '%s\n' 'codex 0.1.1-rc.2+build.7'
 SH
     chmod +x "$runtime"
 
@@ -184,23 +184,23 @@ from unittest.mock import patch
 
 import doctor
 
-doctor.AI_RUNTIME_BINARIES = (("dsh", "DSH"),)
+doctor.AI_RUNTIME_BINARIES = (("codex", "Codex"),)
 result = doctor.DiagResult()
 with patch.object(doctor.shutil, "which", return_value=sys.argv[1]):
     doctor.check_ai_runtimes(result)
 PY
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'OK: DSH (dsh) 0.1.1-rc.2+build.7'
+    echo "$output" | grep -q 'OK: Codex (codex) 0.1.1-rc.2+build.7'
 }
 
 @test "doctor: AI runtime probe reports a stable SemVer" {
-    runtime="$TEST_TMP/dsh-stable"
-    printf '%s\n' '#!/bin/sh' "printf '%s\\n' 'dsh 1.2.3'" > "$runtime"
+    runtime="$TEST_TMP/codex-stable"
+    printf '%s\n' '#!/bin/sh' "printf '%s\\n' 'codex 1.2.3'" > "$runtime"
     chmod +x "$runtime"
 
     run check_single_runtime "$runtime"
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'OK: DSH (dsh) 1.2.3'
+    echo "$output" | grep -q 'OK: Codex (codex) 1.2.3'
     echo "$output" | grep -q 'warnings=0 errors=0'
 }
 
@@ -213,7 +213,7 @@ PY
 
     run check_single_runtime "$runtime"
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'OK: DSH (dsh) 1.0.80'
+    echo "$output" | grep -q 'OK: Codex (codex) 1.0.80'
     echo "$output" | grep -q 'warnings=0 errors=0'
 }
 
@@ -225,25 +225,25 @@ PY
         '1.2.3-01' \
         '1.2.3-rc..2' \
         '1.2.3+build..7'; do
-        runtime="$TEST_TMP/dsh-invalid-semver"
-        printf '%s\n' '#!/bin/sh' "printf '%s\\n' 'dsh $version'" > "$runtime"
+        runtime="$TEST_TMP/codex-invalid-semver"
+        printf '%s\n' '#!/bin/sh' "printf '%s\\n' 'codex $version'" > "$runtime"
         chmod +x "$runtime"
 
         run check_single_runtime "$runtime"
         [ "$status" -eq 0 ]
         echo "$output" | grep -q \
-            'WARN: DSH (dsh) detected but version output contained invalid SemVer'
-        ! echo "$output" | grep -q 'OK: DSH'
+            'WARN: Codex (codex) detected but version output contained invalid SemVer'
+        ! echo "$output" | grep -q 'OK: Codex'
     done
 
     for version in '1.2.3' '0.1.1-rc.2' '1.2.3+build.7'; do
-        runtime="$TEST_TMP/dsh-valid-semver"
-        printf '%s\n' '#!/bin/sh' "printf '%s\\n' 'dsh $version'" > "$runtime"
+        runtime="$TEST_TMP/codex-valid-semver"
+        printf '%s\n' '#!/bin/sh' "printf '%s\\n' 'codex $version'" > "$runtime"
         chmod +x "$runtime"
 
         run check_single_runtime "$runtime"
         [ "$status" -eq 0 ]
-        echo "$output" | grep -q "OK: DSH (dsh) $version"
+        echo "$output" | grep -q "OK: Codex (codex) $version"
         echo "$output" | grep -q 'warnings=0 errors=0'
     done
 }
@@ -251,68 +251,68 @@ PY
 @test "doctor: missing AI runtime is skipped without probing" {
     run check_single_runtime MISSING
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'SKIP: DSH (dsh) not found'
+    echo "$output" | grep -q 'SKIP: Codex (codex) not found'
     echo "$output" | grep -q 'warnings=0 errors=0'
 }
 
 @test "doctor: nonzero AI runtime version command is never reported OK" {
-    runtime="$TEST_TMP/dsh-nonzero"
+    runtime="$TEST_TMP/codex-nonzero"
     printf '%s\n' '#!/bin/sh' 'exit 7' > "$runtime"
     chmod +x "$runtime"
 
     run check_single_runtime "$runtime"
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'WARN: DSH (dsh) detected but version command exited with status 7'
-    ! echo "$output" | grep -q 'OK: DSH'
+    echo "$output" | grep -q 'WARN: Codex (codex) detected but version command exited with status 7'
+    ! echo "$output" | grep -q 'OK: Codex'
 }
 
 @test "doctor: malformed AI runtime executable is never reported OK" {
-    runtime="$TEST_TMP/dsh-malformed"
+    runtime="$TEST_TMP/codex-malformed"
     printf '%s\n' 'not an executable image' > "$runtime"
     chmod +x "$runtime"
 
     run check_single_runtime "$runtime"
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'WARN: DSH (dsh) detected but version check failed:'
-    ! echo "$output" | grep -q 'OK: DSH'
+    echo "$output" | grep -q 'WARN: Codex (codex) detected but version check failed:'
+    ! echo "$output" | grep -q 'OK: Codex'
 }
 
 @test "doctor: disappearing AI runtime executable is never reported OK" {
-    run check_single_runtime "$TEST_TMP/dsh-disappeared"
+    run check_single_runtime "$TEST_TMP/codex-disappeared"
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'WARN: DSH (dsh) detected but executable disappeared'
-    ! echo "$output" | grep -q 'OK: DSH'
+    echo "$output" | grep -q 'WARN: Codex (codex) detected but executable disappeared'
+    ! echo "$output" | grep -q 'OK: Codex'
 }
 
 @test "doctor: invalid-text AI runtime output is never reported OK" {
-    runtime="$TEST_TMP/dsh-invalid-text"
+    runtime="$TEST_TMP/codex-invalid-text"
     printf '%s\n' '#!/bin/sh' "printf '\\377'" > "$runtime"
     chmod +x "$runtime"
 
     run check_single_runtime "$runtime"
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'WARN: DSH (dsh) detected but version output is not valid text'
-    ! echo "$output" | grep -q 'OK: DSH'
+    echo "$output" | grep -q 'WARN: Codex (codex) detected but version output is not valid text'
+    ! echo "$output" | grep -q 'OK: Codex'
 }
 
 @test "doctor: unknown AI runtime version output is never reported OK" {
-    runtime="$TEST_TMP/dsh-unknown"
-    printf '%s\n' '#!/bin/sh' "printf '%s\\n' 'dsh development snapshot'" > "$runtime"
+    runtime="$TEST_TMP/codex-unknown"
+    printf '%s\n' '#!/bin/sh' "printf '%s\\n' 'codex development snapshot'" > "$runtime"
     chmod +x "$runtime"
 
     run check_single_runtime "$runtime"
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'WARN: DSH (dsh) detected but version output did not contain SemVer'
-    ! echo "$output" | grep -q 'OK: DSH'
+    echo "$output" | grep -q 'WARN: Codex (codex) detected but version output did not contain SemVer'
+    ! echo "$output" | grep -q 'OK: Codex'
 }
 
 @test "doctor: timed-out AI runtime version command is never reported OK" {
-    runtime="$TEST_TMP/dsh-timeout"
+    runtime="$TEST_TMP/codex-timeout"
     printf '%s\n' '#!/bin/sh' 'sleep 1' > "$runtime"
     chmod +x "$runtime"
 
     run check_single_runtime "$runtime" 0.05
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q 'WARN: DSH (dsh) detected but version check timed out'
-    ! echo "$output" | grep -q 'OK: DSH'
+    echo "$output" | grep -q 'WARN: Codex (codex) detected but version check timed out'
+    ! echo "$output" | grep -q 'OK: Codex'
 }

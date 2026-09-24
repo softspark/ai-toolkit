@@ -27,11 +27,17 @@ Usage: ./scripts/generate_roo_modes.py > .roomodes
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import agents_dir, frontmatter_field
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
+
+MODE_GROUPS = ["read", "edit", "command", "mcp"]
+_MODE_REQUIRED = frozenset({"slug", "name", "roleDefinition", "groups"})
+_MODE_OPTIONAL = frozenset({"description", "whenToUse"})
 
 
 def _json_escape(s: str) -> str:
@@ -84,6 +90,85 @@ def _first_sentence(description: str, *, limit: int = 140) -> str:
     return text[:limit].rsplit(" ", 1)[0] + "..."
 
 
+def _toolkit_slugs(source_dir: Path) -> set[str]:
+    return {
+        agent_file.stem
+        for agent_file in source_dir.glob("*.md")
+        if frontmatter_field(agent_file, "name")
+        and frontmatter_field(agent_file, "description")
+    }
+
+
+def _is_toolkit_mode(mode: object, slugs: set[str]) -> bool:
+    """Match the exact shape this generator emits (current and pre-description).
+
+    ``.roomodes`` carries no ownership marker, so a mode counts as toolkit-owned
+    only when its slug is a toolkit agent, its keys and ``groups`` are exactly
+    what the generator writes, and ``roleDefinition`` opens with the description.
+    """
+    if not isinstance(mode, dict):
+        return False
+    keys = set(mode)
+    if not _MODE_REQUIRED <= keys <= _MODE_REQUIRED | _MODE_OPTIONAL:
+        return False
+    if mode["slug"] not in slugs or mode["groups"] != MODE_GROUPS:
+        return False
+    role = mode["roleDefinition"]
+    description = mode.get("description")
+    if not isinstance(role, str):
+        return False
+    if description is None:
+        return "\n\n" in role
+    return isinstance(description, str) and role.startswith(f"{description}\n\n")
+
+
+def _modes_edit(slugs: set[str]) -> OwnedEdit:
+    def strip_toolkit_modes(content: bytes) -> bytes | None:
+        try:
+            data = json.loads(content)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return content
+        if not isinstance(data, dict) or not isinstance(data.get("customModes"), list):
+            return content
+        modes = data["customModes"]
+        kept = [mode for mode in modes if not _is_toolkit_mode(mode, slugs)]
+        if len(kept) == len(modes):
+            return content
+        if not kept and set(data) == {"customModes"}:
+            return None
+        data["customModes"] = kept
+        return (json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+    return strip_toolkit_modes
+
+
+def _cleanup_plan(
+    target_dir: Path, source_dir: Path | None
+) -> tuple[Path, dict[Path, OwnedEdit]]:
+    target = lexical_absolute(target_dir)
+    path = target / ".roomodes"
+    if not path.is_file():
+        return target, {}
+    return target, {path: _modes_edit(_toolkit_slugs(source_dir or agents_dir))}
+
+
+def cleanup(target_dir: Path, *, source_dir: Path | None = None) -> int:
+    """Remove toolkit modes from ``target_dir/.roomodes``.
+
+    User modes and other top-level keys are kept (the file is re-serialized
+    as indented JSON); the file is deleted only when nothing else remains.
+    Returns 1 when the file was rewritten or removed, else 0.
+    """
+    target, edits = _cleanup_plan(target_dir, source_dir)
+    return apply_owned_edits(edits, target, label="Roo modes")
+
+
+def discover(target_dir: Path, *, source_dir: Path | None = None) -> int:
+    """Return 1 when :func:`cleanup` would change ``.roomodes``, without side effects."""
+    target, edits = _cleanup_plan(target_dir, source_dir)
+    return apply_owned_edits(edits, target, label="Roo modes", dry_run=True)
+
+
 def main() -> None:
     first = True
     sys.stdout.write('{\n  "customModes": [\n')
@@ -115,7 +200,7 @@ def main() -> None:
         sys.stdout.write(f'      "roleDefinition": "{_json_escape(role_text)}",\n')
         if when_to_use:
             sys.stdout.write(f'      "whenToUse": "{_json_escape(when_to_use)}",\n')
-        sys.stdout.write('      "groups": ["read", "edit", "command", "mcp"]\n')
+        sys.stdout.write(f'      "groups": {json.dumps(MODE_GROUPS)}\n')
         sys.stdout.write("    }")
 
     sys.stdout.write("\n  ]\n}\n")

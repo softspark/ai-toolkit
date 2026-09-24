@@ -116,7 +116,6 @@ PLANNED_ASSETS = [
 ]
 
 AI_RUNTIME_BINARIES = (
-    ("dsh", "DSH"),
     ("codex", "Codex"),
     ("claude", "Claude Code"),
     ("copilot", "GitHub Copilot"),
@@ -991,6 +990,15 @@ def _est_tokens(chars: int) -> int:
     return chars // 4
 
 
+def _always_loaded_rule(path: Path) -> bool:
+    """A rule with no ``paths``, or ``paths: ["**/*"]``, loads in every session."""
+    try:
+        paths = load_frontmatter(path, strict=False).get("paths")
+    except (FrontmatterError, OSError, UnicodeDecodeError):
+        return True
+    return not isinstance(paths, list) or not paths or paths == ["**/*"]
+
+
 def _load_json_keys(path: Path, keys: tuple[str, ...]) -> dict:
     """Read only the named top-level keys from a JSON file.
 
@@ -1105,14 +1113,19 @@ def check_context_budget(dr: DiagResult) -> None:
             agent_chars += len(fm["name"]) + len(fm.get("description", ""))
         dr.ok(f"agents listing: {agent_count} agents, ~{_est_tokens(agent_chars)} est. tokens")
 
-    # Always-loaded user memory: ~/.claude/CLAUDE.md and ~/.claude/rules/*.md.
-    memory_files = [CLAUDE_DIR / "CLAUDE.md"] + sorted((CLAUDE_DIR / "rules").glob("*.md")) \
-        if (CLAUDE_DIR / "rules").is_dir() else [CLAUDE_DIR / "CLAUDE.md"]
+    # Always-loaded user memory: ~/.claude/CLAUDE.md and the ~/.claude/rules/*.md
+    # without a narrowing `paths` scope. A path-scoped rule (testing,
+    # performance) loads only when a matching file is touched.
+    rule_files = sorted((CLAUDE_DIR / "rules").glob("*.md")) \
+        if (CLAUDE_DIR / "rules").is_dir() else []
+    memory_files = [CLAUDE_DIR / "CLAUDE.md"] + [p for p in rule_files if _always_loaded_rule(p)]
     memory_chars = sum(p.stat().st_size for p in memory_files if p.is_file())
     memory_count = sum(1 for p in memory_files if p.is_file())
+    scoped_count = len(rule_files) - (memory_count - (1 if (CLAUDE_DIR / "CLAUDE.md").is_file() else 0))
     dr.ok(
         f"user memory: {memory_count} always-loaded files "
         f"(~/.claude/CLAUDE.md + rules), ~{_est_tokens(memory_chars)} est. tokens"
+        + (f"; {scoped_count} path-scoped rule(s) load on demand" if scoped_count else "")
     )
 
     # Zero-use skills. Evidence: Claude Code lifetime counters + toolkit stats.

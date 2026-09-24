@@ -3,9 +3,9 @@ title: "Merge-Friendly Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, merge, hooks, injection, symlinks]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-03-27"
-last_updated: "2026-03-28"
+last_updated: "2026-09-24"
 description: "Reference description of how ai-toolkit preserves user content while installing toolkit components."
 ---
 
@@ -24,9 +24,10 @@ Instead of replacing entire directories or files, the installer uses merge-frien
 | `agents/*.md` | per-file symlinks | preserved; user file wins on name conflict |
 | `skills/*/` | per-directory symlinks | preserved; user directory wins on name conflict |
 | `settings.json` hooks | JSON merge with `_source: ai-toolkit` | preserved; toolkit entries removable |
-| `constitution.md` | marker injection | preserved outside markers |
+| `rules/ai-toolkit-*.md` (incl. `ai-toolkit-constitution.md`) | managed files, reserved prefix | other filenames in `rules/` untouched |
 | `ARCHITECTURE.md` | marker injection | preserved outside markers |
 | `CLAUDE.md` | marker injection | preserved outside markers |
+| legacy `constitution.md` | toolkit section stripped on install | preserved outside markers; removed when empty |
 
 ## Why this model exists
 

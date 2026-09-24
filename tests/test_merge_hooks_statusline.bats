@@ -282,6 +282,21 @@ EOF
     [ "$cmd" = "my-line.sh" ]
 }
 
+@test "merge-hooks: strip removes untagged toolkit statusLine and handlers, keeps chained user handler" {
+    # Claude Code drops "_source" when it rewrites settings.json.
+    cat > "$TARGET" <<'EOF'
+{"statusLine":{"type":"command","command":"bash \"$HOME/.softspark/ai-toolkit/hooks/ai-toolkit-statusline.sh\""},
+ "hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[
+   {"type":"command","command":"bash \"$HOME/.softspark/ai-toolkit/hooks/guard-destructive.sh\""},
+   {"type":"command","command":"echo mine"}]}],
+  "Stop":[{"matcher":"","hooks":[{"type":"command","command":"bash ~/.softspark/ai-toolkit/hooks/save-session.sh"}]}]}}
+EOF
+    run $MERGE strip "$TARGET"
+    [ "$status" -eq 0 ]
+    run python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$TARGET"
+    [ "$output" = '{"hooks": {"PreToolUse": [{"hooks": [{"command": "echo mine", "type": "command"}], "matcher": "Bash"}]}}' ]
+}
+
 @test "merge-hooks: strip on missing statusLine is a no-op" {
     echo '{"hooks":{}}' > "$TARGET"
     run $MERGE strip "$TARGET"

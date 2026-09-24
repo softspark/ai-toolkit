@@ -13,10 +13,10 @@ Why this exists
 ---------------
 The rules were reachable only as Claude Code user-level files under
 ``~/.claude/rules/``, with the global ``CLAUDE.md`` carrying a pointer to them
-rather than their content. That pointer is a Claude Code idiom. DeepSeek Harness
-reads ``AGENTS.md``, ``AGENTS.local.md``, ``CLAUDE.md`` and ``CLAUDE.local.md``
-and has no rules-directory support at all, so under DSH every one of those rules
-was inert: named in an injected file, never loaded, never applied.
+rather than their content. That pointer is a Claude Code idiom. A client that
+reads only instruction files such as ``AGENTS.md`` or ``CLAUDE.md`` and has no
+rules-directory support sees every one of those rules as inert: named in an
+injected file, never loaded, never applied.
 
 Shipping them as skills fixes that without changing the Claude Code surface. A
 skill is discovered by every editor that reads the shared skill catalogue, and

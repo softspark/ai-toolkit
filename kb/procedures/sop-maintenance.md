@@ -3,9 +3,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.5.0"
+version: "3.6.0"
 created: "2026-03-23"
-last_updated: "2026-09-04"
+last_updated: "2026-09-24"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -25,7 +25,9 @@ ai-toolkit install --local
 By default, `--local` installs Claude Code configs only:
 - `CLAUDE.md` — project-specific rules template (only if missing)
 - `.claude/settings.local.json` — MCP servers, env vars, permissions (only if missing, initialized with MCP defaults)
-- `.claude/constitution.md` — toolkit constitution **injected** via markers (preserves user content)
+- `.claude/CLAUDE.md` — compact language-rules index
+
+Common rules and the constitution are not copied into the project: the global install writes them to `~/.claude/rules/`, which Claude Code loads in every project, and a project copy would load them twice (more under a registered parent directory). `--local` writes `.claude/rules/ai-toolkit-*.md` and `.claude/constitution.md` only for what the global install does not provide, and removes the copies an older install left.
 
 To also install editor configs, use `--editors`:
 
@@ -89,10 +91,9 @@ What `install` and `update` do (merge-friendly — user content never overwritte
 | `agents/*.md` | Per-file symlinks into `~/.claude/agents/` | User file with same name preserved (toolkit skipped) |
 | `skills/*/` | Per-directory symlinks into `~/.claude/skills/` | User dir with same name preserved |
 | `settings.json` hooks | JSON merge via `merge-hooks.py` | User hooks + settings preserved, toolkit entries tagged `_source: ai-toolkit` |
-| `constitution.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
-| `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | Same as above |
+| `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
 | `CLAUDE.md` | Compact index for managed global rules | User content outside toolkit markers untouched |
-| `rules/ai-toolkit-*.md` | File-based Claude Code user-level rules from `app/rules/*.md` and registered rules | `ai-toolkit-*` prefix reserved for installer-managed files |
+| `rules/ai-toolkit-*.md` | File-based Claude Code user-level rules from `app/rules/*.md`, `app/rules/common/*.md` (with `paths`), registered rules, and `ai-toolkit-constitution.md` | `ai-toolkit-*` prefix reserved for installer-managed files |
 
 Re-running updates only toolkit content. Old whole-directory symlinks are auto-upgraded to per-file on next run.
 
@@ -499,14 +500,42 @@ validation + tests, regenerates AGENTS.md + llms.txt, and publishes to npm.
 ## Uninstall
 
 ```bash
-ai-toolkit uninstall    # strips toolkit components from ~/.claude/
+ai-toolkit uninstall            # everything: registered projects, user level, data directory
+ai-toolkit uninstall --local    # one project, then unregisters it
 ```
 
-What `uninstall` does:
-- Removes per-file agent symlinks (user agents preserved)
-- Removes per-directory skill symlinks (user skills preserved)
-- Strips toolkit hook entries from `settings.json` (user hooks + settings preserved)
-- Strips toolkit markers from `constitution.md` and `ARCHITECTURE.md` (user content preserved; empty files removed)
-- `~/.claude/CLAUDE.md` preserved (contains your custom content + compact toolkit index)
-- `~/.claude/rules/` preserved unless explicitly removed
-- Empty `agents/` and `skills/` directories cleaned up
+`uninstall` removes everything the toolkit installed. It lists every component
+and asks once before changing anything (`--yes` skips the question).
+
+Order of a global uninstall:
+1. **Registered projects.** Each project in `projects.json` that still exists gets the local uninstall below, in its own rollback transaction. A project that cannot be handled safely (for example a symlinked `.claude/`) stops the run before anything changes.
+2. **User level:**
+   - agent and skill symlinks in `~/.claude/`
+   - `~/.claude/rules/ai-toolkit-*.md`, a prefix reserved for the installer. The constitution and the always-on rules live there.
+   - toolkit sections of `~/.claude/CLAUDE.md` and `ARCHITECTURE.md`. Your own content and plugin sections stay.
+   - the shipped output styles
+   - every editor surface the installer writes: Codex, Copilot, Cline, Cursor, Windsurf/Devin, Gemini, Antigravity, Augment, OpenCode, Roo, Aider
+   - built-in MCP template servers recorded in `state.json`
+   - plugin packs, through the plugin lifecycle's own `remove` for every recorded pack and runtime
+   - hooks and MCP servers added with `inject-hook` / `inject-mcp`, matched by the source names in their registries. Their registries live in the data directory, so `remove-hook` / `remove-mcp` could not reach them afterwards. Editor config files keep their other content and are never deleted.
+3. **`~/.claude/settings.json`:**
+   - Hook entries and the status line are removed when tagged `_source: ai-toolkit`, when they match a toolkit hook signature, or when they run a script from `~/.softspark/ai-toolkit/hooks/`. Claude Code drops the tag when it rewrites the file, so the tag alone is not enough.
+   - `outputStyle`, `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`, `skillListingBudgetFraction` and the `skillOverrides` the toolkit recorded are removed only while they still hold the toolkit's value.
+   - `enabledPlugins` stays. Removing it would re-enable the Claude app plugin.
+4. **`~/.softspark/ai-toolkit/`**, which holds hook scripts, state, the registry, session history, compaction snapshots, stats, the governance log, plugins and `memory.db`:
+   - It is first archived to `~/ai-toolkit-backup-<time>.tar.gz` (mode 0600).
+   - The archive is re-read and compared with the directory before anything is deleted.
+   - This step runs last, so a failure here rolls every other change back.
+
+`uninstall --local` also removes:
+- `.softspark-toolkit.lock.json` and `.softspark-toolkit-extends.json`
+- the fallback `.git/hooks/pre-commit`. A `pre-commit.backup` is put back in its place.
+- `CLAUDE.md` and `.claude/settings.local.json` while they are unchanged from the template. Otherwise only the `@.claude/constitution.md` import is removed, and only when no project-owned constitution text remains.
+
+It then unregisters the project.
+
+Kept on purpose:
+- `.softspark-toolkit.json`, your project config
+- MCP mirrors of your own `.mcp.json` in editor configs
+
+Editor cleanup is best effort. A surface that cannot be cleaned safely, for example behind a symlinked root, is listed as `WARN` and left in place.

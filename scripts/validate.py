@@ -408,7 +408,7 @@ def _validate_rule_paths(rel: str, fm_lines: list[str], vr: ValidationResult) ->
 
 def _validate_invocation_metadata(label: str, fm_lines: list[str],
                                   vr: ValidationResult) -> None:
-    """Reject metadata spellings that DSH interprets differently or ignores."""
+    """Reject invocation metadata spellings that Agent Skills clients ignore."""
     entries: list[tuple[str, str]] = []
     for line_number, line in enumerate(fm_lines, start=2):
         if not line.strip() or line.lstrip().startswith("#") or line[0].isspace():
@@ -644,7 +644,7 @@ def _validate_emitted_frontmatter(
     label: str,
     vr: ValidationResult,
 ) -> None:
-    """Validate the DSH Agent Skills frontmatter contract."""
+    """Validate the Agent Skills frontmatter contract."""
     for field in CAMEL_CASE_INVOCATION_FIELDS:
         if field in fields:
             vr.error(

@@ -21,8 +21,10 @@ from dir_rules_shared import (
     STANDARD_RULES,
     build_language_rules,
     build_registered_rules,
+    rule_scope,
     write_rules,
 )
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 
 def generate(target_dir: Path, *,
@@ -41,6 +43,47 @@ def generate(target_dir: Path, *,
     root = output_root.parent if output_root is not None else target_dir
     subdir = output_root.name if output_root is not None else ".roo/rules"
     write_rules(root, rules, subdir)
+
+
+def _cleanup_plan(
+    target_dir: Path, output_root: Path | None
+) -> tuple[Path, dict[Path, OwnedEdit], tuple[Path, ...]]:
+    target = lexical_absolute(target_dir)
+    rules_root = (
+        lexical_absolute(output_root)
+        if output_root is not None
+        else target / ".roo" / "rules"
+    )
+    for path in (rules_root.parent, rules_root):
+        if path.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Roo rules path: {path}")
+    if not rules_root.is_dir():
+        return target, {}, ()
+    edits: dict[Path, OwnedEdit] = {
+        path: lambda _content: None
+        for path in sorted(rules_root.iterdir())
+        if rule_scope(path.name) is not None
+        and path.suffix == ".md"
+        and path.is_file()
+    }
+    prune = tuple(p for p in (rules_root, rules_root.parent) if p != target)
+    return target, edits, prune
+
+
+def cleanup(target_dir: Path, *, output_root: Path | None = None) -> int:
+    """Remove ``ai-toolkit-*`` Roo rule files and return how many were removed.
+
+    Defaults to ``target_dir/.roo/rules``; pass the same ``output_root`` as
+    :func:`generate` for the global ``~/.roo/rules``. User rules are untouched.
+    """
+    target, edits, prune = _cleanup_plan(target_dir, output_root)
+    return apply_owned_edits(edits, target, label="Roo rule", prune=prune)
+
+
+def discover(target_dir: Path, *, output_root: Path | None = None) -> int:
+    """Count the files :func:`cleanup` would remove, without side effects."""
+    target, edits, _ = _cleanup_plan(target_dir, output_root)
+    return apply_owned_edits(edits, target, label="Roo rule", dry_run=True)
 
 
 def main() -> None:

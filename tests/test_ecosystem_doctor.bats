@@ -54,76 +54,58 @@ print('ok')
     [ "$output" = "ok" ]
 }
 
-@test "ecosystem_doctor: DSH registry entry is explicit developer preview" {
-    run python3 -c "
-import json
-data = json.load(open('$TOOLKIT_DIR/scripts/ecosystem_tools.json'))
-matches = [tool for tool in data['tools'] if tool['id'] == 'dsh']
-assert len(matches) == 1, f'expected one DSH entry, got {len(matches)}'
-dsh = matches[0]
-assert dsh['kind'] == 'harness'
-assert dsh['status'] == 'developer-preview'
-assert dsh['selection_policy'] == 'explicit-only'
-assert dsh['reviewed_version'] == '0.1.2-rc.1'
-assert set(dsh['excluded_from']) == {'editors-all', 'auto-detect', 'defaults'}
-print('ok')
-"
-    [ "$status" -eq 0 ]
-    [ "$output" = "ok" ]
-}
-
-@test "ecosystem_doctor: DSH registry sources and drift contract stay pinned" {
+@test "ecosystem_doctor: drift contract reports heading, marker and version changes" {
     run python3 -c "
 import json
 import pathlib
 import sys
 from unittest.mock import patch
-from urllib.parse import urlparse
 
 sys.path.insert(0, '$TOOLKIT_DIR/scripts')
 from ecosystem_doctor import check_tool
 
 base = pathlib.Path('$TOOLKIT_DIR')
 data = json.loads((base / 'scripts/ecosystem_tools.json').read_text())
-dsh = next(tool for tool in data['tools'] if tool['id'] == 'dsh')
-
-assert urlparse(dsh['urls']['docs']).netloc == 'deepseek-harness.github.io'
-assert dsh['urls']['release_notes'] == 'https://github.com/deepseek-ai/deepseek-harness/releases'
-assert dsh['urls']['reviewed_release'].endswith('/tag/dsh-v0.1.2-rc.1')
-assert '/blob/dsh-v0.1.2-rc.1/apps/cli/reference/README.md' in dsh['urls']['reviewed_cli_docs']
-assert '/blob/dsh-v0.1.2-rc.1/docs/subsystems/skills.md' in dsh['urls']['reviewed_skill_docs']
-assert {
-    '.agents/skills/*/SKILL.md',
-    '\$DSH_HOME/profiles/<profile>/package.json',
-    '\$DSH_HOME/.agent-presets/softspark-orchestrator',
-} <= set(dsh['config_paths'])
-assert dsh['our_generators'] == ['scripts/generate_codex_skills.py']
-assert dsh['our_lifecycle'] == ['scripts/install_steps/dsh.py']
-for relative in dsh['our_generators'] + dsh['our_lifecycle']:
-    assert (base / relative).is_file(), relative
-assert dsh['version_probe'] == {'kind': 'command', 'command': 'dsh --version'}
+codex = next(tool for tool in data['tools'] if tool['id'] == 'codex-cli')
+marker = codex['capability_markers'][0]
 
 previous = {
     'headings': ['Old heading'],
-    'markers': {'Developer preview': False},
-    'version': '0.1.1-rc.2',
+    'markers': {marker: False},
+    'version': '0.1.0',
 }
-content = '# DeepSeek Harness\n## Profiles\nDeveloper preview with skills and Agent Presets.'
+content = f'# Codex\n## Configuration\nReads {marker} for instructions.'
 with patch('ecosystem_doctor.fetch_url', return_value=(content, None)), patch(
-    'ecosystem_doctor.probe_version', return_value='0.1.2-alpha.2'
+    'ecosystem_doctor.probe_version', return_value='0.2.0'
 ):
-    report = check_tool(dsh, previous, offline=False)
+    report = check_tool(codex, previous, offline=False)
 
 kinds = {entry['kind'] for entry in report['drift']}
-assert {'headings_added', 'headings_removed', 'marker_flips', 'version_changed'} <= kinds
-assert report['docs_url'] == dsh['urls']['docs']
+assert {'headings_added', 'headings_removed', 'marker_flips', 'version_changed'} <= kinds, kinds
+assert report['docs_url'] == codex['urls']['docs']
 print('ok')
 "
     [ "$status" -eq 0 ]
     [ "$output" = "ok" ]
 }
 
-@test "ecosystem_doctor: every registry tool has a schema-valid snapshot baseline including DSH preview" {
+@test "ecosystem_doctor: --update drops baselines for tools removed from the registry" {
+    run python3 -c "
+import sys
+
+sys.path.insert(0, '$TOOLKIT_DIR/scripts')
+from ecosystem_doctor import update_snapshot
+
+snapshot = {'tools': {'kept': {'version': '1.0.0'}, 'retired': {'version': '0.1.0'}}}
+updated = update_snapshot(snapshot, [], {'kept'})
+assert updated['tools'] == {'kept': {'version': '1.0.0'}}, updated
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [ "$output" = "ok" ]
+}
+
+@test "ecosystem_doctor: every registry tool has a schema-valid snapshot baseline" {
     run python3 -c "
 import json
 import re
@@ -145,11 +127,6 @@ for tool_id, tool in registry_by_id.items():
     ), tool_id
     assert set(baseline['markers']) == set(tool['capability_markers']), tool_id
     assert all(isinstance(value, bool) for value in baseline['markers'].values()), tool_id
-
-dsh = snapshot['tools']['dsh']
-assert dsh['headings'] == sorted(dsh['headings'])
-assert 'Developer preview' in dsh['markers']
-assert set(dsh['markers']) == set(registry_by_id['dsh']['capability_markers'])
 print('ok')
 "
     [ "$status" -eq 0 ]

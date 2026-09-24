@@ -3,17 +3,17 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.11.0"
+version: "1.13.0"
 created: "2026-03-23"
-last_updated: "2026-09-08"
-description: "Architecture of ai-toolkit: install ownership, runtime adapters, the explicit DSH target, skill tiers, and project integration."
+last_updated: "2026-09-24"
+description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
 ---
 
 # AI Toolkit Architecture
 
 ## Purpose
 
-Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, compatible assistants, and the explicit developer-preview DSH target. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
+Shared, project-agnostic AI development toolkit for Claude Code, Claude Chat/Cowork, and compatible assistants. Provides agents, skills, lifecycle hooks, persona presets, and runtime-specific plugin packaging.
 
 ## Design Principles
 
@@ -36,7 +36,7 @@ ai-toolkit/
     claude-app/              # Generated app-only rules skill, hooks, instructions
     hooks/                   # Hook scripts (copied to ~/.softspark/ai-toolkit/hooks/)
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
-    constitution.md          # Immutable safety rules, 7 articles (marker-injected)
+    constitution.md          # Immutable safety rules, 7 articles (-> ~/.claude/rules/ai-toolkit-constitution.md)
     ARCHITECTURE.md          # System architecture reference (marker-injected)
     CLAUDE.md.template       # Template for project CLAUDE.md (used by init)
     settings.local.json.template
@@ -45,7 +45,7 @@ ai-toolkit/
     plugins/                 # Experimental opt-in plugin packs + optional modules
   scripts/                   # All scripts
     install.py               # Global installer → ~/.claude/ (--local for project-local setup)
-    uninstall.py             # Removes toolkit components from ~/.claude/
+    uninstall.py             # Removes everything installed; archives ~/.softspark/ai-toolkit first
     inject_rule_cli.py       # Injects a rule into CLAUDE.md (delegates to inject_section_cli.py)
     inject_section_cli.py    # Marker-based content injection (canonical implementation)
     _common.py               # Shared helper for generators (frontmatter, agents/skills emission)
@@ -93,31 +93,32 @@ Machine (global)                              Project (local)
   agents/*.md    → per-file symlinks             rules/     ← registered rules
   skills/*/      → per-dir symlinks              hooks/     ← hook scripts (copied)
   settings.json  ← hooks merged here
-  constitution.md ← marker injection            my-project/
-  ARCHITECTURE.md ← marker injection              CLAUDE.md            ← project index
-  CLAUDE.md       ← compact rule index            .claude/
-  rules/*.md      ← Claude user-level rules
-                                                    settings.local.json  ← MCP, perms
-                                                    constitution.md     ← marker injection
+  ARCHITECTURE.md ← marker injection            my-project/
+  CLAUDE.md       ← compact rule index            CLAUDE.md            ← project index
+  rules/*.md      ← Claude user-level rules:      .claude/
+    toolkit, common (paths-scoped),                 settings.local.json  ← MCP, perms
+    constitution                                    rules/ai-toolkit-*.md ← only rules the
+                                                      global install lacks
 ```
+
+Claude Code loads `~/.claude/rules/` in every project and `.claude/rules/` from parent directories too, so a rule or the constitution that applies everywhere lives only at user level; a project copy would load it twice.
 
 | Component | Strategy | Collision handling |
 |-----------|----------|-------------------|
 | `agents/*.md` | Per-file symlinks | User file with same name wins (toolkit skipped) |
 | `skills/*/` | Per-directory symlinks | User dir with same name wins (toolkit skipped) |
 | `settings.json` hooks | JSON merge via `merge-hooks.py` | User hooks + settings preserved, toolkit entries tagged with `_source` |
-| `constitution.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
-| `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | Same as above |
+| `rules/ai-toolkit-*.md` | Managed files, including `ai-toolkit-constitution.md` | The `ai-toolkit-*` prefix is reserved; any other filename is the user's |
+| `ARCHITECTURE.md` | Marker injection via `inject_section_cli.py` | User content outside `<!-- TOOLKIT:* -->` markers untouched |
 | `CLAUDE.md` | Marker injection via `inject_rule_cli.py` | Same as above |
 
 **`ai-toolkit install`** — run once per machine, merges toolkit into `~/.claude/`. Auto-upgrades old whole-directory symlinks.
 
 **`ai-toolkit update`** — re-apply after `npm install -g @softspark/ai-toolkit@latest` or after `add-rule` / `remove-rule`. Same as `install` but semantically correct for update flows.
 
-**`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, constitution.md, language rules). Editor configs are opt-in via `--editors`:
+**`ai-toolkit install --local`** — run per project. Always installs Claude Code configs (CLAUDE.md, settings.local.json, the language rules index); common rules and the constitution only when the global install does not provide them. Editor configs are opt-in via `--editors`:
 - `--editors all` — install all 11 editors (Cursor, Windsurf, Cline, Roo, Aider, Augment, Copilot, Antigravity, Codex, Gemini, opencode)
 - `--editors cursor,aider` — install only selected editors
-- `--editors dsh` requires explicit selection. Its DSH-specific output is project `.agents/skills`; the normal `--local` Claude files, detected language rules, and generic project outputs still apply. DSH is excluded from `all`, auto-detection, and defaults.
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
 Each editor gets its documented directory-based format. Copilot receives root
@@ -140,9 +141,7 @@ packs can layer their rules, skills, and hooks onto that Codex user target.
 
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
 
-DSH profile mutation is also outside generic installation. `ai-toolkit dsh install|update|doctor|uninstall --profile web` names both the integration and profile. It manages only `@softspark/dsh-codex@1.0.0`, `@softspark/dsh-orchestrator@1.0.1`, the released preset, and their ownership record. Vendor CLIs own login and credentials. DSH `0.1.1-rc.2` is the only reviewed host version.
-
-Both DSH preview paths are read-only. Project `--dry-run` resolves `extends` without persisting its lockfile and changes no project or `DSH_HOME` entry. Profile lifecycle `--dry-run` changes no package, preset, state, profile, or authentication surface.
+The DeepSeek Harness (DSH) target and the `ai-toolkit dsh` profile lifecycle were retired on 2026-09-24. Local install and uninstall still recognise `.agents/skills` surfaces carrying a legacy `dsh` owner marker so they can be migrated or removed; see `kb/reference/dsh-compatibility.md`.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers`
 entries into `.claude/settings.local.json` plus any selected editors with
@@ -155,14 +154,10 @@ project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
 |---------|--------|-------------|
 | `install` | `~/.claude/` | First-time: per-file symlinks + JSON merge + marker injection + rules |
 | `install --local` | `./` | Claude Code configs + editors via `--editors` (auto-detect or explicit) |
-| `install --local --editors dsh` | `./` | Generic local outputs plus the shared `.agents/skills` catalog; no DSH profile writes |
-| `dsh install|update --profile <name>` | `$DSH_HOME/profiles/<name>` | Exact SoftSpark package and preset lifecycle |
-| `dsh doctor --profile <name>` | DSH profile and ai-toolkit state | Read-only runtime, ownership, drift, and recovery diagnostics |
-| `dsh uninstall --profile <name>` | Managed DSH package, preset, and state entries | Ownership-checked removal that preserves unrelated profile content |
 | `claude-app export` | output ZIP + Markdown | Uploadable Claude Chat/Cowork plugin and global instructions |
 | `update` | `~/.claude/` | Re-apply after npm update or after add-rule/remove-rule |
 | `update --local` | `./` | Re-apply + refresh project-local configs |
-| `uninstall` | `~/.claude/` | Strips toolkit components (preserves user content) |
+| `uninstall` | registered projects, `~/.claude/`, editors, `~/.softspark/ai-toolkit/` | Removes everything installed; archives the data directory first (user content in shared files preserved) |
 | `add-rule <file>` | `~/.softspark/ai-toolkit/rules/` | Register rule — auto-applied on every `update` |
 | `remove-rule <name>` | `~/.softspark/ai-toolkit/rules/` + `~/.claude/rules/` | Unregister rule and remove generated Claude rule file |
 | `mcp add <name...>` | `./.mcp.json` | Merge canonical MCP template(s) into project config |
@@ -262,16 +257,6 @@ surface or tmux-backed Agent Teams lifecycle. Plugin packs reuse the same
 translation and hook-compatibility model when targeting the global Codex layer.
 
 See `kb/reference/codex-cli-compatibility.md` for the detailed mapping.
-
-### DSH Explicit Target
-
-The DSH target reuses the Codex `.agents/skills` emitter. Canonical skill ownership stays under `app/skills`. DSH invocation metadata is validated before emission because invalid camel-case fields, non-boolean invocation values, and nested discovery entries fail closed upstream.
-
-The profile lifecycle is a separate transaction boundary. It stores exact package-tree and preset identity under the shared ai-toolkit state path selected by `AI_TOOLKIT_HOME`, `SOFTSPARK_HOME`, or the default `~/.softspark/ai-toolkit`. A DSH lifecycle lock plus state compare-and-swap checks protect concurrent writers. Collision or rollback ambiguity preserves user data and reports doctor-visible recovery paths.
-
-Codex remains the parent model through its local app server. The released preset adds one-shot Claude Code and GitHub Copilot Gemini delegation tools. ai-toolkit does not handle provider API keys or login state. GitHub Copilot policy and AI credits apply to the Gemini route. Direct Google, Antigravity, and Gemini API-key routes are unsupported.
-
-See `kb/reference/dsh-compatibility.md` for the exact command, version, authentication, and recovery contract. Real-profile Phase 3 qualification is pending.
 
 ## MCP Rendering Layer
 

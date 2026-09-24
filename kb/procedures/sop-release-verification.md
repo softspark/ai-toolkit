@@ -2,11 +2,11 @@
 title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
-tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif, dsh]
-version: "1.8.4"
+tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
+version: "1.9.0"
 created: "2026-04-08"
-last_updated: "2026-09-18"
-description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, explicit DSH lifecycle, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
+last_updated: "2026-09-24"
+description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
 # SOP: Release Verification
@@ -55,7 +55,7 @@ files parse or that a second install is idempotent.
 
 ## Quick Checklist (TL;DR)
 
-The 14 core commands below must pass. Releases that change DSH must also complete Phase 10.
+The 14 core commands below must pass.
 
 ```bash
 # Pre-commit (Phase 0)
@@ -198,7 +198,8 @@ cd - && rm -rf /tmp/ai-toolkit-verify
 **Verify "Project-local" section:**
 - [ ] Would create: CLAUDE.md
 - [ ] Would create: .claude/settings.local.json
-- [ ] Would inject: .claude/constitution.md
+- [ ] Would inject: .claude/constitution.md only without a global install
+- [ ] Would generate: .claude/rules/ai-toolkit-*.md only for common rules the global install does not provide
 - [ ] Editors: all 11 listed (copilot, cursor, windsurf, cline, roo, aider, augment, antigravity, codex, gemini, opencode)
 - [ ] Would generate configs for each editor (legacy + directory-based)
 - [ ] Would install: .git/hooks/pre-commit
@@ -471,38 +472,6 @@ python3 -c "import zipfile; z=zipfile.ZipFile('$D.zip'); assert '.claude-plugin/
 
 **Verify:** the official validator exits 0; the archive contains the manifest,
 app-native rules skill, bundled agents/skills, and plugin-relative Cowork hooks.
-
----
-
-## Phase 10: Explicit DSH Qualification (v4.30.0+)
-
-Run this phase whenever the release changes the `dsh` target, package pins, preset lifecycle, or DSH compatibility documentation. Use a new task-specific `DSH_HOME`; never replace `HOME` or reuse a regular profile.
-
-Prerequisites: DSH `0.1.2-rc.1`, pnpm `>=11.7.0,<12.0.0`, Codex logged in through ChatGPT, Claude Code logged in natively, and GitHub Copilot CLI logged in natively. Do not supply provider API keys. The lifecycle automatically installs the scoped Claude Agent SDK `0.3.263` override and checks the actual provider and SDK metadata; no manual vendor configuration is needed.
-
-```bash
-DSH_SMOKE_ROOT="$(mktemp -d)"
-export DSH_HOME="$DSH_SMOKE_ROOT/dsh-home"
-export AI_TOOLKIT_HOME="$DSH_SMOKE_ROOT/toolkit-state"
-mkdir -p "$DSH_HOME"
-
-ai-toolkit dsh install --profile web
-ai-toolkit dsh doctor --profile web
-DSH_TELEMETRY_DISABLED=1 dsh --profile web --host 127.0.0.1 --port 0 --no-open
-```
-
-In a new `softspark-orchestrator` session, select the `codex` provider and run two standalone marker prompts:
-
-1. `subagent_claude_code` returns an exact child marker, then the Codex parent returns its exact completion marker.
-2. `subagent_gemini_copilot` returns an exact child marker, then the Codex parent returns its exact completion marker.
-
-Stop DSH, then remove only the managed profile artifacts:
-
-```bash
-ai-toolkit dsh uninstall --profile web --yes
-```
-
-**Verify:** both tool results have `isError=false`, both turns end as `completed`, `doctor` reports `Claude SDK: compatible (0.3.263)` and no recovery requirement before uninstall, and an unrelated preset fixture remains unchanged. The task-specific `AI_TOOLKIT_HOME` keeps lifecycle state separate from the operator's installation; `HOME` remains unchanged. Preserve only redacted event sequence evidence; never attach credentials, auth files, or full private prompts.
 
 ---
 

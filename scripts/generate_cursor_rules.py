@@ -14,6 +14,34 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_base import render_generator
+from injection import strip_owned_sections
+from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
+
+RULES_FILE = ".cursorrules"
+
+
+def _edits(target_dir: Path) -> tuple[Path, dict[Path, OwnedEdit]]:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Cursor target directory: {target}")
+    return target, {target / RULES_FILE: strip_owned_sections}
+
+
+def discover(target_dir: Path) -> int:
+    """Return 1 when ``.cursorrules`` holds ai-toolkit TOOLKIT sections."""
+    target, edits = _edits(target_dir)
+    return apply_owned_edits(edits, target, label="Cursor rules", dry_run=True)
+
+
+def cleanup(target_dir: Path) -> int:
+    """Strip ai-toolkit sections from ``.cursorrules``; delete it if nothing remains.
+
+    Returns 1 when the file was rewritten or removed, else 0. A symlinked
+    ``.cursorrules`` is skipped, never followed.
+    """
+    target, edits = _edits(target_dir)
+    return apply_owned_edits(edits, target, label="Cursor rules")
+
 
 if __name__ == "__main__":
     render_generator({

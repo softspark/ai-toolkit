@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor, antigravity]
 version: "1.4.0"
 created: "2026-04-12"
-last_updated: "2026-08-21"
+last_updated: "2026-09-24"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -101,6 +101,20 @@ unsupported legacy `httpUrl` field before any file in the transaction changes.
 roots. They never relocate project files.
 
 Global-only clients are configured explicitly via `ai-toolkit mcp install --editor ...`.
+
+## Uninstall
+
+`ai-toolkit uninstall` removes MCP servers the toolkit can show it added:
+
+- Built-in template servers installed with `mcp install --scope global`. Their
+  template names are recorded in `state.json` (`mcp_templates`). An entry goes
+  only while its value still equals what the toolkit wrote for that editor.
+  Codex entries are matched only inside the managed block.
+- Servers added with `inject-mcp`, by their recorded source.
+
+The mirrors that `install --local` copies from your `.mcp.json` into editor
+configs stay, and so does `.mcp.json` itself. They are your servers, not
+toolkit content.
 
 ## Related
 

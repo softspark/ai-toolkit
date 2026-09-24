@@ -14,46 +14,50 @@ setup() {
     mkdir -p "$TEST_HOME" "$TEST_PROJECT"
 }
 
-@test "generic uninstall leaves explicit DSH profile lifecycle untouched" {
-    local dsh_home="$TEST_ROOT/dsh-home"
-    local fake_bin="$TEST_ROOT/fake-bin"
-    mkdir -p "$dsh_home" "$fake_bin" "$TEST_HOME/.codex/agents"
-    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/dsh"
-    cp "$TOOLKIT_DIR/tests/fixtures/dsh/fake_dsh.py" "$fake_bin/pnpm"
-    chmod +x "$fake_bin/dsh" "$fake_bin/pnpm"
-    HOME="$TEST_HOME" DSH_HOME="$dsh_home" PATH="$fake_bin:$PATH" \
-        run node "$TOOLKIT_DIR/bin/ai-toolkit.js" dsh install --profile web
-    [ "$status" -eq 0 ]
+@test "global uninstall ignores state left by the retired DSH integration" {
+    mkdir -p "$TEST_HOME/.codex/agents" "$TEST_HOME/.softspark/ai-toolkit"
     printf '%s\n' '# ai-toolkit-managed: codex-agent' > \
         "$TEST_HOME/.codex/agents/ai-toolkit-owned.toml"
-    local before_profile before_preset before_state
-    before_profile="$(find "$dsh_home/profiles/web" -type f -exec shasum {} \; | sort)"
-    before_preset="$(find "$dsh_home/.agent-presets/softspark-orchestrator" \
-        -type f -exec shasum {} \; | sort)"
-    before_state="$(shasum "$TEST_HOME/.softspark/ai-toolkit/state.json")"
+    printf '%s\n' '{"dsh": {"profiles": {"web": {}}}}' > \
+        "$TEST_HOME/.softspark/ai-toolkit/state.json"
 
-    HOME="$TEST_HOME" DSH_HOME="$dsh_home" PATH="$fake_bin:$PATH" \
-        run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
 
     [ "$status" -eq 0 ]
     [ ! -e "$TEST_HOME/.codex/agents/ai-toolkit-owned.toml" ]
-    [ "$(find "$dsh_home/profiles/web" -type f -exec shasum {} \; | sort)" = \
-        "$before_profile" ]
-    [ "$(find "$dsh_home/.agent-presets/softspark-orchestrator" \
-        -type f -exec shasum {} \; | sort)" = "$before_preset" ]
-    [ "$(shasum "$TEST_HOME/.softspark/ai-toolkit/state.json")" = "$before_state" ]
+    [ ! -e "$TEST_HOME/.softspark/ai-toolkit" ]
+}
+
+# Rewrite a Codex skill surface into the layout releases with DSH support
+# wrote: $2 is "dsh" (DSH-only owner) or "shared" (Codex and DSH owners).
+legacy_skill_surface() {
+    python3 - "$1" "$2" <<'PY'
+import sys
+from pathlib import Path
+
+agents = Path(sys.argv[1]) / ".agents"
+kind = sys.argv[2]
+marker = {"dsh": ".ai-toolkit-dsh-adapted", "shared": ".ai-toolkit-shared-adapted"}[kind]
+wrappers = sorted((agents / "skills").glob("*/.ai-toolkit-codex-adapted"))
+assert wrappers, "no adapted wrappers to convert"
+for codex_marker in wrappers:
+    codex_marker.rename(codex_marker.with_name(marker))
+owners = "dsh\n" if kind == "dsh" else "codex\ndsh\n"
+(agents / ".ai-toolkit-skill-owners").write_text(owners)
+PY
 }
 
 @test "uninstall --local removes every managed agent-skill variant and its owner marker" {
-    for spec in 'dsh:dsh-only' 'codex,dsh:shared' 'codex:codex-only'; do
-        local editors=${spec%%:*}
-        local name=${spec#*:}
-        local project="$TEST_ROOT/$name"
+    for layout in dsh shared codex; do
+        local project="$TEST_ROOT/$layout"
         mkdir -p "$project"
 
         HOME="$TEST_HOME" run bash -c "cd '$project' && \
-            python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors '$editors'"
+            python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"
         [ "$status" -eq 0 ]
+        if [ "$layout" != codex ]; then
+            legacy_skill_surface "$project" "$layout"
+        fi
         [ -f "$project/.agents/.ai-toolkit-skill-owners" ]
 
         mkdir -p "$project/.agents/skills/user-skill" \
@@ -769,4 +773,53 @@ assert exit_code == 1, exit_code
 assert before == after, "unsupported-platform uninstall changed the filesystem"
 assert "No files were changed" in stderr.getvalue(), stderr.getvalue()
 PY
+}
+
+@test "global uninstall after a full all-editor install, plugin and injections leaves no toolkit content" {
+    local project="$TEST_HOME/project"
+    mkdir -p "$project"
+    git -C "$project" init -q
+    unset CODEX_HOME COPILOT_HOME AI_TOOLKIT_HOME SOFTSPARK_HOME
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --editors all --profile full
+    [ "$status" -eq 0 ]
+    HOME="$TEST_HOME" run bash -c "cd '$project' && \
+        python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors all --profile full"
+    [ "$status" -eq 0 ]
+    local sources="$TEST_ROOT/sources"
+    mkdir -p "$sources"
+    printf '%s\n' '{"hooks": {"PreToolUse": [{"matcher": "", "hooks": [{"type": "command", "command": "echo ext"}]}]}}' \
+        > "$sources/ext-hooks.json"
+    printf '%s\n' '{"name": "ext-mcp", "mcpServers": {"ext-mcp": {"type": "http", "url": "http://localhost:9/mcp"}}}' \
+        > "$sources/ext-mcp.json"
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/inject_hook_cli.py" "$sources/ext-hooks.json" "$TEST_HOME"
+    [ "$status" -eq 0 ]
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/inject_mcp_cli.py" "$sources/ext-mcp.json" "$TEST_HOME"
+    [ "$status" -eq 0 ]
+    HOME="$TEST_HOME" run node "$TOOLKIT_DIR/bin/ai-toolkit.js" plugin install --editor all memory-pack
+    [ "$status" -eq 0 ]
+
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"WARN"* ]]
+
+    # Editor MCP configs belong to the editors (~/.claude.json is Claude
+    # Code's own state), so inject-mcp's entries are removed from them but
+    # the files stay. Nothing else may be left, and nothing may name the
+    # toolkit, the injected sources or the plugin.
+    local leftovers
+    leftovers="$(cd "$TEST_HOME" && find . -mindepth 1 \( -type f -o -type l \) \
+        ! -path './project/.git/*' ! -name 'ai-toolkit-backup-*.tar.gz' \
+        ! -path './.mcp.json' ! -path './.claude.json' ! -path './.codex/config.toml' \
+        ! -path './.augment/settings.json' ! -path './.gemini/settings.json' \
+        ! -path './.gemini/config/mcp_config.json' ! -path './.cursor/mcp.json' \
+        ! -path './.copilot/mcp-config.json' ! -path './.codeium/windsurf/mcp_config.json' \
+        ! -path './.cline/data/settings/cline_mcp_settings.json' \
+        ! -path './Library/Application Support/Claude/claude_desktop_config.json' \
+        ! -path './.config/Claude/claude_desktop_config.json' | sort)"
+    [ -z "$leftovers" ] || { echo "$leftovers"; false; }
+    local mentions
+    mentions="$(cd "$TEST_HOME" && grep -rlE 'ai-toolkit|ext-mcp|echo ext|memory-pack' . \
+        --exclude='ai-toolkit-backup-*.tar.gz' --exclude-dir=.git || true)"
+    [ -z "$mentions" ] || { echo "$mentions"; false; }
 }

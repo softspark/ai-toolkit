@@ -12,8 +12,9 @@ never touching user content outside the markers.
 Claude Code (~/.claude/):
   - Per-file symlinks: agents/*.md, skills/*/  (merges with user files)
   - Merged JSON: hooks.json (toolkit entries tagged with _source)
-  - Marker injection: constitution.md, ARCHITECTURE.md (preserves user content)
-  - User-level rules: rules/ai-toolkit-*.md plus compact CLAUDE.md index
+  - Marker injection: ARCHITECTURE.md (preserves user content)
+  - User-level rules: rules/ai-toolkit-*.md (standalone, common, constitution)
+    plus compact CLAUDE.md index
 
 Other tools (global config locations):
   - Windsurf: ~/.codeium/windsurf/memories/global_rules.md + ~/.codeium/windsurf/skills/
@@ -326,7 +327,7 @@ VALID_LANGS = {"python", "typescript", "golang", "go", "rust", "java", "kotlin",
 
 def validate_args(cfg: dict) -> None:
     """Validate parsed arguments — exit non-zero on invalid values."""
-    from install_steps.ai_tools import LOCAL_ONLY_EDITORS, SELECTABLE_EDITORS
+    from install_steps.ai_tools import ALL_EDITORS
 
     errors: list[str] = []
 
@@ -353,17 +354,22 @@ def validate_args(cfg: dict) -> None:
                 f"(valid: {', '.join(VALID_SCOPES)})"
             )
 
+    # Retired editors warn and are ignored for one release (deprecation path in
+    # BACKWARD_COMPATIBILITY.md) instead of failing scripts that still pass them.
+    if cfg["editors"] and cfg["editors"] != "all":
+        from install_steps.project_registry import LEGACY_RETIRED_EDITORS
+        requested = [e.strip() for e in cfg["editors"].split(",") if e.strip()]
+        for retired in sorted(LEGACY_RETIRED_EDITORS & set(requested)):
+            print(f"Warning: editor '{retired}' is retired and ignored "
+                  "(see kb/reference/dsh-compatibility.md)", file=sys.stderr)
+        cfg["editors"] = ",".join(e for e in requested if e not in LEGACY_RETIRED_EDITORS)
+
     # Validate --editors
     if cfg["editors"] and cfg["editors"] != "all":
         for e in cfg["editors"].split(","):
             e = e.strip()
-            if e and e not in SELECTABLE_EDITORS:
-                errors.append(
-                    f"Unknown editor: '{e}' "
-                    f"(valid: {', '.join(SELECTABLE_EDITORS)}, all)"
-                )
-            if e in LOCAL_ONLY_EDITORS and not cfg["local"]:
-                errors.append(f"Editor '{e}' is project-local and requires --local")
+            if e and e not in ALL_EDITORS:
+                errors.append(f"Unknown editor: '{e}' (valid: {', '.join(ALL_EDITORS)}, all)")
 
     # Validate --lang
     if cfg["lang"]:
@@ -462,7 +468,7 @@ def print_summary(local: bool = False) -> None:
 
 def install_claude_code(target_dir: Path, hooks_scripts_dir: Path,
                         rules_dir: Path, only: str, skip: str,
-                        dry_run: bool) -> None:
+                        dry_run: bool, profile: str = "standard") -> None:
     print("## Claude Code (~/.claude/)")
     print()
 
@@ -483,7 +489,7 @@ def install_claude_code(target_dir: Path, hooks_scripts_dir: Path,
     print(f"  Available: {count_agents()} agents, {count_skills()} skills")
 
     inject_rules(claude_dir, target_dir, rules_dir, only, skip, dry_run,
-                 refresh_urls=True)
+                 refresh_urls=True, profile=profile)
 
     if not dry_run:
         refresh_url_hooks(str(target_dir))
@@ -790,7 +796,8 @@ def main() -> None:
         # Global install
         print_banner(target_dir, rules_dir, profile, only, skip, dry_run,
                      modules=resolved_modules)
-        install_claude_code(target_dir, hooks_scripts_dir, rules_dir, only, skip, dry_run)
+        install_claude_code(target_dir, hooks_scripts_dir, rules_dir, only, skip, dry_run,
+                            profile=profile or "standard")
 
         # Determine global editors: --editors flag > state > default (none)
         editors_arg: str = cfg["editors"]

@@ -444,6 +444,147 @@ def sync_project_mcp_to_editors(project_dir: Path, editors: list[str]) -> list[P
     )
 
 
+_TEMPLATE_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "app" / "mcp-templates"
+
+
+def _recorded_template_servers(
+    template_names: list[str],
+    templates_dir: Path,
+) -> dict[str, dict]:
+    """Return the servers of built-in templates recorded as globally installed."""
+    servers: dict[str, dict] = {}
+    for name in template_names:
+        if not isinstance(name, str) or not _TEMPLATE_NAME_RE.fullmatch(name):
+            continue
+        path = templates_dir / f"{name}.json"
+        if path.is_symlink() or not path.is_file():
+            continue
+        data = json.loads(path.read_text(encoding="utf-8"))
+        bucket = data.get("mcpServers") if isinstance(data, dict) else None
+        if isinstance(bucket, dict):
+            servers.update(
+                (key, value) for key, value in bucket.items() if isinstance(value, dict)
+            )
+    return servers
+
+
+def _global_config_groups(home: Path | None) -> dict[Path, list[str]]:
+    """Map each existing global MCP config path to the editors that write it."""
+    groups: dict[Path, list[str]] = {}
+    for editor in supported_editors():
+        if not EDITOR_SPECS[editor].get("global_path"):
+            continue
+        try:
+            path = resolve_editor_path(editor, "global", home=home)
+        except FileNotFoundError:
+            continue  # configured *_HOME does not exist: nothing installed there
+        groups.setdefault(path.absolute(), []).append(editor)
+    return groups
+
+
+def _template_removal(
+    path: Path,
+    editors: list[str],
+    servers: dict[str, dict],
+) -> tuple[ConfigUpdate, int] | None:
+    if EDITOR_SPECS[editors[0]]["format"] == "toml":
+        original, text = _load_toml_document(path)
+        if original is None:
+            return None
+        base, managed = _split_codex_managed_block(text, path)
+        owned = [
+            name for name, server in servers.items()
+            if name in managed and managed[name] == _normalize_toml_server(server)
+        ]
+        if not owned:
+            return None
+        for name in owned:
+            del managed[name]
+        rendered = _compose_codex_toml(base, managed)
+        return ConfigUpdate(path, original, rendered.encode("utf-8")), len(owned)
+    original, data = _load_json_document(path)
+    bucket = data.get("mcpServers")
+    if original is None or not isinstance(bucket, dict):
+        return None
+    owned = [
+        name for name, server in servers.items()
+        if name in bucket
+        and any(bucket[name] == _normalize_server(editor, server) for editor in editors)
+    ]
+    if not owned:
+        return None
+    for name in owned:
+        del bucket[name]
+    content = (json.dumps(data, indent=2) + "\n").encode("utf-8")
+    return ConfigUpdate(path, original, content), len(owned)
+
+
+def _prepare_template_cleanup(
+    template_names: list[str],
+    home: Path | None,
+    templates_dir: Path | None,
+) -> tuple[list[ConfigUpdate], int]:
+    servers = _recorded_template_servers(template_names, templates_dir or TEMPLATES_DIR)
+    return prepare_owned_server_removal(servers, home=home)
+
+
+def prepare_owned_server_removal(
+    servers: dict[str, dict],
+    *,
+    home: Path | None = None,
+) -> tuple[list[ConfigUpdate], int]:
+    """Preflight removal of toolkit-written copies of ``servers`` from global configs.
+
+    An entry goes only when its name is in ``servers`` and its value equals what
+    ``install_servers`` wrote for that editor (Codex: inside the managed block).
+    Returns ``(updates, removed_entries)`` for :func:`apply_config_updates`.
+    """
+    if not servers:
+        return [], 0
+    updates: list[ConfigUpdate] = []
+    removed = 0
+    for path, editors in _global_config_groups(home).items():
+        result = _template_removal(path, editors, servers)
+        if result is None:
+            continue
+        updates.append(result[0])
+        removed += result[1]
+    return updates, removed
+
+
+def cleanup_template_servers(
+    template_names: list[str],
+    *,
+    home: Path | None = None,
+    templates_dir: Path | None = None,
+) -> int:
+    """Remove globally installed built-in template servers from editor configs.
+
+    ``template_names`` is the ownership record (``state.json`` ``mcp_templates``,
+    written by ``ai-toolkit mcp install`` at global scope). A server entry is
+    removed only when its name comes from one of those templates AND its value
+    still equals what the toolkit wrote for that editor, so a user-edited or
+    user-added server of the same name survives. Codex entries are matched only
+    inside the ai-toolkit managed block. Files are rewritten, never deleted.
+    ``home=None`` honors ``CODEX_HOME``/``COPILOT_HOME``/``CLAUDE_USER_DATA_DIR``.
+    Returns the number of server entries removed across all configs.
+    """
+    updates, removed = _prepare_template_cleanup(template_names, home, templates_dir)
+    apply_config_updates(updates)
+    return removed
+
+
+def discover_template_servers(
+    template_names: list[str],
+    *,
+    home: Path | None = None,
+    templates_dir: Path | None = None,
+) -> int:
+    """Count what :func:`cleanup_template_servers` would remove, without writing."""
+    return _prepare_template_cleanup(template_names, home, templates_dir)[1]
+
+
 def _load_json_file(path: Path) -> dict:
     _original, data = _load_json_document(path)
     return data

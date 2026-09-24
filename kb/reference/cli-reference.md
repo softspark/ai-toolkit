@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-09-04"
+last_updated: "2026-09-24"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -25,7 +25,7 @@ Usage: ai-toolkit <command> [options]
 | `update --local` | Re-apply + auto-detect editors from existing project files |
 | `reset --local` | Wipe all project-local configs and recreate from scratch (clean slate) |
 | `status` | Show installed modules and version |
-| `uninstall` | Remove toolkit from `~/.claude/` |
+| `uninstall` | Remove everything the toolkit installed: every registered project, `~/.claude/` and editor surfaces, toolkit settings, and `~/.softspark/ai-toolkit/` (archived to `~/ai-toolkit-backup-<time>.tar.gz` first). `--local` removes one project and unregisters it |
 | `validate` | Verify toolkit integrity (`--strict` for CI-grade, warnings = errors) |
 | `doctor` | Diagnose install health, hooks, quick-win assets, artifact drift, context budget (est. resident tokens of the skill/agent listings and user rules, plus skills with zero recorded use; read-only, prints the `skillOverrides` key to paste), and permission rules (`permissions.allow` wildcards on interpreters, task runners, package installs, `gh api`, `curl`, `git fetch`, destructive commands; warns only, never edits) |
 | `doctor --fix` | Auto-repair broken symlinks, missing hooks, stale artifacts |

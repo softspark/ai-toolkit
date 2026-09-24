@@ -37,6 +37,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import skills_dir
 from frontmatter import frontmatter_field
+from secure_fs import apply_owned_edits, lexical_absolute
 
 COMMAND_PREFIX = "ai-toolkit-"
 
@@ -146,6 +147,50 @@ def generate(
 
     removed = _cleanup_stale(commands_out)
     return written, removed
+
+
+def _is_managed_command(content: bytes) -> bool:
+    """Match the exact TOML shape ``_render_gemini_command`` emits."""
+    return content.startswith(b'description = "') and b"\nprompt = '''\n" in content
+
+
+def _owned_command_edit(content: bytes) -> bytes | None:
+    return None if _is_managed_command(content) else content
+
+
+def _apply(target_dir: Path, config_root: Path | None, *, dry_run: bool) -> int:
+    target = lexical_absolute(target_dir)
+    if target.is_symlink() or not target.is_dir():
+        raise RuntimeError(f"Unsafe Gemini target directory: {target}")
+    base = lexical_absolute(config_root) if config_root is not None else target / ".gemini"
+    commands_out = base / "commands"
+    for directory in (base, commands_out):
+        if directory.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Gemini commands directory: {directory}")
+    files = sorted(
+        path for path in commands_out.glob(f"{COMMAND_PREFIX}*.toml")
+        if path.is_file() and not path.is_symlink()
+    ) if commands_out.is_dir() else []
+    return apply_owned_edits(
+        {path: _owned_command_edit for path in files},
+        target,
+        label="Gemini command",
+        prune=(commands_out, base) if base != target else (commands_out,),
+        dry_run=dry_run,
+    )
+
+
+def discover(target_dir: Path, *, config_root: Path | None = None) -> int:
+    """Count managed ``ai-toolkit-*.toml`` commands ``cleanup`` would remove."""
+    return _apply(target_dir, config_root, dry_run=True)
+
+
+def cleanup(target_dir: Path, *, config_root: Path | None = None) -> int:
+    """Remove every managed Gemini command; user commands are preserved.
+
+    ``config_root`` mirrors ``generate``; it must lie inside ``target_dir``.
+    """
+    return _apply(target_dir, config_root, dry_run=False)
 
 
 def main() -> None:

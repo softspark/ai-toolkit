@@ -423,6 +423,114 @@ def remove(source_name: str, target_dir: str) -> None:
         print(f"No entries with source '{source_name}' found.")
 
 
+# ---------------------------------------------------------------------------
+# Uninstall: remove every injected source while the registry still exists
+# ---------------------------------------------------------------------------
+
+_SOURCE_NAME_RE = re.compile(r"[a-zA-Z0-9_-]+")
+# Plugin packs own ``ai-toolkit-plugin-<name>`` sources; they are not inject-mcp's.
+PLUGIN_SOURCE_PREFIX = "ai-toolkit-plugin-"
+
+
+def _is_injected_source(source: object) -> bool:
+    return (
+        isinstance(source, str)
+        and source != PROTECTED_SOURCE
+        and not source.startswith(PLUGIN_SOURCE_PREFIX)
+        and _SOURCE_NAME_RE.fullmatch(source) is not None
+    )
+
+
+def _read_template_servers(path: Path) -> dict:
+    """Return ``mcpServers`` from a local template file; ``{}`` when unusable."""
+    if path.is_symlink() or not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+    servers = data.get("mcpServers") if isinstance(data, dict) else None
+    if not isinstance(servers, dict):
+        return {}
+    return {name: s for name, s in servers.items() if isinstance(s, dict)}
+
+
+def _registered_sources(data_dir: Path) -> tuple[set[str], dict]:
+    """Registered source names and their servers from cached or local templates."""
+    from mcp_sources import load_sources
+
+    external = data_dir / "mcp-templates" / "external"
+    if external.is_symlink() or (external / "sources.json").is_symlink():
+        return set(), {}
+    names: set[str] = set()
+    servers: dict = {}
+    for name, entry in load_sources(external).items():
+        if not _is_injected_source(name):
+            continue
+        names.add(name)
+        template = external / f"{name}.json"
+        if not template.is_file() and isinstance(entry, dict) and "path" in entry:
+            template = Path(str(entry["path"]))
+        for server_name, server in _read_template_servers(template).items():
+            servers.setdefault(server_name, server)
+    return names, servers
+
+
+def _prepare_injected_removal(home: Path, data_dir: Path) -> tuple[list, int]:
+    from mcp_editors import (
+        load_json_config,
+        prepare_json_config,
+        prepare_owned_server_removal,
+    )
+
+    sources, registered_servers = _registered_sources(data_dir)
+    if not sources:
+        return [], 0
+    mcp_path = home / ".mcp.json"
+    config = load_json_config(mcp_path)
+    bucket = config.get("mcpServers")
+    bucket = bucket if isinstance(bucket, dict) else {}
+    tagged = [
+        name for name, server in bucket.items() if _server_source(server) in sources
+    ]
+    servers = {name: _strip_source_tag(bucket[name]) for name in tagged}
+    for name, server in registered_servers.items():
+        servers.setdefault(name, server)
+    updates, removed = prepare_owned_server_removal(servers, home=home)
+    if tagged:
+        config["mcpServers"] = {
+            name: server for name, server in bucket.items() if name not in tagged
+        }
+        updates.append(prepare_json_config(mcp_path, config))
+    return updates, removed + len(tagged)
+
+
+def cleanup_injected(home: Path, data_dir: Path) -> int:
+    """Remove every inject-mcp server from ``~/.mcp.json`` and global editor configs.
+
+    Ownership is the registry: only sources named in
+    ``data_dir/mcp-templates/external/sources.json`` are considered.
+    Matched in ``home/.mcp.json``: servers tagged ``_source: <name>``; other or
+    unregistered tags are left alone. Matched in each global editor config (the
+    ``inject`` propagation targets): an entry named like one of those servers
+    or like a server in that source's cached URL template or recorded local
+    file, whose value equals what propagation wrote. Edited or
+    user-added copies survive. Files are rewritten keeping user keys, never
+    deleted, and no network is used. Call before ``data_dir`` is removed; the
+    registry itself is left for the caller. Returns the entries removed.
+    """
+    updates, removed = _prepare_injected_removal(Path(home), Path(data_dir))
+    from mcp_editors import apply_config_updates
+
+    apply_config_updates(updates)
+    return removed
+
+
+def discover_injected(home: Path, data_dir: Path) -> int:
+    """Count what :func:`cleanup_injected` would remove, without writing."""
+    return _prepare_injected_removal(Path(home), Path(data_dir))[1]
+
+
 def _parse_args(argv: list[str]) -> dict:
     """Parse CLI arguments."""
     result: dict = {

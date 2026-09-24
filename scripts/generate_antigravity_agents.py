@@ -18,6 +18,7 @@ from frontmatter import frontmatter_field
 from secure_fs import (
     SecureDestination,
     SecureTransaction,
+    apply_owned_edits,
     lexical_absolute,
     nearest_existing_root,
     run_secure_transaction,
@@ -209,37 +210,39 @@ def generate(
     return written, removed
 
 
-def cleanup(target_dir: Path, *, config_root: Path | None = None) -> int:
-    """Remove managed Antigravity agents while preserving every user agent."""
+def _owned_agent_edit(content: bytes) -> bytes | None:
+    return None if _is_managed(content) else content
+
+
+def _apply(target_dir: Path, config_root: Path | None, *, dry_run: bool) -> int:
     target = lexical_absolute(target_dir)
     if target.is_symlink() or not target.is_dir():
         raise RuntimeError(f"Unsafe Antigravity target directory: {target}")
     base = lexical_absolute(config_root) if config_root is not None else target / ".agents"
+    if base.is_symlink():
+        raise RuntimeError(f"Unsafe Antigravity config path: {base}")
     output_dir = base / "agents"
     stale = _stale_files(output_dir, set())
-    if not stale:
-        return 0
-    root = nearest_existing_root(target)
-    destinations = [
-        SecureDestination(path, root, f"Antigravity agent {path.parent.name}")
-        for path in stale
-    ]
+    # Each agent lives in its own directory; prune those, then every parent
+    # up to (never including) the target once they are empty.
+    parents = [d for d in (output_dir, *output_dir.parents) if target in d.parents]
+    return apply_owned_edits(
+        {path: _owned_agent_edit for path in stale},
+        target,
+        label="Antigravity agent",
+        prune=(*(path.parent for path in stale), *parents),
+        dry_run=dry_run,
+    )
 
-    def apply(transaction: SecureTransaction) -> int:
-        removed = 0
-        for destination in destinations:
-            if _is_managed(transaction.initial_content(destination)):
-                transaction.unlink(destination)
-                removed += 1
-        return removed
 
-    removed = run_secure_transaction(destinations, apply)
-    for path in stale:
-        try:
-            path.parent.rmdir()
-        except OSError:
-            pass
-    return removed
+def discover(target_dir: Path, *, config_root: Path | None = None) -> int:
+    """Count managed Antigravity agent definitions ``cleanup`` would remove."""
+    return _apply(target_dir, config_root, dry_run=True)
+
+
+def cleanup(target_dir: Path, *, config_root: Path | None = None) -> int:
+    """Remove managed Antigravity agents while preserving every user agent."""
+    return _apply(target_dir, config_root, dry_run=False)
 
 
 def main() -> None:

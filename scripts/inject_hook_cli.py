@@ -1057,6 +1057,178 @@ def remove(source_name: str, target_dir: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Uninstall: remove every injected source while the registry still exists
+# ---------------------------------------------------------------------------
+
+
+# Plugin packs tag their own entries ``ai-toolkit-plugin-<name>``; they are
+# plugin-owned, not inject-hook sources.
+PLUGIN_SOURCE_PREFIX = "ai-toolkit-plugin-"
+
+
+def _read_template_hooks(path: Path) -> dict:
+    """Return ``hooks`` from a local hooks file; ``{}`` when unusable."""
+    if path.is_symlink() or not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+    hooks = data.get("hooks") if isinstance(data, dict) else None
+    if not isinstance(hooks, dict):
+        return {}
+    return {
+        event: entries for event, entries in hooks.items() if isinstance(entries, list)
+    }
+
+
+def _registered_hook_templates(data_dir: Path) -> dict[str, dict]:
+    """Map each registered source to its cached or recorded local hooks file."""
+    from hook_sources import load_sources
+
+    external = data_dir / "hooks" / "external"
+    if external.is_symlink() or (external / "sources.json").is_symlink():
+        return {}
+    templates: dict[str, dict] = {}
+    for name, entry in load_sources(external).items():
+        if (
+            name == PROTECTED_SOURCE
+            or name.startswith(PLUGIN_SOURCE_PREFIX)
+            or SOURCE_NAME_PATTERN.fullmatch(name) is None
+        ):
+            continue
+        template = external / f"{name}.json"
+        if not template.is_file() and isinstance(entry, dict) and "path" in entry:
+            template = Path(str(entry["path"]))
+        templates[name] = _read_template_hooks(template)
+    return templates
+
+
+def _count_entries(hooks: dict) -> int:
+    return sum(len(entries) for entries in hooks.values() if isinstance(entries, list))
+
+
+def _strip_injected_settings(settings: dict, templates: dict[str, dict]) -> int:
+    """Drop injected entries in place and return how many were removed."""
+    hooks = settings.get("hooks")
+    if not isinstance(hooks, dict) or not all(
+        isinstance(entries, list) for entries in hooks.values()
+    ):
+        return 0
+    cleaned = hooks
+    for source in sorted(templates):
+        cleaned = strip_source(cleaned, source, templates.get(source) or None)
+    removed = _count_entries(hooks) - _count_entries(cleaned)
+    if removed:
+        if cleaned:
+            settings["hooks"] = cleaned
+        else:
+            settings.pop("hooks", None)
+    return removed
+
+
+def _strip_injected_codex(data: dict, owners: set[str]) -> int:
+    """Drop handlers carrying a registered source's owner marker; return the count."""
+    removed = 0
+    hooks = data.get("hooks", {})
+    for event in list(hooks):
+        retained_groups: list[dict] = []
+        for group in hooks[event]:
+            handlers = group.get("hooks", [])
+            retained = []
+            for handler in handlers:
+                match = CODEX_OWNER_PATTERN.search(handler.get("command", ""))
+                if match and match.group("owner") in owners:
+                    removed += 1
+                else:
+                    retained.append(handler)
+            if retained:
+                retained_groups.append(dict(group, hooks=retained))
+        if retained_groups:
+            hooks[event] = retained_groups
+        else:
+            del hooks[event]
+    return removed
+
+
+def _injected_hooks(home: Path, data_dir: Path, *, dry_run: bool) -> int:
+    _require_secure_mutation_support()
+    target_root = _trusted_target_root(str(home))
+    templates = _registered_hook_templates(lexical_absolute(data_dir))
+    settings_path = target_root / ".claude" / "settings.json"
+    settings_destination = _Destination(settings_path, target_root, "Claude settings")
+    _assert_safe_destination(settings_destination)
+    codex_destination = _codex_destination(target_root)
+    destinations = [
+        destination
+        for destination in (settings_destination, codex_destination)
+        if destination.path.is_file()
+    ]
+    if not templates or not destinations:
+        return 0
+
+    def apply(transaction: SecureTransaction) -> int:
+        removed = 0
+        if settings_destination in destinations:
+            content = transaction.initial_content(settings_destination)
+            if content is not None:
+                settings = _load_destination_json(content, settings_path)
+                count = _strip_injected_settings(settings, templates)
+                if count and not dry_run:
+                    transaction.atomic_write(settings_destination, _json_bytes(settings))
+                removed += count
+        if codex_destination in destinations:
+            content = transaction.initial_content(codex_destination)
+            if content is not None:
+                data = _load_codex_hooks_bytes(content, codex_destination.path)
+                count = _strip_injected_codex(
+                    data, {_codex_owner(name) for name in templates}
+                )
+                if count and not dry_run:
+                    _write_codex_update(
+                        _CodexUpdate(codex_destination, data, ""), transaction
+                    )
+                removed += count
+        return removed
+
+    transaction = SecureTransaction(destinations)
+    try:
+        return apply(transaction)
+    except BaseException as error:
+        try:
+            transaction.rollback()
+        except Exception as rollback_error:
+            raise RuntimeError(
+                f"Injected hook cleanup failed and rollback was incomplete: {rollback_error}"
+            ) from error
+        raise
+    finally:
+        transaction.close()
+
+
+def cleanup_injected(home: Path, data_dir: Path) -> int:
+    """Remove every inject-hook entry from Claude settings and Codex hooks.
+
+    Ownership is the registry: only sources named in
+    ``data_dir/hooks/external/sources.json`` are considered. Matched in
+    ``home/.claude/settings.json``: entries tagged ``_source: <name>`` plus
+    untagged entries identical to that source's cached or recorded local hooks
+    file (Claude Code can drop ``_source`` when it rewrites settings). Matched
+    in the Codex hooks file (``CODEX_HOME`` honored): handlers carrying that
+    source's exact ``AI_TOOLKIT_HOOK_OWNER`` marker. Unregistered tags are
+    left alone. Files are rewritten keeping user keys, never deleted; no
+    network. Call before ``data_dir`` is removed; the registry itself is left
+    for the caller. Returns the entries removed.
+    """
+    return _injected_hooks(Path(home), Path(data_dir), dry_run=False)
+
+
+def discover_injected(home: Path, data_dir: Path) -> int:
+    """Count what :func:`cleanup_injected` would remove, without writing."""
+    return _injected_hooks(Path(home), Path(data_dir), dry_run=True)
+
+
+# ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
 

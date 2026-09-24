@@ -290,47 +290,101 @@ def generate_global(home_dir: Path) -> Path:
     return generate(home_dir, global_install=True)
 
 
-def cleanup(target_dir: Path, *, global_install: bool = False) -> None:
-    """Remove only ai-toolkit's namespace and managed adjacent runtime."""
+def _is_managed_runtime(content: bytes | None) -> bool:
+    return content is not None and RUNTIME_MARKER.encode() in content[:256]
+
+
+def _cleanup_targets(
+    target_dir: Path, global_install: bool
+) -> tuple[Path, Path | None, Path | None]:
+    """Return (target, hooks.json or None, managed runtime or None).
+
+    Symlinked files are skipped; a symlinked ancestor is refused later by the
+    secure transaction.
+    """
     target = lexical_absolute(target_dir)
     hooks_path, runtime_path, _ = _paths(target, global_install)
-    if not hooks_path.is_file() or hooks_path.is_symlink():
-        return
-    root = nearest_existing_root(target)
-    hooks_destination = SecureDestination(hooks_path, root, "Antigravity hooks.json")
-    destinations = [hooks_destination]
-    runtime_destination: SecureDestination | None = None
+    hooks = hooks_path if hooks_path.is_file() and not hooks_path.is_symlink() else None
+    runtime: Path | None = None
     if runtime_path.is_file() and not runtime_path.is_symlink():
+        try:
+            if _is_managed_runtime(runtime_path.read_bytes()):
+                runtime = runtime_path
+        except OSError:
+            pass
+    return target, hooks, runtime
+
+
+def discover(target_dir: Path, *, global_install: bool = False) -> int:
+    """Count what ``cleanup`` removes: the namespace and the managed runtime."""
+    _, hooks, runtime = _cleanup_targets(target_dir, global_install)
+    count = int(runtime is not None)
+    if hooks is not None:
+        document = _load_existing(hooks.read_bytes(), hooks)
+        count += int(MANAGED_NAMESPACE in document)
+    return count
+
+
+def cleanup(target_dir: Path, *, global_install: bool = False) -> int:
+    """Remove only ai-toolkit's namespace and managed adjacent runtime.
+
+    Returns the number of items removed: 1 for the ``ai-toolkit`` namespace
+    in hooks.json, 1 for the runtime script. An orphaned managed runtime is
+    removed even when hooks.json no longer holds the namespace.
+    """
+    target, hooks_path, runtime_path = _cleanup_targets(target_dir, global_install)
+    if hooks_path is None and runtime_path is None:
+        return 0
+    root = nearest_existing_root(target)
+    hooks_destination: SecureDestination | None = None
+    runtime_destination: SecureDestination | None = None
+    destinations: list[SecureDestination] = []
+    if hooks_path is not None:
+        hooks_destination = SecureDestination(hooks_path, root, "Antigravity hooks.json")
+        destinations.append(hooks_destination)
+    if runtime_path is not None:
         runtime_destination = SecureDestination(
             runtime_path, root, "Antigravity hook runtime"
         )
         destinations.append(runtime_destination)
 
-    def apply(transaction: SecureTransaction) -> None:
-        document = _load_existing(
-            transaction.initial_content(hooks_destination), hooks_path
-        )
-        if MANAGED_NAMESPACE not in document:
-            return
-        document.pop(MANAGED_NAMESPACE)
-        if document:
-            transaction.atomic_write(
-                hooks_destination,
-                (
-                    json.dumps(
-                        document, indent=2, ensure_ascii=False, sort_keys=True
-                    )
-                    + "\n"
-                ).encode(),
+    def apply(transaction: SecureTransaction) -> int:
+        removed = 0
+        if hooks_destination is not None and hooks_path is not None:
+            document = _load_existing(
+                transaction.initial_content(hooks_destination), hooks_path
             )
-        else:
-            transaction.unlink(hooks_destination)
-        if runtime_destination is not None:
-            runtime = transaction.initial_content(runtime_destination)
-            if runtime is not None and RUNTIME_MARKER.encode() in runtime[:256]:
-                transaction.unlink(runtime_destination)
+            if MANAGED_NAMESPACE in document:
+                document.pop(MANAGED_NAMESPACE)
+                removed += 1
+                if document:
+                    transaction.atomic_write(
+                        hooks_destination,
+                        (
+                            json.dumps(
+                                document, indent=2, ensure_ascii=False, sort_keys=True
+                            )
+                            + "\n"
+                        ).encode(),
+                    )
+                else:
+                    transaction.unlink(hooks_destination)
+        if runtime_destination is not None and _is_managed_runtime(
+            transaction.initial_content(runtime_destination)
+        ):
+            transaction.unlink(runtime_destination)
+            removed += 1
+        return removed
 
-    run_secure_transaction(destinations, apply)
+    removed = run_secure_transaction(destinations, apply)
+    if runtime_path is not None:
+        runtime_dir = runtime_path.parent
+        if runtime_dir.is_dir() and not runtime_dir.is_symlink():
+            try:
+                runtime_dir.rmdir()
+            except OSError:
+                pass
+    return removed
 
 
 def main() -> None:
