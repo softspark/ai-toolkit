@@ -41,6 +41,7 @@ GLOBAL_INSTRUCTIONS_PATH = CLAUDE_APP_DIR / "global-instructions.md"
 REGISTERED_RULES_DIR = Path.home() / ".softspark" / "ai-toolkit" / "rules"
 
 PLUGIN_SCRIPT_FILES = (
+    "claude_codex_capability.py",
     "paths.py",
     "secret_column_check.py",
     "session_state.py",

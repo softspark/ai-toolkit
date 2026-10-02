@@ -1,7 +1,8 @@
 ---
 name: mcp-specialist
 description: "MCP server design, implementation, client configuration, and integration troubleshooting. Triggers: mcp, model context protocol, json-rpc, sse, stdio, mcp server, mcp config, mcp integration, mcp connection, claude desktop, mcp client."
-model: opus
+model: sonnet
+effort: high
 color: blue
 tools: Read, Write, Edit, Bash, Grep, Glob
 skills: mcp-patterns, api-patterns, clean-code

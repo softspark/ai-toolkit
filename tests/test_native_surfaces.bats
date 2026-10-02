@@ -18,7 +18,7 @@
 #   2. User-authored files without our prefix are never touched.
 #   3. Only user-invocable skills become commands — knowledge skills stay out.
 #   4. Frontmatter matches each editor's documented schema:
-#        - Augment agents:   name/description/model:inherit/color/tools/disabled_tools
+#        - Augment agents:   name/description/color/native tools allowlist (model omitted)
 #        - Augment commands: markdown body, no TOML, no template:
 #        - Cursor agents:    name/description/tools list (model omitted)
 #        - Gemini commands:  TOML with description= and prompt=\"\"\"
@@ -74,13 +74,15 @@ teardown_file() {
     done
 }
 
-@test "augment_agents: frontmatter has name, description, tools, disabled_tools" {
+@test "augment_agents: frontmatter uses a native allowlist without disabled_tools" {
     for f in "$NS_DIR"/.augment/agents/ai-toolkit-*.md; do
         grep -q '^name: '            "$f" || { echo "no name in $f"; return 1; }
         grep -q '^description: "'    "$f" || { echo "no description in $f"; return 1; }
         grep -q '^tools: \['         "$f" || { echo "no tools list in $f"; return 1; }
-        grep -q '^disabled_tools: \[\]$' "$f" || { echo "no disabled_tools in $f"; return 1; }
+        ! grep -q '^disabled_tools:' "$f" || { echo "allowlist overridden in $f"; return 1; }
+        grep -q '<!-- ai-toolkit-managed: augment-agent -->' "$f" || return 1
     done
+    grep -q '^tools: \[view, codebase-retrieval\]$' "$NS_DIR/.augment/agents/ai-toolkit-explorer-agent.md"
 }
 
 @test "augment_agents: ai-engineer body includes expertise heading" {
@@ -92,12 +94,14 @@ teardown_file() {
 @test "augment_agents: regeneration cleans stale ai-toolkit-* files" {
     tmp="$(mktemp -d)"
     mkdir -p "$tmp/.augment/agents"
-    # Pre-seed stale file (source doesn't exist) and a user file (no prefix).
-    echo "stale" > "$tmp/.augment/agents/ai-toolkit-nonexistent-agent.md"
+    # Pre-seed an owned legacy export and user files, including our filename prefix.
+    printf '%s\n' '---' 'name: nonexistent-agent' 'description: "Legacy"' 'tools: [Read]' 'disabled_tools: []' '---' 'stale' > "$tmp/.augment/agents/ai-toolkit-nonexistent-agent.md"
     echo "mine"  > "$tmp/.augment/agents/user-custom.md"
+    echo "mine"  > "$tmp/.augment/agents/ai-toolkit-user-custom.md"
     python3 "$TOOLKIT_DIR/scripts/generate_augment_agents.py" "$tmp" >/dev/null
     [ ! -f "$tmp/.augment/agents/ai-toolkit-nonexistent-agent.md" ]
     [ -f   "$tmp/.augment/agents/user-custom.md" ]
+    [ "$(cat "$tmp/.augment/agents/ai-toolkit-user-custom.md")" = "mine" ]
     rm -rf "$tmp"
 }
 

@@ -2,7 +2,8 @@
 name: ai-engineer
 description: "AI/ML integration specialist. Use for LLM integration, vector databases, RAG pipelines, embeddings, AI agent orchestration, document indexing, semantic search, hybrid retrieval, and answer generation. Triggers: ai, ml, llm, embedding, vector, rag, agent, openai, anthropic, search, retrieval, indexing, chunking, reranking."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: opus
+model: sonnet
+effort: high
 color: blue
 skills: clean-code, rag-patterns, api-patterns
 ---

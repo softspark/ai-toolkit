@@ -54,6 +54,7 @@ with zipfile.ZipFile("$archive") as z:
     assert "agents/backend-specialist.md" in names
     assert "skills/debug/SKILL.md" in names
     assert "scripts/session_state.py" in names
+    assert "scripts/claude_codex_capability.py" in names
     assert not any("agents/.claude/" in name for name in names)
 
     manifest = json.loads(z.read(".claude-plugin/plugin.json"))

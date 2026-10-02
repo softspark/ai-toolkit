@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [windows, wsl, install, uninstall, dependencies, hooks, security]
 created: "2026-04-24"
-last_updated: "2026-07-15"
+last_updated: "2026-10-02"
 description: "Windows support model for ai-toolkit: WSL, Git Bash, dependency detection, hooks, and fail-closed managed mutations."
 ---
 
@@ -62,6 +62,13 @@ available. A requested mutation exits non-zero before its transaction starts
 and reports `No files were changed`. Run the command from WSL to remove managed
 customizations, inject or remove external hooks, and generate/update native
 Codex hooks safely.
+
+Antigravity's new workflow-to-skill replacements also require these primitives.
+On native Windows, that optional generation step prints a WSL or
+`/migrate-workflows` instruction and skips the new skill writes, while preserving
+the existing legacy workflow and catalogue-pointer output. Use WSL to generate
+the replacements safely, or the Antigravity migration command before workflows
+retire on 2026-11-01. No unprotected transaction fallback is used.
 
 ## Verification
 

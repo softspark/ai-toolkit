@@ -29,7 +29,9 @@ def build_pointer_skill(editor_name: str) -> str:
         "1. Match the user's task to a skill name in the catalogue.\n"
         "2. Read the skill's SKILL.md from `.claude/skills/<name>/SKILL.md` "
         "or `~/.claude/skills/<name>/SKILL.md` when available.\n"
-        "3. Follow that skill's workflow, rules, gotchas, and exclusions.\n\n"
+        "3. Follow that skill's workflow, rules, gotchas, and exclusions.\n"
+        "4. Outside Claude Code, ignore CLAUDE_CODE_ONLY blocks and use this "
+        "client's native agents and configured models.\n\n"
         "## Catalogue\n\n"
         f"{emit_skills_bullets()}\n"
     )

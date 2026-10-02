@@ -813,9 +813,10 @@ def _detect_editors(cwd: Path) -> list[str]:
         p = cwd / marker
         if not p.exists():
             continue
-        if marker == ".agents/skills" and _is_pointer_only_skills_dir(p):
+        if marker == ".agents/skills" and _is_antigravity_only_skills_dir(p):
             # The canonical workspace Antigravity pointer also lives in
-            # .agents/skills/; only materialized skills indicate Codex.
+            # .agents/skills/, alongside owned workflow replacements.
+            found.add("antigravity")
             continue
         if marker == ".agents/skills":
             owners = skill_surface_owners(p)
@@ -825,13 +826,16 @@ def _detect_editors(cwd: Path) -> list[str]:
     return sorted(found)
 
 
-def _is_pointer_only_skills_dir(skills_dir: Path) -> bool:
-    """True when a skills dir holds only the ai-toolkit pointer skill."""
+def _is_antigravity_only_skills_dir(skills_dir: Path) -> bool:
+    """Distinguish Antigravity-owned shared skills from a native Codex install."""
+    from antigravity_workflow_skills import workflow_skill_paths
+
     try:
         entries = [e.name for e in skills_dir.iterdir() if not e.name.startswith(".")]
-    except OSError:
+        owned = {path.parent.name for path in workflow_skill_paths(skills_dir)}
+    except (OSError, RuntimeError):
         return False
-    return entries == ["ai-toolkit-skill-catalogue"]
+    return bool(entries) and set(entries) <= owned | {"ai-toolkit-skill-catalogue"}
 
 
 def _resolve_editors(editors_arg: str, cwd: Path) -> list[str]:

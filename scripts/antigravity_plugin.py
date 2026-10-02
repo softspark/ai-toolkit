@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dir_rules_shared import STANDARD_RULES
 from paths import user_path
 from emission import agents_dir
+from prompt_surfaces import strip_claude_code_only
 from generate_antigravity_agents import render_agent
 from generate_antigravity_hooks import (
     RUNTIME_NAME,
@@ -100,7 +101,7 @@ def _adapt_skill_files(
             adapted.append((relative, content, mode))
             continue
         skill_name = path.parts[1]
-        text = content.decode("utf-8")
+        text = strip_claude_code_only(content.decode("utf-8"))
         skill_root = f"${{extensionPath}}/skills/{skill_name}"
         text = text.replace("${CLAUDE_SKILL_DIR}", skill_root)
         if skill_name == "persona":

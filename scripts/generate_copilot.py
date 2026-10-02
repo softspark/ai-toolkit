@@ -76,6 +76,7 @@ from emission import (
     skills_dir,
 )
 from frontmatter import frontmatter_field
+from prompt_surfaces import strip_claude_code_only
 from generator_base import render_generator
 from secure_fs import SecureDestination, run_secure_transaction
 
@@ -265,6 +266,7 @@ def _read_legacy_prompt_body(skill_file: Path) -> str:
 
 def _portable_copilot_body(body: str, *, include_execution_note: bool) -> str:
     """Remove Claude-only interpolation and delegation APIs from markdown."""
+    body = strip_claude_code_only(body)
     body = _replace_agent_calls(body)
     body = _TASK_CALL_RE.sub(
         "Update or inspect progress using Copilot's current planning controls.",

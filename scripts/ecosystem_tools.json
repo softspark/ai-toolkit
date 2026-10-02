@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-09-23",
+  "last_updated": "2026-10-02",
   "tools": [
     {
       "id": "claude-code",
@@ -99,16 +99,17 @@
         "command": "claude --version"
       },
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
-          "B",
-          "F"
+          "A",
+          "C"
         ],
-        "note": "Accept model-switch hook events and current MCP input schema; correct skill metadata and recognize account-synced plugins.",
+        "note": "Current command hooks, skill/subagent effort and plugin contracts remain compatible. Plugin mods and function hooks are optional, not adopted.",
         "sources": [
           "https://code.claude.com/docs/en/hooks",
           "https://code.claude.com/docs/en/skills",
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins-reference",
+          "https://code.claude.com/docs/en/sub-agents"
         ]
       }
     },
@@ -148,11 +149,12 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
-          "F"
+          "A",
+          "C"
         ],
-        "note": "Account plugins sync to Claude Code terminal sessions from 2.1.273. Manual app export/upload remains necessary. Initial doctor fetch returned HTTP 429; preserve last-known-good snapshot on fetch errors.",
+        "note": "Account-synced plugins and app export remain compatible; hooks/subagents remain unavailable in ordinary Chat. Organization publishing controls are optional.",
         "sources": [
           "https://support.claude.com/en/articles/13837440-use-plugins-in-claude",
           "https://code.claude.com/docs/en/plugins-reference#plugins-synced-from-claude-ai"
@@ -213,13 +215,15 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
-          "B"
+          "A"
         ],
-        "note": "Permission hooks must return valid JSON on success. Emit permission:allow for all six permission events, retaining destructive-command denials.",
+        "note": "BDK heading is navigation drift; hooks, native agent inheritance and skill paths remain compatible.",
         "sources": [
-          "https://cursor.com/docs/hooks"
+          "https://cursor.com/docs/hooks",
+          "https://cursor.com/docs/subagents",
+          "https://cursor.com/docs/skills"
         ]
       }
     },
@@ -274,13 +278,11 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
-          "A",
-          "C",
-          "D"
+          "A"
         ],
-        "note": "Native Devin and compatibility skill locations remain supported. Workflows are deprecated in favor of skills; preserve compatible workflow output with a deprecation notice. Plugin marketplace and optional skill permission grants are not adopted.",
+        "note": "Current Devin hook schema and Windsurf-compatible skill paths remain supported. No new emitted-contract migration found.",
         "sources": [
           "https://docs.devin.ai/cli/extensibility/skills/overview",
           "https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks",
@@ -336,16 +338,17 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
-          "B",
-          "F"
+          "A",
+          "C"
         ],
-        "note": "Preserve skill invocation controls; enforce custom-agent character limit; normalize VS Code hook payloads and decisions separately from CLI/cloud.",
+        "note": "Computer-use navigation and optional HTTP/exec hooks do not change emitted command hooks. Agent and skill invocation controls remain compatible.",
         "sources": [
           "https://docs.github.com/en/copilot/reference/hooks-reference",
           "https://code.visualstudio.com/docs/agent-customization/hooks",
-          "https://code.visualstudio.com/docs/agent-customization/agent-skills"
+          "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+          "https://docs.github.com/en/copilot/reference/custom-agents-configuration"
         ]
       }
     },
@@ -407,12 +410,11 @@
         "command": "gemini --version"
       },
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
-          "A",
-          "C"
+          "A"
         ],
-        "note": "Current hook reference still documents the existing eleven-event lifecycle. No Stop event or implicit migration to a different runtime. Optional extensions remain not adopted.",
+        "note": "Eleven native events remain documented; AfterAgent is the completion event. No Stop event or forced runtime migration.",
         "sources": [
           "https://geminicli.com/docs/hooks/"
         ]
@@ -471,17 +473,18 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
           "A",
           "C"
         ],
-        "note": "Refresh customization sources; native skills and SDK/CLI-only plugins retain their separate scopes. .clineignore deprecation does not affect toolkit output, which does not generate that file. The upstream repository confirms the executable-hook input/output schema, but still labels TaskComplete and PreCompact as coming soon; emitted files do not prove runtime event availability.",
+        "note": "Desktop App is an additional optional surface and SDK heading removal is navigation. Hosted hook page was incomplete; official repository still labels TaskComplete/PreCompact coming soon.",
         "sources": [
           "https://docs.cline.bot/customization/skills",
           "https://docs.cline.bot/customization/plugins",
           "https://docs.cline.bot/resources/deprecations",
-          "https://github.com/cline/cline/blob/main/.clinerules/hooks/README.md"
+          "https://github.com/cline/cline/blob/main/.clinerules/hooks/README.md",
+          "https://docs.cline.bot/cline-overview"
         ]
       }
     },
@@ -527,11 +530,11 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
           "A"
         ],
-        "note": "Zoo custom-mode schema remains compatible with current .roomodes output. Keep Roo compatibility paths and distinguish frozen Roo docs from the successor.",
+        "note": "Zoo .roomodes and .roo/rules-{slug}/ remain compatible; retain Roo paths for successor installs.",
         "sources": [
           "https://docs.zoocode.dev/features/custom-modes"
         ]
@@ -575,11 +578,11 @@
         "command": "aider --version"
       },
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
           "A"
         ],
-        "note": "Configuration options still support read conventions and existing generated switches. No required output migration found in the options reference.",
+        "note": "Existing config, conventions, architect, lint/test, attribution and language options remain documented.",
         "sources": [
           "https://aider.chat/docs/config/options.html"
         ]
@@ -641,14 +644,17 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
           "A",
+          "B",
           "C"
         ],
-        "note": "Notification remains listed in the common event enum without a dedicated handler contract; do not wire a speculative event. Existing hook configuration remains supported.",
+        "note": "Correct native tool allowlists and remove conflicting disabled_tools. Preserve marked/legacy ownership and user files. Notification remains insufficiently specified for an emitted handler.",
         "sources": [
-          "https://docs.augmentcode.com/cli/hooks"
+          "https://docs.augmentcode.com/cli/hooks",
+          "https://docs.augmentcode.com/cli/subagents",
+          "https://docs.augmentcode.com/cli/permissions#migrating-from-legacy-tool-names"
         ]
       }
     },
@@ -658,8 +664,8 @@
       "kind": "editor",
       "urls": {
         "docs": "https://antigravity.google/docs",
-        "release_notes": "https://antigravity.google/changelog",
-        "changelog": null
+        "release_notes": "https://antigravity.google/docs/changelog",
+        "changelog": "https://antigravity.google/docs/changelog"
       },
       "config_paths": [
         ".agents/rules/*.md",
@@ -691,7 +697,7 @@
         "scripts/antigravity_plugin.py",
         "scripts/mcp_editors.py"
       ],
-      "status_note": "Antigravity 2.0 v2.8.1, Antigravity CLI v1.1.14, IDE v2.5.5 (verified 2026-08-19). Project skills use .agents/skills/; only .agent/skills/ is legacy. Global skills use ~/.gemini/antigravity-cli/skills/ for CLI and ~/.gemini/config/skills/ for the IDE/shared product. Native hooks use .agents/hooks.json or ~/.gemini/config/hooks.json with exact events PreToolUse, PostToolUse, PreInvocation, PostInvocation, and Stop plus a self-contained adjacent adapter. Full-profile installs add native subagents. antigravity-plugin exports an opt-in deterministic package for .agents/plugins/, ~/.gemini/antigravity-cli/plugins/, or ~/.gemini/config/plugins/. Native MCP output consumes portable transport metadata and uses serverUrl; legacy url input is normalized and httpUrl is rejected. Unrelated config data is preserved transactionally.",
+      "status_note": "Antigravity 2.19.1 (reviewed 2026-10-01) fixes custom agents ignoring global/project rules; 2.18.1 adds plugin marketplace management. Native agent models remain inherit/flash/pro; toolkit agents preserve inherit. Previous CLI/IDE version observations are historical, not current availability guarantees. Project skills use .agents/skills/; only .agent/skills/ is legacy. Global skills use ~/.gemini/antigravity-cli/skills/ for CLI and ~/.gemini/config/skills/ for the IDE/shared product. Native hooks use .agents/hooks.json or ~/.gemini/config/hooks.json with exact events PreToolUse, PostToolUse, PreInvocation, PostInvocation, and Stop plus a self-contained adjacent adapter. Full-profile installs add native subagents. antigravity-plugin exports an opt-in deterministic package for .agents/plugins/, ~/.gemini/antigravity-cli/plugins/, or ~/.gemini/config/plugins/. Native MCP output consumes portable transport metadata and uses serverUrl; legacy url input is normalized and httpUrl is rejected. Unrelated config data is preserved transactionally.",
       "capability_markers": [
         "agent manager",
         "artifacts",
@@ -717,13 +723,19 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
-          "A"
+          "A",
+          "C",
+          "D"
         ],
-        "note": "Official hook reference still specifies the existing five native events and camelCase payloads. Refresh snapshot and clarify that current docs can be read through the web index.",
+        "note": "Hooks and inherited agent models remain compatible. Marketplace UI is optional. Workflows retire 2026-11-01: emit same-named skills, retain deprecated legacy files, preserve collisions, warn about unmigrated commands. Native Windows keeps legacy output with explicit WSL/manual migration guidance.",
         "sources": [
-          "https://antigravity.google/docs/hooks"
+          "https://antigravity.google/docs/hooks",
+          "https://antigravity.google/docs/changelog",
+          "https://antigravity.google/docs/subagents/",
+          "https://antigravity.google/docs/migration/workflows-to-skills/",
+          "https://antigravity.google/docs/skills"
         ]
       }
     },
@@ -780,8 +792,6 @@
         "hook event: SubagentStart",
         "hook event: SubagentStop",
         "hook handler: command",
-        "hook handler: prompt",
-        "hook handler: agent",
         ".agents/skills",
         ".codex/agents",
         ".codex-plugin/plugin.json",
@@ -798,15 +808,17 @@
         "command": "codex --version"
       },
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
-          "B",
-          "F"
+          "A",
+          "C"
         ],
-        "note": "Add portable root plugin.json while retaining the Codex compatibility manifest. Accept Interrupt and mcp_tool configuration, wildcard matchers and current Stop continuation semantics; track native MCP searches.",
+        "note": "Native agents, skills, plugin manifests and trusted hooks remain compatible. command/mcp_tool execute; prompt/agent handlers are parsed but skipped. Cloud restrictions do not alter local exports.",
         "sources": [
           "https://developers.openai.com/plugins/build/plugins",
-          "https://learn.chatgpt.com/docs/hooks"
+          "https://learn.chatgpt.com/docs/hooks",
+          "https://learn.chatgpt.com/docs/agent-configuration/subagents",
+          "https://learn.chatgpt.com/docs/build-skills"
         ]
       }
     },
@@ -873,15 +885,17 @@
         "command": "opencode --version"
       },
       "documentation_review": {
-        "date": "2026-09-23",
+        "date": "2026-10-02",
         "classes": [
           "A",
-          "C"
+          "D"
         ],
-        "note": "Stable skill discovery and tool/session plugin events remain supported. Keep stable generator; no speculative v2 API migration.",
+        "note": "Stable plugins, skills and Markdown commands remain compatible. Agent tools is deprecated but our generator already omits it. No v2 migration adopted.",
         "sources": [
           "https://opencode.ai/docs/plugins/",
-          "https://opencode.ai/docs/skills/"
+          "https://opencode.ai/docs/skills/",
+          "https://opencode.ai/docs/agents/",
+          "https://opencode.ai/docs/commands/"
         ]
       }
     }

@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import agents_dir
 from frontmatter import frontmatter_field
+from prompt_surfaces import strip_claude_code_only
 from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 AGENT_PREFIX = "ai-toolkit-"
@@ -66,7 +67,7 @@ def _render_opencode_agent(agent_file: Path) -> str:
         lines.append(f"color: {color}")
     lines.append("---")
     lines.append("")
-    body = _agent_body(agent_file).rstrip()
+    body = strip_claude_code_only(_agent_body(agent_file)).rstrip()
     if body:
         lines.append(body)
     lines.append("")
@@ -98,20 +99,22 @@ def generate(
     """
     base = config_root if config_root is not None else target_dir / ".opencode"
     agents_out = base / "agents"
-    agents_out.mkdir(parents=True, exist_ok=True)
 
-    written = 0
+    rendered: list[tuple[Path, str]] = []
     for agent_file in sorted(agents_dir.glob("*.md")):
         name = frontmatter_field(agent_file, "name")
         description = frontmatter_field(agent_file, "description")
         if not name or not description:
             continue
         out_path = agents_out / f"{AGENT_PREFIX}{name}.md"
-        out_path.write_text(_render_opencode_agent(agent_file), encoding="utf-8")
-        written += 1
+        rendered.append((out_path, _render_opencode_agent(agent_file)))
+
+    agents_out.mkdir(parents=True, exist_ok=True)
+    for out_path, content in rendered:
+        out_path.write_text(content, encoding="utf-8")
 
     removed = _cleanup_stale(agents_out)
-    return written, removed
+    return len(rendered), removed
 
 
 def _managed_edits(base: Path) -> dict[Path, OwnedEdit]:

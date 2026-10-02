@@ -2,7 +2,8 @@
 name: game-developer
 description: "Game development across all platforms (PC, Web, Mobile, VR/AR). Use for Unity, Godot, Unreal, Phaser, Three.js. Covers game mechanics, multiplayer, optimization, 2D/3D graphics."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: opus
+model: sonnet
+effort: high
 color: blue
 skills: clean-code
 ---

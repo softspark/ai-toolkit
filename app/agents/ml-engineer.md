@@ -2,7 +2,8 @@
 name: ml-engineer
 description: "Machine learning systems specialist. Use for model training, data pipelines, MLOps, and model deployment. Triggers: ml, machine learning, model training, mlops, tensorflow, pytorch, scikit-learn."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: opus
+model: sonnet
+effort: high
 color: blue
 skills: clean-code
 ---
