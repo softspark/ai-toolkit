@@ -2,6 +2,7 @@
 name: debugger
 description: "Root cause analysis expert. Use for cryptic errors, stack traces, intermittent failures, silent bugs, and systematic debugging. Triggers: debug, error, exception, traceback, bug, failure, root cause."
 model: opus
+effort: xhigh
 color: magenta
 tools: Read, Edit, Bash
 skills: clean-code

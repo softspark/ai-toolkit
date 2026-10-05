@@ -123,6 +123,21 @@ PY
     [ "$count" -ge 10 ]
 }
 
+@test "antigravity: retired workflows keep all slash names through native skills" {
+    count=0
+    for workflow in "$AG_TMP"/.agents/workflows/ai-toolkit-*.md; do
+        name="$(basename "$workflow" .md)"
+        skill="$AG_TMP/.agents/skills/$name/SKILL.md"
+        [ -f "$skill" ]
+        grep -q "^name: $name$" "$skill"
+        grep -q '^description: ' "$skill"
+        grep -q 'ai-toolkit-managed: antigravity-workflow-skill' "$skill"
+        grep -q 'DEPRECATED: workflows retire 2026-11-01' "$workflow"
+        count=$((count + 1))
+    done
+    [ "$count" -eq 13 ]
+}
+
 @test "antigravity: regeneration is idempotent including the pointer" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_antigravity.py" "$tmp" >/dev/null

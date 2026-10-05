@@ -7,6 +7,58 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v5.1.0 - Conditional Codex delegation and editor compatibility (2026-10-02)
+
+### Added
+
+- **Conditional Claude-to-Codex routing:** Added local installed/enabled plugin
+  detection in `scripts/claude_codex_capability.py`, plus runtime-agent checks
+  in `/orchestrate`, `/workflow`, `/swarm` and agent-authoring guidance. Missing
+  or disabled plugins retain native agents and configured models; detection
+  never installs or enables a plugin.
+- **Explicit executor lifecycle:** Added scoped task ownership, final-result
+  collection, failure handling and verification guidance for `codex:codex-rescue`.
+  Security prefers available Astra `xhigh`; hard debugging uses available Codex
+  or native Opus `xhigh`. Security-package access remains separate.
+
+### Changed
+
+- **Claude role defaults:** Changed eleven implementation agents to Sonnet
+  `high`, orchestration to Opus `high`, and the debugger to Opus `xhigh`.
+  Explicit user choices and other clients' model settings remain authoritative.
+- **Portable content:** Added scoped instruction filtering in
+  `scripts/prompt_surfaces.py`; native agent, command and skill exports preserve
+  model inheritance, frontmatter, resources and fenced examples.
+- **Editor priorities:** Documented Claude Code, Codex and Antigravity as the
+  recommended primary set. Other adapters, saved selections and `--editors all`
+  remain supported.
+
+### Fixed
+
+- **Forwarding hooks:** Fixed the generic research reminder conflicting with
+  Codex's forwarding-only wrapper, including quiet mode. Ship the detector with
+  deployed hooks so an older npm-global package does not hide it.
+- **Safe regeneration:** Fixed partial agent/command refreshes when a later
+  scoped block is malformed. Preserve user collisions and literal marker examples.
+- **Test isolation:** Fixed an uninstall fixture writing its registry lock to
+  the real user home.
+
+### Ecosystem
+
+- **Augment (class B):** Replaced Claude tool aliases with documented native
+  allowlists and removed the conflicting empty `disabled_tools` field. Reject
+  unknown/empty tool grants, report unsupported orchestration, and preserve user
+  files while adopting recognized legacy definitions.
+- **Antigravity (class D):** Added same-named native skills for all 13 generated
+  workflow commands before their 2026-11-01 retirement. Retain legacy files,
+  mark deprecation, preserve ownership during cleanup, and diagnose unmigrated
+  commands. Native Windows keeps legacy output with explicit WSL/manual migration
+  guidance instead of unsafe protected writes.
+- **Dated compatibility review:** Reviewed all 13 integrations, refreshed the
+  ecosystem snapshot, and corrected Codex's parsed-but-skipped prompt/agent hook
+  markers. Skill count remains 116; agent count remains 44. The skill-body budget
+  remains unchanged because the largest body still sits above the ratchet margin.
+
 ## v5.0.1 - Pre-commit gate fix, local release gates (2026-09-24)
 
 Patch release. The fallback pre-commit hook no longer reports a failed linter as

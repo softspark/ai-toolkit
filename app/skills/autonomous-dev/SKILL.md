@@ -10,6 +10,16 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 $ARGUMENTS
 
+<!-- CLAUDE_CODE_ONLY_START -->
+Only in Claude Code, apply the `model-routing-patterns` skill when choosing
+executors or creating agent definitions. Delegate to `codex:codex-rescue` only
+when its plugin is installed, enabled and callable in this session. Otherwise
+use the installed native agents and their configured models. A context without
+the Agent tool returns the dispatch decision to its supervisor; it does not
+invent a tool or bypass the client. Preserve explicit user choices and verify
+actual completion before accepting a delegated result.
+<!-- CLAUDE_CODE_ONLY_END -->
+
 Own one software-delivery run from its requested outcome to a reviewed,
 verified PR. Continue through reversible decisions within the user's approved
 scope, recording assumptions where they can be reviewed. Use existing skills

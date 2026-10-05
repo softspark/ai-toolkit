@@ -52,8 +52,10 @@ for source, output in zip(sources, generated, strict=True):
     assert data["name"] == fields["name"]
     assert data["description"] == fields["description"]
     expected_body = body.lstrip("\n").rstrip() + "\n"
-    if "Use Opus" not in expected_body and "Use Sonnet" not in expected_body:
+    if ("Use Opus" not in expected_body and "Use Sonnet" not in expected_body
+            and "<!-- CLAUDE_CODE_ONLY_START -->" not in expected_body):
         assert data["developer_instructions"] == expected_body
+    assert "codex:codex-rescue" not in data["developer_instructions"]
     assert "Use Opus" not in data["developer_instructions"]
     assert output.name == f"ai-toolkit-{data['name']}.toml"
 PY

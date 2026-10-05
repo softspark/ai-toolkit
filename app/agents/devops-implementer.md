@@ -1,7 +1,8 @@
 ---
 name: devops-implementer
 description: "Infrastructure implementation expert. Use for writing Terraform, Ansible, Docker, and shell scripts based on approved architecture notes and implementation summaries. Triggers: terraform, ansible, docker, kubernetes, shell, infrastructure, deployment, configuration."
-model: opus
+model: sonnet
+effort: high
 color: orange
 tools: Read, Write, Edit, Bash
 skills: clean-code

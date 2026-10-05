@@ -2,7 +2,8 @@
 name: frontend-specialist
 description: "Senior Frontend Architect for React, Next.js, Vue, and modern web systems. Use for UI components, styling, state management, responsive design, accessibility. Triggers: component, react, vue, ui, ux, css, tailwind, responsive, nextjs."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: opus
+model: sonnet
+effort: high
 color: blue
 skills: clean-code, testing-patterns, design-engineering, a11y-validate
 ---

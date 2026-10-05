@@ -3,9 +3,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.6.0"
+version: "3.7.0"
 created: "2026-03-23"
-last_updated: "2026-09-24"
+last_updated: "2026-10-02"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -37,6 +37,12 @@ ai-toolkit install --local --editors cursor,aider         # specific editors onl
 ```
 
 Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`, `codex`, `gemini`, `opencode`.
+
+The recommended primary set is Claude Code, Codex and Antigravity:
+`ai-toolkit install --local --editors codex,antigravity` (Claude is installed by
+default). Other adapters remain optional and supported; `all` still means all
+supported editors and existing selections remain unchanged. This recommendation
+does not uninstall applications or remove user configuration.
 
 To restrict which language rules are injected, use `--lang`:
 
@@ -375,23 +381,23 @@ When adding or modifying any toolkit component:
 
 | Editor | Where to verify |
 |--------|----------------|
-| Claude Code | `docs.anthropic.com/claude-code` |
+| Claude Code | `code.claude.com/docs` |
 | Cursor | `docs.cursor.com` |
-| Windsurf | `docs.codeium.com/windsurf` |
+| Windsurf / Devin Desktop | `docs.devin.ai/desktop` |
 | GitHub Copilot | `docs.github.com/copilot` |
 | Gemini CLI | `github.com/google-gemini/gemini-cli` |
 | Cline | `github.com/cline/cline` |
-| Roo Code | `github.com/RooVetGit/Roo-Code` |
+| Roo / Zoo Code | `github.com/Zoo-Code-Org/Zoo-Code` (Roo upstream is archived) |
 | Aider | `aider.chat` |
 | Augment | `docs.augmentcode.com` |
 | Codex CLI | `github.com/openai/codex` |
-| Google Antigravity | `developers.google.com/project-idx` |
+| Google Antigravity | `antigravity.google/docs` and `antigravity.google/docs/changelog` |
 
 ### When to do this
 
 - Adding a new skill → verify it renders correctly for Codex `.agents/skills/` and all directory-based editors
 - Adding a new hook → verify event name is valid in Claude and check `.codex/hooks.json` compatibility
-- Adding a new MCP template → verify it installs correctly for all 8 native adapters (`mcp_editors.py`)
+- Adding a new MCP template → verify it installs correctly for every native adapter in `mcp_editors.py`
 - Modifying generator output → check that every editor-specific generator still produces valid output
 - Adding a new editor → verify ALL existing features render correctly for the new target
 
@@ -497,8 +503,14 @@ tests. Never tag by hand and never `git push --tags`. Full procedure:
 
 | Agent Type | Model | Examples |
 |-----------|-------|---------|
-| Complex reasoning | opus | orchestrator, backend-specialist, security-auditor |
-| Pattern-following | sonnet | documenter, explorer-agent, data-analyst |
+| Coordination and complex decisions | opus | orchestrator (`high`), debugger (`xhigh`), security-auditor |
+| Bounded implementation and tests | sonnet | backend-specialist, frontend-specialist, test-engineer (`high`) |
+| Documentation and analysis | sonnet | documenter, data-analyst |
+| Small read-only exploration | haiku | explorer-agent |
+
+Claude can also delegate to the installed Codex plugin when it is enabled and
+callable in the current session. Without it, use the native configured agents.
+See [Model Compatibility](../reference/model-compatibility.md#conditional-claude-to-codex-delegation).
 
 ## Uninstall
 

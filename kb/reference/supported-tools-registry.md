@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.17.0"
+version: "1.18.0"
 created: "2026-04-23"
-last_updated: "2026-09-24"
+last_updated: "2026-10-02"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
@@ -14,6 +14,15 @@ description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, 
 The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view. Update it whenever the JSON changes. The [2026-09-23 review](../planning/ecosystem-sync-20260923.md) records source-backed classifications for every target; local CLI versions are observations, not claims about the latest upstream release.
 
 ## Tool Count: 13
+
+The [2026-10-02 release review](../planning/ecosystem-sync-20261002.md) verifies
+all 13 integrations and records the adopted Augment and Antigravity migrations.
+
+The recommended primary working set is Claude Code, Codex and Antigravity.
+Other listed integrations remain supported and opt-in. This changes neither
+`--editors all` nor recorded editor selections, and does not uninstall software.
+For current model defaults and optional Claude-to-Codex execution, see
+[Model Compatibility](model-compatibility.md#conditional-claude-to-codex-delegation).
 
 1 primary runtime, 1 Claude app target, and 11 editor integrations. The DeepSeek Harness (`dsh`) target was retired on 2026-09-24; see [DSH Compatibility (retired)](./dsh-compatibility.md).
 
@@ -171,6 +180,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Changelog | https://www.augmentcode.com/changelog |
 | Config paths | `.augment/rules/*.md`, `.augment-guidelines` (workspace root, legacy single-file), `~/.augment/user-guidelines.md`, `.augment/agents/*.md`, `.augment/commands/*.md`, `.augment/skills/*/SKILL.md`, `.augment/settings.json`, `.augment/settings.local.json`, `~/.augment/rules/*.md`, `~/.augment/settings.json`, `/etc/augment/settings.json`. Auggie CLI also discovers skills/commands from `.claude/` and `.agents/` (`.augment/` wins on precedence). |
 | Our generators | `scripts/generate_augment.py`, `scripts/generate_augment_rules.py`, `scripts/generate_augment_agents.py` (profile=full), `scripts/generate_augment_commands.py` (profile=full), `scripts/generate_augment_hooks.py` (profile=full, HOME-scoped), `scripts/generate_augment_skills.py` (profile=full) |
+| Agent permission contract | Native allowlist only: `Read` → `view`, `Grep` → `codebase-retrieval`, `Glob` → `view` + `codebase-retrieval` (deduplicated), `Edit` → `str-replace-editor`, `Write` → `save-file`, `Bash` → `launch-process`. `disabled_tools` is omitted because it overrides `tools`, even when empty. Unmapped Claude orchestration tools are omitted with an explicit capability note; unknown tools and empty native allowlists fail before any output changes. Model remains the CLI default. Generated agents carry ownership markers; cleanup recognizes legacy exports and preserves user files. [Official subagent reference](https://docs.augmentcode.com/cli/subagents) |
 | Global install | `ai-toolkit install --editors augment` writes `~/.augment/rules/ai-toolkit.md` **plus** (profile=full) `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` — all documented user-tier surfaces. A global-only Augment user previously got no hooks/agents/commands. Skills need no global emission: Auggie natively reads `~/.claude/skills/`. |
 | Tracked capabilities | `.augment`, Agent mode, Next Edit, MCP, context engine, Auggie CLI, `always_apply`, `agent_requested`, subagents, custom commands, `SKILL.md`, `PreToolUse`, `PostToolUse`, `SessionStart`, `SessionEnd`, `Stop`, `Notification`, ACP Mode, plugins/marketplace |
 | Earlier baseline / notes | Auggie CLI v0.31.0. Since v0.30.0 (2026-06-25) `PreToolUse`/`PostToolUse` hooks fire during sub-agent sessions. The shared hook input adapter normalizes Augment's `conversation_id`, so edit and quality state remains isolated across parallel sub-agents. `Notification` is enum-only (doctor flipped its marker), with no dedicated handler documented, so class C (do NOT wire). Plugins/marketplace (`auggie plugin marketplace add`, `.augment-plugin`/`.claude-plugin` layouts, `enabledPlugins`/`autoUpdateMarketplaces` in settings) are documented but not yet a shipping target. |
@@ -178,18 +188,27 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 
 ### Google Antigravity
 
+Workflows retire on 2026-11-01. The generator now adds the 13 existing command
+names as `.agents/skills/<workflow-name>/SKILL.md`, and in both documented global
+skill roots. Legacy workflow files remain with a deprecation comment. User-owned
+skill collisions and extra resources are preserved; `emit_skill_pointer=False`
+still opts out of skill-directory writes. Doctor reports unmigrated local/global
+workflows. On native Windows, use WSL or `/migrate-workflows`; the generator
+retains legacy output and explains why it skipped protected skill writes.
+[Official migration](https://antigravity.google/docs/migration/workflows-to-skills/).
+
 | Field | Value |
 |-------|-------|
 | ID | `google-antigravity` |
 | Docs | https://antigravity.google/docs (official hook and configuration pages are now readable through the web index; use feature pages to verify) |
-| Changelog | https://antigravity.google/changelog (SPA; changelog entries embedded in main-*.js) |
+| Changelog | https://antigravity.google/docs/changelog |
 | Config paths | Rules/workflows: `.agents/rules/*.md`, `.agents/workflows/*.md`. Skills: canonical `.agents/skills/*/SKILL.md`; `.agent/skills/*/SKILL.md` is compatibility-only. Agents: `.agents/agents/ai-toolkit-*/agent.md`. Hooks: `.agents/hooks.json` plus `.agents/hooks/ai-toolkit-antigravity-hook.py`. Plugins: `.agents/plugins/<plugin>/plugin.json`. MCP: `.agents/mcp_config.json`. Cross-tool instructions: `AGENTS.md`, `GEMINI.md`. |
 | Global config paths | CLI skills `~/.gemini/antigravity-cli/skills/*/SKILL.md` and CLI plugins `~/.gemini/antigravity-cli/plugins/<plugin>/plugin.json` are current canonical CLI surfaces. IDE/shared-product skills use `~/.gemini/config/skills/*/SKILL.md`; agents use `~/.gemini/config/agents/ai-toolkit-*/agent.md`; hooks use `~/.gemini/config/hooks.json` plus adjacent runtime; IDE/shared plugins use `~/.gemini/config/plugins/<plugin>/plugin.json`; MCP uses `~/.gemini/config/mcp_config.json`. Rules stay project-local; only workspace `.agent/skills/` is legacy. `~/.gemini/GEMINI.md` remains the Gemini-CLI-shared instruction surface. |
 | Our generators | `scripts/generate_antigravity.py` (rules, workflows, canonical + compatibility skill pointer), `scripts/generate_antigravity_hooks.py` (exact five-event schema and self-contained adapter), `scripts/generate_antigravity_agents.py` (native subagents and explicit tool mapping), `scripts/antigravity_plugin.py` (deterministic opt-in export/verify), and `scripts/mcp_editors.py` (transactional project/global MCP adapter). |
 | Install profiles | `minimal`: rules/workflows/skills only. `standard` and `strict`: add native hooks. `full`: additionally adds native agents. Global install follows the same gates under `~/.gemini/config/`; it never auto-installs the plugin. |
 | Plugin flow | `ai-toolkit antigravity-plugin export [output]` creates a self-contained ZIP with exact manifest fields `$schema`, `name`, `description`, rules, skills, agents, hooks, runtime, and LICENSE. Verify offline with `ai-toolkit antigravity-plugin verify <archive-or-dir>`, then install manually under `.agents/plugins/<plugin>/` for a workspace, `~/.gemini/antigravity-cli/plugins/<plugin>/` for CLI, or `~/.gemini/config/plugins/<plugin>/` for the IDE/shared product. Hook commands resolve from `${extensionPath}`. |
 | Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, hooks, five native hook events, subagents, agent permissions, plugins, global skills/hooks/agents, `AGENTS.md`, `GEMINI.md`, `serverUrl` |
-| Reviewed baseline / notes | Antigravity 2.0 v2.8.1, Antigravity CLI v1.1.14, IDE v2.5.5 (verified 2026-08-19). Hooks use `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. The adapter returns native camelCase payloads, object-shaped `injectSteps`, empty default `terminationBehavior`, and a `decision` string for Stop while preventing re-entry loops. MCP consumes portable `transport` metadata, accepts input `url` only for migration and emits it as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
+| Reviewed baseline / notes | Antigravity 2.19.1 (reviewed 2026-10-01) fixes custom agents ignoring global/project rules; 2.18.1 adds plugin marketplace management. Native agent models remain inherit/flash/pro; toolkit agents preserve inherit. Previous CLI/IDE version observations are historical, not current availability guarantees. Hooks use `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. The adapter returns native camelCase payloads, object-shaped `injectSteps`, empty default `terminationBehavior`, and a `decision` string for Stop while preventing re-entry loops. MCP consumes portable `transport` metadata, accepts input `url` only for migration and emits it as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
 | Doc access note | Docs are a JavaScript SPA, but the official search index exposes the current MCP guide and changelog text. Verify changelog claims against the dated official entry because the MCP guide's warning can lag schema releases. |
 
 ### Codex CLI

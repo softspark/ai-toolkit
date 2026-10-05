@@ -2,7 +2,7 @@
 name: swarm
 description: "Runs tasks via Map-Reduce, Consensus, or Relay swarms. Triggers: swarm, map-reduce, consensus swarm, relay swarm, parallel agents."
 user-invocable: true
-effort: max
+effort: high
 argument-hint: "[map-reduce|consensus|relay] [--with-kb] [--worktree] [task]"
 context: fork
 agent: orchestrator
@@ -14,9 +14,22 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Agent, TeamCreate, TeamDelet
 
 $ARGUMENTS
 
+<!-- CLAUDE_CODE_ONLY_START -->
+Only in Claude Code, apply the `model-routing-patterns` skill when choosing
+executors or creating agent definitions. Delegate to `codex:codex-rescue` only
+when its plugin is installed, enabled and callable in this session. Otherwise
+use the installed native agents and their configured models. A context without
+the Agent tool returns the dispatch decision to its supervisor; it does not
+invent a tool or bypass the client. Preserve explicit user choices and verify
+actual completion before accepting a delegated result.
+<!-- CLAUDE_CODE_ONLY_END -->
+
 ## MANDATORY: You MUST use the Agent tool
 
-**DO NOT do the work yourself.** Decompose the task and invoke agents via multiple parallel `Agent` tool calls. Single-agent execution = failure.
+When delegation is available, decompose the task and invoke agents via parallel
+`Agent` tool calls for independent work. If the runtime has no delegation support,
+use the current session and explicitly report single-agent execution. Never
+present simulated agents as a real swarm.
 
 ## Modes
 

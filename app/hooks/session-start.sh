@@ -31,6 +31,17 @@ if [ ! -t 0 ]; then
     # shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
     INPUT="$(cat)"
 fi
+# This small capability hint is useful at normal verbosity. The helper checks
+# Claude identity, profile and quiet flags before reading plugin metadata;
+# native editor sessions keep their own delegation and model selection.
+CODEX_CAPABILITY_SCRIPT="$(dirname "$0")/../scripts/claude_codex_capability.py"
+if [ ! -f "$CODEX_CAPABILITY_SCRIPT" ]; then
+    CODEX_CAPABILITY_SCRIPT="$TOOLKIT_DIR/scripts/claude_codex_capability.py"
+fi
+if [ -f "$CODEX_CAPABILITY_SCRIPT" ] && command -v python3 >/dev/null 2>&1; then
+    printf '%s' "$INPUT" | python3 "$CODEX_CAPABILITY_SCRIPT" 2>/dev/null || true
+fi
+unset CODEX_CAPABILITY_SCRIPT
 SESSION_ID_INPUT=$(hook_session_id)
 SESSION_SOURCE=$(hook_json '.source // empty')
 if [ "$SESSION_SOURCE" != "compact" ] &&

@@ -33,6 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import agents_dir, frontmatter_field
+from prompt_surfaces import strip_claude_code_only
 from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 MODE_GROUPS = ["read", "edit", "command", "mcp"]
@@ -184,7 +185,7 @@ def main() -> None:
         if not name or not description:
             continue
 
-        role_def = _read_body(agent_file)
+        role_def = strip_claude_code_only(_read_body(agent_file))
         role_text = f"{description}\n\n{role_def}"
         when_to_use = _first_sentence(description)
 

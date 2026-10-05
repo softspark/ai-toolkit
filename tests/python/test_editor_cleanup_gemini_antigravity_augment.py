@@ -251,7 +251,9 @@ def test_antigravity_counts_rules_workflows_and_both_pointers(tmp_path: Path) ->
     rules = list((tmp_path / ".agents" / "rules").glob("ai-toolkit-*.md"))
     workflows = list((tmp_path / ".agents" / "workflows").glob("ai-toolkit-*.md"))
 
-    assert generate_antigravity.discover(tmp_path) == len(rules) + len(workflows) + 2
+    replacements = list((tmp_path / ".agents/skills").glob("ai-toolkit-*/SKILL.md"))
+    assert len(replacements) == len(workflows) + 1  # workflow skills plus catalogue
+    assert generate_antigravity.discover(tmp_path) == len(rules) + len(workflows) + len(replacements) + 1
     assert generate_antigravity.discover(tmp_path, global_install=True) == 0
 
 

@@ -2,7 +2,8 @@
 name: nlp-engineer
 description: "Natural Language Processing specialist. Use for text processing, NER, text classification, information extraction, and language model fine-tuning. Triggers: nlp, ner, tokenization, text classification, sentiment, spacy, transformers."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: opus
+model: sonnet
+effort: high
 color: blue
 skills: clean-code
 ---

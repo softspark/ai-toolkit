@@ -1,7 +1,8 @@
 ---
 name: test-engineer
 description: "Testing expert. Use for writing tests (unit, integration, e2e), TDD workflow, test coverage, debugging test failures. Triggers: test, pytest, unittest, coverage, tdd, testing, mock, fixture."
-model: opus
+model: sonnet
+effort: high
 color: teal
 tools: Read, Write, Edit, Bash
 skills: testing-patterns, clean-code
