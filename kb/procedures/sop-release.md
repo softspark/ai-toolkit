@@ -3,7 +3,7 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck, local-gates]
-version: "2.0.1"
+version: "2.0.2"
 created: "2026-04-10"
 last_updated: "2026-10-05"
 description: "Release procedure for ai-toolkit under Local Release Gates, Publish-Only CI: ecosystem-sync drift check, version sync, changelog, artifact regeneration, then one command (npm run release -- X.Y.Z) that runs every gate on macOS and in Linux containers, tags, pushes and watches the publish-only workflow."
@@ -68,6 +68,15 @@ npm run release -- X.Y.Z
 
 `scripts/release.sh` is the only supported way to create a release tag. A tag
 made by hand skipped the gates, and nothing on GitHub will catch that.
+
+On a busy workstation, set `AI_TOOLKIT_RELEASE_TEST_JOBS=1` before running
+the same release command. This runs the complete host and Linux Bats suites
+serially; it does not skip any gate. The default is 4 workers, and only the
+integers 1 through 4 are accepted (invalid values fail before any gate).
+Every test container is capped at 1 CPU, 3 GiB RAM, no swap and 512 processes.
+These limits apply to the three `docker run` gates, not the initial Docker
+toolchain image build. `npm test` outside the release script keeps its default
+of four workers. Serial execution can take longer than the estimate above.
 
 ---
 

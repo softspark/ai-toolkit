@@ -30,6 +30,8 @@ readonly WAIT_SECONDS=30
 # npm lists a new version 3 to 6 minutes after the publish job ends (v5.0.0
 # and v5.0.1 both took about 5); 20 x 30 s leaves margin.
 readonly NPM_WAIT_ATTEMPTS=20
+readonly RELEASE_TEST_JOBS="${AI_TOOLKIT_RELEASE_TEST_JOBS-4}"
+readonly DOCKER_RESOURCE_ARGS=(--cpus 1 --memory 3g --memory-swap 3g --pids-limit 512)
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly REPO_ROOT
@@ -217,7 +219,11 @@ gate_publish_workflow() {
 }
 
 gate_bats_host() {
-    npm test || return 1
+    case "$RELEASE_TEST_JOBS" in
+        1) bats tests/ || return 1 ;;
+        4) npm test || return 1 ;;
+        *) bats tests/ --jobs "$RELEASE_TEST_JOBS" --no-parallelize-within-files || return 1 ;;
+    esac
     ! grep -q '^not ok' "$LOG_DIR/bats-macos.log"
 }
 
@@ -282,11 +288,16 @@ EOF
 # bash 3.2 does not fail a bare [[ ]] assertion in bats while Linux does.
 gate_bats_linux() {
     build_linux_image || return 1
-    docker run --rm -i "$LINUX_TOOLCHAIN_IMAGE" bash -euc '
+    docker run --rm -i "${DOCKER_RESOURCE_ARGS[@]}" \
+        -e RELEASE_TEST_JOBS="$RELEASE_TEST_JOBS" "$LINUX_TOOLCHAIN_IMAGE" bash -euc '
         mkdir -p /home/tester/repo && tar --no-same-owner -xf - -C /home/tester/repo
         chown -R tester:tester /home/tester/repo
         cd /home/tester/repo
-        runuser -u tester -- env HOME=/home/tester bats tests/ --jobs 4 --no-parallelize-within-files
+        if [ "$RELEASE_TEST_JOBS" = 1 ]; then
+            runuser -u tester -- env HOME=/home/tester bats tests/
+        else
+            runuser -u tester -- env HOME=/home/tester bats tests/ --jobs "$RELEASE_TEST_JOBS" --no-parallelize-within-files
+        fi
     ' <"$SOURCE_TAR"
 }
 
@@ -312,10 +323,11 @@ sys.exit(1 if failed else 0)
 '
 
 gate_python_ceiling() {
-    docker run --rm -i -e PY_IMPORT_CHECK="$PY_IMPORT_CHECK" "$PY_CEILING_IMAGE" bash -euc '
+    docker run --rm -i "${DOCKER_RESOURCE_ARGS[@]}" \
+        -e PY_IMPORT_CHECK="$PY_IMPORT_CHECK" "$PY_CEILING_IMAGE" bash -euc '
         mkdir -p /src && tar --no-same-owner -xf - -C /src && cd /src
         python3 --version
-        python3 -m py_compile scripts/*.py app/skills/*/scripts/*.py
+        python3 -m py_compile scripts/*.py app/hooks/*.py app/skills/*/scripts/*.py
         python3 -c "$PY_IMPORT_CHECK"
     ' <"$SOURCE_TAR"
 }
@@ -327,7 +339,7 @@ gate_python_floor() {
     test_py="$(json_field package.json ".scripts['test:py']")" || return 1
     lint_py="$(json_field package.json ".scripts['lint:py']")" || return 1
     typecheck_py="$(json_field package.json ".scripts['typecheck:py']")" || return 1
-    docker run --rm -i \
+    docker run --rm -i "${DOCKER_RESOURCE_ARGS[@]}" \
         -e PY_IMPORT_CHECK="$PY_IMPORT_CHECK" -e TEST_PY="$test_py" \
         -e LINT_PY="$lint_py" -e TYPECHECK_PY="$typecheck_py" \
         "$PY_FLOOR_IMAGE" bash -euc '
@@ -335,7 +347,7 @@ gate_python_floor() {
         apt-get update -qq
         apt-get install -y -qq --no-install-recommends nodejs git jq >/dev/null
         python3 --version
-        python3 -m py_compile scripts/*.py app/skills/*/scripts/*.py
+        python3 -m py_compile scripts/*.py app/hooks/*.py app/skills/*/scripts/*.py
         python3 -c "$PY_IMPORT_CHECK"
         python3 -m pip install --quiet --disable-pip-version-check --root-user-action=ignore -r requirements-dev.txt
         sh -c "$TEST_PY"
@@ -474,6 +486,10 @@ EOF
 
 main() {
     parse_args "$@"
+    case "$RELEASE_TEST_JOBS" in
+        [1-4]) ;;
+        *) die "AI_TOOLKIT_RELEASE_TEST_JOBS must be an integer from 1 to 4" ;;
+    esac
     cd "$REPO_ROOT"
     TAG="v$VERSION"
     LOG_DIR="${TMPDIR:-/tmp}"

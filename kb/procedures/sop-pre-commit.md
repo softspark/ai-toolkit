@@ -3,9 +3,9 @@ title: "SOP: Pre-Commit Gate"
 category: procedures
 service: ai-toolkit
 tags: [pre-commit, quality-gate, shellcheck, bats, validation, secrets]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-09-02"
-last_updated: "2026-09-24"
+last_updated: "2026-10-05"
 description: "The local gate to run before every commit to ai-toolkit: staged-file and secret scan, ShellCheck, Python syntax, toolkit validation, and the Bats suite. No GitHub workflow tests pushes, so this gate is what keeps main green between releases."
 ---
 
@@ -46,7 +46,7 @@ python3 app/skills/commit/scripts/pre-commit-check.py
 shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh
 
 # 3. Python syntax across every script the toolkit ships
-python3 -m py_compile scripts/*.py app/skills/*/scripts/*.py
+python3 -m py_compile scripts/*.py app/hooks/*.py app/skills/*/scripts/*.py
 
 # 4. Toolkit integrity: agents, skills, registry drift, content quality
 npm run validate

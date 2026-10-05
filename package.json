@@ -1,6 +1,6 @@
 {
   "name": "@softspark/ai-toolkit",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "AI coding toolkit: 116 skills, 44 agents, 13 developer-tool integrations, autonomous software delivery, Claude Chat/Cowork export, safety constitution, SARIF audit, and signed npm provenance.",
   "keywords": [
     "claude",
@@ -78,7 +78,7 @@
     "surface": "python3 scripts/surface_manifest.py",
     "surface:update": "python3 scripts/surface_manifest.py --update",
     "test:py": "python3 -m pytest tests/python",
-    "lint:py": "ruff check scripts --select E,F --ignore E501,E402 --line-length 120 --extend-exclude app/skills/*/scripts,benchmarks",
+    "lint:py": "ruff check scripts app/hooks --select E,F --ignore E501,E402 --line-length 120 --extend-exclude app/skills/*/scripts,benchmarks",
     "typecheck:py": "python3 -m mypy"
   },
   "files": [

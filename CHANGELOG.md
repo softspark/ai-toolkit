@@ -7,6 +7,28 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v5.2.1 - Prompt intent boundaries and helper delivery (2026-10-05)
+
+### Fixed
+
+- **Prompt intent reminders:** Recognize bounded Polish and English words;
+  avoid substring matches such as `ladybug` and `designer`, and ignore marked
+  quoted/pasted content when selecting architecture or debugging context.
+  Existing categories, priority, search-required flags and quiet/minimal modes
+  remain compatible. No model or network call is added.
+- **Hook helper delivery:** Include the adjacent Python classifier in global,
+  plugin-core, Codex and Claude-app hook assets. Record its hash in diagnostics
+  and compile it in the Python release gates.
+
+### Changed
+
+- **Bounded release checks:** Allow serial host/Linux Bats execution with
+  `AI_TOOLKIT_RELEASE_TEST_JOBS=1` and cap each test container at 1 CPU,
+  3 GiB memory, no swap and 512 processes without skipping any gate.
+- **Compatibility evidence:** Reuse the same-day 5.2.0 integration review for
+  the private helper asset, with a fresh online drift check. Skill/agent counts,
+  model selections, permissions and skill-body budgets are unchanged.
+
 ## v5.2.0 - Project accounts and live usage (2026-10-05)
 
 ### Added

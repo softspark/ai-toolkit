@@ -196,7 +196,7 @@ def main() -> int:
             "hook_sha256": hashlib.sha256(HOOK.read_bytes()).hexdigest(),
             "hook_dependency_sha256": {
                 name: hashlib.sha256((HOOK.parent / name).read_bytes()).hexdigest()
-                for name in ("_profile-check.sh", "_hook-io.sh", "_search-capability.sh")
+                for name in ("_profile-check.sh", "_hook-io.sh", "_search-capability.sh", "_prompt-intent.py")
             },
             "platform": f"{platform.system()} {platform.release()} {platform.machine()}",
             "python": platform.python_version(),

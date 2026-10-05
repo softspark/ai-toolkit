@@ -6,20 +6,18 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1964%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1987%20passing-success)](tests/)
 
-## What's New in v5.2.0
+## What's New in v5.2.1
 
-- **Accounts per project.** `ai-toolkit claude-switch` and `ai-toolkit codex-switch`
-  select isolated profiles through explicit launch commands, including Git worktrees.
-- **Live account limits.** `ai-toolkit llm-status` queries every configured Claude
-  and Codex account without quota caching, model turns or historical fallback.
-- **Offline routing benchmark.** Diagnose prompt-hook routing with synthetic
-  fixtures and bounded runs; no private session mining or model calls.
-- **Safer CI action.** Quote the toolkit-version input, pin setup-node 7, and
-  update checkout and release-action pins.
-- **Current compatibility review.** Recheck all 13 integrations while preserving
-  configured models, permissions and supported native exports.
+- **Polish and English prompt intent.** Recognize whole words and supported
+  inflections without treating `ladybug` as debugging or `designer` as architecture.
+- **Quoted text stays data.** Ignore marked code, quotations, paste wrappers and
+  notifications while preserving the existing reminder and search-flag contracts.
+- **Complete helper delivery.** Global, plugin-core, Codex and Claude-app installs
+  carry the adjacent classifier, with no model or network calls.
+- **Bounded release verification.** Run host/Linux tests serially and cap test
+  containers without skipping release gates.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

@@ -20,7 +20,6 @@ source "$(dirname "$0")/_search-capability.sh"
 # shellcheck disable=SC2034  # INPUT is consumed via sourced _hook-io.sh
 INPUT=$(cat)
 PROMPT_TEXT=$(hook_prompt)
-LOWERED="$(printf '%s' "$PROMPT_TEXT" | tr '[:upper:]' '[:lower:]')"
 
 # Heuristic search-required flag (paired with search-tracker.sh + Stop check).
 # Set only when a search provider is detectable or strict mode is requested.
@@ -64,10 +63,13 @@ else
     CONTEXT_MSG="Search-first note: no ai-toolkit search provider was detected, so search-first enforcement is advisory only. Use available local evidence; do not call unavailable RAG/MCP tools."
 fi
 
-if printf '%s' "$LOWERED" | grep -Eq 'architecture|design|migration|deploy|rollback|refactor|plugin|workflow'; then
+# Classify only explicit intent for the reminder. The original prompt above
+# remains the source of truth for the independent search-required flag.
+PROMPT_CATEGORY=$(printf '%s' "$PROMPT_TEXT" | python3 -I -S "$(dirname "$0")/_prompt-intent.py" 2>/dev/null) || PROMPT_CATEGORY=none
+if [ "$PROMPT_CATEGORY" = "architecture" ]; then
     CONTEXT_MSG="$CONTEXT_MSG
 UserPromptSubmit: task looks architectural or multi-step. Use plan mode, define success criteria, and validate before marking done."
-elif printf '%s' "$LOWERED" | grep -Eq 'bug|error|fail|failing|incident|outage|debug'; then
+elif [ "$PROMPT_CATEGORY" = "debug" ]; then
     CONTEXT_MSG="$CONTEXT_MSG
 UserPromptSubmit: debugging request detected. Gather evidence first, then propose the smallest safe fix and targeted tests."
 else

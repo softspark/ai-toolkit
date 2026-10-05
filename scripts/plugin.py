@@ -574,6 +574,8 @@ def _ensure_core_hook_scripts() -> None:
         dst = HOOKS_DIR / hook_file.name
         shutil.copy2(hook_file, dst)
         dst.chmod(dst.stat().st_mode | 0o111)
+    for helper_file in sorted(hooks_src.glob("*.py")):
+        shutil.copy2(helper_file, HOOKS_DIR / helper_file.name)
 
 
 def _copy_plugin_scripts(name: str, pack_dir: Path, installed_items: list[str]) -> None:

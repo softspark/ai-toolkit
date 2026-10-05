@@ -88,7 +88,9 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
         shutil.copy2(hook_file, dst)
         dst.chmod(dst.stat().st_mode | 0o111)
         copied += 1
-    for runtime_file in sorted(hooks_src.glob("*.json")):
+    for runtime_file in sorted(hooks_src.iterdir()):
+        if not runtime_file.is_file() or runtime_file.suffix not in {".json", ".py"}:
+            continue
         shutil.copy2(runtime_file, hooks_scripts_dir / runtime_file.name)
         copied += 1
     print(f"  Copied: {copied} hook scripts to ~/.softspark/ai-toolkit/hooks/")

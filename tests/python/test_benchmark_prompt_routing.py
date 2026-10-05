@@ -2,6 +2,7 @@
 """Verify offline measurement and privacy boundaries against the actual hook."""
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -97,3 +98,18 @@ def test_cli_malformed_dataset_never_echoes_private_content(tmp_path: Path) -> N
     assert result.returncode == 2
     assert "PRIVATE_PROMPT_MARKER" not in result.stdout + result.stderr
     assert str(path) not in result.stdout + result.stderr
+
+
+def test_cli_records_classifier_helper_identity(tmp_path: Path) -> None:
+    data, _ = load_dataset(DEFAULT_DATASET)
+    data["cases"] = data["cases"][:1]
+    dataset = tmp_path / "public-diagnostic.json"
+    dataset.write_text(json.dumps(data))
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/benchmark_prompt_routing.py"), "--dataset", str(dataset), "--repeats", "1"],
+        text=True, capture_output=True, check=False,
+    )
+    assert result.returncode == 0
+    report = json.loads(result.stdout)
+    expected = hashlib.sha256((ROOT / "app/hooks/_prompt-intent.py").read_bytes()).hexdigest()
+    assert report["hook_dependency_sha256"]["_prompt-intent.py"] == expected

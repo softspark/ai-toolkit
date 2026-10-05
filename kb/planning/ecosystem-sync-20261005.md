@@ -3,7 +3,7 @@ title: "Ecosystem review for ai-toolkit 5.2.0"
 category: planning
 service: ai-toolkit
 tags: [release, ecosystem, compatibility, editors, models]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-10-05"
 last_updated: "2026-10-05"
 description: "Online review of thirteen integrations, upstream CLI releases and model contracts before ai-toolkit 5.2.0."
@@ -91,3 +91,17 @@ Markdown endpoint was fetched successfully, and the online doctor fetched the
 HTML successfully. No other source-access error blocked these dispositions.
 The review establishes documented compatibility, not live execution in all
 thirteen clients, account model availability, model quality or paid API results.
+
+## Applicability to 5.2.1
+
+The same-day compatibility review also covers 5.2.1. Its installer and generator
+changes deliver a private Python hook helper; they introduce no native editor
+contract, model selection, permission or prompt-budget change. Catalog counts
+and body-budget thresholds remain unchanged.
+
+A fresh online check before 5.2.1 returned exit 0: 13 targets, nine clean,
+four content-only hash changes (Claude app, Copilot, Gemini and Codex), zero
+heading changes and zero fetch errors. The refreshed snapshot contains only
+those hashes and its timestamp. The dispositions and reviewed CLI versions
+above remain applicable. Published-package verification must exercise the new
+helper through the installed hook.

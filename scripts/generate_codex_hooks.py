@@ -141,6 +141,7 @@ HELPER_ASSETS = frozenset(
         "_hook-io.sh",
         "_locate-toolkit.sh",
         "_profile-check.sh",
+        "_prompt-intent.py",
         "_search-capability.sh",
         "_session-paths.sh",
     }

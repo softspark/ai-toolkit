@@ -4,9 +4,9 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [benchmark, hooks, routing, evaluation]
-version: "1.0.1"
+version: "1.1.0"
 created: "2026-10-04"
-last_updated: "2026-10-04"
+last_updated: "2026-10-05"
 description: "Offline B1 diagnostic baseline, dataset contract and missing evidence for prompt routing evaluation."
 ---
 
@@ -14,14 +14,44 @@ description: "Offline B1 diagnostic baseline, dataset contract and missing evide
 
 **B1 status: preparation complete, evaluation Inconclusive.** The repository
 contains 20 synthetic diagnostic cases, not the required 100–200 independently
-labeled natural prompts. These cases demonstrate specific current behaviors;
-their error rate cannot justify B2 or a G-ROUTE decision. Runtime hooks are
-unchanged. This implements the B1 preparation in rag-mcp's
+labeled natural prompts. These cases demonstrate specific behaviors; their
+error rate cannot establish a representative G-ROUTE result. Targeted fixes
+after 5.2.0 address reproduced PL/EN boundary and marked-quote errors, while the
+historical measurements below retain their original source identity. This
+implements the B1 preparation in rag-mcp's
 `kb/planning/rag-reranker-and-toolkit-routing-plan-20261003.md`.
 
-## Current behavior
+## Targeted corrections in 5.2.1
 
-The actual `app/hooks/user-prompt-submit.sh` emits architecture, debug or generic
+Version 5.2.1 fixes reproduced reminder-classification errors without adding
+a model, telemetry, network request, `plan`/`review` output category or skill
+suggestion. `_prompt-intent.py` applies Unicode-aware PL/EN boundaries and ignores
+marked quotes/pastes. Architecture still precedes debug, and the original
+prompt still controls the independent search-required flag. The
+[hook catalog](hooks-catalog.md) defines the supported markers and limitations.
+
+The first 17 targeted regressions produced 12 failures against the released
+hook and passed after the fix. The final 23 regressions also cover punctuation,
+known slash commands, multiple-backtick inline code, explicit XML paste wrappers,
+Python import isolation and generic fallback when the helper fails. Five
+installation-path checks exercise the delivered helper rather than source alone.
+
+On the unchanged 20-case public diagnostic, the current source produces 14/20
+expected categories versus the baseline's 6/20. Five remaining cases expect
+`plan` or `review`, which this compatibility-preserving fix does not introduce.
+One remaining case uses an unmarked prose quotation, outside the supported
+marker contract. The diagnostic was used during development, so this is bug-fix
+evidence, not an independently held-out G-ROUTE result.
+
+One sequential run on 2026-10-05 measured whole-process p50 54.274 ms and p95
+57.999 ms. It does not pass the proposed 50 ms qualification threshold; host
+timing and representative quality still require their separate evaluation.
+Private natural-prompt drafts and their predictions remain outside Git and
+were not used to tune these changes.
+
+## Baseline behavior in 5.2.0
+
+In 5.2.0, `app/hooks/user-prompt-submit.sh` emits architecture, debug or generic
 context. This benchmark maps generic context to `none`; `plan` and `review`
 remain separate expected categories so their absence is visible in the matrix.
 The hook gives architecture substring matches priority over debug matches. It
@@ -92,13 +122,16 @@ privacy and separation of calibration/final evaluation before freezing G0-eval.
 Still needed: 100–200 anonymized natural PL/EN prompts with independent category
 and skill labels, at least 20 with no matching skill, explicit commands,
 notifications and pasted content; separate calibration/final sets; and
-consented, separately observed model Skill selections. No private session logs
-were mined to fill this gap. No live inference was run.
+consented, separately observed model Skill selections. The original preparation
+did not read private session logs. A subsequent 100-case local review draft was
+prepared outside Git on 2026-10-05; its labels remain unreviewed and its filtered
+selection does not meet this evaluation contract. No private prompt text or
+natural-data report is committed here, and no live model inference was run.
 
-The two quoted-text fixtures (indices 15 and 16) are diagnostic probes, not a
-claim that either is a supported client paste marker. B2 must name supported
-client markers and scope paste-exclusion guarantees to those markers. Unmarked
-pastes remain a diagnostic slice.
+Quoted-text fixture 16 uses a Markdown fence and is covered by the current marker
+contract. Fixture 15 is an unmarked prose quotation and remains a diagnostic
+slice outside that guarantee. The [hook catalog](hooks-catalog.md) names the
+recognized formats; client-specific paste metadata is not assumed.
 
 ## Diagnostic measurement, 2026-10-04
 
@@ -107,7 +140,9 @@ Platform: Darwin 25.6.0 arm64; Python 3.14.7. Hook SHA-256:
 `830a51637b45634041e72b24ccf25e95131d767d48666d1b7169eb26f16f9238`.
 Dataset SHA-256:
 `a09f767e9eed417f684e5c270b04c2566ab16a58436eb7444bee68c2a94b5adb`.
-The runner also emits dependency hashes for the three sourced helper scripts.
+The baseline records hashes for the three sourced shell helpers. Current runs
+also record `_prompt-intent.py`, so classifier changes invalidate the recorded
+implementation identity even when the shell entry point is unchanged.
 
 The 20 cases comprise 12 EN, 5 PL, 2 mixed and 1 neutral; 9 expect no skill.
 The first three reproduce the architecture/debug/generic prompts already in

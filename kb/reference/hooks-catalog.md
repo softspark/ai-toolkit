@@ -4,7 +4,7 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.16.3"
+version: "1.17.0"
 created: "2026-03-27"
 last_updated: "2026-10-05"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -159,6 +159,20 @@ same as `DROP TABLE`.
 **Action:** Maintains the per-session search-first flag used by Stop enforcement
 and can provide a lightweight governance reminder: plan mode for architectural
 work, evidence-first debugging, KB-first research, and validation expectations.
+
+The adjacent `_prompt-intent.py` helper selects the existing `architecture`,
+`debug` or generic (`none`) reminder with Unicode-aware PL/EN word boundaries.
+Architecture keeps precedence over debugging. Marked Markdown fences (including
+an unclosed fence), blockquote lines, inline code, balanced inline quotations
+and explicit `pasted_text`/`quoted_text`/`untrusted_text` blocks are excluded from
+classification. Known system-notification blocks are recognized at line starts;
+unmarked pasted prose cannot reliably be separated from an instruction.
+The original prompt still controls the separate search-required flag.
+
+The helper runs as an isolated standard-library Python process (`-I -S`), with
+no model, network, telemetry or private-history access. Missing or failing helper
+execution retains the generic reminder. Global, plugin-core, Codex and
+Claude-app installations carry the helper next to the shell hook.
 
 The [offline prompt routing baseline](prompt-routing-baseline.md) documents the
 current category behavior, diagnostic fixtures and independent-data requirements.

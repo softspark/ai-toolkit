@@ -8122,7 +8122,7 @@ title: "Ecosystem review for ai-toolkit 5.2.0"
 category: planning
 service: ai-toolkit
 tags: [release, ecosystem, compatibility, editors, models]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-10-05"
 last_updated: "2026-10-05"
 description: "Online review of thirteen integrations, upstream CLI releases and model contracts before ai-toolkit 5.2.0."
@@ -8210,6 +8210,20 @@ Markdown endpoint was fetched successfully, and the online doctor fetched the
 HTML successfully. No other source-access error blocked these dispositions.
 The review establishes documented compatibility, not live execution in all
 thirteen clients, account model availability, model quality or paid API results.
+
+## Applicability to 5.2.1
+
+The same-day compatibility review also covers 5.2.1. Its installer and generator
+changes deliver a private Python hook helper; they introduce no native editor
+contract, model selection, permission or prompt-budget change. Catalog counts
+and body-budget thresholds remain unchanged.
+
+A fresh online check before 5.2.1 returned exit 0: 13 targets, nine clean,
+four content-only hash changes (Claude app, Copilot, Gemini and Codex), zero
+heading changes and zero fetch errors. The refreshed snapshot contains only
+those hashes and its timestamp. The dispositions and reviewed CLI versions
+above remain applicable. Published-package verification must exercise the new
+helper through the installed hook.
 
 ---
 
@@ -9889,9 +9903,9 @@ title: "SOP: Pre-Commit Gate"
 category: procedures
 service: ai-toolkit
 tags: [pre-commit, quality-gate, shellcheck, bats, validation, secrets]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-09-02"
-last_updated: "2026-09-24"
+last_updated: "2026-10-05"
 description: "The local gate to run before every commit to ai-toolkit: staged-file and secret scan, ShellCheck, Python syntax, toolkit validation, and the Bats suite. No GitHub workflow tests pushes, so this gate is what keeps main green between releases."
 ---
 
@@ -9932,7 +9946,7 @@ python3 app/skills/commit/scripts/pre-commit-check.py
 shellcheck --severity=warning app/hooks/*.sh app/plugins/*/hooks/*.sh
 
 # 3. Python syntax across every script the toolkit ships
-python3 -m py_compile scripts/*.py app/skills/*/scripts/*.py
+python3 -m py_compile scripts/*.py app/hooks/*.py app/skills/*/scripts/*.py
 
 # 4. Toolkit integrity: agents, skills, registry drift, content quality
 npm run validate
@@ -10544,7 +10558,7 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck, local-gates]
-version: "2.0.1"
+version: "2.0.2"
 created: "2026-04-10"
 last_updated: "2026-10-05"
 description: "Release procedure for ai-toolkit under Local Release Gates, Publish-Only CI: ecosystem-sync drift check, version sync, changelog, artifact regeneration, then one command (npm run release -- X.Y.Z) that runs every gate on macOS and in Linux containers, tags, pushes and watches the publish-only workflow."
@@ -10609,6 +10623,15 @@ npm run release -- X.Y.Z
 
 `scripts/release.sh` is the only supported way to create a release tag. A tag
 made by hand skipped the gates, and nothing on GitHub will catch that.
+
+On a busy workstation, set `AI_TOOLKIT_RELEASE_TEST_JOBS=1` before running
+the same release command. This runs the complete host and Linux Bats suites
+serially; it does not skip any gate. The default is 4 workers, and only the
+integers 1 through 4 are accepted (invalid values fail before any gate).
+Every test container is capped at 1 CPU, 3 GiB RAM, no swap and 512 processes.
+These limits apply to the three `docker run` gates, not the initial Docker
+toolchain image build. `npm test` outside the release script keeps its default
+of four workers. Serial execution can take longer than the estimate above.
 
 ---
 
@@ -15087,7 +15110,7 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.16.3"
+version: "1.17.0"
 created: "2026-03-27"
 last_updated: "2026-10-05"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -15242,6 +15265,20 @@ same as `DROP TABLE`.
 **Action:** Maintains the per-session search-first flag used by Stop enforcement
 and can provide a lightweight governance reminder: plan mode for architectural
 work, evidence-first debugging, KB-first research, and validation expectations.
+
+The adjacent `_prompt-intent.py` helper selects the existing `architecture`,
+`debug` or generic (`none`) reminder with Unicode-aware PL/EN word boundaries.
+Architecture keeps precedence over debugging. Marked Markdown fences (including
+an unclosed fence), blockquote lines, inline code, balanced inline quotations
+and explicit `pasted_text`/`quoted_text`/`untrusted_text` blocks are excluded from
+classification. Known system-notification blocks are recognized at line starts;
+unmarked pasted prose cannot reliably be separated from an instruction.
+The original prompt still controls the separate search-required flag.
+
+The helper runs as an isolated standard-library Python process (`-I -S`), with
+no model, network, telemetry or private-history access. Missing or failing helper
+execution retains the generic reminder. Global, plugin-core, Codex and
+Claude-app installations carry the helper next to the shell hook.
 
 The [offline prompt routing baseline](prompt-routing-baseline.md) documents the
 current category behavior, diagnostic fixtures and independent-data requirements.
@@ -18136,9 +18173,9 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [benchmark, hooks, routing, evaluation]
-version: "1.0.1"
+version: "1.1.0"
 created: "2026-10-04"
-last_updated: "2026-10-04"
+last_updated: "2026-10-05"
 description: "Offline B1 diagnostic baseline, dataset contract and missing evidence for prompt routing evaluation."
 ---
 
@@ -18146,14 +18183,44 @@ description: "Offline B1 diagnostic baseline, dataset contract and missing evide
 
 **B1 status: preparation complete, evaluation Inconclusive.** The repository
 contains 20 synthetic diagnostic cases, not the required 100–200 independently
-labeled natural prompts. These cases demonstrate specific current behaviors;
-their error rate cannot justify B2 or a G-ROUTE decision. Runtime hooks are
-unchanged. This implements the B1 preparation in rag-mcp's
+labeled natural prompts. These cases demonstrate specific behaviors; their
+error rate cannot establish a representative G-ROUTE result. Targeted fixes
+after 5.2.0 address reproduced PL/EN boundary and marked-quote errors, while the
+historical measurements below retain their original source identity. This
+implements the B1 preparation in rag-mcp's
 `kb/planning/rag-reranker-and-toolkit-routing-plan-20261003.md`.
 
-## Current behavior
+## Targeted corrections in 5.2.1
 
-The actual `app/hooks/user-prompt-submit.sh` emits architecture, debug or generic
+Version 5.2.1 fixes reproduced reminder-classification errors without adding
+a model, telemetry, network request, `plan`/`review` output category or skill
+suggestion. `_prompt-intent.py` applies Unicode-aware PL/EN boundaries and ignores
+marked quotes/pastes. Architecture still precedes debug, and the original
+prompt still controls the independent search-required flag. The
+[hook catalog](hooks-catalog.md) defines the supported markers and limitations.
+
+The first 17 targeted regressions produced 12 failures against the released
+hook and passed after the fix. The final 23 regressions also cover punctuation,
+known slash commands, multiple-backtick inline code, explicit XML paste wrappers,
+Python import isolation and generic fallback when the helper fails. Five
+installation-path checks exercise the delivered helper rather than source alone.
+
+On the unchanged 20-case public diagnostic, the current source produces 14/20
+expected categories versus the baseline's 6/20. Five remaining cases expect
+`plan` or `review`, which this compatibility-preserving fix does not introduce.
+One remaining case uses an unmarked prose quotation, outside the supported
+marker contract. The diagnostic was used during development, so this is bug-fix
+evidence, not an independently held-out G-ROUTE result.
+
+One sequential run on 2026-10-05 measured whole-process p50 54.274 ms and p95
+57.999 ms. It does not pass the proposed 50 ms qualification threshold; host
+timing and representative quality still require their separate evaluation.
+Private natural-prompt drafts and their predictions remain outside Git and
+were not used to tune these changes.
+
+## Baseline behavior in 5.2.0
+
+In 5.2.0, `app/hooks/user-prompt-submit.sh` emits architecture, debug or generic
 context. This benchmark maps generic context to `none`; `plan` and `review`
 remain separate expected categories so their absence is visible in the matrix.
 The hook gives architecture substring matches priority over debug matches. It
@@ -18224,13 +18291,16 @@ privacy and separation of calibration/final evaluation before freezing G0-eval.
 Still needed: 100–200 anonymized natural PL/EN prompts with independent category
 and skill labels, at least 20 with no matching skill, explicit commands,
 notifications and pasted content; separate calibration/final sets; and
-consented, separately observed model Skill selections. No private session logs
-were mined to fill this gap. No live inference was run.
+consented, separately observed model Skill selections. The original preparation
+did not read private session logs. A subsequent 100-case local review draft was
+prepared outside Git on 2026-10-05; its labels remain unreviewed and its filtered
+selection does not meet this evaluation contract. No private prompt text or
+natural-data report is committed here, and no live model inference was run.
 
-The two quoted-text fixtures (indices 15 and 16) are diagnostic probes, not a
-claim that either is a supported client paste marker. B2 must name supported
-client markers and scope paste-exclusion guarantees to those markers. Unmarked
-pastes remain a diagnostic slice.
+Quoted-text fixture 16 uses a Markdown fence and is covered by the current marker
+contract. Fixture 15 is an unmarked prose quotation and remains a diagnostic
+slice outside that guarantee. The [hook catalog](hooks-catalog.md) names the
+recognized formats; client-specific paste metadata is not assumed.
 
 ## Diagnostic measurement, 2026-10-04
 
@@ -18239,7 +18309,9 @@ Platform: Darwin 25.6.0 arm64; Python 3.14.7. Hook SHA-256:
 `830a51637b45634041e72b24ccf25e95131d767d48666d1b7169eb26f16f9238`.
 Dataset SHA-256:
 `a09f767e9eed417f684e5c270b04c2566ab16a58436eb7444bee68c2a94b5adb`.
-The runner also emits dependency hashes for the three sourced helper scripts.
+The baseline records hashes for the three sourced shell helpers. Current runs
+also record `_prompt-intent.py`, so classifier changes invalidate the recorded
+implementation identity even when the shell entry point is unchanged.
 
 The 20 cases comprise 12 EN, 5 PL, 2 mixed and 1 neutral; 9 expect no skill.
 The first three reproduce the architecture/debug/generic prompts already in
