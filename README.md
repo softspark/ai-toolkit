@@ -6,21 +6,20 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1947%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1963%20passing-success)](tests/)
 
-## What's New in v5.1.0
+## What's New in v5.2.0
 
-- **Conditional Codex delegation from Claude.** Detect the installed, enabled
-  plugin and confirm its runtime agent before delegation; otherwise retain
-  native agents and configured models.
-- **Supervised model defaults.** Sonnet `high` for bounded implementation,
-  Opus `high` for coordination and Opus `xhigh` for hard debugging; available
-  Codex execution can use Astra `xhigh` for security.
-- **Portable exports.** Claude plugin instructions stay out of other clients,
-  while native model settings, literal examples and user files are preserved.
-- **Editor compatibility.** Augment uses effective native tool allowlists.
-  Antigravity's 13 workflow commands also ship as same-named skills before
-  workflows retire on November 1, retaining older-client compatibility.
+- **Accounts per project.** `ai-toolkit claude-switch` and `ai-toolkit codex-switch`
+  select isolated profiles through explicit launch commands, including Git worktrees.
+- **Live account limits.** `ai-toolkit llm-status` queries every configured Claude
+  and Codex account without quota caching, model turns or historical fallback.
+- **Offline routing benchmark.** Diagnose prompt-hook routing with synthetic
+  fixtures and bounded runs; no private session mining or model calls.
+- **Safer CI action.** Quote the toolkit-version input, pin setup-node 7, and
+  update checkout and release-action pins.
+- **Current compatibility review.** Recheck all 13 integrations while preserving
+  configured models, permissions and supported native exports.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -79,6 +78,71 @@ ai-toolkit update --local                         # auto-detects editors
 ```
 
 DeepSeek Harness (DSH) support is retired: `--editors dsh` is ignored with a warning and `ai-toolkit dsh ...` only prints manual cleanup steps. `ai-toolkit update --local` cleans up old DSH project skills, and DSH profiles are removed with DSH itself. See [DSH Compatibility (retired)](kb/reference/dsh-compatibility.md).
+
+### All LLM Accounts
+
+```bash
+ai-toolkit llm-status                   # live limits for all configured Claude and Codex accounts
+ai-toolkit llm-status --refresh         # same live query for both providers
+ai-toolkit llm-status refresh           # equivalent spelling
+ai-toolkit llm-status --verbose         # include paths, project mappings and timestamps
+ai-toolkit llm-status --json            # combined provider/account data for scripts
+```
+
+The dashboard shows usage bars, reset times and active/default accounts for
+each provider. It uses the
+existing account registries below. Every invocation fetches current limits;
+there is no disk quota cache or fallback to old readings. Failures appear on
+the affected account. A failed provider configuration does not hide the other accounts.
+
+### Claude Code Accounts per Project
+
+Keep your existing Claude login as the default and assign separate profiles to
+client directories:
+
+```bash
+ai-toolkit claude-switch init
+ai-toolkit claude-switch add infinity --share-config
+ai-toolkit claude-switch add play-reserve --share-config
+ai-toolkit claude-switch bind /absolute/path/to/infinity infinity
+ai-toolkit claude-switch bind /absolute/path/to/play-reserve play-reserve
+ai-toolkit claude-switch login infinity
+ai-toolkit claude-switch login play-reserve
+ai-toolkit claude-switch run
+```
+
+Run `ai-toolkit claude-switch run` from a project directory to select its account.
+Use `ai-toolkit claude-switch run --account infinity` for an explicit override.
+Plain `claude` keeps its native behavior. Status lists all
+configured profiles and live 5-hour/7-day subscription limits as usage bars
+with reset countdowns and fetch timestamps. `status --verbose` adds configuration
+paths, project mappings and exact timestamps. Claude limits are fetched using
+each profile's OAuth credentials through Claude's internal usage endpoint,
+whose availability can change. No model turn is submitted and no quota readings
+are saved. `status --json` is available for scripts. Missing limits stay unknown;
+authentication and network failures are shown explicitly per account.
+See [Claude account profiles](kb/howto/claude-account-profiles.md) for shared
+settings, authentication checks, and migration from older shell functions.
+
+### Codex / OpenAI Accounts per Project
+
+`ai-toolkit codex-switch` uses the same
+project routing and compact status dashboard for Codex CLI accounts:
+
+```bash
+ai-toolkit codex-switch init
+ai-toolkit codex-switch add infinity --share-config
+ai-toolkit codex-switch bind /absolute/path/to/infinity infinity
+ai-toolkit codex-switch login infinity
+ai-toolkit codex-switch run
+ai-toolkit codex-switch status --refresh
+```
+
+Named profiles use isolated `CODEX_HOME` directories and bypass the shared
+daemon. The default keeps your existing login. Every `status` invocation reads
+live account limits through the native app-server without starting a model turn. See
+[Codex account profiles](kb/howto/codex-account-profiles.md) for setup,
+configuration sharing, worktrees and supported CLI scope.
 
 ### Plugin Management
 

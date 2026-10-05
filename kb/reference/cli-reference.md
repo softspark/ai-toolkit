@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-09-24"
+last_updated: "2026-10-04"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -34,6 +34,88 @@ Usage: ai-toolkit <command> [options]
 | `claude-app verify` | Validate a clean staged plugin with structural checks and the official Claude plugin validator |
 | `codex-plugin export [--output FILE]` | Build a deterministic native Codex plugin ZIP with skills and self-contained hooks |
 | `codex-plugin verify` | Validate a clean native Codex plugin stage without installing it or changing user configuration |
+
+## Combined LLM Account Status
+
+`ai-toolkit llm-status` displays every account registered with
+`ai-toolkit claude-switch` and `ai-toolkit codex-switch`, grouped by provider. Each group retains
+its own active account selected by the current directory, default marker,
+usage bars, reset times and fetch age.
+
+| Option | Behavior |
+|--------|----------|
+| No options | Fetch live limits for all configured Claude and Codex accounts |
+| `--refresh` or `refresh` | Explicit spelling of the same live query for both providers |
+| `--verbose`, `-v` | Add profile paths, project bindings and exact timestamps |
+| `--json` | Return `account_count` and `providers.claude` / `providers.codex` |
+| `--color auto\|always\|never` | Control terminal color; `NO_COLOR` disables it |
+
+Each JSON provider includes `state`, `default_account`, `selected`, `accounts`
+and `error`. Same-named accounts remain separate under their provider.
+Unconfigured providers have `state: "not_configured"` and an empty account
+list. An unreadable or invalid registry returns `state: "error"`,
+`error: "invalid_configuration"`, and process exit code 1 while still showing
+the other provider. No configured accounts is a successful empty result with
+setup hints in terminal output. Individual refresh errors stay on the affected
+account, as in `ai-toolkit codex-switch status`, without showing old readings.
+A refresh failure does not make the command exit nonzero.
+
+The command honors `CLAUDE_SWITCH_CONFIG`, `CODEX_SWITCH_CONFIG` and toolkit
+data-directory overrides. It never initializes registries or changes account
+bindings. Quota readings are neither cached on disk nor loaded from old cache
+files. Claude uses each profile's OAuth credentials with its internal usage
+endpoint; Codex uses its native app-server, which may update its own
+authentication and local state. Neither reader submits a model turn.
+
+## Claude Code Account Routing
+
+`ai-toolkit claude-switch` manages profiles and launches the native Claude CLI.
+
+| Command | Description |
+|---------|-------------|
+| `ai-toolkit claude-switch init` | Create the account registry, preserving the existing default Claude login |
+| `ai-toolkit claude-switch add NAME [--share-config]` | Create a separate profile; optionally symlink selected configuration from `~/.claude/` |
+| `ai-toolkit claude-switch bind PATH NAME` | Assign an existing project directory and its descendants to a profile |
+| `ai-toolkit claude-switch default NAME` | Set the profile used outside bound projects |
+| `ai-toolkit claude-switch status [--refresh] [--account NAME] [--verbose] [--color auto\|always\|never] [--json]` | Live usage bars for all profiles; `--verbose` adds paths, bindings and exact UTC timestamps; JSON retains all fields |
+| `ai-toolkit claude-switch login NAME` | Run Claude's native `auth login` for that profile |
+| `ai-toolkit claude-switch run [--account NAME] [--] ARGS...` | Launch Claude with the selected configuration and forward arguments |
+
+The longest directory binding wins. Unbound linked Git worktrees inherit the
+main checkout's binding. The default registry is
+`~/.softspark/ai-toolkit/claude-switch.json`; `CLAUDE_SWITCH_CONFIG` can select
+another file. Status counts configured profiles and preserves selected routing
+fields in JSON, adding `account_count`, `default_account`, and `accounts`.
+Usage is fetched live for each profile on every invocation. Missing windows
+remain unknown and failures appear per account. The internal Claude usage
+endpoint is not a stable public API. Status never alters account routing.
+See [Claude account profiles](../howto/claude-account-profiles.md) for setup,
+configuration sharing, authentication checks, and CLI-only scope.
+
+## Codex / OpenAI Account Routing
+
+`ai-toolkit codex-switch` manages profiles and launches the native Codex CLI.
+
+| Command | Description |
+|---------|-------------|
+| `ai-toolkit codex-switch init` | Preserve the current native Codex home as the original default |
+| `ai-toolkit codex-switch add NAME [--share-config]` | Create a private Codex home; optionally link reusable configuration |
+| `ai-toolkit codex-switch bind PATH NAME` | Route a project, descendants and its unbound worktrees |
+| `ai-toolkit codex-switch default NAME` | Set the fallback profile |
+| `ai-toolkit codex-switch login NAME` | Start native Codex login in that profile |
+| `ai-toolkit codex-switch run [--account NAME] [--] ARGS...` | Run Codex, honoring directory routing and native `-C`/`--cd` |
+| `ai-toolkit codex-switch status [--refresh] [--verbose] [--color auto\|always\|never] [--json] [--account NAME]` | Fetch live account limits via the native app-server on every invocation |
+
+Registry: `~/.softspark/ai-toolkit/codex-switch.json`. Override with
+`CODEX_SWITCH_CONFIG`; toolkit data follows `AI_TOOLKIT_HOME`. Named profiles
+use `--no-daemon`, isolated SQLite state and separate native credentials.
+This command does not change ChatGPT/Desktop/IDE login or rotate accounts on
+quota exhaustion. See [Codex account profiles](../howto/codex-account-profiles.md).
+
+Account tools are subcommands of `ai-toolkit` only. Plain `claude` and
+`codex` retain their native behavior. Use the matching `run` subcommand for
+project routing. Older shell functions must be removed from startup files
+and cleared from open terminals; see the migration steps in the account guides.
 
 ## Rule & Hook Injection
 

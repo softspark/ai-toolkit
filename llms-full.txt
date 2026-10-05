@@ -34,9 +34,12 @@
 - [Closed: Tool-Output Token Reduction](kb/history/completed/tool-output-token-reduction-closed-20260727.md)
 - [How-To Guides](kb/howto/README.md)
 - [Autonomous software development](kb/howto/autonomous-development.md)
+- [Claude Code Account Profiles by Project](kb/howto/claude-account-profiles.md)
+- [Codex account profiles](kb/howto/codex-account-profiles.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
 - [Ecosystem sync, 2026-09-23](kb/planning/ecosystem-sync-20260923.md)
 - [Ecosystem review for 5.1.0](kb/planning/ecosystem-sync-20261002.md)
+- [Ecosystem review for 5.2.0](kb/planning/ecosystem-sync-20261005.md)
 - [Editor support and delegation refresh](kb/planning/editor-and-delegation-refresh-20261001.md)
 - [Model compatibility refresh](kb/planning/model-compatibility-refresh-20260923.md)
 - [SOP: Ecosystem Sync](kb/procedures/sop-ecosystem-sync.md)
@@ -75,6 +78,7 @@
 - [Model compatibility for skills and agents](kb/reference/model-compatibility.md)
 - [AI Toolkit - opencode Compatibility](kb/reference/opencode-compatibility.md)
 - [Plugin Pack Conventions](kb/reference/plugin-pack-conventions.md)
+- [Prompt routing baseline](kb/reference/prompt-routing-baseline.md)
 - [Quick Wins Implementation Summary](kb/reference/quick-wins-implementation-summary.md)
 - [Skill Templates](kb/reference/skill-templates.md)
 - [Skills Catalog](kb/reference/skills-catalog.md)
@@ -6315,6 +6319,423 @@ Related: [maintenance SOP](../procedures/sop-maintenance.md),
 
 ---
 
+## kb/howto/claude-account-profiles.md
+
+---
+title: "Claude Code Account Profiles by Project"
+category: howto
+service: ai-toolkit
+tags: [claude, accounts, profiles, cli, authentication]
+created: "2026-10-04"
+last_updated: "2026-10-05"
+description: "Keep a default Claude Code login and route selected project directories to separate account profiles."
+---
+
+# Claude Code Account Profiles by Project
+
+`ai-toolkit claude-switch` assigns a Claude Code account profile to a project directory.
+The mapping is stable, including subdirectories. Each process gets its own
+configuration directory, so terminals in different projects can run concurrently.
+`status` fetches live usage for each configured profile. Usage never
+changes routing: there is no account rotation or automatic paid fallback.
+
+## Prerequisites
+
+- Install the toolkit so `ai-toolkit` is on `PATH`, plus the native Claude Code CLI.
+- Node.js 18+ and Python 3.11+ are required.
+- Have access to each intended Claude account and existing project directories.
+- For a source checkout, use `node bin/ai-toolkit.js claude-switch` from the repository root.
+
+## 1. Create profiles
+
+```bash
+ai-toolkit claude-switch init
+ai-toolkit claude-switch add infinity --share-config
+ai-toolkit claude-switch add play-reserve --share-config
+ai-toolkit claude-switch bind /absolute/path/to/infinity infinity
+ai-toolkit claude-switch bind /absolute/path/to/play-reserve play-reserve
+```
+
+Replace the project paths with existing directories. `init` preserves an
+existing registry. The initial `default` profile uses your existing `~/.claude/`
+and does not move or copy its authentication data. Named profiles are created
+under `~/.softspark/ai-toolkit/claude-profiles/NAME`.
+
+`--share-config` links existing `agents`, `skills`, `rules`, `commands`,
+`output-styles`, `CLAUDE.md`, `ARCHITECTURE.md`, and `settings.json` from the
+default Claude directory. It does not
+link credentials, history, global Claude JSON state, or plugin directories.
+Shared files are live: changes through any profile affect all profiles using
+those links. Review `settings.json` for authentication environment variables,
+credential helpers, and account-specific hooks before sharing it. Omit
+`--share-config` to start with an independent configuration. Plugins and any
+profile-specific MCP configuration need separate setup.
+
+The toolkit installer continues to manage `~/.claude/`. Existing symlinks in
+profiles see changes to the shared configuration without another install.
+
+## 2. Log in once per profile
+
+```bash
+ai-toolkit claude-switch login infinity
+ai-toolkit claude-switch login play-reserve
+```
+
+Each command starts Claude's native `auth login` with the selected configuration
+directory. Choose the intended account in the browser. Login remains native;
+the status reader later reads that profile's OAuth credentials to query usage,
+without printing or copying them to toolkit storage.
+
+Launch each profile and use Claude's `/status` to verify the actual signed-in
+account and subscription:
+
+```bash
+ai-toolkit claude-switch run --account infinity
+ai-toolkit claude-switch run --account play-reserve
+```
+
+`ai-toolkit claude-switch status` reports configuration routing and live limits, not a
+verified account identity. If inherited environment credentials or provider flags are present,
+the launcher warns using variable names without printing their values. Resolve
+these overrides before assuming a Max subscription is used. Shared settings can
+also contain authentication overrides. The launcher does not silently remove
+credentials from your environment.
+
+Named profiles reject an inherited `CLAUDE_SECURESTORAGE_CONFIG_DIR`, including
+an empty value, because it overrides their credential directory. Unset it before
+running or logging in to a named profile. The original default profile keeps
+native Claude behavior.
+
+## 3. Launch through the toolkit
+
+```bash
+cd /absolute/path/to/infinity
+ai-toolkit claude-switch run                      # infinity profile
+ai-toolkit claude-switch status
+
+cd /absolute/path/to/play-reserve
+ai-toolkit claude-switch run                      # play-reserve profile
+
+cd /absolute/path/to/another-project
+ai-toolkit claude-switch run                      # default profile
+ai-toolkit claude-switch run --account infinity   # explicit override
+```
+
+The launcher resolves the native Claude executable on `PATH`. Plain `claude`
+uses its native account selection; the toolkit installs no shell function or
+standalone account-switch command.
+
+## 4. Migrate an older shell setup
+
+Remove old account-switch `shell-init` evaluation lines from `~/.zshrc` or
+`~/.bashrc`, including standalone and `ai-toolkit` spellings. Open a new
+terminal afterwards. Sourcing the edited file does not clear an already loaded
+function. In an existing zsh/bash session, clear the old function and command
+lookup cache:
+
+```bash
+unset -f claude
+hash -r
+```
+
+Use `ai-toolkit claude-switch` for future commands. Existing registry bindings,
+profile directories and credentials remain valid.
+
+## Selection and arguments
+
+Selection checks an explicit account first, then project bindings, then the
+configured default. The longest matching directory wins. A binding for
+`/work/infinity` matches `/work/infinity/src`, but not `/work/infinity-old`.
+A linked Git worktree without its own matching binding inherits the binding
+of its main checkout through Git's common directory. Binding a worktree
+explicitly takes precedence.
+
+```bash
+ai-toolkit claude-switch status --json
+ai-toolkit claude-switch status --account infinity --json
+ai-toolkit claude-switch default default
+ai-toolkit claude-switch run --account infinity -- --resume
+ai-toolkit claude-switch run -- --help
+```
+
+`--account NAME` is a launcher option only at the beginning of the `run`
+arguments. Subsequent arguments are passed to Claude unchanged. `--` ends
+launcher argument handling. `ai-toolkit claude-switch --help` displays launcher help;
+`ai-toolkit claude-switch run -- --help` displays Claude help.
+
+JSON status preserves `account`, `config_dir`, `project` (the matching binding
+or `null`), and `source` (`override`, `project`, `worktree`, or `default`). It also
+includes `account_count`, `default_account`, and an `accounts` list. Each entry
+has `name`, `selected`, `is_default`, `config_dir`, `projects`, and `usage`.
+`--account` selects a profile for the report while retaining the complete list.
+
+The registry lives at `~/.softspark/ai-toolkit/claude-switch.json` by default.
+`AI_TOOLKIT_HOME` changes the toolkit data root, and `CLAUDE_SWITCH_CONFIG`
+selects another registry file. Registry data stores directory mappings, not
+email addresses or tokens.
+
+The initial `default` profile removes `CLAUDE_CONFIG_DIR` from the launched
+process to retain Claude's original default authentication location. Named
+profiles set it to their absolute directory. Setting another profile as the
+default changes which profile is selected outside bound projects.
+
+## Usage statistics
+
+Use `ai-toolkit llm-status` to see these profiles together with all configured Codex
+accounts. `ai-toolkit llm-status`, `ai-toolkit llm-status --refresh` and `ai-toolkit llm-status refresh` all fetch
+current limits for both providers. See [combined status options](../reference/cli-reference.md#combined-llm-account-status).
+
+```bash
+ai-toolkit claude-switch status
+ai-toolkit claude-switch status --refresh
+ai-toolkit claude-switch status --verbose
+ai-toolkit claude-switch status --json
+```
+
+The compact report shows profile count, selected/default markers, five-hour and
+seven-day progress bars, time until reset, and fetch age. Terminals under
+86 columns use stacked rows. `--verbose` (or `-v`) adds configuration paths,
+project bindings and exact UTC timestamps; paths under
+your home directory are shortened to `~`.
+The count describes registered profiles, not independently verified accounts.
+Colors are automatic in a terminal and disabled in pipes. Use
+`--color always|never|auto` to select a mode; `NO_COLOR` disables colors in every
+mode. `--json` remains complete, uses absolute paths and never includes colors.
+
+Every invocation queries `https://api.anthropic.com/api/oauth/usage` using
+that profile's OAuth credentials. This is Claude's internal usage endpoint,
+not a documented stable public API; its availability and response may change.
+No model turn is submitted and no conversation is created. There is no
+background polling and no dependency on the toolkit status line or an active
+Claude session.
+
+The reader uses the profile's macOS Keychain entry or native `.credentials.json`
+file. Requests time out after 10 seconds per profile. It does not renew OAuth
+tokens or modify credential storage. `authentication_expired` requires a native
+login through `ai-toolkit claude-switch login NAME`; `rate_limited` means the provider
+refused the current request. `--refresh` is an alias for normal live status.
+
+Missing windows display `not provided` and are omitted from JSON, never zero.
+Authentication, network and
+response errors appear on the affected profile. Failed reads never fall back
+to an earlier percentage. Use Claude's `/status` to verify the signed-in
+identity and `/usage` to compare the provider's native display.
+
+Quota readings stay in memory for the command and are not saved to disk.
+Historical files under `~/.softspark/ai-toolkit/claude-usage/` from earlier
+versions are ignored and left in place. Existing custom status lines remain
+unchanged; the toolkit status line no longer collects quota snapshots.
+
+In JSON, `usage.state` is `live` after a successful fetch or `error` after a
+failure. Successful reads include `observed_at`, `age_seconds`, `windows`
+and `refreshed: true`. Failed reads contain empty `windows`, null timestamps,
+`refreshed: false` and a sanitized `refresh_error` code.
+
+## Verification
+
+1. Run `ai-toolkit claude-switch status --json` inside a bound project and
+   check `account`, `source` and the matching `project`.
+2. Launch `ai-toolkit claude-switch run` and inspect Claude's `/status` to
+   confirm the signed-in account.
+3. Run `ai-toolkit llm-status` to fetch both providers' current limits.
+
+## Troubleshooting
+
+| Symptom | Resolution |
+|---------|------------|
+| Old shell command fails after upgrade | Remove the old startup evaluation, open a new terminal or run `unset -f claude` and `hash -r`; use `ai-toolkit claude-switch` |
+| Plain `claude` uses the original login | Use `ai-toolkit claude-switch run` for project-based selection |
+| `authentication_expired` | Run `ai-toolkit claude-switch login NAME` and retry status |
+| A usage request fails | Read the profile's error; no previous quota value is used as a fallback |
+
+## Scope and sources
+
+This routing applies to Claude Code CLI processes started through the launcher.
+It does not change Claude Desktop, the web app, or independently launched IDE
+integrations. Separate configuration directories do not establish provider
+permission for any particular multi-account arrangement or spending entitlement.
+
+Claude documents `CLAUDE_CONFIG_DIR` in its
+[environment variable reference](https://code.claude.com/docs/en/env-vars).
+See [Claude Code authentication](https://code.claude.com/docs/en/authentication)
+for supported login and credential options.
+The internal OAuth usage endpoint is an implementation dependency, not a
+public API guarantee from Anthropic.
+
+---
+
+## kb/howto/codex-account-profiles.md
+
+---
+title: "Codex Account Profiles by Project"
+category: howto
+service: ai-toolkit
+tags: [codex, openai, accounts, profiles, cli, authentication]
+created: "2026-10-04"
+last_updated: "2026-10-04"
+description: "Route Codex CLI accounts by project directory and read official account usage limits."
+---
+
+# Codex account profiles
+
+`ai-toolkit codex-switch` routes the Codex CLI. It does not switch accounts in ChatGPT, the Codex
+desktop app, an existing session, or an independently started IDE integration.
+
+## Prerequisites
+
+- Install the toolkit so `ai-toolkit` is on `PATH`, plus the native Codex CLI.
+- Node.js 18+ and Python 3.11+ are required.
+- Have access to each intended account and existing project directories.
+- For a source checkout, use `node bin/ai-toolkit.js codex-switch` from the repository root.
+
+## 1. Create profiles and log in
+
+```bash
+ai-toolkit codex-switch init
+ai-toolkit codex-switch add infinity --share-config
+ai-toolkit codex-switch add play-reserve --share-config
+ai-toolkit codex-switch bind /absolute/path/to/infinity infinity
+ai-toolkit codex-switch bind /absolute/path/to/play-reserve play-reserve
+ai-toolkit codex-switch login infinity
+ai-toolkit codex-switch login play-reserve
+```
+
+Use real existing project paths. `init` preserves an existing registry and
+keeps the native default home (`~/.codex`, or the existing absolute
+`CODEX_HOME` captured during initialization). Each named profile has a private
+directory under `~/.softspark/ai-toolkit/codex-profiles/NAME` and logs in through
+Codex's own browser flow. Tokens, history, databases and plugin state are never
+copied between accounts. Codex owns credential storage, including its keyring.
+
+`--share-config` explicitly links existing `config.toml`, `AGENTS.md`,
+`AGENTS.override.md`, `agents`, `skills`, `rules`, `hooks.json`, and
+`ai-toolkit-hooks` from the original default profile. These are live shared
+settings, including any provider, workspace, permission or project-trust
+configuration stored in `config.toml`. Changes through any linked profile
+affect the others. Omit the flag for independent settings. Portable skills
+under `~/.agents/skills` remain discoverable through native Codex behavior.
+
+## 2. Launch through the toolkit
+
+```bash
+ai-toolkit codex-switch run                          # select by current directory
+ai-toolkit codex-switch run --account infinity       # explicit override
+ai-toolkit codex-switch run --account default        # original account
+ai-toolkit codex-switch run -- -C /path/to/project    # select by native directory flag
+```
+
+Plain `codex` keeps its native behavior. Project bindings apply only to
+`ai-toolkit codex-switch run`; no shell function or standalone account-switch
+command is installed.
+
+The longest complete directory match wins. Subdirectories inherit their
+binding; an unbound Git worktree inherits the main checkout's binding.
+`--account` is consumed only at the start of wrapper arguments. All subsequent
+arguments remain native Codex arguments; `--` ends wrapper option parsing.
+Native `--profile` selects a configuration layer, not an account login.
+
+Named profiles use `--no-daemon` to avoid attaching to the shared background
+server. They clear inherited `CODEX_SQLITE_HOME` and constrain `sqlite_home`
+to the selected profile. Remote connections, shared-server management,
+desktop launches and explicit SQLite home overrides are rejected for named
+profiles because they could use state outside that profile. Use the native
+`command codex` directly for those separate workflows.
+This restriction also applies when native global options, such as
+`--local-provider ollama`, precede a shared-server or desktop command.
+
+Named launches refuse inherited `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`, or
+`OPENAI_API_KEY` rather than silently use an unrelated credential. Error
+messages name variables without printing values. The original default profile
+retains native behavior. Account selection never changes in response to quotas.
+
+## 3. Check status and limits
+
+Use `ai-toolkit llm-status` for a combined dashboard of these profiles and all configured
+Claude accounts. `ai-toolkit llm-status`, `ai-toolkit llm-status --refresh` and `ai-toolkit llm-status refresh`
+all fetch current limits for both providers. See [combined status options](../reference/cli-reference.md#combined-llm-account-status).
+
+```bash
+ai-toolkit codex-switch status
+ai-toolkit codex-switch status --refresh
+ai-toolkit codex-switch status --verbose
+ai-toolkit codex-switch status --refresh --json
+```
+
+The terminal dashboard matches `ai-toolkit claude-switch`: profile count, active/default
+markers, colored progress bars, reset countdowns and fetch age. Details
+use `--verbose`; `--color auto|always|never` and `NO_COLOR` control colors.
+JSON includes selected routing and the complete profile list.
+
+Every `status` invocation starts a short-lived native Codex app-server for each
+profile and calls the documented `account/rateLimits/read` method. It does not
+submit a model turn, start a conversation, or read tokens itself. Codex may
+refresh its native authentication and write its normal local state.
+
+The reader uses the `codex` quota bucket and identifies five-hour/seven-day
+windows by their declared durations. It never assumes `primary` is five hours.
+Missing windows remain unknown. Other model-specific buckets, API billing and
+arbitrary window durations are not displayed as these two subscription limits.
+Quota readings are not written to disk. Failed requests show a sanitized error
+on the affected profile without falling back to historical observations.
+An API-key-only or logged-out profile may not
+provide subscription quotas. Use native Codex `/status` for its own view.
+
+The request has a 10-second timeout per profile and its owned subprocess is
+stopped afterwards. Credentials and full protocol messages are never cached
+by the toolkit. `--refresh` remains an alias for the normal live behavior.
+
+## Storage and configuration
+
+- Registry: `~/.softspark/ai-toolkit/codex-switch.json`.
+- Profiles: `~/.softspark/ai-toolkit/codex-profiles/NAME`.
+- `CODEX_SWITCH_CONFIG` selects another registry; `AI_TOOLKIT_HOME` relocates
+  toolkit data. Claude's registry remains separate.
+
+Historical quota cache files from earlier versions are neither read nor updated.
+The command leaves those files in place.
+
+To change the fallback, use `ai-toolkit codex-switch default NAME`. To reassign a
+directory, run `ai-toolkit codex-switch bind PATH NAME` again.
+
+## 4. Migrate an older shell setup
+
+Remove old account-switch `shell-init` evaluation lines from `~/.zshrc` or
+`~/.bashrc`, including standalone and `ai-toolkit` spellings. Open a new
+terminal. Sourcing the edited startup file does not remove functions already
+loaded in the current shell. To clear an existing zsh/bash session:
+
+```bash
+unset -f codex
+hash -r
+```
+
+Use `ai-toolkit codex-switch` instead of the removed `openai-switch` or
+`codex-switch` standalone commands and the removed `ai-toolkit openai-switch`
+alias. Account registries, bindings and credentials remain in place.
+
+## Verification
+
+1. Run `ai-toolkit codex-switch status --json` from a bound project and check
+   the selected account and routing source.
+2. Launch `ai-toolkit codex-switch run` and check native Codex `/status`.
+3. Run `ai-toolkit llm-status` to fetch both providers' current limits.
+
+## Troubleshooting
+
+| Symptom | Resolution |
+|---------|------------|
+| Old command fails after upgrade | Remove its startup evaluation, open a new terminal or run `unset -f codex` and `hash -r`; use `ai-toolkit codex-switch` |
+| Plain `codex` uses the original login | Use `ai-toolkit codex-switch run` for project-based selection |
+| A profile is logged out | Run `ai-toolkit codex-switch login NAME` and retry status |
+| Limits are unknown | Confirm the profile uses a subscription login; API-key-only profiles may not expose subscription quotas |
+| A usage request fails | Read the profile's error; the dashboard does not substitute historical readings |
+
+Sources: [Codex authentication](https://learn.chatgpt.com/docs/auth),
+[configuration and state](https://learn.chatgpt.com/docs/config-file/config-advanced),
+and [official app-server rate limits](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt).
+
+---
+
 ## kb/planning/cloud-security-pack-plan.md
 
 ---
@@ -7691,6 +8112,104 @@ Cline's hosted hook page did not expose a complete reference; the official
 repository was used instead. Detailed Cursor BDK and Copilot computer-use
 features were not adopted. This review establishes documented contract
 compatibility, not live account access, model quality or paid execution results.
+
+---
+
+## kb/planning/ecosystem-sync-20261005.md
+
+---
+title: "Ecosystem review for ai-toolkit 5.2.0"
+category: planning
+service: ai-toolkit
+tags: [release, ecosystem, compatibility, editors, models]
+version: "1.0.0"
+created: "2026-10-05"
+last_updated: "2026-10-05"
+description: "Online review of thirteen integrations, upstream CLI releases and model contracts before ai-toolkit 5.2.0."
+---
+
+# Ecosystem review for 5.2.0
+
+Release Phase 0 follows [the ecosystem SOP](../procedures/sop-ecosystem-sync.md).
+The first online doctor run checked all 13 registry targets: **3 clean, 10 with
+drift, zero fetch errors**. Structural differences were the Devin landing page
+and installed CLI versions. Other reported differences were content hashes with
+unchanged headings. Feature references were reviewed separately; a landing-page
+hash alone does not verify hooks, skills, agents or plugin contracts.
+
+## Dispositions
+
+Each finding has one class. Multiple classes in a row describe separate findings.
+Class A means compatible documentation/navigation churn; C means an optional
+surface not adopted; D records a deprecation already handled by the toolkit.
+No new mandatory generator migration, default promotion (E), or global surface
+migration (F) was identified in this review.
+
+| Integration | Classes | Evidence and disposition |
+|-------------|---------|--------------------------|
+| Claude Code | A, C | Local version advanced from 2.1.287 to 2.1.289. [Release 2.1.289](https://github.com/anthropics/claude-code/releases/tag/v2.1.289) fixes permission handling and plugin validation; optional mod teammate APIs are not adopted. [Command hooks](https://code.claude.com/docs/en/hooks), [skills](https://code.claude.com/docs/en/skills), [agent effort](https://code.claude.com/docs/en/sub-agents) and [plugin manifests](https://code.claude.com/docs/en/plugins-reference) remain compatible. |
+| Claude Chat/Cowork | A, C | Content-only landing-page change. [Plugin distribution](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) retains the existing export surface. Organization publishing and additional app UI capabilities do not require generated configuration. |
+| Cursor | A, C | Content-only change. [Hooks](https://cursor.com/docs/hooks) retain project/user JSON configuration and native event names; [subagents](https://cursor.com/docs/subagents) retain native configuration. Optional workspace startup/plugin discovery is not generated. Cloud hook limitations do not expand local installation guarantees. |
+| Windsurf/Devin | A | The landing page replaced onboarding headings with a video introduction. [Official Markdown](https://docs.devin.ai/desktop.md) confirms the presentation change. [Lifecycle hooks](https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks) remain supported, and [skills](https://docs.devin.ai/cli/extensibility/skills/overview) explicitly retain `.windsurf/skills/` alongside `.devin/skills/`. |
+| GitHub Copilot | A, C, D | [Command hooks](https://docs.github.com/en/copilot/reference/hooks-reference) remain supported; optional alternate handler surfaces are not adopted. [Agent configuration](https://docs.github.com/en/copilot/reference/custom-agents-configuration) retires `infer` in favor of invocation controls; the generator already uses `user-invocable` and `disable-model-invocation` and emits no `infer`. |
+| Gemini CLI | A | Content-only change. [Native hooks](https://geminicli.com/docs/hooks/) retain `AfterAgent` as the completion event; this is not a Claude-style `Stop` event. |
+| Cline | A, C | Content-only change. [Skills](https://docs.cline.bot/customization/skills) retain `.clinerules/skills/` compatibility alongside recommended `.cline/skills/`. [Plugin packaging](https://docs.cline.bot/customization/plugins) is an optional distribution surface; no migration of existing generated skills is required. |
+| Roo/Zoo | A | Doctor clean. [Zoo custom modes](https://docs.zoocode.dev/features/custom-modes) explicitly retain JSON `.roomodes`; new UI YAML defaults do not deprecate existing JSON output. |
+| Aider | A | Doctor clean. [Options reference](https://aider.chat/docs/config/options.html) continues documenting the configuration, read/conventions and lint/test surfaces used by the generators. |
+| Augment | A | Content-only change. [Hooks](https://docs.augmentcode.com/cli/hooks) and [subagents](https://docs.augmentcode.com/cli/subagents) remain compatible with the 5.1.0 repair: native allowlist only, no overriding `disabled_tools`. No additional permission expansion is adopted. |
+| Antigravity | A, D | Doctor clean, but the [workflow retirement on 2026-11-01](https://antigravity.google/docs/migration/workflows-to-skills/) remains relevant. Existing same-named skill migration and marked legacy output handle it. [Native hooks](https://antigravity.google/docs/hooks) remain compatible. Legacy removal remains tracked in [issue #34](https://github.com/softspark/ai-toolkit/issues/34). |
+| Codex | A, C | Local CLI advanced from 0.159.3 to [0.160.0](https://github.com/openai/codex/releases/tag/rust-v0.160.0). UI, Guardian, reconnect and sandbox fixes require no generated-config migration. [Hooks](https://learn.chatgpt.com/docs/hooks) still execute `command`/`mcp_tool`, while `prompt`/`agent` handlers are parsed but skipped. [Skills](https://learn.chatgpt.com/docs/build-skills), [agents](https://learn.chatgpt.com/docs/agent-configuration/subagents) and the [supported compatibility plugin manifest](https://developers.openai.com/plugins/build/plugins) remain valid; portable root manifests do not force an existing export migration. |
+| OpenCode | A, D | Content-only change. [Plugin events](https://opencode.ai/docs/plugins/) retain the stable JS contract. [Agent `tools`](https://opencode.ai/docs/agents/) is deprecated in favor of `permission`; our agent generator already omits that deprecated field. No speculative plugin-version migration. |
+
+## Model and prompt review
+
+Reviewed the native model/effort frontmatter inventory, model-routing guidance,
+JSON-output examples and cache examples against current provider references.
+The dated [model compatibility reference](../reference/model-compatibility.md)
+remains the basis for separating client selection from API request parameters.
+
+The current [OpenAI migration guide](https://developers.openai.com/api/docs/guides/latest-model)
+adds `gpt-6.1-sol`. Like Astra, it rejects `none` effort and requires Responses
+for tool calling. That does not change the documented behavior of `gpt-6-sol`
+or authorize replacing configured models. This is class C availability metadata:
+preserve all approved models, effort levels, tools and budgets. The
+[Codex catalog](https://learn.chatgpt.com/docs/models) still scopes GPT-5.5
+retirement on 2026-10-14 to ChatGPT sign-in rather than the OpenAI API.
+
+[Claude model IDs and effort defaults](https://platform.claude.com/docs/en/models/overview)
+remain consistent with the dated routing table. The
+[effort reference](https://platform.claude.com/docs/en/build-with-claude/effort),
+[structured-output schema](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+and [prompt-cache reference](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
+retain the request contracts used by the reviewed examples. Cache eligibility
+and cost remain model-dependent; historical Sonnet 5 examples are not silently
+rewritten into Sonnet 5.5 requests. [Copilot availability](https://docs.github.com/en/copilot/reference/ai-models/supported-models)
+remains account/client-dependent; generated agents continue inheriting selection.
+
+## Validation and limits
+
+The reviewed Claude CLI version for isolated release smoke tests is **2.1.289**.
+This is backed by its official release page, separately from the doctor's local
+version probe. Codex **0.160.0** was also checked against its tagged release notes.
+
+The snapshot was refreshed after the above dispositions. Validation passed:
+
+- Online `ecosystem_doctor.py --check --format text`: exit 0, 13 targets,
+  11 clean and two content-only hash changes (Claude app and Gemini), zero
+  structural drift or fetch errors. Dynamic hashes are non-gating per the SOP.
+- Offline `ecosystem_doctor.py --offline --check --format text`: 13 clean.
+- `validate.py --strict`: zero errors or warnings, including 76 KB documents.
+- `audit_skills.py --ci`: zero high/warning findings, 14 informational notices.
+- Diff and whitespace review completed for the snapshot and this report.
+
+Full test suites and cross-platform release gates belong to the release
+coordinator; this document does not claim they have completed.
+
+The browser could not render the Devin desktop landing page; its official
+Markdown endpoint was fetched successfully, and the online doctor fetched the
+HTML successfully. No other source-access error blocked these dispositions.
+The review establishes documented compatibility, not live execution in all
+thirteen clients, account model availability, model quality or paid API results.
 
 ---
 
@@ -11647,7 +12166,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-09-24"
+last_updated: "2026-10-04"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -11677,6 +12196,88 @@ Usage: ai-toolkit <command> [options]
 | `claude-app verify` | Validate a clean staged plugin with structural checks and the official Claude plugin validator |
 | `codex-plugin export [--output FILE]` | Build a deterministic native Codex plugin ZIP with skills and self-contained hooks |
 | `codex-plugin verify` | Validate a clean native Codex plugin stage without installing it or changing user configuration |
+
+## Combined LLM Account Status
+
+`ai-toolkit llm-status` displays every account registered with
+`ai-toolkit claude-switch` and `ai-toolkit codex-switch`, grouped by provider. Each group retains
+its own active account selected by the current directory, default marker,
+usage bars, reset times and fetch age.
+
+| Option | Behavior |
+|--------|----------|
+| No options | Fetch live limits for all configured Claude and Codex accounts |
+| `--refresh` or `refresh` | Explicit spelling of the same live query for both providers |
+| `--verbose`, `-v` | Add profile paths, project bindings and exact timestamps |
+| `--json` | Return `account_count` and `providers.claude` / `providers.codex` |
+| `--color auto\|always\|never` | Control terminal color; `NO_COLOR` disables it |
+
+Each JSON provider includes `state`, `default_account`, `selected`, `accounts`
+and `error`. Same-named accounts remain separate under their provider.
+Unconfigured providers have `state: "not_configured"` and an empty account
+list. An unreadable or invalid registry returns `state: "error"`,
+`error: "invalid_configuration"`, and process exit code 1 while still showing
+the other provider. No configured accounts is a successful empty result with
+setup hints in terminal output. Individual refresh errors stay on the affected
+account, as in `ai-toolkit codex-switch status`, without showing old readings.
+A refresh failure does not make the command exit nonzero.
+
+The command honors `CLAUDE_SWITCH_CONFIG`, `CODEX_SWITCH_CONFIG` and toolkit
+data-directory overrides. It never initializes registries or changes account
+bindings. Quota readings are neither cached on disk nor loaded from old cache
+files. Claude uses each profile's OAuth credentials with its internal usage
+endpoint; Codex uses its native app-server, which may update its own
+authentication and local state. Neither reader submits a model turn.
+
+## Claude Code Account Routing
+
+`ai-toolkit claude-switch` manages profiles and launches the native Claude CLI.
+
+| Command | Description |
+|---------|-------------|
+| `ai-toolkit claude-switch init` | Create the account registry, preserving the existing default Claude login |
+| `ai-toolkit claude-switch add NAME [--share-config]` | Create a separate profile; optionally symlink selected configuration from `~/.claude/` |
+| `ai-toolkit claude-switch bind PATH NAME` | Assign an existing project directory and its descendants to a profile |
+| `ai-toolkit claude-switch default NAME` | Set the profile used outside bound projects |
+| `ai-toolkit claude-switch status [--refresh] [--account NAME] [--verbose] [--color auto\|always\|never] [--json]` | Live usage bars for all profiles; `--verbose` adds paths, bindings and exact UTC timestamps; JSON retains all fields |
+| `ai-toolkit claude-switch login NAME` | Run Claude's native `auth login` for that profile |
+| `ai-toolkit claude-switch run [--account NAME] [--] ARGS...` | Launch Claude with the selected configuration and forward arguments |
+
+The longest directory binding wins. Unbound linked Git worktrees inherit the
+main checkout's binding. The default registry is
+`~/.softspark/ai-toolkit/claude-switch.json`; `CLAUDE_SWITCH_CONFIG` can select
+another file. Status counts configured profiles and preserves selected routing
+fields in JSON, adding `account_count`, `default_account`, and `accounts`.
+Usage is fetched live for each profile on every invocation. Missing windows
+remain unknown and failures appear per account. The internal Claude usage
+endpoint is not a stable public API. Status never alters account routing.
+See [Claude account profiles](../howto/claude-account-profiles.md) for setup,
+configuration sharing, authentication checks, and CLI-only scope.
+
+## Codex / OpenAI Account Routing
+
+`ai-toolkit codex-switch` manages profiles and launches the native Codex CLI.
+
+| Command | Description |
+|---------|-------------|
+| `ai-toolkit codex-switch init` | Preserve the current native Codex home as the original default |
+| `ai-toolkit codex-switch add NAME [--share-config]` | Create a private Codex home; optionally link reusable configuration |
+| `ai-toolkit codex-switch bind PATH NAME` | Route a project, descendants and its unbound worktrees |
+| `ai-toolkit codex-switch default NAME` | Set the fallback profile |
+| `ai-toolkit codex-switch login NAME` | Start native Codex login in that profile |
+| `ai-toolkit codex-switch run [--account NAME] [--] ARGS...` | Run Codex, honoring directory routing and native `-C`/`--cd` |
+| `ai-toolkit codex-switch status [--refresh] [--verbose] [--color auto\|always\|never] [--json] [--account NAME]` | Fetch live account limits via the native app-server on every invocation |
+
+Registry: `~/.softspark/ai-toolkit/codex-switch.json`. Override with
+`CODEX_SWITCH_CONFIG`; toolkit data follows `AI_TOOLKIT_HOME`. Named profiles
+use `--no-daemon`, isolated SQLite state and separate native credentials.
+This command does not change ChatGPT/Desktop/IDE login or rotate accounts on
+quota exhaustion. See [Codex account profiles](../howto/codex-account-profiles.md).
+
+Account tools are subcommands of `ai-toolkit` only. Plain `claude` and
+`codex` retain their native behavior. Use the matching `run` subcommand for
+project routing. Older shell functions must be removed from startup files
+and cleared from open terminals; see the migration steps in the account guides.
 
 ## Rule & Hook Injection
 
@@ -11833,7 +12434,7 @@ service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
 version: "1.2.0"
 created: "2026-04-12"
-last_updated: "2026-09-23"
+last_updated: "2026-10-04"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -11855,6 +12456,14 @@ rules, and hooks onto the active `CODEX_HOME` without changing project-local
 configuration.
 
 ## Local Install Outputs
+
+For multiple CLI logins, `ai-toolkit codex-switch run` selects a
+separate `CODEX_HOME` by project directory and starts named profiles without
+the shared daemon. The default profile retains the original native home.
+`ai-toolkit codex-switch status` (also with `--refresh`) uses the documented
+app-server rate-limit read on every invocation without a
+model turn. See [Codex account profiles](../howto/codex-account-profiles.md)
+for configuration sharing, isolation and the CLI-only scope.
 
 `ai-toolkit install --local --editors codex` generates:
 
@@ -13978,9 +14587,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.6.0"
+version: "3.7.0"
 created: "2026-03-26"
-last_updated: "2026-09-24"
+last_updated: "2026-10-05"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -14026,6 +14635,9 @@ claude-app --scope global` targets it directly, without a plugin.
 |---------|--------|---------|
 | `ai-toolkit install` | `~/.claude/` | first-time machine setup |
 | `ai-toolkit update` | `~/.claude/` | re-apply after package or rule changes |
+| `ai-toolkit claude-switch` | `~/.softspark/ai-toolkit/claude-switch.json` and account profile directories | bind Claude Code accounts to project directories; launch with the selected profile |
+| `ai-toolkit codex-switch` | `~/.softspark/ai-toolkit/codex-switch.json` and Codex account homes | route Codex CLI accounts and fetch live usage limits |
+| `ai-toolkit llm-status` | existing Claude/Codex registries and provider credentials | fetch live limits for every configured account on each invocation |
 | `ai-toolkit install --local` | current project | Claude Code configs only (CLAUDE.md, settings, constitution, language rules). Add `--editors all` for other tools, or `--editors cursor,aider` for specific ones. Auto-detects editors from existing project files when `--editors` is omitted. |
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
@@ -14067,6 +14679,39 @@ Claude Code's default global install writes these managed surfaces:
 - `~/.claude/CLAUDE.md` — compact index pointing at the managed rule files.
 
 The `ai-toolkit-*` prefix in `~/.claude/rules/` is reserved for installer-managed files. User-authored Claude rules should use another filename prefix, or be registered through `ai-toolkit add-rule` so they are emitted as `ai-toolkit-registered-*.md`.
+
+## Claude Code Account Profiles
+
+`ai-toolkit claude-switch run` selects a Claude Code profile
+from the current directory. The `default` profile keeps the existing
+`~/.claude/` configuration and login. Named profiles have separate directories
+under `~/.softspark/ai-toolkit/claude-profiles/`. Each launch sets
+`CLAUDE_CONFIG_DIR` only for a named profile; the original default leaves that
+variable unset, preserving Claude's existing default authentication location.
+
+The installer still manages `~/.claude/`. Creating an account profile does not
+install toolkit files into it. `ai-toolkit claude-switch add NAME --share-config` can
+symlink existing `agents`, `skills`, `rules`, `commands`, `output-styles`,
+`CLAUDE.md`, `ARCHITECTURE.md`, and `settings.json` from `~/.claude/`.
+These are shared files: editing them through
+a profile also changes the default configuration. Credentials, session history,
+global Claude state, and plugin directories are not linked. Review shared
+settings for environment credentials and account-specific hooks first.
+
+Account tools are available only under `ai-toolkit`; the package installs no
+standalone account aliases or shell functions. Plain `claude` and `codex` retain
+native behavior. The switch only routes Claude Code CLI launches through its `run` command. Claude Chat/Desktop/Cowork
+and IDE sessions retain their own account selection. It does not switch
+accounts on a usage limit or guarantee how a provider treats multiple accounts.
+See [Claude account profiles](../howto/claude-account-profiles.md) for setup.
+
+`ai-toolkit claude-switch status` fetches live 5-hour
+and 7-day limits for every profile using its OAuth credentials. Claude's usage
+endpoint is internal and may change. `ai-toolkit llm-status` also queries Codex through
+its native app-server. No command stores quota readings or falls back to old
+ones after a failed request. The status line does not collect quota snapshots;
+the installer needs no usage-reader runtime helper for it. User-customized
+status lines remain untouched. Historical quota files are left in place.
 
 ## Claude App Target
 
@@ -14433,11 +15078,12 @@ ecosystem.
 ---
 title: "Hooks Catalog"
 category: reference
+section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.16.0"
+version: "1.16.3"
 created: "2026-03-27"
-last_updated: "2026-10-01"
+last_updated: "2026-10-05"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -14446,6 +15092,12 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 ## Overview
 
 ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+
+The toolkit status line only renders its input; it does not collect or write
+subscription quota snapshots. `ai-toolkit claude-switch status` and `ai-toolkit llm-status` fetch
+current limits directly when invoked, independently of status-line rendering.
+No usage collector is deployed alongside the hooks. Custom status lines remain unchanged.
+See [account profile statistics](../howto/claude-account-profiles.md).
 
 ## Supported Surface
 
@@ -14584,6 +15236,9 @@ same as `DROP TABLE`.
 **Action:** Maintains the per-session search-first flag used by Stop enforcement
 and can provide a lightweight governance reminder: plan mode for architectural
 work, evidence-first debugging, KB-first research, and validation expectations.
+
+The [offline prompt routing baseline](prompt-routing-baseline.md) documents the
+current category behavior, diagnostic fixtures and independent-data requirements.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`. The bundled `app/hooks.json`
 registers this command with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json`.
@@ -15052,7 +15707,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
 
 ## Architecture
 
-```
+```text
 ~/.softspark/ai-toolkit/
 ├── rules/          # Registered rules (add-rule.sh)
 ├── state/          # Per-session runtime state
@@ -17464,6 +18119,201 @@ What survives from that work and applies to any pack:
 - `hooks/session-summary.sh` — summarizes session on Stop
 
 These are intentionally excluded from the default install until explicitly enabled via `ai-toolkit plugin install`.
+
+---
+
+## kb/reference/prompt-routing-baseline.md
+
+---
+title: "Prompt routing baseline"
+category: reference
+section: reference
+service: ai-toolkit
+tags: [benchmark, hooks, routing, evaluation]
+version: "1.0.1"
+created: "2026-10-04"
+last_updated: "2026-10-04"
+description: "Offline B1 diagnostic baseline, dataset contract and missing evidence for prompt routing evaluation."
+---
+
+# Prompt routing baseline
+
+**B1 status: preparation complete, evaluation Inconclusive.** The repository
+contains 20 synthetic diagnostic cases, not the required 100–200 independently
+labeled natural prompts. These cases demonstrate specific current behaviors;
+their error rate cannot justify B2 or a G-ROUTE decision. Runtime hooks are
+unchanged. This implements the B1 preparation in rag-mcp's
+`kb/planning/rag-reranker-and-toolkit-routing-plan-20261003.md`.
+
+## Current behavior
+
+The actual `app/hooks/user-prompt-submit.sh` emits architecture, debug or generic
+context. This benchmark maps generic context to `none`; `plan` and `review`
+remain separate expected categories so their absence is visible in the matrix.
+The hook gives architecture substring matches priority over debug matches. It
+has no Polish vocabulary, word boundaries, explicit slash-command precedence,
+paste exclusion or suggested skill. These are observations for B2, not changes
+made by the benchmark.
+
+`PROMPT_IS_QUESTION=0` suppresses the search-required flag for notification
+prefixes and single tokens. It does **not** suppress the later category context.
+`<task-notification>error…` still gets debugging context. A token containing
+`debug` does too. `track-usage.sh` counts user slash commands, not actual model
+Skill calls; both suggestion accuracy and actual model selection accuracy are
+reported as unavailable, never as zero errors.
+
+Sources: [hook catalog](hooks-catalog.md),
+`app/hooks/user-prompt-submit.sh`, `app/hooks/track-usage.sh`.
+
+## Reproduce offline
+
+From the ai-toolkit repository root, with Python 3.10+, Bash and jq installed:
+
+```bash
+python3 scripts/benchmark_prompt_routing.py --repeats 3
+python3 scripts/benchmark_prompt_routing.py --profile minimal --repeats 3
+python3 scripts/benchmark_prompt_routing.py --dataset /private/path/labeled-prompts.json --repeats 3
+```
+
+The runner executes the actual hook in a temporary home and working directory,
+with a fresh environment, `AI_TOOLKIT_SEARCH_FIRST=off` and JSON context output.
+It does not read session logs, invoke models, install telemetry, call retrieval,
+or write to the real user state directory. This controls category measurement;
+it excludes production search-provider detection and search flag writes from
+the latency scenario. Audit the hook again before running a future revision;
+the runner is process isolation for state, not an OS network sandbox.
+
+Each case runs 1–5 times (default 3), with a two-second per-process timeout.
+Datasets are bounded to 1000 cases, 10 MB and 100,000 characters per prompt.
+The p50/p95 values use nearest rank over whole-process wall times, including
+Bash startup and JSON I/O. Processes are fresh, sequential and have no model
+cold/warm distinction. Repeats improve timing samples, not category sample size.
+Unexpected hook output or non-deterministic categories fail the run. Minimal
+profile requires silence and never receives a category accuracy score.
+
+JSON output contains aggregates, zero-based mismatch indices and source hashes.
+It contains no prompt text, raw hook output, dataset path or custom case IDs.
+Keep natural datasets and their reports outside Git. The only checked-in prompts
+are deliberately authored public synthetic fixtures.
+
+## Dataset contract and remaining evidence
+
+The JSON root requires `schema_version: 1`, `origin: "synthetic" | "natural"`,
+`labels: "developer" | "independent"`, and a nonempty `cases` array. Each case
+requires:
+
+| Field | Values |
+|---|---|
+| `prompt` | Exact submitted text; empty string is valid |
+| `expected_category` | `architecture`, `debug`, `plan`, `review`, `none` |
+| `expected_skill` | Skill name or JSON `null` for no matching skill |
+| `language` | `pl`, `en`, `mixed`, `neutral` |
+
+Use [the synthetic fixture](../../benchmarks/prompt-routing/diagnostic.json) as a
+schema example. Provenance fields are declarations, not independently verified
+evidence. The runner always reports Inconclusive because it measures a baseline,
+not candidate improvement. A human must check dataset independence, relevance,
+privacy and separation of calibration/final evaluation before freezing G0-eval.
+
+Still needed: 100–200 anonymized natural PL/EN prompts with independent category
+and skill labels, at least 20 with no matching skill, explicit commands,
+notifications and pasted content; separate calibration/final sets; and
+consented, separately observed model Skill selections. No private session logs
+were mined to fill this gap. No live inference was run.
+
+The two quoted-text fixtures (indices 15 and 16) are diagnostic probes, not a
+claim that either is a supported client paste marker. B2 must name supported
+client markers and scope paste-exclusion guarantees to those markers. Unmarked
+pastes remain a diagnostic slice.
+
+## Diagnostic measurement, 2026-10-04
+
+Baseline source SHA: `62990cfd9dab31e02cdb50dd38456c8555616795`.
+Platform: Darwin 25.6.0 arm64; Python 3.14.7. Hook SHA-256:
+`830a51637b45634041e72b24ccf25e95131d767d48666d1b7169eb26f16f9238`.
+Dataset SHA-256:
+`a09f767e9eed417f684e5c270b04c2566ab16a58436eb7444bee68c2a94b5adb`.
+The runner also emits dependency hashes for the three sourced helper scripts.
+
+The 20 cases comprise 12 EN, 5 PL, 2 mixed and 1 neutral; 9 expect no skill.
+The first three reproduce the architecture/debug/generic prompts already in
+`tests/test_hooks.bats`; the remaining authored cases probe planned behavior.
+Labels were written by the benchmark author, not independent annotators.
+
+| Measurement | Standard | Minimal |
+|---|---:|---:|
+| Correct categories / cases | 6 / 20 | Not applicable |
+| Diagnostic category accuracy | 30% | Not applicable |
+| False architecture classifications | 5 | Not applicable |
+| False debug classifications | 3 | Not applicable |
+| Whole-process p50 | 37.121 ms | 7.523 ms |
+| Whole-process p95 | 47.159 ms | 8.715 ms |
+| Timing samples | 60 | 60 |
+| All output silent | Not applicable | Yes |
+
+Confusion matrix, expected rows and emitted columns:
+
+| Expected | architecture | debug | plan | review | none |
+|---|---:|---:|---:|---:|---:|
+| architecture | 1 | 0 | 0 | 0 | 1 |
+| debug | 0 | 2 | 0 | 0 | 1 |
+| plan | 0 | 0 | 0 | 0 | 2 |
+| review | 1 | 0 | 0 | 0 | 2 |
+| none | 4 | 3 | 0 | 0 | 3 |
+
+The descriptive Wilson 95% interval is 14.55–51.90%; it does not turn these
+selected synthetic cases into a population estimate. The observed p95 is for
+this controlled host run only, not proof of meeting the production 50 ms gate.
+A separate reviewer run with `--repeats 1` reproduced 6/20 and both hashes but
+measured p95 57.132 ms over 20 timing samples. It is a separate observation, not
+pooled with the 60-sample run, and reinforces the need for a frozen timing protocol.
+No candidate, natural-prompt baseline or model skill-selection improvement has
+been measured. G-ROUTE remains Inconclusive.
+
+## Verification of B1 preparation
+
+On 2026-10-04, focused Python tests passed (12), the existing hook/editor Bats
+tests passed (199), the full Python suite passed (723), repository `lint:py`
+passed, and strict mypy passed for the new runner. The repository validator
+passed again with zero errors and warnings after concurrent unrelated CLI changes
+(74 KB documents and 1,954 Bats tests in the current inventory).
+The new Python files also passed the broader inherited Ruff rules.
+
+```bash
+python3 scripts/validate.py --strict
+uv run --no-project --with 'pytest>=8,<10' --with 'mypy>=1.10,<3' python -m pytest tests/python
+bats tests/test_hooks.bats tests/test_hooks_per_editor.bats
+npm run lint:py
+mypy --strict scripts/benchmark_prompt_routing.py
+npm test
+```
+
+The first full Bats run enumerated 1,953 tests and exited 1. Its captured output showed
+`README badges match ground truth` failing while unrelated `claude-switch`
+changes increased the test count during this work; the output was truncated,
+so this report does not claim that was the only failure. Those concurrent edits
+were preserved. The badge was subsequently updated by that concurrent work;
+the focused badge test passed when the coordinator reran it.
+
+A complete coordinator run then isolated two npm-pack failures: invoking the
+new npm by absolute path still let nested commands resolve the old system npm.
+Both tests passed with the Node 22 bin directory prepended to `PATH`. The final
+full run used that same environment and passed **1,954/1,954 Bats tests**, exit 0.
+Its log is `/private/tmp/rag-routing-ai-toolkit-bats-node22-20261004.log`.
+These results cover the shared working tree, including concurrent CLI changes;
+they are not evidence bound to a new release commit.
+
+Unqualified `ruff check .` still has findings on existing files under inherited
+broader rules. The repository's documented lint command and the new files pass;
+this is not a claim that every existing file passes the broader configuration.
+
+The system npm 6.7 did not execute scripts correctly with Node 22. For the final
+lint/full Bats environment, Node 22.22.2's bin directory must come first in `PATH`,
+so subprocesses also resolve npm 11.13.0 from that installation.
+The local system Python lacked pytest; the Python suite used an isolated uv
+environment. A requested coverage-tool environment was canceled before launch;
+coverage was not measured. No coverage percentage or completed evaluation is
+claimed.
 
 ---
 

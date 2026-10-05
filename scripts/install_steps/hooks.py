@@ -102,6 +102,7 @@ def _copy_hook_scripts(claude_dir: Path, hooks_scripts_dir: Path) -> None:
 # scripts that a deployed hook actually executes belong here.
 HOOK_RUNTIME_SCRIPTS: tuple[str, ...] = (
     "claude_codex_capability.py",
+    "paths.py",
     "session_state.py",
     "session_token_stats.py",
     "test_cohesion.py",

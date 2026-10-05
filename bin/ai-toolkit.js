@@ -8,6 +8,7 @@
 const { execFileSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { constants: osConstants } = require('os');
 
 const TOOLKIT_DIR = path.dirname(__dirname);
 const CWD = process.cwd();
@@ -46,7 +47,7 @@ const GENERATORS = {
 // ---------------------------------------------------------------------------
 
 /**
- * @type {Record<string, { script: string, toolkitCwd?: boolean }>}
+ * @type {Record<string, { script: string, toolkitCwd?: boolean, preserveSignal?: boolean }>}
  */
 const SCRIPT_COMMANDS = {
   'install':              { script: 'install.py' },
@@ -60,6 +61,9 @@ const SCRIPT_COMMANDS = {
   'compile-slm':          { script: 'compile_slm.py' },
   'pack-codebase':        { script: 'pack_codebase.py' },
   'claude-app':           { script: 'claude_app.py',          toolkitCwd: true },
+  'claude-switch':        { script: 'claude_switch.py',        preserveSignal: true },
+  'codex-switch':         { script: 'codex_switch.py',         preserveSignal: true },
+  'llm-status':           { script: 'llm_status.py' },
   'codex-plugin':         { script: 'codex_plugin.py',         toolkitCwd: true },
   'antigravity-plugin':   { script: 'antigravity_plugin.py',   toolkitCwd: true },
 };
@@ -122,6 +126,9 @@ const COMMANDS = {
   'compile-slm': 'Compile toolkit into a minimal SLM system prompt (--budget, --model-size, --dry-run)',
   'pack-codebase': 'Pack the current codebase into a single AI-friendly markdown file (--budget, --include, --exclude, --dry-run)',
   'claude-app': 'Export or verify the uploadable Claude Chat/Desktop/Cowork plugin',
+  'claude-switch': 'Assign Claude Code account profiles to project directories',
+  'codex-switch': 'Assign Codex account profiles to projects and inspect usage limits',
+  'llm-status': 'Show usage and routing for all configured Claude and Codex accounts',
   'codex-plugin': 'Export or verify the native Codex CLI plugin package',
   'antigravity-plugin': 'Export or verify the native Google Antigravity plugin package',
   dsh: 'Retired: prints manual cleanup steps for DSH profiles (removed in the next minor)',
@@ -218,7 +225,7 @@ function runGenerator(scriptName, extraArgs = []) {
  * Spawn a script with inherited stdio (interactive). Exits on non-zero status.
  * @param {string} script - Absolute path to the script
  * @param {string[]} [args=[]] - CLI arguments
- * @param {{ cwd?: string }} [opts={}] - Options (cwd override)
+ * @param {{ cwd?: string, preserveSignal?: boolean }} [opts={}] - Execution options
  */
 function run(script, args = [], opts = {}) {
   requirePython();
@@ -231,6 +238,9 @@ function run(script, args = [], opts = {}) {
     cwd: opts.cwd || CWD,
     env: { ...process.env, AI_TOOLKIT_USER_CWD: CWD },
   });
+  if (opts.preserveSignal && result.signal) {
+    process.exit(128 + osConstants.signals[result.signal]);
+  }
   if (result.status !== 0) {
     process.exit(result.status || 1);
   }
@@ -262,7 +272,10 @@ function propagateGlobal(...flags) {
  */
 function runScript(command, args) {
   const entry = SCRIPT_COMMANDS[command];
-  const opts = entry.toolkitCwd ? { cwd: TOOLKIT_DIR } : {};
+  const opts = {
+    ...(entry.toolkitCwd ? { cwd: TOOLKIT_DIR } : {}),
+    preserveSignal: entry.preserveSignal,
+  };
   run(scriptPath(entry.script), args, opts);
 }
 

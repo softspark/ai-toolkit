@@ -18,7 +18,14 @@ setup() {
     export AI_TOOLKIT_DIR="$TOOLKIT_DIR"
     export AI_TOOLKIT_STATUSLINE_NO_COLOR=1
     export HOME="$TEST_TMP"
+    export AI_TOOLKIT_HOME="$TEST_TMP/.softspark/ai-toolkit"
+    unset CLAUDE_CONFIG_DIR
     export COLUMNS=120
+    export -f make_usage_input
+}
+
+make_usage_input() {
+    printf '%s' '{"session_id":"statusline-session","cwd":"/tmp/profile-project","model":{"display_name":"Opus"},"rate_limits":{"five_hour":{"used_percentage":42,"resets_at":4102444800},"seven_day":{"used_percentage":18,"resets_at":4102531200}}}'
 }
 
 teardown() {
@@ -187,6 +194,56 @@ EOF
 @test "statusline: handles malformed JSON stdin without crash" {
     run bash -c "echo 'not json at all' | bash '$HOOK'"
     [ "$status" -eq 0 ]
+}
+
+@test "statusline: renders active profile without writing a quota cache" {
+    export CLAUDE_CONFIG_DIR="$TEST_TMP/custom-profile"
+    run bash -c 'make_usage_input | bash "$1"' -- "$HOOK"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"profile-project"* ]]
+    [[ "$output" == *"Opus"* ]]
+    [ ! -e "$AI_TOOLKIT_HOME/claude-usage" ]
+}
+
+@test "statusline: installed hook needs no quota collector and creates no cache" {
+    mkdir -p "$AI_TOOLKIT_HOME/hooks"
+    cp "$HOOK" "$AI_TOOLKIT_HOME/hooks/ai-toolkit-statusline.sh"
+    unset AI_TOOLKIT_DIR
+    run bash -c 'make_usage_input | bash "$1"' -- "$AI_TOOLKIT_HOME/hooks/ai-toolkit-statusline.sh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"profile-project"* ]]
+    [ ! -e "$AI_TOOLKIT_HOME/claude-usage" ]
+}
+
+@test "statusline: historical quota files are preserved unchanged" {
+    mkdir -p "$TEST_TMP/isolated/hooks"
+    mkdir -p "$AI_TOOLKIT_HOME/claude-usage/profile"
+    printf '%s' '{"historical":true}' > "$AI_TOOLKIT_HOME/claude-usage/profile/session.json"
+    cp "$HOOK" "$TEST_TMP/isolated/hooks/ai-toolkit-statusline.sh"
+    unset AI_TOOLKIT_DIR
+    run bash -c 'make_usage_input | bash "$1"' -- "$TEST_TMP/isolated/hooks/ai-toolkit-statusline.sh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"profile-project"* ]]
+    [[ "$output" == *"Opus"* ]]
+    [ "$(cat "$AI_TOOLKIT_HOME/claude-usage/profile/session.json")" = '{"historical":true}' ]
+    [ "$(find "$AI_TOOLKIT_HOME/claude-usage" -type f | wc -l | tr -d ' ')" = 1 ]
+}
+
+@test "statusline: rendering needs no writable toolkit storage" {
+    touch "$TEST_TMP/blocked-cache"
+    export AI_TOOLKIT_HOME="$TEST_TMP/blocked-cache"
+    run bash -c 'make_usage_input | bash "$1"' -- "$HOOK"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"profile-project"* ]]
+    [[ "$output" == *"Opus"* ]]
+}
+
+@test "statusline: disabled rendering creates no quota cache" {
+    export AI_TOOLKIT_STATUSLINE_DISABLE=1
+    run bash -c 'make_usage_input | bash "$1"' -- "$HOOK"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -d "$AI_TOOLKIT_HOME/claude-usage" ]
 }
 
 @test "statusline: omits token segment when both tokens are zero" {

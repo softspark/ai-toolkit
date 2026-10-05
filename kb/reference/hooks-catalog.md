@@ -1,11 +1,12 @@
 ---
 title: "Hooks Catalog"
 category: reference
+section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.16.0"
+version: "1.16.3"
 created: "2026-03-27"
-last_updated: "2026-10-01"
+last_updated: "2026-10-05"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -14,6 +15,12 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 ## Overview
 
 ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+
+The toolkit status line only renders its input; it does not collect or write
+subscription quota snapshots. `ai-toolkit claude-switch status` and `ai-toolkit llm-status` fetch
+current limits directly when invoked, independently of status-line rendering.
+No usage collector is deployed alongside the hooks. Custom status lines remain unchanged.
+See [account profile statistics](../howto/claude-account-profiles.md).
 
 ## Supported Surface
 
@@ -152,6 +159,9 @@ same as `DROP TABLE`.
 **Action:** Maintains the per-session search-first flag used by Stop enforcement
 and can provide a lightweight governance reminder: plan mode for architectural
 work, evidence-first debugging, KB-first research, and validation expectations.
+
+The [offline prompt routing baseline](prompt-routing-baseline.md) documents the
+current category behavior, diagnostic fixtures and independent-data requirements.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`. The bundled `app/hooks.json`
 registers this command with `AI_TOOLKIT_HOOK_QUIET=1 AI_TOOLKIT_HOOK_FORMAT=json`.
@@ -620,7 +630,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
 
 ## Architecture
 
-```
+```text
 ~/.softspark/ai-toolkit/
 ├── rules/          # Registered rules (add-rule.sh)
 ├── state/          # Per-session runtime state

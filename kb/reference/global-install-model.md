@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.6.0"
+version: "3.7.0"
 created: "2026-03-26"
-last_updated: "2026-09-24"
+last_updated: "2026-10-05"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -51,6 +51,9 @@ claude-app --scope global` targets it directly, without a plugin.
 |---------|--------|---------|
 | `ai-toolkit install` | `~/.claude/` | first-time machine setup |
 | `ai-toolkit update` | `~/.claude/` | re-apply after package or rule changes |
+| `ai-toolkit claude-switch` | `~/.softspark/ai-toolkit/claude-switch.json` and account profile directories | bind Claude Code accounts to project directories; launch with the selected profile |
+| `ai-toolkit codex-switch` | `~/.softspark/ai-toolkit/codex-switch.json` and Codex account homes | route Codex CLI accounts and fetch live usage limits |
+| `ai-toolkit llm-status` | existing Claude/Codex registries and provider credentials | fetch live limits for every configured account on each invocation |
 | `ai-toolkit install --local` | current project | Claude Code configs only (CLAUDE.md, settings, constitution, language rules). Add `--editors all` for other tools, or `--editors cursor,aider` for specific ones. Auto-detects editors from existing project files when `--editors` is omitted. |
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
@@ -92,6 +95,39 @@ Claude Code's default global install writes these managed surfaces:
 - `~/.claude/CLAUDE.md` — compact index pointing at the managed rule files.
 
 The `ai-toolkit-*` prefix in `~/.claude/rules/` is reserved for installer-managed files. User-authored Claude rules should use another filename prefix, or be registered through `ai-toolkit add-rule` so they are emitted as `ai-toolkit-registered-*.md`.
+
+## Claude Code Account Profiles
+
+`ai-toolkit claude-switch run` selects a Claude Code profile
+from the current directory. The `default` profile keeps the existing
+`~/.claude/` configuration and login. Named profiles have separate directories
+under `~/.softspark/ai-toolkit/claude-profiles/`. Each launch sets
+`CLAUDE_CONFIG_DIR` only for a named profile; the original default leaves that
+variable unset, preserving Claude's existing default authentication location.
+
+The installer still manages `~/.claude/`. Creating an account profile does not
+install toolkit files into it. `ai-toolkit claude-switch add NAME --share-config` can
+symlink existing `agents`, `skills`, `rules`, `commands`, `output-styles`,
+`CLAUDE.md`, `ARCHITECTURE.md`, and `settings.json` from `~/.claude/`.
+These are shared files: editing them through
+a profile also changes the default configuration. Credentials, session history,
+global Claude state, and plugin directories are not linked. Review shared
+settings for environment credentials and account-specific hooks first.
+
+Account tools are available only under `ai-toolkit`; the package installs no
+standalone account aliases or shell functions. Plain `claude` and `codex` retain
+native behavior. The switch only routes Claude Code CLI launches through its `run` command. Claude Chat/Desktop/Cowork
+and IDE sessions retain their own account selection. It does not switch
+accounts on a usage limit or guarantee how a provider treats multiple accounts.
+See [Claude account profiles](../howto/claude-account-profiles.md) for setup.
+
+`ai-toolkit claude-switch status` fetches live 5-hour
+and 7-day limits for every profile using its OAuth credentials. Claude's usage
+endpoint is internal and may change. `ai-toolkit llm-status` also queries Codex through
+its native app-server. No command stores quota readings or falls back to old
+ones after a failed request. The status line does not collect quota snapshots;
+the installer needs no usage-reader runtime helper for it. User-customized
+status lines remain untouched. Historical quota files are left in place.
 
 ## Claude App Target
 

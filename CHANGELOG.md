@@ -7,6 +7,55 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v5.2.0 - Project accounts and live usage (2026-10-05)
+
+### Added
+
+- **Project account routing:** Added `ai-toolkit claude-switch` and
+  `ai-toolkit codex-switch` with isolated profile directories, native login,
+  explicit account selection, directory bindings and worktree inheritance.
+  The original default login remains in place. Named Codex profiles avoid the
+  shared daemon and isolate SQLite state.
+- **Live usage dashboard:** Added `ai-toolkit llm-status`, JSON output, colored
+  quota bars and reset times for every registered account. Each invocation
+  fetches current limits; failed accounts show explicit errors without old
+  readings or zero placeholders. Claude uses its internal OAuth usage endpoint;
+  Codex uses the native app-server. Neither path submits a model turn or saves
+  quota snapshots. Claude token rotation remains owned by the native client.
+- **Routing diagnostic baseline:** Added `scripts/benchmark_prompt_routing.py`,
+  20 synthetic cases and the dataset contract. Results remain Inconclusive for
+  routing decisions until independently labeled natural data is supplied.
+
+### Changed
+
+- **Explicit CLI surface:** Exposed all account and usage commands only through
+  `ai-toolkit`; no extra executables or automatic shell overrides are installed.
+  Profile guides document migration from development-preview aliases.
+- **Release dependencies:** Updated checkout to 7.0.1 and setup-node to 7.0.0.
+  Corrected the release-action pin to the verified commit behind its existing
+  v3.0.2 tag. Action references use immutable commit SHAs.
+
+### Fixed
+
+- **Account isolation:** Rejected inherited Claude secure-storage overrides for
+  named launches and logins, including empty overrides. Rejected named Codex
+  remote/shared-state bypasses even after native global options.
+- **Composite action input:** Passed `toolkit-version` through an environment
+  variable as one quoted npm argument, preventing shell interpolation.
+- **Hook runtime dependency:** Shipped `paths.py` alongside the installed helpers
+  that import it. Status-line rendering does not collect or persist account quotas.
+
+### Ecosystem
+
+- **Thirteen-target review:** Reviewed current documentation and Claude Code
+  2.1.289 / Codex 0.160.0. Adopted compatible metadata drift; optional surfaces
+  and already-handled deprecations require no new generator migration. Preserved
+  selected models, effort levels and tool permissions. See
+  `kb/planning/ecosystem-sync-20261005.md`.
+- **Catalog and budget:** Skill count remains 116 and agent count 44. No new
+  broad-access skill is introduced. The unchanged largest skill body does not
+  permit lowering the body-budget threshold in this release.
+
 ## v5.1.0 - Conditional Codex delegation and editor compatibility (2026-10-02)
 
 ### Added

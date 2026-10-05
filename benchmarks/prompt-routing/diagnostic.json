@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "origin": "synthetic",
+  "labels": "developer",
+  "cases": [
+    {"prompt": "design a migration strategy", "expected_category": "architecture", "expected_skill": "architecture-decision", "language": "en"},
+    {"prompt": "debug this error in auth", "expected_category": "debug", "expected_skill": "debug", "language": "en"},
+    {"prompt": "add a button to the form", "expected_category": "none", "expected_skill": null, "language": "en"},
+    {"prompt": "Zaprojektuj architekturę nowej usługi", "expected_category": "architecture", "expected_skill": "architecture-decision", "language": "pl"},
+    {"prompt": "Znajdź przyczynę błędu logowania", "expected_category": "debug", "expected_skill": "debug", "language": "pl"},
+    {"prompt": "Prepare a plan for the next feature", "expected_category": "plan", "expected_skill": "plan", "language": "en"},
+    {"prompt": "Przygotuj plan realizacji zadania", "expected_category": "plan", "expected_skill": "plan", "language": "pl"},
+    {"prompt": "Review this pull request", "expected_category": "review", "expected_skill": "review", "language": "en"},
+    {"prompt": "Zrób przegląd zmian w kodzie", "expected_category": "review", "expected_skill": "review", "language": "pl"},
+    {"prompt": "The ladybug is red", "expected_category": "none", "expected_skill": null, "language": "en"},
+    {"prompt": "Write a poem about a designer", "expected_category": "none", "expected_skill": null, "language": "en"},
+    {"prompt": "<task-notification>error in background task</task-notification>", "expected_category": "none", "expected_skill": null, "language": "en"},
+    {"prompt": "<ci-monitor-event>deployment failed</ci-monitor-event>", "expected_category": "none", "expected_skill": null, "language": "en"},
+    {"prompt": "/tmp/debug-report.txt", "expected_category": "none", "expected_skill": null, "language": "neutral"},
+    {"prompt": "/review explain the design error", "expected_category": "review", "expected_skill": "review", "language": "en"},
+    {"prompt": "Policz słowa w cytacie: design error debug", "expected_category": "none", "expected_skill": null, "language": "mixed"},
+    {"prompt": "Count words in this quotation:\n```text\ndesign error debug\n```", "expected_category": "none", "expected_skill": null, "language": "en"},
+    {"prompt": "Explain what this function returns", "expected_category": "none", "expected_skill": "explain", "language": "en"},
+    {"prompt": "Dodaj przycisk do formularza", "expected_category": "none", "expected_skill": null, "language": "pl"},
+    {"prompt": "Debug błąd w tym module", "expected_category": "debug", "expected_skill": "debug", "language": "mixed"}
+  ]
+}

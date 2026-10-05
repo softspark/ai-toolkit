@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
 version: "1.2.0"
 created: "2026-04-12"
-last_updated: "2026-09-23"
+last_updated: "2026-10-04"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -27,6 +27,14 @@ rules, and hooks onto the active `CODEX_HOME` without changing project-local
 configuration.
 
 ## Local Install Outputs
+
+For multiple CLI logins, `ai-toolkit codex-switch run` selects a
+separate `CODEX_HOME` by project directory and starts named profiles without
+the shared daemon. The default profile retains the original native home.
+`ai-toolkit codex-switch status` (also with `--refresh`) uses the documented
+app-server rate-limit read on every invocation without a
+model turn. See [Codex account profiles](../howto/codex-account-profiles.md)
+for configuration sharing, isolation and the CLI-only scope.
 
 `ai-toolkit install --local --editors codex` generates:
 

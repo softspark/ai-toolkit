@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-10-02",
+  "last_updated": "2026-10-05",
   "tools": [
     {
       "id": "claude-code",
       "display_name": "Claude Code",
       "kind": "primary",
-      "reviewed_version": "2.1.267",
-      "release_review_note": "2026-09-10 class C: maxEffortLevel and --system-prompt-snapshot are optional runtime controls, not adopted by toolkit generators. Existing emitted hooks, agents and plugin formats require no migration. Reviewed https://github.com/anthropics/claude-code/releases/tag/v2.1.267.",
+      "reviewed_version": "2.1.289",
+      "release_review_note": "2026-10-05 classes A/C: reviewed Claude Code 2.1.289 permission and plugin-validation fixes; no mandatory generated-config migration. Optional teammate APIs are not adopted. https://github.com/anthropics/claude-code/releases/tag/v2.1.289",
       "urls": {
         "docs": "https://code.claude.com/docs",
         "release_notes": "https://github.com/anthropics/claude-code/releases",
@@ -99,17 +99,18 @@
         "command": "claude --version"
       },
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A",
           "C"
         ],
-        "note": "Current command hooks, skill/subagent effort and plugin contracts remain compatible. Plugin mods and function hooks are optional, not adopted.",
+        "note": "Claude Code 2.1.289 retains emitted command hooks, skills, agents and plugin contracts. Optional teammate/mod APIs are not adopted.",
         "sources": [
           "https://code.claude.com/docs/en/hooks",
           "https://code.claude.com/docs/en/skills",
           "https://code.claude.com/docs/en/plugins-reference",
-          "https://code.claude.com/docs/en/sub-agents"
+          "https://code.claude.com/docs/en/sub-agents",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.289"
         ]
       }
     },
@@ -149,12 +150,12 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A",
           "C"
         ],
-        "note": "Account-synced plugins and app export remain compatible; hooks/subagents remain unavailable in ordinary Chat. Organization publishing controls are optional.",
+        "note": "Current plugin distribution retains the existing export surface. Organization publishing and additional app UI capabilities are optional.",
         "sources": [
           "https://support.claude.com/en/articles/13837440-use-plugins-in-claude",
           "https://code.claude.com/docs/en/plugins-reference#plugins-synced-from-claude-ai"
@@ -215,11 +216,12 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
-          "A"
+          "A",
+          "C"
         ],
-        "note": "BDK heading is navigation drift; hooks, native agent inheritance and skill paths remain compatible.",
+        "note": "Hooks, native subagents and skill paths remain compatible. Optional workspace startup and plugin discovery are not generated.",
         "sources": [
           "https://cursor.com/docs/hooks",
           "https://cursor.com/docs/subagents",
@@ -278,15 +280,16 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A"
         ],
-        "note": "Current Devin hook schema and Windsurf-compatible skill paths remain supported. No new emitted-contract migration found.",
+        "note": "Devin desktop headings changed presentation; lifecycle hooks and .windsurf/skills compatibility remain supported.",
         "sources": [
           "https://docs.devin.ai/cli/extensibility/skills/overview",
           "https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks",
-          "https://docs.devin.ai/desktop/changelog"
+          "https://docs.devin.ai/desktop/changelog",
+          "https://docs.devin.ai/desktop.md"
         ]
       }
     },
@@ -338,12 +341,13 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A",
-          "C"
+          "C",
+          "D"
         ],
-        "note": "Computer-use navigation and optional HTTP/exec hooks do not change emitted command hooks. Agent and skill invocation controls remain compatible.",
+        "note": "Command hooks remain supported; optional alternate handlers are not adopted. Deprecated infer is already replaced by user-invocable and disable-model-invocation.",
         "sources": [
           "https://docs.github.com/en/copilot/reference/hooks-reference",
           "https://code.visualstudio.com/docs/agent-customization/hooks",
@@ -410,11 +414,11 @@
         "command": "gemini --version"
       },
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A"
         ],
-        "note": "Eleven native events remain documented; AfterAgent is the completion event. No Stop event or forced runtime migration.",
+        "note": "Native hooks remain compatible; AfterAgent remains the completion event rather than a Claude-style Stop handler.",
         "sources": [
           "https://geminicli.com/docs/hooks/"
         ]
@@ -473,12 +477,12 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A",
           "C"
         ],
-        "note": "Desktop App is an additional optional surface and SDK heading removal is navigation. Hosted hook page was incomplete; official repository still labels TaskComplete/PreCompact coming soon.",
+        "note": "Existing .clinerules/skills compatibility remains documented alongside .cline/skills. Plugin packaging is optional and needs no current migration.",
         "sources": [
           "https://docs.cline.bot/customization/skills",
           "https://docs.cline.bot/customization/plugins",
@@ -530,11 +534,11 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A"
         ],
-        "note": "Zoo .roomodes and .roo/rules-{slug}/ remain compatible; retain Roo paths for successor installs.",
+        "note": "Zoo custom modes continue supporting JSON .roomodes; UI YAML defaults do not deprecate generated JSON.",
         "sources": [
           "https://docs.zoocode.dev/features/custom-modes"
         ]
@@ -578,11 +582,11 @@
         "command": "aider --version"
       },
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A"
         ],
-        "note": "Existing config, conventions, architect, lint/test, attribution and language options remain documented.",
+        "note": "Current options retain the emitted configuration, conventions and lint/test surfaces.",
         "sources": [
           "https://aider.chat/docs/config/options.html"
         ]
@@ -644,13 +648,11 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
-          "A",
-          "B",
-          "C"
+          "A"
         ],
-        "note": "Correct native tool allowlists and remove conflicting disabled_tools. Preserve marked/legacy ownership and user files. Notification remains insufficiently specified for an emitted handler.",
+        "note": "Hooks and subagents retain the native allowlist contract fixed in 5.1.0; no new permission expansion or generator migration.",
         "sources": [
           "https://docs.augmentcode.com/cli/hooks",
           "https://docs.augmentcode.com/cli/subagents",
@@ -723,13 +725,12 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A",
-          "C",
           "D"
         ],
-        "note": "Hooks and inherited agent models remain compatible. Marketplace UI is optional. Workflows retire 2026-11-01: emit same-named skills, retain deprecated legacy files, preserve collisions, warn about unmigrated commands. Native Windows keeps legacy output with explicit WSL/manual migration guidance.",
+        "note": "Native hooks remain compatible. The 2026-11-01 workflow retirement is already handled by same-named skills plus marked legacy output; cleanup remains issue34.",
         "sources": [
           "https://antigravity.google/docs/hooks",
           "https://antigravity.google/docs/changelog",
@@ -743,8 +744,8 @@
       "id": "codex-cli",
       "display_name": "Codex CLI",
       "kind": "editor",
-      "reviewed_version": "0.154.0",
-      "release_review_note": "2026-09-10 class C: optional native worktrees, inline questions, Windows daemon and model-picker features are not adopted as generated configuration. Removal of codex mcp-server requires no toolkit migration: no generator, installer, skill or documented command uses that entry point. Reviewed https://github.com/openai/codex/releases/tag/rust-v0.154.0.",
+      "reviewed_version": "0.160.0",
+      "release_review_note": "2026-10-05 classes A/C: reviewed Codex 0.160.0 UI, reconnect, Guardian and sandbox fixes; existing skill/agent/hook/plugin exports remain compatible. Preserve configured models and permissions. https://github.com/openai/codex/releases/tag/rust-v0.160.0",
       "urls": {
         "docs": "https://learn.chatgpt.com/docs/codex/cli",
         "release_notes": "https://github.com/openai/codex/releases",
@@ -808,17 +809,18 @@
         "command": "codex --version"
       },
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A",
           "C"
         ],
-        "note": "Native agents, skills, plugin manifests and trusted hooks remain compatible. command/mcp_tool execute; prompt/agent handlers are parsed but skipped. Cloud restrictions do not alter local exports.",
+        "note": "Codex 0.160.0 preserves native skills, agents and supported compatibility plugin exports. command/mcp_tool hooks execute; prompt/agent remain parsed but skipped.",
         "sources": [
           "https://developers.openai.com/plugins/build/plugins",
           "https://learn.chatgpt.com/docs/hooks",
           "https://learn.chatgpt.com/docs/agent-configuration/subagents",
-          "https://learn.chatgpt.com/docs/build-skills"
+          "https://learn.chatgpt.com/docs/build-skills",
+          "https://github.com/openai/codex/releases/tag/rust-v0.160.0"
         ]
       }
     },
@@ -885,12 +887,12 @@
         "command": "opencode --version"
       },
       "documentation_review": {
-        "date": "2026-10-02",
+        "date": "2026-10-05",
         "classes": [
           "A",
           "D"
         ],
-        "note": "Stable plugins, skills and Markdown commands remain compatible. Agent tools is deprecated but our generator already omits it. No v2 migration adopted.",
+        "note": "Stable plugins and agent contracts remain compatible. Deprecated agent tools is already omitted; no speculative plugin-version migration.",
         "sources": [
           "https://opencode.ai/docs/plugins/",
           "https://opencode.ai/docs/skills/",
