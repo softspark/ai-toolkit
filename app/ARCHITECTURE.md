@@ -72,18 +72,18 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 ### Development (5)
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| `backend-specialist` | opus | Node.js, Python, PHP, APIs |
-| `frontend-specialist` | opus | React, Next.js, Vue, Nuxt |
-| `mobile-developer` | opus | React Native, Flutter, native |
-| `game-developer` | opus | Unity, Godot, Unreal, Phaser |
+| `backend-specialist` | sonnet | Node.js, Python, PHP, APIs |
+| `frontend-specialist` | sonnet | React, Next.js, Vue, Nuxt |
+| `mobile-developer` | sonnet | React Native, Flutter, native |
+| `game-developer` | sonnet | Unity, Godot, Unreal, Phaser |
 | `database-architect` | opus | Schema design, migrations, query optimization, operations |
 
 ### AI/ML (6)
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| `ai-engineer` | opus | LLM integration, vector search, RAG pipelines |
-| `ml-engineer` | opus | Model training, MLOps |
-| `nlp-engineer` | opus | NLP pipelines, text processing |
+| `ai-engineer` | sonnet | LLM integration, vector search, RAG pipelines |
+| `ml-engineer` | sonnet | Model training, MLOps |
+| `nlp-engineer` | sonnet | NLP pipelines, text processing |
 | `data-scientist` | opus | Statistics, analysis, visualization |
 | `data-analyst` | sonnet | SQL, analytics, reporting |
 | `prompt-engineer` | opus | Prompt design, optimization |
@@ -92,8 +92,8 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 | Agent | Model | Purpose |
 |-------|-------|---------|
 | `code-reviewer` | opus | Code review, standards |
-| `test-engineer` | opus | Test strategy, implementation |
-| `qa-automation-engineer` | opus | E2E, API, performance testing |
+| `test-engineer` | sonnet | Test strategy, implementation |
+| `qa-automation-engineer` | sonnet | E2E, API, performance testing |
 | `security-auditor` | opus | Security audit, pen testing, OWASP, vulnerability assessment |
 | `security-architect` | opus | Threat modeling, secure design, AuthN/AuthZ |
 | `system-governor` | opus | Constitution guardian, VETO power |
@@ -101,7 +101,7 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 ### Infrastructure & DevOps (6)
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| `devops-implementer` | opus | CI/CD, automation |
+| `devops-implementer` | sonnet | CI/CD, automation |
 | `infrastructure-architect` | opus | Cloud architecture, IaC |
 | `infrastructure-validator` | sonnet | Infrastructure validation |
 | `incident-responder` | sonnet | Incident management |
@@ -134,7 +134,7 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 ### MCP (2)
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| `mcp-specialist` | opus | MCP server design, client config, troubleshooting |
+| `mcp-specialist` | sonnet | MCP server design, client config, troubleshooting |
 | `mcp-testing-engineer` | sonnet | MCP testing |
 
 ### Specialist (4)

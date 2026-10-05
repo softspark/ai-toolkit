@@ -58,7 +58,9 @@ def _pointer_skill_md() -> str:
         "1. Match the user's task to a skill name in the catalogue.\n"
         "2. Read the skill's SKILL.md from `.claude/skills/<name>/SKILL.md` "
         "or `~/.claude/skills/<name>/SKILL.md` (whichever exists).\n"
-        "3. Follow its Rules, Gotchas, and When NOT to Use sections.\n\n"
+        "3. Follow its Rules, Gotchas, and When NOT to Use sections.\n"
+        "4. Ignore CLAUDE_CODE_ONLY blocks outside Claude Code; use native "
+        "agents and the current client's configured models.\n\n"
         "## Catalogue (installed skills)\n\n"
         f"{emit_skills_bullets()}\n"
     )

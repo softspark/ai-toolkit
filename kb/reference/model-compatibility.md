@@ -3,15 +3,15 @@ title: "Model compatibility for skills and agents"
 category: reference
 service: ai-toolkit
 tags: [models, skills, agents, codex, copilot, claude, effort]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-09-23"
-last_updated: "2026-09-23"
+last_updated: "2026-10-01"
 description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."
 ---
 
 # Model compatibility for skills and agents
 
-Reviewed 2026-09-23. These are documentation snapshots, not a guarantee that a
+Reviewed 2026-10-01. These are documentation snapshots, not a guarantee that a
 model is enabled on a particular account. Check the active client's picker and
 policy before selecting a model. Preserve a user's explicit choice; do not
 replace a tiered workflow with a single flagship model.
@@ -27,7 +27,8 @@ replace a tiered workflow with a single flagship model.
 
 Claude aliases do not imply the same concrete model on every provider. The
 current Claude Code reference maps Anthropic API `opus` to Opus 5.5 and `sonnet`
-to Sonnet 5, while other providers can resolve differently. See
+to Sonnet 5.5, while other providers can resolve differently. Sonnet 5.5 requires
+Claude Code 2.1.284 or later. See
 [Claude Code model configuration](https://code.claude.com/docs/en/model-config).
 
 ## Reviewed model families
@@ -36,7 +37,7 @@ to Sonnet 5, while other providers can resolve differently. See
 |------------------|---------------------------------|--------------------|
 | OpenAI API | `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` | Use Responses for reasoning with tools; Astra rejects `none` effort, while Sol/Luna allow it |
 | Codex | GPT-6 Astra/Sol/Luna, according to account/client availability | Start from the selected/default effort; higher reasoning and orchestration modes are explicit choices |
-| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-haiku-4-5-20251001` | Opus 5.5 defaults to medium effort, Fable/Sonnet to high; Haiku does not support effort |
+| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` | Opus 5.5 defaults to medium effort, Fable/Sonnet to high; Haiku does not support effort |
 | GitHub Copilot | Offers models from multiple providers, including current GPT-6 and Claude families | Plan, organization policy and client determine the actual list; utility models are not selectable session models |
 
 Sources: [OpenAI migration guidance](https://developers.openai.com/api/docs/guides/latest-model),
@@ -53,6 +54,12 @@ one product's retirement list globally. See the Codex models reference above.
 
 ## Effort, caching and prompting
 
+Sonnet 5.5 API migrations are not model-name substitutions: forced `tool_choice`
+values `any` and `tool` are rejected, and thinking-block handling changed.
+Existing examples targeting Sonnet 5 remain examples for that model until their
+full request/response contract is migrated.
+[Migration guide](https://platform.claude.com/docs/en/models/sonnet-5-5/migration-guide).
+
 - Preserve effective effort when supported. An API's `reasoning.effort`,
   Claude's `output_config.effort`, and an editor's reasoning control are not
   interchangeable schemas. Do not forward unsupported sampling parameters to
@@ -66,6 +73,38 @@ one product's retirement list globally. See the Codex models reference above.
 - A failed task is a signal to inspect context and evidence. Escalate to another
   model only within an approved routing policy; uncertainty scores alone do not
   establish which output is correct.
+
+## Conditional Claude-to-Codex delegation
+
+The Claude orchestrator and authoring/workflow skills apply
+`model-routing-patterns`. The native defaults are Opus `high` for coordination,
+Sonnet `high` for bounded implementation and tests, and Opus `xhigh` for hard
+debugging. The plugin route is optional and requires an installed, effectively
+enabled `codex@openai-codex` plus a callable `codex:codex-rescue` in the current
+Claude session. A cache directory or SessionStart hint alone is not enough.
+
+When the plugin is missing, disabled or unavailable, use installed native agents
+with their configured models and effort. Never install/enable a plugin, change
+the current model or force a cross-provider call merely to satisfy routing.
+Explicit task-level model choices take precedence.
+
+When available, Codex can own an implementation task before Claude gets stuck.
+Security prefers `--model gpt-6-astra --effort xhigh`; hard debugging uses
+`--effort xhigh` or the native debugger. Normal Codex implementation retains its
+configured model and effort. The forwarding wrapper's Claude model is separate.
+An unavailable Astra route is reported and falls back to the existing native
+security agent, without silently substituting another Codex model.
+
+The supervisor supplies working directory, owned paths, acceptance criteria and
+checks; it collects final results, reviews changes and validates tests. A job ID,
+empty output or a partial result is not completion. Security package loading and
+account access are separate from selecting Astra. Existing permissions remain.
+
+Claude-only instruction blocks are omitted from generated native agents,
+commands and materialized skills for other clients. Marker-only skills preserve
+their native frontmatter and resources. Clients that read canonical skills via
+catalogue pointers must ignore the explicitly scoped blocks. Codex and other
+hosts use native delegation; they never delegate back to the Claude plugin.
 
 ## Cost and validation
 

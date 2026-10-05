@@ -2,7 +2,7 @@
 name: debug
 description: "Systematic debugging via logs, health checks, hypothesis-driven investigation. Triggers: debug, error, trace root cause, fix bug, reproduce symptom, investigation."
 user-invocable: true
-effort: medium
+effort: xhigh
 argument-hint: "[symptom]"
 agent: debugger
 context: fork

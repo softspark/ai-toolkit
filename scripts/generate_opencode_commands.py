@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from codex_skill_adapter import build_opencode_skill_text, is_codex_adapted_skill
 from emission import skills_dir
 from frontmatter import frontmatter_field
+from prompt_surfaces import strip_claude_code_only
 from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 COMMAND_PREFIX = "ai-toolkit-"
@@ -57,7 +58,7 @@ def _render_opencode_command(skill_file: Path) -> str:
     # opencode reads the command prompt from the markdown BODY of the file.
     # The frontmatter only defines command properties; the `template` field is
     # JSON-config-only and is ignored in .md command files.
-    body = _skill_body(skill_file).rstrip()
+    body = strip_claude_code_only(_skill_body(skill_file)).rstrip()
 
     lines: list[str] = ["---"]
     if description:
@@ -125,9 +126,8 @@ def generate(
     """
     base = config_root if config_root is not None else target_dir / ".opencode"
     commands_out = base / "commands"
-    commands_out.mkdir(parents=True, exist_ok=True)
 
-    written = 0
+    rendered: list[tuple[Path, str]] = []
     for skill_dir in sorted(skills_dir.iterdir()):
         if skill_dir.name.startswith("_"):
             continue
@@ -140,11 +140,14 @@ def generate(
         if not name:
             continue
         out_path = commands_out / f"{COMMAND_PREFIX}{name}.md"
-        out_path.write_text(_render_opencode_command(skill_file), encoding="utf-8")
-        written += 1
+        rendered.append((out_path, _render_opencode_command(skill_file)))
+
+    commands_out.mkdir(parents=True, exist_ok=True)
+    for out_path, content in rendered:
+        out_path.write_text(content, encoding="utf-8")
 
     removed = _cleanup_stale(commands_out)
-    return written, removed
+    return len(rendered), removed
 
 
 def _managed_edits(base: Path) -> dict[Path, OwnedEdit]:

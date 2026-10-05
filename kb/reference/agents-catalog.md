@@ -3,9 +3,9 @@ title: "AI Toolkit - Agents Catalog"
 category: reference
 service: ai-toolkit
 tags: [agents, catalog, roles, ai-development]
-version: "1.4.3"
+version: "1.5.0"
 created: "2026-03-23"
-last_updated: "2026-09-23"
+last_updated: "2026-10-01"
 description: "Complete catalog of specialized agents with roles, models, and use cases."
 ---
 
@@ -16,6 +16,12 @@ Aliases resolve through the active provider/client configuration. Codex and
 Copilot generated agents preserve the host's selected model rather than copying
 Claude aliases. See [Model Compatibility](model-compatibility.md) for the dated
 model reference, effort boundaries and validation limits.
+
+Bounded implementation agents use Sonnet with `high` effort. The orchestrator
+uses Opus `high`, and the debugger uses Opus `xhigh`. Other roles retain their
+configured tiers. In Claude Code, an installed, enabled and runtime-callable
+Codex plugin is an additional executor; absent that capability, native agents
+keep their configured models. See [conditional delegation](model-compatibility.md#conditional-claude-to-codex-delegation).
 
 ## By Category
 
@@ -32,19 +38,19 @@ model reference, effort boundaries and validation limits.
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **backend-specialist** | opus | Node.js, Python, PHP, FastAPI, APIs |
-| **frontend-specialist** | opus | React, Next.js, Vue, Nuxt, Tailwind |
-| **mobile-developer** | opus | React Native, Flutter, native iOS/Android |
-| **game-developer** | opus | Unity, Godot, Unreal, Phaser, Three.js |
+| **backend-specialist** | sonnet | Node.js, Python, PHP, FastAPI, APIs |
+| **frontend-specialist** | sonnet | React, Next.js, Vue, Nuxt, Tailwind |
+| **mobile-developer** | sonnet | React Native, Flutter, native iOS/Android |
+| **game-developer** | sonnet | Unity, Godot, Unreal, Phaser, Three.js |
 | **database-architect** | opus | Schema design, migrations, query optimization, operations |
 
 ### AI/ML (6)
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **ai-engineer** | opus | LLM integration, vector databases, RAG pipelines, agent orchestration |
-| **ml-engineer** | opus | Model training, MLOps, TensorFlow, PyTorch |
-| **nlp-engineer** | opus | NLP pipelines, NER, text classification, transformers |
+| **ai-engineer** | sonnet | LLM integration, vector databases, RAG pipelines, agent orchestration |
+| **ml-engineer** | sonnet | Model training, MLOps, TensorFlow, PyTorch |
+| **nlp-engineer** | sonnet | NLP pipelines, NER, text classification, transformers |
 | **data-scientist** | opus | Statistics, visualization, EDA, hypothesis testing |
 | **data-analyst** | sonnet | SQL, analytics, reporting, dashboards |
 | **prompt-engineer** | opus | Prompt design, chain-of-thought, few-shot, optimization |
@@ -54,8 +60,8 @@ model reference, effort boundaries and validation limits.
 | Agent | Model | Use Case |
 |-------|-------|----------|
 | **code-reviewer** | opus | Code review, standards, quality audit |
-| **test-engineer** | opus | Test strategy, TDD, unit/integration/E2E tests |
-| **qa-automation-engineer** | opus | Playwright, Cypress, API testing, performance testing |
+| **test-engineer** | sonnet | Test strategy, TDD, unit/integration/E2E tests |
+| **qa-automation-engineer** | sonnet | Playwright, Cypress, API testing, performance testing |
 | **security-auditor** | opus | OWASP, CVE analysis, pen testing, vulnerability assessment |
 | **security-architect** | opus | Threat modeling, secure design, AuthN/AuthZ |
 | **system-governor** | opus | Constitution guardian, validates changes, VETO power |
@@ -64,7 +70,7 @@ model reference, effort boundaries and validation limits.
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **devops-implementer** | opus | Terraform, Ansible, Docker, Kubernetes, CI/CD |
+| **devops-implementer** | sonnet | Terraform, Ansible, Docker, Kubernetes, CI/CD |
 | **infrastructure-architect** | opus | System design, architecture notes, trade-off analysis |
 | **infrastructure-validator** | sonnet | Deployment verification, health checks, rollback |
 | **incident-responder** | sonnet | P1-P4 incidents, emergency fixes, postmortem |
@@ -85,7 +91,7 @@ model reference, effort boundaries and validation limits.
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **mcp-specialist** | opus | MCP server design, client config, troubleshooting |
+| **mcp-specialist** | sonnet | MCP server design, client config, troubleshooting |
 | **mcp-testing-engineer** | sonnet | MCP protocol compliance, transport testing |
 
 ### Management & Evolution (4)

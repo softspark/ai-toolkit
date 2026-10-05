@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from emission import agents_dir
 from frontmatter import frontmatter_field
+from prompt_surfaces import strip_claude_code_only
 from secure_fs import (
     SecureDestination,
     SecureTransaction,
@@ -61,7 +62,7 @@ def render_agent(source: Path) -> tuple[str, str]:
         "",
         MANAGED_MARKER,
         "",
-        _body(source),
+        strip_claude_code_only(_body(source)),
         "",
     ]
     return name, "\n".join(lines)

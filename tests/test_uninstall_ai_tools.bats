@@ -697,7 +697,10 @@ PY
     printf '%s\n' 'external user data' > \
         "$external_github/instructions/ai-toolkit-managed.instructions.md"
 
-    python3 - "$TOOLKIT_DIR" "$TEST_ROOT" "$TEST_PROJECT" <<'PY'
+    # Keep registry-lock side effects out of both the real home and the tree
+    # whose byte-for-byte preservation this test checks.
+    mkdir -p "$BATS_TEST_TMPDIR/isolated-home"
+    HOME="$BATS_TEST_TMPDIR/isolated-home" python3 - "$TOOLKIT_DIR" "$TEST_ROOT" "$TEST_PROJECT" <<'PY'
 import base64
 import contextlib
 import importlib.util

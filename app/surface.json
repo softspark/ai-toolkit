@@ -181,6 +181,7 @@
   "agent_frontmatter_fields": [
     "color",
     "description",
+    "effort",
     "model",
     "name",
     "skills",

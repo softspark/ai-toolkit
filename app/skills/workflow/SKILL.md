@@ -2,7 +2,7 @@
 name: workflow
 description: "Starts and manages autonomous agent workflows. Triggers: workflow, start workflow, autonomous agents, agent pipeline."
 user-invocable: true
-effort: max
+effort: high
 argument-hint: "[type] [task description]"
 context: fork
 agent: orchestrator
@@ -13,6 +13,16 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Agent, TeamCreate, TeamDelet
 # /workflow - Autonomous Agent Workflow
 
 $ARGUMENTS
+
+<!-- CLAUDE_CODE_ONLY_START -->
+Only in Claude Code, apply the `model-routing-patterns` skill when choosing
+executors or creating agent definitions. Delegate to `codex:codex-rescue` only
+when its plugin is installed, enabled and callable in this session. Otherwise
+use the installed native agents and their configured models. A context without
+the Agent tool returns the dispatch decision to its supervisor; it does not
+invent a tool or bypass the client. Preserve explicit user choices and verify
+actual completion before accepting a delegated result.
+<!-- CLAUDE_CODE_ONLY_END -->
 
 ## Autonomous software delivery
 

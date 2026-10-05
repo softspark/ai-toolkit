@@ -19,9 +19,12 @@ Antigravity also supports the Agent Skills standard. The canonical project
 surface is ``.agents/skills/<skill-name>/SKILL.md``. The older singular
 ``.agent/skills/`` path remains a compatibility output only, so the skill
 pointer is dual-emitted. We do not duplicate our full skill catalogue; instead we
-emit a single pointer skill that teaches Antigravity to look up the real
+emit a pointer skill that teaches Antigravity to look up the real
 catalogue in ``~/.softspark/ai-toolkit/app/skills/`` (global install) or
 ``.claude/skills/`` (local install).
+The 13 standard workflow commands also ship as same-named native skills, since
+workflow execution retires on 2026-11-01. Legacy workflow files remain for older
+clients; native skills take precedence when both exist.
 
 Usage:
   python3 scripts/generate_antigravity.py [target-dir]
@@ -33,10 +36,16 @@ pointer to target-dir/.agents/skills/ (canonical) + target-dir/.agent/skills/
 from __future__ import annotations
 
 import sys
+from functools import partial
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from codex_skill_adapter import ADAPTED_MARKERS
+from antigravity_workflow_skills import (
+    owned_workflow_skill_edit,
+    sync_workflow_skills,
+    workflow_skill_paths,
+)
 from dir_rules_shared import (
     STANDARD_RULES,
     STANDARD_WORKFLOWS,
@@ -75,7 +84,9 @@ def _pointer_skill_md() -> str:
         "1. Match the user's task to a skill name in the catalogue.\n"
         "2. Read the skill's SKILL.md from `.claude/skills/<name>/SKILL.md` "
         "or `~/.claude/skills/<name>/SKILL.md` (whichever exists).\n"
-        "3. Follow its Rules, Gotchas, and When NOT to Use sections.\n\n"
+        "3. Follow its Rules, Gotchas, and When NOT to Use sections.\n"
+        "4. Ignore CLAUDE_CODE_ONLY blocks outside Claude Code; use native "
+        "agents and the current client's configured models.\n\n"
         "## Catalogue (installed skills)\n\n"
         f"{emit_skills_bullets()}\n"
     )
@@ -115,12 +126,23 @@ def generate_global(target_dir: Path) -> None:
     Antigravity RULES have no documented global file surface, so only the
     product-specific skill pointers are emitted globally (rules stay local).
     """
+    target_dir.mkdir(parents=True, exist_ok=True)
+    sync_workflow_skills(target_dir, (".gemini/config/skills", ".gemini/antigravity-cli/skills"))
     content = _pointer_skill_md()
     for rel in (".gemini/config/skills", ".gemini/antigravity-cli/skills"):
         skill_dir = target_dir / rel / POINTER_SKILL_NAME
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "SKILL.md").write_text(content, encoding="utf-8")
         print(f"  Generated: {rel}/{POINTER_SKILL_NAME}/SKILL.md")
+
+
+def _legacy_workflow(filename: str, render) -> str:
+    notice = (
+        "<!-- DEPRECATED: workflows retire 2026-11-01; use "
+        f".agents/skills/{Path(filename).stem}/SKILL.md. "
+        "https://antigravity.google/docs/migration/workflows-to-skills/ -->"
+    )
+    return render().replace("\n---\n", f"\n---\n\n{notice}\n", 1)
 
 
 def generate(target_dir: Path, *,
@@ -137,8 +159,14 @@ def generate(target_dir: Path, *,
     rules = dict(STANDARD_RULES)
     rules.update(build_language_rules(language_modules))
     rules.update(build_registered_rules(rules_dir))
+    # Native skills retain slash names after workflows retire on 2026-11-01.
+    # Keep the legacy workflows and the existing skill-directory opt-out.
+    if emit_skill_pointer:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        sync_workflow_skills(target_dir, (".agents/skills",))
     write_rules(target_dir, rules, ".agents/rules")
-    write_rules(target_dir, STANDARD_WORKFLOWS, ".agents/workflows")
+    legacy = {name: partial(_legacy_workflow, name, render) for name, render in STANDARD_WORKFLOWS.items()}
+    write_rules(target_dir, legacy, ".agents/workflows")
     if emit_skill_pointer:
         _write_skill_pointer(target_dir)
 
@@ -184,6 +212,9 @@ def _apply(target_dir: Path, global_install: bool, *, dry_run: bool) -> int:
                     and path.is_file() and not path.is_symlink()
                 })
     for rel in GLOBAL_SKILL_ROOTS if global_install else LOCAL_SKILL_ROOTS:
+        for path in workflow_skill_paths(target / rel):
+            edits[path] = owned_workflow_skill_edit
+            leaves.append(path.parent)
         pointer_dir = target / rel / POINTER_SKILL_NAME
         leaves.append(pointer_dir)
         # A symlinked pointer directory is skipped. One carrying a Codex (or
@@ -218,8 +249,8 @@ def discover(target_dir: Path, *, global_install: bool = False) -> int:
     Local (``target_dir`` = project): ``.agents/rules/ai-toolkit-*.md``,
     ``.agents/workflows/ai-toolkit-*.md``, and the catalogue pointer in
     ``.agents/skills/`` and ``.agent/skills/``. Global (``target_dir`` =
-    HOME): the pointer in ``~/.gemini/config/skills/`` and
-    ``~/.gemini/antigravity-cli/skills/``.
+    HOME): the pointer and owned workflow replacements in
+    ``~/.gemini/config/skills/`` and ``~/.gemini/antigravity-cli/skills/``.
     """
     return _apply(target_dir, global_install, dry_run=True)
 

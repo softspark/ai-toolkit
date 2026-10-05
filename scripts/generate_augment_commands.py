@@ -35,6 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import skills_dir
 from frontmatter import frontmatter_field
+from prompt_surfaces import strip_claude_code_only
 from secure_fs import apply_owned_edits, lexical_absolute
 
 COMMAND_PREFIX = "ai-toolkit-"
@@ -53,7 +54,7 @@ def _render_augment_command(skill_file: Path) -> str:
     """Render a single Augment command .md file from a user-invocable skill."""
     description = frontmatter_field(skill_file, "description")
     argument_hint = frontmatter_field(skill_file, "argument-hint")
-    body = _skill_body(skill_file).rstrip()
+    body = strip_claude_code_only(_skill_body(skill_file)).rstrip()
 
     lines: list[str] = ["---"]
     if description:
@@ -116,9 +117,8 @@ def generate(
     """
     base = config_root if config_root is not None else target_dir / ".augment"
     commands_out = base / "commands"
-    commands_out.mkdir(parents=True, exist_ok=True)
 
-    written = 0
+    rendered: list[tuple[Path, str]] = []
     for skill_dir in sorted(skills_dir.iterdir()):
         if skill_dir.name.startswith("_"):
             continue
@@ -131,11 +131,14 @@ def generate(
         if not name:
             continue
         out_path = commands_out / f"{COMMAND_PREFIX}{name}.md"
-        out_path.write_text(_render_augment_command(skill_file), encoding="utf-8")
-        written += 1
+        rendered.append((out_path, _render_augment_command(skill_file)))
+
+    commands_out.mkdir(parents=True, exist_ok=True)
+    for out_path, content in rendered:
+        out_path.write_text(content, encoding="utf-8")
 
     removed = _cleanup_stale(commands_out)
-    return written, removed
+    return len(rendered), removed
 
 
 _COMMAND_FRONTMATTER_KEYS = (b"description: ", b"argument-hint: ")
