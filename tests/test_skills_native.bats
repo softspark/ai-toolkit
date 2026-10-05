@@ -239,7 +239,7 @@ PY
 }
 
 @test "codex-skills: adapted wrappers use native schema and semantic guidance" {
-    run python3 - "$B3_CODEX_ON/.agents/skills" <<'PY'
+    run python3 - "$B3_CODEX_ON/.agents/skills" "$TOOLKIT_DIR" <<'PY'
 import re
 import sys
 from pathlib import Path
@@ -265,7 +265,15 @@ for marker in root.glob("*/.ai-toolkit-codex-adapted"):
         for line in frontmatter.splitlines()
         if ":" in line
     }
-    assert keys == {"name", "description"}, (skill_file, keys)
+    body = skill_file.read_text(encoding="utf-8").split("---", 2)[-1]
+    if "## Codex Translation Layer" in body:
+        assert keys == {"name", "description"}, (skill_file, keys)
+    else:
+        source = Path(sys.argv[2]) / "app/skills" / marker.parent.name / "SKILL.md"
+        original = source.read_text(encoding="utf-8")
+        assert "<!-- CLAUDE_CODE_ONLY_START -->" in original, source
+        assert frontmatter == original.split("---", 2)[1], skill_file
+    assert "codex:codex-rescue" not in body, skill_file
 
 orchestrate = (root / "orchestrate" / "SKILL.md").read_text(encoding="utf-8")
 assert "Codex-native subagents" in orchestrate

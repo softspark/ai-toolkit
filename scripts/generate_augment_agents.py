@@ -13,8 +13,7 @@ documents: name, description, color, model, tools, disabled_tools.
     name: <slug>
     description: "<single-line description>"
     color: <color-name>       # optional UI hint
-    tools: [Read, Write, ...]
-    disabled_tools: []
+    tools: [view, save-file, ...]
     ---
 
     <body from agent file>
@@ -25,15 +24,14 @@ Design choices:
   is used" and do not document ``inherit`` as a value. ai-toolkit stores short
   aliases (``opus``/``sonnet``/``haiku``) that do not map to Augment's full
   model ids, so we omit the field to defer to the CLI default.
-* ``tools`` are passed through verbatim from the source file, normalized into
-  YAML flow-list form (``[Read, Write, ...]``) so Augment parses them as a
-  native list.
-* ``disabled_tools: []`` is emitted as an explicit empty list to match the
-  shape Augment's UI expects when reading back the file.
-* Files are prefixed ``ai-toolkit-`` so uninstall can identify ours without
-  touching user-authored agents.
-* Regeneration removes stale ``ai-toolkit-*.md`` files whose source agent
-  no longer exists.
+* ``tools`` maps the source permissions to documented native Augment names.
+  Unsupported Claude orchestration tools are omitted with a capability note;
+  unknown tools and empty native allowlists fail before writes.
+  ``disabled_tools`` is never emitted because it overrides the allowlist,
+  including when empty.
+* Files carry both the ``ai-toolkit-`` prefix and an ownership marker. Cleanup
+  also recognizes the legacy generated frontmatter shape. Unowned destinations
+  and stale user-authored files are preserved.
 
 Usage:
   python3 scripts/generate_augment_agents.py [target-dir]
@@ -42,15 +40,30 @@ Writes files to ``target-dir/.augment/agents/``.
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import agents_dir
 from frontmatter import frontmatter_field
+from prompt_surfaces import strip_claude_code_only
 from secure_fs import apply_owned_edits, lexical_absolute
 
 AGENT_PREFIX = "ai-toolkit-"
+MANAGED_MARKER = "<!-- ai-toolkit-managed: augment-agent -->"
+TOOL_MAPPING = {
+    "Read": ("view",),
+    "Grep": ("codebase-retrieval",),
+    "Glob": ("view", "codebase-retrieval"),
+    "Edit": ("str-replace-editor",),
+    "Write": ("save-file",),
+    "Bash": ("launch-process",),
+}
+UNSUPPORTED_ORCHESTRATION = frozenset({
+    "Agent", "TeamCreate", "TeamDelete", "SendMessage",
+    "TaskCreate", "TaskList", "TaskUpdate",
+})
 
 
 def _agent_body(agent_file: Path) -> str:
@@ -64,11 +77,24 @@ def _agent_body(agent_file: Path) -> str:
     return parts[2].lstrip("\n")
 
 
-def _parse_tools(tools_raw: str) -> list[str]:
-    """Parse the comma-separated ``tools:`` frontmatter value into a list."""
-    if not tools_raw:
-        return []
-    return [t.strip() for t in tools_raw.split(",") if t.strip()]
+def _mapped_tools(agent_file: Path) -> tuple[list[str], list[str]]:
+    """Translate only granted capabilities; never widen an unknown permission."""
+    mapped: list[str] = []
+    unsupported: list[str] = []
+    for tool in dict.fromkeys(
+        item.strip() for item in frontmatter_field(agent_file, "tools").split(",") if item.strip()
+    ):
+        if tool in UNSUPPORTED_ORCHESTRATION:
+            unsupported.append(tool)
+            continue
+        if tool not in TOOL_MAPPING:
+            raise ValueError(f"Unknown Augment source tool in {agent_file}: {tool}")
+        for native in TOOL_MAPPING[tool]:
+            if native not in mapped:
+                mapped.append(native)
+    if not mapped:
+        raise ValueError(f"Refusing empty native allowlist for Augment agent: {agent_file}")
+    return mapped, unsupported
 
 
 def _render_augment_agent(agent_file: Path) -> str:
@@ -76,8 +102,7 @@ def _render_augment_agent(agent_file: Path) -> str:
     name = frontmatter_field(agent_file, "name")
     description = frontmatter_field(agent_file, "description")
     color = frontmatter_field(agent_file, "color")
-    tools_raw = frontmatter_field(agent_file, "tools")
-    tools = _parse_tools(tools_raw)
+    tools, unsupported = _mapped_tools(agent_file)
 
     # Escape description for YAML quoted string
     safe_desc = description.replace('"', "'")
@@ -90,35 +115,39 @@ def _render_augment_agent(agent_file: Path) -> str:
     # map to Augment's provider-qualified ids, so we defer to the CLI default.
     if color:
         lines.append(f"color: {color}")
-    if tools:
-        tools_flow = ", ".join(tools)
-        lines.append(f"tools: [{tools_flow}]")
-    else:
-        lines.append("tools: []")
-    # Explicit empty disabled_tools for shape parity with Augment UI exports
-    lines.append("disabled_tools: []")
+    tools_flow = ", ".join(tools)
+    lines.append(f"tools: [{tools_flow}]")
     lines.append("---")
     lines.append("")
-    body = _agent_body(agent_file).rstrip()
+    lines.extend([MANAGED_MARKER, ""])
+    if unsupported:
+        lines.extend([
+            "Augment capability note: the following Claude orchestration tools are "
+            f"unavailable in this exported agent: {', '.join(unsupported)}. "
+            "Do not simulate these tools or claim delegation occurred. Ignore source "
+            "instructions that require them; use the native allowlist and report "
+            "delegation-dependent work to the caller.",
+            "",
+        ])
+    body = strip_claude_code_only(_agent_body(agent_file)).rstrip()
     if body:
         lines.append(body)
     lines.append("")
     return "\n".join(lines)
 
 
-def _cleanup_stale(agents_out: Path) -> int:
+def _cleanup_stale(agents_out: Path, expected: set[str]) -> int:
     """Remove stale ai-toolkit-* agent files whose source no longer exists.
 
-    Only touches files with the ``ai-toolkit-`` prefix so user-authored
-    Augment agents are preserved.
+    Both an owned shape and the ``ai-toolkit-`` prefix are required.
     """
     if not agents_out.is_dir():
         return 0
     removed = 0
     for f in sorted(agents_out.glob(f"{AGENT_PREFIX}*.md")):
-        source_name = f.stem[len(AGENT_PREFIX):]
-        source = agents_dir / f"{source_name}.md"
-        if not source.is_file():
+        if f.name in expected or f.is_symlink() or not f.is_file():
+            continue
+        if _is_managed_agent(f.read_bytes()):
             f.unlink()
             removed += 1
     return removed
@@ -135,25 +164,46 @@ def generate(
     """
     base = config_root if config_root is not None else target_dir / ".augment"
     agents_out = base / "agents"
-    agents_out.mkdir(parents=True, exist_ok=True)
 
-    written = 0
+    rendered: list[tuple[Path, str]] = []
     for agent_file in sorted(agents_dir.glob("*.md")):
         name = frontmatter_field(agent_file, "name")
         description = frontmatter_field(agent_file, "description")
         if not name or not description:
             continue
         out_path = agents_out / f"{AGENT_PREFIX}{name}.md"
-        out_path.write_text(_render_augment_agent(agent_file), encoding="utf-8")
+        rendered.append((out_path, _render_augment_agent(agent_file)))
+
+    for directory in (target_dir, base, agents_out):
+        if directory.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Augment agents directory: {directory}")
+    agents_out.mkdir(parents=True, exist_ok=True)
+    written = 0
+    for out_path, content in rendered:
+        if out_path.is_symlink() or (out_path.exists() and (
+            not out_path.is_file() or not _is_managed_agent(out_path.read_bytes())
+        )):
+            print(f"Warning: preserving unowned Augment agent: {out_path}", file=sys.stderr)
+            continue
+        out_path.write_text(content, encoding="utf-8")
         written += 1
 
-    removed = _cleanup_stale(agents_out)
+    removed = _cleanup_stale(agents_out, {path.name for path, _ in rendered})
     return written, removed
 
 
 def _is_managed_agent(content: bytes) -> bool:
-    """Match the frontmatter shape ``_render_augment_agent`` emits."""
-    return content.startswith(b"---\nname: ") and b"\ndisabled_tools: []\n---\n" in content
+    """Recognize current ownership markers and the previous generated shape."""
+    if not content.startswith(b"---\nname: "):
+        return False
+    header, separator, body = content.partition(b"\n---\n")
+    marked = bool(separator) and body.lstrip(b"\n").startswith(MANAGED_MARKER.encode() + b"\n")
+    legacy = bool(separator) and re.fullmatch(
+        rb'---\nname: [^\n]+\ndescription: "[^"\n]*"\n'
+        rb'(?:color: [^\n]+\n)?tools: \[[^\n]*\]\ndisabled_tools: \[\]',
+        header,
+    ) is not None
+    return marked or legacy
 
 
 def _owned_agent_edit(content: bytes) -> bytes | None:

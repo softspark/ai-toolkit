@@ -26,6 +26,8 @@ except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from frontmatter import frontmatter_field
 
+from prompt_surfaces import strip_claude_code_only
+
 
 CLAUDE_ONLY_TOOLS = frozenset({
     "Agent", "TeamCreate", "TeamDelete", "SendMessage",
@@ -166,9 +168,15 @@ def skill_tools(skill_file: Path) -> list[str]:
 
 def is_codex_adapted_skill(skill_file: Path) -> bool:
     """Return True when a source skill needs portable client adaptation."""
+    text = skill_file.read_text(encoding="utf-8")
+    portable = strip_claude_code_only(text)
+    return portable != text or _needs_semantic_adaptation(skill_file, portable)
+
+
+def _needs_semantic_adaptation(skill_file: Path, text: str) -> bool:
+    """Distinguish filtering a client block from rewriting native skill metadata."""
     if set(skill_tools(skill_file)) & CLAUDE_ONLY_TOOLS:
         return True
-    text = skill_file.read_text(encoding="utf-8")
     match = _FRONTMATTER_RE.match(text)
     body = match.group("body") if match else text
     if adapt_model_directives(body) != body:
@@ -208,13 +216,13 @@ def _build_portable_skill_text(skill_file: Path, platform: str) -> str:
     """Render a client-specific skill using semantic, signature-free guidance."""
     if platform not in _PLATFORM_LABELS:
         raise ValueError(f"Unsupported skill adaptation platform: {platform}")
-    text = skill_file.read_text(encoding="utf-8")
+    text = strip_claude_code_only(skill_file.read_text(encoding="utf-8"))
+    adapted = _needs_semantic_adaptation(skill_file, text)
     match = _FRONTMATTER_RE.match(text)
     if not match:
-        return _adapt_body(text, platform) if is_codex_adapted_skill(skill_file) else text
+        return _adapt_body(text, platform) if adapted else text
 
     body = match.group("body")
-    adapted = is_codex_adapted_skill(skill_file)
 
     if adapted:
         body = _adapt_body(body, platform)
@@ -1086,6 +1094,7 @@ def _adapt_body(body: str, platform: str) -> str:
 
 def adapt_model_directives(body: str) -> str:
     """Remove Claude runtime tier orders without rewriting fenced API examples."""
+    body = strip_claude_code_only(body)
     lines: list[str] = []
     prose: list[str] = []
     fence: str | None = None

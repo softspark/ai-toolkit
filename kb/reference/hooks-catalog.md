@@ -3,9 +3,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.15.0"
+version: "1.16.0"
 created: "2026-03-27"
-last_updated: "2026-09-23"
+last_updated: "2026-10-01"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -65,6 +65,18 @@ when the source is `compact`, performs stale search-flag cleanup, and checks
 for updates without printing informational stdout. Set
 `AI_TOOLKIT_HOOK_VERBOSE=1` to print the startup reminders and loaded context
 for debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
+
+In Claude Code, normal verbosity additionally emits a short Codex-delegation
+hint. `scripts/claude_codex_capability.py` reads installed plugin metadata and
+local enablement, including project/local overrides, without launching Codex.
+An installed and enabled `codex@openai-codex` is only a candidate: the supervisor
+must still confirm `codex:codex-rescue` is callable in the current session.
+Missing, disabled or malformed metadata selects native-agent guidance. The
+hint does not change models, install plugins or establish account/model access.
+Quiet/minimal profiles and recognized non-Claude hook contexts suppress it.
+The deployed hook prefers its adjacent runtime helper, so an older npm-global
+package does not hide the detector after a hook update. Positive hints point to
+`model-routing-patterns` before selecting an executor.
 
 > **Session storage:** auto-generated session artifacts (context, handoff note,
 > checkpoints, decisions) are stored **outside the project repo** under
@@ -273,6 +285,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Fires | When a subagent is spawned |
 
 **Action:** Reminds subagents to stay narrow in scope, gather evidence first, and return explicit validation notes.
+
+For Claude's `codex:codex-rescue` forwarding wrapper, the reminder instead
+preserves its forwarding-only contract: the actual Codex worker gathers evidence
+and the supervisor collects and verifies the result. Ordinary agents are unchanged.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -572,6 +588,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 | Component | Purpose |
 |-----------|---------|
+| `scripts/claude_codex_capability.py` | Read-only Claude plugin metadata hint; runtime agent availability remains authoritative. |
 | `scripts/session_state.py` | Isolated edit state keyed by a hash of the normalized native session ID. Reset on SessionStart and cleaned on SessionEnd. Read by revert-guard and quality-gate. |
 | `scripts/test_cohesion.py` | Resolves changed paths → test commands via cohesion map. First-match-wins. Stdlib-only. |
 | `app/hooks/test-cohesion-map.json` | Toolkit-default path → tests mapping (used when no project map exists). |

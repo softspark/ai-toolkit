@@ -551,6 +551,28 @@ def check_generated_artifacts(dr: DiagResult, fix_mode: bool) -> None:
 # Check 6: Planned Assets
 # ---------------------------------------------------------------------------
 
+def check_antigravity_workflows(dr: DiagResult, project: Path | None = None, home: Path | None = None) -> None:
+    """Warn only when a legacy command has no same-named skill replacement."""
+    project = project or Path.cwd()
+    home = home or Path.home()
+    roots = (project / ".agents", project / ".agent", home / ".gemini/config")
+    for root in roots:
+        workflows = root / "workflows"
+        if not workflows.is_dir():
+            continue
+        for workflow in sorted(workflows.glob("*.md")):
+            replacements = [root / "skills" / workflow.stem / "SKILL.md"]
+            if root == project / ".agent":
+                replacements.append(project / ".agents/skills" / workflow.stem / "SKILL.md")
+            if not any(path.is_file() for path in replacements):
+                install_scope = "" if root == home / ".gemini/config" else " --local"
+                dr.warn(
+                    f"Antigravity workflow {workflow.name} retires 2026-11-01; "
+                    "migrate it to a same-named skill with /migrate-workflows "
+                    f"(toolkit commands: ai-toolkit install{install_scope} --editors antigravity)"
+                )
+
+
 def check_planned_assets(dr: DiagResult) -> None:
     """Check that planned assets exist and are non-empty."""
     print("## Planned Assets")
@@ -1301,6 +1323,7 @@ def main() -> None:
     check_hook_scripts(dr, fix_mode)
     check_hook_configuration(dr)
     check_generated_artifacts(dr, fix_mode)
+    check_antigravity_workflows(dr)
     check_planned_assets(dr)
     check_benchmark_freshness(dr)
     check_stale_rules(dr, fix_mode)

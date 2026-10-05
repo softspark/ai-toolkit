@@ -6,19 +6,21 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1936%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1947%20passing-success)](tests/)
 
-## What's New in v5.0.1
+## What's New in v5.1.0
 
-- **The fallback pre-commit hook blocks on a failed linter.** It used to print
-  "Pre-commit checks passed" even when PHPStan crashed, because the checker it
-  called always exited 0. It now fails on a failed or crashed checker and says
-  when nothing ran. PHPStan gets an explicit memory limit.
-- **Releases gate locally.** `npm run release -- X.Y.Z` runs validate, the
-  audits, ShellCheck, bats on macOS and in Linux, and the Python floor, then
-  tags and pushes. GitHub Actions only publishes the tag.
-- Still in v5.0.0: user-level rules and constitution, a complete `uninstall`,
-  DSH retired.
+- **Conditional Codex delegation from Claude.** Detect the installed, enabled
+  plugin and confirm its runtime agent before delegation; otherwise retain
+  native agents and configured models.
+- **Supervised model defaults.** Sonnet `high` for bounded implementation,
+  Opus `high` for coordination and Opus `xhigh` for hard debugging; available
+  Codex execution can use Astra `xhigh` for security.
+- **Portable exports.** Claude plugin instructions stay out of other clients,
+  while native model settings, literal examples and user files are preserved.
+- **Editor compatibility.** Augment uses effective native tool allowlists.
+  Antigravity's 13 workflow commands also ship as same-named skills before
+  workflows retire on November 1, retaining older-client compatibility.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -280,6 +282,14 @@ autonomous-development
 ```
 
 ### Multi-Agent Skill Selection
+
+Claude Code uses Opus `high` for coordination, Sonnet `high` for bounded
+implementation and tests, and Opus `xhigh` for hard debugging. If the official
+Codex plugin is installed, enabled and available in the active agent catalog,
+the supervisor can also assign work to Codex, preferring Astra `xhigh` for
+security. Otherwise it keeps the available native agents and configured models.
+Detection never installs or enables a plugin. See
+[conditional model routing](kb/reference/model-compatibility.md#conditional-claude-to-codex-delegation).
 
 ```
 Need multi-agent coordination?

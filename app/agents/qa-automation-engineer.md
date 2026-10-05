@@ -2,7 +2,8 @@
 name: qa-automation-engineer
 description: "Test automation and QA specialist. Use for E2E testing, API testing, performance testing, and CI/CD test integration. Triggers: e2e, playwright, cypress, selenium, api test, performance test, automation."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: opus
+model: sonnet
+effort: high
 color: teal
 skills: testing-patterns, clean-code
 ---

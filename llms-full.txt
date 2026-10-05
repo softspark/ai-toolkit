@@ -36,6 +36,8 @@
 - [Autonomous software development](kb/howto/autonomous-development.md)
 - [Plan: Cloud Security Pack — Multi-Cloud Audit](kb/planning/cloud-security-pack-plan.md)
 - [Ecosystem sync, 2026-09-23](kb/planning/ecosystem-sync-20260923.md)
+- [Ecosystem review for 5.1.0](kb/planning/ecosystem-sync-20261002.md)
+- [Editor support and delegation refresh](kb/planning/editor-and-delegation-refresh-20261001.md)
 - [Model compatibility refresh](kb/planning/model-compatibility-refresh-20260923.md)
 - [SOP: Ecosystem Sync](kb/procedures/sop-ecosystem-sync.md)
 - [SOP: AI Toolkit Maintenance](kb/procedures/sop-maintenance.md)
@@ -7614,6 +7616,363 @@ Python 3.12 environment with `requirements-dev.txt` is used for typechecking.
 
 ---
 
+## kb/planning/ecosystem-sync-20261002.md
+
+---
+title: "Ecosystem review for ai-toolkit 5.1.0"
+category: planning
+service: ai-toolkit
+tags: [release, ecosystem, compatibility, editors]
+version: "1.0.0"
+created: "2026-10-02"
+last_updated: "2026-10-02"
+description: "Dated compatibility decisions for all thirteen integrations before the 5.1.0 release."
+---
+
+# Ecosystem review for 5.1.0
+
+The online doctor checked all 13 integrations: 3 clean, 10 with content,
+navigation or version drift, and zero fetch errors. The initial sandboxed run
+failed DNS for every tool; it was rerun with network access and was not accepted
+as evidence of compatibility. Feature references were reviewed separately from
+landing-page hashes. Sources and dispositions are recorded on each tool in
+`scripts/ecosystem_tools.json` with review date 2026-10-02.
+
+| Integration | Classes | Disposition |
+|-------------|---------|-------------|
+| Claude Code | A, C | Existing command hooks, model/effort metadata and plugin surfaces remain valid; optional plugin mods/function hooks not adopted |
+| Claude Chat/Cowork | A, C | Export remains valid; ordinary Chat still has no hooks or subagents; organization publishing controls not generated |
+| Cursor | A | BDK navigation changed; current hook/agent/skill contracts remain compatible |
+| Windsurf/Devin | A | Existing native Devin and legacy-compatible skill/hook paths retained |
+| GitHub Copilot | A, C | Computer-use navigation and optional HTTP/exec hooks do not require changes to emitted command hooks |
+| Gemini CLI | A | Eleven hook events remain supported; no native Stop event introduced |
+| Cline | A, C | Desktop is an additional optional surface; SDK navigation changed; source repository remains the hook-contract reference |
+| Roo/Zoo | A | Successor retains mode schema and compatible paths |
+| Aider | A | Existing configuration and conventions remain supported |
+| Augment | A, B, C | Repair native tool permissions and conflicting restriction fields; optional Notification handler not adopted |
+| Antigravity | A, C, D | Migrate standard workflow commands to skills before retirement; retain compatible legacy output |
+| Codex | A, C | Native agent/skill/plugin contracts remain compatible; prompt/agent hook handlers are parsed but skipped |
+| OpenCode | A, D | Agent tools field is deprecated, but our generator already omits it; no speculative v2 migration |
+
+## Adopted changes
+
+Augment's `disabled_tools` overrides `tools`, even when empty. The previous
+generator emitted both and used Claude tool aliases. It now emits one positive
+native allowlist, rejects unknown or empty grants, explains unsupported
+orchestration tools and preserves both user content and recognized legacy
+ownership. The real explorer exports only view/retrieval permissions.
+[Augment subagents](https://docs.augmentcode.com/cli/subagents),
+[permission aliases](https://docs.augmentcode.com/cli/permissions#migrating-from-legacy-tool-names).
+
+Antigravity workflows retire on 2026-11-01. Thirteen same-named skills preserve
+the generated slash commands locally and in both global skill roots. Legacy
+files remain with deprecation notices. Protected updates and ownership-aware
+cleanup preserve user collisions/resources; doctor warns only where a workflow
+lacks a replacement. Native Windows keeps legacy output and receives WSL or
+manual migration guidance; no unsafe filesystem fallback was added.
+[Migration guide](https://antigravity.google/docs/migration/workflows-to-skills/).
+Legacy-output removal is tracked separately in
+[issue #34](https://github.com/softspark/ai-toolkit/issues/34); 5.1.0 keeps it.
+
+Codex registry markers no longer imply that `prompt` and `agent` hook handlers
+execute. The generator already limited executable handlers to `command` and
+`mcp_tool`, so this correction changes documentation rather than runtime output.
+[Codex hooks](https://learn.chatgpt.com/docs/hooks).
+
+## Verification and scope
+
+Regression tests cover native allowlists, read-only tools, legacy ownership,
+user-file preservation, all thirteen migrated command names, global roots,
+idempotency, transactional rollback, symlink refusal, native Windows degradation
+and shared-directory editor detection. Final cross-platform release gates are
+run by `npm run release -- 5.1.0`; their logs are retained by the release script.
+
+Cline's hosted hook page did not expose a complete reference; the official
+repository was used instead. Detailed Cursor BDK and Copilot computer-use
+features were not adopted. This review establishes documented contract
+compatibility, not live account access, model quality or paid execution results.
+
+---
+
+## kb/planning/editor-and-delegation-refresh-20261001.md
+
+---
+title: "Editor support and Claude-to-Codex delegation refresh"
+category: planning
+service: ai-toolkit
+tags: [editors, claude, codex, antigravity, orchestration, models]
+version: "1.0.0"
+created: "2026-10-01"
+last_updated: "2026-10-01"
+description: "Approved editor priorities, conditional Codex plugin delegation and supervised model tiers, with implementation evidence."
+---
+
+# Editor support and delegation refresh
+
+## Status and objective
+
+Approved by the user on October 1; repository implementation, validation and
+global toolkit activation are complete.
+The user additionally requires plugin detection: delegate from Claude to Codex
+only when its plugin is installed, enabled and available in the active session.
+Otherwise use the installed native agents and their configured models.
+Prioritize Claude Code, Codex and Antigravity, integrate the installed Codex
+plugin into Claude task delegation, and move bounded implementation work to
+less expensive model tiers while retaining stronger supervision.
+
+The selected scope keeps three primary clients and the remaining adapters
+optional. No editor removal or subscription change is part of this implementation.
+Runtime installation and verification evidence is recorded below.
+
+## Implementation evidence
+
+- Eleven bounded implementation roles now default to Sonnet `high`; the Claude
+  orchestrator uses Opus `high`, and the debugger uses Opus `xhigh`.
+- Normal Claude sessions receive a read-only installed/enabled plugin hint and
+  the shared routing skill. Project disablement, missing/malformed metadata and
+  unavailable runtime agents retain native configured execution.
+- The forwarding wrapper has a narrow SubagentStart exception, including quiet
+  behavior. The detector ships alongside deployed hooks and in the Claude app
+  package, so it remains available with an older npm-global installation.
+- Other clients filter Claude-only guidance, preserve their model selection and
+  keep literal examples, metadata and resources. Malformed blocks fail before
+  agent/command writes. No editor or vendor plugin was removed or installed.
+- Independent routing/spec and export/quality reviews approved the final fixes.
+- Full Bats suite: **1946 passed**, exit 0, log
+  `/private/tmp/ai-toolkit-delegation-bats-final-20261001.log`.
+- Full Python suite: **677 passed**, log
+  `/private/tmp/ai-toolkit-delegation-pytest-final-20261001.log`.
+- Targeted detector/export suite: **80 passed**; hook integration: **10 passed**,
+  rerun after the final quiet-mode correction. Export reviewer independently
+  confirmed 37 prompt-surface tests.
+- Ruff, ShellCheck, strict mypy (12 modules), strict toolkit validation and
+  `git diff --check` passed. Native artifacts were regenerated.
+- The first sandboxed full run exposed a local HTTP socket restriction, plus a
+  test fixture using the real home for a registry lock. The fixture now isolates
+  its home, and the final full run used the required local-socket permission.
+- The local metadata detector recognizes the user's enabled Codex plugin.
+  No paid delegated-model task or security scan was run; model access and actual
+  security-package execution are not certified by these contract tests.
+- Activated with the existing `standard` profile, saved module set and 11 selected
+  editors using `scripts/install.py --modules agents,core,rules-common,skills
+  --profile standard --only agents,skills,hooks`. Claude agent/skill links now
+  reference this checkout. No vendor application binaries were upgraded.
+- Post-install checks confirmed the selected Claude model/effort pairs, identical
+  deployed detector and forwarding-hook bytes, the Codex plugin still enabled,
+  no Claude plugin routing in native Codex exports, and unchanged saved module
+  and editor selections. Skill audit: zero high-severity or warning findings.
+- Start a new Claude session to load the updated definitions. Native Codex
+  reported changed global hooks and requires its normal `/hooks` trust review;
+  no trust/approval state was bypassed or automatically granted.
+- The installer encountered HTTP 404 for the existing external `jira-mcp-hooks`
+  refresh URL and retained its cached version. This unrelated upstream source
+  did not prevent toolkit installation.
+
+## Verified local baseline
+
+- Claude Code: `2.1.287`; Codex CLI: `0.159.3`.
+- Claude plugin `codex@openai-codex`: installed and enabled, version `1.0.6`,
+  originating from `openai/codex-plugin-cc`.
+- Its installation is under `~/.claude/plugins/cache/openai-codex/codex/1.0.6`.
+  `agents/codex-rescue.md` describes proactive implementation delegation and
+  defaults to write access; its Sonnet wrapper forwards to a separate Codex run.
+- `app/agents/` declares 44 agent models: 29 Opus, 14 Sonnet and one Haiku.
+  `app/skills/orchestrate/SKILL.md`, `swarm/SKILL.md` and `workflow/SKILL.md`
+  select Opus and maximum effort.
+- `scripts/generate_antigravity_agents.py` emits `model: inherit`.
+
+Existing project references: [PATH: kb/reference/model-compatibility.md],
+[PATH: kb/reference/codex-cli-compatibility.md],
+[PATH: kb/reference/mcp-editor-compatibility.md].
+
+## Editor support proposal
+
+This is a support-priority recommendation based on product status and the
+user's stated workflow, not a market-share ranking or evidence of local usage.
+
+| Surface | Proposed treatment | Evidence / reason |
+|---------|--------------------|-------------------|
+| Claude Code, Codex, Antigravity | Primary maintained and tested targets | User's stated priorities |
+| Cursor, Copilot, Cline, OpenCode | Optional integrations | Distinct workflows; no justification for removing working adapters merely because they are not primary |
+| Windsurf / Devin Desktop | Optional; update naming and migration guidance | [Vendor rebranding](https://devin.ai/blog/windsurf-is-now-devin-desktop) and [compatibility FAQ](https://docs.devin.ai/desktop/devin-desktop-faq) |
+| Gemini CLI | Exclude from recommended individual-user stack; preserve explicit enterprise/API cases | [Google's transition to Antigravity CLI](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/) |
+| Roo Code / Zoo Code | Retire old product branding; keep successor compatibility optional | [Roo archive](https://github.com/RooCodeInc/Roo-Code), [Zoo releases](https://github.com/Zoo-Code-Org/Zoo-Code/releases); same adapter also serves Zoo |
+| Aider, Augment | Optional, candidates to remove from the user's own setup if unused | No verified basis for claiming both products are discontinued |
+
+Antigravity 2.19.1, released September 30, fixes custom agents ignoring project
+and global rules. Check the installed application version before updating it;
+this audit did not establish the local Antigravity version.
+[Antigravity changelog](https://antigravity.google/docs/changelog).
+
+Do not reinterpret `--editors all` as three editors. A recommended subset must
+remain distinct from the full supported-adapter set, preserving existing
+installation choices and cleanup paths.
+
+## Claude-to-Codex integration
+
+Reuse the installed `codex:codex-rescue` agent. Do not copy or modify its cache.
+Treat Codex as a task executor with ownership and acceptance criteria, without
+claiming it has native Claude Team membership or shared team messaging.
+
+1. Add a shared routing rule for orchestration, workflow and agent creation.
+   When the plugin agent is available and the user permits Codex execution,
+   proactively delegate suitable independent coding tasks to it.
+2. Use an availability reminder at session start only if necessary. Enabled
+   plugin metadata is a hint; the current tool/agent catalog is authoritative.
+   Hooks must not install plugins, authenticate, launch paid work or grant access.
+3. Dispatch via `Agent(subagent_type="codex:codex-rescue", prompt="--fresh ...")`.
+   Include the original objective, work directory, owned files, relevant evidence,
+   constraints, acceptance criteria and verification commands. Use explicit
+   task/thread identity for continuation rather than an ambiguous last thread.
+4. Correct `app/hooks/subagent-start.sh`: the forwarding wrapper must not receive
+   the generic instruction to inspect files before forwarding. The actual Codex
+   worker still researches, implements and verifies its assigned task.
+5. The supervisor collects the result, inspects the diff, runs required checks,
+   handles blockers and closes completed work. Do not duplicate the plugin's
+   session hooks or automatically enable its optional review gate.
+6. Apply the user-selected task routes below while preserving explicit task-level
+   model choices and permissions. Outside those routes, retain the client's
+   selected Codex model. The plugin uses
+   `workspace-write` for writes and `approvalPolicy: never`; permission failures
+   return to the supervisor instead of triggering a bypass.
+7. Do not recommend the plugin's stale Spark alias. The official
+   [Codex changelog](https://learn.chatgpt.com/docs/changelog) records Spark's
+   September 14 retirement. Model IDs must be available in the actual client.
+
+Claude 2.1.287 supports nested agents subject to the current Agent tool and depth
+limit. Do not generalize the plugin's older warning into a ban on all delegation
+from forked agents. [Claude subagent documentation](https://code.claude.com/docs/en/sub-agents).
+
+## Proposed model policy
+
+User-selected routes, recorded October 1: implementation, tests and routine
+fixes use Sonnet 5.5 at `high` or Codex; security uses Codex Astra at `xhigh`;
+hard debugging uses Codex or Opus at `xhigh`. Normalize the user's spellings
+`height` and `xheight` to the configuration values `high` and `xhigh`.
+Security-package entitlement and accreditation are account-specific; this
+implementation does not certify either.
+For security work, prefer the requested Astra route and existing account setup
+when available. If the plugin is absent or disabled, use the installed native
+security agent and its configured model, noting that the Codex route is unavailable.
+
+Sonnet 5.5 was released September 28. Current standard API input/output prices
+are $2/$10 per million tokens, versus Opus 5.5 at $4/$20. Those rates are not
+subscription usage prices or guaranteed per-task savings.
+[Model comparison](https://platform.claude.com/docs/en/models/overview),
+[Sonnet announcement](https://www.anthropic.com/claude-sonnet-5-5).
+
+| Work | Proposed route |
+|------|----------------|
+| Decomposition, architecture, ambiguous decisions, final acceptance | Opus, high effort as a starting policy to evaluate |
+| Bounded backend/frontend implementation, tests, routine fixes, QA automation, approved DevOps changes | Sonnet 5.5, `high`; Codex for suitable independent work |
+| Documentation and routine maintenance | Sonnet; retain existing explicit user choices |
+| Small read-only discovery tasks | Existing Haiku explorer; evaluate Sonnet for difficult repository navigation |
+| Security work and security decisions | Codex Astra, `xhigh`, using the user's existing security setup |
+| Hard debugging | Codex or Opus, `xhigh` |
+| Migrations | Supervisor assessment based on risk and failed checks |
+
+Use supported Claude aliases with provider-aware resolution, not global search
+and replace. On direct Anthropic API, current Claude Code resolves `sonnet` to
+Sonnet 5.5; other providers differ. Installed Claude Code meets the required
+minimum version 2.1.284. [Model configuration](https://code.claude.com/docs/en/model-config).
+
+Skills mostly supply procedures and effort; agents and forked skill definitions
+select execution models. Inspect both before changing routing. Keep exceptions
+for difficult tasks; changing every worker to the cheapest tier is not the goal.
+Lower routine orchestration from unconditional `max` only as part of the
+approved policy. Compare total supervisor, worker, retry and review usage.
+
+Antigravity supports `inherit`, `flash` and `pro` in custom-agent definitions.
+It needs its own explicit mapping if the user wants differentiated tiers;
+do not translate Claude model identifiers into its schema.
+[Antigravity subagents](https://antigravity.google/docs/subagents/).
+
+API examples need a separate compatibility review: Sonnet 5.5 rejects forced
+`tool_choice` values `any` and `tool` and changes thinking-block handling.
+Do not upgrade executable examples by replacing only the model ID.
+[Migration guide](https://platform.claude.com/docs/en/models/sonnet-5-5/migration-guide).
+
+## Delivery plan and acceptance criteria
+
+### Internet verification of the selected routes (October 1)
+
+The selected division is consistent with documented capabilities and is a
+reasonable quality-oriented starting policy. It is not a measured optimum for
+this repository or proof of a working end-to-end plugin setup.
+
+- **Sonnet 5.5 `high`:** Anthropic suggests `medium` for well-defined agentic
+  work and `high` for harder or longer tasks. It explicitly notes that `low`
+  and `medium` can stop early to check in with the user. Keeping `high` fits
+  the requested autonomous implementation workflow.
+  [Sonnet prompting guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5).
+- **Opus supervision:** Anthropic documents a Sonnet executor with an Opus
+  advisor. This supports the broader division of work, but its API advisor
+  mechanism is not the same implementation as Claude-to-Codex delegation.
+  Opus 5.5 supports `high` and `xhigh`; its default is `medium`, so the proposed
+  levels are explicit choices, not universal vendor defaults.
+  [Advisor tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/advisor-tool),
+  [effort reference](https://platform.claude.com/docs/en/build-with-claude/effort).
+- **Astra `xhigh`:** GPT-6 Astra supports `xhigh`; Codex documents High and
+  Extra High for difficult multistep work. The installed Claude plugin accepts
+  `--model gpt-6-astra --effort xhigh` and forwards model and effort to
+  `turn/start` in `scripts/lib/codex.mjs`. The wrapper's Claude model and effort
+  do not automatically set those controls for the Codex worker.
+  [Astra reference](https://developers.openai.com/api/docs/models/gpt-6-astra),
+  [Codex models](https://learn.chatgpt.com/docs/models).
+- **Security package and access:** selecting Astra does not itself invoke
+  Codex Security or establish Trusted Access. The exact security package has
+  not been identified in this review. If the user means OpenAI's offering,
+  verify its loaded plugin/CLI route and the account used by the delegated
+  runtime. Current cyber guidance recommends GPT-Daybreak-Blue for most
+  authorized defensive work; access is scoped to the approved identity,
+  workspace or API project, model and product surface. Preserve the user's
+  Astra choice until that intended package and access route are established.
+  [Codex Security plugin](https://learn.chatgpt.com/docs/security/plugin),
+  [models and Trusted Access](https://learn.chatgpt.com/docs/cyber-safety).
+
+Runtime acceptance must include observing the selected model and effort in an
+actual delegated task and confirming that the intended security workflow ran.
+No paid task, security scan or access-status check was performed in this review.
+
+### Implementation sequence
+
+1. Implement the approved recommended editor support profile and the worker
+   routes above; preserve explicit task-level model choices and native fallback
+   when the Codex plugin is absent, disabled or unavailable.
+2. Implement routing guidance in `app/agents/orchestrator.md` and orchestration,
+   workflow, subagent-development, agent-creator and model-routing skills.
+   Add the narrow hook exception and any required availability helper.
+3. Update selected worker definitions, dated compatibility references and
+   ecosystem registry. Correct the maintenance SOP's Project IDX link and
+   outdated MCP-adapter count. Preserve historical release records.
+4. Regenerate supported client artifacts and verify that Claude-specific routing
+   does not cause Codex to invoke the Claude plugin recursively.
+5. Test enabled, disabled, missing and malformed plugin metadata; ordinary-agent
+   hook behavior; forwarding behavior; runtime capability absence; explicit
+   model preservation; the requested `high`/`xhigh` worker routes; and
+   translated/exported guidance.
+6. Run affected Bats/Python suites, static checks, strict validation and the full
+   repository suites before claiming the implementation complete. A live plugin
+   smoke test additionally requires a working authenticated account and agreed
+   execution scope; static checks do not establish runtime quality or savings.
+
+## Alternatives and pre-mortem
+
+- **Recommended:** three primary clients, optional remaining adapters, supervised
+  Sonnet/Codex workers. Reduces operational focus without breaking installations.
+- **Conservative:** refresh compatibility and Codex routing but retain all model
+  tiers. Lower migration risk, less opportunity to reduce execution cost.
+- **Minimal:** retain only the three primary clients. Requires explicit agreement
+  to remove public support plus migration and cleanup compatibility for users.
+
+Risks: an installed plugin may be disabled or unavailable at the current nesting
+depth; workers may touch overlapping files; permission failures may look like
+model failures; wrappers and redundant reviews may erase savings; a model
+supervisor can still approve incorrect work. Use capability checks, explicit
+ownership, surfaced blockers and independent executable acceptance checks.
+
+---
+
 ## kb/planning/model-compatibility-refresh-20260923.md
 
 ---
@@ -8018,9 +8377,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.6.0"
+version: "3.7.0"
 created: "2026-03-23"
-last_updated: "2026-09-24"
+last_updated: "2026-10-02"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -8052,6 +8411,12 @@ ai-toolkit install --local --editors cursor,aider         # specific editors onl
 ```
 
 Supported editors: `cursor`, `windsurf`, `cline`, `roo`, `aider`, `augment`, `copilot`, `antigravity`, `codex`, `gemini`, `opencode`.
+
+The recommended primary set is Claude Code, Codex and Antigravity:
+`ai-toolkit install --local --editors codex,antigravity` (Claude is installed by
+default). Other adapters remain optional and supported; `all` still means all
+supported editors and existing selections remain unchanged. This recommendation
+does not uninstall applications or remove user configuration.
 
 To restrict which language rules are injected, use `--lang`:
 
@@ -8390,23 +8755,23 @@ When adding or modifying any toolkit component:
 
 | Editor | Where to verify |
 |--------|----------------|
-| Claude Code | `docs.anthropic.com/claude-code` |
+| Claude Code | `code.claude.com/docs` |
 | Cursor | `docs.cursor.com` |
-| Windsurf | `docs.codeium.com/windsurf` |
+| Windsurf / Devin Desktop | `docs.devin.ai/desktop` |
 | GitHub Copilot | `docs.github.com/copilot` |
 | Gemini CLI | `github.com/google-gemini/gemini-cli` |
 | Cline | `github.com/cline/cline` |
-| Roo Code | `github.com/RooVetGit/Roo-Code` |
+| Roo / Zoo Code | `github.com/Zoo-Code-Org/Zoo-Code` (Roo upstream is archived) |
 | Aider | `aider.chat` |
 | Augment | `docs.augmentcode.com` |
 | Codex CLI | `github.com/openai/codex` |
-| Google Antigravity | `developers.google.com/project-idx` |
+| Google Antigravity | `antigravity.google/docs` and `antigravity.google/docs/changelog` |
 
 ### When to do this
 
 - Adding a new skill → verify it renders correctly for Codex `.agents/skills/` and all directory-based editors
 - Adding a new hook → verify event name is valid in Claude and check `.codex/hooks.json` compatibility
-- Adding a new MCP template → verify it installs correctly for all 8 native adapters (`mcp_editors.py`)
+- Adding a new MCP template → verify it installs correctly for every native adapter in `mcp_editors.py`
 - Modifying generator output → check that every editor-specific generator still produces valid output
 - Adding a new editor → verify ALL existing features render correctly for the new target
 
@@ -8512,8 +8877,14 @@ tests. Never tag by hand and never `git push --tags`. Full procedure:
 
 | Agent Type | Model | Examples |
 |-----------|-------|---------|
-| Complex reasoning | opus | orchestrator, backend-specialist, security-auditor |
-| Pattern-following | sonnet | documenter, explorer-agent, data-analyst |
+| Coordination and complex decisions | opus | orchestrator (`high`), debugger (`xhigh`), security-auditor |
+| Bounded implementation and tests | sonnet | backend-specialist, frontend-specialist, test-engineer (`high`) |
+| Documentation and analysis | sonnet | documenter, data-analyst |
+| Small read-only exploration | haiku | explorer-agent |
+
+Claude can also delegate to the installed Codex plugin when it is enabled and
+callable in the current session. Without it, use the native configured agents.
+See [Model Compatibility](../reference/model-compatibility.md#conditional-claude-to-codex-delegation).
 
 ## Uninstall
 
@@ -10123,9 +10494,9 @@ title: "AI Toolkit - Agents Catalog"
 category: reference
 service: ai-toolkit
 tags: [agents, catalog, roles, ai-development]
-version: "1.4.3"
+version: "1.5.0"
 created: "2026-03-23"
-last_updated: "2026-09-23"
+last_updated: "2026-10-01"
 description: "Complete catalog of specialized agents with roles, models, and use cases."
 ---
 
@@ -10136,6 +10507,12 @@ Aliases resolve through the active provider/client configuration. Codex and
 Copilot generated agents preserve the host's selected model rather than copying
 Claude aliases. See [Model Compatibility](model-compatibility.md) for the dated
 model reference, effort boundaries and validation limits.
+
+Bounded implementation agents use Sonnet with `high` effort. The orchestrator
+uses Opus `high`, and the debugger uses Opus `xhigh`. Other roles retain their
+configured tiers. In Claude Code, an installed, enabled and runtime-callable
+Codex plugin is an additional executor; absent that capability, native agents
+keep their configured models. See [conditional delegation](model-compatibility.md#conditional-claude-to-codex-delegation).
 
 ## By Category
 
@@ -10152,19 +10529,19 @@ model reference, effort boundaries and validation limits.
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **backend-specialist** | opus | Node.js, Python, PHP, FastAPI, APIs |
-| **frontend-specialist** | opus | React, Next.js, Vue, Nuxt, Tailwind |
-| **mobile-developer** | opus | React Native, Flutter, native iOS/Android |
-| **game-developer** | opus | Unity, Godot, Unreal, Phaser, Three.js |
+| **backend-specialist** | sonnet | Node.js, Python, PHP, FastAPI, APIs |
+| **frontend-specialist** | sonnet | React, Next.js, Vue, Nuxt, Tailwind |
+| **mobile-developer** | sonnet | React Native, Flutter, native iOS/Android |
+| **game-developer** | sonnet | Unity, Godot, Unreal, Phaser, Three.js |
 | **database-architect** | opus | Schema design, migrations, query optimization, operations |
 
 ### AI/ML (6)
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **ai-engineer** | opus | LLM integration, vector databases, RAG pipelines, agent orchestration |
-| **ml-engineer** | opus | Model training, MLOps, TensorFlow, PyTorch |
-| **nlp-engineer** | opus | NLP pipelines, NER, text classification, transformers |
+| **ai-engineer** | sonnet | LLM integration, vector databases, RAG pipelines, agent orchestration |
+| **ml-engineer** | sonnet | Model training, MLOps, TensorFlow, PyTorch |
+| **nlp-engineer** | sonnet | NLP pipelines, NER, text classification, transformers |
 | **data-scientist** | opus | Statistics, visualization, EDA, hypothesis testing |
 | **data-analyst** | sonnet | SQL, analytics, reporting, dashboards |
 | **prompt-engineer** | opus | Prompt design, chain-of-thought, few-shot, optimization |
@@ -10174,8 +10551,8 @@ model reference, effort boundaries and validation limits.
 | Agent | Model | Use Case |
 |-------|-------|----------|
 | **code-reviewer** | opus | Code review, standards, quality audit |
-| **test-engineer** | opus | Test strategy, TDD, unit/integration/E2E tests |
-| **qa-automation-engineer** | opus | Playwright, Cypress, API testing, performance testing |
+| **test-engineer** | sonnet | Test strategy, TDD, unit/integration/E2E tests |
+| **qa-automation-engineer** | sonnet | Playwright, Cypress, API testing, performance testing |
 | **security-auditor** | opus | OWASP, CVE analysis, pen testing, vulnerability assessment |
 | **security-architect** | opus | Threat modeling, secure design, AuthN/AuthZ |
 | **system-governor** | opus | Constitution guardian, validates changes, VETO power |
@@ -10184,7 +10561,7 @@ model reference, effort boundaries and validation limits.
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **devops-implementer** | opus | Terraform, Ansible, Docker, Kubernetes, CI/CD |
+| **devops-implementer** | sonnet | Terraform, Ansible, Docker, Kubernetes, CI/CD |
 | **infrastructure-architect** | opus | System design, architecture notes, trade-off analysis |
 | **infrastructure-validator** | sonnet | Deployment verification, health checks, rollback |
 | **incident-responder** | sonnet | P1-P4 incidents, emergency fixes, postmortem |
@@ -10205,7 +10582,7 @@ model reference, effort boundaries and validation limits.
 
 | Agent | Model | Use Case |
 |-------|-------|----------|
-| **mcp-specialist** | opus | MCP server design, client config, troubleshooting |
+| **mcp-specialist** | sonnet | MCP server design, client config, troubleshooting |
 | **mcp-testing-engineer** | sonnet | MCP protocol compliance, transport testing |
 
 ### Management & Evolution (4)
@@ -14043,9 +14420,9 @@ title: "Hooks Catalog"
 category: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.15.0"
+version: "1.16.0"
 created: "2026-03-27"
-last_updated: "2026-09-23"
+last_updated: "2026-10-01"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -14105,6 +14482,18 @@ when the source is `compact`, performs stale search-flag cleanup, and checks
 for updates without printing informational stdout. Set
 `AI_TOOLKIT_HOOK_VERBOSE=1` to print the startup reminders and loaded context
 for debugging; `AI_TOOLKIT_HOOK_QUIET=1` keeps it silent explicitly.
+
+In Claude Code, normal verbosity additionally emits a short Codex-delegation
+hint. `scripts/claude_codex_capability.py` reads installed plugin metadata and
+local enablement, including project/local overrides, without launching Codex.
+An installed and enabled `codex@openai-codex` is only a candidate: the supervisor
+must still confirm `codex:codex-rescue` is callable in the current session.
+Missing, disabled or malformed metadata selects native-agent guidance. The
+hint does not change models, install plugins or establish account/model access.
+Quiet/minimal profiles and recognized non-Claude hook contexts suppress it.
+The deployed hook prefers its adjacent runtime helper, so an older npm-global
+package does not hide the detector after a hook update. Positive hints point to
+`model-routing-patterns` before selecting an executor.
 
 > **Session storage:** auto-generated session artifacts (context, handoff note,
 > checkpoints, decisions) are stored **outside the project repo** under
@@ -14313,6 +14702,10 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Fires | When a subagent is spawned |
 
 **Action:** Reminds subagents to stay narrow in scope, gather evidence first, and return explicit validation notes.
+
+For Claude's `codex:codex-rescue` forwarding wrapper, the reminder instead
+preserves its forwarding-only contract: the actual Codex worker gathers evidence
+and the supervisor collects and verifies the result. Ordinary agents are unchanged.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -14612,6 +15005,7 @@ Non-blocking (exit 0). Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 | Component | Purpose |
 |-----------|---------|
+| `scripts/claude_codex_capability.py` | Read-only Claude plugin metadata hint; runtime agent availability remains authoritative. |
 | `scripts/session_state.py` | Isolated edit state keyed by a hash of the normalized native session ID. Reset on SessionStart and cleaned on SessionEnd. Read by revert-guard and quality-gate. |
 | `scripts/test_cohesion.py` | Resolves changed paths → test commands via cohesion map. First-match-wins. Stdlib-only. |
 | `app/hooks/test-cohesion-map.json` | Toolkit-default path → tests mapping (used when no project map exists). |
@@ -16469,15 +16863,15 @@ title: "Model compatibility for skills and agents"
 category: reference
 service: ai-toolkit
 tags: [models, skills, agents, codex, copilot, claude, effort]
-version: "1.0.0"
+version: "1.1.0"
 created: "2026-09-23"
-last_updated: "2026-09-23"
+last_updated: "2026-10-01"
 description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."
 ---
 
 # Model compatibility for skills and agents
 
-Reviewed 2026-09-23. These are documentation snapshots, not a guarantee that a
+Reviewed 2026-10-01. These are documentation snapshots, not a guarantee that a
 model is enabled on a particular account. Check the active client's picker and
 policy before selecting a model. Preserve a user's explicit choice; do not
 replace a tiered workflow with a single flagship model.
@@ -16493,7 +16887,8 @@ replace a tiered workflow with a single flagship model.
 
 Claude aliases do not imply the same concrete model on every provider. The
 current Claude Code reference maps Anthropic API `opus` to Opus 5.5 and `sonnet`
-to Sonnet 5, while other providers can resolve differently. See
+to Sonnet 5.5, while other providers can resolve differently. Sonnet 5.5 requires
+Claude Code 2.1.284 or later. See
 [Claude Code model configuration](https://code.claude.com/docs/en/model-config).
 
 ## Reviewed model families
@@ -16502,7 +16897,7 @@ to Sonnet 5, while other providers can resolve differently. See
 |------------------|---------------------------------|--------------------|
 | OpenAI API | `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` | Use Responses for reasoning with tools; Astra rejects `none` effort, while Sol/Luna allow it |
 | Codex | GPT-6 Astra/Sol/Luna, according to account/client availability | Start from the selected/default effort; higher reasoning and orchestration modes are explicit choices |
-| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-haiku-4-5-20251001` | Opus 5.5 defaults to medium effort, Fable/Sonnet to high; Haiku does not support effort |
+| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` | Opus 5.5 defaults to medium effort, Fable/Sonnet to high; Haiku does not support effort |
 | GitHub Copilot | Offers models from multiple providers, including current GPT-6 and Claude families | Plan, organization policy and client determine the actual list; utility models are not selectable session models |
 
 Sources: [OpenAI migration guidance](https://developers.openai.com/api/docs/guides/latest-model),
@@ -16519,6 +16914,12 @@ one product's retirement list globally. See the Codex models reference above.
 
 ## Effort, caching and prompting
 
+Sonnet 5.5 API migrations are not model-name substitutions: forced `tool_choice`
+values `any` and `tool` are rejected, and thinking-block handling changed.
+Existing examples targeting Sonnet 5 remain examples for that model until their
+full request/response contract is migrated.
+[Migration guide](https://platform.claude.com/docs/en/models/sonnet-5-5/migration-guide).
+
 - Preserve effective effort when supported. An API's `reasoning.effort`,
   Claude's `output_config.effort`, and an editor's reasoning control are not
   interchangeable schemas. Do not forward unsupported sampling parameters to
@@ -16532,6 +16933,38 @@ one product's retirement list globally. See the Codex models reference above.
 - A failed task is a signal to inspect context and evidence. Escalate to another
   model only within an approved routing policy; uncertainty scores alone do not
   establish which output is correct.
+
+## Conditional Claude-to-Codex delegation
+
+The Claude orchestrator and authoring/workflow skills apply
+`model-routing-patterns`. The native defaults are Opus `high` for coordination,
+Sonnet `high` for bounded implementation and tests, and Opus `xhigh` for hard
+debugging. The plugin route is optional and requires an installed, effectively
+enabled `codex@openai-codex` plus a callable `codex:codex-rescue` in the current
+Claude session. A cache directory or SessionStart hint alone is not enough.
+
+When the plugin is missing, disabled or unavailable, use installed native agents
+with their configured models and effort. Never install/enable a plugin, change
+the current model or force a cross-provider call merely to satisfy routing.
+Explicit task-level model choices take precedence.
+
+When available, Codex can own an implementation task before Claude gets stuck.
+Security prefers `--model gpt-6-astra --effort xhigh`; hard debugging uses
+`--effort xhigh` or the native debugger. Normal Codex implementation retains its
+configured model and effort. The forwarding wrapper's Claude model is separate.
+An unavailable Astra route is reported and falls back to the existing native
+security agent, without silently substituting another Codex model.
+
+The supervisor supplies working directory, owned paths, acceptance criteria and
+checks; it collects final results, reviews changes and validates tests. A job ID,
+empty output or a partial result is not completion. Security package loading and
+account access are separate from selecting Astra. Existing permissions remain.
+
+Claude-only instruction blocks are omitted from generated native agents,
+commands and materialized skills for other clients. Marker-only skills preserve
+their native frontmatter and resources. Clients that read canonical skills via
+catalogue pointers must ignore the explicitly scoped blocks. Codex and other
+hosts use native delegation; they never delegate back to the Claude plugin.
 
 ## Cost and validation
 
@@ -17658,9 +18091,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.17.0"
+version: "1.18.0"
 created: "2026-04-23"
-last_updated: "2026-09-24"
+last_updated: "2026-10-02"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
@@ -17669,6 +18102,15 @@ description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, 
 The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view. Update it whenever the JSON changes. The [2026-09-23 review](../planning/ecosystem-sync-20260923.md) records source-backed classifications for every target; local CLI versions are observations, not claims about the latest upstream release.
 
 ## Tool Count: 13
+
+The [2026-10-02 release review](../planning/ecosystem-sync-20261002.md) verifies
+all 13 integrations and records the adopted Augment and Antigravity migrations.
+
+The recommended primary working set is Claude Code, Codex and Antigravity.
+Other listed integrations remain supported and opt-in. This changes neither
+`--editors all` nor recorded editor selections, and does not uninstall software.
+For current model defaults and optional Claude-to-Codex execution, see
+[Model Compatibility](model-compatibility.md#conditional-claude-to-codex-delegation).
 
 1 primary runtime, 1 Claude app target, and 11 editor integrations. The DeepSeek Harness (`dsh`) target was retired on 2026-09-24; see [DSH Compatibility (retired)](./dsh-compatibility.md).
 
@@ -17826,6 +18268,7 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 | Changelog | https://www.augmentcode.com/changelog |
 | Config paths | `.augment/rules/*.md`, `.augment-guidelines` (workspace root, legacy single-file), `~/.augment/user-guidelines.md`, `.augment/agents/*.md`, `.augment/commands/*.md`, `.augment/skills/*/SKILL.md`, `.augment/settings.json`, `.augment/settings.local.json`, `~/.augment/rules/*.md`, `~/.augment/settings.json`, `/etc/augment/settings.json`. Auggie CLI also discovers skills/commands from `.claude/` and `.agents/` (`.augment/` wins on precedence). |
 | Our generators | `scripts/generate_augment.py`, `scripts/generate_augment_rules.py`, `scripts/generate_augment_agents.py` (profile=full), `scripts/generate_augment_commands.py` (profile=full), `scripts/generate_augment_hooks.py` (profile=full, HOME-scoped), `scripts/generate_augment_skills.py` (profile=full) |
+| Agent permission contract | Native allowlist only: `Read` → `view`, `Grep` → `codebase-retrieval`, `Glob` → `view` + `codebase-retrieval` (deduplicated), `Edit` → `str-replace-editor`, `Write` → `save-file`, `Bash` → `launch-process`. `disabled_tools` is omitted because it overrides `tools`, even when empty. Unmapped Claude orchestration tools are omitted with an explicit capability note; unknown tools and empty native allowlists fail before any output changes. Model remains the CLI default. Generated agents carry ownership markers; cleanup recognizes legacy exports and preserves user files. [Official subagent reference](https://docs.augmentcode.com/cli/subagents) |
 | Global install | `ai-toolkit install --editors augment` writes `~/.augment/rules/ai-toolkit.md` **plus** (profile=full) `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` — all documented user-tier surfaces. A global-only Augment user previously got no hooks/agents/commands. Skills need no global emission: Auggie natively reads `~/.claude/skills/`. |
 | Tracked capabilities | `.augment`, Agent mode, Next Edit, MCP, context engine, Auggie CLI, `always_apply`, `agent_requested`, subagents, custom commands, `SKILL.md`, `PreToolUse`, `PostToolUse`, `SessionStart`, `SessionEnd`, `Stop`, `Notification`, ACP Mode, plugins/marketplace |
 | Earlier baseline / notes | Auggie CLI v0.31.0. Since v0.30.0 (2026-06-25) `PreToolUse`/`PostToolUse` hooks fire during sub-agent sessions. The shared hook input adapter normalizes Augment's `conversation_id`, so edit and quality state remains isolated across parallel sub-agents. `Notification` is enum-only (doctor flipped its marker), with no dedicated handler documented, so class C (do NOT wire). Plugins/marketplace (`auggie plugin marketplace add`, `.augment-plugin`/`.claude-plugin` layouts, `enabledPlugins`/`autoUpdateMarketplaces` in settings) are documented but not yet a shipping target. |
@@ -17833,18 +18276,27 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 
 ### Google Antigravity
 
+Workflows retire on 2026-11-01. The generator now adds the 13 existing command
+names as `.agents/skills/<workflow-name>/SKILL.md`, and in both documented global
+skill roots. Legacy workflow files remain with a deprecation comment. User-owned
+skill collisions and extra resources are preserved; `emit_skill_pointer=False`
+still opts out of skill-directory writes. Doctor reports unmigrated local/global
+workflows. On native Windows, use WSL or `/migrate-workflows`; the generator
+retains legacy output and explains why it skipped protected skill writes.
+[Official migration](https://antigravity.google/docs/migration/workflows-to-skills/).
+
 | Field | Value |
 |-------|-------|
 | ID | `google-antigravity` |
 | Docs | https://antigravity.google/docs (official hook and configuration pages are now readable through the web index; use feature pages to verify) |
-| Changelog | https://antigravity.google/changelog (SPA; changelog entries embedded in main-*.js) |
+| Changelog | https://antigravity.google/docs/changelog |
 | Config paths | Rules/workflows: `.agents/rules/*.md`, `.agents/workflows/*.md`. Skills: canonical `.agents/skills/*/SKILL.md`; `.agent/skills/*/SKILL.md` is compatibility-only. Agents: `.agents/agents/ai-toolkit-*/agent.md`. Hooks: `.agents/hooks.json` plus `.agents/hooks/ai-toolkit-antigravity-hook.py`. Plugins: `.agents/plugins/<plugin>/plugin.json`. MCP: `.agents/mcp_config.json`. Cross-tool instructions: `AGENTS.md`, `GEMINI.md`. |
 | Global config paths | CLI skills `~/.gemini/antigravity-cli/skills/*/SKILL.md` and CLI plugins `~/.gemini/antigravity-cli/plugins/<plugin>/plugin.json` are current canonical CLI surfaces. IDE/shared-product skills use `~/.gemini/config/skills/*/SKILL.md`; agents use `~/.gemini/config/agents/ai-toolkit-*/agent.md`; hooks use `~/.gemini/config/hooks.json` plus adjacent runtime; IDE/shared plugins use `~/.gemini/config/plugins/<plugin>/plugin.json`; MCP uses `~/.gemini/config/mcp_config.json`. Rules stay project-local; only workspace `.agent/skills/` is legacy. `~/.gemini/GEMINI.md` remains the Gemini-CLI-shared instruction surface. |
 | Our generators | `scripts/generate_antigravity.py` (rules, workflows, canonical + compatibility skill pointer), `scripts/generate_antigravity_hooks.py` (exact five-event schema and self-contained adapter), `scripts/generate_antigravity_agents.py` (native subagents and explicit tool mapping), `scripts/antigravity_plugin.py` (deterministic opt-in export/verify), and `scripts/mcp_editors.py` (transactional project/global MCP adapter). |
 | Install profiles | `minimal`: rules/workflows/skills only. `standard` and `strict`: add native hooks. `full`: additionally adds native agents. Global install follows the same gates under `~/.gemini/config/`; it never auto-installs the plugin. |
 | Plugin flow | `ai-toolkit antigravity-plugin export [output]` creates a self-contained ZIP with exact manifest fields `$schema`, `name`, `description`, rules, skills, agents, hooks, runtime, and LICENSE. Verify offline with `ai-toolkit antigravity-plugin verify <archive-or-dir>`, then install manually under `.agents/plugins/<plugin>/` for a workspace, `~/.gemini/antigravity-cli/plugins/<plugin>/` for CLI, or `~/.gemini/config/plugins/<plugin>/` for the IDE/shared product. Hook commands resolve from `${extensionPath}`. |
 | Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, hooks, five native hook events, subagents, agent permissions, plugins, global skills/hooks/agents, `AGENTS.md`, `GEMINI.md`, `serverUrl` |
-| Reviewed baseline / notes | Antigravity 2.0 v2.8.1, Antigravity CLI v1.1.14, IDE v2.5.5 (verified 2026-08-19). Hooks use `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. The adapter returns native camelCase payloads, object-shaped `injectSteps`, empty default `terminationBehavior`, and a `decision` string for Stop while preventing re-entry loops. MCP consumes portable `transport` metadata, accepts input `url` only for migration and emits it as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
+| Reviewed baseline / notes | Antigravity 2.19.1 (reviewed 2026-10-01) fixes custom agents ignoring global/project rules; 2.18.1 adds plugin marketplace management. Native agent models remain inherit/flash/pro; toolkit agents preserve inherit. Previous CLI/IDE version observations are historical, not current availability guarantees. Hooks use `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. The adapter returns native camelCase payloads, object-shaped `injectSteps`, empty default `terminationBehavior`, and a `decision` string for Stop while preventing re-entry loops. MCP consumes portable `transport` metadata, accepts input `url` only for migration and emits it as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
 | Doc access note | Docs are a JavaScript SPA, but the official search index exposes the current MCP guide and changelog text. Verify changelog claims against the dated official entry because the MCP guide's warning can lag schema releases. |
 
 ### Codex CLI
@@ -18269,7 +18721,7 @@ category: reference
 service: ai-toolkit
 tags: [windows, wsl, install, uninstall, dependencies, hooks, security]
 created: "2026-04-24"
-last_updated: "2026-07-15"
+last_updated: "2026-10-02"
 description: "Windows support model for ai-toolkit: WSL, Git Bash, dependency detection, hooks, and fail-closed managed mutations."
 ---
 
@@ -18327,6 +18779,13 @@ available. A requested mutation exits non-zero before its transaction starts
 and reports `No files were changed`. Run the command from WSL to remove managed
 customizations, inject or remove external hooks, and generate/update native
 Codex hooks safely.
+
+Antigravity's new workflow-to-skill replacements also require these primitives.
+On native Windows, that optional generation step prints a WSL or
+`/migrate-workflows` instruction and skips the new skill writes, while preserving
+the existing legacy workflow and catalogue-pointer output. Use WSL to generate
+the replacements safely, or the Antigravity migration command before workflows
+retire on 2026-11-01. No unprotected transaction fallback is used.
 
 ## Verification
 

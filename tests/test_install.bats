@@ -97,7 +97,7 @@ teardown() {
     done
 
     # Hook runtime Python scripts deployed alongside (so hooks work without npm-global)
-    for runtime in session_state.py session_token_stats.py test_cohesion.py version_check.py; do
+    for runtime in claude_codex_capability.py session_state.py session_token_stats.py test_cohesion.py version_check.py; do
         [ -f "$HOME/.softspark/ai-toolkit/scripts/$runtime" ] || { echo "MISSING runtime script: $runtime"; return 1; }
     done
     [ -f "$HOME/.softspark/ai-toolkit/hooks/test-cohesion-map.json" ] || {
