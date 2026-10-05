@@ -7,6 +7,7 @@
 # Optimized: install runs once in setup_file, each test restores from snapshot.
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+source "$TOOLKIT_DIR/tests/fixtures/doctor-runtime-stubs.bash"
 
 setup_file() {
     export DOCTOR_SNAPSHOT
@@ -21,6 +22,7 @@ teardown_file() {
 
 setup() {
     TEST_TMP="$(mktemp -d)"
+    create_doctor_runtime_stubs "$TEST_TMP"
     cp -a "$DOCTOR_SNAPSHOT/." "$TEST_TMP/"
     export HOME="$TEST_TMP"
 }

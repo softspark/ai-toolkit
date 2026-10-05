@@ -10,6 +10,7 @@
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 CLI="node $TOOLKIT_DIR/bin/ai-toolkit.js"
+source "$TOOLKIT_DIR/tests/fixtures/doctor-runtime-stubs.bash"
 
 setup() {
     TEST_TMP="$(mktemp -d)"
@@ -531,6 +532,7 @@ print('OK: cached rule preserved after failed refresh')
 }
 
 @test "cli: doctor exits 0 and includes all sections on healthy install" {
+    create_doctor_runtime_stubs "$TEST_TMP"
     export HOME="$TEST_TMP"
     run $CLI install
     [ "$status" -eq 0 ]
@@ -543,6 +545,7 @@ print('OK: cached rule preserved after failed refresh')
 }
 
 @test "cli: doctor exits non-zero when global install is missing" {
+    create_doctor_runtime_stubs "$TEST_TMP"
     export HOME="$TEST_TMP"
     run $CLI doctor
     [ "$status" -ne 0 ]

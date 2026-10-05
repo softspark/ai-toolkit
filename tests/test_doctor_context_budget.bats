@@ -8,9 +8,11 @@
 # ~/.claude.json (which holds secrets next to the usage counters) is never read.
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+source "$TOOLKIT_DIR/tests/fixtures/doctor-runtime-stubs.bash"
 
 setup() {
     TEST_TMP="$(mktemp -d)"
+    create_doctor_runtime_stubs "$TEST_TMP"
     export HOME="$TEST_TMP"
     export SOFTSPARK_HOME="$TEST_TMP/.softspark"
     mkdir -p "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.claude/rules" "$SOFTSPARK_HOME/ai-toolkit"
@@ -113,4 +115,17 @@ _write_claude_json() {
     before="$(cat "$HOME/.claude/settings.json")"
     run python3 "$TOOLKIT_DIR/scripts/doctor.py" --fix
     [ "$before" = "$(cat "$HOME/.claude/settings.json")" ]
+}
+
+@test "doctor context budget: ambient AI clients are never launched" {
+    mkdir -p "$TEST_TMP/ambient-bin"
+    for binary in claude codex copilot; do
+        printf '%s\n' '#!/bin/sh' 'touch "$HOME/ambient-client-was-launched"' 'exit 1' \
+            > "$TEST_TMP/ambient-bin/$binary"
+        chmod +x "$TEST_TMP/ambient-bin/$binary"
+    done
+    export PATH="${DOCTOR_RUNTIME_BIN:-$TEST_TMP/missing}:$TEST_TMP/ambient-bin:$PATH"
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py"
+    [ ! -e "$HOME/ambient-client-was-launched" ]
+    echo "$output" | grep -q 'OK: GitHub Copilot (copilot) 99.0.0'
 }

@@ -10544,9 +10544,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck, local-gates]
-version: "2.0.0"
+version: "2.0.1"
 created: "2026-04-10"
-last_updated: "2026-09-24"
+last_updated: "2026-10-05"
 description: "Release procedure for ai-toolkit under Local Release Gates, Publish-Only CI: ecosystem-sync drift check, version sync, changelog, artifact regeneration, then one command (npm run release -- X.Y.Z) that runs every gate on macOS and in Linux containers, tags, pushes and watches the publish-only workflow."
 ---
 
@@ -10876,6 +10876,12 @@ Linux bash does, and parts of the suite are path-sensitive (`/var` against
 suite. The Python containers keep the old CI coverage of the declared floor
 (`PYTHON_MIN` 3.11): `py_compile` catches syntax, only an import catches
 version-gated runtime features.
+
+The Python-floor container also installs Node.js, Git and jq. Python integration
+tests execute the real Node CLI dispatcher, create Git worktrees and exercise
+the Bash prompt hook, so a Python-only image is insufficient. Doctor fixtures
+use controlled AI runtime executables instead of launching the maintainer's
+installed clients or their auto-updaters.
 
 ### What the publish workflow still does
 

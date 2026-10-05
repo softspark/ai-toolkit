@@ -8,9 +8,11 @@
 # exact rules and read-only wildcards are not. Doctor never edits them.
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+source "$TOOLKIT_DIR/tests/fixtures/doctor-runtime-stubs.bash"
 
 setup() {
     TEST_TMP="$(mktemp -d)"
+    create_doctor_runtime_stubs "$TEST_TMP"
     export HOME="$TEST_TMP/home"
     export SOFTSPARK_HOME="$HOME/.softspark"
     PROJECT="$TEST_TMP/project"

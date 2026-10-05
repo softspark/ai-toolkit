@@ -44,6 +44,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   variable as one quoted npm argument, preventing shell interpolation.
 - **Hook runtime dependency:** Shipped `paths.py` alongside the installed helpers
   that import it. Status-line rendering does not collect or persist account quotas.
+- **Release test isolation:** Isolated doctor fixtures from installed AI clients
+  and their background updaters. Added Node.js, Git and jq to the Python-floor
+  gate for the new CLI, worktree and prompt-hook integration tests.
 
 ### Ecosystem
 

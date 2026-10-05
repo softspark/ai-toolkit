@@ -332,6 +332,8 @@ gate_python_floor() {
         -e LINT_PY="$lint_py" -e TYPECHECK_PY="$typecheck_py" \
         "$PY_FLOOR_IMAGE" bash -euc '
         mkdir -p /src && tar --no-same-owner -xf - -C /src && cd /src
+        apt-get update -qq
+        apt-get install -y -qq --no-install-recommends nodejs git jq >/dev/null
         python3 --version
         python3 -m py_compile scripts/*.py app/skills/*/scripts/*.py
         python3 -c "$PY_IMPORT_CHECK"
