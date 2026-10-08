@@ -305,9 +305,24 @@ import json
 import sys
 
 state = json.load(open(sys.argv[1]))
+# The global layer is refreshed with the recorded profile and modules, never
+# with the project's --profile or detected languages.
 assert state["profile"] == "full", state
-assert state["installed_modules"] == ["core", "agents", "skills", "rules-python"], state
-assert state["last_updated"] == "2026-01-02T00:00:00Z", state
+assert sorted(state["installed_modules"]) == ["agents", "core", "rules-python", "skills"], state
+PY
+}
+
+@test "update keeps the recorded profile when modules are recorded too" {
+    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
+    cat > "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'EOF'
+{"installed_version": "4.13.0", "profile": "minimal", "installed_modules": ["core", "agents"]}
+EOF
+    run bash -c "HOME='$TEST_TMP' node '$TOOLKIT_DIR/bin/ai-toolkit.js' update"
+    [ "$status" -eq 0 ]
+    python3 - "$TEST_TMP/.softspark/ai-toolkit/state.json" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+assert state["profile"] == "minimal", state
 PY
 }
 

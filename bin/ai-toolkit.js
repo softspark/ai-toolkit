@@ -333,7 +333,9 @@ function showHelp() {
   console.log('\nOptions for install / update:');
   console.log('  --only <list>   Apply only listed components (e.g. agents,hooks,rules,skills,constitution)');
   console.log('  --skip <list>   Skip listed components');
-  console.log('  --local         Project-local configs only (CLAUDE.md, settings, constitution, language rules, git hooks)');
+  console.log('  --local         Global layer first (as update), then project-local configs (AGENTS.md/CLAUDE.md,');
+  console.log('                  settings, language rules, per-project editor files, git hooks)');
+  console.log('  --no-global     With --local: skip the global layer');
   console.log('  --profile <p>   Install profile: minimal (agents+skills), standard (default), strict (all+git hooks)');
   console.log('  --persona <p>   Persona preset: backend-lead, frontend-lead, devops-eng, junior-dev');
   console.log('  --modules <list>  Install specific modules (e.g. core,agents,rules-typescript)');
@@ -629,8 +631,8 @@ function handleConfig(args) {
  */
 function handleGenerateAll(_args) {
   for (const [name, gen] of Object.entries(GENERATORS)) {
-    // Skip codex-md and opencode-md — they inject into AGENTS.md via markers
-    // (used by install --local --editors codex|opencode), not as standalone files.
+    // Skip codex-md and opencode-md — they render the global $CODEX_HOME and
+    // ~/.config/opencode AGENTS.md sections, not a standalone project file.
     // The native Cline generator below emits both current and compatibility rules;
     // generating the retired single-file surface first would block that directory.
     if (name === 'codex-md' || name === 'opencode-md' || name === 'cline-rules') continue;
@@ -698,11 +700,14 @@ function handleUpdate(args) {
       const modules = state.installed_modules;
       const profile = state.profile;
 
-      // If we have recorded modules, pass them to install.py
+      // Pass the recorded profile and modules to install.py. The profile also
+      // gates editor surfaces and is recorded again, so it must travel with the
+      // modules; without it an update reset `full` or `minimal` to `standard`.
+      if (profile) {
+        stateArgs.push('--profile', profile);
+      }
       if (Array.isArray(modules) && modules.length > 0) {
         stateArgs.push('--modules', modules.join(','));
-      } else if (profile) {
-        stateArgs.push('--profile', profile);
       }
     } catch (_err) {
       // State file is corrupt or unreadable -- fall through to plain install

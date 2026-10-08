@@ -180,9 +180,9 @@ SETTINGS
     [ -f "$TEST_PROJECT/child/.claude/rules/team.md" ]
 }
 
-@test "install --local without a global install keeps the project self-contained" {
+@test "install --local --no-global without a global install keeps the project self-contained" {
     echo 'x = 1' > "$TEST_PROJECT/app.py"
-    (cd "$TEST_PROJECT" && python3 "$TOOLKIT_DIR/scripts/install.py" --local --skip-register >/dev/null 2>&1)
+    (cd "$TEST_PROJECT" && python3 "$TOOLKIT_DIR/scripts/install.py" --local --no-global --skip-register >/dev/null 2>&1)
     [ -f "$TEST_PROJECT/.claude/rules/ai-toolkit-coding-style.md" ]
     grep -q '<!-- TOOLKIT:constitution START -->' "$TEST_PROJECT/.claude/constitution.md"
     grep -q '^@.claude/constitution.md$' "$TEST_PROJECT/CLAUDE.md"
@@ -342,8 +342,8 @@ assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"s
 
 # ── Local install: all checks in grouped tests ───────────────────────────────
 
-@test "install --local creates project configs and constitution" {
-    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local) >/dev/null 2>&1
+@test "install --local --no-global creates project configs and constitution" {
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --no-global) >/dev/null 2>&1
     [ -f "$TEST_PROJECT/CLAUDE.md" ]
     [ -f "$TEST_PROJECT/.claude/settings.local.json" ]
     [ ! -f "$TEST_PROJECT/.claude/hooks.json" ]
@@ -362,7 +362,7 @@ assert d['skillListingBudgetFraction'] == 0.05, f'user override lost, got {d[\"s
 @test "install --local preserves user content in existing constitution.md" {
     mkdir -p "$TEST_PROJECT/.claude"
     echo "# My project safety rules" > "$TEST_PROJECT/.claude/constitution.md"
-    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local) >/dev/null 2>&1
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --no-global) >/dev/null 2>&1
     grep -q "My project safety rules" "$TEST_PROJECT/.claude/constitution.md"
     grep -q "<!-- TOOLKIT:constitution START -->" "$TEST_PROJECT/.claude/constitution.md"
 }
@@ -474,13 +474,13 @@ JSON
     [ ! -e "$TMP_HOME/.codex/hooks.json" ]
 }
 
-@test "install --local --editors codex keeps project surfaces local with CODEX_HOME" {
+@test "install --local --no-global --editors codex keeps project surfaces local with CODEX_HOME" {
     custom_home="$TMP_HOME/custom-codex-home"
     mkdir -p "$custom_home"
     printf '%s\n' 'User-owned CODEX_HOME sentinel.' > "$custom_home/AGENTS.md"
 
     (cd "$TEST_PROJECT" && HOME="$TMP_HOME" CODEX_HOME="$custom_home" \
-        python3 "$TOOLKIT_DIR/scripts/install.py" --local \
+        python3 "$TOOLKIT_DIR/scripts/install.py" --local --no-global \
         --editors codex) >/dev/null 2>&1
 
     [ -f "$TEST_PROJECT/.codex/hooks.json" ]
@@ -894,7 +894,7 @@ PY
     printf '%s\n' '# Real project' '' 'Run make test before pushing.' > "$TEST_PROJECT/CLAUDE.md"
     printf '%s\n' '/AGENTS.md' > "$TEST_PROJECT/.gitignore"
 
-    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local --no-global --editors codex"
     [ "$status" -eq 0 ]
     [[ "$output" == *"ai-toolkit adopt-agents-md"* ]]
     [ ! -e "$TEST_PROJECT/AGENTS.md" ]
@@ -1189,4 +1189,67 @@ assert 'github' in json.load(open('$TEST_PROJECT/.roo/mcp.json'))['mcpServers']
 
     # Broken symlink should be removed
     [ ! -L "$TEST_PROJECT/.claude/skills/deleted-skill" ]
+}
+
+# ── Global layer first ───────────────────────────────────────────────────────
+
+@test "install --local in a fresh HOME installs the global layer before the project" {
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex,antigravity"
+    [ "$status" -eq 0 ]
+    global_at=$(printf '%s\n' "$output" | grep -n '^## Global layer' | cut -d: -f1)
+    local_at=$(printf '%s\n' "$output" | grep -n '^## Project-local' | cut -d: -f1)
+    [ -n "$global_at" ] && [ -n "$local_at" ] && [ "$global_at" -lt "$local_at" ]
+    [ -f "$TMP_HOME/.claude/settings.json" ]
+    grep -q '<!-- TOOLKIT:ai-toolkit START -->' "$TMP_HOME/.codex/AGENTS.md"
+    [ -f "$TMP_HOME/.gemini/config/hooks.json" ]
+    python3 - "$TMP_HOME/.softspark/ai-toolkit/state.json" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+assert state["global_editors"] == ["antigravity", "codex"], state["global_editors"]
+assert state["profile"] == "standard"
+PY
+    # Codex gets toolkit rules from the global layer, not the project AGENTS.md.
+    [[ "$output" == *"Codex: ai-toolkit rules come from $TMP_HOME/.codex/AGENTS.md"* ]]
+    ! grep -q '<!-- TOOLKIT:' "$TEST_PROJECT/AGENTS.md"
+}
+
+@test "install --local keeps the recorded global profile and adds the project's editors" {
+    HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" "$TMP_HOME" --profile minimal --editors gemini >/dev/null 2>&1
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex,cursor --profile full --lang python) >/dev/null 2>&1
+
+    python3 - "$TMP_HOME/.softspark/ai-toolkit/state.json" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+assert state["profile"] == "minimal", state["profile"]
+assert "rules-python" not in state["installed_modules"], state["installed_modules"]
+assert state["global_editors"] == ["codex", "cursor", "gemini"], state["global_editors"]
+PY
+}
+
+@test "install --local --no-global installs only the project" {
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex --no-global"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"## Global layer"* ]]
+    [ ! -e "$TMP_HOME/.codex/AGENTS.md" ]
+    # Only the global layer links agents and merges hooks into ~/.claude.
+    [ ! -e "$TMP_HOME/.claude/agents" ]
+    ! grep -q '"hooks"' "$TMP_HOME/.claude/settings.json" 2>/dev/null
+    [[ "$output" == *"NOTE: Codex reads ai-toolkit rules from"* ]]
+    [ -f "$TEST_PROJECT/CLAUDE.md" ]
+}
+
+@test "update propagation does not repeat the global layer per registered project" {
+    second="$(mktemp -d)"
+    (cd "$second" && git init -q)
+    for project in "$TEST_PROJECT" "$second"; do
+        (cd "$project" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors codex) >/dev/null 2>&1
+    done
+    # What `ai-toolkit update` runs after its own single global pass.
+    run bash -c "HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/update_projects.py' --verbose"
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | grep -c '## Project-local')" -eq 2 ]
+    [ "$(printf '%s\n' "$output" | grep -c '## Global layer')" -eq 0 ]
+    rm -rf "$second"
 }

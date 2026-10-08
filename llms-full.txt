@@ -8928,9 +8928,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.7.0"
+version: "3.8.0"
 created: "2026-03-23"
-last_updated: "2026-10-02"
+last_updated: "2026-10-08"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -8940,15 +8940,20 @@ description: "Standard operating procedures for installing, maintaining, and evo
 
 Use this when starting a new project that should use the toolkit.
 
-**Prerequisites:** toolkit installed globally (`ai-toolkit install` already done once).
+**Prerequisites:** the npm package (`npm install -g @softspark/ai-toolkit`).
 
 ```bash
 cd /path/to/new-project
 ai-toolkit install --local
 ```
 
-By default, `--local` installs Claude Code configs only:
-- `CLAUDE.md` — project-specific rules template (only if missing)
+`--local` first installs the global layer, the same pass `ai-toolkit update`
+runs (recorded global profile or modules; recorded global editors plus every
+selected editor that has a global surface), so everything a client can load
+from `$HOME` lives there once. `--no-global` skips that step. Then it installs
+what only the project can hold; without `--editors` that is Claude Code:
+- `AGENTS.md` — project instructions template, read by every agent (only when the project has no instructions yet)
+- `CLAUDE.md` — `@AGENTS.md` import section next to Claude-only content
 - `.claude/settings.local.json` — MCP servers, env vars, permissions (only if missing, initialized with MCP defaults)
 - `.claude/CLAUDE.md` — compact language-rules index
 
@@ -12233,7 +12238,7 @@ Usage: ai-toolkit <command> [options]
 | `install` | First-time global install into `~/.claude/` + Cursor, Windsurf, Gemini |
 | `install --language-skills detected\|all` | `detected` (default): turn off `<lang>-rules`/`<lang>-patterns` skills for languages no registered project uses, via `skillOverrides` in `~/.claude/settings.json` (entries are tracked in `state.json` and restored when a project brings the language back; a user's own override is never touched); `all`: keep every language skill on. The choice persists across `install`/`update` |
 | `install --opt-in-rules <list>` | Enable opt-in registered rules (`rag-mcp-legal-rules` is opt-in by default; `add-rule --opt-in` marks others). Stored per project with `--local`, otherwise in `state.json`; `none` clears the list. Without the flag the stored list applies |
-| `install --local` | Claude Code configs only; add `--editors all` or `--editors cursor,aider` for other tools. Keeps an `@AGENTS.md` import in `CLAUDE.md`, creates `AGENTS.md` from the template only in a project without instructions, and removes toolkit sections an older release put in `AGENTS.md` |
+| `install --local` | Global layer first (the same pass `update` runs: recorded profile/modules, recorded global editors plus every selected editor with a global surface), then project-local configs: Claude Code project files, and with `--editors all` or `--editors cursor,aider` the per-project editor configs. `--no-global` skips the global layer (`update` passes it to every registered project after its own global pass). Keeps an `@AGENTS.md` import in `CLAUDE.md`, creates `AGENTS.md` from the template only in a project without instructions, and removes toolkit sections an older release put in `AGENTS.md` |
 | `adopt-agents-md [dir] [--dry-run]` | Move the project's own `CLAUDE.md` instructions into `AGENTS.md` (read by every agent), leave `CLAUDE.md` importing it next to the toolkit sections, and drop an `AGENTS.md` entry from `.gitignore`; every file is backed up first |
 | `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
 | `update --local` | Re-apply + auto-detect editors from existing project files |
@@ -14696,10 +14701,11 @@ claude-app --scope global` targets it directly, without a plugin.
 | `ai-toolkit claude-switch` | `~/.softspark/ai-toolkit/claude-switch.json` and account profile directories | bind Claude Code accounts to project directories; launch with the selected profile |
 | `ai-toolkit codex-switch` | `~/.softspark/ai-toolkit/codex-switch.json` and Codex account homes | route Codex CLI accounts and fetch live usage limits |
 | `ai-toolkit llm-status` | existing Claude/Codex registries and provider credentials | fetch live limits for every configured account on each invocation |
-| `ai-toolkit install --local` | current project | Claude Code configs only (CLAUDE.md, settings, constitution, language rules). Add `--editors all` for other tools, or `--editors cursor,aider` for specific ones. Auto-detects editors from existing project files when `--editors` is omitted. |
+| `ai-toolkit install --local` | `~/` first, then the current project | Global layer first: the same pass `update` runs, with the recorded global profile or modules and the recorded global editors plus every selected editor that has a global surface, so everything a client can load from `$HOME` is installed once there. Then what only the project can hold: `AGENTS.md`/`CLAUDE.md`, settings, language rules, and per-project editor configs (`--editors all`, or `--editors cursor,aider`; auto-detected from existing project files when omitted). `--no-global` skips the global layer. |
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
-| `ai-toolkit update --local` | current project | refresh project configs; auto-detects editors from existing files |
+| `ai-toolkit update --local` | `~/` first, then the current project | refresh the global layer and the project configs; auto-detects editors from existing files |
+| `ai-toolkit update` | `~/`, then every registered project | one global pass, then each registered project with `--no-global` so the global layer is not repeated per project |
 | `ai-toolkit claude-app export` | ZIP + Markdown output | build the uploadable Claude Chat/Cowork plugin and Cowork global instructions; registered rules are included unless `--no-custom-rules` is set |
 | `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |

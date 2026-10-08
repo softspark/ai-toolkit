@@ -6,11 +6,14 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1999%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2004%20passing-success)](tests/)
 
-## What's New in v5.3.1
+## What's New in v5.3.2
 
-- **Generated AGENTS.md stays out of CLAUDE.md.** A toolkit-generated
+- **Global first, then the project.** `install --local` installs everything a
+  client can load from `$HOME` before the project files, using the recorded
+  global profile; `--no-global` opts out, and `update` keeps the profile.
+- **Generated AGENTS.md stays out of CLAUDE.md (v5.3.1).** A toolkit-generated
   `AGENTS.md` (`# AI Toolkit Instructions`) is no longer imported, so Claude
   does not load rules from `~/.claude/rules/` twice; `adopt-agents-md` refuses
   to merge into it.

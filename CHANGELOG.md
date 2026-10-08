@@ -7,6 +7,35 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v5.3.2 - install --local installs the global layer first (2026-10-08)
+
+### Ecosystem
+
+- Drift review: documentation edits for Claude Code, Claude app and Gemini
+  CLI change nothing the generators emit (class A); snapshot refreshed.
+
+### Changed
+
+- **Global first, then the project:** `install --local` (and `update
+  --local`) now runs the global layer before the project, the same pass
+  `ai-toolkit update` runs: the recorded global profile or modules, and the
+  recorded global editors plus every selected editor that has a global surface.
+  Everything a client can load from `$HOME` is installed once there, and the
+  project only gets what no global surface can hold (`AGENTS.md`/`CLAUDE.md`,
+  settings, language rules, per-project editor files). A project-only install
+  no longer leaves Codex or OpenCode without toolkit rules. `--no-global` skips
+  the global layer; `ai-toolkit update` passes it to each registered project
+  after its own single global pass.
+
+### Fixed
+
+- **`update` reset the profile:** with recorded modules, `ai-toolkit update`
+  passed only `--modules`, so a `full` or `minimal` global install was
+  re-recorded as `standard` and installed `standard` editor surfaces. The
+  recorded profile now travels with the modules.
+
+---
+
 ## v5.3.1 - Generated AGENTS.md stays out of CLAUDE.md (2026-10-08)
 
 ### Ecosystem

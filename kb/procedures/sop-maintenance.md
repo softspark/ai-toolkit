@@ -3,9 +3,9 @@ title: "SOP: AI Toolkit Maintenance"
 category: procedures
 service: ai-toolkit
 tags: [sop, maintenance, agents, skills, install]
-version: "3.7.0"
+version: "3.8.0"
 created: "2026-03-23"
-last_updated: "2026-10-02"
+last_updated: "2026-10-08"
 description: "Standard operating procedures for installing, maintaining, and evolving the ai-toolkit."
 ---
 
@@ -15,15 +15,20 @@ description: "Standard operating procedures for installing, maintaining, and evo
 
 Use this when starting a new project that should use the toolkit.
 
-**Prerequisites:** toolkit installed globally (`ai-toolkit install` already done once).
+**Prerequisites:** the npm package (`npm install -g @softspark/ai-toolkit`).
 
 ```bash
 cd /path/to/new-project
 ai-toolkit install --local
 ```
 
-By default, `--local` installs Claude Code configs only:
-- `CLAUDE.md` — project-specific rules template (only if missing)
+`--local` first installs the global layer, the same pass `ai-toolkit update`
+runs (recorded global profile or modules; recorded global editors plus every
+selected editor that has a global surface), so everything a client can load
+from `$HOME` lives there once. `--no-global` skips that step. Then it installs
+what only the project can hold; without `--editors` that is Claude Code:
+- `AGENTS.md` — project instructions template, read by every agent (only when the project has no instructions yet)
+- `CLAUDE.md` — `@AGENTS.md` import section next to Claude-only content
 - `.claude/settings.local.json` — MCP servers, env vars, permissions (only if missing, initialized with MCP defaults)
 - `.claude/CLAUDE.md` — compact language-rules index
 

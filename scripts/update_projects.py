@@ -119,7 +119,9 @@ def main() -> None:
 
     # --skip-register: parallel installs must NOT write to projects.json
     # concurrently. We re-register sequentially after all installs complete.
-    parallel_args = extra_args + ["--skip-register"]
+    # --no-global: `update` ran the global layer once before propagating;
+    # parallel copies would only repeat it and race on the same files.
+    parallel_args = extra_args + ["--skip-register", "--no-global"]
 
     # Run in parallel (max 8 workers — don't overwhelm the system)
     max_workers = min(len(projects), 8)

@@ -35,7 +35,10 @@ Usage:
 Options:
   --only agents,hooks     Install only listed components
   --skip skills           Skip listed components
-  --local                 Also inject into project-local configs
+  --local                 Install the global layer first (everything a client can
+                          load from $HOME), then project-local configs
+  --no-global             With --local: skip the global layer (update uses this
+                          after its own global pass)
   --list, --dry-run       Dry-run: show what would be installed
   --reset                 Wipe and recreate local configs
   --profile <p>           minimal|standard|strict
@@ -231,6 +234,7 @@ def parse_args(argv: list[str]) -> dict:
         "config": "",
         "refresh_base": False,
         "skip_register": False,
+        "no_global": False,
         "codex_skills": False,
         "language_skills": "",
         "opt_in_rules": None,
@@ -292,6 +296,8 @@ def parse_args(argv: list[str]) -> dict:
             cfg["refresh_base"] = True
         elif arg == "--skip-register":
             cfg["skip_register"] = True
+        elif arg == "--no-global":
+            cfg["no_global"] = True
         elif arg == "--codex-skills":
             cfg["codex_skills"] = True
         elif arg.startswith("--language-skills="):
@@ -561,6 +567,45 @@ def install_persona(target_dir: Path, persona: str, dry_run: bool) -> None:
     print(f"  Persona applied: {persona}")
 
 
+def ensure_global_layer(local_editors_arg: str, project_dir: Path,
+                        local_profile: str, dry_run: bool) -> None:
+    """Install everything a client can load from $HOME before the project.
+
+    A project install starts with the global layer: whatever applies to every
+    project lives once at user level, and the project only gets what no global
+    surface can hold. The global pass is the same one ``ai-toolkit update``
+    runs: the recorded global profile or modules (so a project's detected
+    languages never replace them), and the recorded global editors plus every
+    editor this project selects that has a global surface.
+    """
+    from install_steps.ai_tools import _resolve_editors
+    from install_steps.install_state import load_state
+
+    state = load_state()
+    selected = _resolve_editors(local_editors_arg, project_dir)
+    editors = sorted(set(get_global_editors())
+                     | {e for e in selected if e in GLOBAL_CAPABLE_EDITORS})
+    modules = state.get("installed_modules")
+    # The profile also gates editor surfaces and is recorded, so it travels
+    # with the modules instead of falling back to the default.
+    args = [str(Path.home()), "--profile", state.get("profile") or local_profile or "standard"]
+    if isinstance(modules, list) and modules:
+        args += ["--modules", ",".join(modules)]
+    if editors:
+        args += ["--editors", ",".join(editors)]
+    if dry_run:
+        args.append("--dry-run")
+    print()
+    # Flush so the header precedes the child's output when stdout is a pipe.
+    print("## Global layer (shared by every project)", flush=True)
+    import subprocess
+    result = subprocess.run([sys.executable, str(Path(__file__).resolve()), *args],
+                            cwd=Path.home(), check=False)
+    if result.returncode != 0:
+        print("Global layer install failed; fix it or rerun with --no-global", file=sys.stderr)
+        sys.exit(result.returncode)
+
+
 def install_strict_git_hooks(profile: str, local: bool, dry_run: bool) -> None:
     if profile == "strict" and not local and not dry_run:
         cwd = Path.cwd()
@@ -792,7 +837,7 @@ def main() -> None:
         hooks_scripts_dir.mkdir(parents=True, exist_ok=True)
 
     if local:
-        # --local: project-local only, no global install
+        # --local: the global layer first, then what only the project can hold.
         # Check for .softspark-toolkit.json extends system
         config_path_arg: str = cfg["config"]
         refresh_base: bool = cfg["refresh_base"]
@@ -808,6 +853,8 @@ def main() -> None:
 
         lang_modules = [m for m in (resolved_modules or []) if m.startswith("rules-")]
         local_editors_arg: str = cfg["editors"]
+        if not cfg["no_global"]:
+            ensure_global_layer(local_editors_arg, project_dir, profile, dry_run)
         install_local_project(rules_dir, dry_run, reset, lang_modules or None,
                               editors=local_editors_arg,
                               merged_config=merged_config,
