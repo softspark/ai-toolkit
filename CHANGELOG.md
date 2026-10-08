@@ -7,7 +7,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v5.3.5 - No orphaned constitution heading in CLAUDE.md (2026-10-08)
+
+### Ecosystem
+
+- Drift review: documentation edits for Claude app, Gemini CLI and Codex CLI
+  change nothing the generators emit (class A); snapshot refreshed.
 
 ### Fixed
 

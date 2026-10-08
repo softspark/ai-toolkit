@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-10-08T10:54:55Z",
+  "last_run": "2026-10-08T11:19:17Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "f8aa65e52241be9b",
+      "docs_hash": "f44ebb85b9d534d9",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -227,7 +227,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "b616d2a3568e73dc",
+      "docs_hash": "02890cb0f26a659b",
       "headings": [
         "API",
         "API Reference",
@@ -412,7 +412,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "0d669e69d0df9651",
+      "docs_hash": "8bd3397db408c422",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -453,7 +453,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "4d8599987bb89c15",
+      "docs_hash": "f8cfc25516569625",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",

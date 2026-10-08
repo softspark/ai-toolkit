@@ -8,13 +8,16 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-2009%20passing-success)](tests/)
 
-## What's New in v5.3.4
+## What's New in v5.3.5
 
-- **`update` names projects with instructions only in `CLAUDE.md`.** Agents
+- **No orphaned `## Project Constitution` heading.** It now leaves `CLAUDE.md`
+  together with its import; `update` removes one an older release left, and
+  `adopt-agents-md` no longer keeps it.
+- **`update` names projects with instructions only in `CLAUDE.md` (v5.3.4).** Agents
   other than Claude Code do not read that file; the list ends the update with
   the `ai-toolkit adopt-agents-md` fix. An untouched older template is now
   recognized and moved to `AGENTS.md`.
-- **Current models.** Skills and defaults reference Claude Haiku 5.5 and
+- **Current models (v5.3.4).** Skills and defaults reference Claude Haiku 5.5 and
   Sonnet 5.5, and the Codex reference adds GPT-6.1 Sol.
 - **The npm package no longer ships an `AGENTS.md` (v5.3.3).** It was the toolkit's
   generated core, which nothing in the package read; `ai-toolkit agents-md`
