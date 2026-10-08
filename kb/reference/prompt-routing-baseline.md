@@ -4,7 +4,7 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [benchmark, hooks, routing, evaluation]
-version: "1.1.0"
+version: "1.1.1"
 created: "2026-10-04"
 last_updated: "2026-10-05"
 description: "Offline B1 diagnostic baseline, dataset contract and missing evidence for prompt routing evaluation."
@@ -19,7 +19,10 @@ error rate cannot establish a representative G-ROUTE result. Targeted fixes
 after 5.2.0 address reproduced PL/EN boundary and marked-quote errors, while the
 historical measurements below retain their original source identity. This
 implements the B1 preparation in rag-mcp's
-`kb/planning/rag-reranker-and-toolkit-routing-plan-20261003.md`.
+`kb/history/completed/rag-reranker-and-toolkit-routing-plan-20261003.md`.
+That plan closed on 2026-10-05 with successful deployment; representative
+G-ROUTE qualification remains Inconclusive and no further evaluation is
+scheduled under the closed plan.
 
 ## Targeted corrections in 5.2.1
 
