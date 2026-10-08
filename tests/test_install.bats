@@ -1251,6 +1251,32 @@ PY
     [ -f "$TEST_PROJECT/CLAUDE.md" ]
 }
 
+@test "update propagation lists projects whose instructions are still only in CLAUDE.md" {
+    adopted="$(mktemp -d)"
+    (cd "$adopted" && git init -q)
+    printf '%s\n' '# Real project' '' 'Run make test.' > "$TEST_PROJECT/CLAUDE.md"
+    for project in "$TEST_PROJECT" "$adopted"; do
+        (cd "$project" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --no-global) >/dev/null 2>&1
+    done
+    [ ! -e "$TEST_PROJECT/AGENTS.md" ] && [ -f "$adopted/AGENTS.md" ]
+
+    run bash -c "HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/update_projects.py'"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Instructions still only in CLAUDE.md (1)"* ]]
+    [[ "$output" == *"ai-toolkit adopt-agents-md"* ]]
+    summary="${output#*Instructions still only in CLAUDE.md}"
+    [[ "$summary" == *"$(basename "$TEST_PROJECT")"* ]]
+    [[ "$summary" != *"$(basename "$adopted")"* ]]
+
+    run bash -c "HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/update_projects.py' --json"
+    python3 - "$output" "$TEST_PROJECT" <<'PY'
+import json, os, sys
+listed = json.loads(sys.argv[1])["claude_md_instructions"]
+assert [os.path.realpath(p) for p in listed] == [os.path.realpath(sys.argv[2])], listed
+PY
+    rm -rf "$adopted"
+}
+
 @test "update propagation does not repeat the global layer per registered project" {
     second="$(mktemp -d)"
     (cd "$second" && git init -q)

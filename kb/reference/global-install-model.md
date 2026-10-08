@@ -58,7 +58,7 @@ claude-app --scope global` targets it directly, without a plugin.
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
 | `ai-toolkit update --local` | `~/` first, then the current project | refresh the global layer and the project configs; auto-detects editors from existing files |
-| `ai-toolkit update` | `~/`, then every registered project | one global pass, then each registered project with `--no-global` so the global layer is not repeated per project |
+| `ai-toolkit update` | `~/`, then every registered project | one global pass, then each registered project with `--no-global` so the global layer is not repeated per project; ends with the projects whose instructions are still only in `CLAUDE.md` (move them with `ai-toolkit adopt-agents-md`; `--json` lists them as `claude_md_instructions`) |
 | `ai-toolkit claude-app export` | ZIP + Markdown output | build the uploadable Claude Chat/Cowork plugin and Cowork global instructions; registered rules are included unless `--no-custom-rules` is set |
 | `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |

@@ -28,6 +28,10 @@ from install_steps.project_registry import (
     register_project,
 )
 
+# install.py prints this when CLAUDE.md still holds the project's instructions
+# and there is no AGENTS.md, so agents other than Claude Code do not see them.
+CLAUDE_MD_INSTRUCTIONS_HINT = "Kept: CLAUDE.md (project instructions;"
+
 
 def _update_project(project: dict[str, Any], install_script: str, extra_args: list[str]) -> dict:
     """Run install --local in a single project. Returns result dict."""
@@ -162,6 +166,10 @@ def main() -> None:
     # Summary
     passed = sum(1 for r in results if r["success"])
     failed = len(results) - passed
+    claude_md_only = sorted(
+        r["path"] for r in results
+        if CLAUDE_MD_INSTRUCTIONS_HINT in (r.get("output") or "")
+    )
 
     if json_output:
         print(json.dumps({
@@ -169,11 +177,19 @@ def main() -> None:
             "total": len(results),
             "passed": passed,
             "failed": failed,
+            "claude_md_instructions": claude_md_only,
         }, indent=2))
     else:
         print()
         print(f"  Updated: {passed}/{len(results)} projects" +
               (f" ({failed} failed)" if failed else ""))
+        if claude_md_only:
+            print()
+            print(f"  Instructions still only in CLAUDE.md ({len(claude_md_only)}); "
+                  "agents other than Claude Code do not read them.")
+            print("  Move them with `ai-toolkit adopt-agents-md` in each project:")
+            for path in claude_md_only:
+                print(f"    {path.replace(str(Path.home()), '~')}")
 
     sys.exit(1 if failed else 0)
 

@@ -23,7 +23,7 @@ Usage: ai-toolkit <command> [options]
 | `install --opt-in-rules <list>` | Enable opt-in registered rules (`rag-mcp-legal-rules` is opt-in by default; `add-rule --opt-in` marks others). Stored per project with `--local`, otherwise in `state.json`; `none` clears the list. Without the flag the stored list applies |
 | `install --local` | Global layer first (the same pass `update` runs: recorded profile/modules, recorded global editors plus every selected editor with a global surface), then project-local configs: Claude Code project files, and with `--editors all` or `--editors cursor,aider` the per-project editor configs. `--no-global` skips the global layer (`update` passes it to every registered project after its own global pass). Keeps an `@AGENTS.md` import in `CLAUDE.md`, creates `AGENTS.md` from the template only in a project without instructions, and removes toolkit sections an older release put in `AGENTS.md` |
 | `adopt-agents-md [dir] [--dry-run]` | Move the project's own `CLAUDE.md` instructions into `AGENTS.md` (read by every agent), leave `CLAUDE.md` importing it next to the toolkit sections, and drop an `AGENTS.md` entry from `.gitignore`; every file is backed up first |
-| `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
+| `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest`: the global layer once, then every registered project; ends by listing projects whose instructions are still only in `CLAUDE.md` (fix with `adopt-agents-md`) |
 | `update --local` | Re-apply + auto-detect editors from existing project files |
 | `reset --local` | Wipe all project-local configs and recreate from scratch (clean slate) |
 | `status` | Show installed modules and version |
