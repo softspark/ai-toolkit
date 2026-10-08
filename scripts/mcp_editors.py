@@ -269,6 +269,60 @@ def _resolve_claude_app_config_path(*, home: Path | None) -> Path:
     return (Path.home() / CLAUDE_APP_CONFIG_RELPATH).absolute()
 
 
+def _claude_switch_account_dirs() -> list[str | None]:
+    """claude-switch account directories, default account first (None = ~/.claude)."""
+    try:
+        from claude_switch import read_registry, registry_path
+
+        registry = read_registry(registry_path())
+    except (ImportError, ValueError, OSError):
+        return []
+    names = [registry.default, *(n for n in registry.accounts if n != registry.default)]
+    return [registry.accounts[name] for name in names]
+
+
+def claude_user_configs(home: Path | None = None) -> list[Path]:
+    """Return every user-scope Claude Code config a global MCP change must reach.
+
+    Claude Code reads user-scope MCP servers from ``$CLAUDE_CONFIG_DIR/.claude.json``
+    when that variable is set, otherwise from ``~/.claude.json``. claude-switch
+    launches each account with its own ``CLAUDE_CONFIG_DIR``, so a global
+    server goes to every registered account (the default account first) and to
+    an active ``CLAUDE_CONFIG_DIR``. An active directory outside ``HOME``
+    belongs to another environment (a sandbox that redirected ``HOME``) and is
+    left alone. An explicit ``home`` (tests, sandboxes) ignores both and
+    resolves ``<home>/.claude.json`` only.
+    """
+    base = home or Path.home()
+    if home is not None:
+        return [base / ".claude.json"]
+    paths = [
+        (Path(directory) if directory else base) / ".claude.json"
+        for directory in _claude_switch_account_dirs()
+    ]
+    configured = os.environ.get("CLAUDE_CONFIG_DIR", "").strip()
+    if configured and Path(configured).expanduser().resolve().is_relative_to(base.resolve()):
+        paths.append(Path(configured).expanduser() / ".claude.json")
+    unique: list[Path] = []
+    for path in paths or [base / ".claude.json"]:
+        if path.absolute() not in {p.absolute() for p in unique}:
+            unique.append(path)
+    return unique
+
+
+def resolve_editor_paths(
+    editor: str,
+    scope: str,
+    *,
+    project_dir: Path | None = None,
+    home: Path | None = None,
+) -> list[Path]:
+    """Resolve every native config path an editor + scope change must write."""
+    if editor == "claude" and scope == "global":
+        return claude_user_configs(home)
+    return [resolve_editor_path(editor, scope, project_dir=project_dir, home=home)]
+
+
 def resolve_editor_path(
     editor: str,
     scope: str,
@@ -276,7 +330,11 @@ def resolve_editor_path(
     project_dir: Path | None = None,
     home: Path | None = None,
 ) -> Path:
-    """Resolve the native config path for an editor + scope."""
+    """Resolve the native config path for an editor + scope.
+
+    For Claude's global scope this is the primary user config (see
+    ``claude_user_configs``); writers use ``resolve_editor_paths``.
+    """
     if editor not in EDITOR_SPECS:
         raise ValueError(f"Unsupported editor: {editor}")
     spec = EDITOR_SPECS[editor]
@@ -308,6 +366,8 @@ def resolve_editor_path(
             return codex_home / "config.toml"
         if editor == "claude-app":
             return _resolve_claude_app_config_path(home=home)
+        if editor == "claude":
+            return claude_user_configs(home)[0]
         return (home or Path.home()) / str(rel)
     raise ValueError(f"Unsupported scope: {scope}")
 
@@ -357,20 +417,20 @@ def prepare_install_servers(
     updates: list[ConfigUpdate] = []
     seen_paths: set[Path] = set()
     for editor in editors:
-        path = resolve_editor_path(
+        for path in resolve_editor_paths(
             editor,
             scope,
             project_dir=project_dir,
             home=home,
-        )
-        identity = path.absolute()
-        if identity in seen_paths:
-            continue
-        seen_paths.add(identity)
-        if EDITOR_SPECS[editor]["format"] == "toml":
-            updates.append(_prepare_merge_toml_servers(path, servers))
-        else:
-            updates.append(_prepare_merge_json_servers(path, editor, servers))
+        ):
+            identity = path.absolute()
+            if identity in seen_paths:
+                continue
+            seen_paths.add(identity)
+            if EDITOR_SPECS[editor]["format"] == "toml":
+                updates.append(_prepare_merge_toml_servers(path, servers))
+            else:
+                updates.append(_prepare_merge_json_servers(path, editor, servers))
     return updates
 
 
@@ -406,20 +466,20 @@ def prepare_remove_servers(
     updates: list[ConfigUpdate] = []
     seen_paths: set[Path] = set()
     for editor in editors:
-        path = resolve_editor_path(
+        for path in resolve_editor_paths(
             editor,
             scope,
             project_dir=project_dir,
             home=home,
-        )
-        identity = path.absolute()
-        if identity in seen_paths:
-            continue
-        seen_paths.add(identity)
-        if EDITOR_SPECS[editor]["format"] == "toml":
-            updates.append(_prepare_remove_toml_servers(path, server_names))
-        else:
-            updates.append(_prepare_remove_json_servers(path, server_names))
+        ):
+            identity = path.absolute()
+            if identity in seen_paths:
+                continue
+            seen_paths.add(identity)
+            if EDITOR_SPECS[editor]["format"] == "toml":
+                updates.append(_prepare_remove_toml_servers(path, server_names))
+            else:
+                updates.append(_prepare_remove_json_servers(path, server_names))
     return updates
 
 
@@ -476,10 +536,11 @@ def _global_config_groups(home: Path | None) -> dict[Path, list[str]]:
         if not EDITOR_SPECS[editor].get("global_path"):
             continue
         try:
-            path = resolve_editor_path(editor, "global", home=home)
+            paths = resolve_editor_paths(editor, "global", home=home)
         except FileNotFoundError:
             continue  # configured *_HOME does not exist: nothing installed there
-        groups.setdefault(path.absolute(), []).append(editor)
+        for path in paths:
+            groups.setdefault(path.absolute(), []).append(editor)
     return groups
 
 

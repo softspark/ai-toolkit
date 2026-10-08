@@ -3,9 +3,9 @@ title: "AI Toolkit - MCP Editor Compatibility"
 category: reference
 service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor, antigravity]
-version: "1.4.0"
+version: "1.5.0"
 created: "2026-04-12"
-last_updated: "2026-09-24"
+last_updated: "2026-10-08"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -19,7 +19,7 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 
 | Editor | Scope | Native Config Path | Adapter Behavior |
 |--------|-------|--------------------|------------------|
-| Claude Code | project + global | `.mcp.json`, `~/.claude.json` | Merges `mcpServers` while preserving other top-level keys |
+| Claude Code | project + global | `.mcp.json`, `~/.claude.json`; with claude-switch profiles, global writes `<profile>/.claude.json` for every registered account (plus an active `CLAUDE_CONFIG_DIR` under `HOME`) | Merges `mcpServers` while preserving other top-level keys |
 | Claude Chat / Cowork | global | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `%APPDATA%/Claude/claude_desktop_config.json` (Windows), `~/.config/Claude/claude_desktop_config.json` (Linux); `CLAUDE_USER_DATA_DIR` overrides the root | Emits the app's stdio-only `{command, args, env}` schema and bridges HTTP/SSE servers through `mcp-remote`; preserves `preferences`, `coworkUserFilesPath`, and user-owned servers |
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds Copilot-required `type` and `tools` fields |

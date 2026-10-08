@@ -75,7 +75,7 @@ authentication and local state. Neither reader submits a model turn.
 | Command | Description |
 |---------|-------------|
 | `ai-toolkit claude-switch init` | Create the account registry, preserving the existing default Claude login |
-| `ai-toolkit claude-switch add NAME [--share-config]` | Create a separate profile; optionally symlink selected configuration from `~/.claude/` |
+| `ai-toolkit claude-switch add NAME [--share-config]` | Create a separate profile; optionally symlink selected configuration from `~/.claude/` and copy the default account's user-scope `mcpServers` into the profile's `.claude.json` |
 | `ai-toolkit claude-switch bind PATH NAME` | Assign an existing project directory and its descendants to a profile |
 | `ai-toolkit claude-switch default NAME` | Set the profile used outside bound projects |
 | `ai-toolkit claude-switch status [--refresh] [--account NAME] [--verbose] [--color auto\|always\|never] [--json]` | Live usage bars for all profiles; `--verbose` adds paths, bindings and exact UTC timestamps; JSON retains all fields |

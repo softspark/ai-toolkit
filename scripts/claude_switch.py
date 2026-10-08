@@ -124,7 +124,33 @@ def add_account(registry: Registry, name: str, share: bool) -> None:
             source = Path.home() / ".claude" / item
             if source.exists():
                 (directory / item).symlink_to(source, target_is_directory=source.is_dir())
+        copy_mcp_servers(user_config(registry.account(registry.default)), directory / ".claude.json")
     registry.accounts[name] = str(directory)
+
+
+def user_config(directory: str | None) -> Path:
+    """The user-scope Claude Code config an account's sessions read."""
+    return (Path(directory) if directory else Path.home()) / ".claude.json"
+
+
+def copy_mcp_servers(source: Path, target: Path) -> None:
+    """Seed a new profile with the user-scope MCP servers of ``source``.
+
+    ``.claude.json`` also holds account state, so it is never linked; only
+    ``mcpServers`` is copied. Later changes are per profile, except
+    ``ai-toolkit mcp install --scope global``, which writes every profile.
+    """
+    try:
+        servers = json.loads(source.read_text(encoding="utf-8")).get("mcpServers")
+    except (OSError, ValueError, AttributeError):
+        return
+    if not isinstance(servers, dict) or not servers:
+        return
+    descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        json.dump({"mcpServers": servers}, stream, indent=2)
+        stream.write("\n")
+    print(f"Copied MCP servers from {source}: {', '.join(sorted(servers))}")
 
 
 def select_account(registry: Registry, override: str | None) -> dict[str, str | None]:
@@ -163,6 +189,9 @@ def launch(registry: Registry, override: str | None, args: list[str]) -> None:
     if binary is None:
         raise ValueError("Claude Code executable 'claude' was not found on PATH")
     env = dict(os.environ)
+    # The CLI's directory handoff for this script; Claude and the tools it runs
+    # must resolve paths from their own working directory.
+    env.pop("AI_TOOLKIT_USER_CWD", None)
     directory = registry.account(name)
     if directory is None:
         # Explicitly setting ~/.claude can select a different macOS Keychain item.

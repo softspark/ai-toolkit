@@ -32,6 +32,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **Legacy `.agent/skills` duplicate:** The skill pointer is written only to
   `.agents/skills/`; reinstall removes the copy an older release left in
   `.agent/skills/`.
+- **MCP servers lost under claude-switch profiles:** each profile reads
+  user-scope MCP servers from `<profile>/.claude.json`, but
+  `mcp install --editor claude --scope global` wrote only `~/.claude.json` and
+  new profiles started with none. Global Claude MCP install, removal and plugin
+  MCP now write every registered profile (and an active `CLAUDE_CONFIG_DIR`
+  under `HOME`); plugin collisions are checked in each one.
+  `claude-switch add --share-config` copies the default account's `mcpServers`,
+  and `doctor` reads usage evidence from the default profile.
+
 ### Changed
 
 - **MCP-dependent registered rules follow the client's MCP config:**

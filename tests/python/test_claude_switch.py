@@ -70,7 +70,7 @@ def installation(tmp_path: Path) -> Installation:
     for directory in (home, executable_dir, cwd):
         directory.mkdir()
     env = dict(os.environ)
-    for name in (*AUTH_ENV, "AI_TOOLKIT_HOME", "SOFTSPARK_HOME", "CLAUDE_SWITCH_CONFIG",
+    for name in (*AUTH_ENV, "AI_TOOLKIT_HOME", "SOFTSPARK_HOME", "CLAUDE_SWITCH_CONFIG", "AI_TOOLKIT_USER_CWD",
                  "CLAUDE_CONFIG_DIR", "CLAUDE_SECURESTORAGE_CONFIG_DIR", "CLAUDECODE", "GIT_DIR", "GIT_WORK_TREE"):
         env.pop(name, None)
     env.update(HOME=str(home), PATH=f"{executable_dir}{os.pathsep}{env.get('PATH', '')}")
@@ -107,6 +107,7 @@ def installation(tmp_path: Path) -> Installation:
         "if '--fake-exit' in sys.argv: sys.exit(23)\n"
         "print(json.dumps({'argv': sys.argv[1:], "
         "'config_dir': os.environ.get('CLAUDE_CONFIG_DIR'), "
+        "'user_cwd': os.environ.get('AI_TOOLKIT_USER_CWD'), "
         "'api_key': os.environ.get('ANTHROPIC_API_KEY')}))\n",
         encoding="utf-8",
     )
@@ -182,6 +183,31 @@ def test_share_config_links_only_explicit_reusable_assets(installation):
         assert (profile / name).resolve() == source / name
     for name in ("plugins", "projects", ".credentials.json", ".claude.json", "history.jsonl"):
         assert not (profile / name).exists(), name
+
+
+def test_share_config_copies_only_user_mcp_servers_from_default_account(installation):
+    (installation.home / ".claude.json").write_text(json.dumps({
+        "oauthAccount": {"emailAddress": "default@example.invalid"},
+        "mcpServers": {"jira": {"type": "stdio", "command": "jira-mcp", "args": []}},
+    }), encoding="utf-8")
+    installation.success("init")
+    result = installation.success("add", "infinity", "--share-config")
+    profile = installation.home / ".softspark/ai-toolkit/claude-profiles/infinity"
+    config = profile / ".claude.json"
+    assert not config.is_symlink()
+    assert json.loads(config.read_text()) == {
+        "mcpServers": {"jira": {"type": "stdio", "command": "jira-mcp", "args": []}},
+    }
+    assert config.stat().st_mode & 0o077 == 0
+    assert "Copied MCP servers" in result.stdout and "jira" in result.stdout
+
+    # A later profile inherits from the current default account's config.
+    installation.success("default", "infinity")
+    installation.success("add", "second", "--share-config")
+    second = installation.home / ".softspark/ai-toolkit/claude-profiles/second/.claude.json"
+    assert json.loads(second.read_text())["mcpServers"] == {
+        "jira": {"type": "stdio", "command": "jira-mcp", "args": []},
+    }
 
 
 def test_unshared_profile_does_not_inherit_settings_or_credentials(installation):
@@ -419,6 +445,13 @@ def test_named_run_replaces_inherited_profile_and_preserves_arguments(configured
     assert output["config_dir"] == str(
         configured.home / ".softspark/ai-toolkit/claude-profiles/infinity",
     )
+
+
+def test_run_does_not_leak_cli_directory_handoff_into_claude(configured):
+    # bin/ai-toolkit.js passes the shell directory to its own script only.
+    configured.env["AI_TOOLKIT_USER_CWD"] = "/where/the/alias/was/typed"
+    output = json.loads(configured.success("run", "--account", "infinity").stdout)
+    assert output["user_cwd"] is None
 
 
 def test_default_run_unsets_config_dir_for_legacy_authentication(configured):

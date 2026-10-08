@@ -4,7 +4,7 @@ category: howto
 service: ai-toolkit
 tags: [claude, accounts, profiles, cli, authentication]
 created: "2026-10-04"
-last_updated: "2026-10-05"
+last_updated: "2026-10-08"
 description: "Keep a default Claude Code login and route selected project directories to separate account profiles."
 ---
 
@@ -45,8 +45,26 @@ link credentials, history, global Claude JSON state, or plugin directories.
 Shared files are live: changes through any profile affect all profiles using
 those links. Review `settings.json` for authentication environment variables,
 credential helpers, and account-specific hooks before sharing it. Omit
-`--share-config` to start with an independent configuration. Plugins and any
-profile-specific MCP configuration need separate setup.
+`--share-config` to start with an independent configuration. Plugins need
+separate setup.
+
+MCP servers: a profile's sessions read user-scope servers from
+`<profile>/.claude.json`, not from `~/.claude.json`. `--share-config` seeds that
+file with a copy of the default account's `mcpServers` (only that key; the
+file also holds account state, so it is never linked). After that the lists
+are per profile. `ai-toolkit mcp install --editor claude --scope global` (and
+`remove`) writes every registered profile, so use it to keep them aligned. To
+add a server to one profile only, run the real binary with that profile's
+directory, because the `claude` alias re-selects the account itself:
+
+```bash
+CLAUDE_CONFIG_DIR=~/.softspark/ai-toolkit/claude-profiles/<name> \
+  ~/.local/bin/claude mcp add --scope user jira -- jira-mcp
+```
+
+Profiles created before this change start without servers; add them with
+either command above. `~/.mcp.json` (project scope under `~`) is the one MCP
+file every profile sees without copying.
 
 The toolkit installer continues to manage `~/.claude/`. Existing symlinks in
 profiles see changes to the shared configuration without another install.

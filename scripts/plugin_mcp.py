@@ -85,19 +85,21 @@ def prepare_plugin_mcp_install(
             hints.append(hint)
 
     updates = tuple(prepare_install_servers([editor], servers, scope="global"))
-    existing = _servers_from_updates(editor, updates, use_original=True)
     source = plugin_mcp_source(plugin_name)
     owned_servers = _owned_servers(previous_ownership, source)
-    for server_name in servers:
-        current = existing.get(server_name)
-        if current is None:
-            continue
-        if owned_servers.get(server_name) == current:
-            continue
-        raise RuntimeError(
-            f"Refusing user-owned MCP server collision for '{server_name}' "
-            f"in {editor}; remove or rename it explicitly"
-        )
+    # Claude's global scope spans every claude-switch profile config.
+    for update in updates:
+        existing = _servers_from_update(editor, update, use_original=True)
+        for server_name in servers:
+            current = existing.get(server_name)
+            if current is None:
+                continue
+            if owned_servers.get(server_name) == current:
+                continue
+            raise RuntimeError(
+                f"Refusing user-owned MCP server collision for '{server_name}' "
+                f"in {editor} ({update.path}); remove or rename it explicitly"
+            )
 
     rendered = _servers_from_updates(editor, updates, use_original=False)
     ownership = {
@@ -134,14 +136,15 @@ def prepare_plugin_mcp_removal(
         return None
 
     inspection = tuple(prepare_remove_servers([editor], [], scope="global"))
-    existing = _servers_from_updates(editor, inspection, use_original=True)
+    configs = [_servers_from_update(editor, u, use_original=True) for u in inspection]
     removable: list[str] = []
     preserved: list[str] = []
     for server_name, expected in owned_servers.items():
-        current = existing.get(server_name)
-        if current is None:
+        present = [config[server_name] for config in configs if server_name in config]
+        if not present:
             continue
-        if current == expected:
+        # Removal is by name in every config, so any edited copy keeps all.
+        if all(current == expected for current in present):
             removable.append(server_name)
         else:
             preserved.append(server_name)
@@ -263,7 +266,16 @@ def _servers_from_updates(
 ) -> dict:
     if not updates:
         return {}
-    payload = updates[0].original if use_original else updates[0].content
+    return _servers_from_update(editor, updates[0], use_original=use_original)
+
+
+def _servers_from_update(
+    editor: str,
+    update: ConfigUpdate,
+    *,
+    use_original: bool,
+) -> dict:
+    payload = update.original if use_original else update.content
     if payload is None:
         return {}
     if editor == "codex":

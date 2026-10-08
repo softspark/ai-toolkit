@@ -99,7 +99,16 @@ _write_claude_json() {
 @test "doctor context budget: reports sizes but skips the verdict without ~/.claude.json" {
     run python3 "$TOOLKIT_DIR/scripts/doctor.py"
     echo "$output" | grep -q 'skill listing: 3 model-invocable skills'
-    echo "$output" | grep -q 'SKIP: usage evidence: ~/.claude.json not found'
+    echo "$output" | grep -q "SKIP: usage evidence: $HOME/.claude.json not found"
+}
+
+@test "doctor context budget: reads usage from the default claude-switch profile" {
+    profile="$HOME/profiles/primary"
+    mkdir -p "$profile" "$HOME/.softspark/ai-toolkit"
+    printf '{"version":1,"default":"default","accounts":{"default":"%s"},"projects":{}}\n' \
+        "$profile" > "$HOME/.softspark/ai-toolkit/claude-switch.json"
+    run python3 "$TOOLKIT_DIR/scripts/doctor.py"
+    echo "$output" | grep -q "SKIP: usage evidence: $profile/.claude.json not found"
 }
 
 @test "doctor context budget: warns when the listing exceeds the configured budget fraction" {

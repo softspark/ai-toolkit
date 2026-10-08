@@ -1180,7 +1180,10 @@ def check_context_budget(dr: DiagResult) -> None:
     )
 
     # Zero-use skills. Evidence: Claude Code lifetime counters + toolkit stats.
-    claude_json = Path.home() / ".claude.json"
+    # The default claude-switch account's config, ~/.claude.json without one.
+    from mcp_editors import claude_user_configs
+
+    claude_json = claude_user_configs()[0]
     counts, startups = _usage_counts(claude_json, STATS_FILE)
     if not claude_json.is_file():
         dr.skip(f"usage evidence: {claude_json} not found, cannot judge unused skills")
@@ -1353,10 +1356,10 @@ def main() -> None:
     check_hook_configuration(dr)
     check_generated_artifacts(dr, fix_mode)
     check_antigravity_workflows(dr)
+    check_antigravity_config(dr)
     check_planned_assets(dr)
     check_benchmark_freshness(dr)
     check_stale_rules(dr, fix_mode)
-    check_antigravity_config(dr)
     check_url_hooks(dr, fix_mode)
     check_language_drift(dr)
     check_plugin_double_load(dr, fix_mode)
