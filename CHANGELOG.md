@@ -7,7 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v5.3.3 - This repository runs on its own AGENTS.md (2026-10-08)
+
+### Ecosystem
+
+- Drift review: documentation edits for Claude Code, Claude app, GitHub
+  Copilot and Gemini CLI change nothing the generators emit (class A);
+  snapshot refreshed.
 
 ### Changed
 
@@ -24,6 +30,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **Stale docs:** `app/ARCHITECTURE.md` still said Codex and OpenCode get
   toolkit rules in the project `AGENTS.md`; they get them in
   `$CODEX_HOME/AGENTS.md` and `~/.config/opencode/AGENTS.md` since v5.3.0.
+- **Python floor note:** `AGENTS.md` pointed at a `ci.yml` workflow that no
+  longer exists; the floor is the `python-floor` gate (`PY_FLOOR_IMAGE` in
+  `scripts/release.sh`).
 
 ---
 

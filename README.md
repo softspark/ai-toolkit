@@ -8,9 +8,13 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-2005%20passing-success)](tests/)
 
-## What's New in v5.3.2
+## What's New in v5.3.3
 
-- **Global first, then the project.** `install --local` installs everything a
+- **The npm package no longer ships an `AGENTS.md`.** It was the toolkit's
+  generated core, which nothing in the package read; `ai-toolkit agents-md`
+  still prints it. This repository now keeps its own instructions in a
+  committed `AGENTS.md`, like every toolkit-installed project.
+- **Global first, then the project (v5.3.2).** `install --local` installs everything a
   client can load from `$HOME` before the project files, using the recorded
   global profile; `--no-global` opts out, and `update` keeps the profile.
 - **Generated AGENTS.md stays out of CLAUDE.md (v5.3.1).** A toolkit-generated
