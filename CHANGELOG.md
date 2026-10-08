@@ -7,7 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v5.3.0 - Project-owned AGENTS.md, working Antigravity, MCP-aware rules (2026-10-08)
+
+### Ecosystem
+
+- Drift review for this release: Claude Code 2.1.290-2.1.294, Codex CLI
+  0.161.0 and documentation edits for nine other tools change nothing the
+  generators emit (classes A and C); the ecosystem snapshot is refreshed.
 
 ### Fixed
 

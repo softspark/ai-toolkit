@@ -251,6 +251,7 @@
   ],
   "cli_commands": [
     "add-rule",
+    "adopt-agents-md",
     "agents-md",
     "aider-conf",
     "antigravity-plugin",

@@ -8,16 +8,21 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1998%20passing-success)](tests/)
 
-## What's New in v5.2.1
+## What's New in v5.3.0
 
-- **Polish and English prompt intent.** Recognize whole words and supported
-  inflections without treating `ladybug` as debugging or `designer` as architecture.
-- **Quoted text stays data.** Ignore marked code, quotations, paste wrappers and
-  notifications while preserving the existing reminder and search-flag contracts.
-- **Complete helper delivery.** Global, plugin-core, Codex and Claude-app installs
-  carry the adjacent classifier, with no model or network calls.
-- **Bounded release verification.** Run host/Linux tests serially and cap test
-  containers without skipping release gates.
+- **One AGENTS.md for every agent.** Project instructions live in a committed
+  `AGENTS.md` that `CLAUDE.md` imports; `ai-toolkit adopt-agents-md` moves an
+  existing `CLAUDE.md` there, and nothing truncates it (Codex
+  `project_doc_max_bytes` raised, 24,000-byte Antigravity warnings).
+- **Working Antigravity hooks and rules.** Hooks run from the `hooks.json`
+  directory and gate only `run_command`; workspace rules carry `trigger`
+  frontmatter and fit Antigravity's size limits.
+- **MCP rules follow the client's MCP config.** Registered rules that need an
+  MCP server reach a file only when its readers have that server;
+  `rag-mcp-legal-rules` is opt-in.
+- **MCP servers in every claude-switch profile.** Global Claude MCP installs
+  write each profile's `.claude.json`, and new shared profiles copy the
+  default account's servers.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
