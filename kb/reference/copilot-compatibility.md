@@ -3,9 +3,9 @@ title: "AI Toolkit - GitHub Copilot Compatibility"
 category: reference
 service: ai-toolkit
 tags: [copilot, compatibility, install, skills, prompts, instructions, agents, hooks]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-07-15"
-last_updated: "2026-09-23"
+last_updated: "2026-10-08"
 description: "GitHub Copilot instructions, agents, skills, prompts and hooks, with CLI, cloud agent and VS Code compatibility boundaries."
 ---
 
@@ -33,7 +33,7 @@ config-path and capability tracking by `kb/reference/supported-tools-registry.md
 | Native agents | `.github/agents/ai-toolkit-*.agent.md` | Custom agents in the agent picker |
 | Portable skills | `.github/skills/ai-toolkit-*/SKILL.md` (+ `reference/`, `scripts/`) | Agent Skills, injected on demand |
 | Lifecycle hooks | `.github/hooks/ai-toolkit.json` + runtime | Version-1 Copilot hooks (profile ≥ `standard`) |
-| Shared rules | root `AGENTS.md` | Read by CLI, cloud agent, VS Code Chat and GitHub.com code review |
+| Project instructions | root `AGENTS.md` (project-owned; the toolkit never writes it) | Read by CLI, cloud agent, VS Code Chat and GitHub.com code review; toolkit rules come from `.github/copilot-instructions.md` |
 
 ## Surface Loading Semantics
 
@@ -108,7 +108,7 @@ ignored local output is not automatically available to a cloud job.
 
 Authoritative behavior lives in `kb/reference/global-install-model.md`. In brief:
 
-- **All profiles (including `minimal`)** emit root `AGENTS.md`,
+- **All profiles (including `minimal`)** emit
   `.github/copilot-instructions.md`, native `.github/agents`, and portable
   self-contained `.github/skills`.
 - **`standard`, `strict`, `full`** additionally emit scoped `.github/instructions`,

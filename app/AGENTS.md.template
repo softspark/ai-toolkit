@@ -1,3 +1,4 @@
+<!-- Project instructions for every coding agent: Claude Code (CLAUDE.md imports this file), Codex, Copilot, OpenCode, Gemini and Antigravity. Keep it under 24,000 bytes, or Antigravity truncates it; move detail into kb/ or skills. -->
 # [Project Name]
 
 ## Overview

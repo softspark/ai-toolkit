@@ -21,7 +21,8 @@ Usage: ai-toolkit <command> [options]
 | `install` | First-time global install into `~/.claude/` + Cursor, Windsurf, Gemini |
 | `install --language-skills detected\|all` | `detected` (default): turn off `<lang>-rules`/`<lang>-patterns` skills for languages no registered project uses, via `skillOverrides` in `~/.claude/settings.json` (entries are tracked in `state.json` and restored when a project brings the language back; a user's own override is never touched); `all`: keep every language skill on. The choice persists across `install`/`update` |
 | `install --opt-in-rules <list>` | Enable opt-in registered rules (`rag-mcp-legal-rules` is opt-in by default; `add-rule --opt-in` marks others). Stored per project with `--local`, otherwise in `state.json`; `none` clears the list. Without the flag the stored list applies |
-| `install --local` | Claude Code configs only; add `--editors all` or `--editors cursor,aider` for other tools |
+| `install --local` | Claude Code configs only; add `--editors all` or `--editors cursor,aider` for other tools. Keeps an `@AGENTS.md` import in `CLAUDE.md`, creates `AGENTS.md` from the template only in a project without instructions, and removes toolkit sections an older release put in `AGENTS.md` |
+| `adopt-agents-md [dir] [--dry-run]` | Move the project's own `CLAUDE.md` instructions into `AGENTS.md` (read by every agent), leave `CLAUDE.md` importing it next to the toolkit sections, and drop an `AGENTS.md` entry from `.gitignore`; every file is backed up first |
 | `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
 | `update --local` | Re-apply + auto-detect editors from existing project files |
 | `reset --local` | Wipe all project-local configs and recreate from scratch (clean slate) |
@@ -203,8 +204,8 @@ to another destination. Codex IDE does not support plugins.
 | Command | Description |
 |---------|-------------|
 | `generate-all` | Generate all platform configs at once |
-| `agents-md` | Regenerate `AGENTS.md` from agent definitions |
-| `codex-md` | Generate `AGENTS.md` (coding rules inlined) with marker injection for Codex CLI |
+| `agents-md` | Regenerate `AGENTS.md` from agent definitions (refuses to overwrite a project's own `AGENTS.md`) |
+| `codex-md` | Generate `AGENTS.md` (coding rules inlined) for Codex CLI (refuses to overwrite a project's own `AGENTS.md`) |
 | `codex-hooks` | Generate `.codex/hooks.json` for Codex CLI |
 | `cursor-rules` | Generate `.cursorrules` (legacy single file) |
 | `cursor-mdc` | Generate `.cursor/rules/*.mdc` (recommended) |

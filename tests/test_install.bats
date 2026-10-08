@@ -491,6 +491,25 @@ JSON
     [ ! -e "$custom_home/agents" ]
 }
 
+@test "install --editors codex (global) raises project_doc_max_bytes so AGENTS.md is read in full" {
+    mkdir -p "$TMP_HOME/.codex"
+    printf '%s\n' 'model = "gpt-5.5"' '' '[mcp_servers.kb]' 'command = "kb"' > "$TMP_HOME/.codex/config.toml"
+    run python3 "$TOOLKIT_DIR/scripts/install.py" "$TMP_HOME" --editors codex
+    [ "$status" -eq 0 ]
+    [ "$(head -1 "$TMP_HOME/.codex/config.toml" | cut -d' ' -f1-3)" = "project_doc_max_bytes = 65536" ]
+    grep -q '^\[mcp_servers.kb\]$' "$TMP_HOME/.codex/config.toml"
+    python3 -c 'import sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); assert d["project_doc_max_bytes"]==65536 and d["model"]=="gpt-5.5"' "$TMP_HOME/.codex/config.toml"
+
+    printf '%s\n' 'project_doc_max_bytes = 1024' > "$TMP_HOME/.codex/config.toml"
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TMP_HOME" --editors codex >/dev/null 2>&1
+    [ "$(grep -c '^project_doc_max_bytes' "$TMP_HOME/.codex/config.toml")" -eq 1 ]
+    grep -q '^project_doc_max_bytes = 65536' "$TMP_HOME/.codex/config.toml"
+
+    printf '%s\n' 'project_doc_max_bytes = 131072' > "$TMP_HOME/.codex/config.toml"
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TMP_HOME" --editors codex >/dev/null 2>&1
+    [ "$(cat "$TMP_HOME/.codex/config.toml")" = "project_doc_max_bytes = 131072" ]
+}
+
 @test "install --editors codex (global) migrates a stale ~/AGENTS.md toolkit section" {
     cat > "$TMP_HOME/AGENTS.md" <<'MD'
 User-authored home instructions.
@@ -638,7 +657,7 @@ EOF
     ! echo "$output" | grep -q 'Would generate: ~/.cline/skills/'
 }
 
-@test "install --local --editors copilot updates the shared AGENTS.md section" {
+@test "install --local --editors copilot leaves the project AGENTS.md to the project" {
     cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
 User-authored preface.
 
@@ -650,12 +669,9 @@ MD
     (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" --local --editors copilot) >/dev/null 2>&1
 
     [ -f "$TEST_PROJECT/AGENTS.md" ]
-    grep -q '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md"
-    grep -q '^# AI Toolkit Instructions' "$TEST_PROJECT/AGENTS.md"
-    if grep -qE '^## Available (Agents|Skills)' "$TEST_PROJECT/AGENTS.md"; then
-        echo "discovery catalog duplicated in AGENTS.md"
-        return 1
-    fi
+    [ "$(cat "$TEST_PROJECT/AGENTS.md")" = "User-authored preface." ]
+    ls "$TMP_HOME"/.softspark/ai-toolkit/backups/*AGENTS.md.*.bak >/dev/null
+    head -3 "$TEST_PROJECT/CLAUDE.md" | grep -qx '@AGENTS.md'
     grep -q 'GitHub Copilot Instructions' "$TEST_PROJECT/.github/copilot-instructions.md"
     [ -f "$TEST_PROJECT/.github/agents/ai-toolkit-debugger.agent.md" ]
     [ -f "$TEST_PROJECT/.github/skills/ai-toolkit-debug/SKILL.md" ]
@@ -664,11 +680,6 @@ MD
     [ -x "$TEST_PROJECT/.github/hooks/ai-toolkit/copilot_hook.py" ]
     grep -q '"postToolUseFailure"' \
         "$TEST_PROJECT/.github/hooks/ai-toolkit.json"
-    if grep -q 'Existing Codex section.' "$TEST_PROJECT/AGENTS.md"; then
-        echo "stale managed content remains"
-        return 1
-    fi
-    grep -q 'User-authored preface.' "$TEST_PROJECT/AGENTS.md"
 }
 
 @test "install --local --editors copilot --profile minimal emits agents and skills only" {
@@ -849,21 +860,88 @@ PY
     [ "$status" -eq 0 ]
 }
 
-@test "install --local --editors copilot,codex emits one shared AGENTS.md section" {
+@test "fresh install --local creates the AGENTS.md template and CLAUDE.md imports it" {
     (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
         --local --editors copilot,codex) >/dev/null 2>&1
 
-    cp "$TEST_PROJECT/AGENTS.md" "$TEST_PROJECT/AGENTS.md.first"
+    cmp "$TOOLKIT_DIR/app/AGENTS.md.template" "$TEST_PROJECT/AGENTS.md"
+    head -4 "$TEST_PROJECT/CLAUDE.md" | grep -qx '@AGENTS.md'
+    ! grep -q '\[Project Name\]' "$TEST_PROJECT/CLAUDE.md"
+    cp "$TEST_PROJECT/CLAUDE.md" "$TEST_PROJECT/CLAUDE.md.first"
     (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
         --local --editors copilot,codex) >/dev/null 2>&1
+    cmp "$TEST_PROJECT/CLAUDE.md.first" "$TEST_PROJECT/CLAUDE.md"
+    cmp "$TOOLKIT_DIR/app/AGENTS.md.template" "$TEST_PROJECT/AGENTS.md"
+}
 
-    cmp "$TEST_PROJECT/AGENTS.md.first" "$TEST_PROJECT/AGENTS.md"
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    if grep -q '<!-- TOOLKIT:copilot-agents ' "$TEST_PROJECT/AGENTS.md"; then
-        echo "legacy Copilot marker remains"
-        return 1
-    fi
+@test "install --local moves an untouched older CLAUDE.md template into AGENTS.md" {
+    tail -n +2 "$TOOLKIT_DIR/app/AGENTS.md.template" > "$TEST_PROJECT/CLAUDE.md"
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+    cmp "$TOOLKIT_DIR/app/AGENTS.md.template" "$TEST_PROJECT/AGENTS.md"
+    head -4 "$TEST_PROJECT/CLAUDE.md" | grep -qx '@AGENTS.md'
+    ! grep -q '\[Project Name\]' "$TEST_PROJECT/CLAUDE.md"
+}
+
+@test "install --local warns when AGENTS.md exceeds Antigravity's 24,000-byte limit" {
+    python3 -c 'print("# Big\n" + "x" * 24100)' > "$TEST_PROJECT/AGENTS.md"
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"WARNING: AGENTS.md is 24107 bytes; Antigravity truncates"* ]]
+}
+
+@test "install --local keeps CLAUDE.md instructions until adopt-agents-md moves them" {
+    printf '%s\n' '# Real project' '' 'Run make test before pushing.' > "$TEST_PROJECT/CLAUDE.md"
+    printf '%s\n' '/AGENTS.md' > "$TEST_PROJECT/.gitignore"
+
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ai-toolkit adopt-agents-md"* ]]
+    [ ! -e "$TEST_PROJECT/AGENTS.md" ]
+    ! grep -q '@AGENTS.md' "$TEST_PROJECT/CLAUDE.md"
+
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' env -u AI_TOOLKIT_USER_CWD node '$TOOLKIT_DIR/bin/ai-toolkit.js' adopt-agents-md"
+    [ "$status" -eq 0 ]
+    [ "$(cat "$TEST_PROJECT/AGENTS.md")" = "$(printf '%s\n' '# Real project' '' 'Run make test before pushing.')" ]
+    head -4 "$TEST_PROJECT/CLAUDE.md" | grep -qx '@AGENTS.md'
+    ! grep -q 'Run make test' "$TEST_PROJECT/CLAUDE.md"
+    grep -q '^@.claude/constitution.md$' "$TEST_PROJECT/CLAUDE.md"
+    ! grep -q 'AGENTS.md' "$TEST_PROJECT/.gitignore"
+
+    cp "$TEST_PROJECT/CLAUDE.md" "$TEST_PROJECT/CLAUDE.md.adopted"
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' env -u AI_TOOLKIT_USER_CWD node '$TOOLKIT_DIR/bin/ai-toolkit.js' adopt-agents-md"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"No change"* ]]
+    cmp "$TEST_PROJECT/CLAUDE.md.adopted" "$TEST_PROJECT/CLAUDE.md"
+}
+
+@test "install --local removes a toolkit-only AGENTS.md left by an older release" {
+    cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
+<!-- TOOLKIT:ai-toolkit START -->
+Old generated block.
+<!-- TOOLKIT:ai-toolkit END -->
+
+<!-- TOOLKIT:jira-mcp START -->
+Old registered rule.
+<!-- TOOLKIT:jira-mcp END -->
+MD
+    printf '%s\n' '# Real project' > "$TEST_PROJECT/CLAUDE.md"
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors antigravity) >/dev/null 2>&1
+
+    [ ! -e "$TEST_PROJECT/AGENTS.md" ]
+    grep -q 'Old registered rule.' "$TMP_HOME"/.softspark/ai-toolkit/backups/*AGENTS.md.*.bak
+    [ "$(head -1 "$TEST_PROJECT/CLAUDE.md")" = "# Real project" ]
+    ! grep -q '@AGENTS.md' "$TEST_PROJECT/CLAUDE.md"
+}
+
+@test "codex-md refuses to overwrite a project AGENTS.md" {
+    printf '%s\n' 'Project rules.' > "$TEST_PROJECT/AGENTS.md"
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' node '$TOOLKIT_DIR/bin/ai-toolkit.js' codex-md"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Refusing to overwrite AGENTS.md"* ]]
+    [ "$(cat "$TEST_PROJECT/AGENTS.md")" = "Project rules." ]
 }
 
 @test "sequential Codex and Copilot installs converge on the same AGENTS.md" {
@@ -884,18 +962,12 @@ PY
         --local --editors copilot) >/dev/null 2>&1
 
     cmp "$copilot_first/AGENTS.md" "$codex_first/AGENTS.md"
-    grep -q '^User-authored instructions\.$' "$copilot_first/AGENTS.md"
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$copilot_first/AGENTS.md")" -eq 1 ]
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$copilot_first/AGENTS.md")" -eq 1 ]
-    if grep -q '<!-- TOOLKIT:copilot-agents ' "$copilot_first/AGENTS.md"; then
-        echo "legacy Copilot marker remains"
-        return 1
-    fi
+    [ "$(cat "$copilot_first/AGENTS.md")" = "User-authored instructions." ]
 
     rm -rf "$copilot_first" "$codex_first"
 }
 
-@test "sequential Codex and Copilot installs preserve registered rules in both orders" {
+@test "registered rules never enter the project AGENTS.md in either install order" {
     local copilot_first codex_first
     copilot_first="$(mktemp -d)"
     codex_first="$(mktemp -d)"
@@ -919,15 +991,14 @@ MD
         --local --editors copilot) >/dev/null 2>&1
 
     cmp "$copilot_first/AGENTS.md" "$codex_first/AGENTS.md"
-    grep -q '^User-authored instructions\.$' "$codex_first/AGENTS.md"
-    grep -q '^Keep the registered rule effective\.$' "$codex_first/AGENTS.md"
-    [ "$(grep -c '<!-- TOOLKIT:team-standard START -->' "$codex_first/AGENTS.md")" -eq 1 ]
-    [ "$(grep -c '<!-- TOOLKIT:team-standard END -->' "$codex_first/AGENTS.md")" -eq 1 ]
+    [ "$(cat "$codex_first/AGENTS.md")" = "User-authored instructions." ]
+    # Copilot still gets the registered rule through its own surface.
+    grep -q '^Keep the registered rule effective\.$' "$codex_first/.github/copilot-instructions.md"
 
     rm -rf "$copilot_first" "$codex_first"
 }
 
-@test "Codex install repairs nested legacy toolkit markers in AGENTS.md" {
+@test "Codex install removes nested legacy toolkit markers from AGENTS.md" {
     cat > "$TEST_PROJECT/AGENTS.md" <<'MD'
 User instructions before the managed block.
 
@@ -946,10 +1017,8 @@ MD
 
     grep -q '^User instructions before the managed block\.$' "$TEST_PROJECT/AGENTS.md"
     grep -q '^User instructions after the managed block\.$' "$TEST_PROJECT/AGENTS.md"
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    if grep -q '<!-- TOOLKIT:copilot-agents ' "$TEST_PROJECT/AGENTS.md"; then
-        echo "legacy Copilot marker remains after nested repair"
+    if grep -q '<!-- TOOLKIT:' "$TEST_PROJECT/AGENTS.md"; then
+        echo "legacy toolkit marker remains after nested repair"
         return 1
     fi
 }
@@ -983,7 +1052,7 @@ MD
     fi
 }
 
-@test "registered rule with Unicode marker name survives cross-editor reruns" {
+@test "registered rule with Unicode marker name is removed from AGENTS.md and kept for Copilot" {
     python3 - "$TOOLKIT_DIR/scripts" <<'PY'
 import sys
 
@@ -1001,19 +1070,17 @@ PY
 
 Treść reguły Unicode pozostaje aktywna.
 MD
-    printf '%s\n' 'User-authored instructions.' > "$TEST_PROJECT/AGENTS.md"
+    printf '%s\n' 'User-authored instructions.' '' '<!-- TOOLKIT:zażółć-gęślą START -->' \
+        'Stara kopia.' '<!-- TOOLKIT:zażółć-gęślą END -->' > "$TEST_PROJECT/AGENTS.md"
 
     (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
         --local --editors codex) >/dev/null 2>&1
     (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
         --local --editors copilot) >/dev/null 2>&1
-    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
-        --local --editors codex) >/dev/null 2>&1
 
-    grep -q '^User-authored instructions\.$' "$TEST_PROJECT/AGENTS.md"
-    [ "$(grep -c '<!-- TOOLKIT:zażółć-gęślą START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    [ "$(grep -c '<!-- TOOLKIT:zażółć-gęślą END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    [ "$(grep -c '^Treść reguły Unicode pozostaje aktywna\.$' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
+    [ "$(cat "$TEST_PROJECT/AGENTS.md")" = "User-authored instructions." ]
+    [ "$(grep -c '<!-- TOOLKIT:zażółć-gęślą START -->' "$TEST_PROJECT/.github/copilot-instructions.md")" -eq 1 ]
+    [ "$(grep -c '^Treść reguły Unicode pozostaje aktywna\.$' "$TEST_PROJECT/.github/copilot-instructions.md")" -eq 1 ]
 }
 
 @test "Codex install removes an orphan START marker from AGENTS.md" {
@@ -1028,12 +1095,10 @@ MD
         --local --editors codex) >/dev/null 2>&1
 
     grep -q '^User instructions before the orphan\.$' "$TEST_PROJECT/AGENTS.md"
-    if grep -q '<!-- TOOLKIT:legacy\.rule START -->' "$TEST_PROJECT/AGENTS.md"; then
+    if grep -q '<!-- TOOLKIT:' "$TEST_PROJECT/AGENTS.md"; then
         echo "orphan START marker remains"
         return 1
     fi
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
 }
 
 @test "Codex install removes an orphan END marker from AGENTS.md" {
@@ -1047,12 +1112,10 @@ MD
         --local --editors codex) >/dev/null 2>&1
 
     grep -q '^User instructions after the orphan\.$' "$TEST_PROJECT/AGENTS.md"
-    if grep -q '<!-- TOOLKIT:legacy\.rule END -->' "$TEST_PROJECT/AGENTS.md"; then
+    if grep -q '<!-- TOOLKIT:' "$TEST_PROJECT/AGENTS.md"; then
         echo "orphan END marker remains"
         return 1
     fi
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit START -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
-    [ "$(grep -c '<!-- TOOLKIT:ai-toolkit END -->' "$TEST_PROJECT/AGENTS.md")" -eq 1 ]
 }
 
 @test "install --local syncs .mcp.json into Claude and selected project editors" {

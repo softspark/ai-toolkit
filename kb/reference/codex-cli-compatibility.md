@@ -3,9 +3,9 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-04-12"
-last_updated: "2026-10-04"
+last_updated: "2026-10-08"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -36,9 +36,13 @@ app-server rate-limit read on every invocation without a
 model turn. See [Codex account profiles](../howto/codex-account-profiles.md)
 for configuration sharing, isolation and the CLI-only scope.
 
-`ai-toolkit install --local --editors codex` generates:
+`ai-toolkit install --local --editors codex` generates the files below. The
+project `AGENTS.md` is project-owned and holds no toolkit rules: Codex has no
+include syntax, so universal coding rules reach it through
+`$CODEX_HOME/AGENTS.md`, which Codex reads before the project chain, and the
+global install raises `project_doc_max_bytes` to 65,536 so neither file is cut
+(see [Project Instructions](global-install-model.md#project-instructions-agentsmd)).
 
-- `AGENTS.md` (project root; universal coding rules inlined — Codex reads instructions only from AGENTS.md, not `.agents/rules/`)
 - `.agents/skills/*`
 - `.codex/hooks.json`
 - `.codex/hooks/*` (self-contained executable hook assets)

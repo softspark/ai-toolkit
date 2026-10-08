@@ -3,9 +3,9 @@ title: "AI Toolkit - opencode Compatibility"
 category: reference
 service: ai-toolkit
 tags: [opencode, compatibility, install, skills, hooks, mcp, plugins]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-04-16"
-last_updated: "2026-09-24"
+last_updated: "2026-10-08"
 description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, Agent Skills, subagents, slash commands, JS plugin hooks, and MCP config."
 ---
 
@@ -13,15 +13,17 @@ description: "Reference for how ai-toolkit integrates with opencode — AGENTS.m
 
 ## Summary
 
-opencode (https://opencode.ai) is the 11th supported editor. `ai-toolkit install --editors opencode` (or `--editors all`) lays down shared `AGENTS.md`, per-agent `.opencode/agents/` files, per-command `.opencode/commands/` files, a JS plugin bridging toolkit Bash hooks to opencode lifecycle events, and MCP server merge into `opencode.json`. The `full` profile also installs complete native Agent Skills.
+opencode (https://opencode.ai) is the 11th supported editor. `ai-toolkit install --editors opencode` (or `--editors all`) lays down toolkit rules in `~/.config/opencode/AGENTS.md`, per-agent `.opencode/agents/` files, per-command `.opencode/commands/` files, a JS plugin bridging toolkit Bash hooks to opencode lifecycle events, and MCP server merge into `opencode.json`. The `full` profile also installs complete native Agent Skills.
 
 opencode also reads `CLAUDE.md` as a fallback, so a user without the native integration still gets baseline rules. The native path adds subagents, slash commands, hooks, and MCP.
 
 ## Local Install Outputs
 
-`ai-toolkit install --local --editors opencode` generates:
+`ai-toolkit install --local --editors opencode` generates the files below.
+The project `AGENTS.md` is project-owned and holds no toolkit sections; toolkit
+rules come from the global `~/.config/opencode/AGENTS.md`, and the install
+prints a note when that file has none.
 
-- `AGENTS.md` (shared with Codex CLI via distinct marker sections)
 - `.opencode/agents/ai-toolkit-*.md` (one per ai-toolkit agent, `mode: subagent`)
 - `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill; the prompt lives in the markdown body)
 - `.opencode/skills/<name>/SKILL.md` plus its resources (`profile=full`)
@@ -56,7 +58,7 @@ Files land directly under `~/.config/opencode/` (no `.opencode/` nesting) becaus
 
 ## Shared AGENTS.md
 
-opencode and Codex CLI both read `AGENTS.md`. The toolkit emits two distinct marker-bounded sections in a single file, so installing both editors does not clobber either. The Codex section is produced by `generate_codex.py`; the opencode section is produced by `generate_opencode.py`. OpenCode commands use a platform-specific portable renderer for Claude-only orchestration primitives, so generated content uses OpenCode-native wording.
+opencode, Codex CLI, Copilot, Antigravity and Claude Code (through the `@AGENTS.md` import in `CLAUDE.md`) all read the project's `AGENTS.md`, so it holds the project's own instructions and nothing generated (see [Project Instructions](global-install-model.md#project-instructions-agentsmd)). Toolkit sections an older release put there are removed on install. `generate_opencode.py` renders the opencode section of the global `~/.config/opencode/AGENTS.md`. OpenCode commands use a platform-specific portable renderer for Claude-only orchestration primitives, so generated content uses OpenCode-native wording.
 
 ## Subagent Translation Model
 
@@ -157,7 +159,7 @@ artifacts:
 - Generated `agents/ai-toolkit-*.md` and `commands/ai-toolkit-*.md`
 - Manifest-owned files under generated `skills/<name>/` directories
 - `plugins/ai-toolkit-hooks.js`, when it still carries the generated header
-- Managed marker sections in `AGENTS.md` (the file is deleted only when nothing else is left)
+- Managed marker sections an older release left in `AGENTS.md` (the file is deleted only when nothing else is left)
 - `opencode.json`, only when it holds nothing but the toolkit's `$schema` (and an empty `mcp`)
 
 `mcp` entries are copies of the user's own `.mcp.json` and stay.

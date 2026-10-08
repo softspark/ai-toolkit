@@ -460,7 +460,8 @@ def print_summary(local: bool = False) -> None:
     if local:
         print()
         print("Next steps:")
-        print("  1. Edit CLAUDE.md -- add your project-specific rules")
+        print("  1. Edit AGENTS.md -- project instructions every agent reads "
+              "(move an existing CLAUDE.md there: ai-toolkit adopt-agents-md)")
         print("  2. Add more editors: ai-toolkit install --local --editors cursor,aider")
         print("  3. Update project configs: ai-toolkit update --local")
     else:

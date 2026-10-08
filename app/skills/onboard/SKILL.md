@@ -49,11 +49,15 @@ This creates symlinks in `.claude/`:
 - `hooks.json` -> quality gates
 - `constitution.md` -> safety rules
 
-### Step 3: Configure CLAUDE.md
-Create a project-specific `CLAUDE.md` from the template:
+### Step 3: Configure AGENTS.md
+Project instructions live in `AGENTS.md`, read by every coding agent;
+`CLAUDE.md` imports it. `ai-toolkit install --local` creates both, or moves an
+existing `CLAUDE.md` with `ai-toolkit adopt-agents-md`. By hand:
 ```bash
-cp /path/to/ai-toolkit/CLAUDE.md.template ./CLAUDE.md
+cp /path/to/ai-toolkit/app/AGENTS.md.template ./AGENTS.md
+printf '@AGENTS.md\n' > CLAUDE.md
 ```
+Keep `AGENTS.md` under 24,000 bytes: Antigravity truncates larger files.
 
 Customize with:
 - Project description and tech stack

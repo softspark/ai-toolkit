@@ -602,6 +602,40 @@ def check_antigravity_config(dr: DiagResult, project: Path | None = None,
             dr.warn(f"Antigravity rule: {problem}")
 
 
+CODEX_PROJECT_DOC_MAX_BYTES = 32 * 1024
+
+
+def check_codex_instructions(dr: DiagResult, project: Path | None = None,
+                             codex_home: Path | None = None) -> None:
+    """Warn when Codex would stop reading instructions before the project's.
+
+    Codex concatenates ``$CODEX_HOME/AGENTS.md`` and the project's AGENTS.md
+    files and stops once they reach ``project_doc_max_bytes`` (32 KiB unless
+    config.toml sets it).
+    """
+    import tomllib
+
+    project = project or _user_path(".")
+    codex_home = codex_home or Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+    global_md, project_md = codex_home / "AGENTS.md", project / "AGENTS.md"
+    if not (global_md.is_file() and project_md.is_file()):
+        return
+    limit = CODEX_PROJECT_DOC_MAX_BYTES
+    try:
+        configured = tomllib.loads((codex_home / "config.toml").read_text(encoding="utf-8"))
+        if isinstance(configured.get("project_doc_max_bytes"), int):
+            limit = configured["project_doc_max_bytes"]
+    except (OSError, ValueError):
+        pass
+    total = global_md.stat().st_size + project_md.stat().st_size
+    if total > limit:
+        dr.warn(
+            f"Codex instructions: {global_md} + {project_md} = {total} bytes, above "
+            f"project_doc_max_bytes ({limit}); Codex drops the rest. Trim AGENTS.md "
+            "or raise project_doc_max_bytes in config.toml"
+        )
+
+
 def check_planned_assets(dr: DiagResult) -> None:
     """Check that planned assets exist and are non-empty."""
     print("## Planned Assets")
@@ -1357,6 +1391,7 @@ def main() -> None:
     check_generated_artifacts(dr, fix_mode)
     check_antigravity_workflows(dr)
     check_antigravity_config(dr)
+    check_codex_instructions(dr)
     check_planned_assets(dr)
     check_benchmark_freshness(dr)
     check_stale_rules(dr, fix_mode)

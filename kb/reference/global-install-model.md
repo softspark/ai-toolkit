@@ -177,14 +177,14 @@ install`, not by the rule installer.
 ## What remains project-local
 
 These files still stay local to a repository as part of the core install model:
-- `CLAUDE.md`
+- `CLAUDE.md`, as an `@AGENTS.md` import section next to the project's own Claude-only content
+- `AGENTS.md`, from the project template only when the project has no instructions yet; afterwards it is project-owned and never written (see [Project Instructions](#project-instructions-agentsmd))
 - `.claude/settings.local.json`
 - `.mcp.json`
 - `.cursor/mcp.json`
 - `.roo/mcp.json`
 - `.github/mcp.json`
 - `.claude/constitution.md`, only for project-owned text (extends amendments, Article VIII+) or when no global install exists
-- project `AGENTS.md`
 - project `.agents/rules/*.md`
 - project `.agents/skills/*`
 - project `.codex/hooks.json`
@@ -209,11 +209,40 @@ These files still stay local to a repository as part of the core install model:
 
 Whatever applies to every project is installed once, at user level, and never copied into a project. Claude Code loads `~/.claude/rules/` in every project and also loads `.claude/rules/` from parent directories, so a project copy of a common rule or of the constitution loaded twice, and once more for every registered parent directory, such as a workspace folder installed with `--local` above its projects. `install --local` therefore writes `.claude/rules/ai-toolkit-*.md` only for a common rule the global install does not provide (every one without a global install; `git-team` for a `strict` project under a `standard` global install), and `.claude/constitution.md` only for project-owned amendments or without a global install. It removes the managed copies an older install left, and the `@.claude/constitution.md` import from `CLAUDE.md` once nothing is left to import. The decision is made from the files present in `~/.claude/rules/`, so the next `update` converges every registered project. See [Language Rules](language-rules.md).
 
+## Project Instructions (AGENTS.md)
+
+A project's instructions live in one project-owned, committed `AGENTS.md`.
+Codex, Copilot, OpenCode, Gemini CLI and Antigravity read it natively; Claude
+Code reads it through the `@AGENTS.md` import section that `install --local`
+keeps at the top of `CLAUDE.md` (Claude reads `AGENTS.md` on its own only when
+no `CLAUDE.md` exists in the directory or above it, and `InstructionsLoaded`
+hooks fire only for imported files). Toolkit rules never go into the project's
+`AGENTS.md`; each agent gets them from its own surface: `.claude/` and
+`~/.claude/rules/`, `.agents/rules/`, `.github/copilot-instructions.md`,
+`$CODEX_HOME/AGENTS.md`, `~/.config/opencode/AGENTS.md`. Toolkit sections an
+older release injected into a project `AGENTS.md` are removed on install after a
+backup to `~/.softspark/ai-toolkit/backups/`; a file that held nothing else is
+deleted. `AGENTS.md` alone is no longer an editor-detection marker.
+
+`ai-toolkit adopt-agents-md [dir] [--dry-run]` migrates an existing project:
+it moves the project's own text from `CLAUDE.md` into `AGENTS.md`, keeps the
+toolkit sections and constitution import in `CLAUDE.md` below the new import,
+and removes an `AGENTS.md` entry from `.gitignore`, backing every file up first.
+`install --local` points at it instead of creating an `AGENTS.md` template next
+to a `CLAUDE.md` that still holds the instructions.
+
+Nothing may truncate the file: Antigravity cuts any rule file above 24,000
+bytes, so `install --local`, `adopt-agents-md` and `doctor` warn above that size.
+Codex stops reading `$CODEX_HOME/AGENTS.md` plus the project chain at
+`project_doc_max_bytes` (32 KiB by default), so `install --editors codex` sets
+it to 65,536 in `$CODEX_HOME/config.toml` unless a larger value is already set,
+and `doctor` warns when the two files exceed the configured value.
+
 Claude Code hooks do **not** live in project-local settings. They are merged only into global `~/.claude/settings.json`. Editor-native generators may emit project-local hook files when that editor documents them; Copilot uses `.github/hooks/*.json` and Codex uses `.codex/hooks.json`.
 
 ## Copilot Install Behavior
 
-`ai-toolkit install --local --editors copilot` always emits root `AGENTS.md`,
+`ai-toolkit install --local --editors copilot` always emits
 `.github/copilot-instructions.md`, native `.github/agents`, and portable,
 self-contained `.github/skills`. Profiles `standard`, `strict`, and `full`
 add scoped `.github/instructions`, `.github/prompts`, and native version-1
@@ -237,9 +266,10 @@ Claude's shared `~/.softspark/ai-toolkit/hooks/` installation.
 
 ## Codex Local Install Behavior
 
-`ai-toolkit install --local --editors codex` creates:
+`ai-toolkit install --local --editors codex` creates the following; toolkit
+rules reach Codex through `$CODEX_HOME/AGENTS.md` from the global install, and
+the install prints a note when that file has none:
 
-- `AGENTS.md`
 - `.agents/skills/*`
 - `.codex/hooks.json`
 - `.codex/hooks/*`

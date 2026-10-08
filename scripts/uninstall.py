@@ -1039,8 +1039,27 @@ def _remove_marked_assets(root: Path, marker: str, trusted_root: Path) -> int:
     return removed
 
 
+CODEX_DOC_LIMIT_MARKER = "# ai-toolkit: global + project AGENTS.md must not be cut"
+
+
+def _codex_config_without_doc_limit(config: Path) -> str | None:
+    """config.toml without the project_doc_max_bytes line the toolkit added,
+    or None when that line is absent."""
+    if config.is_symlink() or not config.is_file():
+        return None
+    lines = config.read_text(encoding="utf-8").splitlines(keepends=True)
+    kept = [
+        line for line in lines
+        if not (line.startswith("project_doc_max_bytes") and line.rstrip().endswith(CODEX_DOC_LIMIT_MARKER))
+    ]
+    return "".join(kept) if kept != lines else None
+
+
 def _discover_codex(surface: CodexSurface) -> list[tuple[str, str]]:
     found: list[tuple[str, str]] = []
+    config = surface.config_root / "config.toml"
+    if _codex_config_without_doc_limit(config) is not None:
+        found.append((f"Injected: {config} (project_doc_max_bytes)", "codex-doc-limit"))
     if surface.instructions.is_file() and "<!-- TOOLKIT:" in (
         surface.instructions.read_text(encoding="utf-8")
     ):
@@ -1124,6 +1143,14 @@ def _remove_codex(surface: CodexSurface) -> None:
     )
     if removed_assets:
         print(f"  Removed: {removed_assets} managed Codex hook asset(s)")
+    config = surface.config_root / "config.toml"
+    remaining = _codex_config_without_doc_limit(config)
+    if remaining is not None:
+        if remaining.strip():
+            _atomic_write_text(config, remaining, config_boundary)
+        else:
+            _safe_unlink(config, config_boundary)
+        print(f"  Stripped: {config} (project_doc_max_bytes added by ai-toolkit)")
     _prune_empty(surface.config_root, trusted_root=config_boundary)
     _prune_empty(surface.skills_root.parent, trusted_root=skills_boundary)
 
@@ -1520,8 +1547,10 @@ def _without_constitution_import(text: str) -> str:
 def _project_claude_md_update(target: Path) -> tuple[Path, str | None] | None:
     """Root ``CLAUDE.md`` after removing what the toolkit put there.
 
-    Returns ``(path, None)`` when the file is an untouched template, the new
-    text when only the constitution import has to go, and ``None`` otherwise.
+    Returns ``(path, None)`` when nothing but toolkit content is left (the
+    ``@AGENTS.md`` import section, the constitution import, or the template
+    an older release wrote here), the new text when only those parts have to
+    go, and ``None`` otherwise.
     """
     path = target / "CLAUDE.md"
     if path.is_symlink() or not path.is_file():
@@ -1531,15 +1560,31 @@ def _project_claude_md_update(target: Path) -> tuple[Path, str | None] | None:
         (target / ".claude" / "constitution.md").read_text(encoding="utf-8")
     ):
         return None  # project-owned constitution text still needs its import
-    updated = _without_constitution_import(original)
-    template = app_dir / "CLAUDE.md.template"
-    if template.is_file() and updated == _without_constitution_import(
-        template.read_text(encoding="utf-8")
-    ):
+    updated = _without_constitution_import(strip_section(original, "agents-md"))
+    if not updated.strip() or updated.strip() in _template_variants():
         return path, None
     if updated.strip() != original.strip():
         return path, updated
     return None
+
+
+def _template_variants() -> tuple[str, ...]:
+    """The project template now (AGENTS.md) and as older releases wrote it
+    into CLAUDE.md, without the leading agent-audience comment."""
+    template = app_dir / "AGENTS.md.template"
+    if not template.is_file():
+        return ()
+    text = template.read_text(encoding="utf-8").strip()
+    first, _, rest = text.partition("\n")
+    return (text, rest.strip()) if first.startswith("<!--") else (text,)
+
+
+def _untouched_agents_md(target: Path) -> Path | None:
+    """The project AGENTS.md when it is still the toolkit's unedited template."""
+    path = target / "AGENTS.md"
+    if path.is_symlink() or not path.is_file():
+        return None
+    return path if path.read_text(encoding="utf-8").strip() in _template_variants() else None
 
 
 def _default_settings_local(path: Path) -> bool:
@@ -1560,8 +1605,10 @@ def _discover_project_files(target: Path) -> list[tuple[str, str]]:
         found.append(("Installed: .git/hooks/pre-commit (toolkit fallback)", "pre-commit"))
     update = _project_claude_md_update(target)
     if update is not None:
-        what = "unchanged template" if update[1] is None else "constitution import"
+        what = "toolkit content only" if update[1] is None else "toolkit imports"
         found.append((f"Generated: CLAUDE.md ({what})", "project-claude-md"))
+    if _untouched_agents_md(target) is not None:
+        found.append(("Generated: AGENTS.md (unchanged template)", "project-agents-md"))
     if _default_settings_local(target / ".claude" / "settings.local.json"):
         found.append(("Generated: .claude/settings.local.json (unchanged defaults)", "settings-local"))
     return found
@@ -1588,10 +1635,14 @@ def _remove_project_files(target: Path) -> None:
         path, text = update
         if text is None:
             _safe_unlink(path, target)
-            print("  Removed: CLAUDE.md (unchanged toolkit template)")
+            print("  Removed: CLAUDE.md (toolkit content only)")
         else:
             _atomic_write_text(path, text, target)
-            print("  Stripped: CLAUDE.md (constitution import; user content preserved)")
+            print("  Stripped: CLAUDE.md (toolkit imports; user content preserved)")
+    agents_md = _untouched_agents_md(target)
+    if agents_md is not None:
+        _safe_unlink(agents_md, target)
+        print("  Removed: AGENTS.md (unchanged toolkit template)")
     settings_local = target / ".claude" / "settings.local.json"
     if _default_settings_local(settings_local):
         _safe_unlink(settings_local, target)

@@ -4,9 +4,9 @@
 Shared AI development toolkit for Claude Code, Claude Chat/Cowork, and 11 editor integrations. It distributes skills, agents, lifecycle hooks, persona presets, plugin packaging, and the safety constitution as a global npm package.
 
 ## Claude Code Runtime Rules
-- Claude Code reads `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, settings, and hooks. It does **not** treat `AGENTS.md` as an instruction source.
+- Claude Code reads `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, settings, and hooks. Since v2.1.277 it also reads `AGENTS.md`, but by default only when no `CLAUDE.md` exists in the working directory or above it (code.claude.com/docs/en/memory). Toolkit-installed projects therefore keep their instructions in a project-owned `AGENTS.md` and import it from `CLAUDE.md` with `@AGENTS.md`.
 - Claude Chat/Desktop/Cowork does **not** scan Claude Code's `~/.claude/` files. Use `ai-toolkit claude-app export`, upload the ZIP in Customize > Plugins, and apply the generated Cowork global instructions. Skills work in Chat/Cowork; hooks and sub-agents are Cowork-only.
-- `AGENTS.md` is generated for Codex/OpenCode/Gemini compatibility. Do not move mandatory Claude behavior there.
+- This repository's own `AGENTS.md` is generated for Codex/OpenCode/Gemini compatibility. Do not move mandatory Claude behavior there.
 - **KB-first is mandatory for technical work:** before answering or acting on a technical/project prompt, call `smart_query()` or `hybrid_search_kb()` and use the result to locate the relevant SOP/reference. Cite the KB path when the result materially informs the answer. If the KB tool is unavailable, state that explicitly and continue from local files.
 - Any rule that must be enforced at a fixed lifecycle point belongs in `app/hooks.json` + `app/hooks/*.sh` with tests. `CLAUDE.md` guidance is context, not enforcement.
 

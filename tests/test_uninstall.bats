@@ -538,8 +538,9 @@ PY
     mkdir -p "$project/.git/hooks" "$project/.claude/rules"
     python3 "$TOOLKIT_DIR/scripts/install_git_hooks.py" "$project" >/dev/null
     printf '%s\n' '#!/bin/sh' 'echo user hook' > "$project/.git/hooks/pre-commit.backup"
-    { cat "$TOOLKIT_DIR/app/CLAUDE.md.template"; printf '\n%s\n%s\n' '## Project Constitution' '@.claude/constitution.md'; } \
-        > "$project/CLAUDE.md"
+    cp "$TOOLKIT_DIR/app/AGENTS.md.template" "$project/AGENTS.md"
+    printf '%s\n' '<!-- TOOLKIT:agents-md START -->' '@AGENTS.md' '<!-- TOOLKIT:agents-md END -->' \
+        '' '## Project Constitution' '@.claude/constitution.md' > "$project/CLAUDE.md"
     cp "$TOOLKIT_DIR/app/mcp-defaults.json" "$project/.claude/settings.local.json"
     printf '%s\n' '{}' > "$project/.softspark-toolkit.lock.json"
     printf '%s\n' 'rule' > "$project/.claude/rules/ai-toolkit-security.md"
@@ -552,6 +553,7 @@ PY
     [ "$(cat "$project/.git/hooks/pre-commit")" = "$(printf '%s\n' '#!/bin/sh' 'echo user hook')" ]
     [ ! -e "$project/.git/hooks/pre-commit.backup" ]
     [ ! -e "$project/CLAUDE.md" ]
+    [ ! -e "$project/AGENTS.md" ]
     [ ! -e "$project/.claude/settings.local.json" ]
     [ ! -e "$project/.softspark-toolkit.lock.json" ]
     [ ! -e "$project/.claude/rules/ai-toolkit-security.md" ]

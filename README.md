@@ -6,7 +6,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-1992%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1998%20passing-success)](tests/)
 
 ## What's New in v5.2.1
 
@@ -217,14 +217,14 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Cursor | `.cursor/rules/*.mdc` + `.cursor/mcp.json` + `.cursor/skills/*` | ✅ | project (`~/.cursor/mcp.json` for MCP only) |
 | Windsurf (Devin Desktop) | `~/.config/devin/AGENTS.md` + `.devin/rules/*.md` + `.devin/hooks.v1.json` + `.windsurf/skills/*` | ✅ | global + project |
 | Gemini CLI | `~/.gemini/GEMINI.md` + `.gemini/settings.json` + `.gemini/{commands,skills,agents}/` | ✅ | project + user |
-| GitHub Copilot | Project: `AGENTS.md` + `.github/copilot-instructions.md` + `.github/{instructions,prompts,agents,skills,hooks}/` + `.github/mcp.json`; user: `$COPILOT_HOME/copilot-instructions.md` + `$COPILOT_HOME/{instructions,agents,skills,hooks}/` + `$COPILOT_HOME/mcp-config.json` | ✅ | project + user |
+| GitHub Copilot | Project: `.github/copilot-instructions.md` + `.github/{instructions,prompts,agents,skills,hooks}/` + `.github/mcp.json`; user: `$COPILOT_HOME/copilot-instructions.md` + `$COPILOT_HOME/{instructions,agents,skills,hooks}/` + `$COPILOT_HOME/mcp-config.json` | ✅ | project + user |
 | Cline | Project: `.cline/{rules,hooks,skills}/` + `.clinerules/{hooks,workflows}/`; user: `~/.cline/{rules,hooks,skills}/` + `~/Documents/Cline/{Rules,Hooks}/` compatibility | ✅ | global + project |
 | Roo Code / [Zoo Code](https://zoocode.dev/) | `~/.roo/rules/*.md` + `.roomodes` + `.roo/rules/*.md` | — | global rules + project |
 | Aider | `~/.aider.conf.yml` + `.aider.conf.yml` + `CONVENTIONS.md` | — | global + project |
 | Augment | `~/.augment/rules/*.md` + `.augment/rules/ai-toolkit-*.md` | ✅ | global + project |
 | Google Antigravity | Project `.agents/{rules,workflows,skills,agents,hooks}/`; user `~/.gemini/config/{skills,agents,hooks}/`; opt-in native plugin export | ✅ | project + user |
-| Codex CLI | Project: `AGENTS.md` + `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
-| opencode | `AGENTS.md` + `.opencode/{agents,commands,plugins,skills}/*` + `opencode.{json,jsonc}` | ✅ | project + global (`~/.config/opencode/`) |
+| Codex CLI | Project: `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
+| opencode | `.opencode/{agents,commands,plugins,skills}/*` + `opencode.{json,jsonc}`; user `~/.config/opencode/AGENTS.md` | ✅ | project + global (`~/.config/opencode/`) |
 
 > Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed, except for MCP servers, which `ai-toolkit mcp install --editor claude-app --scope global` writes straight to `claude_desktop_config.json`. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
 
@@ -396,7 +396,7 @@ Jira completion and KB indexing as explicit project lifecycle outcomes.
 
 ## Getting Started
 
-1. **Customize CLAUDE.md** — add your project's tech stack, commands, and conventions at the top (above toolkit markers).
+1. **Customize AGENTS.md** — add your project's tech stack, commands, and conventions. Every coding agent reads it (Claude Code through the `@AGENTS.md` import that `install --local` keeps in `CLAUDE.md`); keep it under 24,000 bytes. An existing `CLAUDE.md` moves there with `ai-toolkit adopt-agents-md`.
 
 2. **Start using skills:**
    ```

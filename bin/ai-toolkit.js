@@ -66,6 +66,7 @@ const SCRIPT_COMMANDS = {
   'llm-status':           { script: 'llm_status.py' },
   'codex-plugin':         { script: 'codex_plugin.py',         toolkitCwd: true },
   'antigravity-plugin':   { script: 'antigravity_plugin.py',   toolkitCwd: true },
+  'adopt-agents-md':      { script: 'agents_md.py' },
 };
 
 // ---------------------------------------------------------------------------
@@ -131,6 +132,7 @@ const COMMANDS = {
   'llm-status': 'Show usage and routing for all configured Claude and Codex accounts',
   'codex-plugin': 'Export or verify the native Codex CLI plugin package',
   'antigravity-plugin': 'Export or verify the native Google Antigravity plugin package',
+  'adopt-agents-md': 'Move CLAUDE.md project instructions into AGENTS.md and import it (--dry-run)',
   dsh: 'Retired: prints manual cleanup steps for DSH profiles (removed in the next minor)',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
   'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, opencode, llms)',
@@ -288,8 +290,20 @@ function writeGeneratorOutput(gen) {
     const dir = path.join(CWD, gen.mkdir);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   }
+  const dest = path.join(CWD, gen.dest);
   const output = runGenerator(gen.script);
-  fs.writeFileSync(path.join(CWD, gen.dest), output);
+  // A project's AGENTS.md holds its own instructions; only replace a file a
+  // generator wrote (same first line, or a toolkit marker section).
+  if (gen.dest === 'AGENTS.md' && fs.existsSync(dest)) {
+    const current = fs.readFileSync(dest, 'utf8');
+    const firstLine = output.toString().split('\n', 1)[0];
+    if (!current.startsWith('<!-- TOOLKIT:') && current.split('\n', 1)[0] !== firstLine) {
+      console.error('Refusing to overwrite AGENTS.md: it holds project instructions. '
+        + `Redirect the output instead: python3 ${scriptPath(gen.script)} > <file>`);
+      process.exit(1);
+    }
+  }
+  fs.writeFileSync(dest, output);
   console.log(`Generated: ${gen.dest}`);
 }
 

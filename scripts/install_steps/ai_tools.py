@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -188,9 +189,10 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         if dry_run:
             print("  Would inject: $CODEX_HOME/AGENTS.md, $CODEX_HOME/agents/, "
                   "$CODEX_HOME/hooks.json + $CODEX_HOME/ai-toolkit-hooks/")
+            print(f"  Would set: project_doc_max_bytes >= {CODEX_DOC_MAX_BYTES} in $CODEX_HOME/config.toml")
             print("  Would generate: ~/.agents/skills/ (shared Codex skill discovery)")
         else:
-            _install_codex_global(target_dir, rules_dir)
+            _install_codex_global(target_dir, rules_dir, opt_in_rules)
         installed.append("codex")
 
     if "opencode" in eds:
@@ -317,11 +319,42 @@ def _resolve_global_codex_home(target_dir: Path) -> Path:
     return codex_home
 
 
-def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
+CODEX_DOC_MAX_BYTES = 64 * 1024
+_CODEX_DOC_LIMIT_RE = re.compile(r"^project_doc_max_bytes\s*=\s*(\d+)\s*(#.*)?$", re.MULTILINE)
+
+
+def _ensure_codex_doc_limit(config: Path) -> None:
+    """Raise Codex's AGENTS.md budget so the project's file is never cut.
+
+    Codex concatenates ``$CODEX_HOME/AGENTS.md`` with the project's AGENTS.md
+    chain and stops at ``project_doc_max_bytes`` (32 KiB by default). The
+    toolkit section plus a project file that stays under Antigravity's
+    24,000-byte cap fits in 64 KiB. A larger value set by the user is kept.
+    """
+    text = config.read_text(encoding="utf-8") if config.is_file() else ""
+    match = _CODEX_DOC_LIMIT_RE.search(text)
+    if match and int(match.group(1)) >= CODEX_DOC_MAX_BYTES:
+        return
+    line = (f"project_doc_max_bytes = {CODEX_DOC_MAX_BYTES}  "
+            "# ai-toolkit: global + project AGENTS.md must not be cut")
+    # A top-level key must precede every [table], so it goes first.
+    updated = (_CODEX_DOC_LIMIT_RE.sub(line, text, count=1) if match
+               else f"{line}\n{text}")
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(updated, encoding="utf-8")
+    print(f"  Updated: {config} (project_doc_max_bytes = {CODEX_DOC_MAX_BYTES})")
+
+
+def _install_codex_global(target_dir: Path, rules_dir: Path,
+                          opt_in_rules: list[str] | None = None) -> None:
     """Install Codex at the active user-level ``CODEX_HOME`` layer.
 
     Creates:
-      - ``$CODEX_HOME/AGENTS.md`` (defaults to ``~/.codex/AGENTS.md``)
+      - ``$CODEX_HOME/AGENTS.md`` (defaults to ``~/.codex/AGENTS.md``), the
+        only place Codex gets toolkit rules from: project AGENTS.md files are
+        project-owned
+      - ``project_doc_max_bytes`` in ``$CODEX_HOME/config.toml`` so that file
+        and the project's AGENTS.md are read in full
       - ``$CODEX_HOME/agents/*`` and ``$CODEX_HOME/hooks.json``
       - ``~/.agents/skills/*`` (the documented shared user-skill path)
     """
@@ -330,7 +363,10 @@ def _install_codex_global(target_dir: Path, rules_dir: Path) -> None:
         "generate_codex.py",
         codex_home / "AGENTS.md",
         rules_dir,
+        clients=("codex",),
+        opt_in_rules=tuple(opt_in_rules or ()),
     )
+    _ensure_codex_doc_limit(codex_home / "config.toml")
 
     # Migration: earlier versions wrote global instructions to ~/AGENTS.md,
     # which Codex never loads as global instructions. Strip that stale toolkit
@@ -789,19 +825,17 @@ def _strip_toolkit_sections(target_file: Path) -> bool:
     return True
 
 
-def _install_copilot_agents_md(cwd: Path, rules_dir: Path, *,
-                               clients: tuple[str, ...] = (),
-                               opt_in_rules: tuple[str, ...] = ()) -> None:
-    """Emit the same effective AGENTS.md used by Codex, including rules."""
-    inject_with_rules(
-        "generate_codex.py",
-        cwd / "AGENTS.md",
-        rules_dir,
-        clients=clients,
-        project_dir=cwd,
-        opt_in_rules=opt_in_rules,
-    )
-    print("  Updated: AGENTS.md (shared Codex/Copilot instructions)")
+def _hint_global_instructions(label: str, path: Path, editor: str) -> None:
+    """Point at the global file that carries toolkit rules for ``label``."""
+    try:
+        has_toolkit = "<!-- TOOLKIT:ai-toolkit START -->" in path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        has_toolkit = False
+    if has_toolkit:
+        print(f"  {label}: ai-toolkit rules come from {path}")
+    else:
+        print(f"  NOTE: {label} reads ai-toolkit rules from {path}, which has none; "
+              f"run: ai-toolkit install --editors {editor}")
 
 
 def run_script(script_name: str, *args: str, capture: bool = False) -> str:
@@ -858,11 +892,8 @@ _EDITOR_MARKERS: dict[str, str] = {
     ".agent/rules": "antigravity",
     ".agents/skills": "codex",
     ".codex": "codex",
-    # NOTE: AGENTS.md alone is ambiguous (Codex + opencode both read it);
-    # prefer the dedicated .opencode/ and opencode.json markers when
-    # disambiguating. If only AGENTS.md is present, Codex takes precedence
-    # to preserve v2.4.x behavior.
-    "AGENTS.md": "codex",
+    # AGENTS.md is not a marker: it is the project's own instructions, read by
+    # every agent, so its presence says nothing about which editors are used.
     "opencode.json": "opencode",
     ".opencode": "opencode",
     ".opencode/agents": "opencode",
@@ -1378,7 +1409,8 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         print("  Would remove: .claude/constitution.md and all editor configs")
         print("  Would recreate all from templates (clean slate)")
     else:
-        print("  Would create: CLAUDE.md (if missing)")
+        print("  Would create: AGENTS.md (if the project has no instructions yet)")
+        print("  Would import: @AGENTS.md into CLAUDE.md (toolkit sections in AGENTS.md are removed)")
         print("  Would create: .claude/settings.local.json (if missing)")
         print("  Would inject: .claude/constitution.md only without a global install "
               "(otherwise it loads from ~/.claude/rules/)")
@@ -1392,7 +1424,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
 
     # Editor-specific dry-run messages
     _EDITOR_DRY_RUN = {
-        "copilot":      "  Would inject: .github/copilot-instructions.md + AGENTS.md",
+        "copilot":      "  Would inject: .github/copilot-instructions.md",
         "cursor":       "  Would generate: .cursorrules + .cursor/rules/*.mdc",
         "windsurf":     "  Would generate: .windsurfrules + .devin/rules/*.md + .windsurf/rules/*.md",
         "cline":        "  Would generate: .cline/rules/*.md + .clinerules/*.md",
@@ -1401,7 +1433,7 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         "augment":      "  Would generate: .augment/rules/ai-toolkit-*.md",
         "antigravity":  "  Would generate: .agents/rules/ + .agents/workflows/",
         "gemini":       "  Would generate: GEMINI.md",
-        "opencode":     "  Would generate: AGENTS.md + .opencode/{agents,commands,plugins}/ + opencode.json",
+        "opencode":     "  Would generate: .opencode/{agents,commands,plugins}/ + opencode.json",
     }
     for ed, msg in _EDITOR_DRY_RUN.items():
         if ed in eds:
@@ -1506,42 +1538,102 @@ def _reset_local_configs(cwd: Path) -> None:
                 print(f"  Removed: .opencode/{sub}/ai-toolkit-*.md")
 
 
-def _create_local_claude_md(cwd: Path, reset: bool) -> None:
-    claude_local = cwd / "CLAUDE.md"
-    if reset or not claude_local.is_file():
-        template = app_dir / "CLAUDE.md.template"
-        if template.is_file():
-            shutil.copy2(template, claude_local)
-            print("  Created: CLAUDE.md (from template)")
-        else:
-            claude_local.write_text(
-                """\
-# [Project Name]
+AGENTS_MD_SECTION = "agents-md"
+AGENTS_MD_IMPORT = "@AGENTS.md"
 
-## Overview
 
-## Tech Stack
-- **Language**:
-- **Framework**:
-- **Database**:
+def project_instructions(text: str) -> str:
+    """CLAUDE.md text minus everything the toolkit manages there.
 
-## Commands
-```bash
-# Dev:
-# Test:
-# Lint:
-# Build:
-```
+    Marker sections and the project constitution import are toolkit-owned;
+    what remains is the project's own instructions (empty for a fresh file).
+    """
+    kept = [
+        line for line in _strip_all_sections(text).splitlines()
+        if line.strip() not in (_CONSTITUTION_HEADING, _CONSTITUTION_IMPORT)
+    ]
+    return "\n".join(kept).strip()
 
-## Key Conventions
 
-## MCP Servers
-""",
-                encoding="utf-8",
-            )
-            print("  Created: CLAUDE.md (default template)")
+def _template_variants(template: Path) -> tuple[str, ...]:
+    """The project template as written now and as older releases wrote it
+    into CLAUDE.md (without the leading agent-audience comment)."""
+    text = template.read_text(encoding="utf-8").strip()
+    first, _, rest = text.partition("\n")
+    return (text, rest.strip()) if first.startswith("<!--") else (text,)
+
+
+def _release_project_agents_md(agents_md: Path) -> None:
+    """Remove toolkit sections older releases injected into a project AGENTS.md.
+
+    The project's AGENTS.md is project-owned and usually committed, so toolkit
+    rules reach each agent through its own surface instead (``.agents/rules/``,
+    ``.claude/``, ``.github/copilot-instructions.md``, ``$CODEX_HOME/AGENTS.md``,
+    ``~/.config/opencode/AGENTS.md``). The file is backed up first and removed
+    when nothing but toolkit sections was in it.
+    """
+    if agents_md.is_symlink() or not agents_md.is_file():
+        return
+    original = agents_md.read_text(encoding="utf-8")
+    stripped = _strip_all_sections(original)
+    if stripped == original:
+        return
+    backup = _backup_file(agents_md, original)
+    remaining = _collapse_blank_runs(_trim_trailing_blanks(stripped.lstrip("\n")))
+    if remaining.strip():
+        agents_md.write_text(remaining + "\n", encoding="utf-8")
+        print(f"  Migrated: removed ai-toolkit sections from AGENTS.md (backup: {backup})")
     else:
-        print("  Kept: CLAUDE.md (already exists)")
+        agents_md.unlink()
+        print(f"  Migrated: removed toolkit-only AGENTS.md (backup: {backup})")
+
+
+def _create_local_claude_md(cwd: Path, reset: bool) -> None:
+    """Make ``AGENTS.md`` the project's instructions and import it into CLAUDE.md.
+
+    ``AGENTS.md`` is the one project file every supported agent reads, Claude
+    Code included. It is project-owned: created from the template only in a
+    project without instructions, never overwritten. ``CLAUDE.md`` imports it
+    with ``@AGENTS.md`` (a marker section) so Claude loads it on every version
+    and ``InstructionsLoaded`` hooks fire; a CLAUDE.md that exists keeps its own
+    content around the import. A CLAUDE.md that still holds the project's
+    instructions is left alone until ``ai-toolkit adopt-agents-md`` moves them.
+    """
+    agents_md = cwd / "AGENTS.md"
+    _release_project_agents_md(agents_md)
+    claude_local = cwd / "CLAUDE.md"
+    existing = "" if reset or not claude_local.is_file() else claude_local.read_text(encoding="utf-8")
+    body = _strip_section(existing, AGENTS_MD_SECTION).strip("\n")
+    template = app_dir / "AGENTS.md.template"
+    if not agents_md.is_file():
+        instructions = project_instructions(body)
+        if instructions in _template_variants(template):
+            # An untouched template from an older release moves to AGENTS.md.
+            body = body.replace(instructions, "", 1).strip("\n")
+        elif instructions:
+            print("  Kept: CLAUDE.md (project instructions; move them to AGENTS.md "
+                  "for every agent with: ai-toolkit adopt-agents-md)")
+            if body + "\n" != existing and existing:
+                claude_local.write_text(body + "\n", encoding="utf-8")
+            return
+        shutil.copy2(template, agents_md)
+        print("  Created: AGENTS.md (project instructions template)")
+    block = (
+        f"<!-- TOOLKIT:{AGENTS_MD_SECTION} START -->\n"
+        "<!-- Auto-injected by ai-toolkit. Project instructions live in AGENTS.md. -->\n"
+        f"{AGENTS_MD_IMPORT}\n"
+        f"<!-- TOOLKIT:{AGENTS_MD_SECTION} END -->\n"
+    )
+    updated = block + (f"\n{body}\n" if body else "")
+    if updated != existing:
+        claude_local.write_text(updated, encoding="utf-8")
+        print(f"  Updated: CLAUDE.md (imports {AGENTS_MD_IMPORT})")
+    else:
+        print(f"  Kept: CLAUDE.md (already imports {AGENTS_MD_IMPORT})")
+    size = agents_md.stat().st_size
+    if size > ANTIGRAVITY_RULE_LIMIT_BYTES:
+        print(f"  WARNING: AGENTS.md is {size} bytes; Antigravity truncates rule files "
+              f"above {ANTIGRAVITY_RULE_LIMIT_BYTES} bytes. Move detail into kb/ or skills.")
 
 
 def _create_local_settings(cwd: Path, reset: bool) -> None:
@@ -1696,8 +1788,6 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             cwd / ".github" / "copilot-instructions.md",
             rules_dir,
         )
-        _install_copilot_agents_md(cwd, rules_dir, clients=readers("copilot"),
-                                   opt_in_rules=opt_in)
         # Agents and skills are the minimal Copilot surface. Standard and above
         # add path instructions, prompts, and native lifecycle hooks.
         gen_copilot_dir(
@@ -1811,16 +1901,12 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             cleanup_agents(cwd)
 
     if "codex" in eds:
-        # AGENTS.md — marker injection; universal coding rules are inlined into
-        # AGENTS.md (Codex reads instructions only from AGENTS.md, not a
-        # .agents/rules/ directory). Language rules reach Codex via .agents/skills/.
-        inject_with_rules(
-            "generate_codex.py",
-            cwd / "AGENTS.md",
-            rules_dir,
-            clients=readers("codex"),
-            project_dir=cwd,
-            opt_in_rules=opt_in,
+        # The project AGENTS.md is project-owned; Codex has no include syntax,
+        # so toolkit rules reach it through $CODEX_HOME/AGENTS.md, which Codex
+        # concatenates before the project chain. Language rules reach Codex via
+        # .agents/skills/.
+        _hint_global_instructions(
+            "Codex", _resolve_global_codex_home(Path.home()) / "AGENTS.md", "codex",
         )
         # .codex/hooks.json — Codex lifecycle hooks
         from generate_codex_hooks import generate as gen_codex_hooks
@@ -1863,15 +1949,10 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             cleanup_gemini_agents(cwd)
 
     if "opencode" in eds:
-        # AGENTS.md — shared with Codex via marker injection (opencode reads same file)
-        # Use a dedicated section tag so Codex and opencode don't clobber each other.
-        inject_with_rules(
-            "generate_opencode.py",
-            cwd / "AGENTS.md",
-            rules_dir,
-            clients=readers("opencode"),
-            project_dir=cwd,
-            opt_in_rules=opt_in,
+        # The project AGENTS.md is project-owned; toolkit rules reach OpenCode
+        # through its global ~/.config/opencode/AGENTS.md.
+        _hint_global_instructions(
+            "OpenCode", Path.home() / ".config" / "opencode" / "AGENTS.md", "opencode",
         )
         # .opencode/agents/ — native subagents
         from generate_opencode_agents import generate as gen_opencode_agents

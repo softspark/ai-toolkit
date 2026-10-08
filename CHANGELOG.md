@@ -43,6 +43,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **AGENTS.md holds the project's instructions for every agent:** Claude
+  Code reads `AGENTS.md` since v2.1.277, but only without a `CLAUDE.md`, and
+  Codex has no include syntax. `install --local` therefore treats the project
+  `AGENTS.md` as project-owned: it creates it from the template only in a
+  project without instructions, keeps an `@AGENTS.md` import section at the
+  top of `CLAUDE.md`, and no longer injects toolkit sections into it (Codex,
+  OpenCode and Copilot get toolkit rules from `$CODEX_HOME/AGENTS.md`,
+  `~/.config/opencode/AGENTS.md` and `.github/copilot-instructions.md`).
+  Sections an older release left there are removed after a backup, and
+  `AGENTS.md` alone no longer marks a project as a Codex project. The new
+  `ai-toolkit adopt-agents-md` moves an existing `CLAUDE.md` into `AGENTS.md`;
+  `agents-md`, `codex-md` and `opencode-md` refuse to overwrite a project's
+  own `AGENTS.md`. The project template is now `app/AGENTS.md.template`.
+- **AGENTS.md is never truncated:** `install --editors codex` raises
+  `project_doc_max_bytes` to 65,536 in `$CODEX_HOME/config.toml` (Codex reads
+  global plus project AGENTS.md only up to 32 KiB by default; a larger user
+  value is kept; uninstall removes the line), the global Codex `AGENTS.md`
+  carries only registered rules whose MCP servers Codex has, and `install
+  --local`, `adopt-agents-md` and `doctor` warn above Antigravity's 24,000-byte
+  per-file cap. `doctor` also warns when Codex's two files exceed its limit.
 - **MCP-dependent registered rules follow the client's MCP config:**
   `.agents/rules/`, project `AGENTS.md`/`GEMINI.md` and `~/.gemini/GEMINI.md`
   receive a registered rule only when one of the clients reading that file has

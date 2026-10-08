@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.13.0"
+version: "1.14.0"
 created: "2026-03-23"
-last_updated: "2026-09-24"
+last_updated: "2026-10-08"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
 ---
 
@@ -38,7 +38,7 @@ ai-toolkit/
     hooks.json               # Hook definitions (merged into ~/.claude/settings.json)
     constitution.md          # Immutable safety rules, 7 articles (-> ~/.claude/rules/ai-toolkit-constitution.md)
     ARCHITECTURE.md          # System architecture reference (marker-injected)
-    CLAUDE.md.template       # Template for project CLAUDE.md (used by init)
+    AGENTS.md.template       # Template for a new project's AGENTS.md (CLAUDE.md imports it)
     settings.local.json.template
     .claude-plugin/
       plugin.json            # Official plugin manifest
@@ -121,8 +121,10 @@ Claude Code loads `~/.claude/rules/` in every project and `.claude/rules/` from 
 - `--editors cursor,aider` — install only selected editors
 - (no flag) — auto-detect from existing project files; `update --local` picks up whatever editors already have configs
 
-Each editor gets its documented directory-based format. Copilot receives root
-`AGENTS.md`, `.github/copilot-instructions.md`, native `.github/agents`, and
+Each editor gets its documented directory-based format. The project's own
+instructions live in a project-owned `AGENTS.md` that `CLAUDE.md` imports;
+toolkit rules never go into it. Copilot receives
+`.github/copilot-instructions.md`, native `.github/agents`, and
 self-contained `.github/skills` in every profile. Profile `standard` and above
 also emits `.github/instructions`, `.github/prompts`, and native
 `.github/hooks`. The user target writes the supported personal surfaces below
@@ -132,7 +134,7 @@ Windsurf, and Cline. Cline rules dual-emit to `.cline/rules/` and `.clinerules/`
 profiles `standard`, `strict`, and `full` add executable hooks under both
 `.cline/hooks/<Event>` and `.clinerules/hooks/<Event>`. Gemini receives
 commands, a skill pointer, and native
-`.gemini/agents/*.md` definitions. Codex local install generates `AGENTS.md`,
+`.gemini/agents/*.md` definitions. Codex local install generates
 `.agents/skills/*`, `.codex/agents/*.toml`, `.codex/hooks.json`, and
 self-contained `.codex/hooks/*`. Global Codex install writes its user-owned
 surfaces below `$CODEX_HOME` (default `~/.codex`) while user skills remain in
@@ -181,7 +183,8 @@ project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
 | `conventions-md` | `./` | Generates `CONVENTIONS.md` (Aider auto-loaded) |
 | `augment-dir-rules` | `./` | Generates `.augment/rules/ai-toolkit-*.md` |
 | `antigravity-rules` | `./` | Generates `.agents/rules/` + `.agents/workflows/` |
-| `codex-md` | `./` | Generates Codex-facing `AGENTS.md` |
+| `codex-md` | `./` | Generates Codex-facing `AGENTS.md` (refuses to overwrite a project's own `AGENTS.md`) |
+| `adopt-agents-md` | `./` | Moves `CLAUDE.md` project instructions into `AGENTS.md` and imports it |
 | `codex-hooks` | `./` | Generates `.codex/hooks.json` |
 | `agents-md` | toolkit | Regenerates `AGENTS.md` |
 | `llms-txt` | `./` | Generates `llms.txt` |
