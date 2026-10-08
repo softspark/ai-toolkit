@@ -207,7 +207,7 @@ that runtime should receive the change.
 3. Update `kb/reference/agents-catalog.md`
 4. Update `app/ARCHITECTURE.md` counts
 5. Run `scripts/validate.py`
-6. Regenerate: `scripts/generate_agents_md.py > AGENTS.md`
+6. Regenerate: `npm run generate:llms`
 
 ## Adding a New Skill
 

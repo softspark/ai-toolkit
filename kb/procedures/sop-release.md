@@ -3,9 +3,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck, local-gates]
-version: "2.0.2"
+version: "2.0.3"
 created: "2026-04-10"
-last_updated: "2026-10-05"
+last_updated: "2026-10-08"
 description: "Release procedure for ai-toolkit under Local Release Gates, Publish-Only CI: ecosystem-sync drift check, version sync, changelog, artifact regeneration, then one command (npm run release -- X.Y.Z) that runs every gate on macOS and in Linux containers, tags, pushes and watches the publish-only workflow."
 ---
 
@@ -283,12 +283,11 @@ npm run generate:all
 git status --short
 ```
 
-`generate:agents` sets `AI_TOOLKIT_NO_CUSTOM_RULES=1`. Running
-`generate_agents_md.py` bare picks up whatever is registered in the maintainer's
-own `~/.softspark/ai-toolkit/rules/`, which then ships inside `AGENTS.md`.
+`AGENTS.md` is this repository's committed contributor instructions (read by
+every agent; `CLAUDE.md` imports it). No build step writes it and it is not
+part of the npm package; edit it by hand like any other doc.
 
-`AGENTS.md`, `GEMINI.md` and `.github/copilot-instructions.md` are generated
-and gitignored; the publish workflow regenerates them for the tarball. Commit
+`GEMINI.md` and `.github/copilot-instructions.md` are generated and gitignored; the publish workflow regenerates them for the tarball. Commit
 the tracked outputs that changed (`llms.txt`, `llms-full.txt`, README badges).
 The release script re-runs `generate:all` and fails if it changes any
 committed file, so a stale artefact cannot reach a tag.

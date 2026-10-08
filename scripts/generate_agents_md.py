@@ -6,7 +6,8 @@
 """Generate the shared AGENTS.md instruction core.
 
 Output is compatible with the Codex and GitHub Copilot AGENTS.md format.
-Usage: ./scripts/generate_agents_md.py > AGENTS.md
+Usage: ./scripts/generate_agents_md.py  (prints to stdout; never redirect it
+over a project's own AGENTS.md)
 """
 from __future__ import annotations
 

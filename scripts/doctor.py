@@ -11,7 +11,7 @@ Checks:
   3. Global install integrity (symlinks, settings.json hooks)
   4. Hook scripts (existence, executable)
   5. Hook configuration (valid event names)
-  6. Generated artifacts (AGENTS.md, llms.txt staleness)
+  6. Generated artifacts (llms.txt, llms-full.txt)
   7. Planned assets
   8. Benchmark freshness
   9. Stale rules
@@ -515,8 +515,9 @@ def check_generated_artifacts(dr: DiagResult, fix_mode: bool) -> None:
     """Check existence and staleness of generated artifacts."""
     print("## Generated Artifacts")
 
+    # AGENTS.md is not here: in this repository it is committed contributor
+    # instructions, and `ai-toolkit agents-md` prints the core on demand.
     artifacts = {
-        "AGENTS.md": ("generate_agents_md.py", []),
         "llms.txt": ("generate_llms_txt.py", []),
         "llms-full.txt": ("generate_llms_txt.py", ["--full"]),
     }
@@ -539,10 +540,6 @@ def check_generated_artifacts(dr: DiagResult, fix_mode: bool) -> None:
                     dr.fail(f"could not regenerate {artifact}")
             else:
                 dr.warn(f"{artifact} missing (run: ai-toolkit generate-all)")
-
-    # AGENTS.md no longer embeds the agent catalog (agents are discovered from
-    # their native directories), so there is no per-entry staleness to check —
-    # presence is covered by the generated-artifacts loop above.
 
     print()
 

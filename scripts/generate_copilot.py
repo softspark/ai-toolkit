@@ -31,8 +31,8 @@ subscription-tier gating or server-side MCP configuration:
 
 GitHub Copilot code review (generally available 2026-06-18, all tiers) now
 automatically reads the root-level ``AGENTS.md`` when generating review
-feedback. We already emit that file via ``scripts/generate_agents_md.py``, so
-no Copilot-specific emission is added here; ``AGENTS.md`` is tracked in this
+feedback. That file is the project's own instructions (the toolkit never
+writes it), so no Copilot-specific emission is added here; ``AGENTS.md`` is tracked in this
 tool's ``capability_markers`` in ``scripts/ecosystem_tools.json``.
 
 Copilot hooks are emitted by ``generate_copilot_hooks.py`` because their

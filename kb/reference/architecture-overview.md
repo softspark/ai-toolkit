@@ -55,7 +55,7 @@ ai-toolkit/
     check_split.py           # Split gate: proves a SKILL.md -> reference/ refactor lost nothing
     sync_badges.py           # Derives README count badges from the tree (runs inside generate:all)
     evaluate_skills.py       # Skill quality report
-    generate_agents_md.py    # Regenerates AGENTS.md
+    generate_agents_md.py    # Prints the shared instruction core (ai-toolkit agents-md, global Codex/OpenCode files)
     generate_cursor_rules.py # Generates .cursorrules (sources _common.py)
     generate_windsurf.py     # Generates .windsurfrules (sources _common.py)
     generate_copilot.py      # Generates Copilot instructions, agents, and portable skills

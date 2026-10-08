@@ -3,9 +3,9 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.9.0"
+version: "1.9.1"
 created: "2026-04-08"
-last_updated: "2026-09-24"
+last_updated: "2026-10-08"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
@@ -59,8 +59,8 @@ The 14 core commands below must pass.
 
 ```bash
 # Pre-commit (Phase 0)
-npm run generate:agents                                   # 1. Regenerate AGENTS.md without custom rules
-npm run generate:llms                                     # 2. Regenerate llms.txt + llms-full.txt
+npm run generate:all                                      # 1. Regenerate every generated artifact (llms, badges, editor configs)
+git status --short                                        # 2. Commit the tracked outputs that changed
 python3 scripts/validate.py --strict                        # 3. Validation passed?
 npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 4. All tests passed? (single run, cached)
 
@@ -92,8 +92,7 @@ NOT regenerate for you — you must do it locally.
 
 ```bash
 # 1. Regenerate generated artifacts
-npm run generate:agents
-npm run generate:llms
+npm run generate:all
 
 # 2. Validate everything (catches stale counts, missing assets)
 python3 scripts/validate.py --strict
@@ -105,9 +104,9 @@ python3 scripts/audit_skills.py --ci
 npm test
 
 # 5. Stage and commit
-# AGENTS.md, GEMINI.md, and .github/copilot-instructions.md are generated and
-# gitignored — do NOT commit them (regenerated at prepublishOnly). Only the
-# doc artifacts llms.txt / llms-full.txt are committed.
+# GEMINI.md and .github/copilot-instructions.md are generated and gitignored;
+# do NOT commit them. AGENTS.md is hand-edited contributor instructions. Only
+# the doc artifacts llms.txt / llms-full.txt are committed here.
 git add llms.txt llms-full.txt
 git add -p  # stage your other changes
 git commit -m "feat: your change description"
@@ -119,7 +118,7 @@ artifacts must be committed by the developer. `scripts/release.sh` fails when
 
 **One-liner (copy-paste):**
 ```bash
-npm run generate:agents && npm run generate:llms && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+npm run generate:all && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---
@@ -173,7 +172,7 @@ ai-toolkit doctor
 - Global Install: .claude exists, agents/skills symlinks (0 broken), settings.json hooks
 - Hook Scripts: all present and executable
 - Hook Configuration: 14 events registered
-- Generated Artifacts: AGENTS.md, llms.txt, llms-full.txt
+- Generated Artifacts: llms.txt, llms-full.txt
 - Planned Assets: plugin.json, benchmarks, plugin packs
 - Benchmark Freshness: < 30 days
 - Stale Rules: all healthy

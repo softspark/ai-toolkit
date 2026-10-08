@@ -35,12 +35,9 @@ jobs:
           test "$GITHUB_REF_NAME" = "v$PKG_VERSION" \
             || { echo "::error::tag $GITHUB_REF_NAME does not match package.json $PKG_VERSION"; exit 1; }
 
-      # Build, not a gate: AGENTS.md and the other generated files are
-      # gitignored but ship in the tarball, so they are produced here.
+      # Build, not a gate: regenerates the package assets from the tagged tree.
       - name: Generate package assets
-        run: |
-          npm run generate:all
-          test -s AGENTS.md
+        run: npm run generate:all
 
       - name: Publish to npm
         run: npm publish --access public --ignore-scripts --provenance

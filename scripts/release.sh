@@ -180,7 +180,6 @@ gate_generate_all() {
     local before after
     before="$(tree_fingerprint)"
     npm run generate:all || return 1
-    test -s AGENTS.md || { echo "AGENTS.md is empty after generate:all"; return 1; }
     after="$(tree_fingerprint)"
     if [ "$before" != "$after" ]; then
         git status --short
@@ -379,7 +378,8 @@ gate_pack() {
     TARBALL="$(ls "$LOG_DIR"/softspark-ai-toolkit-*.tgz)"
     local entries
     entries="$(tar -tzf "$TARBALL")" || return 1
-    printf '%s\n' "$entries" | grep -qx 'package/AGENTS.md' || { echo "AGENTS.md missing from tarball"; return 1; }
+    # AGENTS.md is this repository's contributor instructions, not a package asset.
+    ! printf '%s\n' "$entries" | grep -qx 'package/AGENTS.md' || { echo "repo AGENTS.md leaked into tarball"; return 1; }
     printf '%s\n' "$entries" | grep -qx 'package/NOTICE' || { echo "NOTICE missing from tarball"; return 1; }
     ! printf '%s\n' "$entries" | grep -qx 'package/scripts/release.sh' || { echo "release.sh leaked into tarball"; return 1; }
 }

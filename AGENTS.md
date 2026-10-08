@@ -1,0 +1,91 @@
+# ai-toolkit
+
+## Overview
+Shared AI development toolkit for Claude Code, Claude Chat/Cowork, and 11 editor integrations. It distributes skills, agents, lifecycle hooks, persona presets, plugin packaging, and the safety constitution as a global npm package.
+
+## Agent Runtime Rules
+- This file is the repository's instructions for every coding agent. Codex, Copilot, OpenCode, Gemini CLI and Antigravity read it natively; Claude Code reads it through the `@AGENTS.md` import in `CLAUDE.md` (since v2.1.277 Claude reads `AGENTS.md` on its own only when no `CLAUDE.md` exists in the working directory or above it, code.claude.com/docs/en/memory). Keep it under 24,000 bytes: Antigravity truncates larger rule files.
+- Claude Code also reads `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, settings, and hooks; put Claude-only instructions in `CLAUDE.md` below the import.
+- Claude Chat/Desktop/Cowork does **not** scan Claude Code's `~/.claude/` files. Use `ai-toolkit claude-app export`, upload the ZIP in Customize > Plugins, and apply the generated Cowork global instructions. Skills work in Chat/Cowork; hooks and sub-agents are Cowork-only.
+- **KB-first is mandatory for technical work:** before answering or acting on a technical/project prompt, call `smart_query()` or `hybrid_search_kb()` and use the result to locate the relevant SOP/reference. Cite the KB path when the result materially informs the answer. If the KB tool is unavailable, state that explicitly and continue from local files.
+- Any rule that must be enforced at a fixed lifecycle point belongs in `app/hooks.json` + `app/hooks/*.sh` with tests. Instruction files are context, not enforcement.
+
+## CRITICAL: Documentation & Count Accuracy
+**Every change to skills, agents, hooks, or editors MUST be reflected in ALL docs:**
+README.md, AGENTS.md, ARCHITECTURE.md, package.json, plugin.json, skills-catalog.md, architecture-overview.md, llms.txt.
+Run `python3 scripts/validate.py --strict` + `python3 scripts/audit_skills.py --ci` before every commit.
+When you touch any `app/hooks/*.sh`, ALSO run `shellcheck --severity=warning app/hooks/*.sh` — it is NOT part of `validate.py` or `npm test`. No GitHub workflow runs tests or lint: CI only publishes a tag, and every gate (ShellCheck included) runs locally in `npm run release -- X.Y.Z` (`scripts/release.sh`, see `kb/procedures/sop-release.md`).
+Stale counts = broken user trust. This is non-negotiable.
+
+## Tech Stack
+- **Language**: Python >= 3.11 (scripts, stdlib-only), Bash (hooks only), Node.js >= 18 (CLI wrapper + visual-server.cjs)
+- **Python floor**: declared in three places that must stay in sync — `PYTHON_MIN` in `bin/ai-toolkit.js`, `PYTHON_MIN` in `scripts/_common.py`, and the `python3` `min_version` in `scripts/check_deps.py`. Raising it requires bumping the `python-syntax` matrix floor in `.github/workflows/ci.yml` and the Requirements note in README.md.
+- **Framework**: Claude Code Agent Skills standard
+- **Database**: —
+
+## Commands
+```bash
+# Test:   npm test  (bats tests/ --jobs 4; needs GNU parallel, see check_deps.py)
+# Validate: python3 scripts/validate.py
+# Evaluate: python3 scripts/evaluate_skills.py
+# Audit:    python3 scripts/audit_skills.py --ci  (security scan, exit 1 on HIGH)
+# Split gate: python3 scripts/check_split.py <skill> --before <pre-split SKILL.md>  (run after every body -> reference/ split; proves no code/section/description was lost)
+# Shellcheck: shellcheck --severity=warning app/hooks/*.sh  (hook lint; also run by scripts/release.sh)
+# Release:  npm run release -- X.Y.Z [--dry-run|--gates-only]  (all gates incl. Linux bats in Docker, then tag + push + watch publish; the only way to tag)
+# Benchmark: python3 scripts/benchmark_ecosystem.py --offline
+# Harvest: python3 scripts/harvest_ecosystem.py --offline
+# Generate: python3 scripts/generate_llms_txt.py > llms.txt
+# Generate: python3 scripts/generate_language_rules_skills.py  (build app/skills/<lang>-rules/ from app/rules/<lang>/)
+# Install:  ai-toolkit install            (global → ~/.claude/settings.json hooks + ~/.softspark/ai-toolkit/hooks/ scripts)
+# Install:  ai-toolkit install --profile minimal|standard|strict
+# Install:  ai-toolkit install --language-skills detected|all  (scope <lang>-rules/<lang>-patterns skills to languages registered projects use; default detected, choice persisted in state.json)
+# Init:     ai-toolkit install --local    (global layer first, then the project: AGENTS.md/CLAUDE.md, settings, language rules; --no-global skips the global layer)
+# Init:     ai-toolkit install --local --editors all  (+ all editors: cursor, windsurf, cline, roo, aider, augment, copilot, antigravity, codex, gemini, opencode)
+# Init:     ai-toolkit install --local --editors cursor,aider  (+ specific editors)
+# Doctor:   ai-toolkit doctor --fix       (auto-repair broken symlinks, hooks, artifacts)
+# Claude app: ai-toolkit claude-app export --verify  (uploadable Chat/Cowork plugin + global instructions)
+# Eject:    ai-toolkit eject              (standalone copy, no toolkit dependency)
+# Compile:  ai-toolkit compile-slm       (compile toolkit for SLMs: --budget, --model-size, --persona, --dry-run)
+# Config:   ai-toolkit config validate|diff|init|create-base|check  (config inheritance)
+# Projects: ai-toolkit projects           (list/prune/remove registered local projects)
+# Codex:   ai-toolkit codex-md            (print the Codex instruction core; install --editors codex writes it to $CODEX_HOME/AGENTS.md)
+# Adopt:   ai-toolkit adopt-agents-md     (move a project's CLAUDE.md instructions into AGENTS.md)
+# Codex:   ai-toolkit codex-rules         (generate .agents/rules/*.md for Codex CLI)
+# Codex:   ai-toolkit codex-hooks         (generate .codex/hooks.json for Codex CLI)
+# Deps:    python3 scripts/check_deps.py  (check system dependencies, OS-specific install hints)
+# Dev tooling (repo only, never shipped): python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+# Python unit tests: npm run test:py   (pytest tests/python; scripts/release.sh runs it with ruff and mypy on Python 3.11 in Docker)
+# Lint:   npm run lint:py    (ruff E,F; the rule set is the package.json script, not a config file)
+# Types:  npm run typecheck:py  (mypy --strict over the allowlist in mypy.ini; add a file when it passes, never remove one)
+# No pyproject.toml here on purpose: quality-gate.sh reads one as "Python project, ruff check ." and this repo is npm-first (pytest.ini / mypy.ini instead)
+```
+
+## Skill Tiers (When to Use What)
+
+- **Tier 1 — Quick single-agent** (`/debug`, `/review`, `/refactor`, `/analyze`, `/docs`, `/plan`, `/tdd`, `/grill-me`, `/triage-issue`): one concern, one file area, fast
+- **Tier 1.5 — Product planning pipeline** (`/write-a-prd` → `/prd-to-plan` → `/prd-to-issues`): interview-driven PRD → vertical-slice plan → GitHub issues
+- **Tier 1.5 — Design & architecture** (`/design-an-interface`, `/architecture-audit`, `/refactor-plan`, `/ubiquitous-language`, `/qa-session`): parallel sub-agent exploration
+- **Tier 2 — Multi-agent workflow** (`/workflow <type>`): cross-cutting task with a known pattern — spawns specialized agents per phase
+- **Tier 3 — Custom parallelism** (`/orchestrate`, `/swarm`): no predefined workflow matches, you define the domains
+
+`/workflow` types: `feature-development`, `backend-feature`, `frontend-feature`, `api-design`, `database-evolution`, `test-coverage`, `security-audit`, `codebase-onboarding`, `spike`, `debugging`, `incident-response`, `performance-optimization`, `infrastructure-change`, `application-deploy`, `proactive-troubleshooting`
+
+## Key Conventions
+- All scripts live in `scripts/` (Python) and `app/hooks/` (Bash) — never at repo root
+- `install` / `update` = global (`~/.claude/` and every global editor surface); `--local` runs that global layer first, then what only the project can hold
+- This repository's `AGENTS.md` is committed project instructions, not a generated artifact; `scripts/generate_agents_md.py` (`ai-toolkit agents-md`) only prints the toolkit instruction core
+- DSH (DeepSeek Harness) support is retired in 5.0.0. For one release `--editors dsh` only warns and is ignored, and `ai-toolkit dsh` only prints manual cleanup steps (deprecation path in `BACKWARD_COMPATIBILITY.md`); remove both stubs in the next minor. Legacy `dsh` owner markers in `.agents/skills` and `dsh` entries in registered projects are only migrated away (see `kb/reference/dsh-compatibility.md`)
+- `inject_rule_cli.py` always writes to `$TARGET_DIR/.claude/CLAUDE.md`
+- `inject_hook_cli.py` injects hooks into `$TARGET_DIR/.claude/settings.json` — supports local files and HTTPS URLs
+- Skill names: lowercase-hyphen, max 64 chars, unique across `app/skills/`
+- Task skills: `disable-model-invocation: true` | Knowledge skills: `user-invocable: false` | Explicit hybrid skills: `user-invocable: true` (used by `instinct-review` and `teams` — explicit user-invocable slash commands with LLM response)
+- All scripts (skills + CLI) are Python stdlib only, JSON to stdout, zero external deps
+- Hooks remain in Bash for startup speed
+- After any agent/skill change: run `python3 scripts/validate.py` before commit
+- After adding agents: regenerate `llms.txt` and `llms-full.txt` (`npm run generate:llms`)
+- Version bump required before every `git tag` + publish
+- `agent:` — names the specialized agent to delegate to
+- `context: fork` — runs skill in isolated forked context
+
+## MCP Servers
+<!-- Configure per-machine in ~/.claude/settings.local.json, not here -->

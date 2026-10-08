@@ -25,7 +25,7 @@ Rule types map to Cursor's UI labels as follows:
 The legacy ``.cursorrules`` single-file format is still generated separately
 by ``generate_cursor_rules.py`` for backwards compatibility. Cursor also
 supports ``AGENTS.md`` (root + nested subdirectories) as an alternative to
-``.cursor/rules/``; ``generate_agents_md.py`` covers that surface.
+``.cursor/rules/``; that file is the project's own and the toolkit leaves it alone.
 
 Usage:
   python3 scripts/generate_cursor_mdc.py [target-dir]

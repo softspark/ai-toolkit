@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Changed
+
+- **The repository follows its own AGENTS.md model:** this repo's
+  instructions moved from `CLAUDE.md` into a committed `AGENTS.md`
+  (`ai-toolkit adopt-agents-md`), and `CLAUDE.md` imports it. `generate:all`
+  no longer writes the generated instruction core over it (`generate:agents`
+  is gone), the npm package no longer ships an `AGENTS.md`, and `doctor`,
+  `release.sh` and the publish workflow stop expecting one. A test fails if a
+  build script redirects into `AGENTS.md` again.
+
+### Fixed
+
+- **Stale docs:** `app/ARCHITECTURE.md` still said Codex and OpenCode get
+  toolkit rules in the project `AGENTS.md`; they get them in
+  `$CODEX_HOME/AGENTS.md` and `~/.config/opencode/AGENTS.md` since v5.3.0.
+
+---
+
 ## v5.3.2 - install --local installs the global layer first (2026-10-08)
 
 ### Ecosystem

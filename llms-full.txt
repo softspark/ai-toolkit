@@ -9132,7 +9132,7 @@ that runtime should receive the change.
 3. Update `kb/reference/agents-catalog.md`
 4. Update `app/ARCHITECTURE.md` counts
 5. Run `scripts/validate.py`
-6. Regenerate: `scripts/generate_agents_md.py > AGENTS.md`
+6. Regenerate: `npm run generate:llms`
 
 ## Adding a New Skill
 
@@ -10028,9 +10028,9 @@ title: "SOP: Release Verification"
 category: procedures
 service: ai-toolkit
 tags: [sop, verification, release, smoke-test, install, update, qa, provenance, sarif]
-version: "1.9.0"
+version: "1.9.1"
 created: "2026-04-08"
-last_updated: "2026-09-24"
+last_updated: "2026-10-08"
 description: "End-to-end smoke test after installing or updating @softspark/ai-toolkit. Verifies CLI, native Codex and GitHub Copilot surfaces, Claude app export, doctor, validation, tests, eject, provenance, SARIF, and per-skill permissions."
 ---
 
@@ -10084,8 +10084,8 @@ The 14 core commands below must pass.
 
 ```bash
 # Pre-commit (Phase 0)
-npm run generate:agents                                   # 1. Regenerate AGENTS.md without custom rules
-npm run generate:llms                                     # 2. Regenerate llms.txt + llms-full.txt
+npm run generate:all                                      # 1. Regenerate every generated artifact (llms, badges, editor configs)
+git status --short                                        # 2. Commit the tracked outputs that changed
 python3 scripts/validate.py --strict                        # 3. Validation passed?
 npm test > /tmp/npm-test.log 2>&1 && grep -c '^ok ' /tmp/npm-test.log && ! grep -q '^not ok' /tmp/npm-test.log  # 4. All tests passed? (single run, cached)
 
@@ -10117,8 +10117,7 @@ NOT regenerate for you — you must do it locally.
 
 ```bash
 # 1. Regenerate generated artifacts
-npm run generate:agents
-npm run generate:llms
+npm run generate:all
 
 # 2. Validate everything (catches stale counts, missing assets)
 python3 scripts/validate.py --strict
@@ -10130,9 +10129,9 @@ python3 scripts/audit_skills.py --ci
 npm test
 
 # 5. Stage and commit
-# AGENTS.md, GEMINI.md, and .github/copilot-instructions.md are generated and
-# gitignored — do NOT commit them (regenerated at prepublishOnly). Only the
-# doc artifacts llms.txt / llms-full.txt are committed.
+# GEMINI.md and .github/copilot-instructions.md are generated and gitignored;
+# do NOT commit them. AGENTS.md is hand-edited contributor instructions. Only
+# the doc artifacts llms.txt / llms-full.txt are committed here.
 git add llms.txt llms-full.txt
 git add -p  # stage your other changes
 git commit -m "feat: your change description"
@@ -10144,7 +10143,7 @@ artifacts must be committed by the developer. `scripts/release.sh` fails when
 
 **One-liner (copy-paste):**
 ```bash
-npm run generate:agents && npm run generate:llms && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
+npm run generate:all && python3 scripts/validate.py --strict && python3 scripts/audit_skills.py --ci && npm test
 ```
 
 ---
@@ -10198,7 +10197,7 @@ ai-toolkit doctor
 - Global Install: .claude exists, agents/skills symlinks (0 broken), settings.json hooks
 - Hook Scripts: all present and executable
 - Hook Configuration: 14 events registered
-- Generated Artifacts: AGENTS.md, llms.txt, llms-full.txt
+- Generated Artifacts: llms.txt, llms-full.txt
 - Planned Assets: plugin.json, benchmarks, plugin packs
 - Benchmark Freshness: < 30 days
 - Stale Rules: all healthy
@@ -10581,9 +10580,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck, local-gates]
-version: "2.0.2"
+version: "2.0.3"
 created: "2026-04-10"
-last_updated: "2026-10-05"
+last_updated: "2026-10-08"
 description: "Release procedure for ai-toolkit under Local Release Gates, Publish-Only CI: ecosystem-sync drift check, version sync, changelog, artifact regeneration, then one command (npm run release -- X.Y.Z) that runs every gate on macOS and in Linux containers, tags, pushes and watches the publish-only workflow."
 ---
 
@@ -10861,12 +10860,11 @@ npm run generate:all
 git status --short
 ```
 
-`generate:agents` sets `AI_TOOLKIT_NO_CUSTOM_RULES=1`. Running
-`generate_agents_md.py` bare picks up whatever is registered in the maintainer's
-own `~/.softspark/ai-toolkit/rules/`, which then ships inside `AGENTS.md`.
+`AGENTS.md` is this repository's committed contributor instructions (read by
+every agent; `CLAUDE.md` imports it). No build step writes it and it is not
+part of the npm package; edit it by hand like any other doc.
 
-`AGENTS.md`, `GEMINI.md` and `.github/copilot-instructions.md` are generated
-and gitignored; the publish workflow regenerates them for the tarball. Commit
+`GEMINI.md` and `.github/copilot-instructions.md` are generated and gitignored; the publish workflow regenerates them for the tarball. Commit
 the tracked outputs that changed (`llms.txt`, `llms-full.txt`, README badges).
 The release script re-runs `generate:all` and fails if it changes any
 committed file, so a stale artefact cannot reach a tag.
@@ -11481,7 +11479,7 @@ ai-toolkit/
     check_split.py           # Split gate: proves a SKILL.md -> reference/ refactor lost nothing
     sync_badges.py           # Derives README count badges from the tree (runs inside generate:all)
     evaluate_skills.py       # Skill quality report
-    generate_agents_md.py    # Regenerates AGENTS.md
+    generate_agents_md.py    # Prints the shared instruction core (ai-toolkit agents-md, global Codex/OpenCode files)
     generate_cursor_rules.py # Generates .cursorrules (sources _common.py)
     generate_windsurf.py     # Generates .windsurfrules (sources _common.py)
     generate_copilot.py      # Generates Copilot instructions, agents, and portable skills
