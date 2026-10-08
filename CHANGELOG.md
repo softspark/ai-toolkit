@@ -7,7 +7,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v5.3.4 - update names CLAUDE.md-only projects, current models (2026-10-08)
+
+### Ecosystem
+
+- Drift review: documentation edits for Claude app, Gemini CLI and Codex CLI
+  change nothing the generators emit (class A); snapshot refreshed.
 
 ### Changed
 
@@ -25,6 +30,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   recommended model for complex coding, replacing `gpt-6-sol`. The concrete
   defaults generators emit (Aider's model) move from `claude-sonnet-5` to
   `claude-sonnet-5-5`, and `haiku` to `claude-haiku-5-5`.
+- **Publish workflow:** `softprops/action-gh-release` 3.0.2 to 3.0.3 (#35;
+  safer handling of malformed GitHub API errors), pinned by commit SHA.
 
 ### Fixed
 
