@@ -104,7 +104,7 @@ skills_dir: Path = app_dir / "skills"
 
 
 # ---------------------------------------------------------------------------
-# Default Claude API IDs, reviewed 2026-09-23 against:
+# Default Claude API IDs, reviewed 2026-10-08 against:
 # https://platform.claude.com/docs/en/models/overview
 # Consumed by generators that need to emit a concrete model string.
 # Aliases like "opus"/"sonnet"/"haiku" in agent frontmatter are resolved by
@@ -112,8 +112,8 @@ skills_dir: Path = app_dir / "skills"
 # ---------------------------------------------------------------------------
 DEFAULT_CLAUDE_MODELS: dict[str, str] = {
     "opus": "claude-opus-5-5",
-    "sonnet": "claude-sonnet-5",
-    "haiku": "claude-haiku-4-5",
+    "sonnet": "claude-sonnet-5-5",
+    "haiku": "claude-haiku-5-5",
 }
 
 

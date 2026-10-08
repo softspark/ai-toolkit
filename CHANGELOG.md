@@ -9,6 +9,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **`update` names projects that still keep instructions in CLAUDE.md:** after
+  propagating to registered projects it lists every project whose instructions
+  live only in `CLAUDE.md` (no `AGENTS.md`), which agents other than Claude
+  Code do not read, with the `ai-toolkit adopt-agents-md` fix. The per-project
+  hint used to be hidden in the parallel run's output. `--json` reports them as
+  `claude_md_instructions`.
+- **Current models in skills and defaults (reviewed 2026-10-08):** Claude
+  Haiku 5.5 (`claude-haiku-5-5`, effort `low` to `max`, default `medium`)
+  replaces Haiku 4.5 in `model-routing-patterns`, `prompt-caching-patterns`
+  (Sonnet 5.5 and Haiku 5.5 now cache from 512 tokens) and
+  `model-compatibility.md`. The Codex reference adds `gpt-6.1-sol`, the
+  recommended model for complex coding, replacing `gpt-6-sol`. The concrete
+  defaults generators emit (Aider's model) move from `claude-sonnet-5` to
+  `claude-sonnet-5-5`, and `haiku` to `claude-haiku-5-5`.
+
 ### Fixed
 
 - **Older CLAUDE.md template not recognized:** a `CLAUDE.md` that is still the

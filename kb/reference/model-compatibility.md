@@ -3,15 +3,15 @@ title: "Model compatibility for skills and agents"
 category: reference
 service: ai-toolkit
 tags: [models, skills, agents, codex, copilot, claude, effort]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-09-23"
-last_updated: "2026-10-01"
+last_updated: "2026-10-08"
 description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."
 ---
 
 # Model compatibility for skills and agents
 
-Reviewed 2026-10-01. These are documentation snapshots, not a guarantee that a
+Reviewed 2026-10-08. These are documentation snapshots, not a guarantee that a
 model is enabled on a particular account. Check the active client's picker and
 policy before selecting a model. Preserve a user's explicit choice; do not
 replace a tiered workflow with a single flagship model.
@@ -26,21 +26,22 @@ replace a tiered workflow with a single flagship model.
 | API examples | Explicit provider model ID plus that model's endpoint and capability contract | Receive configured models, budgets and rates; application fallback must use an approved compatible set |
 
 Claude aliases do not imply the same concrete model on every provider. The
-current Claude Code reference maps Anthropic API `opus` to Opus 5.5 and `sonnet`
-to Sonnet 5.5, while other providers can resolve differently. Sonnet 5.5 requires
-Claude Code 2.1.284 or later. See
+current Claude Code reference maps Anthropic API `opus` to Opus 5.5, `sonnet`
+to Sonnet 5.5 and `haiku` to Haiku 5.5, while other providers can resolve
+differently. Sonnet 5.5 requires Claude Code 2.1.284 or later and Haiku 5.5
+requires 2.1.293 or later. See
 [Claude Code model configuration](https://code.claude.com/docs/en/model-config).
 
 ## Reviewed model families
 
 | Provider/surface | Current examples at review time | Important boundary |
 |------------------|---------------------------------|--------------------|
-| OpenAI API | `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` | Use Responses for reasoning with tools; Astra rejects `none` effort, while Sol/Luna allow it |
-| Codex | GPT-6 Astra/Sol/Luna, according to account/client availability | Start from the selected/default effort; higher reasoning and orchestration modes are explicit choices |
-| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` | Opus 5.5 defaults to medium effort, Fable/Sonnet to high; Haiku does not support effort |
+| OpenAI API | `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-luna` (`gpt-6-sol` still listed) | Use Responses for reasoning with tools; Astra and Sol 6.1 reject `none` (Sol 6.1 also `minimal`; use `low`), while GPT-6 Sol/Luna allow it |
+| Codex | `gpt-6.1-sol` recommended for complex coding, `gpt-6-astra` most capable, `gpt-6-luna` for focused tasks, according to account/client availability | Start from the selected/default effort; higher reasoning and orchestration modes are explicit choices |
+| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`, `claude-haiku-5-5` | Opus 5.5 and Haiku 5.5 default to medium effort, Fable/Sonnet to high; all four support `low` to `max` |
 | GitHub Copilot | Offers models from multiple providers, including current GPT-6 and Claude families | Plan, organization policy and client determine the actual list; utility models are not selectable session models |
 
-Sources: [OpenAI migration guidance](https://developers.openai.com/api/docs/guides/latest-model),
+Sources: [OpenAI latest model guide](https://developers.openai.com/api/docs/guides/latest-model),
 [Codex models](https://learn.chatgpt.com/docs/models),
 [Claude models](https://platform.claude.com/docs/en/models/overview),
 [Claude effort](https://platform.claude.com/docs/en/build-with-claude/effort),

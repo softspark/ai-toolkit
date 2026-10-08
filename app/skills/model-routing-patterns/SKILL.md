@@ -85,14 +85,20 @@ executor, not a Claude `model:` value or an automatic Claude Team member. Reuse
 the installed plugin instead of generating another wrapper or editing its cache.
 <!-- CLAUDE_CODE_ONLY_END -->
 
-## Reviewed model reference (2026-10-01)
+## Reviewed model reference (2026-10-08)
 
 | Model | Claude API ID | API effort default |
 |-------|---------------|--------------------|
 | Claude Opus 5.5 | `claude-opus-5-5` | `medium` |
 | Claude Fable 5.1 | `claude-fable-5-1` | `high` |
 | Claude Sonnet 5.5 | `claude-sonnet-5-5` | `high` |
-| Claude Haiku 4.5 | `claude-haiku-4-5-20251001` | Effort unsupported |
+| Claude Haiku 5.5 | `claude-haiku-5-5` | `medium` |
+
+Codex (account and client availability decide): `gpt-6-astra` is the most
+capable model; `gpt-6.1-sol` is the recommended
+model for complex coding and agentic work and replaces `gpt-6-sol`; `gpt-6-luna`
+fits focused, repeatable tasks. GPT-5.5 leaves Codex with ChatGPT sign-in on
+2026-10-14. Sol 6.1 accepts `low` to `max` effort but not `none` or `minimal`.
 
 These are dated identifiers, not a runtime upgrade policy. Check the provider's
 model availability and current [pricing](https://platform.claude.com/docs/en/about-claude/pricing)
@@ -102,8 +108,8 @@ surface retirement or availability problems explicitly.
 
 ## Effort and caching
 
-Opus 5.5, Fable 5.1 and Sonnet 5.5 support `low`, `medium`, `high`, `xhigh`, and
-`max`. Effort is a behavior control, not a hard spending cap. Opus 5.5 and Fable
+Opus 5.5, Fable 5.1, Sonnet 5.5 and Haiku 5.5 support `low`, `medium`, `high`,
+`xhigh`, and `max`. Effort is a behavior control, not a hard spending cap. Opus 5.5 and Fable
 5.1 use always-on adaptive thinking; a small output limit can truncate the answer.
 
 Changing top-level `output_config.effort` invalidates message cache blocks, with
@@ -169,13 +175,14 @@ confidence thresholds, traffic percentages or cost multipliers as universal rule
 
 ## Sources and related skills
 
-Reviewed 2026-10-01:
+Reviewed 2026-10-08:
 - [Claude model overview](https://platform.claude.com/docs/en/models/overview)
 - [Effort](https://platform.claude.com/docs/en/build-with-claude/effort)
 - [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 - [Sonnet 5.5 prompting](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5)
 - [Codex models](https://learn.chatgpt.com/docs/models)
 - [Astra model](https://developers.openai.com/api/docs/models/gpt-6-astra)
+- [Latest OpenAI model guide](https://developers.openai.com/api/docs/guides/latest-model)
 - [Models and Trusted Access](https://learn.chatgpt.com/docs/cyber-safety)
 
 Use `prompt-caching-patterns` for cache design and `json-mode-patterns` for

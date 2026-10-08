@@ -12,14 +12,14 @@ Cache repeated prefixes when reuse offsets write costs. Cache eligibility and
 pricing depend on the model and platform; a short system prompt is not cached
 merely because it repeats.
 
-## Dated cache reference (2026-09-23)
+## Dated cache reference (2026-10-08)
 
 | Model | Minimum eligible prefix | Cache read / base input price |
 |-------|-------------------------|-------------------------------|
 | Claude Opus 5.5 | 512 tokens | 5% |
 | Claude Fable 5.1 | 512 tokens | 2.5% |
-| Claude Sonnet 5 | 1024 tokens | 10% |
-| Claude Haiku 4.5 | 4096 tokens | 10% |
+| Claude Sonnet 5.5 | 512 tokens | 5% |
+| Claude Haiku 5.5 | 512 tokens | 10% |
 
 For the Claude API, a five-minute write costs 1.25 times base input and a one-hour
 write costs 2 times base input. Recheck
@@ -112,7 +112,7 @@ minutes, within the approved cost policy.
 
 ## Sources and related skills
 
-Reviewed 2026-09-23:
+Reviewed 2026-10-08:
 - [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 - [Pricing](https://platform.claude.com/docs/en/about-claude/pricing)
 

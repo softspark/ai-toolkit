@@ -12238,7 +12238,7 @@ Usage: ai-toolkit <command> [options]
 | `install --opt-in-rules <list>` | Enable opt-in registered rules (`rag-mcp-legal-rules` is opt-in by default; `add-rule --opt-in` marks others). Stored per project with `--local`, otherwise in `state.json`; `none` clears the list. Without the flag the stored list applies |
 | `install --local` | Global layer first (the same pass `update` runs: recorded profile/modules, recorded global editors plus every selected editor with a global surface), then project-local configs: Claude Code project files, and with `--editors all` or `--editors cursor,aider` the per-project editor configs. `--no-global` skips the global layer (`update` passes it to every registered project after its own global pass). Keeps an `@AGENTS.md` import in `CLAUDE.md`, creates `AGENTS.md` from the template only in a project without instructions, and removes toolkit sections an older release put in `AGENTS.md` |
 | `adopt-agents-md [dir] [--dry-run]` | Move the project's own `CLAUDE.md` instructions into `AGENTS.md` (read by every agent), leave `CLAUDE.md` importing it next to the toolkit sections, and drop an `AGENTS.md` entry from `.gitignore`; every file is backed up first |
-| `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
+| `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest`: the global layer once, then every registered project; ends by listing projects whose instructions are still only in `CLAUDE.md` (fix with `adopt-agents-md`) |
 | `update --local` | Re-apply + auto-detect editors from existing project files |
 | `reset --local` | Wipe all project-local configs and recreate from scratch (clean slate) |
 | `status` | Show installed modules and version |
@@ -14703,7 +14703,7 @@ claude-app --scope global` targets it directly, without a plugin.
 | `ai-toolkit install --local --lang <lang>` | current project | explicit language selection for rules (e.g. `--lang typescript`, `--lang go,python`); auto-detected when omitted |
 | `ai-toolkit install --modules <list>` | `~/.claude/` | selective module install (e.g. `--modules core,agents,rules-typescript`) |
 | `ai-toolkit update --local` | `~/` first, then the current project | refresh the global layer and the project configs; auto-detects editors from existing files |
-| `ai-toolkit update` | `~/`, then every registered project | one global pass, then each registered project with `--no-global` so the global layer is not repeated per project |
+| `ai-toolkit update` | `~/`, then every registered project | one global pass, then each registered project with `--no-global` so the global layer is not repeated per project; ends with the projects whose instructions are still only in `CLAUDE.md` (move them with `ai-toolkit adopt-agents-md`; `--json` lists them as `claude_md_instructions`) |
 | `ai-toolkit claude-app export` | ZIP + Markdown output | build the uploadable Claude Chat/Cowork plugin and Cowork global instructions; registered rules are included unless `--no-custom-rules` is set |
 | `ai-toolkit add-rule` | `~/.softspark/ai-toolkit/rules/` | register a global rule |
 | `ai-toolkit remove-rule` | `~/.softspark/ai-toolkit/rules/` | unregister a global rule |
@@ -17662,15 +17662,15 @@ title: "Model compatibility for skills and agents"
 category: reference
 service: ai-toolkit
 tags: [models, skills, agents, codex, copilot, claude, effort]
-version: "1.1.0"
+version: "1.2.0"
 created: "2026-09-23"
-last_updated: "2026-10-01"
+last_updated: "2026-10-08"
 description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."
 ---
 
 # Model compatibility for skills and agents
 
-Reviewed 2026-10-01. These are documentation snapshots, not a guarantee that a
+Reviewed 2026-10-08. These are documentation snapshots, not a guarantee that a
 model is enabled on a particular account. Check the active client's picker and
 policy before selecting a model. Preserve a user's explicit choice; do not
 replace a tiered workflow with a single flagship model.
@@ -17685,21 +17685,22 @@ replace a tiered workflow with a single flagship model.
 | API examples | Explicit provider model ID plus that model's endpoint and capability contract | Receive configured models, budgets and rates; application fallback must use an approved compatible set |
 
 Claude aliases do not imply the same concrete model on every provider. The
-current Claude Code reference maps Anthropic API `opus` to Opus 5.5 and `sonnet`
-to Sonnet 5.5, while other providers can resolve differently. Sonnet 5.5 requires
-Claude Code 2.1.284 or later. See
+current Claude Code reference maps Anthropic API `opus` to Opus 5.5, `sonnet`
+to Sonnet 5.5 and `haiku` to Haiku 5.5, while other providers can resolve
+differently. Sonnet 5.5 requires Claude Code 2.1.284 or later and Haiku 5.5
+requires 2.1.293 or later. See
 [Claude Code model configuration](https://code.claude.com/docs/en/model-config).
 
 ## Reviewed model families
 
 | Provider/surface | Current examples at review time | Important boundary |
 |------------------|---------------------------------|--------------------|
-| OpenAI API | `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna` | Use Responses for reasoning with tools; Astra rejects `none` effort, while Sol/Luna allow it |
-| Codex | GPT-6 Astra/Sol/Luna, according to account/client availability | Start from the selected/default effort; higher reasoning and orchestration modes are explicit choices |
-| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` | Opus 5.5 defaults to medium effort, Fable/Sonnet to high; Haiku does not support effort |
+| OpenAI API | `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-luna` (`gpt-6-sol` still listed) | Use Responses for reasoning with tools; Astra and Sol 6.1 reject `none` (Sol 6.1 also `minimal`; use `low`), while GPT-6 Sol/Luna allow it |
+| Codex | `gpt-6.1-sol` recommended for complex coding, `gpt-6-astra` most capable, `gpt-6-luna` for focused tasks, according to account/client availability | Start from the selected/default effort; higher reasoning and orchestration modes are explicit choices |
+| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`, `claude-haiku-5-5` | Opus 5.5 and Haiku 5.5 default to medium effort, Fable/Sonnet to high; all four support `low` to `max` |
 | GitHub Copilot | Offers models from multiple providers, including current GPT-6 and Claude families | Plan, organization policy and client determine the actual list; utility models are not selectable session models |
 
-Sources: [OpenAI migration guidance](https://developers.openai.com/api/docs/guides/latest-model),
+Sources: [OpenAI latest model guide](https://developers.openai.com/api/docs/guides/latest-model),
 [Codex models](https://learn.chatgpt.com/docs/models),
 [Claude models](https://platform.claude.com/docs/en/models/overview),
 [Claude effort](https://platform.claude.com/docs/en/build-with-claude/effort),
