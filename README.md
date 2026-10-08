@@ -8,9 +8,13 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-1999%20passing-success)](tests/)
 
-## What's New in v5.3.0
+## What's New in v5.3.1
 
-- **One AGENTS.md for every agent.** Project instructions live in a committed
+- **Generated AGENTS.md stays out of CLAUDE.md.** A toolkit-generated
+  `AGENTS.md` (`# AI Toolkit Instructions`) is no longer imported, so Claude
+  does not load rules from `~/.claude/rules/` twice; `adopt-agents-md` refuses
+  to merge into it.
+- **One AGENTS.md for every agent (v5.3.0).** Project instructions live in a committed
   `AGENTS.md` that `CLAUDE.md` imports; `ai-toolkit adopt-agents-md` moves an
   existing `CLAUDE.md` there, and nothing truncates it (Codex
   `project_doc_max_bytes` raised, 24,000-byte Antigravity warnings).
@@ -19,10 +23,8 @@
   frontmatter and fit Antigravity's size limits.
 - **MCP rules follow the client's MCP config.** Registered rules that need an
   MCP server reach a file only when its readers have that server;
-  `rag-mcp-legal-rules` is opt-in.
-- **MCP servers in every claude-switch profile.** Global Claude MCP installs
-  write each profile's `.claude.json`, and new shared profiles copy the
-  default account's servers.
+  `rag-mcp-legal-rules` is opt-in. Global Claude MCP installs reach every
+  claude-switch profile.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

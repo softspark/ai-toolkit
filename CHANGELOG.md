@@ -7,7 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v5.3.1 - Generated AGENTS.md stays out of CLAUDE.md (2026-10-08)
+
+### Ecosystem
+
+- Drift review: documentation edits for Claude Code, Claude app, GitHub
+  Copilot and Gemini CLI change nothing the generators emit (class A); the
+  ecosystem snapshot is refreshed.
 
 ### Fixed
 
