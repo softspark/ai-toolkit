@@ -35,6 +35,7 @@ from install_steps.ai_tools import (
     _CONSTITUTION_IMPORT as CONSTITUTION_IMPORT,
     _backup_file,
     _create_local_claude_md,
+    _is_generated_agents_md,
     project_instructions,
 )
 from registered_rules import ANTIGRAVITY_RULE_LIMIT_BYTES
@@ -70,6 +71,11 @@ def adopt(project: Path, *, dry_run: bool = False) -> list[str]:
     for path in (claude_md, agents_md, gitignore):
         if path.is_symlink():
             raise RuntimeError(f"Refusing to edit symlinked {path}")
+    if _is_generated_agents_md(agents_md):
+        raise RuntimeError(
+            f"{agents_md} is the generated ai-toolkit instruction core, not project "
+            "instructions; remove or regenerate it elsewhere before adopting"
+        )
     changes: list[str] = []
 
     claude_text = claude_md.read_text(encoding="utf-8") if claude_md.is_file() else ""

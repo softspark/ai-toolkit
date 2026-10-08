@@ -16,6 +16,9 @@ from frontmatter import split_frontmatter  # noqa: E402
 CONSTITUTION_PATH = (
     Path(__file__).resolve().parent.parent / "app" / "constitution.md"
 )
+# First line of the generated core; an AGENTS.md starting with it is a
+# toolkit artifact (e.g. this repository's own), not project instructions.
+INSTRUCTION_CORE_TITLE = "# AI Toolkit Instructions"
 
 
 def _strip_frontmatter(text: str) -> str:
@@ -83,7 +86,7 @@ def render_instruction_core() -> str:
         )
     )
     sections = [
-        "# AI Toolkit Instructions",
+        INSTRUCTION_CORE_TITLE,
         (
             "Shared, always-on policy for ai-toolkit projects. Agent and skill"
             " catalogs are discovered from their native directories instead of"

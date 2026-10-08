@@ -936,6 +936,25 @@ MD
     ! grep -q '@AGENTS.md' "$TEST_PROJECT/CLAUDE.md"
 }
 
+@test "install --local never imports a generated toolkit AGENTS.md into CLAUDE.md" {
+    AI_TOOLKIT_NO_CUSTOM_RULES=1 python3 "$TOOLKIT_DIR/scripts/generate_agents_md.py" > "$TEST_PROJECT/AGENTS.md"
+    printf '%s\n' '<!-- TOOLKIT:agents-md START -->' '@AGENTS.md' '<!-- TOOLKIT:agents-md END -->' \
+        '' '# Toolkit repo' > "$TEST_PROJECT/CLAUDE.md"
+    cp "$TEST_PROJECT/AGENTS.md" "$TEST_PROJECT/AGENTS.md.generated"
+
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --editors codex) >/dev/null 2>&1
+
+    ! grep -q '@AGENTS.md' "$TEST_PROJECT/CLAUDE.md"
+    [ "$(head -1 "$TEST_PROJECT/CLAUDE.md")" = "# Toolkit repo" ]
+    cmp "$TEST_PROJECT/AGENTS.md.generated" "$TEST_PROJECT/AGENTS.md"
+
+    run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' env -u AI_TOOLKIT_USER_CWD node '$TOOLKIT_DIR/bin/ai-toolkit.js' adopt-agents-md"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"generated ai-toolkit instruction core"* ]]
+    cmp "$TEST_PROJECT/AGENTS.md.generated" "$TEST_PROJECT/AGENTS.md"
+}
+
 @test "codex-md refuses to overwrite a project AGENTS.md" {
     printf '%s\n' 'Project rules.' > "$TEST_PROJECT/AGENTS.md"
     run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' node '$TOOLKIT_DIR/bin/ai-toolkit.js' codex-md"

@@ -1564,6 +1564,17 @@ def _template_variants(template: Path) -> tuple[str, ...]:
     return (text, rest.strip()) if first.startswith("<!--") else (text,)
 
 
+def _is_generated_agents_md(agents_md: Path) -> bool:
+    """True for an AGENTS.md that is the toolkit's generated instruction core."""
+    from instruction_core import INSTRUCTION_CORE_TITLE
+
+    try:
+        with agents_md.open(encoding="utf-8") as stream:
+            return stream.readline().rstrip("\n") == INSTRUCTION_CORE_TITLE
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
 def _release_project_agents_md(agents_md: Path) -> None:
     """Remove toolkit sections older releases injected into a project AGENTS.md.
 
@@ -1605,6 +1616,13 @@ def _create_local_claude_md(cwd: Path, reset: bool) -> None:
     claude_local = cwd / "CLAUDE.md"
     existing = "" if reset or not claude_local.is_file() else claude_local.read_text(encoding="utf-8")
     body = _strip_section(existing, AGENTS_MD_SECTION).strip("\n")
+    if _is_generated_agents_md(agents_md):
+        # A generated toolkit core (this repository's own AGENTS.md) repeats
+        # rules Claude already loads from ~/.claude/rules/; never import it.
+        if existing and body + "\n" != existing:
+            claude_local.write_text(body + "\n", encoding="utf-8")
+            print("  Updated: CLAUDE.md (removed import of generated AGENTS.md)")
+        return
     template = app_dir / "AGENTS.md.template"
     if not agents_md.is_file():
         instructions = project_instructions(body)

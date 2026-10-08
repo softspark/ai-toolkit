@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- **Generated AGENTS.md imported into CLAUDE.md:** `install --local` (and so
+  `update`) added `@AGENTS.md` to `CLAUDE.md` even when `AGENTS.md` was the
+  toolkit's generated instruction core (`# AI Toolkit Instructions`, as in this
+  repository or after `ai-toolkit agents-md`), so Claude loaded rules it already
+  has from `~/.claude/rules/` twice. Such a file is no longer imported, an
+  existing import is removed, and `adopt-agents-md` refuses to merge into it.
+
+---
+
 ## v5.3.0 - Project-owned AGENTS.md, working Antigravity, MCP-aware rules (2026-10-08)
 
 ### Ecosystem
