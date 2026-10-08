@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- **Orphaned `## Project Constitution` heading:** when the constitution import
+  sat a blank line below its heading, removing the import (the constitution
+  is global since v5.0) left the heading in `CLAUDE.md`, and
+  `adopt-agents-md` then kept it there as the only line besides the import.
+  The heading now goes with its import, `adopt-agents-md` drops a heading
+  without an import, and `install --local` (so `update`) removes one an
+  older release left at the end of `CLAUDE.md`.
+
+---
+
 ## v5.3.4 - update names CLAUDE.md-only projects, current models (2026-10-08)
 
 ### Ecosystem

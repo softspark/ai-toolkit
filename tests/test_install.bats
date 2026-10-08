@@ -180,6 +180,25 @@ SETTINGS
     [ -f "$TEST_PROJECT/child/.claude/rules/team.md" ]
 }
 
+@test "install --local drops the constitution heading with its import, and one left orphaned" {
+    python3 "$TOOLKIT_DIR/scripts/install.py" "$TMP_HOME" >/dev/null 2>&1
+    # Import a blank line below its heading (as older installs wrote it).
+    printf '%s\n' '# Real project' '' 'Run make test.' '' '## Project Constitution' '' \
+        '@.claude/constitution.md' > "$TEST_PROJECT/CLAUDE.md"
+    (cd "$TEST_PROJECT" && python3 "$TOOLKIT_DIR/scripts/install.py" --local --no-global --skip-register >/dev/null 2>&1)
+    ! grep -q 'constitution' "$TEST_PROJECT/CLAUDE.md"
+    ! grep -q 'Project Constitution' "$TEST_PROJECT/CLAUDE.md"
+    grep -qx 'Run make test.' "$TEST_PROJECT/CLAUDE.md"
+
+    # Heading already orphaned by an older release.
+    printf '%s\n' '# Real project' '' 'Run make test.' '' '## Project Constitution' '' > "$TEST_PROJECT/CLAUDE.md"
+    run bash -c "cd '$TEST_PROJECT' && python3 '$TOOLKIT_DIR/scripts/install.py' --local --no-global --skip-register"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Removed: CLAUDE.md heading left from the constitution import"* ]]
+    ! grep -q 'Project Constitution' "$TEST_PROJECT/CLAUDE.md"
+    grep -qx 'Run make test.' "$TEST_PROJECT/CLAUDE.md"
+}
+
 @test "install --local --no-global without a global install keeps the project self-contained" {
     echo 'x = 1' > "$TEST_PROJECT/app.py"
     (cd "$TEST_PROJECT" && python3 "$TOOLKIT_DIR/scripts/install.py" --local --no-global --skip-register >/dev/null 2>&1)

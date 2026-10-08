@@ -62,6 +62,19 @@ def test_interleaved_toolkit_sections_stay_in_claude_md(tmp_path: Path) -> None:
     assert list((tmp_path / "home" / "toolkit-data" / "backups").glob("*CLAUDE.md.*.bak"))
 
 
+def test_orphan_constitution_heading_is_not_kept_in_claude_md(tmp_path: Path) -> None:
+    # An older update removed the import but left its heading at the end.
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "CLAUDE.md").write_text(
+        "# Project\n\nRun make test.\n\n## Project Constitution\n\n", encoding="utf-8")
+
+    assert _adopt(project).returncode == 0
+
+    assert (project / "AGENTS.md").read_text(encoding="utf-8") == "# Project\n\nRun make test.\n"
+    assert "Project Constitution" not in (project / "CLAUDE.md").read_text(encoding="utf-8")
+
+
 def test_dry_run_changes_nothing(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()

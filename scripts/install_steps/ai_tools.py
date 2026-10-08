@@ -1202,8 +1202,12 @@ def _reconcile_constitution_import(cwd: Path) -> None:
         kept: list[str] = []
         for line in lines:
             if line.strip() == _CONSTITUTION_IMPORT:
-                if kept and kept[-1].strip() == _CONSTITUTION_HEADING:
-                    kept.pop()
+                # The heading may sit a blank line above the import.
+                end = len(kept)
+                while end and not kept[end - 1].strip():
+                    end -= 1
+                if end and kept[end - 1].strip() == _CONSTITUTION_HEADING:
+                    del kept[end - 1:]
                 continue
             kept.append(line)
         claude_md.write_text(
@@ -1211,6 +1215,17 @@ def _reconcile_constitution_import(cwd: Path) -> None:
             encoding="utf-8",
         )
         print("  Removed: CLAUDE.md import of .claude/constitution.md")
+    elif not imported:
+        # Releases before 5.3.4 removed the import but kept its heading when a
+        # blank line separated them, leaving it as the file's last line.
+        content = [line for line in lines if line.strip()]
+        if content and content[-1].strip() == _CONSTITUTION_HEADING:
+            last = max(i for i, line in enumerate(lines) if line.strip())
+            claude_md.write_text(
+                _collapse_blank_runs("\n".join(lines[:last]).rstrip("\n") + "\n"),
+                encoding="utf-8",
+            )
+            print("  Removed: CLAUDE.md heading left from the constitution import")
 
 
 def _inject_language_rules(cwd: Path, language_modules: list[str] | None,

@@ -50,6 +50,13 @@ def _toolkit_parts(text: str) -> str:
     project constitution import, in their original order."""
     kept: list[str] = []
     open_section: str | None = None
+    # The heading belongs to the import; once the import is gone (the global
+    # install provides the constitution) a leftover heading is dropped too.
+    constitution_lines = (
+        (CONSTITUTION_HEADING, CONSTITUTION_IMPORT)
+        if any(line.strip() == CONSTITUTION_IMPORT for line in text.splitlines())
+        else ()
+    )
     for line in text.splitlines():
         match = _MARKER.match(line.strip())
         if open_section is None and match and match["kind"] == "START":
@@ -59,7 +66,7 @@ def _toolkit_parts(text: str) -> str:
             if match and match["kind"] == "END" and match["name"] == open_section:
                 open_section = None
                 kept.append("")
-        elif line.strip() in (CONSTITUTION_HEADING, CONSTITUTION_IMPORT):
+        elif line.strip() in constitution_lines:
             kept.append(line)
     return collapse_blank_runs(trim_trailing_blanks("\n".join(kept).strip("\n"))) + "\n"
 
