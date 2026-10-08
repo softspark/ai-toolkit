@@ -6327,7 +6327,7 @@ category: howto
 service: ai-toolkit
 tags: [claude, accounts, profiles, cli, authentication]
 created: "2026-10-04"
-last_updated: "2026-10-05"
+last_updated: "2026-10-08"
 description: "Keep a default Claude Code login and route selected project directories to separate account profiles."
 ---
 
@@ -6368,8 +6368,26 @@ link credentials, history, global Claude JSON state, or plugin directories.
 Shared files are live: changes through any profile affect all profiles using
 those links. Review `settings.json` for authentication environment variables,
 credential helpers, and account-specific hooks before sharing it. Omit
-`--share-config` to start with an independent configuration. Plugins and any
-profile-specific MCP configuration need separate setup.
+`--share-config` to start with an independent configuration. Plugins need
+separate setup.
+
+MCP servers: a profile's sessions read user-scope servers from
+`<profile>/.claude.json`, not from `~/.claude.json`. `--share-config` seeds that
+file with a copy of the default account's `mcpServers` (only that key; the
+file also holds account state, so it is never linked). After that the lists
+are per profile. `ai-toolkit mcp install --editor claude --scope global` (and
+`remove`) writes every registered profile, so use it to keep them aligned. To
+add a server to one profile only, run the real binary with that profile's
+directory, because the `claude` alias re-selects the account itself:
+
+```bash
+CLAUDE_CONFIG_DIR=~/.softspark/ai-toolkit/claude-profiles/<name> \
+  ~/.local/bin/claude mcp add --scope user jira -- jira-mcp
+```
+
+Profiles created before this change start without servers; add them with
+either command above. `~/.mcp.json` (project scope under `~`) is the one MCP
+file every profile sees without copying.
 
 The toolkit installer continues to manage `~/.claude/`. Existing symlinks in
 profiles see changes to the shared configuration without another install.
@@ -12195,7 +12213,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-10-04"
+last_updated: "2026-10-08"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -12211,6 +12229,7 @@ Usage: ai-toolkit <command> [options]
 |---------|-------------|
 | `install` | First-time global install into `~/.claude/` + Cursor, Windsurf, Gemini |
 | `install --language-skills detected\|all` | `detected` (default): turn off `<lang>-rules`/`<lang>-patterns` skills for languages no registered project uses, via `skillOverrides` in `~/.claude/settings.json` (entries are tracked in `state.json` and restored when a project brings the language back; a user's own override is never touched); `all`: keep every language skill on. The choice persists across `install`/`update` |
+| `install --opt-in-rules <list>` | Enable opt-in registered rules (`rag-mcp-legal-rules` is opt-in by default; `add-rule --opt-in` marks others). Stored per project with `--local`, otherwise in `state.json`; `none` clears the list. Without the flag the stored list applies |
 | `install --local` | Claude Code configs only; add `--editors all` or `--editors cursor,aider` for other tools |
 | `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
 | `update --local` | Re-apply + auto-detect editors from existing project files |
@@ -12265,7 +12284,7 @@ authentication and local state. Neither reader submits a model turn.
 | Command | Description |
 |---------|-------------|
 | `ai-toolkit claude-switch init` | Create the account registry, preserving the existing default Claude login |
-| `ai-toolkit claude-switch add NAME [--share-config]` | Create a separate profile; optionally symlink selected configuration from `~/.claude/` |
+| `ai-toolkit claude-switch add NAME [--share-config]` | Create a separate profile; optionally symlink selected configuration from `~/.claude/` and copy the default account's user-scope `mcpServers` into the profile's `.claude.json` |
 | `ai-toolkit claude-switch bind PATH NAME` | Assign an existing project directory and its descendants to a profile |
 | `ai-toolkit claude-switch default NAME` | Set the profile used outside bound projects |
 | `ai-toolkit claude-switch status [--refresh] [--account NAME] [--verbose] [--color auto\|always\|never] [--json]` | Live usage bars for all profiles; `--verbose` adds paths, bindings and exact UTC timestamps; JSON retains all fields |
@@ -12313,6 +12332,8 @@ and cleared from open terminals; see the migration steps in the account guides.
 | Command | Description |
 |---------|-------------|
 | `add-rule <rule.md\|url> [name]` | Register rule in `~/.softspark/ai-toolkit/rules/` — auto-applied on every `update` |
+| `add-rule … --requires-mcp <servers>` | Record the MCP servers the rule needs (empty = none). Files read by Antigravity, Gemini CLI, Codex, Copilot or OpenCode (`.agents/rules/`, `AGENTS.md`, `GEMINI.md`) get the rule only when one of their readers has the server configured, matched by server name or command basename. Without the flag, a rule named `<server>` or `<server>-rules` whose name has an `mcp` segment requires `<server>`. Such rules end with an explicit "server unavailable" fallback |
+| `add-rule … --opt-in` / `--no-opt-in` | Emit the rule only where `install --opt-in-rules <name>` enabled it (or revert to always emitting it) |
 | `remove-rule <name> [dir]` | Unregister rule and remove its block from `CLAUDE.md` |
 | `inject-hook <file.json\|url> [name]` | Inject external hooks (file or URL) into settings.json (idempotent, `_source` tagged, URL hooks auto-refresh on update) |
 | `remove-hook <name>` | Remove injected hooks by source name (also unregisters URL source if present) |
@@ -14616,9 +14637,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.7.0"
+version: "3.8.0"
 created: "2026-03-26"
-last_updated: "2026-10-05"
+last_updated: "2026-10-08"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -14775,7 +14796,7 @@ scoped to whatever documented HOME file surface each exposes:
 
 - `cursor`: `~/.cursor/hooks.json` (safety/quality hooks; profile ≥ standard). Cursor RULES stay project-local — their only global surface is the Settings UI.
 - `copilot`: instructions, native agents, portable skills, and native hooks under `$COPILOT_HOME` when set or `~/.copilot` otherwise. The hook config is `hooks/ai-toolkit.json`; its self-contained runtime is `hooks/ai-toolkit/copilot_hook.py`. VS Code and GitHub.com still use repo `.github/` files, which local install emits.
-- `antigravity`: current canonical skill pointers at `~/.gemini/antigravity-cli/skills/` for CLI and `~/.gemini/config/skills/` for the IDE/shared product; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. Only workspace `.agent/skills/` is legacy. Antigravity rules stay project-local. Native plugins are opt-in exports installed manually under `~/.gemini/antigravity-cli/plugins/<name>/` for CLI or `~/.gemini/config/plugins/<name>/` for the IDE/shared product.
+- `antigravity`: current canonical skill pointers at `~/.gemini/antigravity-cli/skills/` for CLI and `~/.gemini/config/skills/` for the IDE/shared product; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. Only workspace `.agent/skills/` is legacy. Antigravity rules stay project-local; its always-on global rule is the shared `~/.gemini/GEMINI.md`, which therefore carries no inline agent or skill catalogue (Antigravity truncates rule files above 24,000 bytes), and a pre-marker copy of the toolkit section there is removed on reinstall after a backup to `~/.softspark/ai-toolkit/backups/`. Registered MCP rules reach `GEMINI.md` only when Gemini CLI or Antigravity has the server configured. Native plugins are opt-in exports installed manually under `~/.gemini/antigravity-cli/plugins/<name>/` for CLI or `~/.gemini/config/plugins/<name>/` for the IDE/shared product.
 
 Their global MCP support, where available, is handled by `ai-toolkit mcp
 install`, not by the rule installer.
@@ -15110,9 +15131,9 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.17.0"
+version: "1.18.0"
 created: "2026-03-27"
-last_updated: "2026-10-05"
+last_updated: "2026-10-08"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -15830,7 +15851,7 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 | Cline | `.cline/hooks/<Event>` plus `.clinerules/hooks/<Event>`; user `~/.cline/hooks/<Event>`; extension compatibility `~/Documents/Cline/Hooks/<Event>` | `generate_cline_hooks.py` | Eight extensionless executable files using Cline's native stdin/stdout contract (profile ≥ `standard`) |
 | GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
 | Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
-| Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native five-event schema plus adjacent Python adapter |
+| Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native schema (`PreToolUse` on `run_command`, `PreInvocation`, `Stop`) plus adjacent Python adapter, run relative to the `hooks.json` directory |
 | OpenCode | `.opencode/plugins/ai-toolkit-hooks.js`; user `~/.config/opencode/plugins/ai-toolkit-hooks.js` | `generate_opencode_plugin.py` | Native JavaScript plugin hooks |
 
 ### Cline hooks (`.cline/hooks/<Event>` and `.clinerules/hooks/<Event>`)
@@ -15850,21 +15871,44 @@ marked toolkit files while preserving user-owned hooks.
 ### Google Antigravity hooks (`.agents/hooks.json`)
 
 The toolkit owns only the top-level `ai-toolkit` namespace and preserves
-unrelated namespaces. The exact event set is `PreToolUse`, `PostToolUse`,
-`PreInvocation`, `PostInvocation`, and `Stop`. Tool events use matcher groups;
-the other events use direct command-handler lists. Every handler has a bounded
-timeout.
+unrelated namespaces. It registers only the events whose adapter output does
+something: `PreToolUse` with the matcher `run_command`, `PreInvocation`, and
+`Stop`. `PreToolUse` uses a matcher group; the other events use direct
+command-handler lists. Every handler has a bounded timeout. `PostToolUse` and
+`PostInvocation` are not registered because their output was always empty, and
+a matcher wider than `run_command` would let a broken hook block `view_file` and
+file writes the adapter never inspects.
+
+**Working directory.** Antigravity runs each handler through `sh -c` (`cmd /c`
+on Windows) with the working directory set to the directory that contains
+`hooks.json`, for every event type. Source: the hook reference shipped in agy
+1.3.1 ("The working directory is set to the directory containing
+`hooks.json`"); the public page at
+<https://antigravity.google/docs/hooks/> does not state it. Measured on
+2026-10-07 with agy 1.3.1: a project command `python3 .agents/hooks/…` failed
+for `PreToolUse`, `PreInvocation`, `PostInvocation`, and `Stop` alike with
+`can't open file '<project>/.agents/.agents/hooks/…'`. The command is therefore
+`python3 hooks/ai-toolkit-antigravity-hook.py <Event>` for both
+`.agents/hooks.json` and `~/.gemini/config/hooks.json`. It survives a moved
+repository, a worktree, and a nested `.agents/`, and needs no shell variables, so
+it also runs under `cmd /c`. Alternatives rejected: `git rev-parse` (repositories
+without git and nested `.agents/` resolve the wrong directory), an absolute
+install-time path (breaks on move and in worktrees, leaks the home path into the
+repository), and an environment variable (Antigravity exposes no workspace
+variable to hooks; only stdin carries `workspacePaths`).
 
 The adjacent Python runtime maps `.toolCall.name` and
 `.toolCall.args.CommandLine` to native camelCase responses. `PreToolUse`
-returns `allow`, `deny`, or `ask`; `PostToolUse` returns `{}`; invocation events
-use object-shaped `injectSteps` and a native `terminationBehavior`; `Stop`
-reads the official `executionNum`, `terminationReason`, optional `error`, and
-`fullyIdle` inputs. It returns `decision: continue` only when the invocation is
-not fully idle and has not passed its first execution; later executions and
-fully idle invocations stop, which bounds re-entry.
-Project commands use `.agents/hooks/`; exported plugin commands resolve through
-`${extensionPath}`.
+returns `allow`, `deny`, or `ask`; `PreInvocation` uses object-shaped
+`injectSteps`; `Stop` reads the official `executionNum`, `terminationReason`,
+optional `error`, and `fullyIdle` inputs. It returns `decision: continue` only
+when the invocation is not fully idle and has not passed its first execution;
+later executions and fully idle invocations stop, which bounds re-entry.
+Exported plugin commands resolve through `${extensionPath}`.
+
+`ai-toolkit doctor` resolves every managed handler from its `hooks.json`
+directory and fails when the runtime cannot be found, and warns when the
+namespace predates the current release; reinstalling repairs both.
 
 ### Cursor hooks (`.cursor/hooks.json`)
 
@@ -16666,9 +16710,9 @@ title: "AI Toolkit - MCP Editor Compatibility"
 category: reference
 service: ai-toolkit
 tags: [mcp, editors, compatibility, codex, cursor, antigravity]
-version: "1.4.0"
+version: "1.5.0"
 created: "2026-04-12"
-last_updated: "2026-09-24"
+last_updated: "2026-10-08"
 description: "Official MCP support matrix and native config targets for editors supported by ai-toolkit."
 ---
 
@@ -16682,7 +16726,7 @@ ai-toolkit keeps `.mcp.json` as the project-level canonical template format and 
 
 | Editor | Scope | Native Config Path | Adapter Behavior |
 |--------|-------|--------------------|------------------|
-| Claude Code | project + global | `.mcp.json`, `~/.claude.json` | Merges `mcpServers` while preserving other top-level keys |
+| Claude Code | project + global | `.mcp.json`, `~/.claude.json`; with claude-switch profiles, global writes `<profile>/.claude.json` for every registered account (plus an active `CLAUDE_CONFIG_DIR` under `HOME`) | Merges `mcpServers` while preserving other top-level keys |
 | Claude Chat / Cowork | global | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `%APPDATA%/Claude/claude_desktop_config.json` (Windows), `~/.config/Claude/claude_desktop_config.json` (Linux); `CLAUDE_USER_DATA_DIR` overrides the root | Emits the app's stdio-only `{command, args, env}` schema and bridges HTTP/SSE servers through `mcp-remote`; preserves `preferences`, `coworkUserFilesPath`, and user-owned servers |
 | Cursor | project + global | `.cursor/mcp.json`, `~/.cursor/mcp.json` | Mirrors `mcpServers` directly |
 | GitHub Copilot | project + global | `.github/mcp.json`, `$COPILOT_HOME/mcp-config.json` (default `~/.copilot/mcp-config.json`) | Adds Copilot-required `type` and `tools` fields |
@@ -19034,9 +19078,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.18.0"
+version: "1.19.0"
 created: "2026-04-23"
-last_updated: "2026-10-02"
+last_updated: "2026-10-08"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
@@ -19233,13 +19277,13 @@ retains legacy output and explains why it skipped protected skill writes.
 | ID | `google-antigravity` |
 | Docs | https://antigravity.google/docs (official hook and configuration pages are now readable through the web index; use feature pages to verify) |
 | Changelog | https://antigravity.google/docs/changelog |
-| Config paths | Rules/workflows: `.agents/rules/*.md`, `.agents/workflows/*.md`. Skills: canonical `.agents/skills/*/SKILL.md`; `.agent/skills/*/SKILL.md` is compatibility-only. Agents: `.agents/agents/ai-toolkit-*/agent.md`. Hooks: `.agents/hooks.json` plus `.agents/hooks/ai-toolkit-antigravity-hook.py`. Plugins: `.agents/plugins/<plugin>/plugin.json`. MCP: `.agents/mcp_config.json`. Cross-tool instructions: `AGENTS.md`, `GEMINI.md`. |
-| Global config paths | CLI skills `~/.gemini/antigravity-cli/skills/*/SKILL.md` and CLI plugins `~/.gemini/antigravity-cli/plugins/<plugin>/plugin.json` are current canonical CLI surfaces. IDE/shared-product skills use `~/.gemini/config/skills/*/SKILL.md`; agents use `~/.gemini/config/agents/ai-toolkit-*/agent.md`; hooks use `~/.gemini/config/hooks.json` plus adjacent runtime; IDE/shared plugins use `~/.gemini/config/plugins/<plugin>/plugin.json`; MCP uses `~/.gemini/config/mcp_config.json`. Rules stay project-local; only workspace `.agent/skills/` is legacy. `~/.gemini/GEMINI.md` remains the Gemini-CLI-shared instruction surface. |
-| Our generators | `scripts/generate_antigravity.py` (rules, workflows, canonical + compatibility skill pointer), `scripts/generate_antigravity_hooks.py` (exact five-event schema and self-contained adapter), `scripts/generate_antigravity_agents.py` (native subagents and explicit tool mapping), `scripts/antigravity_plugin.py` (deterministic opt-in export/verify), and `scripts/mcp_editors.py` (transactional project/global MCP adapter). |
+| Config paths | Rules/workflows: `.agents/rules/*.md` (each needs `trigger:` frontmatter or Antigravity silently discards it; 24,000-byte per-file cap; always-on and global rules share a 20,000-token budget), `.agents/workflows/*.md`. Skills: canonical `.agents/skills/*/SKILL.md`; `.agent/skills/*/SKILL.md` is legacy, no longer written, and the old pointer copy is removed on reinstall. Agents: `.agents/agents/ai-toolkit-*/agent.md`. Hooks: `.agents/hooks.json` plus `.agents/hooks/ai-toolkit-antigravity-hook.py`, invoked as `python3 hooks/…` because handlers run from the `hooks.json` directory. Plugins: `.agents/plugins/<plugin>/plugin.json`. MCP: `.agents/mcp_config.json`. Cross-tool instructions: `AGENTS.md`, `GEMINI.md`. |
+| Global config paths | CLI skills `~/.gemini/antigravity-cli/skills/*/SKILL.md` and CLI plugins `~/.gemini/antigravity-cli/plugins/<plugin>/plugin.json` are current canonical CLI surfaces. IDE/shared-product skills use `~/.gemini/config/skills/*/SKILL.md`; agents use `~/.gemini/config/agents/ai-toolkit-*/agent.md`; hooks use `~/.gemini/config/hooks.json` plus adjacent runtime; IDE/shared plugins use `~/.gemini/config/plugins/<plugin>/plugin.json`; MCP uses `~/.gemini/config/mcp_config.json`. The toolkit emits no modular global rules (`~/.gemini/config/rules/*.md`); only workspace `.agent/skills/` is legacy. `~/.gemini/GEMINI.md` is the Gemini-CLI-shared instruction surface and Antigravity's always-on global rule, so it carries no inline agent or skill catalogue. |
+| Our generators | `scripts/generate_antigravity.py` (rules with activation frontmatter, workflows, canonical skill pointer), `scripts/generate_antigravity_hooks.py` (three-event schema, `run_command` matcher, and self-contained adapter), `scripts/registered_rules.py` (registered MCP rules only when Antigravity has the server configured), `scripts/generate_antigravity_agents.py` (native subagents and explicit tool mapping), `scripts/antigravity_plugin.py` (deterministic opt-in export/verify), and `scripts/mcp_editors.py` (transactional project/global MCP adapter). |
 | Install profiles | `minimal`: rules/workflows/skills only. `standard` and `strict`: add native hooks. `full`: additionally adds native agents. Global install follows the same gates under `~/.gemini/config/`; it never auto-installs the plugin. |
 | Plugin flow | `ai-toolkit antigravity-plugin export [output]` creates a self-contained ZIP with exact manifest fields `$schema`, `name`, `description`, rules, skills, agents, hooks, runtime, and LICENSE. Verify offline with `ai-toolkit antigravity-plugin verify <archive-or-dir>`, then install manually under `.agents/plugins/<plugin>/` for a workspace, `~/.gemini/antigravity-cli/plugins/<plugin>/` for CLI, or `~/.gemini/config/plugins/<plugin>/` for the IDE/shared product. Hook commands resolve from `${extensionPath}`. |
-| Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, hooks, five native hook events, subagents, agent permissions, plugins, global skills/hooks/agents, `AGENTS.md`, `GEMINI.md`, `serverUrl` |
-| Reviewed baseline / notes | Antigravity 2.19.1 (reviewed 2026-10-01) fixes custom agents ignoring global/project rules; 2.18.1 adds plugin marketplace management. Native agent models remain inherit/flash/pro; toolkit agents preserve inherit. Previous CLI/IDE version observations are historical, not current availability guarantees. Hooks use `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. The adapter returns native camelCase payloads, object-shaped `injectSteps`, empty default `terminationBehavior`, and a `decision` string for Stop while preventing re-entry loops. MCP consumes portable `transport` metadata, accepts input `url` only for migration and emits it as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
+| Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, hooks, five native hook events (three wired), subagents, agent permissions, plugins, global skills/hooks/agents, `AGENTS.md`, `GEMINI.md`, `serverUrl` |
+| Reviewed baseline / notes | Antigravity 2.19.1 (reviewed 2026-10-01) fixes custom agents ignoring global/project rules; 2.18.1 adds plugin marketplace management. Native agent models remain inherit/flash/pro; toolkit agents preserve inherit. Previous CLI/IDE version observations are historical, not current availability guarantees. Antigravity defines `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the toolkit wires `PreToolUse` (matcher `run_command`), `PreInvocation`, and `Stop`, because the other two always returned empty output. The shell tool is `run_command` with the command at `.toolCall.args.CommandLine`. Handlers run via `sh -c` with the working directory set to the directory containing `hooks.json` (agy 1.3.1 hook reference, confirmed by agy 1.3.1 logs on 2026-10-07). The adapter returns native camelCase payloads, object-shaped `injectSteps`, and a `decision` string for Stop while preventing re-entry loops. MCP consumes portable `transport` metadata, accepts input `url` only for migration and emits it as `serverUrl`; `httpUrl` is rejected. Optional `args`, `env`, `cwd`, `headers`, `authProviderType`, `oauth`, `disabled`, and `disabledTools` are preserved. |
 | Doc access note | Docs are a JavaScript SPA, but the official search index exposes the current MCP guide and changelog text. Verify changelog claims against the dated official entry because the MCP guide's warning can lag schema releases. |
 
 ### Codex CLI
