@@ -1556,10 +1556,16 @@ def project_instructions(text: str) -> str:
     return "\n".join(kept).strip()
 
 
+def _collapse_blank_lines(text: str) -> str:
+    """Older installs left extra blank lines around sections they removed."""
+    return re.sub(r"\n\s*\n(\s*\n)+", "\n\n", text.strip())
+
+
 def _template_variants(template: Path) -> tuple[str, ...]:
     """The project template as written now and as older releases wrote it
-    into CLAUDE.md (without the leading agent-audience comment)."""
-    text = template.read_text(encoding="utf-8").strip()
+    into CLAUDE.md (without the leading agent-audience comment), compared
+    with blank-line runs collapsed (see ``_collapse_blank_lines``)."""
+    text = _collapse_blank_lines(template.read_text(encoding="utf-8"))
     first, _, rest = text.partition("\n")
     return (text, rest.strip()) if first.startswith("<!--") else (text,)
 
@@ -1626,7 +1632,7 @@ def _create_local_claude_md(cwd: Path, reset: bool) -> None:
     template = app_dir / "AGENTS.md.template"
     if not agents_md.is_file():
         instructions = project_instructions(body)
-        if instructions in _template_variants(template):
+        if _collapse_blank_lines(instructions) in _template_variants(template):
             # An untouched template from an older release moves to AGENTS.md.
             body = body.replace(instructions, "", 1).strip("\n")
         elif instructions:

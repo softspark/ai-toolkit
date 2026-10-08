@@ -143,6 +143,18 @@ teardown() {
     [ ! -e "$TEST_PROJECT/.gemini/agents/ai-toolkit-backend-specialist.md" ]
 }
 
+@test "uninstall.py removes an untouched older template with extra blank lines" {
+    tail -n +2 "$TOOLKIT_DIR/app/AGENTS.md.template" \
+        | sed 's/^## MCP Servers$/\n## MCP Servers/' > "$TEST_PROJECT/CLAUDE.md"
+    printf '%s\n' '# Real project' > "$TEST_PROJECT/AGENTS.md"
+
+    python3 "$TOOLKIT_DIR/scripts/uninstall.py" --local \
+        --target "$TEST_PROJECT" --yes >/dev/null 2>&1
+
+    [ ! -e "$TEST_PROJECT/CLAUDE.md" ]
+    grep -qx '# Real project' "$TEST_PROJECT/AGENTS.md"
+}
+
 @test "uninstall.py removes managed OpenCode skills and preserves user files" {
     (cd "$TEST_PROJECT" && python3 "$TOOLKIT_DIR/scripts/install.py" --local \
         --editors opencode --profile full) >/dev/null 2>&1

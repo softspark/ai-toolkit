@@ -1561,20 +1561,26 @@ def _project_claude_md_update(target: Path) -> tuple[Path, str | None] | None:
     ):
         return None  # project-owned constitution text still needs its import
     updated = _without_constitution_import(strip_section(original, "agents-md"))
-    if not updated.strip() or updated.strip() in _template_variants():
+    if not updated.strip() or _collapse_blank_lines(updated) in _template_variants():
         return path, None
     if updated.strip() != original.strip():
         return path, updated
     return None
 
 
+def _collapse_blank_lines(text: str) -> str:
+    """Older installs left extra blank lines around sections they removed."""
+    return re.sub(r"\n\s*\n(\s*\n)+", "\n\n", text.strip())
+
+
 def _template_variants() -> tuple[str, ...]:
     """The project template now (AGENTS.md) and as older releases wrote it
-    into CLAUDE.md, without the leading agent-audience comment."""
+    into CLAUDE.md, without the leading agent-audience comment (blank-line
+    runs collapsed)."""
     template = app_dir / "AGENTS.md.template"
     if not template.is_file():
         return ()
-    text = template.read_text(encoding="utf-8").strip()
+    text = _collapse_blank_lines(template.read_text(encoding="utf-8"))
     first, _, rest = text.partition("\n")
     return (text, rest.strip()) if first.startswith("<!--") else (text,)
 
@@ -1584,7 +1590,7 @@ def _untouched_agents_md(target: Path) -> Path | None:
     path = target / "AGENTS.md"
     if path.is_symlink() or not path.is_file():
         return None
-    return path if path.read_text(encoding="utf-8").strip() in _template_variants() else None
+    return path if _collapse_blank_lines(path.read_text(encoding="utf-8")) in _template_variants() else None
 
 
 def _default_settings_local(path: Path) -> bool:

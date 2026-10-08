@@ -883,6 +883,17 @@ PY
     ! grep -q '\[Project Name\]' "$TEST_PROJECT/CLAUDE.md"
 }
 
+@test "install --local recognizes an older template with extra blank lines left by a removed section" {
+    # Older installs removed a section and left a blank-line run behind.
+    tail -n +2 "$TOOLKIT_DIR/app/AGENTS.md.template" \
+        | sed 's/^## MCP Servers$/\n## MCP Servers/' > "$TEST_PROJECT/CLAUDE.md"
+    grep -B2 '^## MCP Servers$' "$TEST_PROJECT/CLAUDE.md" | head -2 | grep -qvx '.\+'
+    (cd "$TEST_PROJECT" && HOME="$TMP_HOME" python3 "$TOOLKIT_DIR/scripts/install.py" \
+        --local --no-global --editors codex) >/dev/null 2>&1
+    cmp "$TOOLKIT_DIR/app/AGENTS.md.template" "$TEST_PROJECT/AGENTS.md"
+    ! grep -q '\[Project Name\]' "$TEST_PROJECT/CLAUDE.md"
+}
+
 @test "install --local warns when AGENTS.md exceeds Antigravity's 24,000-byte limit" {
     python3 -c 'print("# Big\n" + "x" * 24100)' > "$TEST_PROJECT/AGENTS.md"
     run bash -c "cd '$TEST_PROJECT' && HOME='$TMP_HOME' python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"

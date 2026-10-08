@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- **Older CLAUDE.md template not recognized:** a `CLAUDE.md` that is still the
+  untouched `[Project Name]` template, but with an extra blank line an older
+  install left when it removed a section, counted as project instructions.
+  `install --local` (and `update`) kept it instead of moving it to
+  `AGENTS.md`, and `uninstall` kept it too. Template matching now ignores
+  blank-line runs.
+
+---
+
 ## v5.3.3 - This repository runs on its own AGENTS.md (2026-10-08)
 
 ### Ecosystem
