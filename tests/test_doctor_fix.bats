@@ -25,6 +25,10 @@ setup() {
     create_doctor_runtime_stubs "$TEST_TMP"
     cp -a "$DOCTOR_SNAPSHOT/." "$TEST_TMP/"
     export HOME="$TEST_TMP"
+    # doctor also inspects the current project (.agents/, workflows); keep the
+    # checkout's own local installs out of the result.
+    unset AI_TOOLKIT_USER_CWD
+    cd "$TEST_TMP"
 }
 
 teardown() {

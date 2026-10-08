@@ -38,7 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import toolkit_dir
 from frontmatter import FrontmatterError, load_frontmatter
 from paths import HOOKS_DIR as _HOOKS_DIR, RULES_DIR as _RULES_DIR, EXTERNAL_HOOKS_DIR as _EXTERNAL_HOOKS_DIR
-from paths import STATS_FILE as _STATS_FILE
+from paths import STATS_FILE as _STATS_FILE, user_path as _user_path
 
 
 # ---------------------------------------------------------------------------
@@ -553,7 +553,9 @@ def check_generated_artifacts(dr: DiagResult, fix_mode: bool) -> None:
 
 def check_antigravity_workflows(dr: DiagResult, project: Path | None = None, home: Path | None = None) -> None:
     """Warn only when a legacy command has no same-named skill replacement."""
-    project = project or Path.cwd()
+    # The CLI runs doctor inside the package; the user's project travels in
+    # AI_TOOLKIT_USER_CWD.
+    project = project or _user_path(".")
     home = home or Path.home()
     roots = (project / ".agents", project / ".agent", home / ".gemini/config")
     for root in roots:
@@ -571,6 +573,33 @@ def check_antigravity_workflows(dr: DiagResult, project: Path | None = None, hom
                     "migrate it to a same-named skill with /migrate-workflows "
                     f"(toolkit commands: ai-toolkit install{install_scope} --editors antigravity)"
                 )
+
+
+def check_antigravity_config(dr: DiagResult, project: Path | None = None,
+                             home: Path | None = None) -> None:
+    """Report Antigravity hooks that cannot start and rules it would drop.
+
+    Hook runtimes are resolved from the directory holding hooks.json, the
+    working directory Antigravity gives every handler.
+    """
+    from generate_antigravity import diagnose_rules
+    from generate_antigravity_hooks import diagnose, is_current
+
+    project = project or _user_path(".")
+    home = home or Path.home()
+    scope = {project / ".agents" / "hooks.json": " --local",
+             home / ".gemini" / "config" / "hooks.json": ""}
+    for hooks_path, install_scope in scope.items():
+        if not hooks_path.is_file():
+            continue
+        fix = f"run: ai-toolkit install{install_scope} --editors antigravity"
+        for problem in diagnose(hooks_path):
+            dr.fail(f"Antigravity hook cannot start: {problem} ({fix})")
+        if not is_current(hooks_path):
+            dr.warn(f"Antigravity hooks in {hooks_path} are from an older release ({fix})")
+    if (project / ".agents").is_dir() or (home / ".gemini").is_dir():
+        for problem in diagnose_rules(project, home):
+            dr.warn(f"Antigravity rule: {problem}")
 
 
 def check_planned_assets(dr: DiagResult) -> None:
@@ -1154,7 +1183,7 @@ def check_context_budget(dr: DiagResult) -> None:
     claude_json = Path.home() / ".claude.json"
     counts, startups = _usage_counts(claude_json, STATS_FILE)
     if not claude_json.is_file():
-        dr.skip("usage evidence: ~/.claude.json not found, cannot judge unused skills")
+        dr.skip(f"usage evidence: {claude_json} not found, cannot judge unused skills")
         return
     if startups is None or startups < MIN_STARTUPS_FOR_USAGE_VERDICT:
         dr.skip(
@@ -1327,6 +1356,7 @@ def main() -> None:
     check_planned_assets(dr)
     check_benchmark_freshness(dr)
     check_stale_rules(dr, fix_mode)
+    check_antigravity_config(dr)
     check_url_hooks(dr, fix_mode)
     check_language_drift(dr)
     check_plugin_double_load(dr, fix_mode)

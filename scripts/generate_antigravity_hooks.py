@@ -5,14 +5,24 @@
 
 """Generate native Google Antigravity hooks and their portable adapter.
 
-Project installs use ``.agents/hooks.json`` and a workspace-relative runtime.
-Global installs use ``~/.gemini/config/hooks.json`` and an adjacent runtime.
-Only the top-level ``ai-toolkit`` namespace is owned by this generator.
+Project installs use ``.agents/hooks.json``; global installs use
+``~/.gemini/config/hooks.json``. Both get the runtime adjacent under
+``hooks/``. Antigravity runs every handler through ``sh -c`` (``cmd /c`` on
+Windows) with the working directory set to the directory that contains
+``hooks.json``, for every event type, so the command names the runtime
+relative to that directory (agy 1.3.1 hook reference; reproduced in
+``kb/reference/hooks-catalog.md``). Only the events whose adapter output does
+something are registered, and ``PreToolUse`` matches only ``run_command``, the
+one tool the adapter inspects: a broken hook must never block file reads or
+writes it does not check. Only the top-level ``ai-toolkit`` namespace is owned
+by this generator.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import shlex
 import sys
 from pathlib import Path
 from typing import Any
@@ -31,19 +41,16 @@ from secure_fs import (
 MANAGED_NAMESPACE = "ai-toolkit"
 HOOK_EVENTS = (
     "PreToolUse",
-    "PostToolUse",
     "PreInvocation",
-    "PostInvocation",
     "Stop",
 )
-TOOL_EVENTS = frozenset({"PreToolUse", "PostToolUse"})
+TOOL_EVENTS = frozenset({"PreToolUse"})
 HOOK_TIMEOUT_SECONDS = 5
 RUNTIME_NAME = "ai-toolkit-antigravity-hook.py"
 RUNTIME_MARKER = "# ai-toolkit-managed: antigravity-hook-runtime"
-TOOL_MATCHER = (
-    "run_command|write_to_file|replace_file_content|"
-    "multi_replace_file_content|view_file"
-)
+TOOL_MATCHER = "run_command"
+# Relative to the directory holding hooks.json, which is the handler's cwd.
+COMMAND_PREFIX = f"python3 hooks/{RUNTIME_NAME}"
 
 
 RUNTIME_SOURCE = '''#!/usr/bin/env python3
@@ -61,7 +68,7 @@ from typing import Any
 
 MAX_INPUT_BYTES = 1024 * 1024
 MAX_RUNTIME_SECONDS = 4
-EVENTS = {"PreToolUse", "PostToolUse", "PreInvocation", "PostInvocation", "Stop"}
+EVENTS = {"PreToolUse", "PreInvocation", "Stop"}
 DESTRUCTIVE = (
     re.compile(r"(?:^|[;&|]\\s*)rm\\s+(?:-[^\\s]*r[^\\s]*f|-[^\\s]*f[^\\s]*r)\\b"),
     re.compile(r"\\bgit\\s+reset\\s+--hard\\b"),
@@ -114,8 +121,6 @@ def _pre_tool(payload: dict[str, Any]) -> dict[str, str]:
 def respond(event: str, payload: dict[str, Any]) -> dict[str, Any]:
     if event == "PreToolUse":
         return _pre_tool(payload)
-    if event == "PostToolUse":
-        return {}
     if event == "PreInvocation":
         return {
             "injectSteps": [
@@ -127,8 +132,6 @@ def respond(event: str, payload: dict[str, Any]) -> dict[str, Any]:
                 }
             ]
         }
-    if event == "PostInvocation":
-        return {"injectSteps": [], "terminationBehavior": ""}
     if event == "Stop":
         execution_num = payload.get("executionNum")
         is_first_execution = (
@@ -238,13 +241,10 @@ def _load_existing(content: bytes | None, path: Path) -> dict[str, Any]:
 def _paths(target_dir: Path, global_install: bool) -> tuple[Path, Path, str]:
     if global_install:
         config_root = target_dir / ".gemini" / "config"
-        runtime = config_root / "hooks" / RUNTIME_NAME
-        command = f'python3 "$HOME/.gemini/config/hooks/{RUNTIME_NAME}"'
-        return config_root / "hooks.json", runtime, command
-    config_root = target_dir / ".agents"
+    else:
+        config_root = target_dir / ".agents"
     runtime = config_root / "hooks" / RUNTIME_NAME
-    command = f"python3 .agents/hooks/{RUNTIME_NAME}"
-    return config_root / "hooks.json", runtime, command
+    return config_root / "hooks.json", runtime, COMMAND_PREFIX
 
 
 def generate(target_dir: Path, *, global_install: bool = False) -> Path:
@@ -385,6 +385,61 @@ def cleanup(target_dir: Path, *, global_install: bool = False) -> int:
             except OSError:
                 pass
     return removed
+
+
+def _runtime_argument(command: str) -> str | None:
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        return None
+    return next((part for part in parts if part.endswith(RUNTIME_NAME)), None)
+
+
+def diagnose(hooks_path: Path) -> list[str]:
+    """Return handlers in the managed namespace that cannot start.
+
+    Each handler's runtime argument is resolved the way Antigravity runs it:
+    from the directory that holds ``hooks.json``. An empty list means the
+    namespace is absent or every handler finds its runtime; ``is_current``
+    reports a namespace an older release wrote.
+    """
+    try:
+        document = _load_existing(hooks_path.read_bytes(), hooks_path)
+    except (OSError, ValueError) as error:
+        return [str(error)]
+    managed = document.get(MANAGED_NAMESPACE)
+    if managed is None:
+        return []
+    if not isinstance(managed, dict):
+        return [f"{hooks_path}: ai-toolkit namespace must be an object; reinstall"]
+    problems: list[str] = []
+    for event, entries in managed.items():
+        for entry in entries if isinstance(entries, list) else []:
+            handlers = entry.get("hooks", [entry]) if isinstance(entry, dict) else []
+            for handler in handlers if isinstance(handlers, list) else []:
+                command = handler.get("command") if isinstance(handler, dict) else None
+                argument = _runtime_argument(command) if isinstance(command, str) else None
+                if argument is None:
+                    problems.append(f"{hooks_path}: {event} command names no runtime")
+                    continue
+                expanded = os.path.expanduser(os.path.expandvars(argument))
+                runtime = hooks_path.parent / expanded
+                if not runtime.is_file():
+                    problems.append(
+                        f"{hooks_path}: {event} runs {argument!r}, which does not "
+                        f"exist from the hooks.json directory ({runtime})"
+                    )
+    return problems
+
+
+def is_current(hooks_path: Path) -> bool:
+    """True when hooks.json holds no managed namespace or the current one."""
+    try:
+        document = _load_existing(hooks_path.read_bytes(), hooks_path)
+    except (OSError, ValueError):
+        return False
+    managed = document.get(MANAGED_NAMESPACE)
+    return managed is None or managed == build_managed_hooks(COMMAND_PREFIX)
 
 
 def main() -> None:

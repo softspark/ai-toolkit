@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [cli, commands, reference, install, update, plugin, mcp, telemetry]
 created: "2026-04-13"
-last_updated: "2026-10-04"
+last_updated: "2026-10-08"
 description: "Complete CLI reference for all ai-toolkit commands, options, and flags."
 ---
 
@@ -20,6 +20,7 @@ Usage: ai-toolkit <command> [options]
 |---------|-------------|
 | `install` | First-time global install into `~/.claude/` + Cursor, Windsurf, Gemini |
 | `install --language-skills detected\|all` | `detected` (default): turn off `<lang>-rules`/`<lang>-patterns` skills for languages no registered project uses, via `skillOverrides` in `~/.claude/settings.json` (entries are tracked in `state.json` and restored when a project brings the language back; a user's own override is never touched); `all`: keep every language skill on. The choice persists across `install`/`update` |
+| `install --opt-in-rules <list>` | Enable opt-in registered rules (`rag-mcp-legal-rules` is opt-in by default; `add-rule --opt-in` marks others). Stored per project with `--local`, otherwise in `state.json`; `none` clears the list. Without the flag the stored list applies |
 | `install --local` | Claude Code configs only; add `--editors all` or `--editors cursor,aider` for other tools |
 | `update` | Re-apply toolkit after `npm install -g @softspark/ai-toolkit@latest` |
 | `update --local` | Re-apply + auto-detect editors from existing project files |
@@ -122,6 +123,8 @@ and cleared from open terminals; see the migration steps in the account guides.
 | Command | Description |
 |---------|-------------|
 | `add-rule <rule.md\|url> [name]` | Register rule in `~/.softspark/ai-toolkit/rules/` — auto-applied on every `update` |
+| `add-rule … --requires-mcp <servers>` | Record the MCP servers the rule needs (empty = none). Files read by Antigravity, Gemini CLI, Codex, Copilot or OpenCode (`.agents/rules/`, `AGENTS.md`, `GEMINI.md`) get the rule only when one of their readers has the server configured, matched by server name or command basename. Without the flag, a rule named `<server>` or `<server>-rules` whose name has an `mcp` segment requires `<server>`. Such rules end with an explicit "server unavailable" fallback |
+| `add-rule … --opt-in` / `--no-opt-in` | Emit the rule only where `install --opt-in-rules <name>` enabled it (or revert to always emitting it) |
 | `remove-rule <name> [dir]` | Unregister rule and remove its block from `CLAUDE.md` |
 | `inject-hook <file.json\|url> [name]` | Inject external hooks (file or URL) into settings.json (idempotent, `_source` tagged, URL hooks auto-refresh on update) |
 | `remove-hook <name>` | Remove injected hooks by source name (also unregisters URL source if present) |

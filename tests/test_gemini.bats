@@ -51,23 +51,19 @@ teardown_file() {
     grep -q '<!-- TOOLKIT:ai-toolkit END -->'   "$GEM_OUT"
 }
 
-@test "generate_gemini.py output lists agents as bullet entries" {
-    grep -q '## Available Agents' "$GEM_OUT"
-    # At least one bullet with an agent name in bold.
-    grep -qE '^- \*\*[a-z][a-z-]+\*\*:' "$GEM_OUT"
+@test "generate_gemini.py output delegates catalogues to native directories" {
+    # GEMINI.md is also Antigravity's always-on global rule, truncated above
+    # 24,000 bytes, so agents and skills are discovered, not inlined.
+    ! grep -q '^## Available Agents' "$GEM_OUT"
+    ! grep -q '^## Available Skills' "$GEM_OUT"
+    grep -q '~/.gemini/skills/' "$GEM_OUT"
+    grep -q '~/.claude/skills/<name>/SKILL.md' "$GEM_OUT"
 }
 
-@test "generate_gemini.py output lists every agent file in app/agents/" {
-    local missing=0
-    for f in "$TOOLKIT_DIR"/app/agents/*.md; do
-        local name="${f##*/}"; name="${name%.md}"
-        grep -q "$name" "$GEM_OUT" || missing=$((missing + 1))
-    done
-    [ "$missing" -eq 0 ]
-}
-
-@test "generate_gemini.py output references skills section" {
-    grep -q '## Available Skills' "$GEM_OUT"
+@test "generate_gemini.py core stays under Antigravity's 24,000-byte rule limit" {
+    run env AI_TOOLKIT_NO_CUSTOM_RULES=1 python3 "$TOOLKIT_DIR/scripts/generate_gemini.py"
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | wc -c | xargs)" -lt 12000 ]
 }
 
 @test "generate_gemini.py output includes guidelines (quality_standards + workflow)" {

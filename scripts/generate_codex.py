@@ -12,7 +12,6 @@ Usage: ./scripts/generate_codex.py > AGENTS.md
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -23,6 +22,7 @@ from emission import (
 )
 from instruction_core import render_instruction_core
 from paths import RULES_DIR
+from registered_rules import print_rule_blocks
 
 
 def main() -> None:
@@ -32,18 +32,7 @@ def main() -> None:
     print_toolkit_end()
 
     # Registered custom rules from ~/.softspark/ai-toolkit/rules/.
-    # Skipped when AI_TOOLKIT_NO_CUSTOM_RULES=1 so a maintainer's personal
-    # registered rules never leak into the toolkit's own canonical files.
-    if RULES_DIR.is_dir() and os.environ.get("AI_TOOLKIT_NO_CUSTOM_RULES") != "1":
-        for rule_file in sorted(RULES_DIR.glob("*.md")):
-            rule_name = rule_file.stem
-            print()
-            print(f"<!-- TOOLKIT:{rule_name} START -->")
-            print("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
-            print()
-            print(rule_file.read_text(encoding="utf-8").rstrip())
-            print()
-            print(f"<!-- TOOLKIT:{rule_name} END -->")
+    print_rule_blocks(RULES_DIR)
 
 
 if __name__ == "__main__":

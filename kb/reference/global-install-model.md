@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.7.0"
+version: "3.8.0"
 created: "2026-03-26"
-last_updated: "2026-10-05"
+last_updated: "2026-10-08"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -162,7 +162,7 @@ scoped to whatever documented HOME file surface each exposes:
 
 - `cursor`: `~/.cursor/hooks.json` (safety/quality hooks; profile ≥ standard). Cursor RULES stay project-local — their only global surface is the Settings UI.
 - `copilot`: instructions, native agents, portable skills, and native hooks under `$COPILOT_HOME` when set or `~/.copilot` otherwise. The hook config is `hooks/ai-toolkit.json`; its self-contained runtime is `hooks/ai-toolkit/copilot_hook.py`. VS Code and GitHub.com still use repo `.github/` files, which local install emits.
-- `antigravity`: current canonical skill pointers at `~/.gemini/antigravity-cli/skills/` for CLI and `~/.gemini/config/skills/` for the IDE/shared product; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. Only workspace `.agent/skills/` is legacy. Antigravity rules stay project-local. Native plugins are opt-in exports installed manually under `~/.gemini/antigravity-cli/plugins/<name>/` for CLI or `~/.gemini/config/plugins/<name>/` for the IDE/shared product.
+- `antigravity`: current canonical skill pointers at `~/.gemini/antigravity-cli/skills/` for CLI and `~/.gemini/config/skills/` for the IDE/shared product; native hooks at `~/.gemini/config/hooks.json` for standard/strict/full; native agents at `~/.gemini/config/agents/` for full. Only workspace `.agent/skills/` is legacy. Antigravity rules stay project-local; its always-on global rule is the shared `~/.gemini/GEMINI.md`, which therefore carries no inline agent or skill catalogue (Antigravity truncates rule files above 24,000 bytes), and a pre-marker copy of the toolkit section there is removed on reinstall after a backup to `~/.softspark/ai-toolkit/backups/`. Registered MCP rules reach `GEMINI.md` only when Gemini CLI or Antigravity has the server configured. Native plugins are opt-in exports installed manually under `~/.gemini/antigravity-cli/plugins/<name>/` for CLI or `~/.gemini/config/plugins/<name>/` for the IDE/shared product.
 
 Their global MCP support, where available, is handled by `ai-toolkit mcp
 install`, not by the rule installer.

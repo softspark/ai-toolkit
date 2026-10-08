@@ -51,6 +51,7 @@ from dir_rules_shared import (
     build_registered_rules,
     cleanup_stale,
     rule_scope,
+    with_frontmatter,
     write_rules,
 )
 from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
@@ -60,41 +61,19 @@ from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 # Frontmatter helpers — Windsurf rule activation modes
 # ---------------------------------------------------------------------------
 
-def _frontmatter(content: str, *,
-                 trigger: str,
-                 description: str = "",
-                 globs: list[str] | None = None) -> str:
-    """Prepend a Windsurf YAML frontmatter block to rule content.
-
-    ``trigger`` must be one of: ``always_on``, ``glob``, ``model_decision``,
-    ``manual``. ``description`` is shown to the model for ``model_decision``
-    mode; ignored otherwise. ``globs`` is only meaningful for ``glob`` mode.
-    """
-    lines = ["---", f"trigger: {trigger}"]
-    if description:
-        lines.append(f"description: {description}")
-    if trigger == "glob" and globs:
-        lines.append("globs: " + ",".join(globs))
-    lines.append("---")
-    lines.append("")
-    lines.append(content.rstrip("\n"))
-    lines.append("")
-    return "\n".join(lines)
-
-
 def _always_on(content_fn):
     """Wrap a content callable so Windsurf treats it as always-on."""
-    return lambda: _frontmatter(content_fn(), trigger="always_on")
+    return lambda: with_frontmatter(content_fn(), trigger="always_on")
 
 
 def _glob_rule(content_fn, globs: list[str]):
     """Wrap a content callable for Windsurf's glob activation mode."""
-    return lambda: _frontmatter(content_fn(), trigger="glob", globs=globs)
+    return lambda: with_frontmatter(content_fn(), trigger="glob", globs=globs)
 
 
 def _model_decision(content_fn, description: str):
     """Wrap a content callable for Windsurf's model-decision activation."""
-    return lambda: _frontmatter(
+    return lambda: with_frontmatter(
         content_fn(), trigger="model_decision", description=description,
     )
 

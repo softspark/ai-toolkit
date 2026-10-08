@@ -7,6 +7,49 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- **Antigravity hooks blocked file tools:** Antigravity runs every hook
+  handler through `sh -c` from the directory that holds `hooks.json`, so the
+  project command `python3 .agents/hooks/…` resolved to
+  `.agents/.agents/hooks/…` and every matched tool call failed, including
+  `view_file` and `write_to_file`. Commands are now `python3 hooks/…` for both
+  `.agents/hooks.json` and `~/.gemini/config/hooks.json`. `PreToolUse` matches
+  only `run_command`, the one tool the adapter inspects, and the always-empty
+  `PostToolUse` and `PostInvocation` handlers are no longer registered.
+- **Antigravity discarded every workspace rule:** `.agents/rules/*.md` now
+  carry `trigger:` frontmatter. Code style, testing, security, workflow,
+  quality standards, output mode and registered rules are `always_on`; the
+  agent index and cross-language rules load on `model_decision`; language
+  rules use quoted `glob` patterns. The agent index no longer repeats the skill
+  catalogue, so every generated rule stays under the 24,000-byte cap.
+- **Truncated global `GEMINI.md`:** The Gemini generator no longer inlines the
+  agent and skill catalogues (both clients discover them natively), and a
+  reinstall removes an unmarked pre-marker copy of the toolkit section after
+  backing the file up to `~/.softspark/ai-toolkit/backups/`.
+- **Legacy `.agent/skills` duplicate:** The skill pointer is written only to
+  `.agents/skills/`; reinstall removes the copy an older release left in
+  `.agent/skills/`.
+### Changed
+
+- **MCP-dependent registered rules follow the client's MCP config:**
+  `.agents/rules/`, project `AGENTS.md`/`GEMINI.md` and `~/.gemini/GEMINI.md`
+  receive a registered rule only when one of the clients reading that file has
+  its MCP server configured. `add-rule --requires-mcp` records the servers;
+  otherwise they are inferred from `<server>-rules` names. Such rules end with
+  an explicit "server unavailable, read `kb/` directly" fallback.
+- **`rag-mcp-legal-rules` is opt-in:** enable it with
+  `install --opt-in-rules rag-mcp-legal-rules` (stored per project with
+  `--local`); `add-rule --opt-in` marks other rules the same way.
+- **`doctor` checks Antigravity:** it fails on hook handlers that cannot find
+  their runtime from the `hooks.json` directory and warns about stale hook
+  namespaces, rules without a valid trigger and rule files above 24,000 bytes.
+  A reinstall that writes an oversized file read by Antigravity also warns.
+
+---
+
 ## v5.2.1 - Prompt intent boundaries and helper delivery (2026-10-05)
 
 ### Fixed

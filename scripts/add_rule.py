@@ -38,11 +38,32 @@ def _name_from_url(url: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]", "", stem)
 
 
+def _split_policy_args(argv: list[str]) -> tuple[list[str], list[str] | None, bool | None]:
+    """Separate ``--requires-mcp=<list>`` and ``--opt-in`` from positionals."""
+    positional: list[str] = []
+    requires_mcp: list[str] | None = None
+    opt_in: bool | None = None
+    for arg in argv:
+        if arg.startswith("--requires-mcp="):
+            requires_mcp = [s.strip() for s in arg.split("=", 1)[1].split(",") if s.strip()]
+        elif arg in ("--opt-in", "--no-opt-in"):
+            opt_in = arg == "--opt-in"
+        else:
+            positional.append(arg)
+    return positional, requires_mcp, opt_in
+
+
 def main() -> None:
     """Register a rule file or URL in the global rules directory."""
-    if len(sys.argv) < 2:
-        print("Usage: add_rule.py <rule-file-or-url> [rule-name]", file=sys.stderr)
+    args, requires_mcp, opt_in = _split_policy_args(sys.argv[1:])
+    if not args:
+        print(
+            "Usage: add_rule.py <rule-file-or-url> [rule-name] "
+            "[--requires-mcp=<servers>] [--opt-in|--no-opt-in]",
+            file=sys.stderr,
+        )
         sys.exit(1)
+    sys.argv = [sys.argv[0], *args]
 
     source = sys.argv[1]
     is_url = source.startswith("https://") or source.startswith("http://")
@@ -96,6 +117,15 @@ def main() -> None:
 
         print(f"Registered: '{rule_name}' -> {dest}")
         print(f"Source path: {rule_file.resolve()} (re-run add-rule to refresh)")
+
+    if requires_mcp is not None or opt_in is not None:
+        from rule_sources import set_rule_policy
+
+        set_rule_policy(rules_dir, rule_name, requires_mcp=requires_mcp, opt_in=opt_in)
+        if requires_mcp is not None:
+            print(f"Requires MCP: {', '.join(requires_mcp) or 'none'}")
+        if opt_in is not None:
+            print(f"Opt-in: {'enable with --opt-in-rules ' + rule_name if opt_in else 'no'}")
 
     print()
     print("Apply now:")

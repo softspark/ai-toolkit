@@ -4,9 +4,9 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.17.0"
+version: "1.18.0"
 created: "2026-03-27"
-last_updated: "2026-10-05"
+last_updated: "2026-10-08"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -724,7 +724,7 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 | Cline | `.cline/hooks/<Event>` plus `.clinerules/hooks/<Event>`; user `~/.cline/hooks/<Event>`; extension compatibility `~/Documents/Cline/Hooks/<Event>` | `generate_cline_hooks.py` | Eight extensionless executable files using Cline's native stdin/stdout contract (profile ≥ `standard`) |
 | GitHub Copilot | `.github/hooks/ai-toolkit.json`; user `$COPILOT_HOME/hooks/ai-toolkit.json` | `generate_copilot_hooks.py` | GitHub version 1, camelCase events (profile ≥ `standard`) |
 | Codex CLI | `.codex/hooks.json`; user `$CODEX_HOME/hooks.json` | `generate_codex_hooks.py` | Native Codex schema, PascalCase events, command ownership markers |
-| Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native five-event schema plus adjacent Python adapter |
+| Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native schema (`PreToolUse` on `run_command`, `PreInvocation`, `Stop`) plus adjacent Python adapter, run relative to the `hooks.json` directory |
 | OpenCode | `.opencode/plugins/ai-toolkit-hooks.js`; user `~/.config/opencode/plugins/ai-toolkit-hooks.js` | `generate_opencode_plugin.py` | Native JavaScript plugin hooks |
 
 ### Cline hooks (`.cline/hooks/<Event>` and `.clinerules/hooks/<Event>`)
@@ -744,21 +744,44 @@ marked toolkit files while preserving user-owned hooks.
 ### Google Antigravity hooks (`.agents/hooks.json`)
 
 The toolkit owns only the top-level `ai-toolkit` namespace and preserves
-unrelated namespaces. The exact event set is `PreToolUse`, `PostToolUse`,
-`PreInvocation`, `PostInvocation`, and `Stop`. Tool events use matcher groups;
-the other events use direct command-handler lists. Every handler has a bounded
-timeout.
+unrelated namespaces. It registers only the events whose adapter output does
+something: `PreToolUse` with the matcher `run_command`, `PreInvocation`, and
+`Stop`. `PreToolUse` uses a matcher group; the other events use direct
+command-handler lists. Every handler has a bounded timeout. `PostToolUse` and
+`PostInvocation` are not registered because their output was always empty, and
+a matcher wider than `run_command` would let a broken hook block `view_file` and
+file writes the adapter never inspects.
+
+**Working directory.** Antigravity runs each handler through `sh -c` (`cmd /c`
+on Windows) with the working directory set to the directory that contains
+`hooks.json`, for every event type. Source: the hook reference shipped in agy
+1.3.1 ("The working directory is set to the directory containing
+`hooks.json`"); the public page at
+<https://antigravity.google/docs/hooks/> does not state it. Measured on
+2026-10-07 with agy 1.3.1: a project command `python3 .agents/hooks/…` failed
+for `PreToolUse`, `PreInvocation`, `PostInvocation`, and `Stop` alike with
+`can't open file '<project>/.agents/.agents/hooks/…'`. The command is therefore
+`python3 hooks/ai-toolkit-antigravity-hook.py <Event>` for both
+`.agents/hooks.json` and `~/.gemini/config/hooks.json`. It survives a moved
+repository, a worktree, and a nested `.agents/`, and needs no shell variables, so
+it also runs under `cmd /c`. Alternatives rejected: `git rev-parse` (repositories
+without git and nested `.agents/` resolve the wrong directory), an absolute
+install-time path (breaks on move and in worktrees, leaks the home path into the
+repository), and an environment variable (Antigravity exposes no workspace
+variable to hooks; only stdin carries `workspacePaths`).
 
 The adjacent Python runtime maps `.toolCall.name` and
 `.toolCall.args.CommandLine` to native camelCase responses. `PreToolUse`
-returns `allow`, `deny`, or `ask`; `PostToolUse` returns `{}`; invocation events
-use object-shaped `injectSteps` and a native `terminationBehavior`; `Stop`
-reads the official `executionNum`, `terminationReason`, optional `error`, and
-`fullyIdle` inputs. It returns `decision: continue` only when the invocation is
-not fully idle and has not passed its first execution; later executions and
-fully idle invocations stop, which bounds re-entry.
-Project commands use `.agents/hooks/`; exported plugin commands resolve through
-`${extensionPath}`.
+returns `allow`, `deny`, or `ask`; `PreInvocation` uses object-shaped
+`injectSteps`; `Stop` reads the official `executionNum`, `terminationReason`,
+optional `error`, and `fullyIdle` inputs. It returns `decision: continue` only
+when the invocation is not fully idle and has not passed its first execution;
+later executions and fully idle invocations stop, which bounds re-entry.
+Exported plugin commands resolve through `${extensionPath}`.
+
+`ai-toolkit doctor` resolves every managed handler from its `hooks.json`
+directory and fails when the runtime cannot be found, and warns when the
+namespace predates the current release; reinstalling repairs both.
 
 ### Cursor hooks (`.cursor/hooks.json`)
 

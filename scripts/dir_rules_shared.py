@@ -12,6 +12,7 @@ Stdlib-only.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from emission import (
@@ -434,6 +435,34 @@ STANDARD_WORKFLOWS: dict[str, callable] = {
 # ---------------------------------------------------------------------------
 # Shared file generation helpers
 # ---------------------------------------------------------------------------
+
+def with_frontmatter(content: str, *,
+                     trigger: str,
+                     description: str = "",
+                     globs: list[str] | None = None,
+                     quoted: bool = False) -> str:
+    """Prepend activation frontmatter shared by Windsurf and Antigravity.
+
+    ``trigger`` must be one of: ``always_on``, ``glob``, ``model_decision``,
+    ``manual``. ``description`` is shown to the model for ``model_decision``
+    mode; ignored otherwise. ``globs`` is only meaningful for ``glob`` mode.
+    ``quoted`` emits ``description`` and ``globs`` as JSON (valid YAML)
+    strings, which Antigravity requires for patterns that start with ``*``.
+    """
+    def scalar(value: str) -> str:
+        return json.dumps(value, ensure_ascii=False) if quoted else value
+
+    lines = ["---", f"trigger: {trigger}"]
+    if description:
+        lines.append(f"description: {scalar(description)}")
+    if trigger == "glob" and globs:
+        lines.append("globs: " + scalar(", ".join(globs) if quoted else ",".join(globs)))
+    lines.append("---")
+    lines.append("")
+    lines.append(content.rstrip("\n"))
+    lines.append("")
+    return "\n".join(lines)
+
 
 def rule_scope(filename: str) -> str | None:
     """Classify a generated rule file by ownership scope."""

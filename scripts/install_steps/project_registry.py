@@ -181,6 +181,7 @@ def register_project(
     profile: str = "",
     extends: str = "",
     editors: list[str] | None = None,
+    opt_in_rules: list[str] | None = None,
 ) -> bool:
     """Register a project directory. Returns True if newly added, False if updated.
 
@@ -191,6 +192,8 @@ def register_project(
         editors: List of editors installed locally (e.g. ["codex", "cursor"]).
                  If provided, replaces the stored editors list. If None, keeps
                  existing editors (or empty for new projects).
+        opt_in_rules: Opt-in registered rules enabled for the project. If
+                 provided, replaces the stored list; None keeps it.
     """
     project_path = str(Path(project_path).resolve())
 
@@ -213,20 +216,35 @@ def register_project(
                     p["editors"] = sorted(set(active_editors(editors)))
                 elif isinstance(p.get("editors"), list):
                     p["editors"] = active_editors(p["editors"])
+                if opt_in_rules is not None:
+                    p["opt_in_rules"] = sorted(set(opt_in_rules))
                 save_registry(projects)
                 return False
 
         # New registration
-        projects.append({
+        entry = {
             "path": project_path,
             "registered_at": now,
             "last_updated": now,
             "profile": profile or "standard",
             "extends": extends or "",
             "editors": sorted(set(active_editors(editors))),
-        })
+        }
+        if opt_in_rules:
+            entry["opt_in_rules"] = sorted(set(opt_in_rules))
+        projects.append(entry)
         save_registry(projects)
         return True
+
+
+def project_opt_in_rules(project_path: str | Path) -> list[str]:
+    """Return the opt-in registered rules stored for a registered project."""
+    project_path = str(Path(project_path).resolve())
+    for p in load_registry():
+        if p.get("path") == project_path:
+            rules = p.get("opt_in_rules", [])
+            return rules if isinstance(rules, list) else []
+    return []
 
 
 def unregister_project(project_path: str | Path) -> bool:

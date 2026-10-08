@@ -50,17 +50,19 @@ def cleanup(target_dir: Path, *, global_install: bool = False) -> int:
 
 
 if __name__ == "__main__":
+    # GEMINI.md is also Antigravity's always-on global rule, truncated above
+    # 24,000 bytes, so the agent and skill catalogues are not inlined: both
+    # clients discover them from their native directories.
     render_generator({
         "title": "# AI Toolkit — Gemini CLI Configuration",
         "intro_template": (
-            "Shared AI development toolkit with specialized agents,"
-            " skills, quality hooks, and a safety constitution."
+            "Shared AI development toolkit with {agents} specialized agents,"
+            " {skills} skills, quality hooks, and a safety constitution."
+            " The catalogues are not repeated here: skills and agents are"
+            " discovered from their native directories (`~/.gemini/skills/`,"
+            " `~/.gemini/agents/`, `~/.gemini/config/skills/`, or"
+            " `.gemini/` and `.agents/` in a project), and every skill is"
+            " installed under `~/.claude/skills/<name>/SKILL.md`."
         ),
-        "agents_section": "## Available Agents",
-        "agents_intro": "Specialized agent personas — apply their expertise for relevant tasks:",
-        "agents_format": "bullets",
-        "skills_section": "## Available Skills",
-        "skills_intro": "Skills are invocable slash commands or auto-loaded knowledge sources:",
-        "skills_format": "bullets",
         "guidelines": ["quality_standards", "workflow"],
     })

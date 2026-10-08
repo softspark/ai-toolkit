@@ -995,6 +995,21 @@ def record_global_editors(editors: list[str]) -> None:
     _mutate_state(update)
 
 
+def get_opt_in_rules() -> list[str]:
+    """Return opt-in registered rules enabled for the global install."""
+    rules = load_state().get("opt_in_rules", [])
+    return rules if isinstance(rules, list) else []
+
+
+def record_opt_in_rules(rules: list[str]) -> None:
+    """Record the opt-in registered rules enabled for the global install."""
+
+    def update(state: dict) -> None:
+        state["opt_in_rules"] = sorted(set(rules))
+
+    _mutate_state(update)
+
+
 def _now_iso() -> str:
     """Return current UTC time in ISO 8601 format."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

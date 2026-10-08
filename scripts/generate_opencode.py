@@ -29,6 +29,7 @@ from emission import (
 from frontmatter import frontmatter_field
 from injection import strip_owned_sections
 from paths import RULES_DIR
+from registered_rules import print_rule_blocks
 from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 
@@ -136,16 +137,7 @@ def main() -> None:
     print_toolkit_end()
 
     # Registered custom rules from ~/.softspark/ai-toolkit/rules/
-    if RULES_DIR.is_dir():
-        for rule_file in sorted(RULES_DIR.glob("*.md")):
-            rule_name = rule_file.stem
-            print()
-            print(f"<!-- TOOLKIT:{rule_name} START -->")
-            print("<!-- Auto-injected by ai-toolkit. Re-run to update. -->")
-            print()
-            print(rule_file.read_text(encoding="utf-8").rstrip())
-            print()
-            print(f"<!-- TOOLKIT:{rule_name} END -->")
+    print_rule_blocks(RULES_DIR)
 
 
 if __name__ == "__main__":

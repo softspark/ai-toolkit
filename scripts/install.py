@@ -45,6 +45,9 @@ Options:
   --language-skills <s>   detected (default): turn off <lang>-rules/<lang>-patterns
                           skills for languages no registered project uses;
                           all: keep every language skill on (persisted)
+  --opt-in-rules <list>   Enable opt-in registered rules (e.g. rag-mcp-legal-rules)
+                          for this install; persisted globally or per project,
+                          'none' clears the list
   --status                Show installed modules and exit
 """
 from __future__ import annotations
@@ -65,12 +68,14 @@ from install_steps.ai_tools import install_ai_tools, install_local_project, run_
 from install_steps.install_state import (
     record_install,
     get_global_editors,
+    get_opt_in_rules,
     record_global_editors,
+    record_opt_in_rules,
     print_status,
     GLOBAL_CAPABLE_EDITORS,
 )
 from install_steps.detect_language import detect_languages
-from install_steps.project_registry import register_project
+from install_steps.project_registry import project_opt_in_rules, register_project
 
 # Config inheritance (extends system)
 from config_resolver import (
@@ -228,6 +233,7 @@ def parse_args(argv: list[str]) -> dict:
         "skip_register": False,
         "codex_skills": False,
         "language_skills": "",
+        "opt_in_rules": None,
     }
     i = 0
     while i < len(argv):
@@ -293,6 +299,11 @@ def parse_args(argv: list[str]) -> dict:
         elif arg == "--language-skills":
             i += 1
             cfg["language_skills"] = argv[i] if i < len(argv) else ""
+        elif arg.startswith("--opt-in-rules="):
+            cfg["opt_in_rules"] = arg.split("=", 1)[1]
+        elif arg == "--opt-in-rules":
+            i += 1
+            cfg["opt_in_rules"] = argv[i] if i < len(argv) else ""
         elif arg.startswith("-"):
             print(f"Unknown option: {arg}")
             sys.exit(1)
@@ -748,6 +759,17 @@ def main() -> None:
         local = True
 
     project_dir = Path.cwd() if local else target_dir
+    # --opt-in-rules replaces the stored list ('none' clears it); without the
+    # flag the project's (or global install's) stored list applies.
+    requested_opt_in: list[str] | None = None
+    if cfg["opt_in_rules"] is not None:
+        requested_opt_in = [
+            r.strip() for r in cfg["opt_in_rules"].split(",")
+            if r.strip() and r.strip() != "none"
+        ]
+    opt_in_rules = requested_opt_in
+    if opt_in_rules is None:
+        opt_in_rules = project_opt_in_rules(project_dir) if local else get_opt_in_rules()
     resolved_modules = resolve_requested_modules(
         modules_arg, profile, auto_detect, project_dir,
     )
@@ -789,7 +811,8 @@ def main() -> None:
                               editors=local_editors_arg,
                               merged_config=merged_config,
                               profile=profile or "standard",
-                              codex_skills=cfg.get("codex_skills", False))
+                              codex_skills=cfg.get("codex_skills", False),
+                              opt_in_rules=opt_in_rules)
         installed_eds: list[str] = []  # local install doesn't track global editors
         install_strict_git_hooks(profile, local, dry_run)
     else:
@@ -811,7 +834,8 @@ def main() -> None:
             global_eds = get_global_editors() or None
 
         installed_eds = install_ai_tools(target_dir, rules_dir, dry_run,
-                                         editors=global_eds, profile=profile)
+                                         editors=global_eds, profile=profile,
+                                         opt_in_rules=opt_in_rules)
         install_persona(target_dir, persona, dry_run)
         install_strict_git_hooks(profile, local, dry_run)
 
@@ -847,6 +871,8 @@ def main() -> None:
 
             if installed_eds:
                 record_global_editors(installed_eds)
+            if requested_opt_in is not None:
+                record_opt_in_rules(requested_opt_in)
 
         # Register project in global registry (for `ai-toolkit update` propagation)
         # Skipped when called from update_projects.py (--skip-register) to avoid
@@ -869,6 +895,7 @@ def main() -> None:
                 profile=profile or "standard",
                 extends=extends_source,
                 editors=local_eds_for_registry,
+                opt_in_rules=requested_opt_in,
             )
             if is_new:
                 print(f"  Registered project in {TOOLKIT_DATA_DIR / 'projects.json'}")

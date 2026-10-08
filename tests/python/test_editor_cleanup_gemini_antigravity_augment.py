@@ -246,15 +246,26 @@ def test_cleanup_prunes_only_emptied_directories(tmp_path: Path) -> None:
     assert tmp_path.is_dir()
 
 
-def test_antigravity_counts_rules_workflows_and_both_pointers(tmp_path: Path) -> None:
+def test_antigravity_counts_rules_workflows_and_pointer(tmp_path: Path) -> None:
     generate_antigravity.generate(tmp_path)
     rules = list((tmp_path / ".agents" / "rules").glob("ai-toolkit-*.md"))
     workflows = list((tmp_path / ".agents" / "workflows").glob("ai-toolkit-*.md"))
 
     replacements = list((tmp_path / ".agents/skills").glob("ai-toolkit-*/SKILL.md"))
     assert len(replacements) == len(workflows) + 1  # workflow skills plus catalogue
-    assert generate_antigravity.discover(tmp_path) == len(rules) + len(workflows) + len(replacements) + 1
+    assert not (tmp_path / ".agent").exists()  # legacy pointer copy no longer written
+    assert generate_antigravity.discover(tmp_path) == len(rules) + len(workflows) + len(replacements)
     assert generate_antigravity.discover(tmp_path, global_install=True) == 0
+
+
+def test_antigravity_cleanup_still_removes_legacy_agent_pointer(tmp_path: Path) -> None:
+    generate_antigravity.generate(tmp_path)
+    legacy = tmp_path / ".agent" / "skills" / POINTER / "SKILL.md"
+    _write(legacy, (tmp_path / ".agents" / "skills" / POINTER / "SKILL.md").read_text())
+
+    generate_antigravity.cleanup(tmp_path)
+
+    assert not legacy.exists()
 
 
 def test_antigravity_skips_pointer_owned_by_codex_adapter(tmp_path: Path) -> None:

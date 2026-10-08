@@ -120,7 +120,41 @@ def register_url_source(
                     f"Refusing to update '{rule_name}' under AI_TOOLKIT_STRICT_PIN=1."
                 )
         entry["sha256"] = new_hash
+    _keep_policy(entry, sources.get(rule_name))
     sources[rule_name] = entry
+    save_sources(rules_dir, sources)
+
+
+# Activation policy set with ``add-rule --requires-mcp/--opt-in``; it survives
+# refreshes of the rule's content.
+POLICY_KEYS = ("requires_mcp", "opt_in")
+
+
+def _keep_policy(entry: dict[str, Any], previous: dict[str, Any] | None) -> None:
+    for key in POLICY_KEYS:
+        if previous and key in previous:
+            entry[key] = previous[key]
+
+
+def set_rule_policy(
+    rules_dir: Path | None,
+    rule_name: str,
+    *,
+    requires_mcp: list[str] | None = None,
+    opt_in: bool | None = None,
+) -> None:
+    """Record which MCP servers a rule needs and whether it is opt-in.
+
+    ``None`` leaves a field unchanged; an empty ``requires_mcp`` list records
+    that the rule needs no server, overriding the name-based default.
+    """
+    rules_dir = rules_dir or RULES_DIR
+    sources = load_sources(rules_dir)
+    entry = sources.setdefault(rule_name, {})
+    if requires_mcp is not None:
+        entry["requires_mcp"] = sorted(set(requires_mcp))
+    if opt_in is not None:
+        entry["opt_in"] = opt_in
     save_sources(rules_dir, sources)
 
 
@@ -151,6 +185,7 @@ def register_path_source(
     }
     if content is not None:
         entry["sha256"] = hashlib.sha256(content).hexdigest()
+    _keep_policy(entry, existing)
     sources[rule_name] = entry
     save_sources(rules_dir, sources)
 

@@ -167,6 +167,43 @@ def strip_owned_sections(content: bytes) -> bytes | None:
     return (remaining + "\n").encode("utf-8")
 
 
+# Second-level headings a pre-marker generator copy could contain.
+_LEGACY_SUBSECTIONS = (
+    "## Available Agent",
+    "## Available Skills",
+    "## Quality Standards",
+    "## Workflow Guidelines",
+    "## Constitution",
+    "## General Guidelines",
+)
+
+
+def strip_legacy_section(text: str, title: str) -> tuple[str, str]:
+    """Remove a pre-marker copy of a generator's output from ``text``.
+
+    Releases before marker injection wrote generator output verbatim, starting
+    with its ``title`` heading. Call this on text whose marker sections are
+    already stripped. The copy runs from a line equal to ``title`` up to the
+    next first-level heading, an unknown second-level heading, or the end of
+    the text, so user content after it survives. Returns the remaining text and
+    the removed text (empty when no copy was found).
+    """
+    lines = text.splitlines(keepends=True)
+    try:
+        start = next(i for i, line in enumerate(lines) if line.rstrip("\n") == title)
+    except StopIteration:
+        return text, ""
+    end = start + 1
+    while end < len(lines):
+        line = lines[end]
+        if line.startswith("# ") or (
+            line.startswith("## ") and not line.startswith(_LEGACY_SUBSECTIONS)
+        ):
+            break
+        end += 1
+    return "".join(lines[:start] + lines[end:]), "".join(lines[start:end])
+
+
 def trim_trailing_blanks(text: str) -> str:
     """Remove trailing blank lines from text."""
     lines = text.splitlines()

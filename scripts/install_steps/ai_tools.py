@@ -29,15 +29,18 @@ from output_filter_retirement import (
 from injection import (
     collapse_blank_runs as _collapse_blank_runs,
     strip_all_sections as _strip_all_sections,
+    strip_legacy_section as _strip_legacy_section,
     strip_section as _strip_section,
     trim_trailing_blanks as _trim_trailing_blanks,
 )
+from registered_rules import ANTIGRAVITY_RULE_LIMIT_BYTES, selection_env
 
 
 def install_ai_tools(target_dir: Path, rules_dir: Path,
                      dry_run: bool,
                      editors: list[str] | None = None,
-                     profile: str = "standard") -> list[str]:
+                     profile: str = "standard",
+                     opt_in_rules: list[str] | None = None) -> list[str]:
     """Install global editor configs.
 
     Args:
@@ -46,6 +49,7 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
         profile: Install profile. Gates each editor's optional native surfaces
                  the same way the local install does — hooks at
                  standard/strict/full, sub-agents/commands/skills at full.
+        opt_in_rules: Opt-in registered rules enabled for the global install.
 
     Returns:
         List of editors that were actually installed (for state tracking).
@@ -98,7 +102,12 @@ def install_ai_tools(target_dir: Path, rules_dir: Path,
                     "~/.gemini/agents/"
                 )
         else:
-            inject_with_rules("generate-gemini.sh", gemini_file, rules_dir)
+            # ~/.gemini/GEMINI.md is also Antigravity's always-on global rule.
+            inject_with_rules(
+                "generate-gemini.sh", gemini_file, rules_dir,
+                clients=("gemini", "antigravity"),
+                opt_in_rules=tuple(opt_in_rules or ()),
+            )
             # Hooks (~/.gemini/settings.json), commands, the skills pointer,
             # and native agents are documented user-tier surfaces. Install
             # them globally with the same profile gates as the local install.
@@ -662,17 +671,32 @@ def inject_with_rules(
     generator_script: str,
     target_file: Path,
     rules_dir: Path,
+    *,
+    clients: tuple[str, ...] = (),
+    project_dir: Path | None = None,
+    opt_in_rules: tuple[str, ...] = (),
 ) -> None:
-    """Run a generator script, write output, then inject registered rules."""
+    """Run a generator script, write output, then inject registered rules.
+
+    ``clients`` names the clients that read ``target_file``. When given, the
+    generator emits only the registered rules whose MCP servers one of them
+    has configured (see ``registered_rules``), and the result is checked
+    against Antigravity's per-file limit when Antigravity reads it. A copy of
+    the generator output written before marker injection existed is removed,
+    after backing the file up.
+    """
     scripts_dir = toolkit_dir / "scripts"
     py_name = generator_script.replace(".sh", ".py").replace("-", "_")
     if (scripts_dir / py_name).is_file():
         cmd = ["python3", str(scripts_dir / py_name)]
     else:
         cmd = ["bash", str(scripts_dir / generator_script)]
+    env = None
+    if clients:
+        env = {**os.environ, **selection_env(clients, project_dir, opt_in_rules)}
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
     except subprocess.TimeoutExpired:
         print(f"  ERROR: {generator_script} timed out after 120s")
         return
@@ -687,11 +711,18 @@ def inject_with_rules(
     if not target_file.exists():
         target_file.touch()
 
-    existing = target_file.read_text(encoding="utf-8")
+    original = target_file.read_text(encoding="utf-8")
     # Strip ALL toolkit sections from existing — generated output is the
     # complete source of truth (includes ai-toolkit block + custom rules).
     # The shared parser also repairs nested legacy sections and orphan markers.
-    existing = _strip_all_sections(existing)
+    existing = _strip_all_sections(original)
+    title = _generated_title(generated)
+    if title:
+        existing, legacy = _strip_legacy_section(existing, title)
+        if legacy:
+            backup = _backup_file(target_file, original)
+            print(f"  Migrated: removed unmarked legacy '{title}' section "
+                  f"from {target_file} (backup: {backup})")
     existing = _trim_trailing_blanks(existing)
     existing = existing.lstrip("\n")
 
@@ -706,6 +737,34 @@ def inject_with_rules(
     output = output.lstrip("\n")
     target_file.write_text(output, encoding="utf-8")
     print(f"  Updated: {target_file}")
+    size = len(output.encode("utf-8"))
+    if "antigravity" in clients and size > ANTIGRAVITY_RULE_LIMIT_BYTES:
+        print(f"  WARNING: {target_file} is {size} bytes; Antigravity truncates "
+              f"rule files above {ANTIGRAVITY_RULE_LIMIT_BYTES} bytes")
+
+
+def _generated_title(generated: str) -> str:
+    """Return the first heading of generator output, inside its markers."""
+    for line in generated.splitlines():
+        if line.startswith("# "):
+            return line
+        if line and not line.startswith("<!--"):
+            return ""
+    return ""
+
+
+def _backup_file(path: Path, content: str) -> Path:
+    """Write ``content`` to a timestamped backup and return its path."""
+    from datetime import datetime, timezone
+
+    from paths import BACKUPS_DIR
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+    flat = str(path.resolve()).strip("/\\").replace("/", "-").replace("\\", "-")
+    backup = BACKUPS_DIR / f"{flat}.{stamp}.bak"
+    backup.write_text(content, encoding="utf-8")
+    return backup
 
 
 def _strip_toolkit_sections(target_file: Path) -> bool:
@@ -730,12 +789,17 @@ def _strip_toolkit_sections(target_file: Path) -> bool:
     return True
 
 
-def _install_copilot_agents_md(cwd: Path, rules_dir: Path) -> None:
+def _install_copilot_agents_md(cwd: Path, rules_dir: Path, *,
+                               clients: tuple[str, ...] = (),
+                               opt_in_rules: tuple[str, ...] = ()) -> None:
     """Emit the same effective AGENTS.md used by Codex, including rules."""
     inject_with_rules(
         "generate_codex.py",
         cwd / "AGENTS.md",
         rules_dir,
+        clients=clients,
+        project_dir=cwd,
+        opt_in_rules=opt_in_rules,
     )
     print("  Updated: AGENTS.md (shared Codex/Copilot instructions)")
 
@@ -858,7 +922,8 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
                           editors: str = "",
                           merged_config: dict | None = None,
                           profile: str = "standard",
-                          codex_skills: bool = False) -> None:
+                          codex_skills: bool = False,
+                          opt_in_rules: list[str] | None = None) -> None:
     """Install project-local configs.
 
     Claude Code configs (CLAUDE.md, settings, constitution) are always installed.
@@ -880,6 +945,9 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
 
     If ``merged_config`` is provided (from .softspark-toolkit.json extends resolution),
     additional rules and constitution amendments from the base config are injected.
+
+    ``opt_in_rules`` names opt-in registered rules (``rag-mcp-legal-rules`` by
+    default) this project enables; other opt-in rules are left out.
     """
     cwd = Path.cwd()
     resolved_editors = _resolve_editors(editors, cwd)
@@ -945,7 +1013,8 @@ def install_local_project(rules_dir: Path, dry_run: bool, reset: bool,
     _create_local_ai_tool_configs(cwd, rules_dir, resolved_editors,
                                   language_modules=language_modules,
                                   profile=profile,
-                                  codex_skills=codex_skills)
+                                  codex_skills=codex_skills,
+                                  opt_in_rules=opt_in_rules)
 
 
 def _apply_extends_config(cwd: Path, merged: dict) -> None:
@@ -1587,8 +1656,15 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
                                    editors: list[str],
                                    language_modules: list[str] | None = None,
                                    profile: str = "standard",
-                                   codex_skills: bool = False) -> None:
+                                   codex_skills: bool = False,
+                                   opt_in_rules: list[str] | None = None) -> None:
     eds = set(editors)
+    opt_in = tuple(opt_in_rules or ())
+
+    def readers(*own: str) -> tuple[str, ...]:
+        # Antigravity also reads the project's AGENTS.md and GEMINI.md.
+        return own + (("antigravity",) if "antigravity" in eds else ())
+
     # `full` implies the `standard` additions (Copilot dir + Gemini hooks)
     # plus every native-surface generator we ship. Normalize unknown
     # profiles to `standard` so callers never produce a silent no-op.
@@ -1620,7 +1696,8 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             cwd / ".github" / "copilot-instructions.md",
             rules_dir,
         )
-        _install_copilot_agents_md(cwd, rules_dir)
+        _install_copilot_agents_md(cwd, rules_dir, clients=readers("copilot"),
+                                   opt_in_rules=opt_in)
         # Agents and skills are the minimal Copilot surface. Standard and above
         # add path instructions, prompts, and native lifecycle hooks.
         gen_copilot_dir(
@@ -1719,7 +1796,7 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
     if "antigravity" in eds:
         from generate_antigravity import generate as gen_antigravity
         gen_antigravity(cwd, language_modules=language_modules,
-                        rules_dir=rules_dir)
+                        rules_dir=rules_dir, opt_in_rules=list(opt_in))
         if add_gemini_hooks:
             _try_generator("generate_antigravity_hooks", cwd)
         else:
@@ -1741,6 +1818,9 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             "generate_codex.py",
             cwd / "AGENTS.md",
             rules_dir,
+            clients=readers("codex"),
+            project_dir=cwd,
+            opt_in_rules=opt_in,
         )
         # .codex/hooks.json — Codex lifecycle hooks
         from generate_codex_hooks import generate as gen_codex_hooks
@@ -1763,6 +1843,9 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             "generate-gemini.sh",
             cwd / "GEMINI.md",
             rules_dir,
+            clients=readers("gemini"),
+            project_dir=cwd,
+            opt_in_rules=opt_in,
         )
         if add_gemini_hooks:
             _try_generator("generate_gemini_hooks", cwd)
@@ -1786,6 +1869,9 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
             "generate_opencode.py",
             cwd / "AGENTS.md",
             rules_dir,
+            clients=readers("opencode"),
+            project_dir=cwd,
+            opt_in_rules=opt_in,
         )
         # .opencode/agents/ — native subagents
         from generate_opencode_agents import generate as gen_opencode_agents

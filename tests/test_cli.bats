@@ -536,6 +536,8 @@ print('OK: cached rule preserved after failed refresh')
     export HOME="$TEST_TMP"
     run $CLI install
     [ "$status" -eq 0 ]
+    # doctor also inspects the current project; keep the checkout out of it.
+    cd "$TEST_TMP"
     run $CLI doctor
     [ "$status" -eq 0 ]
     echo "$output" | grep -q '## Environment'

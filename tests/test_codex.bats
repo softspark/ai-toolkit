@@ -14,7 +14,8 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 setup_file() {
     export CX_DIR; CX_DIR="$(mktemp -d)"
     export CX_LOG_DIR; CX_LOG_DIR="$(mktemp -d)"
-    python3 "$TOOLKIT_DIR/scripts/generate_codex.py" > "$CX_LOG_DIR/codex-md" 2>/dev/null
+    # The maintainer's own registered rules are not part of the shipped core.
+    AI_TOOLKIT_NO_CUSTOM_RULES=1 python3 "$TOOLKIT_DIR/scripts/generate_codex.py" > "$CX_LOG_DIR/codex-md" 2>/dev/null
     echo $? > "$CX_LOG_DIR/codex-md.status"
     python3 "$TOOLKIT_DIR/scripts/generate_codex_hooks.py" "$CX_DIR" > "$CX_LOG_DIR/codex-hooks.log" 2>/dev/null
     echo $? > "$CX_LOG_DIR/codex-hooks.status"

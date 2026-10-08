@@ -329,6 +329,8 @@ function showHelp() {
   console.log('  --auto-detect   Detect project languages and install matching rule modules');
   console.log('  --language-skills <s>  detected (default): turn off <lang>-rules/<lang>-patterns skills for languages');
   console.log('                  no registered project uses (skillOverrides, reversible); all: keep every language skill on');
+  console.log('  --opt-in-rules <list>  Enable opt-in registered rules (rag-mcp-legal-rules is opt-in by default);');
+  console.log('                  stored per project with --local, globally otherwise; none clears');
   console.log('  --list, --dry-run  Dry-run: show what would be applied');
   console.log('\nOptions for create:');
   console.log('  skill <name> --template=<type>  Scaffold skill (types: linter, reviewer, generator, workflow, knowledge)');
@@ -361,6 +363,10 @@ function showHelp() {
   console.log('\nOptions for add-rule:');
   console.log('  <rule-file>     Path to .md rule file or HTTPS URL to register globally');
   console.log('  [rule-name]     Override rule name (default: filename/URL stem without .md)');
+  console.log('  --requires-mcp <servers>  MCP servers the rule needs (comma-separated; empty = none).');
+  console.log('                  Rule files read by Antigravity, Gemini, Codex, Copilot or OpenCode get the rule');
+  console.log('                  only when one of their readers has the server configured');
+  console.log('  --opt-in        Emit the rule only where --opt-in-rules <name> enabled it (--no-opt-in reverts)');
   console.log('\nOptions for plugin:');
   console.log('  install <name>  Install a plugin pack (--editor claude|codex|all)');
   console.log('  install --all   Install all available plugin packs for selected editor(s)');
@@ -484,9 +490,21 @@ function handleRemoveRule(args) {
  * @param {string[]} args
  */
 function handleAddRule(args) {
-  const ruleFile = args[0];
+  const policyArgs = [];
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--opt-in' || args[i] === '--no-opt-in' || args[i].startsWith('--requires-mcp=')) {
+      policyArgs.push(args[i]);
+    } else if (args[i] === '--requires-mcp') {
+      policyArgs.push(`--requires-mcp=${args[i + 1] ?? ''}`);
+      i++;
+    } else {
+      positional.push(args[i]);
+    }
+  }
+  const ruleFile = positional[0];
   if (!ruleFile) {
-    console.error('Usage: ai-toolkit add-rule <rule-file-or-url> [rule-name]');
+    console.error('Usage: ai-toolkit add-rule <rule-file-or-url> [rule-name] [--requires-mcp <servers>] [--opt-in]');
     process.exit(1);
   }
   // Pass URLs through directly (don't resolve as filesystem path)
@@ -496,8 +514,8 @@ function handleAddRule(args) {
   }
   const isUrl = ruleFile.startsWith('https://');
   const absRuleFile = isUrl ? ruleFile : path.resolve(CWD, ruleFile);
-  const ruleName = args[1];
-  run(scriptPath('add_rule.py'), ruleName ? [absRuleFile, ruleName] : [absRuleFile]);
+  const ruleName = positional[1];
+  run(scriptPath('add_rule.py'), [...(ruleName ? [absRuleFile, ruleName] : [absRuleFile]), ...policyArgs]);
   propagateGlobal('--rules');
 }
 
