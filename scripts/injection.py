@@ -167,37 +167,37 @@ def strip_owned_sections(content: bytes) -> bytes | None:
     return (remaining + "\n").encode("utf-8")
 
 
-# Second-level headings a pre-marker generator copy could contain.
-_LEGACY_SUBSECTIONS = (
-    "## Available Agent",
-    "## Available Skills",
-    "## Quality Standards",
-    "## Workflow Guidelines",
-    "## Constitution",
-    "## General Guidelines",
-)
+# Comment lines older generators wrote under their title; not user headings.
+_GENERATOR_COMMENTS = ("# Auto-generated", "# Regenerate", "# Generated")
 
 
 def strip_legacy_section(text: str, title: str) -> tuple[str, str]:
     """Remove a pre-marker copy of a generator's output from ``text``.
 
     Releases before marker injection wrote generator output verbatim, starting
-    with its ``title`` heading. Call this on text whose marker sections are
-    already stripped. The copy runs from a line equal to ``title`` up to the
-    next first-level heading, an unknown second-level heading, or the end of
-    the text, so user content after it survives. Returns the remaining text and
-    the removed text (empty when no copy was found).
+    with its ``title`` heading, and later releases appended marker sections
+    after it. Call this on the original text. The copy runs from a line equal
+    to ``title``, outside every marker section, up to the next marker line, the
+    next first-level heading that is not a generator comment, or the end of
+    the text. Returns the remaining text and the removed text (empty when no
+    copy was found).
     """
     lines = text.splitlines(keepends=True)
-    try:
-        start = next(i for i, line in enumerate(lines) if line.rstrip("\n") == title)
-    except StopIteration:
+    depth, start = 0, None
+    for i, line in enumerate(lines):
+        match = _MARKER_RE.match(line.rstrip("\n"))
+        if match:
+            depth += 1 if match["kind"] == "START" else -1
+        elif depth <= 0 and line.rstrip("\n") == title:
+            start = i
+            break
+    if start is None:
         return text, ""
     end = start + 1
     while end < len(lines):
         line = lines[end]
-        if line.startswith("# ") or (
-            line.startswith("## ") and not line.startswith(_LEGACY_SUBSECTIONS)
+        if _MARKER_RE.match(line.rstrip("\n")) or (
+            line.startswith("# ") and not line.startswith(_GENERATOR_COMMENTS)
         ):
             break
         end += 1

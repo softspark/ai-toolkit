@@ -751,7 +751,7 @@ def inject_with_rules(
     # Strip ALL toolkit sections from existing — generated output is the
     # complete source of truth (includes ai-toolkit block + custom rules).
     # The shared parser also repairs nested legacy sections and orphan markers.
-    existing = _strip_all_sections(original)
+    existing = original
     title = _generated_title(generated)
     if title:
         existing, legacy = _strip_legacy_section(existing, title)
@@ -759,6 +759,7 @@ def inject_with_rules(
             backup = _backup_file(target_file, original)
             print(f"  Migrated: removed unmarked legacy '{title}' section "
                   f"from {target_file} (backup: {backup})")
+    existing = _strip_all_sections(existing)
     existing = _trim_trailing_blanks(existing)
     existing = existing.lstrip("\n")
 
