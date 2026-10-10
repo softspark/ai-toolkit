@@ -45,6 +45,24 @@ migration of old DSH project files.
   docs no longer mention DSH.
 - Test count: 2009 → 2003 (six tests of the removed behaviour).
 
+### Fixed
+
+- **`inject-mcp` and `remove-mcp` reach every `claude-switch` profile.** With
+  the default target they passed `$HOME` to the editor writers as an explicit
+  home, which pins Claude to `~/.claude.json` only, so an injected server never
+  reached `<profile>/.claude.json`. A profile then saw it only through
+  `~/.mcp.json`, which Claude Code treats as project scope and asks about per
+  project: rejected once, the server was off in that project for good. The
+  default target now resolves like `mcp install --scope global` (every
+  registered profile, `CODEX_HOME`, `COPILOT_HOME`, `CLAUDE_USER_DATA_DIR`),
+  and `uninstall` cleans injected servers from the same set. An explicit
+  target directory still pins every editor to it. Servers injected before
+  this release reach the profiles on the next `inject-mcp` of the same
+  template.
+- Three pytest cases cover inject, remove and uninstall cleanup across
+  profiles and an explicit target that leaves them alone; the inject bats
+  suites unset the editor and `claude-switch` environment overrides.
+
 ---
 
 ## v5.3.5 - No orphaned constitution heading in CLAUDE.md (2026-10-08)

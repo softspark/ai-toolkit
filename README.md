@@ -15,6 +15,9 @@
   migrates old DSH project skills or registry entries. Run `ai-toolkit update`
   once on 5.3.5 first if a project still carries them, see the
   [removal note](kb/history/completed/dsh-integration-removed-20261010.md).
+- **`inject-mcp` reaches every Claude Code profile.** Injected servers such as
+  `rag-mcp` are written to each `claude-switch` profile, like `mcp install`
+  does; `remove-mcp` and `uninstall` clean them there too.
 - **No orphaned `## Project Constitution` heading (v5.3.5).** It now leaves `CLAUDE.md`
   together with its import; `update` removes one an older release left, and
   `adopt-agents-md` no longer keeps it.
