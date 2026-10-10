@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.14.0"
+version: "1.14.1"
 created: "2026-03-23"
-last_updated: "2026-10-08"
+last_updated: "2026-10-10"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
 ---
 
@@ -142,8 +142,6 @@ the documented shared `$HOME/.agents/skills/` directory. Experimental plugin
 packs can layer their rules, skills, and hooks onto that Codex user target.
 
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
-
-The DeepSeek Harness (DSH) target and the `ai-toolkit dsh` profile lifecycle were retired on 2026-09-24. Local install and uninstall still recognise `.agents/skills` surfaces carrying a legacy `dsh` owner marker so they can be migrated or removed; see `kb/reference/dsh-compatibility.md`.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers`
 entries into `.claude/settings.local.json` plus any selected editors with

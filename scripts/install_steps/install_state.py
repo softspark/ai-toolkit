@@ -27,8 +27,6 @@ from paths import EXTERNAL_HOOKS_DIR, RULES_DIR, STATE_FILE
 
 _STATE_LOCK_TIMEOUT_SECONDS = 2.0
 _STATE_LOCK_POLL_SECONDS = 0.025
-# Top-level key of the retired DSH profile lifecycle; dropped on the next write.
-LEGACY_DSH_STATE_KEY = "dsh"
 
 
 @dataclass(frozen=True)
@@ -907,7 +905,6 @@ def _mutate_state(mutator: Callable[[dict], None]) -> None:
             secure=transaction.parent_descriptor is not None,
             transaction=transaction,
         )
-        state.pop(LEGACY_DSH_STATE_KEY, None)
         mutator(state)
         _write_state_locked(state, transaction=transaction)
 

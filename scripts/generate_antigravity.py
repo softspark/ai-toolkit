@@ -45,7 +45,7 @@ from functools import partial
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from codex_skill_adapter import ADAPTED_MARKERS
+from codex_skill_adapter import ADAPTED_MARKER
 from antigravity_workflow_skills import (
     owned_workflow_skill_edit,
     sync_workflow_skills,
@@ -134,13 +134,11 @@ def _write_skill_pointer(target_dir: Path) -> None:
 
 
 def _is_owned_pointer_dir(pointer_dir: Path) -> bool:
-    """True for a real pointer directory that no Codex/DSH adapter owns."""
+    """True for a real pointer directory that the Codex adapter does not own."""
     if pointer_dir.is_symlink() or not (pointer_dir / "SKILL.md").is_file():
         return False
-    return not any(
-        (pointer_dir / marker).exists() or (pointer_dir / marker).is_symlink()
-        for marker in ADAPTED_MARKERS
-    )
+    marker = pointer_dir / ADAPTED_MARKER
+    return not marker.exists() and not marker.is_symlink()
 
 
 # ---------------------------------------------------------------------------
@@ -351,8 +349,8 @@ def _apply(target_dir: Path, global_install: bool, *, dry_run: bool) -> int:
             leaves.append(path.parent)
         pointer_dir = target / rel / POINTER_SKILL_NAME
         leaves.append(pointer_dir)
-        # A symlinked pointer directory is skipped. One carrying a Codex (or
-        # legacy DSH) adapter marker belongs to the shared ``.agents/skills`` surface
+        # A symlinked pointer directory is skipped. One carrying a Codex
+        # adapter marker belongs to the shared ``.agents/skills`` surface
         # that uninstall cleans separately.
         if _is_owned_pointer_dir(pointer_dir):
             edits[pointer_dir / "SKILL.md"] = owned_pointer_edit

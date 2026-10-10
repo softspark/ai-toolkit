@@ -14,11 +14,11 @@ setup() {
     mkdir -p "$TEST_HOME" "$TEST_PROJECT"
 }
 
-@test "global uninstall ignores state left by the retired DSH integration" {
+@test "global uninstall ignores unknown keys in state.json" {
     mkdir -p "$TEST_HOME/.codex/agents" "$TEST_HOME/.softspark/ai-toolkit"
     printf '%s\n' '# ai-toolkit-managed: codex-agent' > \
         "$TEST_HOME/.codex/agents/ai-toolkit-owned.toml"
-    printf '%s\n' '{"dsh": {"profiles": {"web": {}}}}' > \
+    printf '%s\n' '{"unknown": {"profiles": {"web": {}}}}' > \
         "$TEST_HOME/.softspark/ai-toolkit/state.json"
 
     HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" --global --yes
@@ -28,70 +28,44 @@ setup() {
     [ ! -e "$TEST_HOME/.softspark/ai-toolkit" ]
 }
 
-# Rewrite a Codex skill surface into the layout releases with DSH support
-# wrote: $2 is "dsh" (DSH-only owner) or "shared" (Codex and DSH owners).
-legacy_skill_surface() {
-    python3 - "$1" "$2" <<'PY'
-import sys
-from pathlib import Path
+@test "uninstall --local removes every managed agent skill and its owner marker" {
+    local project="$TEST_ROOT/codex"
+    mkdir -p "$project"
 
-agents = Path(sys.argv[1]) / ".agents"
-kind = sys.argv[2]
-marker = {"dsh": ".ai-toolkit-dsh-adapted", "shared": ".ai-toolkit-shared-adapted"}[kind]
-wrappers = sorted((agents / "skills").glob("*/.ai-toolkit-codex-adapted"))
-assert wrappers, "no adapted wrappers to convert"
-for codex_marker in wrappers:
-    codex_marker.rename(codex_marker.with_name(marker))
-owners = "dsh\n" if kind == "dsh" else "codex\ndsh\n"
-(agents / ".ai-toolkit-skill-owners").write_text(owners)
-PY
-}
+    HOME="$TEST_HOME" run bash -c "cd '$project' && \
+        python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"
+    [ "$status" -eq 0 ]
+    [ -f "$project/.agents/.ai-toolkit-skill-owners" ]
 
-@test "uninstall --local removes every managed agent-skill variant and its owner marker" {
-    for layout in dsh shared codex; do
-        local project="$TEST_ROOT/$layout"
-        mkdir -p "$project"
+    mkdir -p "$project/.agents/skills/user-skill" \
+        "$project/.agent-presets" "$project/user-directory"
+    printf '%s\n' '---' 'name: user-skill' 'description: User owned.' \
+        '---' 'User skill.' > "$project/.agents/skills/user-skill/SKILL.md"
+    printf '%s\n' 'user preset' > "$project/.agent-presets/user-preset.md"
+    printf '%s\n' 'unrelated file' > "$project/user-directory/keep.txt"
+    printf '%s\n' 'user wrapper addition' > \
+        "$project/.agents/skills/orchestrate/user-added.txt"
 
-        HOME="$TEST_HOME" run bash -c "cd '$project' && \
-            python3 '$TOOLKIT_DIR/scripts/install.py' --local --editors codex"
-        [ "$status" -eq 0 ]
-        if [ "$layout" != codex ]; then
-            legacy_skill_surface "$project" "$layout"
-        fi
-        [ -f "$project/.agents/.ai-toolkit-skill-owners" ]
+    HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
+        --local --yes --target "$project"
+    [ "$status" -eq 0 ]
 
-        mkdir -p "$project/.agents/skills/user-skill" \
-            "$project/.agent-presets" "$project/user-directory"
-        printf '%s\n' '---' 'name: user-skill' 'description: User owned.' \
-            '---' 'User skill.' > "$project/.agents/skills/user-skill/SKILL.md"
-        printf '%s\n' 'user preset' > "$project/.agent-presets/user-preset.md"
-        printf '%s\n' 'unrelated file' > "$project/user-directory/keep.txt"
-        printf '%s\n' 'user wrapper addition' > \
-            "$project/.agents/skills/orchestrate/user-added.txt"
-
-        HOME="$TEST_HOME" run python3 "$TOOLKIT_DIR/scripts/uninstall.py" \
-            --local --yes --target "$project"
-        [ "$status" -eq 0 ]
-
-        [ ! -e "$project/.agents/.ai-toolkit-skill-owners" ]
-        [ -f "$project/.agents/skills/user-skill/SKILL.md" ]
-        [ -f "$project/.agent-presets/user-preset.md" ]
-        [ -f "$project/user-directory/keep.txt" ]
-        [ -f "$project/.agents/skills/orchestrate/user-added.txt" ]
-        [ ! -e "$project/.agents/skills/orchestrate/SKILL.md" ]
-        [ -z "$(find "$project/.agents/skills" -type f \
-            \( -name '.ai-toolkit-codex-adapted' \
-               -o -name '.ai-toolkit-dsh-adapted' \
-               -o -name '.ai-toolkit-shared-adapted' \) -print -quit)" ]
-        [ -z "$(find "$project/.agents/skills" -type l -print0 | \
-            xargs -0 -I '{}' sh -c \
-                'case "$(readlink "{}")" in *ai-toolkit/app/skills/*) printf managed;; esac' \
-            2>/dev/null)" ]
-    done
+    [ ! -e "$project/.agents/.ai-toolkit-skill-owners" ]
+    [ -f "$project/.agents/skills/user-skill/SKILL.md" ]
+    [ -f "$project/.agent-presets/user-preset.md" ]
+    [ -f "$project/user-directory/keep.txt" ]
+    [ -f "$project/.agents/skills/orchestrate/user-added.txt" ]
+    [ ! -e "$project/.agents/skills/orchestrate/SKILL.md" ]
+    [ -z "$(find "$project/.agents/skills" -type f \
+        -name '.ai-toolkit-codex-adapted' -print -quit)" ]
+    [ -z "$(find "$project/.agents/skills" -type l -print0 | \
+        xargs -0 -I '{}' sh -c \
+            'case "$(readlink "{}")" in *ai-toolkit/app/skills/*) printf managed;; esac' \
+        2>/dev/null)" ]
 
     local orphaned="$TEST_ROOT/orphaned-owner"
     mkdir -p "$orphaned/.agents"
-    printf '%s\n' 'codex' 'dsh' > \
+    printf '%s\n' 'codex' > \
         "$orphaned/.agents/.ai-toolkit-skill-owners"
     printf '%s\n' 'user agents data' > "$orphaned/.agents/keep.txt"
 
@@ -110,12 +84,11 @@ PY
 }
 
 @test "uninstall preserves every noncanonical agent-skill owner marker" {
-    for variant in reversed duplicate unknown leading-space trailing-space blank-line; do
+    for variant in duplicate unknown leading-space trailing-space blank-line; do
         local project="$TEST_ROOT/owner-$variant"
         local marker="$project/.agents/.ai-toolkit-skill-owners"
         mkdir -p "$project/.agents"
         case "$variant" in
-            reversed) printf '%s\n' 'dsh' 'codex' > "$marker" ;;
             duplicate) printf '%s\n' 'codex' 'codex' > "$marker" ;;
             unknown) printf '%s\n' 'codex' 'user-runtime' > "$marker" ;;
             leading-space) printf ' codex\n' > "$marker" ;;
@@ -499,11 +472,11 @@ EOF
         "$TEST_PROJECT/.codex/agents/ai-toolkit-managed.toml"
     printf '%s\n' '<!-- ai-toolkit-managed: github-copilot -->' 'managed copilot' > \
         "$TEST_PROJECT/.github/instructions/ai-toolkit-managed.instructions.md"
-    printf '%s\n' 'managed DSH skill' > \
+    printf '%s\n' 'managed Codex skill' > \
         "$TEST_PROJECT/.agents/skills/orchestrate/SKILL.md"
-    printf '%s\n' 'generated by ai-toolkit for dsh' > \
-        "$TEST_PROJECT/.agents/skills/orchestrate/.ai-toolkit-dsh-adapted"
-    printf '%s\n' 'dsh' > \
+    printf '%s\n' 'generated by ai-toolkit for codex' > \
+        "$TEST_PROJECT/.agents/skills/orchestrate/.ai-toolkit-codex-adapted"
+    printf '%s\n' 'codex' > \
         "$TEST_PROJECT/.agents/.ai-toolkit-skill-owners"
     chmod 640 "$TEST_PROJECT/.claude/constitution.md"
     chmod 600 "$TEST_PROJECT/.codex/agents/ai-toolkit-managed.toml"

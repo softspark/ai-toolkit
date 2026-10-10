@@ -74,7 +74,6 @@ Stale counts = broken user trust. This is non-negotiable.
 - All scripts live in `scripts/` (Python) and `app/hooks/` (Bash) — never at repo root
 - `install` / `update` = global (`~/.claude/` and every global editor surface); `--local` runs that global layer first, then what only the project can hold
 - This repository's `AGENTS.md` is committed project instructions, not a generated artifact; `scripts/generate_agents_md.py` (`ai-toolkit agents-md`) only prints the toolkit instruction core
-- DSH (DeepSeek Harness) support is retired in 5.0.0. For one release `--editors dsh` only warns and is ignored, and `ai-toolkit dsh` only prints manual cleanup steps (deprecation path in `BACKWARD_COMPATIBILITY.md`); remove both stubs in the next minor. Legacy `dsh` owner markers in `.agents/skills` and `dsh` entries in registered projects are only migrated away (see `kb/reference/dsh-compatibility.md`)
 - `inject_rule_cli.py` always writes to `$TARGET_DIR/.claude/CLAUDE.md`
 - `inject_hook_cli.py` injects hooks into `$TARGET_DIR/.claude/settings.json` — supports local files and HTTPS URLs
 - Skill names: lowercase-hyphen, max 64 chars, unique across `app/skills/`

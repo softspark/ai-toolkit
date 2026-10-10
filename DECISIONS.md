@@ -488,3 +488,29 @@ Migration choices:
   DSH itself; `kb/reference/dsh-compatibility.md` has the commands.
 - History stays: `kb/history/` and `kb/planning/` keep the DSH plans and
   review records unchanged.
+
+## DSH leftovers removed (2026-10-10)
+
+The owner ended development of the SoftSpark DSH plugins and archived their
+repositories, and asked for every remaining trace of DSH to leave the toolkit,
+without exceptions. 5.4.0 removes:
+
+- the two deprecation stubs, as the entry above announced: `ai-toolkit dsh`
+  is an unknown command and `--editors dsh` is an unknown editor. They warned
+  through 5.0.0 to 5.3.5, which satisfies "at least one minor release" in
+  `BACKWARD_COMPATIBILITY.md`. `dsh` leaves `app/surface.json` on purpose.
+- the migration code the entry above chose to keep: the `dsh` skill-surface
+  owner, the `.ai-toolkit-dsh-adapted` and `.ai-toolkit-shared-adapted`
+  wrapper markers with the wrapper transition, the `dsh` filter on registered
+  editors and the `dsh` key dropped from `state.json`.
+
+What is lost, stated plainly: a machine that went from a release before 5.0.0
+straight to 5.4.0 without one `update` in between is no longer converged
+automatically. A registered project listing `dsh` fails `ai-toolkit update`
+with `Unknown editor: 'dsh'`, an owner marker naming `dsh` makes
+`install --local --editors codex` refuse the surface, and `uninstall` leaves
+that marker and the old wrappers behind. The owner accepted this over keeping
+a narrow tolerance. Running `update` once on 5.3.5 before upgrading avoids all
+of it; the manual steps are in
+`kb/history/completed/dsh-integration-removed-20261010.md`, which replaces
+`kb/reference/dsh-compatibility.md`.

@@ -3,9 +3,9 @@ title: "Manifest-Driven Install System"
 category: reference
 service: ai-toolkit
 tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
-version: "1.17.0"
+version: "1.17.1"
 created: "2026-04-07"
-last_updated: "2026-09-24"
+last_updated: "2026-10-10"
 description: "Reference for manifest-driven project installation and install state in ~/.softspark/ai-toolkit/state.json."
 ---
 
@@ -119,10 +119,6 @@ ai-toolkit status
 
 Re-applies installed modules, skipping files whose content hash has not changed since last install. Implemented in `scripts/install_steps/install_state.py`.
 
-## Retired DSH Profile Lifecycle
-
-`ai-toolkit install --local --editors dsh` and `ai-toolkit dsh install|update|doctor|uninstall` were removed on 2026-09-24. Project `.agents/skills` surfaces written for DSH are migrated by `update` / `install --local` and removed by `ai-toolkit uninstall`. DSH profiles are not touched by the toolkit any more. Remove them with DSH itself as described in [DSH Compatibility (retired)](dsh-compatibility.md).
-
 ## State Tracking
 
 Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
@@ -169,4 +165,3 @@ No existing install scripts or CI configurations need changes.
 - [PATH: kb/reference/language-rules.md] — language rules structure and auto-detection detail
 - [PATH: kb/reference/mcp-templates.md] — MCP server templates (the `mcp-templates` module)
 - [PATH: kb/reference/architecture-overview.md] — overall install model
-- [PATH: kb/reference/dsh-compatibility.md] - retired DSH integration and manual profile cleanup

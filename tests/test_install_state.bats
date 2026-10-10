@@ -185,33 +185,6 @@ print('OK')
     echo "$output" | grep -q 'OK'
 }
 
-@test "install_state: legacy DSH state loads and is dropped on the next write" {
-    mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
-    printf '%s\n' '{"profile":"standard","dsh":{"profiles":{"web":{"owned":true}}}}' > \
-        "$TEST_TMP/.softspark/ai-toolkit/state.json"
-
-    run python3 - "$TOOLKIT_DIR" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
-from install_steps import install_state
-
-state_path = Path.home() / ".softspark" / "ai-toolkit" / "state.json"
-assert install_state.load_state()["profile"] == "standard"
-install_state.record_mcp_template("after-dsh")
-state = json.loads(state_path.read_text(encoding="utf-8"))
-assert "dsh" not in state, state
-assert state["profile"] == "standard", state
-assert state["mcp_templates"] == ["after-dsh"], state
-PY
-
-    [ "$status" -eq 0 ]
-    run $CLI status
-    [ "$status" -eq 0 ]
-}
-
 @test "install_state: atomic save failure preserves the previous shared state bytes" {
     mkdir -p "$TEST_TMP/.softspark/ai-toolkit"
     printf '%s\n' '{"sentinel":"before"}' > \

@@ -371,16 +371,6 @@ def validate_args(cfg: dict) -> None:
                 f"(valid: {', '.join(VALID_SCOPES)})"
             )
 
-    # Retired editors warn and are ignored for one release (deprecation path in
-    # BACKWARD_COMPATIBILITY.md) instead of failing scripts that still pass them.
-    if cfg["editors"] and cfg["editors"] != "all":
-        from install_steps.project_registry import LEGACY_RETIRED_EDITORS
-        requested = [e.strip() for e in cfg["editors"].split(",") if e.strip()]
-        for retired in sorted(LEGACY_RETIRED_EDITORS & set(requested)):
-            print(f"Warning: editor '{retired}' is retired and ignored "
-                  "(see kb/reference/dsh-compatibility.md)", file=sys.stderr)
-        cfg["editors"] = ",".join(e for e in requested if e not in LEGACY_RETIRED_EDITORS)
-
     # Validate --editors
     if cfg["editors"] and cfg["editors"] != "all":
         for e in cfg["editors"].split(","):

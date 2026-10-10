@@ -108,23 +108,6 @@ teardown() {
     echo "$output" | grep -q 'remove-rule'
 }
 
-@test "cli: retired dsh command warns with cleanup steps and succeeds" {
-    run $CLI dsh doctor --profile web
-    [ "$status" -eq 0 ]
-    echo "$output" | grep -q "ai-toolkit dsh\` is retired"
-    echo "$output" | grep -q "dsh plugin --profile <name> remove @softspark/dsh-codex"
-}
-
-@test "cli: retired dsh editor warns and is ignored" {
-    local project
-    project="$(mktemp -d)"
-    run bash -c "cd '$project' && $CLI install --local --editors dsh,codex --dry-run 2>&1"
-    [ "$status" -eq 0 ]
-    echo "$output" | grep -q "editor 'dsh' is retired and ignored"
-    echo "$output" | grep -q "Would generate: .codex/hooks.json"
-    rm -rf "$project"
-}
-
 @test "cli: unknown command exits non-zero" {
     run $CLI totally-unknown-command-xyz
     [ "$status" -ne 0 ]

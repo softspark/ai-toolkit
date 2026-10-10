@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.19.0"
+version: "1.19.1"
 created: "2026-04-23"
-last_updated: "2026-10-08"
+last_updated: "2026-10-10"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
@@ -24,7 +24,7 @@ Other listed integrations remain supported and opt-in. This changes neither
 For current model defaults and optional Claude-to-Codex execution, see
 [Model Compatibility](model-compatibility.md#conditional-claude-to-codex-delegation).
 
-1 primary runtime, 1 Claude app target, and 11 editor integrations. The DeepSeek Harness (`dsh`) target was retired on 2026-09-24; see [DSH Compatibility (retired)](./dsh-compatibility.md).
+1 primary runtime, 1 Claude app target, and 11 editor integrations.
 
 ---
 

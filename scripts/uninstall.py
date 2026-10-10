@@ -45,7 +45,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import app_dir, toolkit_dir
 from codex_skill_adapter import (
-    ADAPTED_MARKERS,
+    ADAPTED_MARKER,
     SKILL_SURFACE_OWNERS_MARKER,
     skill_surface_owners,
 )
@@ -906,11 +906,8 @@ def _is_codex_agent(path: Path) -> bool:
 def _is_codex_skill(path: Path) -> bool:
     if path.is_symlink():
         return _is_toolkit_link(path)
-    return path.is_dir() and any(
-        not (path / marker_name).is_symlink()
-        and (path / marker_name).is_file()
-        for marker_name in ADAPTED_MARKERS
-    )
+    marker = path / ADAPTED_MARKER
+    return path.is_dir() and not marker.is_symlink() and marker.is_file()
 
 
 def _remove_codex_skills(skills_root: Path, trusted_root: Path) -> int:
@@ -926,7 +923,7 @@ def _remove_codex_skills(skills_root: Path, trusted_root: Path) -> int:
         if not _is_codex_skill(skill):
             continue
         for child in sorted(skill.iterdir()):
-            if child.name in {"SKILL.md", *ADAPTED_MARKERS}:
+            if child.name in {"SKILL.md", ADAPTED_MARKER}:
                 if not child.is_symlink() and child.is_file():
                     _safe_unlink(child, trusted_root)
                 continue

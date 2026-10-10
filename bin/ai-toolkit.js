@@ -133,7 +133,6 @@ const COMMANDS = {
   'codex-plugin': 'Export or verify the native Codex CLI plugin package',
   'antigravity-plugin': 'Export or verify the native Google Antigravity plugin package',
   'adopt-agents-md': 'Move CLAUDE.md project instructions into AGENTS.md and import it (--dry-run)',
-  dsh: 'Retired: prints manual cleanup steps for DSH profiles (removed in the next minor)',
   'llms-txt': 'Generate llms.txt and llms-full.txt',
   'generate-all': 'Generate all platform configs at once (agents, cursor, windsurf, copilot, gemini, cline, roo, aider, augment, antigravity, codex, opencode, llms)',
   help: 'Show this help message',
@@ -766,21 +765,6 @@ function handleUpdate(args) {
 }
 
 /** @type {Record<string, (args: string[]) => void>} */
-/**
- * Retired in 5.0.0. Kept for one release as a warning (deprecation path in
- * BACKWARD_COMPATIBILITY.md) so scripts calling it do not start failing.
- */
-function handleRetiredDsh() {
-  console.error([
-    'Warning: `ai-toolkit dsh` is retired. ai-toolkit no longer manages DeepSeek Harness profiles.',
-    'To remove what an earlier `ai-toolkit dsh install --profile <name>` added:',
-    '  dsh plugin --profile <name> remove @softspark/dsh-codex',
-    '  dsh plugin --profile <name> remove @softspark/dsh-orchestrator',
-    '  rm -rf "${DSH_HOME:-$HOME/.dsh}/.agent-presets/softspark-orchestrator"',
-    'Details: kb/reference/dsh-compatibility.md',
-  ].join('\n'));
-}
-
 const SPECIAL_HANDLERS = {
   'status':       handleStatus,
   'update':       handleUpdate,
@@ -792,7 +776,6 @@ const SPECIAL_HANDLERS = {
   'config':       handleConfig,
   'projects':     (args) => run(scriptPath('projects_cli.py'), args),
   'plugin':       (args) => run(scriptPath('plugin.py'), args),
-  'dsh':          handleRetiredDsh,
   'remove-rule':  handleRemoveRule,
   'add-rule':     handleAddRule,
   'inject-hook':  handleInjectHook,

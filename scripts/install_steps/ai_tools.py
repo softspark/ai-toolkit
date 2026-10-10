@@ -15,9 +15,7 @@ from _common import app_dir, inject_section, toolkit_dir
 from frontmatter import FrontmatterError, parse_frontmatter, split_frontmatter
 from codex_skill_adapter import (
     cleanup_codex_skills,
-    has_legacy_dsh_skill_surface,
     managed_skill_surface_transaction,
-    remove_legacy_dsh_skill_surface,
     skill_surface_owners,
     sync_codex_skill,
     unmanaged_codex_skill_names,
@@ -1512,8 +1510,6 @@ def _install_local_dry_run(reset: bool, editors: list[str] | None = None,
         print("  Would generate: .agents/skills/ Codex skills")
         if codex_skills:
             print("  Would refresh: .agents/skills/ via --codex-skills")
-    elif has_legacy_dsh_skill_surface(Path.cwd()):
-        print("  Would remove: retired DSH-only .agents/skills/ managed skills")
     if not eds:
         print("  No editors selected (use --editors <list> or --editors all)")
 
@@ -1733,14 +1729,6 @@ def _install_codex_skills(cwd: Path) -> None:
     )
 
 
-def _remove_legacy_dsh_skills(cwd: Path) -> None:
-    """Drop a `.agents/skills` surface left by the retired DSH target."""
-    if not has_legacy_dsh_skill_surface(cwd):
-        return
-    removed = remove_legacy_dsh_skill_surface(cwd, app_dir / "skills")
-    print(f"  Removed: {removed} retired DSH skills from .agents/skills/")
-
-
 def _install_codex_agents(cwd: Path, *, config_root: Path | None = None) -> None:
     """Generate native Codex custom-agent TOML files."""
     from generate_codex_agents import generate as gen_codex_agents
@@ -1954,14 +1942,11 @@ def _create_local_ai_tool_configs(cwd: Path, rules_dir: Path,
         print("  Created: .codex/hooks.json")
         # .codex/agents/ -- native Codex custom-agent definitions
         _install_codex_agents(cwd)
-        # A legacy shared Codex/DSH surface converges on Codex-only here.
         _install_codex_skills(cwd)
         # --codex-skills explicitly re-runs the same Codex skill sync path.
         if codex_skills:
             _try_generator("generate_codex_skills", cwd,
                            enable_codex_skills=True)
-    else:
-        _remove_legacy_dsh_skills(cwd)
 
     if "gemini" in eds:
         # GEMINI.md — marker injection from the shared generator output
