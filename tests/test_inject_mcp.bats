@@ -11,6 +11,9 @@ setup() {
     TEST_DIR="$(mktemp -d)"
     export HOME="$TEST_DIR"
     export SOFTSPARK_HOME="$TEST_DIR/.softspark"
+    # The default target is the real HOME, so editor roots and the
+    # claude-switch registry come from the environment: keep them in TEST_DIR.
+    unset CODEX_HOME COPILOT_HOME CLAUDE_USER_DATA_DIR CLAUDE_SWITCH_CONFIG AI_TOOLKIT_HOME
 }
 
 teardown() {

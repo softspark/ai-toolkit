@@ -11,7 +11,7 @@ setup() {
 }
 
 run_python() {
-    run env -u CODEX_HOME -u COPILOT_HOME -u CLAUDE_USER_DATA_DIR \
+    run env -u CODEX_HOME -u COPILOT_HOME -u CLAUDE_USER_DATA_DIR -u CLAUDE_SWITCH_CONFIG \
         HOME="$TEST_HOME" SOFTSPARK_HOME="$TEST_HOME/.softspark" \
         AI_TOOLKIT_HOME="$TEST_HOME/.softspark/ai-toolkit" \
         PYTHONPATH="$TOOLKIT_DIR/scripts" python3 - "$TEST_HOME" "$TOOLKIT_DIR"

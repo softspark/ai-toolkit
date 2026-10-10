@@ -20,7 +20,8 @@ Arguments:
                           ``{"mcpServers": {...}}`` block (toolkit template format).
     target-dir            Directory containing ``.mcp.json``
                           (default: $HOME -- writes to ~/.mcp.json and propagates
-                          to ~/.claude.json, ~/.cursor/mcp.json, ~/.codex/config.toml, ...).
+                          to ~/.claude.json and every claude-switch profile,
+                          ~/.cursor/mcp.json, ~/.codex/config.toml, ...).
 
 Flags:
     --name <name>  Explicit source name. Default: filename stem or URL last segment.
@@ -209,6 +210,19 @@ def _fetch_and_cache(url: str, source: str) -> str:
     return str(cached_path)
 
 
+def _editor_home(target_dir: str | Path) -> Path | None:
+    """``None`` for the real home, so editor configs resolve as ``mcp install`` does.
+
+    An explicit ``home`` pins every editor to ``<home>/...``: Claude then gets
+    ``<home>/.claude.json`` only and misses the claude-switch profiles, and
+    ``CODEX_HOME``/``COPILOT_HOME`` are ignored. Any other target stays pinned.
+    """
+    from secure_fs import lexical_absolute
+
+    target = lexical_absolute(target_dir)
+    return None if target == lexical_absolute(Path.home()) else target
+
+
 def _propagate_to_editors(
     servers_clean: dict, source: str, target_dir: str, force: bool
 ) -> None:
@@ -219,7 +233,7 @@ def _propagate_to_editors(
     """
     from mcp_editors import EDITOR_SPECS, install_servers
 
-    home = Path(target_dir)
+    home = _editor_home(target_dir)
     editors_with_global = [
         name for name, spec in EDITOR_SPECS.items()
         if spec.get("global_path")
@@ -243,7 +257,7 @@ def _remove_from_editors(server_names: list[str], target_dir: str) -> None:
     """Remove servers from every editor with a global_path."""
     from mcp_editors import EDITOR_SPECS, remove_servers
 
-    home = Path(target_dir)
+    home = _editor_home(target_dir)
     editors_with_global = [
         name for name, spec in EDITOR_SPECS.items()
         if spec.get("global_path")
@@ -496,7 +510,7 @@ def _prepare_injected_removal(home: Path, data_dir: Path) -> tuple[list, int]:
     servers = {name: _strip_source_tag(bucket[name]) for name in tagged}
     for name, server in registered_servers.items():
         servers.setdefault(name, server)
-    updates, removed = prepare_owned_server_removal(servers, home=home)
+    updates, removed = prepare_owned_server_removal(servers, home=_editor_home(home))
     if tagged:
         config["mcpServers"] = {
             name: server for name, server in bucket.items() if name not in tagged

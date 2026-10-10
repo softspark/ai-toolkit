@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [extension-api, inject-rule, inject-hook, inject-mcp, mcp-templates, integration, editors]
 version: "1.9.0"
 created: "2026-04-07"
-last_updated: "2026-09-10"
+last_updated: "2026-10-10"
 description: "Reference for ai-toolkit's extension API: inject-rule, inject-hook, inject-mcp, remove-* variants, and editor-aware MCP template management."
 ---
 
@@ -174,6 +174,8 @@ npx @softspark/ai-toolkit inject-mcp ./conflict.json --force
 ```
 
 **Flags:** `--name <name>` overrides the auto-derived source name (works for both local files and URLs). `--force` overwrites servers tagged with a different `_source`. Positional `template-name` is supported only for URL sources (legacy positional grammar inherited from `inject-hook`); for local files use `--name`.
+
+**Claude Code profiles:** with the default target (`$HOME`), Claude's user-scope config is written exactly as `ai-toolkit mcp install --editor claude --scope global` writes it: `~/.claude.json` or the default account, every registered `claude-switch` profile's `<profile>/.claude.json`, and an active `CLAUDE_CONFIG_DIR` under `HOME`; `CODEX_HOME`, `COPILOT_HOME` and `CLAUDE_USER_DATA_DIR` are honored. `remove-mcp` and `uninstall` clean the same set. An explicit target directory pins every editor to `<target>/...` and touches no profile.
 
 **Implementation:** `scripts/inject_mcp_cli.py`, `scripts/mcp_sources.py`, `scripts/url_fetch.py`.
 

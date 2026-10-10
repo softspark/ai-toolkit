@@ -21,11 +21,13 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 JIRA = {"type": "stdio", "command": "jira-mcp", "args": []}
+RAG = {"type": "http", "url": "http://localhost:8081/mcp/sse"}
 
 
 def _run(home: Path, code: str, **extra_env: str) -> subprocess.CompletedProcess[str]:
     env = {k: v for k, v in os.environ.items()
-           if k not in {"CLAUDE_CONFIG_DIR", "CLAUDE_SWITCH_CONFIG", "AI_TOOLKIT_HOME", "SOFTSPARK_HOME"}}
+           if k not in {"CLAUDE_CONFIG_DIR", "CLAUDE_SWITCH_CONFIG", "AI_TOOLKIT_HOME", "SOFTSPARK_HOME",
+                        "CODEX_HOME", "COPILOT_HOME", "CLAUDE_USER_DATA_DIR"}}
     env.update(HOME=str(home), **extra_env)
     return subprocess.run(
         [sys.executable, "-c", f"import sys; sys.path.insert(0, {str(SCRIPTS)!r})\n{code}"],
@@ -75,6 +77,67 @@ def test_global_install_and_remove_reach_every_profile(tmp_path: Path) -> None:
     done = _run(tmp_path, "from mcp_editors import remove_servers\n"
                           "remove_servers(['claude'], ['jira'], scope='global')\n")
     assert done.returncode == 0, done.stderr
+    assert _servers(primary / ".claude.json") == {}
+    assert _servers(client / ".claude.json") == {}
+
+
+def _two_profiles(home: Path) -> tuple[Path, Path]:
+    profiles = home / ".softspark" / "ai-toolkit" / "claude-profiles"
+    primary, client = profiles / "primary", profiles / "client"
+    for directory in (primary, client):
+        directory.mkdir(parents=True)
+    _registry(home, "default", {"default": str(primary), "client": str(client)})
+    return primary, client
+
+
+def _rag_template(home: Path) -> Path:
+    template = home / "rag-mcp.json"
+    template.write_text(json.dumps({"mcpServers": {"rag": RAG}}))
+    return template
+
+
+def test_inject_mcp_and_remove_mcp_reach_every_profile(tmp_path: Path) -> None:
+    primary, client = _two_profiles(tmp_path)
+    template = _rag_template(tmp_path)
+
+    done = _run(tmp_path, f"import inject_mcp_cli\ninject_mcp_cli.inject({str(template)!r}, {str(tmp_path)!r})")
+    assert done.returncode == 0, done.stderr
+    assert _servers(primary / ".claude.json") == {"rag": RAG}
+    assert _servers(client / ".claude.json") == {"rag": RAG}
+
+    done = _run(tmp_path, f"import inject_mcp_cli\ninject_mcp_cli.remove('rag-mcp', {str(tmp_path)!r})")
+    assert done.returncode == 0, done.stderr
+    assert _servers(primary / ".claude.json") == {}
+    assert _servers(client / ".claude.json") == {}
+
+
+def test_uninstall_cleanup_of_injected_mcp_reaches_every_profile(tmp_path: Path) -> None:
+    primary, client = _two_profiles(tmp_path)
+    template = _rag_template(tmp_path)
+    data_dir = tmp_path / ".softspark" / "ai-toolkit"
+    # Seeded as propagation writes them, so this checks cleanup on its own.
+    for profile in (primary, client):
+        (profile / ".claude.json").write_text(json.dumps({"mcpServers": {"rag": RAG}}))
+
+    done = _run(tmp_path, (
+        "from pathlib import Path\nimport inject_mcp_cli\n"
+        f"inject_mcp_cli.inject({str(template)!r}, {str(tmp_path)!r})\n"
+        f"print(inject_mcp_cli.cleanup_injected(Path({str(tmp_path)!r}), Path({str(data_dir)!r})))"
+    ))
+    assert done.returncode == 0, done.stderr
+    assert _servers(primary / ".claude.json") == {}
+    assert _servers(client / ".claude.json") == {}
+
+
+def test_inject_mcp_into_another_directory_leaves_profiles_alone(tmp_path: Path) -> None:
+    primary, client = _two_profiles(tmp_path)
+    template = _rag_template(tmp_path)
+    target = tmp_path / "sandbox"
+    target.mkdir()
+
+    done = _run(tmp_path, f"import inject_mcp_cli\ninject_mcp_cli.inject({str(template)!r}, {str(target)!r})")
+    assert done.returncode == 0, done.stderr
+    assert _servers(target / ".claude.json") == {"rag": RAG}
     assert _servers(primary / ".claude.json") == {}
     assert _servers(client / ".claude.json") == {}
 

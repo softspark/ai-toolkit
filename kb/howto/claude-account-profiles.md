@@ -4,7 +4,7 @@ category: howto
 service: ai-toolkit
 tags: [claude, accounts, profiles, cli, authentication]
 created: "2026-10-04"
-last_updated: "2026-10-08"
+last_updated: "2026-10-10"
 description: "Keep a default Claude Code login and route selected project directories to separate account profiles."
 ---
 
@@ -53,7 +53,8 @@ MCP servers: a profile's sessions read user-scope servers from
 file with a copy of the default account's `mcpServers` (only that key; the
 file also holds account state, so it is never linked). After that the lists
 are per profile. `ai-toolkit mcp install --editor claude --scope global` (and
-`remove`) writes every registered profile, so use it to keep them aligned. To
+`remove`), `inject-mcp` and `remove-mcp` write every registered profile, so use
+them to keep the profiles aligned. To
 add a server to one profile only, run the real binary with that profile's
 directory, because the `claude` alias re-selects the account itself:
 
@@ -63,8 +64,11 @@ CLAUDE_CONFIG_DIR=~/.softspark/ai-toolkit/claude-profiles/<name> \
 ```
 
 Profiles created before this change start without servers; add them with
-either command above. `~/.mcp.json` (project scope under `~`) is the one MCP
-file every profile sees without copying.
+either command above, or re-run `inject-mcp` for an injected template.
+`~/.mcp.json` (project scope under `~`) is the one MCP file every profile sees
+without copying, but as project scope it needs approval per project: a server
+once rejected there is listed in that project's `disabledMcpjsonServers` and
+stays off until the profile has it at user scope.
 
 The toolkit installer continues to manage `~/.claude/`. Existing symlinks in
 profiles see changes to the shared configuration without another install.
