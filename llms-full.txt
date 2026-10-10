@@ -17,6 +17,7 @@
 - [Plan: Deep Coverage v3.0 — 100% Native Surface Utilization](kb/history/completed/deep-coverage-v3-20260423.md)
 - [Plan: Drop Cascade hooks after 2026-07-01 sunset](kb/history/completed/drop-cascade-hooks-after-sunset-20260710.md)
 - [Plan: DeepSeek Harness (dsh) Integration (Superseded)](kb/history/completed/dsh-integration-plan-superseded.md)
+- [DSH Integration (removed)](kb/history/completed/dsh-integration-removed-20261010.md)
 - [Plan: Native DSH Install Target](kb/history/completed/dsh-native-install-target-plan.md)
 - [Plan: Ecosystem Deep Sweep — All 12 Supported Tools](kb/history/completed/ecosystem-deep-sweep-20260423.md)
 - [Plan: Enterprise Config Inheritance — Multi-Repo Governance with `extends`](kb/history/completed/enterprise-config-inheritance-plan-20260412.md)
@@ -61,7 +62,6 @@
 - [Plan: Competitive Features — ai-toolkit](kb/reference/competitive-features-implementation.md)
 - [AI Toolkit - GitHub Copilot Compatibility](kb/reference/copilot-compatibility.md)
 - [Distribution Model](kb/reference/distribution-model.md)
-- [DSH Compatibility (Retired)](kb/reference/dsh-compatibility.md)
 - [Enterprise Config Inheritance Guide](kb/reference/enterprise-config-guide.md)
 - [Extension API Reference](kb/reference/extension-api.md)
 - [Global Install Model](kb/reference/global-install-model.md)
@@ -1065,6 +1065,86 @@ No work should continue from this archived document. The scoped native install t
 - `kb/reference/codex-cli-compatibility.md`
 - `kb/reference/architecture-overview.md`
 - `kb/reference/supported-tools-registry.md`
+
+---
+
+## kb/history/completed/dsh-integration-removed-20261010.md
+
+---
+title: "AI Toolkit - DSH Integration (removed)"
+category: planning
+service: ai-toolkit
+tags: [dsh, deepseek-harness, removed, migration]
+doc_type: postmortem
+status: completed
+version: "3.0.0"
+created: "2026-08-31"
+last_updated: "2026-10-10"
+description: "REMOVED. DeepSeek Harness support left ai-toolkit in 5.0.0 (2026-09-24); the deprecation stubs and the cleanup of old DSH project skills left in 5.4.0 (2026-10-10). Lists what each old input does now and the manual cleanup for projects and DSH profiles that still carry toolkit files."
+---
+
+# DSH Integration (removed)
+
+## Summary
+
+DeepSeek Harness (DSH) support was removed in two steps, both by decision of the repository owner (see `DECISIONS.md`, "DSH integration retired" and "DSH leftovers removed"):
+
+| Release | Date | What left |
+|---|---|---|
+| 5.0.0 | 2026-09-24 | The `dsh` install target and the `ai-toolkit dsh` profile lifecycle. Two warning stubs and a migration for old project skills stayed. |
+| 5.4.0 | 2026-10-10 | The stubs and the migration. No toolkit code knows about DSH any more. |
+
+The SoftSpark DSH plugins (`@softspark/dsh-codex`, `@softspark/dsh-orchestrator` and the others) were discontinued and their repositories archived on 2026-10-10.
+
+## What old inputs do in 5.4.0
+
+Releases 5.0.0 to 5.3.5 handled every row below without an error. 5.4.0 does not.
+
+| Input | 5.0.0 to 5.3.5 | 5.4.0 |
+|---|---|---|
+| `ai-toolkit dsh ...` | Printed manual cleanup steps, exit 0 | Unknown command: prints help, exit 1 |
+| `ai-toolkit install --local --editors dsh,...` | Warned and ignored `dsh` | `Unknown editor: 'dsh'`, exit 1, nothing installed |
+| Registered project listing `dsh` in its editors | Entry dropped on read | `ai-toolkit update` fails for that project with `Unknown editor: 'dsh'` |
+| `.agents/.ai-toolkit-skill-owners` naming `dsh` | Surface re-rendered for Codex, or removed when DSH-only | Marker is invalid: `install --local --editors codex` stops with `Refusing invalid skill-surface owner marker`; `uninstall` leaves the marker in place |
+| Skill wrapper marked `.ai-toolkit-dsh-adapted` or `.ai-toolkit-shared-adapted` | Re-rendered or removed | Treated as a user-owned directory and left alone |
+| `dsh` key in `~/.softspark/ai-toolkit/state.json` | Dropped on the next write | Kept and ignored |
+
+Projects that ran `ai-toolkit update` on any release from 5.0.0 to 5.3.5 are already converged and see none of this. Codex-only projects are unaffected.
+
+## Cleaning up a project that still carries DSH files
+
+Easiest: before upgrading, run `ai-toolkit update` once on 5.3.5. It migrates every registered project.
+
+After upgrading, do it by hand in the project:
+
+1. In `.agents/skills/`, find the directories that contain `.ai-toolkit-dsh-adapted` or `.ai-toolkit-shared-adapted`. Each holds a generated `SKILL.md`, that marker and symlinks into the toolkit. Delete a directory unless you added your own files to it.
+2. Delete `.agents/.ai-toolkit-skill-owners`.
+3. If the project uses Codex, run `ai-toolkit install --local --editors codex` to write a fresh surface. Passing `--editors` also replaces the stored editor list, which fixes a registry entry that still lists `dsh`.
+
+## Removing an old DSH profile
+
+Profiles set up by `ai-toolkit dsh install` live under `$DSH_HOME` (default `~/.dsh`). The toolkit does not read, update or remove them. If you no longer want the SoftSpark packages there, remove them with DSH itself. For the default `web` profile:
+
+```bash
+dsh plugin --profile web remove @softspark/dsh-codex
+dsh plugin --profile web remove @softspark/dsh-orchestrator
+rm -rf "${DSH_HOME:-$HOME/.dsh}/.agent-presets/softspark-orchestrator"
+```
+
+Repeat the two `plugin remove` lines for any other profile name you installed. Stop running DSH sessions first.
+
+Notes:
+
+- The preset directory `softspark-orchestrator` was a copy of `@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator`. Delete it only if you did not edit it and want it gone.
+- `ai-toolkit dsh install` also set a pnpm override for `@anthropic-ai/claude-agent-sdk` (version `0.3.263`) under the `@deepseek-ai/dsh-subagent-claude-code` selector in the profile's `pnpm-workspace.yaml`. It is harmless to keep. Remove it by hand if you want the profile back to its DSH default.
+
+## History
+
+The design, qualification evidence and pins of the removed integration are kept for reference:
+
+- [PATH: kb/history/completed/dsh-native-install-target-plan.md]
+- [PATH: kb/history/completed/dsh-integration-plan-superseded.md]
+- Earlier versions of this document are in git history under `kb/reference/dsh-compatibility.md`: the compatibility contract (v1.8.1, toolkit v4.39.0) and the retirement note (v2.0.0, toolkit v5.0.0).
 
 ---
 
@@ -11427,9 +11507,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.14.0"
+version: "1.14.1"
 created: "2026-03-23"
-last_updated: "2026-10-08"
+last_updated: "2026-10-10"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
 ---
 
@@ -11566,8 +11646,6 @@ the documented shared `$HOME/.agents/skills/` directory. Experimental plugin
 packs can layer their rules, skills, and hooks onto that Codex user target.
 
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
-
-The DeepSeek Harness (DSH) target and the `ai-toolkit dsh` profile lifecycle were retired on 2026-09-24. Local install and uninstall still recognise `.agents/skills` surfaces carrying a legacy `dsh` owner marker so they can be migrated or removed; see `kb/reference/dsh-compatibility.md`.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers`
 entries into `.claude/settings.local.json` plus any selected editors with
@@ -13904,72 +13982,6 @@ This model gives:
 - `kb/reference/global-install-model.md`
 - `kb/reference/merge-friendly-install-model.md`
 - `kb/reference/architecture-overview.md`
-
----
-
-## kb/reference/dsh-compatibility.md
-
----
-title: "AI Toolkit - DSH Compatibility (Retired)"
-category: reference
-service: ai-toolkit
-tags: [dsh, deepseek-harness, retired, migration]
-version: "2.0.0"
-created: "2026-08-31"
-last_updated: "2026-09-24"
-status: retired
-description: "Retired: ai-toolkit no longer supports DeepSeek Harness. Migration behaviour for old DSH project skills and manual removal of DSH profiles."
----
-
-# DSH Compatibility (Retired)
-
-## Summary
-
-DeepSeek Harness (DSH) support was removed in 5.0.0 on 2026-09-24 by decision of the repository owner (see `DECISIONS.md`, "DSH integration retired"). Both entry points no longer do anything. Following the deprecation path in `BACKWARD_COMPATIBILITY.md`, they stay for that one release as warnings, so scripts that call them keep working:
-
-- `ai-toolkit install --local --editors dsh`: prints a warning, ignores `dsh`, installs the other editors.
-- `ai-toolkit dsh install|update|doctor|uninstall --profile <name>`: prints the manual cleanup steps below and exits 0.
-
-Both stubs are removed in the next minor release.
-
-## What the toolkit still does
-
-The toolkit keeps just enough knowledge of DSH to clean up after itself:
-
-| Existing state | Command | Result |
-|---|---|---|
-| `.agents/skills` surface with owners `codex` + `dsh` | `ai-toolkit update --local` or `ai-toolkit install --local` | Re-rendered as a Codex-only surface |
-| `.agents/skills` surface with owner `dsh` only | `ai-toolkit update --local` or `ai-toolkit install --local` | Removed |
-| Either of the above | `ai-toolkit uninstall` | Removed |
-| Registered project listing `dsh` in its editors | any command reading the project registry | Not an error; the `dsh` entry is dropped |
-
-Codex keeps using `.agents/skills`; nothing changes for Codex-only projects.
-
-## Removing an old DSH profile
-
-Profiles set up by `ai-toolkit dsh install` live under `$DSH_HOME` (default `~/.dsh`). The toolkit no longer reads, updates or removes them. If you no longer want the SoftSpark packages there, remove them with DSH itself. For the default `web` profile:
-
-```bash
-dsh plugin --profile web remove @softspark/dsh-codex
-dsh plugin --profile web remove @softspark/dsh-orchestrator
-rm -rf "${DSH_HOME:-$HOME/.dsh}/.agent-presets/softspark-orchestrator"
-```
-
-Repeat the two `plugin remove` lines for any other profile name you installed. Stop running DSH sessions first.
-
-Notes:
-
-- The preset directory `softspark-orchestrator` was a copy of `@softspark/dsh-orchestrator/agent-presets/softspark-orchestrator`. Delete it only if you did not edit it and want it gone.
-- `ai-toolkit dsh install` also set a pnpm override for `@anthropic-ai/claude-agent-sdk` (version `0.3.263`) under the `@deepseek-ai/dsh-subagent-claude-code` selector in the profile's `pnpm-workspace.yaml`. It is harmless to keep. Remove it by hand if you want the profile back to its DSH default.
-- Old `dsh` ownership records in `~/.softspark/ai-toolkit/state.json` are no longer used.
-
-## History
-
-The design, qualification evidence and pins of the removed integration are kept for reference:
-
-- [PATH: kb/history/completed/dsh-native-install-target-plan.md]
-- [PATH: kb/history/completed/dsh-integration-plan-superseded.md]
-- The last version of this document before retirement is in git history (v1.8.1, toolkit v4.39.0).
 
 ---
 
@@ -16575,9 +16587,9 @@ title: "Manifest-Driven Install System"
 category: reference
 service: ai-toolkit
 tags: [install, manifest, modules, profiles, auto-detect, state-tracking]
-version: "1.17.0"
+version: "1.17.1"
 created: "2026-04-07"
-last_updated: "2026-09-24"
+last_updated: "2026-10-10"
 description: "Reference for manifest-driven project installation and install state in ~/.softspark/ai-toolkit/state.json."
 ---
 
@@ -16691,10 +16703,6 @@ ai-toolkit status
 
 Re-applies installed modules, skipping files whose content hash has not changed since last install. Implemented in `scripts/install_steps/install_state.py`.
 
-## Retired DSH Profile Lifecycle
-
-`ai-toolkit install --local --editors dsh` and `ai-toolkit dsh install|update|doctor|uninstall` were removed on 2026-09-24. Project `.agents/skills` surfaces written for DSH are migrated by `update` / `install --local` and removed by `ai-toolkit uninstall`. DSH profiles are not touched by the toolkit any more. Remove them with DSH itself as described in [DSH Compatibility (retired)](dsh-compatibility.md).
-
 ## State Tracking
 
 Installed module state is persisted to `~/.softspark/ai-toolkit/state.json`:
@@ -16741,8 +16749,6 @@ No existing install scripts or CI configurations need changes.
 - [PATH: kb/reference/language-rules.md] — language rules structure and auto-detection detail
 - [PATH: kb/reference/mcp-templates.md] — MCP server templates (the `mcp-templates` module)
 - [PATH: kb/reference/architecture-overview.md] — overall install model
-- [PATH: kb/reference/dsh-compatibility.md] - retired DSH integration and manual profile cleanup
-
 ---
 
 ## kb/reference/mcp-editor-compatibility.md
@@ -19126,9 +19132,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.19.0"
+version: "1.19.1"
 created: "2026-04-23"
-last_updated: "2026-10-08"
+last_updated: "2026-10-10"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
@@ -19147,7 +19153,7 @@ Other listed integrations remain supported and opt-in. This changes neither
 For current model defaults and optional Claude-to-Codex execution, see
 [Model Compatibility](model-compatibility.md#conditional-claude-to-codex-delegation).
 
-1 primary runtime, 1 Claude app target, and 11 editor integrations. The DeepSeek Harness (`dsh`) target was retired on 2026-09-24; see [DSH Compatibility (retired)](./dsh-compatibility.md).
+1 primary runtime, 1 Claude app target, and 11 editor integrations.
 
 ---
 

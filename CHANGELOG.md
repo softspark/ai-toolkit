@@ -7,6 +7,46 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v5.4.0 - Remaining DSH code removed (2026-10-10)
+
+Development of the SoftSpark DSH plugins has ended and their repositories are
+archived. This release removes what 5.0.0 left behind for DeepSeek Harness
+(DSH): the deprecation stubs it announced for "the next minor", and the
+migration of old DSH project files.
+
+### Ecosystem
+
+- Drift review: ten tools report documentation edits that change nothing the
+  generators emit (class A). The two Claude Code marker flips (`Stop`,
+  `output style`) come from page chrome on the docs landing page, a CSS
+  comment and a navigation label, not from a capability change. Snapshot
+  refreshed.
+
+### Removed
+
+- **BREAKING for callers of the retired names: `ai-toolkit dsh` and
+  `--editors dsh`.** Both only warned from 5.0.0 to 5.3.5. `ai-toolkit dsh ...`
+  is now an unknown command (help, exit 1) and `--editors dsh` fails with
+  `Unknown editor: 'dsh'`. `dsh` leaves the protected CLI surface in
+  `app/surface.json`; see `DECISIONS.md`, "DSH leftovers removed".
+- **Migration of old DSH project files.** The toolkit no longer recognises the
+  `dsh` owner in `.agents/.ai-toolkit-skill-owners`, the
+  `.ai-toolkit-dsh-adapted` and `.ai-toolkit-shared-adapted` wrapper markers,
+  `dsh` in a registered project's editors, or the `dsh` key in `state.json`.
+  A project that ran `update` on any release from 5.0.0 to 5.3.5 is already
+  converged and is not affected. One that did not: `ai-toolkit update` fails
+  for it with `Unknown editor: 'dsh'`, `install --local --editors codex` stops
+  with `Refusing invalid skill-surface owner marker`, and `uninstall` leaves
+  the marker and the old wrappers in place. Run `ai-toolkit update` once on
+  5.3.5 before upgrading, or follow the manual steps in
+  `kb/history/completed/dsh-integration-removed-20261010.md`.
+- **`kb/reference/dsh-compatibility.md`.** Rewritten as the removal record
+  above and moved to `kb/history/`; README, `AGENTS.md` and the reference
+  docs no longer mention DSH.
+- Test count: 2009 → 2003 (six tests of the removed behaviour).
+
+---
+
 ## v5.3.5 - No orphaned constitution heading in CLAUDE.md (2026-10-08)
 
 ### Ecosystem

@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-10-08T11:19:17Z",
+  "last_run": "2026-10-10T07:16:47Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "74a38a7a20b29f7e",
+      "docs_hash": "df4df52e361732f0",
       "headings": [
         "Admin",
         "Auggie CLI",
@@ -66,7 +66,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "f44ebb85b9d534d9",
+      "docs_hash": "47778a1ef2f5c764",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -108,7 +108,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "8ffdafb1c1a0c8c6",
+      "docs_hash": "40884482c4f81fcd",
       "headings": [
         "Core concepts",
         "Documentation Index",
@@ -148,7 +148,7 @@
         "SessionEnd": false,
         "SessionStart": false,
         "Setup": true,
-        "Stop": false,
+        "Stop": true,
         "StopFailure": false,
         "SubagentStart": false,
         "SubagentStop": false,
@@ -166,7 +166,7 @@
         "hook handler: mcp_tool": false,
         "hook handler: prompt": false,
         "monitors": true,
-        "output style": false,
+        "output style": true,
         "outputStyles": false,
         "plugins": true,
         "settings.json": true,
@@ -176,10 +176,10 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.294 (Claude Code)"
+      "version": "2.1.296 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "839ca1e6e17d8ba7",
+      "docs_hash": "47c604bd046914ce",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -227,7 +227,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "02890cb0f26a659b",
+      "docs_hash": "ded62a9b7ccc36d7",
       "headings": [
         "API",
         "API Reference",
@@ -375,10 +375,10 @@
         "plugin.json": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.161.0"
+      "version": "codex-cli 0.154.0"
     },
     "cursor": {
-      "docs_hash": "f1863951adcc3c06",
+      "docs_hash": "9f524866515e42ba",
       "headings": [
         "Agent",
         "BDK",
@@ -412,7 +412,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "8bd3397db408c422",
+      "docs_hash": "a51d4cf66d6b2f5a",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -453,7 +453,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "f8cfc25516569625",
+      "docs_hash": "b898986d502c76bb",
       "headings": [
         "About Copilot auto model selection",
         "About Copilot automations",
@@ -491,7 +491,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "8cbf9aaffb6b57bf",
+      "docs_hash": "9fe532d247c3e361",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -518,7 +518,7 @@
       }
     },
     "opencode": {
-      "docs_hash": "636b66e40cf5f65e",
+      "docs_hash": "df5b372cd3b7cdc6",
       "headings": [
         "Add features",
         "Ask questions",
@@ -580,7 +580,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "288c1d4776d5f632",
+      "docs_hash": "503b0fbf7e5a2e16",
       "headings": [
         "Accounts",
         "Agent Command Center",

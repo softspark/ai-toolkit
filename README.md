@@ -6,11 +6,16 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2009%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2003%20passing-success)](tests/)
 
-## What's New in v5.3.5
+## What's New in v5.4.0
 
-- **No orphaned `## Project Constitution` heading.** It now leaves `CLAUDE.md`
+- **The last DeepSeek Harness (DSH) code is gone.** `ai-toolkit dsh` is an
+  unknown command and `--editors dsh` an unknown editor; the toolkit no longer
+  migrates old DSH project skills or registry entries. Run `ai-toolkit update`
+  once on 5.3.5 first if a project still carries them, see the
+  [removal note](kb/history/completed/dsh-integration-removed-20261010.md).
+- **No orphaned `## Project Constitution` heading (v5.3.5).** It now leaves `CLAUDE.md`
   together with its import; `update` removes one an older release left, and
   `adopt-agents-md` no longer keeps it.
 - **`update` names projects with instructions only in `CLAUDE.md` (v5.3.4).** Agents
@@ -97,8 +102,6 @@ ai-toolkit install --local --editors all          # + all editors
 ai-toolkit install --local --editors cursor,aider # + specific editors
 ai-toolkit update --local                         # auto-detects editors
 ```
-
-DeepSeek Harness (DSH) support is retired: `--editors dsh` is ignored with a warning and `ai-toolkit dsh ...` only prints manual cleanup steps. `ai-toolkit update --local` cleans up old DSH project skills, and DSH profiles are removed with DSH itself. See [DSH Compatibility (retired)](kb/reference/dsh-compatibility.md).
 
 ### All LLM Accounts
 
@@ -454,7 +457,6 @@ Jira completion and KB indexing as explicit project lifecycle outcomes.
 | Codex CLI Compatibility | [kb/reference/codex-cli-compatibility.md](kb/reference/codex-cli-compatibility.md) |
 | opencode Compatibility | [kb/reference/opencode-compatibility.md](kb/reference/opencode-compatibility.md) |
 | GitHub Copilot Compatibility | [kb/reference/copilot-compatibility.md](kb/reference/copilot-compatibility.md) |
-| DSH Compatibility (retired) | [kb/reference/dsh-compatibility.md](kb/reference/dsh-compatibility.md) |
 | Maintenance SOP | [kb/procedures/sop-maintenance.md](kb/procedures/sop-maintenance.md) |
 
 ---
