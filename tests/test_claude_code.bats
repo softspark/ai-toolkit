@@ -286,9 +286,8 @@ for group in hooks["Stop"]:
     for handler in group["hooks"]:
         name = handler["command"].rsplit("/", 1)[-1].strip('"')
         mode[name] = handler.get("async", False)
-# quality-check and save-session always exit 0; their output is advisory, so
-# they must not hold the turn open (measured p50 3.3 s across the chain).
-assert mode["quality-check.sh"] is True, mode
+# save-session always exits 0 and only writes a file, so it must not hold the
+# turn open.
 assert mode["save-session.sh"] is True, mode
 # quality-gate blocks with exit 2 and stop-search-check corrects the turn:
 # both must stay synchronous or their verdicts would arrive after the fact.
@@ -302,6 +301,23 @@ for event, groups in hooks.items():
     for group in groups:
         for handler in group["hooks"]:
             assert not handler.get("async"), (event, handler["command"])
+PY
+}
+
+@test "claude-code: Stop runs the project checker once, through quality-gate" {
+    python3 - "$TOOLKIT_DIR/app/hooks.json" "$TOOLKIT_DIR/app/claude-app/hooks/hooks.json" <<'PY'
+import json, sys
+for path in sys.argv[1:]:
+    stop = json.load(open(path))["hooks"]["Stop"]
+    names = [
+        handler["command"].rsplit("/", 1)[-1].strip('"')
+        for group in stop
+        for handler in group["hooks"]
+    ]
+    # quality-gate.sh runs tsc / ruff / dart analyze / go vet synchronously;
+    # quality-check.sh next to it ran the same checker a second time per turn.
+    assert names.count("quality-gate.sh") == 1, (path, names)
+    assert "quality-check.sh" not in names, (path, names)
 PY
 }
 

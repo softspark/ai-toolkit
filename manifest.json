@@ -23,7 +23,7 @@
       ]
     },
     "hooks": {
-      "description": "29 hook entries across 14 lifecycle events plus statusLine",
+      "description": "28 hook entries across 14 lifecycle events plus statusLine",
       "path": "app/hooks.json + app/hooks/*.sh",
       "target": "~/.claude/settings.json (merge) + ~/.softspark/ai-toolkit/{hooks,scripts}/ (copy)",
       "type": "merge+copy",

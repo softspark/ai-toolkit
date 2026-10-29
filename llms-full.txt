@@ -11965,7 +11965,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
-29 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+28 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
 
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|
@@ -11980,7 +11980,6 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | UserPromptSubmit | Before user prompt execution | `track-usage.sh` | Record skill invocations to stats.json |
 | PostToolUse | After edit/write tools | `post-tool-use.sh` | Lightweight validation reminders |
 | PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
-| Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
 | Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |
 | TaskCompleted | Agent Teams: task done | `quality-gate.sh` | Block completion on errors |
@@ -15365,7 +15364,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 The toolkit status line only renders its input; it does not collect or write
 subscription quota snapshots. `ai-toolkit claude-switch status` and `ai-toolkit llm-status` fetch
@@ -15586,11 +15585,12 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 | Field | Value |
 |-------|-------|
-| Event | `Stop` |
+| Event | `Stop` in Augment, Codex and Devin; `AfterAgent` in Gemini CLI; not wired in Claude Code |
 | Matcher | *(all)* |
 | Script | `~/.softspark/ai-toolkit/hooks/quality-check.sh` |
-| Fires | After every Claude response |
-| Mode | Background (`"async": true`). The linter (`npx tsc`, `ruff`) was the bulk of a 3.3 s median Stop chain; its output is advisory and reaches you when it finishes instead of holding the turn open |
+| Fires | After every agent response in those editors, and from the git pre-commit fallback (`--blocking`) |
+
+**Not on Claude Code's Stop.** Claude Code's Stop event runs `quality-gate.sh`, which already runs the same checker (ruff, `npx tsc --noEmit`, `dart analyze`, `go vet`) synchronously. Releases up to 5.4.2 also wired this script there in the background, so every turn ran the checker twice, both copies at once. PHPStan, which only this script runs, is therefore not checked at Stop in Claude Code; the git pre-commit fallback still runs it. `ai-toolkit update` removes the old Stop entry from `~/.claude/settings.json`, with or without its `_source` tag.
 
 **Action:** Runs language-appropriate linter:
 - Python: `ruff check .`
@@ -16049,7 +16049,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     ├── PreToolUse         → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh, revert-guard.sh
     ├── UserPromptSubmit   → user-prompt-submit.sh, track-usage.sh
     ├── PostToolUse        → post-tool-use.sh, governance-capture.sh, loop-guard.sh, test-cohesion.sh, secret-column-check.sh, search-tracker.sh
-    ├── Stop               → quality-check.sh, save-session.sh, quality-gate.sh, stop-search-check.sh
+    ├── Stop               → save-session.sh, quality-gate.sh, stop-search-check.sh
     ├── TaskCompleted      → quality-gate.sh
     ├── TeammateIdle       → echo (inline)
     ├── SubagentStart      → subagent-start.sh
@@ -19741,7 +19741,7 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
-**14 lifecycle events / 29 global hook entries:**
+**14 lifecycle events / 28 global hook entries:**
 
 | Event | Script | Action |
 |-------|--------|--------|
@@ -19761,7 +19761,6 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PostToolUse | `test-cohesion.sh` | Run cohesion-mapped tests after edits; block on failure (Art. VI.3) |
 | PostToolUse | `secret-column-check.sh` | Advisory: a schema/model/migration edit declares a secret-looking column with no encryption or hashing marker |
 | PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
-| Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
 | Stop | `quality-gate.sh` | Block final response on lint/type errors + cohesion tests for session edits |
 | Stop | `stop-search-check.sh` | Continue conversation if search-first rule was skipped and a provider exists; no-op offline |

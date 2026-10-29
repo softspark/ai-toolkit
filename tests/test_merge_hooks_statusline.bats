@@ -80,7 +80,7 @@ EOF
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/save-session.sh\""
                     }
                 ]
             },
@@ -90,7 +90,7 @@ EOF
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/save-session.sh\""
                     }
                 ]
             },
@@ -117,17 +117,78 @@ with open(sys.argv[1]) as f:
     data = json.load(f)
 
 stop = data["hooks"]["Stop"]
-quality_check = [
+save_session = [
     entry for entry in stop
-    if entry["hooks"][0]["command"] == '"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh"'
+    if entry["hooks"][0]["command"] == '"$HOME/.softspark/ai-toolkit/hooks/save-session.sh"'
 ]
 custom = [
     entry for entry in stop
     if entry["hooks"][0]["command"] == "bash ~/my-custom-stop.sh"
 ]
-assert len(quality_check) == 1, quality_check
-assert quality_check[0].get("_source") == "ai-toolkit", quality_check
+assert len(save_session) == 1, save_session
+assert save_session[0].get("_source") == "ai-toolkit", save_session
 assert len(custom) == 1, custom
+PY
+}
+
+# Releases up to 5.4.2 wired quality-check.sh to Claude Code's Stop next to
+# quality-gate.sh, which runs the same checker, so every turn type-checked twice.
+@test "merge-hooks: drops the retired Stop quality-check, tagged or untagged, keeps user hooks" {
+    cat > "$TARGET" <<'EOF'
+{
+    "hooks": {
+        "Stop": [
+            {
+                "_source": "ai-toolkit",
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\"",
+                        "async": true
+                    }
+                ]
+            },
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\"",
+                        "async": true
+                    }
+                ]
+            },
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\" --blocking"
+                    }
+                ]
+            }
+        ]
+    }
+}
+EOF
+    run $MERGE inject "$TOOLKIT_HOOKS" "$TARGET"
+    [ "$status" -eq 0 ]
+    python3 - "$TARGET" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+commands = [
+    handler["command"]
+    for entry in data["hooks"]["Stop"]
+    for handler in entry["hooks"]
+]
+assert '"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh"' not in commands, commands
+assert commands.count('"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh" --blocking') == 1, commands
+assert commands.count('"$HOME/.softspark/ai-toolkit/hooks/quality-gate.sh"') == 1, commands
 PY
 }
 

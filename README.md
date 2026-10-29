@@ -6,7 +6,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2012%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2014%20passing-success)](tests/)
 
 ## What's New in v5.4.2
 
@@ -291,7 +291,7 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | `skills/` (hybrid) | 33 | Slash commands with agent knowledge base |
 | `skills/` (knowledge) | 51 | Domain knowledge auto-loaded by agents (includes 13 `<lang>-rules` skills) |
 | `agents/` | 44 | Specialized agents across 10 categories |
-| `hooks/` | 29 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
+| `hooks/` | 28 entries / 14 events + statusLine | Quality gates, path safety, prompt governance, loop guard, session lifecycle |
 | `plugins/` | 2 packs | Opt-in packs that install files of their own (memory, enterprise) |
 | `constitution.md` | 7 articles | Machine-enforced safety rules |
 | `rules/` | auto-synced | Global/project rule files for Claude and other editors |
@@ -307,7 +307,7 @@ ai-toolkit/
 │   ├── agents/          # 44 agent definitions
 │   ├── skills/          # 116 skills (task / hybrid / knowledge)
 │   ├── rules/           # Source rules synced into Claude/editor rule files
-│   ├── hooks/           # Hook scripts (29 entries, 14 lifecycle events)
+│   ├── hooks/           # Hook scripts (28 entries, 14 lifecycle events)
 │   ├── claude-app/      # Generated Chat/Cowork plugin rules, hooks, instructions
 │   ├── plugins/         # 2 experimental plugin packs (opt-in)
 │   ├── output-styles/   # System prompt output style overrides
@@ -327,7 +327,7 @@ ai-toolkit/
 
 **Machine-enforced constitution** — 7-article safety constitution enforced via `PreToolUse` hooks that actually block `rm -rf`, `DROP TABLE`, and irreversible operations. Not just documentation.
 
-**29 lifecycle hook entries:** Executable handlers across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, secrets-at-rest reminders, and search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
+**28 lifecycle hook entries:** Executable handlers across 14 events (SessionStart → SessionEnd, plus InstructionsLoaded + ConfigChange). Guards, governance, quality gates, session persistence, MCP health checks, revert protection, test-cohesion enforcement, loop guard, secrets-at-rest reminders, and search-first discipline. See [Hooks Catalog](kb/reference/hooks-catalog.md).
 
 **Security scanning** — `/skill-audit` for code-level risks, `/cve-scan` for dependency CVEs. Both CI-ready with exit codes.
 

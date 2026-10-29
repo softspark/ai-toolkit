@@ -14,7 +14,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 The toolkit status line only renders its input; it does not collect or write
 subscription quota snapshots. `ai-toolkit claude-switch status` and `ai-toolkit llm-status` fetch
@@ -235,11 +235,12 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 | Field | Value |
 |-------|-------|
-| Event | `Stop` |
+| Event | `Stop` in Augment, Codex and Devin; `AfterAgent` in Gemini CLI; not wired in Claude Code |
 | Matcher | *(all)* |
 | Script | `~/.softspark/ai-toolkit/hooks/quality-check.sh` |
-| Fires | After every Claude response |
-| Mode | Background (`"async": true`). The linter (`npx tsc`, `ruff`) was the bulk of a 3.3 s median Stop chain; its output is advisory and reaches you when it finishes instead of holding the turn open |
+| Fires | After every agent response in those editors, and from the git pre-commit fallback (`--blocking`) |
+
+**Not on Claude Code's Stop.** Claude Code's Stop event runs `quality-gate.sh`, which already runs the same checker (ruff, `npx tsc --noEmit`, `dart analyze`, `go vet`) synchronously. Releases up to 5.4.2 also wired this script there in the background, so every turn ran the checker twice, both copies at once. PHPStan, which only this script runs, is therefore not checked at Stop in Claude Code; the git pre-commit fallback still runs it. `ai-toolkit update` removes the old Stop entry from `~/.claude/settings.json`, with or without its `_source` tag.
 
 **Action:** Runs language-appropriate linter:
 - Python: `ruff check .`
@@ -698,7 +699,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     ├── PreToolUse         → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh, revert-guard.sh
     ├── UserPromptSubmit   → user-prompt-submit.sh, track-usage.sh
     ├── PostToolUse        → post-tool-use.sh, governance-capture.sh, loop-guard.sh, test-cohesion.sh, secret-column-check.sh, search-tracker.sh
-    ├── Stop               → quality-check.sh, save-session.sh, quality-gate.sh, stop-search-check.sh
+    ├── Stop               → save-session.sh, quality-gate.sh, stop-search-check.sh
     ├── TaskCompleted      → quality-gate.sh
     ├── TeammateIdle       → echo (inline)
     ├── SubagentStart      → subagent-start.sh
