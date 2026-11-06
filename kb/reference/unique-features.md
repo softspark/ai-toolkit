@@ -42,7 +42,7 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PostToolUse | `secret-column-check.sh` | Advisory: a schema/model/migration edit declares a secret-looking column with no encryption or hashing marker |
 | PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
-| Stop | `quality-gate.sh` | Block final response on lint/type errors + cohesion tests for session edits |
+| Stop | `quality-gate.sh` | Block final response on lint/type errors + cohesion tests for session edits; keep PHPStan advisory |
 | Stop | `stop-search-check.sh` | Continue conversation if search-first rule was skipped and a provider exists; no-op offline |
 | TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
 | SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |

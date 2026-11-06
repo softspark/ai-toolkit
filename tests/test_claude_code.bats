@@ -344,6 +344,71 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "claude-code: global and plugin Stop run PHPStan once without blocking or duplicating TypeScript" {
+    python3 - "$TOOLKIT_DIR" <<'PY'
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+root = Path(sys.argv[1])
+configs = (root / "app/hooks.json", root / "app/claude-app/hooks/hooks.json")
+for config in configs:
+    for scenario in ("php-pass", "php-fail", "typescript-fail"):
+        with tempfile.TemporaryDirectory(prefix="stop-quality-") as temp:
+            fixture = Path(temp)
+            home = fixture / "home"
+            runtime = home / ".softspark/ai-toolkit"
+            plugin = fixture / "plugin with spaces"
+            for destination in (runtime, plugin):
+                shutil.copytree(root / "app/hooks", destination / "hooks")
+            project = fixture / "project"
+            project.mkdir()
+            (project / "composer.json").write_text("{}")
+            vendor = project / "vendor/bin"
+            vendor.mkdir(parents=True)
+            tools = fixture / "bin"
+            tools.mkdir()
+            log = fixture / "checker.log"
+            for path, name in ((vendor / "phpstan", "phpstan"), (tools / "npx", "tsc")):
+                code = 0 if scenario == "php-pass" else 1
+                path.write_text(
+                    '#!/usr/bin/env bash\n'
+                    f'echo "{name}:$*" >> "$CHECKER_LOG"\n'
+                    f'echo "{name} result"\nexit {code}\n'
+                )
+                path.chmod(0o755)
+            if scenario == "typescript-fail":
+                (project / "package.json").write_text("{}")
+                (project / "tsconfig.json").write_text("{}")
+            env = dict(os.environ, HOME=str(home), CLAUDE_PLUGIN_ROOT=str(plugin),
+                       AI_TOOLKIT_DIR=str(runtime), TOOLKIT_HOOK_PROFILE="standard",
+                       AI_TOOLKIT_DISABLED_HOOKS="save-session,stop-search-check",
+                       AI_TOOLKIT_PHPSTAN_MEMORY="512M", CHECKER_LOG=str(log),
+                       PATH=f"{tools}:{os.environ['PATH']}")
+            results = [
+                subprocess.run(["bash", "-c", handler["command"]], cwd=project, env=env,
+                               input='{"session_id":"stop-quality"}', text=True,
+                               capture_output=True, timeout=15, check=False)
+                for group in json.loads(config.read_text())["hooks"]["Stop"]
+                for handler in group["hooks"]
+            ]
+            expected = ["tsc:tsc --noEmit"] if scenario == "typescript-fail" else [
+                "phpstan:analyse --memory-limit=512M"
+            ]
+            assert log.exists(), (config, scenario, results)
+            assert log.read_text().splitlines() == expected, (config, scenario, log.read_text())
+            statuses = [result.returncode for result in results]
+            assert statuses.count(2) == (scenario == "typescript-fail"), (scenario, statuses)
+            assert all(code in (0, 2) for code in statuses), (scenario, results)
+            output = "".join(result.stdout + result.stderr for result in results)
+            assert ("tsc result" if scenario == "typescript-fail" else "phpstan result") in output
+PY
+}
+
 @test "claude-code: merge-hooks treats a legacy handler that differs only in async as the same hook" {
     tmp="$(mktemp -d)"
     cat > "$tmp/settings.json" <<'EOF'

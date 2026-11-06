@@ -7,7 +7,7 @@
 #
 # Fires on: Stop, TaskCompleted
 # Exit 2 = block completion/stop. Skipped when TOOLKIT_HOOK_PROFILE=minimal.
-# Strict profile also runs mypy.
+# Strict profile also runs mypy. PHPStan remains advisory.
 
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
@@ -95,6 +95,14 @@ cohesion_for_session_edits() {
 if [ -f .claude/test-cohesion-map.json ] || \
    { [ -f app/hooks.json ] && [ -d tests ] && [ -f scripts/validate.py ]; }; then
     cohesion_for_session_edits
+fi
+
+# Claude no longer has a separate advisory quality-check Stop handler. Reuse
+# its PHP dispatch without rerunning the checkers owned by this gate. Keep
+# this before the blocking checks so mixed PHP/Dart or PHP/Go projects retain
+# their advisory PHP pass even when the other checker fails.
+if [ -f composer.json ]; then
+    bash "$(dirname "$0")/quality-check.sh" --php-only
 fi
 
 if [ -f pyproject.toml ] || [ -f setup.py ]; then

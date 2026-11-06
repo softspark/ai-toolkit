@@ -480,7 +480,7 @@ stub_tool() {
 # Runs quality-check.sh from $TEST_TMP/project with stubs first on PATH and the
 # operator's opt-outs cleared.
 run_quality_check() {
-    cd "$TEST_TMP/project"
+    cd "$TEST_TMP/project" || return 1
     run env -u AI_TOOLKIT_DISABLED_HOOKS -u AI_TOOLKIT_PHPSTAN_MEMORY \
         PATH="$TEST_TMP/bin:$PATH" bash "$HOOKS_DIR/quality-check.sh" "$@"
 }
@@ -671,6 +671,144 @@ run_quality_check() {
     run_quality_check --blocking
     [ "$status" -eq 1 ]
     echo "$output" | grep -q "PHPStan (make stan): FAILED (exit 2)"
+}
+
+@test "quality-check: --php-only preserves Python and TypeScript selection precedence" {
+    local marker
+    for marker in pyproject.toml setup.py tsconfig.json; do
+        mkdir -p "$TEST_TMP/$marker"
+        cd "$TEST_TMP/$marker"
+        touch composer.json package.json "$marker"
+        stub_tool vendor/bin/phpstan 1 "PHPStan must not run"
+        stub_tool "$TEST_TMP/bin/ruff" 1 "ruff must not run"
+        stub_tool "$TEST_TMP/bin/npx" 1 "tsc must not run"
+
+        run env PATH="$TEST_TMP/bin:$PATH" bash "$HOOKS_DIR/quality-check.sh" --php-only
+
+        [ "$status" -eq 0 ]
+        [ ! -f "$TEST_TMP/args.log" ]
+    done
+}
+
+@test "quality-check: --php-only never falls through to Dart or Go" {
+    local marker
+    for marker in pubspec.yaml go.mod; do
+        mkdir -p "$TEST_TMP/$marker"
+        cd "$TEST_TMP/$marker"
+        touch composer.json "$marker"
+        stub_tool "$TEST_TMP/bin/dart" 1 "Dart must not run"
+        stub_tool "$TEST_TMP/bin/go" 1 "Go must not run"
+
+        run env PATH="$TEST_TMP/bin:$PATH" bash "$HOOKS_DIR/quality-check.sh" --php-only
+
+        [ "$status" -eq 0 ]
+        [ ! -f "$TEST_TMP/args.log" ]
+    done
+}
+
+@test "quality-gate: PHPStan success and failure each run once and remain advisory" {
+    local code
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    for code in 0 1; do
+        stub_tool vendor/bin/phpstan "$code" "PHPStan result $code"
+        : > "$TEST_TMP/args.log"
+
+        run env AI_TOOLKIT_DIR="$TOOLKIT_DIR" AI_TOOLKIT_PHPSTAN_MEMORY=512M \
+            bash "$HOOKS_DIR/quality-gate.sh"
+
+        [ "$status" -eq 0 ]
+        [[ "$output" == *"PHPStan result $code"* ]]
+        [ "$(cat "$TEST_TMP/args.log")" = "analyse --memory-limit=512M" ]
+    done
+}
+
+@test "quality-gate: PHPStan Makefile target runs once instead of the vendor executable" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    printf 'php-stan:\n\tfalse\n' > Makefile
+    stub_tool "$TEST_TMP/bin/make" 2 "make PHPStan failed"
+    stub_tool vendor/bin/phpstan 1 "vendor PHPStan must not run"
+
+    run env AI_TOOLKIT_DIR="$TOOLKIT_DIR" PATH="$TEST_TMP/bin:$PATH" \
+        bash "$HOOKS_DIR/quality-gate.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"make PHPStan failed"* ]]
+    [ "$(cat "$TEST_TMP/args.log")" = "-s php-stan" ]
+}
+
+@test "quality-gate: missing PHPStan does not duplicate the Dart or Go checker" {
+    local marker tool expected
+    for marker in pubspec.yaml go.mod; do
+        mkdir -p "$TEST_TMP/$marker"
+        cd "$TEST_TMP/$marker"
+        touch composer.json "$marker"
+        if [ "$marker" = pubspec.yaml ]; then
+            tool=dart
+            expected=analyze
+        else
+            tool=go
+            expected='vet ./...'
+        fi
+        stub_tool "$TEST_TMP/bin/$tool" 0
+        : > "$TEST_TMP/args.log"
+
+        run env AI_TOOLKIT_DIR="$TOOLKIT_DIR" PATH="$TEST_TMP/bin:$PATH" \
+            bash "$HOOKS_DIR/quality-gate.sh"
+
+        [ "$status" -eq 0 ]
+        [ "$(cat "$TEST_TMP/args.log")" = "$expected" ]
+    done
+}
+
+@test "quality-gate: advisory PHPStan runs once before a failing Dart or Go checker" {
+    local marker tool expected
+    for marker in pubspec.yaml go.mod; do
+        mkdir -p "$TEST_TMP/$marker"
+        cd "$TEST_TMP/$marker"
+        touch composer.json "$marker"
+        if [ "$marker" = pubspec.yaml ]; then
+            tool=dart
+            expected=analyze
+        else
+            tool=go
+            expected='vet ./...'
+        fi
+        stub_tool vendor/bin/phpstan 1 "advisory PHPStan finding"
+        stub_tool "$TEST_TMP/bin/$tool" 1 "$tool blocking finding"
+        : > "$TEST_TMP/args.log"
+
+        run env AI_TOOLKIT_DIR="$TOOLKIT_DIR" AI_TOOLKIT_PHPSTAN_MEMORY=1G \
+            PATH="$TEST_TMP/bin:$PATH" bash "$HOOKS_DIR/quality-gate.sh"
+
+        [ "$status" -eq 2 ]
+        [[ "$output" == *"advisory PHPStan finding"* ]]
+        [[ "$output" == *"$tool blocking finding"* ]]
+        [ "$(cat "$TEST_TMP/args.log")" = "$(printf 'analyse --memory-limit=1G\n%s' "$expected")" ]
+    done
+}
+
+@test "quality-gate: PHPStan honors minimal profile and disabled quality hooks" {
+    local disabled
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    touch composer.json
+    stub_tool vendor/bin/phpstan 1 "PHPStan must not run"
+
+    run env TOOLKIT_HOOK_PROFILE=minimal AI_TOOLKIT_DIR="$TOOLKIT_DIR" \
+        bash "$HOOKS_DIR/quality-gate.sh"
+    [ "$status" -eq 0 ]
+    [ ! -f "$TEST_TMP/args.log" ]
+
+    for disabled in quality-check quality-gate; do
+        run env AI_TOOLKIT_DISABLED_HOOKS="$disabled" AI_TOOLKIT_DIR="$TOOLKIT_DIR" \
+            bash "$HOOKS_DIR/quality-gate.sh"
+        [ "$status" -eq 0 ]
+        [ ! -f "$TEST_TMP/args.log" ]
+    done
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
