@@ -11965,7 +11965,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
-29 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+28 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
 
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|
@@ -11980,9 +11980,8 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | UserPromptSubmit | Before user prompt execution | `track-usage.sh` | Record skill invocations to stats.json |
 | PostToolUse | After edit/write tools | `post-tool-use.sh` | Lightweight validation reminders |
 | PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
-| Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
-| Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |
+| Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors; delegate advisory PHPStan |
 | TaskCompleted | Agent Teams: task done | `quality-gate.sh` | Block completion on errors |
 | TeammateIdle | Agent Teams: idle | *(inline)* | Completeness reminder; stop the agent once its final report is in |
 | SubagentStart | Subagent spawn | `subagent-start.sh` | Scope reminder for subagents |
@@ -15365,7 +15364,7 @@ description: "Complete reference of all ai-toolkit hooks: events, scripts, insta
 
 ## Overview
 
-ai-toolkit provides 29 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
+ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
 The toolkit status line only renders its input; it does not collect or write
 subscription quota snapshots. `ai-toolkit claude-switch status` and `ai-toolkit llm-status` fetch
@@ -15586,11 +15585,14 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 | Field | Value |
 |-------|-------|
-| Event | `Stop` |
+| Event | `Stop` in Augment, Codex and Devin; `AfterAgent` in Gemini CLI; delegated PHP-only pass in Claude Code |
 | Matcher | *(all)* |
 | Script | `~/.softspark/ai-toolkit/hooks/quality-check.sh` |
-| Fires | After every Claude response |
-| Mode | Background (`"async": true`). The linter (`npx tsc`, `ruff`) was the bulk of a 3.3 s median Stop chain; its output is advisory and reaches you when it finishes instead of holding the turn open |
+| Fires | After every agent response in those editors, through Claude's quality gate (`--php-only`), and from the git pre-commit fallback (`--blocking`) |
+
+**No separate Claude Code Stop handler.** Claude Code's Stop event runs `quality-gate.sh`, which already runs the shared checkers (ruff, `npx tsc --noEmit`, `dart analyze`, `go vet`). Releases up to 5.4.2 also wired this script there in the background, running shared checkers twice. The gate now delegates `quality-check.sh --php-only` for Composer projects, preserving advisory PHPStan without repeating the other checkers. Python and TypeScript retain their existing precedence over PHP; PHP-only mode never falls back to Dart or Go. `ai-toolkit update` removes the old Stop entry from `~/.claude/settings.json`, with or without its `_source` tag.
+
+The delegated PHP pass runs synchronously on both `Stop` and `TaskCompleted`: it adds PHPStan's runtime to the hook, but findings still do not block completion. It keeps Makefile target preference and the PHPStan memory setting. Minimal profile, disabling `quality-gate`, or disabling `quality-check` skips the delegated pass. This works in a standard global installation without requiring a git pre-commit hook.
 
 **Action:** Runs language-appropriate linter:
 - Python: `ruff check .`
@@ -15601,7 +15603,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
-**Two modes.** As the Stop hook it is advisory: it prints the first 15 lines of output and always exits 0. The git pre-commit fallback (`scripts/install_git_hooks.py`) calls it as `quality-check.sh --blocking`, where a checker that failed, crashed or never ran cannot read as a pass:
+**Advisory and blocking modes.** The default mode and `--php-only` print the first 15 lines of output and always exit 0. The git pre-commit fallback (`scripts/install_git_hooks.py`) calls it as `quality-check.sh --blocking`, where a checker that failed, crashed or never ran cannot read as a pass:
 
 | Exit | Meaning | Line printed |
 |------|---------|--------------|
@@ -15639,6 +15641,8 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 **Action:** Runs lint/typecheck. **Blocks stopping (exit 2)** if errors found, so Claude must continue and fix the issues. Missing local tooling is reported as skipped rather than blocking the session. Ruff runs only when the project configured it (`ruff.toml`, `.ruff.toml`, or a `[tool.ruff]` table in `pyproject.toml`); a `pyproject.toml` that only carries build or pytest/mypy metadata does not trigger `ruff check .` under whatever configuration the machine resolves (v4.32.0).
 
+PHPStan is an advisory exception: the gate delegates `quality-check.sh --php-only` before its blocking checks. PHP findings are shown without blocking; the shared checkers still run once.
+
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
 ### TaskCompleted — `quality-gate.sh`
@@ -15650,7 +15654,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 | Script | `~/.softspark/ai-toolkit/hooks/quality-gate.sh` |
 | Fires | When an Agent Teams task is marked complete |
 
-**Action:** Runs lint/typecheck. **Blocks completion (exit 2)** if errors found. Strict profile also runs `mypy --strict`.
+**Action:** Runs the same checks as Stop, including advisory PHPStan. **Blocks completion (exit 2)** on errors from its blocking checkers. Strict profile also runs `mypy --strict`.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -16049,7 +16053,7 @@ commands explicitly silent, and Codex-generated hooks plus Claude's bundled
     ├── PreToolUse         → guard-destructive.sh, guard-path.sh, guard-config.sh, commit-quality.sh, revert-guard.sh
     ├── UserPromptSubmit   → user-prompt-submit.sh, track-usage.sh
     ├── PostToolUse        → post-tool-use.sh, governance-capture.sh, loop-guard.sh, test-cohesion.sh, secret-column-check.sh, search-tracker.sh
-    ├── Stop               → quality-check.sh, save-session.sh, quality-gate.sh, stop-search-check.sh
+    ├── Stop               → save-session.sh, quality-gate.sh, stop-search-check.sh
     ├── TaskCompleted      → quality-gate.sh
     ├── TeammateIdle       → echo (inline)
     ├── SubagentStart      → subagent-start.sh
@@ -19741,7 +19745,7 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
-**14 lifecycle events / 29 global hook entries:**
+**14 lifecycle events / 28 global hook entries:**
 
 | Event | Script | Action |
 |-------|--------|--------|
@@ -19761,9 +19765,8 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PostToolUse | `test-cohesion.sh` | Run cohesion-mapped tests after edits; block on failure (Art. VI.3) |
 | PostToolUse | `secret-column-check.sh` | Advisory: a schema/model/migration edit declares a secret-looking column with no encryption or hashing marker |
 | PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
-| Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
-| Stop | `quality-gate.sh` | Block final response on lint/type errors + cohesion tests for session edits |
+| Stop | `quality-gate.sh` | Block final response on lint/type errors + cohesion tests for session edits; keep PHPStan advisory |
 | Stop | `stop-search-check.sh` | Continue conversation if search-first rule was skipped and a provider exists; no-op offline |
 | TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
 | SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |

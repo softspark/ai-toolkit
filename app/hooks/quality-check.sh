@@ -12,6 +12,8 @@
 #   (default)   Advisory, for the Stop hook. Surfaces the first 15 lines of the
 #               checker output and always exits 0: it must not block Claude from
 #               returning a response. The checker's status is dropped on purpose.
+#   --php-only  Advisory PHP pass delegated by quality-gate. Retains the normal
+#               Python/TypeScript precedence but never falls back to Dart/Go.
 #   --blocking  Gate, for the git pre-commit hook. Exit codes:
 #                 0  the checker ran and passed
 #                 1  the checker failed or crashed (its name and exit code are printed)
@@ -24,8 +26,11 @@
 #                              host php.ini default (128M) crashes parallel workers.
 
 BLOCKING=0
+PHP_ONLY=0
 if [ "${1:-}" = "--blocking" ]; then
     BLOCKING=1
+elif [ "${1:-}" = "--php-only" ]; then
+    PHP_ONLY=1
 fi
 
 if [ "$BLOCKING" -eq 1 ]; then
@@ -40,6 +45,15 @@ fi
 
 # shellcheck source=_profile-check.sh
 source "$(dirname "$0")/_profile-check.sh"
+
+# The gate already owns Python/TypeScript checks. Preserve their precedence
+# over PHP, including bare Python projects that did not configure Ruff.
+if [ "$PHP_ONLY" -eq 1 ]; then
+    if [ -f pyproject.toml ] || [ -f setup.py ] || \
+       { [ -f package.json ] && [ -f tsconfig.json ]; }; then
+        exit 0
+    fi
+fi
 
 # PHPStan prints these when a parallel worker dies (memory limit, fatal error).
 # Safety net for a crash that still ends with exit 0.
@@ -139,9 +153,9 @@ elif [ -f composer.json ] && { PHPSTAN_TARGET="$(phpstan_make_target)" || [ -f v
         run_checker "PHPStan" "$PHPSTAN_CRASH_RE" \
             vendor/bin/phpstan analyse "--memory-limit=${AI_TOOLKIT_PHPSTAN_MEMORY:-1G}"
     fi
-elif [ -f pubspec.yaml ]; then
+elif [ "$PHP_ONLY" -eq 0 ] && [ -f pubspec.yaml ]; then
     run_checker "dart analyze" "" dart analyze
-elif [ -f go.mod ]; then
+elif [ "$PHP_ONLY" -eq 0 ] && [ -f go.mod ]; then
     run_checker "go vet" "" go vet ./...
 fi
 

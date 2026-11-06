@@ -21,7 +21,7 @@ Unlike other toolkits that put safety rules in documentation only, ai-toolkit en
 
 Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are copied to `~/.softspark/ai-toolkit/hooks/` on install and referenced from `~/.claude/settings.json`. Easy to read, debug, and extend.
 
-**14 lifecycle events / 29 global hook entries:**
+**14 lifecycle events / 28 global hook entries:**
 
 | Event | Script | Action |
 |-------|--------|--------|
@@ -41,9 +41,8 @@ Hook logic lives in `app/hooks/*.sh` — not inline JSON one-liners. Scripts are
 | PostToolUse | `test-cohesion.sh` | Run cohesion-mapped tests after edits; block on failure (Art. VI.3) |
 | PostToolUse | `secret-column-check.sh` | Advisory: a schema/model/migration edit declares a secret-looking column with no encryption or hashing marker |
 | PostToolUse | `search-tracker.sh` | Clear search-first flag when smart_query/hybrid_search_kb/Web* runs |
-| Stop | `quality-check.sh` | Multi-language lint (ruff/tsc/phpstan/dart/go) |
 | Stop | `save-session.sh` | Persist session context for cross-session continuity |
-| Stop | `quality-gate.sh` | Block final response on lint/type errors + cohesion tests for session edits |
+| Stop | `quality-gate.sh` | Block final response on lint/type errors + cohesion tests for session edits; keep PHPStan advisory |
 | Stop | `stop-search-check.sh` | Continue conversation if search-first rule was skipped and a provider exists; no-op offline |
 | TaskCompleted | `quality-gate.sh` | Block task completion on lint/type errors |
 | SubagentStart | `subagent-start.sh` | Narrow-scope reminder for spawned subagents |

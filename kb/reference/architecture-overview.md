@@ -316,7 +316,7 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 
 ## Quality Hooks
 
-29 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
+28 entries across 14 lifecycle events. See [hooks-catalog.md](hooks-catalog.md) for full details.
 
 | Hook | Trigger | Script | Action |
 |------|---------|--------|--------|
@@ -331,9 +331,8 @@ Agents (code-reviewer, debugger, devops-implementer, ...)
 | UserPromptSubmit | Before user prompt execution | `track-usage.sh` | Record skill invocations to stats.json |
 | PostToolUse | After edit/write tools | `post-tool-use.sh` | Lightweight validation reminders |
 | PostToolUse | After any tool | `governance-capture.sh` | Log security-sensitive operations |
-| Stop | After response | `quality-check.sh` | Multi-language lint |
 | Stop | After response | `save-session.sh` | Persist session context |
-| Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors |
+| Stop | Before final stop | `quality-gate.sh` | Block final response on lint/type errors; delegate advisory PHPStan |
 | TaskCompleted | Agent Teams: task done | `quality-gate.sh` | Block completion on errors |
 | TeammateIdle | Agent Teams: idle | *(inline)* | Completeness reminder; stop the agent once its final report is in |
 | SubagentStart | Subagent spawn | `subagent-start.sh` | Scope reminder for subagents |

@@ -286,9 +286,8 @@ for group in hooks["Stop"]:
     for handler in group["hooks"]:
         name = handler["command"].rsplit("/", 1)[-1].strip('"')
         mode[name] = handler.get("async", False)
-# quality-check and save-session always exit 0; their output is advisory, so
-# they must not hold the turn open (measured p50 3.3 s across the chain).
-assert mode["quality-check.sh"] is True, mode
+# save-session always exits 0 and only writes a file, so it must not hold the
+# turn open.
 assert mode["save-session.sh"] is True, mode
 # quality-gate blocks with exit 2 and stop-search-check corrects the turn:
 # both must stay synchronous or their verdicts would arrive after the fact.
@@ -302,6 +301,23 @@ for event, groups in hooks.items():
     for group in groups:
         for handler in group["hooks"]:
             assert not handler.get("async"), (event, handler["command"])
+PY
+}
+
+@test "claude-code: Stop runs the project checker once, through quality-gate" {
+    python3 - "$TOOLKIT_DIR/app/hooks.json" "$TOOLKIT_DIR/app/claude-app/hooks/hooks.json" <<'PY'
+import json, sys
+for path in sys.argv[1:]:
+    stop = json.load(open(path))["hooks"]["Stop"]
+    names = [
+        handler["command"].rsplit("/", 1)[-1].strip('"')
+        for group in stop
+        for handler in group["hooks"]
+    ]
+    # quality-gate.sh runs tsc / ruff / dart analyze / go vet synchronously;
+    # quality-check.sh next to it ran the same checker a second time per turn.
+    assert names.count("quality-gate.sh") == 1, (path, names)
+    assert "quality-check.sh" not in names, (path, names)
 PY
 }
 
@@ -326,6 +342,71 @@ assert "TaskStop" not in result.stdout, result.stdout
 assert "All assigned files modified" not in result.stdout, result.stdout
 PY
     [ "$status" -eq 0 ]
+}
+
+@test "claude-code: global and plugin Stop run PHPStan once without blocking or duplicating TypeScript" {
+    python3 - "$TOOLKIT_DIR" <<'PY'
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+root = Path(sys.argv[1])
+configs = (root / "app/hooks.json", root / "app/claude-app/hooks/hooks.json")
+for config in configs:
+    for scenario in ("php-pass", "php-fail", "typescript-fail"):
+        with tempfile.TemporaryDirectory(prefix="stop-quality-") as temp:
+            fixture = Path(temp)
+            home = fixture / "home"
+            runtime = home / ".softspark/ai-toolkit"
+            plugin = fixture / "plugin with spaces"
+            for destination in (runtime, plugin):
+                shutil.copytree(root / "app/hooks", destination / "hooks")
+            project = fixture / "project"
+            project.mkdir()
+            (project / "composer.json").write_text("{}")
+            vendor = project / "vendor/bin"
+            vendor.mkdir(parents=True)
+            tools = fixture / "bin"
+            tools.mkdir()
+            log = fixture / "checker.log"
+            for path, name in ((vendor / "phpstan", "phpstan"), (tools / "npx", "tsc")):
+                code = 0 if scenario == "php-pass" else 1
+                path.write_text(
+                    '#!/usr/bin/env bash\n'
+                    f'echo "{name}:$*" >> "$CHECKER_LOG"\n'
+                    f'echo "{name} result"\nexit {code}\n'
+                )
+                path.chmod(0o755)
+            if scenario == "typescript-fail":
+                (project / "package.json").write_text("{}")
+                (project / "tsconfig.json").write_text("{}")
+            env = dict(os.environ, HOME=str(home), CLAUDE_PLUGIN_ROOT=str(plugin),
+                       AI_TOOLKIT_DIR=str(runtime), TOOLKIT_HOOK_PROFILE="standard",
+                       AI_TOOLKIT_DISABLED_HOOKS="save-session,stop-search-check",
+                       AI_TOOLKIT_PHPSTAN_MEMORY="512M", CHECKER_LOG=str(log),
+                       PATH=f"{tools}:{os.environ['PATH']}")
+            results = [
+                subprocess.run(["bash", "-c", handler["command"]], cwd=project, env=env,
+                               input='{"session_id":"stop-quality"}', text=True,
+                               capture_output=True, timeout=15, check=False)
+                for group in json.loads(config.read_text())["hooks"]["Stop"]
+                for handler in group["hooks"]
+            ]
+            expected = ["tsc:tsc --noEmit"] if scenario == "typescript-fail" else [
+                "phpstan:analyse --memory-limit=512M"
+            ]
+            assert log.exists(), (config, scenario, results)
+            assert log.read_text().splitlines() == expected, (config, scenario, log.read_text())
+            statuses = [result.returncode for result in results]
+            assert statuses.count(2) == (scenario == "typescript-fail"), (scenario, statuses)
+            assert all(code in (0, 2) for code in statuses), (scenario, results)
+            output = "".join(result.stdout + result.stderr for result in results)
+            assert ("tsc result" if scenario == "typescript-fail" else "phpstan result") in output
+PY
 }
 
 @test "claude-code: merge-hooks treats a legacy handler that differs only in async as the same hook" {

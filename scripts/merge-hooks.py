@@ -73,6 +73,20 @@ LEGACY_TOOLKIT_HOOKS = {
             "will be sent to it (constitution Article V.3).'",
         )
     ],
+    # quality-check.sh left Claude Code's Stop event because quality-gate.sh
+    # runs the same checker there. The script still ships (pre-commit and other
+    # editors' Stop hooks), so RETIRED_HOOK_SCRIPTS cannot reclaim the entry.
+    "Stop": [
+        {
+            "matcher": "",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": "\"$HOME/.softspark/ai-toolkit/hooks/quality-check.sh\"",
+                }
+            ],
+        },
+    ],
 }
 
 # Hook scripts older releases installed and current releases no longer ship.
