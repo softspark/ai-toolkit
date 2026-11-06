@@ -37,7 +37,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-destructive.sh\""
+            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-destructive.sh\"",
+            "onFailure": "block"
           }
         ]
       },
@@ -46,7 +47,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-path.sh\""
+            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-path.sh\"",
+            "onFailure": "block"
           }
         ]
       },
@@ -55,7 +57,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-config.sh\""
+            "command": "AI_TOOLKIT_DIR=\"${CLAUDE_PLUGIN_ROOT}\" \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-config.sh\"",
+            "onFailure": "block"
           }
         ]
       },

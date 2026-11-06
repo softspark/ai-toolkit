@@ -781,11 +781,19 @@ generate(Path('$tmp'))
     [ -f "$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js" ]
 }
 
-@test "opencode plugin uses named export only (no default export)" {
+@test "opencode plugin exports the supported V2 and V1 compatibility entrypoints" {
     local f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
-    grep -q 'export const AiToolkitHooks' "$f"
-    # opencode requires named exports; a default export is non-spec.
-    ! grep -q 'export default' "$f"
+    run node --input-type=module - "$f" <<'JS'
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const code = readFileSync(process.argv[2], 'utf8');
+const module = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
+assert.deepEqual(Object.keys(module), ['default']);
+assert.equal(module.default.id, 'ai-toolkit.project');
+assert.equal(typeof module.default.setup, 'function');
+assert.equal(typeof module.default.server, 'function');
+JS
+    [ "$status" -eq 0 ]
 }
 
 @test "opencode plugin invokes toolkit hooks directory" {
@@ -818,10 +826,9 @@ generate(Path('$tmp'))
 
 @test "opencode plugin passes payloads via stdin (no shell interpolation)" {
     local f="$OC_DIR/.opencode/plugins/ai-toolkit-hooks.js"
-    # proc.stdin.write(input) — payload on stdin, not argv
-    grep -q 'proc.stdin.write' "$f"
-    # scriptPath bound separately from payload — no template literal for payload
-    grep -q 'bash \${scriptPath}' "$f"
+    # JSON goes to stdin; the script path remains a separate process argument.
+    grep -Fq 'proc.stdin.end(input)' "$f"
+    grep -Fq 'spawn("bash", [scriptPath]' "$f"
 }
 
 @test "opencode agent files do not emit source-model-hint comments" {

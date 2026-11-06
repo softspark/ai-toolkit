@@ -146,6 +146,46 @@ assert matching[0].get("_source") == "jira-mcp-hooks", matching
 PY
 }
 
+@test "inject_hook_cli.py upgrades legacy failure policy without removing custom handlers" {
+    python3 - "$TOOLKIT_DIR" "$TEST_DIR" <<'PY'
+import copy
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+root, target = Path(sys.argv[1]), Path(sys.argv[2])
+source = target / "policy-hooks.json"
+settings = target / ".claude/settings.json"
+guard = {"matcher": "Bash", "hooks": [{"type": "command", "command": "check-policy"}]}
+upgraded = copy.deepcopy(guard)
+upgraded["hooks"][0]["onFailure"] = "block"
+source.write_text(json.dumps({"hooks": {"PreToolUse": [upgraded]}}))
+custom_command = copy.deepcopy(guard)
+custom_command["hooks"][0].update(command="check-policy --custom", onFailure="continue")
+custom_matcher = copy.deepcopy(guard)
+custom_matcher["matcher"] = "Read"
+other_source = copy.deepcopy(guard)
+other_source["_source"] = "another-plugin"
+for tagged in (False, True):
+    legacy = copy.deepcopy(guard)
+    if tagged:
+        legacy["_source"] = "policy-hooks"
+    preserved = [custom_command, custom_matcher, other_source]
+    settings.write_text(json.dumps({"hooks": {"PreToolUse": [legacy, *preserved]}, "userSetting": 42}))
+    for _ in range(2):
+        subprocess.run([sys.executable, str(root / "scripts/inject_hook_cli.py"),
+                        str(source), str(target)], check=True)
+        result = json.loads(settings.read_text())
+        entries = result["hooks"]["PreToolUse"]
+        assert result["userSetting"] == 42
+        assert len(entries) == 4, entries
+        assert all(entries.count(entry) == 1 for entry in preserved), entries
+        expected = {**upgraded, "_source": "policy-hooks"}
+        assert entries.count(expected) == 1, entries
+PY
+}
+
 @test "inject_hook_cli.py updates entries on re-injection" {
     # First injection with one command
     _make_hooks_file "$TEST_DIR/updatable.json" "Stop" "echo v1"
@@ -496,6 +536,17 @@ PY
 
 @test "inject_hook_cli.py propagates SessionEnd using the exact Codex event allowlist" {
     _make_hooks_file "$TEST_DIR/session-end.json" "SessionEnd" "echo bye"
+    python3 - "$TEST_DIR/session-end.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+for event in ("PreModelRequest", "PostModelRequest"):
+    data["hooks"][event] = [{"hooks": [{"type": "command", "command": "echo " + event}]}]
+path.write_text(json.dumps(data))
+PY
     mkdir -p "$TEST_DIR/.codex"
     cat > "$TEST_DIR/.codex/hooks.json" <<'JSON'
 {
@@ -525,7 +576,7 @@ from generate_codex_hooks import SUPPORTED_EVENTS
 from inject_hook_cli import CODEX_EVENTS, _codex_owner
 
 assert CODEX_EVENTS == SUPPORTED_EVENTS
-assert len(CODEX_EVENTS) == 12
+assert len(CODEX_EVENTS) == 14
 with open(sys.argv[1]) as handle:
     data = json.load(handle)
 assert data["hooks"]["Stop"][0]["hooks"][0]["command"] == "echo user"
@@ -535,6 +586,9 @@ assert data["hooks"]["Interrupt"] == [
 handler = data["hooks"]["SessionEnd"][0]["hooks"][0]
 owner = _codex_owner("session-end")
 assert handler["command"] == f"AI_TOOLKIT_HOOK_OWNER={owner} echo bye", handler
+for event in ("PreModelRequest", "PostModelRequest"):
+    handler = data["hooks"][event][0]["hooks"][0]
+    assert handler["command"] == f"AI_TOOLKIT_HOOK_OWNER={owner} echo {event}", handler
 PY
 }
 

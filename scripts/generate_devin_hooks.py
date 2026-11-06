@@ -21,11 +21,11 @@ Devin **tool name** (``read``, ``edit``, ``exec``, ``grep``, ``glob``,
 ``mcp__<server>__<tool>``) — NOT Claude's ``Bash``/``Edit`` names — so the
 shared guard scripts reliably fire under Devin.
 
-Blocking contract: the shared guard scripts emit ``{"decision":"block",
-"reason":...}`` on stdout (plain mode) AND exit 2 — Devin honors both (docs:
-exit 2 = deny; JSON ``{"decision":"block"}`` = deny). Hooks therefore run
-WITHOUT ``AI_TOOLKIT_HOOK_FORMAT=json`` because Devin expects the flat
-``{"decision","reason"}`` shape, not Claude's ``hookSpecificOutput`` envelope.
+Blocking contract: Devin honors exit 2 and flat ``{"decision":"block",
+"reason":...}`` JSON. Shared guards retain their existing stderr/exit-code
+or flat JSON verdicts. Context-only prompt and edit handlers
+request JSON output because Devin consumes their reminders through
+``hookSpecificOutput`` with ``hookEventName`` and ``additionalContext``.
 
 Existing user hook entries are preserved; only entries tagged
 ``_source: ai-toolkit`` are replaced on regeneration.
@@ -44,6 +44,7 @@ from secure_fs import apply_owned_edits, lexical_absolute
 
 HOOKS_PREFIX = '"$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
+CONTEXT_SCRIPTS = frozenset({"user-prompt-submit.sh", "post-tool-use.sh"})
 
 # event -> list of (matcher_regex, [script names]).
 # Matchers target Devin tool names: read, edit, exec, mcp__<server>__<tool>.
@@ -76,7 +77,13 @@ def build_hook_entry(matcher: str, scripts: list[str]) -> dict:
         "_source": SOURCE_TAG,
         "matcher": matcher,
         "hooks": [
-            {"type": "command", "command": f'{HOOKS_PREFIX}{s}"'}
+            {
+                "type": "command",
+                "command": (
+                    ("AI_TOOLKIT_HOOK_FORMAT=json " if s in CONTEXT_SCRIPTS else "")
+                    + f'{HOOKS_PREFIX}{s}"'
+                ),
+            }
             for s in scripts
         ],
     }

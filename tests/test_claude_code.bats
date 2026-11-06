@@ -13,6 +13,63 @@
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
+@test "claude-code: safety guards block on hook failure in global and plugin manifests" {
+    python3 - "$TOOLKIT_DIR" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root / "scripts"))
+from claude_app import render_plugin_hooks
+
+guards = {"guard-destructive.sh", "guard-path.sh", "guard-config.sh"}
+documents = (json.loads((root / "app/hooks.json").read_text()), json.loads(render_plugin_hooks()))
+for document in documents:
+    protected = set()
+    for event, groups in document["hooks"].items():
+        for group in groups:
+            for handler in group["hooks"]:
+                name = handler["command"].rsplit("/", 1)[-1].strip('"')
+                if event == "PreToolUse" and name in guards:
+                    assert handler["onFailure"] == "block", handler
+                    assert not handler.get("async"), handler
+                    protected.add(name)
+                else:
+                    assert "onFailure" not in handler, handler
+    assert protected == guards, protected
+PY
+}
+
+@test "claude-code: onFailure accepts only command and HTTP policies with documented values" {
+    python3 - "$TOOLKIT_DIR" <<'PY'
+import contextlib
+import io
+import sys
+
+sys.path.insert(0, sys.argv[1] + "/scripts")
+from validate import ValidationResult, _validate_hook_handler
+
+for hook_type in ("command", "http"):
+    required = {"command": "true"} if hook_type == "command" else {"url": "https://example.com/hook"}
+    for policy in ("continue", "block"):
+        result = ValidationResult()
+        _validate_hook_handler("PreToolUse", {"type": hook_type, "onFailure": policy, **required}, result)
+        assert result.errors == 0
+for handler in (
+    {"type": "command", "command": "true", "onFailure": "deny"},
+    {"type": "command", "command": "true", "onFailure": True},
+    {"type": "command", "command": "true", "onFailure": ["block"]},
+    {"type": "prompt", "prompt": "Check", "onFailure": "block"},
+    {"type": "mcp_tool", "server": "policy", "tool": "check", "onFailure": "block"},
+):
+    result = ValidationResult()
+    with contextlib.redirect_stdout(io.StringIO()):
+        _validate_hook_handler("PreToolUse", handler, result)
+    assert result.errors > 0, handler
+PY
+}
+
 # ── Hook event allowlist ─────────────────────────────────────────────────────
 
 @test "claude-code: hook event allowlists exactly match the current Claude Code contract" {

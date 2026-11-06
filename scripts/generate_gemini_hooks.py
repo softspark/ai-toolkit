@@ -21,6 +21,8 @@ after the model's final response), so we wire our `save-session.sh` and
 
 Hook scripts are shared with Claude Code / Codex and live under
 `~/.softspark/ai-toolkit/hooks/`. This generator does NOT duplicate shell code.
+Text-only advisory handlers are wrapped as native JSON output. Blocking and
+already-JSON handlers retain their original exit codes and output.
 
 Usage:
     python3 scripts/generate_gemini_hooks.py [target-dir]
@@ -31,12 +33,17 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import sys
 import tempfile
 from pathlib import Path
 
 HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_FORMAT=json "$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
+TEXT_ADVISORY_HOOKS = frozenset({
+    "session-start.sh", "mcp-health.sh", "commit-quality.sh",
+    "quality-check.sh", "session-end.sh",
+})
 GEMINI_SUPPORTED_HOOK_EVENTS = (
     "BeforeTool",
     "AfterTool",
@@ -100,12 +107,22 @@ if _unsupported_events:
 
 def build_hook_entry(matcher: str, script: str) -> dict:
     """Build a single Gemini hook entry (merge-safe shape)."""
+    command = f"{HOOKS_PREFIX}{script}\""
+    if script in TEXT_ADVISORY_HOOKS:
+        # These handlers are advisory. Keep infrastructure failures visible
+        # with pipefail; blocking and already-JSON hooks are not transformed.
+        field = (
+            "{hookSpecificOutput: {additionalContext: .}}"
+            if script == "session-start.sh" else "{systemMessage: .}"
+        )
+        command += f" | jq -Rs 'if length == 0 then {{}} else {field} end'"
+        command = f"bash -o pipefail -c {shlex.quote(command)}"
     entry: dict = {
         "_source": SOURCE_TAG,
         "hooks": [
             {
                 "type": "command",
-                "command": f"{HOOKS_PREFIX}{script}\"",
+                "command": command,
             }
         ],
     }

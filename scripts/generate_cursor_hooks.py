@@ -35,7 +35,7 @@ SCRIPT_NAME = "cursor_hook.py"
 PROJECT_RUNTIME = ".cursor/hooks/ai-toolkit/cursor_hook.py"
 USER_RUNTIME = "./hooks/ai-toolkit/cursor_hook.py"
 
-# Cursor 3.11 hook events documented at https://cursor.com/docs/hooks.
+# Cursor 3.27 hook events reviewed at https://cursor.com/docs/hooks (2026-11-06).
 HOOK_DEFINITIONS: tuple[tuple[str, str, int], ...] = (
     ("sessionStart", "session-start", 10),
     ("sessionEnd", "observe", 10),

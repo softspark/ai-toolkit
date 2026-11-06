@@ -101,7 +101,7 @@ teardown_file() {
 
 # ── Native hook contract ─────────────────────────────────────────────────────────────────
 
-@test "cursor hooks: emits every documented Cursor 3.11 event" {
+@test "cursor hooks: emits every documented Cursor 3.27 event" {
     tmp="$(mktemp -d)"
     python3 "$TOOLKIT_DIR/scripts/generate_cursor_hooks.py" "$tmp" >/dev/null
     python3 - "$tmp/.cursor/hooks.json" <<'PY'

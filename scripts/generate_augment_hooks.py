@@ -6,14 +6,15 @@
 """Generate Augment settings.json hooks block.
 
 Augment reads hooks from several settings.json layers (per
-docs.augmentcode.com/cli/hooks): `<workspace>/.augment/settings.local.json`,
+docs.augmentcode.com/cli/v0/hooks): `<workspace>/.augment/settings.local.json`,
 `<workspace>/.augment/settings.json`, `~/.augment/settings.json` (user scope),
 and `/etc/augment/settings.json` (system policy). This generator writes the
 user-scope file: it accepts an optional target directory and defaults to the
 user's `$HOME`, writing `~/.augment/settings.json`. Project-local hook emission
 for `--local` installs is a possible future extension.
 
-Augment hook events (per docs.augmentcode.com/cli/hooks.md):
+Targets stable Auggie 0.x; unversioned upstream docs describe the 1.x prerelease.
+Augment hook events (per docs.augmentcode.com/cli/v0/hooks.md):
     PreToolUse, PostToolUse, SessionStart, SessionEnd, Stop
 Schema mirrors Claude Code — each event holds an array of groups, each group
 holds `{matcher?, hooks: [{type, command, timeout?}]}`. We tag the outer group

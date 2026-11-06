@@ -1153,6 +1153,12 @@ def _validate_hook_handler(event: str, hook: dict, vr: ValidationResult) -> None
         if field not in hook:
             vr.error(f"{event}: hook type '{hook_type}' missing required field '{field}'")
 
+    if "onFailure" in hook:
+        if hook_type not in {"command", "http"}:
+            vr.error(f"{event}: onFailure is supported only for command and http hooks")
+        if hook["onFailure"] not in ("continue", "block"):
+            vr.error(f"{event}: onFailure must be 'continue' or 'block'")
+
     if hook_type == "mcp_tool":
         if "arguments" in hook:
             vr.error(f"{event}: mcp_tool uses optional 'input', not 'arguments'")

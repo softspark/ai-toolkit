@@ -6,13 +6,12 @@
 """Generate ``.devin/rules/*.md`` and ``.windsurf/rules/*.md`` (and workflows)
 for Devin Desktop (formerly Windsurf).
 
-Windsurf rebranded to Devin Desktop on 2026-06-02. ``.devin/`` is now the
-primary read+write workspace tree; ``.windsurf/`` is a legacy read-only
-fallback that current builds still honor (docs.devin.ai/desktop/devin-desktop-faq:
-"The application already supports .devin/ as the primary workspace directory
-and falls back to .windsurf/ for backward compatibility"). We dual-emit the
-same content to both trees so old Windsurf builds keep working during the
-transition.
+Windsurf rebranded to Devin Desktop on 2026-06-02. ``.devin/`` is the preferred
+workspace tree, while ``.windsurf/`` remains supported. Current Devin CLI
+loads rules from both directories; only the single ``global_rules.md`` files
+have native-over-legacy precedence (docs.devin.ai/cli/extensibility/rules).
+We dual-emit for older Windsurf builds, so compatibility output may duplicate
+rule context in current clients.
 
 Each rule file supports YAML frontmatter with these fields
 (from docs.devin.ai/desktop — memories docs):

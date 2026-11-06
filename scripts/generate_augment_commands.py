@@ -9,7 +9,7 @@ User-invocable skills become Augment custom slash commands. Knowledge skills
 (``user-invocable: false``) are excluded — they load automatically via
 AGENTS.md/rules context instead of ``/`` invocation.
 
-Per docs.augmentcode.com/cli/custom-commands, Augment custom commands are plain
+Per docs.augmentcode.com/cli/v0/custom-commands, stable Auggie commands are plain
 markdown files with an optional YAML frontmatter header. The body of the file IS
 the prompt (no ``template:`` field, no TOML). The documented frontmatter fields
 are ``description``, ``argument-hint``, and ``model`` (no ``agent`` field):

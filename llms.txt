@@ -42,6 +42,7 @@
 - [Ecosystem review for 5.1.0](kb/planning/ecosystem-sync-20261002.md)
 - [Ecosystem review for 5.2.0](kb/planning/ecosystem-sync-20261005.md)
 - [Ecosystem sync and Claude teammate diagnostics](kb/planning/ecosystem-sync-20261027.md)
+- [Ecosystem sync: 2026-11-06](kb/planning/ecosystem-sync-20261106.md)
 - [Editor support and delegation refresh](kb/planning/editor-and-delegation-refresh-20261001.md)
 - [Model compatibility refresh](kb/planning/model-compatibility-refresh-20260923.md)
 - [SOP: Ecosystem Sync](kb/procedures/sop-ecosystem-sync.md)

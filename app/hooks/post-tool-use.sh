@@ -33,22 +33,22 @@ if [ -n "$FILE_PATH" ] && [ -n "$TOOLKIT_DIR" ] && command -v python3 >/dev/null
 fi
 
 if [ -z "$FILE_PATH" ]; then
-    hook_emit_context "PostToolUse: ${TOOL_NAME} completed. Consider validating lint, tests, and docs if behavior changed."
+    hook_emit_context "PostToolUse" "PostToolUse: ${TOOL_NAME} completed. Consider validating lint, tests, and docs if behavior changed."
     exit 0
 fi
 
 case "$FILE_PATH" in
     *.md|*.txt)
-        hook_emit_context "PostToolUse: updated ${FILE_PATH}. If behavior or workflow changed, refresh related docs and examples."
+        hook_emit_context "PostToolUse" "PostToolUse: updated ${FILE_PATH}. If behavior or workflow changed, refresh related docs and examples."
         ;;
     *.bats|*.test.*|*.spec.*)
-        hook_emit_context "PostToolUse: updated test file ${FILE_PATH}. Run the most relevant targeted test command next."
+        hook_emit_context "PostToolUse" "PostToolUse: updated test file ${FILE_PATH}. Run the most relevant targeted test command next."
         ;;
     *.json|*.yml|*.yaml|*.toml)
-        hook_emit_context "PostToolUse: updated config file ${FILE_PATH}. Validate syntax and any generated artifacts affected by this change."
+        hook_emit_context "PostToolUse" "PostToolUse: updated config file ${FILE_PATH}. Validate syntax and any generated artifacts affected by this change."
         ;;
     *)
-        hook_emit_context "PostToolUse: updated ${FILE_PATH}. If behavior changed, run validation, targeted tests, and update docs if needed."
+        hook_emit_context "PostToolUse" "PostToolUse: updated ${FILE_PATH}. If behavior changed, run validation, targeted tests, and update docs if needed."
         ;;
 esac
 

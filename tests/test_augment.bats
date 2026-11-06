@@ -6,11 +6,11 @@
 # Per-tool tests for Augment integration (generate_augment.py + generate_augment_rules.py).
 #
 # Upstream docs (as of 2026-04-23):
-#   https://docs.augmentcode.com/cli/rules.md
-#   https://docs.augmentcode.com/cli/hooks.md
-#   https://docs.augmentcode.com/cli/subagents.md
-#   https://docs.augmentcode.com/cli/skills.md
-#   https://docs.augmentcode.com/cli/custom-commands.md
+#   https://docs.augmentcode.com/cli/v0/rules.md
+#   https://docs.augmentcode.com/cli/v0/hooks.md
+#   https://docs.augmentcode.com/cli/v0/subagents.md
+#   https://docs.augmentcode.com/cli/v0/skills.md
+#   https://docs.augmentcode.com/cli/v0/custom-commands.md
 #
 # Rules surface we generate:
 #   .augment/rules/ai-toolkit-*.md with YAML frontmatter:

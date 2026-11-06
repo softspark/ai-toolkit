@@ -53,6 +53,36 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "codex-hooks-native: refresh preserves user model request diagnostics" {
+    run python3 - "$TOOLKIT_DIR" "$TEST_ROOT" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+toolkit, root = map(Path, sys.argv[1:])
+sys.path.insert(0, str(toolkit / "scripts"))
+from generate_codex_hooks import generate
+
+for global_scope in (False, True):
+    target = root / ("global" if global_scope else "project")
+    config = target if global_scope else target / ".codex"
+    config.mkdir(parents=True)
+    path = config / "hooks.json"
+    user_hooks = {
+        "PreModelRequest": [{"hooks": [{"type": "command", "command": "echo diagnostic"}]}],
+        "PostModelRequest": [{"hooks": [{"type": "mcp_tool", "server": "audit",
+                                          "tool": "record", "input": {"turn": "${turn_id}"}}]}],
+    }
+    path.write_text(json.dumps({"hooks": user_hooks}))
+    for _ in range(2):
+        generate(target, global_install=global_scope, codex_home=target if global_scope else None)
+        actual = json.loads(path.read_text())["hooks"]
+        assert {event: actual[event] for event in user_hooks} == user_hooks
+        assert "Stop" in actual
+PY
+    [ "$status" -eq 0 ]
+}
+
 @test "codex-hooks-native: project hooks are self-contained and schema-valid" {
     run python3 "$TOOLKIT_DIR/scripts/generate_codex_hooks.py" "$TEST_ROOT"
     [ "$status" -eq 0 ]
@@ -74,7 +104,7 @@ from generate_codex_hooks import SUPPORTED_EVENTS
 supported = {
     "PreToolUse", "PostToolUse", "PermissionRequest", "PreCompact",
     "PostCompact", "SessionStart", "UserPromptSubmit", "SubagentStart",
-    "SubagentStop", "Stop", "SessionEnd", "Interrupt",
+    "SubagentStop", "Stop", "SessionEnd", "Interrupt", "PreModelRequest", "PostModelRequest",
 }
 assert SUPPORTED_EVENTS == supported, SUPPORTED_EVENTS
 data = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))

@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-10-27T19:48:01Z",
+  "last_run": "2026-11-06T07:33:37Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,49 +24,37 @@
       }
     },
     "augment": {
-      "docs_hash": "5318418e753badcb",
+      "docs_hash": "b1ea0ec045c7159b",
       "headings": [
-        "Admin",
-        "Auggie CLI",
-        "Code",
-        "Cosmos",
-        "Documentation Index",
-        "Getting Started",
+        "Getting started",
+        "Introducing Auggie CLI",
         "Introduction",
-        "Models &amp; Pricing",
-        "On this page",
-        "Other automation",
-        "Other clients",
-        "Review",
-        "Troubleshooting",
-        "\u200bAuggie CLI",
-        "\u200bAutomate your SDLC",
-        "\u200bCosmos",
-        "\u200bGet started in minutes"
+        "Using Auggie in interactive mode",
+        "Using Auggie in your automations"
       ],
       "markers": {
         ".augment": true,
-        "ACP Mode": true,
+        "ACP Mode": false,
         "Agent mode": false,
         "Auggie CLI": true,
-        "MCP": true,
+        "MCP": false,
         "Next Edit": false,
-        "Notification": true,
+        "Notification": false,
         "PostToolUse": false,
         "PreToolUse": false,
         "SKILL.md": false,
         "SessionEnd": false,
         "SessionStart": false,
-        "Stop": true,
+        "Stop": false,
         "agent_requested": false,
         "always_apply": false,
         "context engine": true,
-        "custom commands": true,
-        "subagents": true
+        "custom commands": false,
+        "subagents": false
       }
     },
     "claude-app": {
-      "docs_hash": "1184c4b2def18f09",
+      "docs_hash": "825c9e9f82eef493",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -108,7 +96,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "00ccdd8ca05c9570",
+      "docs_hash": "41595e19d82b0f86",
       "headings": [
         "Code review and pull requests",
         "Core concepts",
@@ -166,7 +154,8 @@
         "hook handler: http": false,
         "hook handler: mcp_tool": false,
         "hook handler: prompt": false,
-        "monitors": true,
+        "monitors": false,
+        "onFailure": false,
         "output style": true,
         "outputStyles": false,
         "plugins": true,
@@ -177,10 +166,10 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.311 (Claude Code)"
+      "version": "2.1.319 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "1ab1dad7ac1784d8",
+      "docs_hash": "c9d8fca13259188d",
       "headings": [
         "API Reference",
         "Best Practices",
@@ -228,10 +217,11 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "235969b507663c2e",
+      "docs_hash": "8631091d73477845",
       "headings": [
         "API",
         "API Reference",
+        "Advanced deployment",
         "Advertiser API",
         "Agent configuration",
         "Agents API",
@@ -261,6 +251,7 @@
         "Compose with scripts and CI",
         "Computer and code",
         "Config file",
+        "Configuration",
         "Connect external tools with MCP",
         "Connect tools and data",
         "Connections",
@@ -270,7 +261,6 @@
         "Cost and throughput",
         "Customization",
         "Cyber safety",
-        "Deployment and configuration",
         "Desktop app",
         "Development workflows",
         "Docs agent",
@@ -362,8 +352,10 @@
         "hook event: Interrupt": false,
         "hook event: PermissionRequest": false,
         "hook event: PostCompact": false,
+        "hook event: PostModelRequest": false,
         "hook event: PostToolUse": false,
         "hook event: PreCompact": false,
+        "hook event: PreModelRequest": false,
         "hook event: PreToolUse": false,
         "hook event: SessionEnd": false,
         "hook event: SessionStart": false,
@@ -380,10 +372,10 @@
         "plugin.json": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.164.0"
+      "version": "codex-cli 0.167.0"
     },
     "cursor": {
-      "docs_hash": "971c2118e599ba53",
+      "docs_hash": "1c8476274547fb83",
       "headings": [
         "Agent",
         "Agent SDK",
@@ -417,7 +409,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "cb39e1afdf66f9fe",
+      "docs_hash": "9f38f1c6ce5bcb54",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -458,13 +450,13 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "faf62d408873e947",
+      "docs_hash": "9b430824462be7c7",
       "headings": [
-        "About Copilot auto model selection",
         "About GitHub Copilot",
-        "About GitHub Copilot Memory",
+        "About GitHub Copilot Dreaming",
         "About GitHub Copilot agents",
-        "About cloud and local sandboxes for GitHub Copilot",
+        "About GitHub Copilot auto model selection",
+        "About cloud sandboxes for GitHub Copilot",
         "About computer use in GitHub Copilot",
         "About default availability of Copilot features and models",
         "About enterprise accounts for Copilot Business",
@@ -524,25 +516,27 @@
       }
     },
     "opencode": {
-      "docs_hash": "9bbfddf2a2042cba",
+      "docs_hash": "de9734b57f96c3bf",
       "headings": [
-        "Add features",
-        "Ask questions",
+        "CLI",
         "Configure",
+        "Connect",
         "Customize",
-        "Initialize",
-        "Install",
+        "Desktop",
+        "Docker",
         "Intro",
-        "Make changes",
+        "Learn",
         "On this page",
-        "Undo changes",
-        "Usage"
+        "Web"
       ],
       "markers": {
-        "AGENTS.md": true,
+        "AGENTS.md": false,
         "MCP": true,
         "agents": true,
         "commands": true,
+        "ctx.event.subscribe": false,
+        "ctx.session.hook": false,
+        "ctx.tool.hook": false,
         "opencode.json": false,
         "permission.skill": false,
         "plugin event: command.executed": false,
@@ -554,9 +548,10 @@
         "plugin event: session.deleted": false,
         "plugin event: tool.execute.after": false,
         "plugin event: tool.execute.before": false,
+        "plugin setup/server compatibility": false,
         "plugins": true,
         "primary mode": false,
-        "rules": true,
+        "rules": false,
         "skills (native .opencode/skills)": false,
         "skills (via .claude/skills fallback)": false,
         "skills array (local paths + HTTP URLs)": false,
@@ -564,19 +559,20 @@
       }
     },
     "roo-code": {
-      "docs_hash": "54908ae23136b646",
+      "docs_hash": "cdaf996da6a07d62",
       "headings": [
         "A mindset for success\u200b",
         "Additional Resources\u200b",
         "Getting Started\u200b",
-        "Roo Code Docs",
-        "What can Roo Code do for you\u200b"
+        "Tutorial &amp; Feature Videos\u200b",
+        "What can Zoo Code do for you\u200b",
+        "Zoo Code Docs"
       ],
       "markers": {
         "Code Actions": false,
         "MCP": true,
         "Orchestrator mode": false,
-        "custom modes": false,
+        "custom modes": true,
         "description": true,
         "groups": false,
         "roleDefinition": false,
@@ -585,7 +581,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "e360c5630adeae71",
+      "docs_hash": "a34d0b5bf4dbcb8c",
       "headings": [
         "Accounts",
         "Agent Command Center",
@@ -597,7 +593,7 @@
         "Windsurf Plugins"
       ],
       "markers": {
-        "AGENTS.md": true,
+        "AGENTS.md": false,
         "Cascade": true,
         "MCP": true,
         "SKILL.md": false,

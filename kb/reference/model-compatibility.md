@@ -5,18 +5,24 @@ service: ai-toolkit
 tags: [models, skills, agents, codex, copilot, claude, effort]
 version: "1.3.0"
 created: "2026-09-23"
-last_updated: "2026-10-27"
+last_updated: "2026-11-06"
 description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."
 ---
 
 # Model compatibility for skills and agents
 
-Reviewed 2026-10-27. These are documentation snapshots, not a guarantee that a
+Reviewed 2026-11-06. These are documentation snapshots, not a guarantee that a
 model is enabled on a particular account. Check the active client's picker and
 policy before selecting a model. Preserve a user's explicit choice; do not
 replace a tiered workflow with a single flagship model.
 
 ## Runtime selection and API examples are different surfaces
+
+The November ecosystem review rechecked the current OpenAI model guide, Codex
+models and custom-agent schema, Claude model and effort references, structured
+outputs and prompt caching. The existing model families and API schema guidance
+remain applicable. This review changes no runtime model, effort, permission or
+budget defaults and makes no live quality or cost claim.
 
 | Surface | Selection contract | Toolkit behavior |
 |---------|--------------------|------------------|

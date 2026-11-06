@@ -161,13 +161,16 @@ Required fields:
 - `hooks[].type`: `"command"`, `"http"`, `"prompt"`, `"agent"`, or `"mcp_tool"` (ai-toolkit uses `"command"`)
 - `hooks[].command`: path to script using `$HOME/.softspark/ai-toolkit/hooks/` prefix (for `type: command`)
 
-Optional fields (read from Claude Code docs, not emitted by ai-toolkit by default):
+Optional fields (read from Claude Code docs; emitted only where needed):
 
 Common to every handler type:
 - `hooks[].if`: one permission-rule filter (e.g. `"Bash(git push*)"`); evaluated only for tool events
 - `hooks[].timeout`: seconds to wait before canceling the handler (type and event defaults apply if omitted)
 - `hooks[].statusMessage`: short message surfaced in the UI while the hook runs
 - `hooks[].once`: run once per session; only honored in skill frontmatter and ignored in settings files or agent frontmatter
+
+Command and HTTP failure policy (Claude Code 2.1.295+):
+- `hooks[].onFailure`: `"continue"` (default) or `"block"` when a handler cannot start, crashes, or times out. ai-toolkit sets `"block"` on its destructive-command, home-path and configuration guards; advisory hooks keep the default. Older clients do not have this failure-policy guarantee.
 
 Command-handler fields:
 - `hooks[].args`: argument vector for exec form. Prefer exec form when a command uses `${CLAUDE_PROJECT_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, or `${CLAUDE_PLUGIN_DATA}` path placeholders

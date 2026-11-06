@@ -148,6 +148,12 @@ surfaces below `$CODEX_HOME` (default `~/.codex`) while user skills remain in
 the documented shared `$HOME/.agents/skills/` directory. Experimental plugin
 packs can layer their rules, skills, and hooks onto that Codex user target.
 
+Gemini advisory hook output is converted to native JSON; its completion
+`prompt_response` feeds the shared session summary. Devin prompt/edit hooks emit
+event-labelled JSON context. Codex refresh preserves both model-request diagnostic
+events. OpenCode's generated plugin supports V2 and V1 1.18.29+ through one
+default export. Claude safety guards use `onFailure: block` on clients 2.1.295+.
+
 Claude Chat/Desktop/Cowork is deliberately outside `--editors`: the app does not scan filesystem configuration under `~/.claude`. `ai-toolkit claude-app export` creates a self-contained plugin ZIP with skills, agents, Cowork hooks, app-native rules, and bundled hook dependencies. It also emits the compact text that users paste into Cowork global instructions. Updating requires re-export and re-upload because the app owns its plugin store.
 
 If a project already has `.mcp.json`, local install mirrors its `mcpServers`

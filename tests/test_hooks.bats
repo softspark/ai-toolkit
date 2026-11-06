@@ -1272,6 +1272,21 @@ PY
     [ ! -f "$(session_dir_for_cwd)/session-context.md" ]
 }
 
+@test "save-session: preserves native Gemini response and prefers the existing assistant field" {
+    mkdir -p "$TEST_TMP/project"
+    cd "$TEST_TMP/project"
+    run_hook_with_input "save-session.sh" \
+        '{"session_id":"gemini-native-response","hook_event_name":"AfterAgent","prompt_response":"Gemini result"}'
+    [ "$status" -eq 0 ]
+    grep -q '^Gemini result$' "$(session_dir_for_cwd)/session-context.md"
+
+    run_hook_with_input "save-session.sh" \
+        '{"session_id":"gemini-native-response","last_assistant_message":"Preferred result","prompt_response":"Fallback result"}'
+    [ "$status" -eq 0 ]
+    grep -q '^Preferred result$' "$(session_dir_for_cwd)/session-context.md"
+    ! grep -q '^Fallback result$' "$(session_dir_for_cwd)/session-context.md"
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # guard-config.sh
 # ═══════════════════════════════════════════════════════════════════════════════

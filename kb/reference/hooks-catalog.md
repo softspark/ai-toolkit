@@ -6,13 +6,21 @@ service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
 version: "1.19.0"
 created: "2026-03-27"
-last_updated: "2026-10-27"
+last_updated: "2026-11-06"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
 # Hooks Catalog
 
 ## Overview
+
+Reviewed 2026-11-06 against the versions recorded in the supported-tools registry.
+Claude's destructive-command, home-path and configuration guards now set
+`onFailure: "block"`, so command startup failures, crashes and timeouts block the
+protected action on Claude Code 2.1.295 and later. Older clients do not have this
+guarantee. The exported Claude app manifest carries the same policy; its native
+schema is validated locally, but the hosted Cowork runtime version and live
+enforcement are not independently verified.
 
 ai-toolkit provides 28 global hook entries across 14 lifecycle events that enforce quality, safety, and workflow rules across all Claude Code sessions, plus a separate `statusLine` command. Hooks are merged into `~/.claude/settings.json` on install, with logic in standalone scripts at `~/.softspark/ai-toolkit/hooks/`.
 
@@ -736,6 +744,22 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 | Google Antigravity | `.agents/hooks.json`; user `~/.gemini/config/hooks.json` | `generate_antigravity_hooks.py` | Native schema (`PreToolUse` on `run_command`, `PreInvocation`, `Stop`) plus adjacent Python adapter, run relative to the `hooks.json` directory |
 | OpenCode | `.opencode/plugins/ai-toolkit-hooks.js`; user `~/.config/opencode/plugins/ai-toolkit-hooks.js` | `generate_opencode_plugin.py` | Native JavaScript plugin hooks |
 
+Gemini's text-only advisory handlers are wrapped as JSON. `SessionStart` adds
+native `additionalContext`; checker, MCP health, commit and session-end messages
+use `systemMessage`. Wrappers preserve infrastructure failure status, and
+blocking/JSON-native handlers retain their contracts. Session persistence accepts
+the native `AfterAgent.prompt_response` when `last_assistant_message` is absent.
+
+OpenCode uses one default `id/setup/server` export for V2 and V1 1.18.29+.
+Both entrypoints use an argument-separated subprocess transport. The V2 bridge
+uses native tool, prompt and compaction hooks plus location-filtered session
+events with subscription cleanup. Doctor warns about the old managed export.
+Global/project IDs differ to avoid native plugin collisions; a shared
+directory/workspace registry elects one advisory executor and transfers ownership
+when that copy unloads or its stream fails. Advisory deduplication is best effort
+during reload; safety guards run in every registered layer. Policy denial and
+guard infrastructure failures block tools.
+
 ### Cline hooks (`.cline/hooks/<Event>` and `.clinerules/hooks/<Event>`)
 
 Cline CLI/SDK loads `.cline/hooks`, while the VS Code and JetBrains extension
@@ -832,7 +856,7 @@ Codex hooks follow the native [Codex hooks contract](https://learn.chatgpt.com/d
 
 - **Locations:** repository hooks live in `.codex/hooks.json`; user hooks live in `$CODEX_HOME/hooks.json` (default `~/.codex/hooks.json`). Project hooks load only for a trusted `.codex` layer.
 - **Assets:** repository commands use self-contained `.codex/hooks/*`; user commands use `$CODEX_HOME/ai-toolkit-hooks/*`. They do not call Claude's `~/.softspark/ai-toolkit/hooks/` paths.
-- **Events:** Codex documents 12 events. ai-toolkit wires 10: `SessionStart`, `SessionEnd`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact` and `Interrupt` are accepted but intentionally unwired in the base bundle. Existing string matchers on `Stop`, `UserPromptSubmit`, and `Interrupt` are preserved even though Codex ignores them.
+- **Events:** Codex documents 14 events. ai-toolkit wires 10: `SessionStart`, `SessionEnd`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `PreCompact`, and `Stop`. `PostCompact`, `Interrupt`, `PreModelRequest`, and `PostModelRequest` are accepted but intentionally unwired in the base bundle. Model-request hooks are diagnostic and cannot block requests or modify context. Existing string matchers on `Stop`, `UserPromptSubmit`, and `Interrupt` are preserved even though Codex ignores them.
 - **Handler compatibility:** generated hooks remain commands. User `mcp_tool` handlers are preserved with required `server`/`tool` and optional object `input`; `SessionEnd` remains command-only. `Interrupt` and `SessionEnd` timeouts cannot exceed three seconds.
 - **Search and continuation:** MCP search calls trigger `search-tracker.sh` through native `PostToolUse`. The bounded TUI-log fallback remains for clients without that event. The Stop adapter returns `decision: block` plus `reason` to request another turn; `continue: false` would stop execution instead.
 - **Session end:** `SessionEnd` runs the self-contained `session-end.sh` asset with a three-second timeout. Its result is advisory, so the adapter records the handoff without emitting steering output.
@@ -850,7 +874,7 @@ Devin CLI uses a **Claude-compatible** hook format (docs.devin.ai/cli/extensibil
 - **Standalone file shape:** in `.devin/hooks.v1.json` the entire file IS the hooks object — no top-level `"hooks"` wrapper key (unlike `.claude/settings.json`).
 - **Events:** Claude-style PascalCase — `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`. `post_cascade_response` maps to `Stop` (which carries no response text on stdin).
 - **Matchers:** regex against the Devin **tool name** (`read`, `edit`, `exec`, `grep`, `glob`, `mcp__<server>__<tool>`) — NOT Claude's `Bash`/`Edit`, so the shared guards reliably fire.
-- **Block contract:** the guard scripts emit `{"decision":"block","reason":...}` on stdout (plain mode) AND exit 2 — Devin honors both. Hooks run **without** `AI_TOOLKIT_HOOK_FORMAT=json` because Devin expects the flat `{"decision","reason"}` shape, not Claude's `hookSpecificOutput` envelope.
+- **Block contract:** the guard scripts retain flat verdicts or stderr plus exit 2. Context-only `user-prompt-submit.sh` and `post-tool-use.sh` commands use `AI_TOOLKIT_HOOK_FORMAT=json` so Devin receives `hookSpecificOutput.additionalContext` with the explicit `UserPromptSubmit` or `PostToolUse` event. Blocking guards keep their existing format.
 - **Stdin payload:** flat `{ "hook_event_name", "tool_name", "tool_input" }` — already handled by `_hook-io.sh` via its `.tool_name` / `.tool_input.*` branches, so no normalizer change was needed.
 - **Global bonus:** Devin CLI reads `~/.claude/settings.json` + `.claude/settings.json` hooks directly (`read_config_from.claude` default on, since CLI `2026.3.20-2`), so a global `ai-toolkit install` already covers Devin even without the project-local file.
 

@@ -154,12 +154,21 @@ def _is_retired_toolkit_entry(entry: dict) -> bool:
     return True
 
 
-# Handler fields that change *how* a command hook is scheduled, not *what* it
+def _is_untagged_entry(entry: dict) -> bool:
+    """Legacy identity must never reclaim an explicitly owned foreign entry."""
+    return "_source" not in entry and not any(
+        isinstance(hook, dict) and "_source" in hook
+        for hook in entry.get("hooks", [])
+    )
+
+
+# Handler fields that change scheduling or failure policy, not the command it
 # runs. A legacy untagged entry that differs only in these is the same hook;
-# otherwise adding `async` or `timeout` in app/hooks.json would leave every
+# otherwise adding `async`, `timeout` or `onFailure` would leave every
 # existing install running the old copy and the new copy side by side.
-_SCHEDULING_FIELDS = frozenset({
+_EXECUTION_POLICY_FIELDS = frozenset({
     "async", "asyncRewake", "timeout", "statusMessage", "shell", "once", "if",
+    "onFailure",
 })
 
 
@@ -167,7 +176,7 @@ def _entry_signature(entry: dict) -> tuple:
     """Return the behavior-defining parts of a hook entry.
 
     Older ai-toolkit installs wrote hook entries without ``_source``. Matching
-    on the event, matcher, and handler payload (minus scheduling fields) lets
+    on the event, matcher, and handler payload (minus execution-policy fields) lets
     current installs remove those legacy duplicates while preserving unrelated
     user hooks.
     """
@@ -179,7 +188,7 @@ def _entry_signature(entry: dict) -> tuple:
         handlers.append(tuple(sorted(
             (key, value)
             for key, value in hook.items()
-            if key != "_source" and key not in _SCHEDULING_FIELDS
+            if key != "_source" and key not in _EXECUTION_POLICY_FIELDS
         )))
     return (entry.get("matcher", ""), tuple(handlers))
 
@@ -211,7 +220,7 @@ def strip_toolkit(hooks: dict, toolkit_hooks: dict | None = None) -> dict:
             and not (
                 isinstance(e, dict)
                 and (
-                    _entry_signature(e) in signatures
+                    (_is_untagged_entry(e) and _entry_signature(e) in signatures)
                     or _is_retired_toolkit_entry(e)
                 )
             )

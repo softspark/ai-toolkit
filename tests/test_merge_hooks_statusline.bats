@@ -21,6 +21,77 @@ teardown() {
     rm -rf "$TEST_TMP"
 }
 
+@test "merge-hooks: failure-policy upgrade replaces legacy guards and preserves custom commands" {
+    python3 - "$TOOLKIT_DIR" "$TARGET" <<'PY'
+import copy
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+root, target = Path(sys.argv[1]), Path(sys.argv[2])
+source = root / "app/hooks.json"
+guards = [group for group in json.loads(source.read_text())["hooks"]["PreToolUse"]
+          if any(handler.get("onFailure") == "block" for handler in group["hooks"])]
+assert len(guards) == 3
+for tagged in (True, False):
+    legacy = copy.deepcopy(guards)
+    for group in legacy:
+        if not tagged:
+            group.pop("_source", None)
+        for handler in group["hooks"]:
+            handler.pop("onFailure")
+    custom = copy.deepcopy(legacy[0])
+    custom.pop("_source", None)
+    custom["hooks"][0]["command"] += " --custom-policy"
+    custom["hooks"][0]["onFailure"] = "continue"
+    target.write_text(json.dumps({"hooks": {"PreToolUse": legacy + [custom]}, "userSetting": True}))
+    for _ in range(2):
+        subprocess.run([sys.executable, str(root / "scripts/merge-hooks.py"),
+                        "inject", str(source), str(target)], check=True)
+        settings = json.loads(target.read_text())
+        entries = settings["hooks"]["PreToolUse"]
+        assert settings["userSetting"] is True
+        assert entries.count(custom) == 1
+        for guard in guards:
+            command = guard["hooks"][0]["command"]
+            matches = [entry for entry in entries if entry["hooks"][0]["command"] == command]
+            assert matches == [guard], matches
+PY
+}
+
+@test "merge-hooks: failure-policy migration preserves explicitly foreign hook ownership" {
+    python3 - "$TOOLKIT_DIR" "$TARGET" <<'PY'
+import copy
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+root, target = Path(sys.argv[1]), Path(sys.argv[2])
+source = root / "app/hooks.json"
+guard = json.loads(source.read_text())["hooks"]["PreToolUse"][0]
+foreign_top = copy.deepcopy(guard)
+foreign_top["_source"] = "another-plugin"
+foreign_top["hooks"][0]["onFailure"] = "continue"
+foreign_nested = copy.deepcopy(foreign_top)
+foreign_nested.pop("_source")
+foreign_nested["hooks"][0]["_source"] = "nested-plugin"
+legacy = copy.deepcopy(guard)
+legacy.pop("_source")
+legacy["hooks"][0].pop("onFailure")
+target.write_text(json.dumps({"hooks": {"PreToolUse": [foreign_top, foreign_nested, legacy]}}))
+for _ in range(2):
+    subprocess.run([sys.executable, str(root / "scripts/merge-hooks.py"),
+                    "inject", str(source), str(target)], check=True)
+    entries = json.loads(target.read_text())["hooks"]["PreToolUse"]
+    assert entries.count(foreign_top) == 1, entries
+    assert entries.count(foreign_nested) == 1, entries
+    assert entries.count(guard) == 1, entries
+    assert legacy not in entries, entries
+PY
+}
+
 read_field() {
     python3 -c "
 import json, sys

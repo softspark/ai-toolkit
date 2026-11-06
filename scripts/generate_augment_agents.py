@@ -6,7 +6,7 @@
 """Generate ``.augment/agents/ai-toolkit-*.md`` files for Augment Code.
 
 Each ai-toolkit agent in ``app/agents/`` is mirrored as an Augment native
-subagent. Augment's subagent frontmatter (per docs.augmentcode.com/cli/subagents)
+subagent. Stable Auggie 0.x frontmatter (per docs.augmentcode.com/cli/v0/subagents)
 documents: name, description, color, model, tools, disabled_tools.
 
     ---

@@ -5,8 +5,8 @@
 #
 # Per-tool tests for Aider integration (generate_aider_conf.py).
 #
-# Upstream docs (as of 2026-04-23): https://aider.chat/docs/config/aider_conf.html
-# Latest stable: v0.86.1 (August 2025). HISTORY.md: https://aider.chat/HISTORY.html
+# Upstream docs: https://aider.chat/docs/config/aider_conf.html
+# Reviewed release and dated sources live in scripts/ecosystem_tools.json.
 #
 # Config surface we track in .aider.conf.yml:
 #   - architect + auto-accept-architect (architect mode, 2-phase workflow)

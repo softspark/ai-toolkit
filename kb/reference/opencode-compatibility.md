@@ -3,15 +3,20 @@ title: "AI Toolkit - opencode Compatibility"
 category: reference
 service: ai-toolkit
 tags: [opencode, compatibility, install, skills, hooks, mcp, plugins]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-04-16"
-last_updated: "2026-10-08"
+last_updated: "2026-11-06"
 description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, Agent Skills, subagents, slash commands, JS plugin hooks, and MCP config."
 ---
 
 # AI Toolkit - opencode Compatibility
 
 ## Summary
+
+Reviewed against OpenCode V2 2.2.5 and the V1 1.19.5 compatibility line.
+The generated plugin requires V2 or V1 1.18.29 and later. V2 is published as
+`@opencode/cli`; the older `opencode-ai` package and GitHub latest-release
+endpoint still identify V1, so they are not the latest-product authority.
 
 opencode (https://opencode.ai) is the 11th supported editor. `ai-toolkit install --editors opencode` (or `--editors all`) lays down toolkit rules in `~/.config/opencode/AGENTS.md`, per-agent `.opencode/agents/` files, per-command `.opencode/commands/` files, a JS plugin bridging toolkit Bash hooks to opencode lifecycle events, and MCP server merge into `opencode.json`. The `full` profile also installs complete native Agent Skills.
 
@@ -125,7 +130,26 @@ rollback, so an ancestor swap cannot redirect mutations outside the target.
 | `permission.asked`         | `guard-destructive.sh` (approval-gate bridge)                      |
 | `command.executed`         | `post-tool-use.sh`                                                 |
 
-Plugin exports a single named export `AiToolkitHooks` — per opencode docs, named exports only (no default export). Hook scripts are invoked via Bun's `$` with the script path bound as a JS constant; opencode event payloads are passed as JSON on stdin, never interpolated into the shell command, so payload data cannot inject shell metacharacters. The toolkit's `exit 2` semantics for PreToolUse guards are preserved and bubble up as the plugin's return code.
+The plugin exports one default object with `id`, V2 `setup`, and V1 `server`,
+following the [documented dual-version contract](https://opencode.ai/v2/docs/build/plugins/server/#support-v1).
+Global and project copies use distinct IDs (`ai-toolkit.global` and
+`ai-toolkit.project`). They share an executor registry per directory/workspace
+so advisory hooks execute once in steady state; unloading the active copy hands
+work to the survivor. Advisory deduplication is best effort during hot reload.
+Safety guards always execute in every registered layer, including standby and
+captured callbacks after unload. A failed lifecycle subscription releases its
+advisory ownership so a surviving instance can take over.
+The table above describes the V1 bridge. V2 registers native tool execution,
+prompt and compaction hooks, plus location-filtered session lifecycle events.
+Subscription cleanup aborts and awaits its event consumer.
+
+Both entrypoints invoke shared scripts through `node:child_process.spawn` with
+a fixed script argument and JSON on stdin, supported by Node and Bun. Payload
+data is never interpolated into shell code. Exit 2 from the pre-tool guard
+rejects the tool invocation. The plugin keeps its project/global path;
+regeneration replaces only toolkit-owned output. Doctor warns about managed
+V1-only exports and points to the update command; unrelated user plugins are
+left alone. Migration tracking: [issue #44](https://github.com/softspark/ai-toolkit/issues/44).
 
 **Intentionally unmapped events**: `tui.*`, `lsp.*`, `installation.*`, `session.idle/status/updated/error/diff`, `file.edited`, `file.watcher.updated`, `todo.updated`, `shell.env`, `server.connected`, `message.*.removed`, `experimental.*` — no matching Bash hook in the toolkit, or the event is opencode-UI-only.
 
@@ -171,18 +195,18 @@ an extra file inside a formerly managed directory is preserved. The native
 skills tree participates in the uninstall transaction, so a later cleanup
 failure restores managed files without discarding those user additions.
 
-## Current Config and v2 Beta Surfaces
+## Current Config and V2 Migration
 
 Stable OpenCode supports both `opencode.json` and `opencode.jsonc`. Its current
 config directory uses plural `agents/`, `commands/`, `plugins/`, and `skills/`
-subdirectories. The v2 plugin API is still beta and additionally recognizes
+subdirectories. The V2 plugin API additionally recognizes
 root-package `skills/*.md`, nested `skills/**/SKILL.md`, and a `skills` config
 array containing local paths or HTTP URLs.
 
-There is no migration in ai-toolkit for v2 yet. The existing stable JavaScript
-plugin generator remains the supported path until the v2 API stabilizes; the
-beta surfaces are tracked in the ecosystem registry so a later sync cannot
-silently miss their promotion.
+Run `ai-toolkit update` (or regenerate the OpenCode plugin) to replace the former
+V1-only named export with the compatible default object. Upgrade clients older
+than V1 1.18.29 before using this output. User plugins and their declarations are
+preserved. See [upstream migration](https://opencode.ai/v2/docs/migrate-v1/).
 
 ## Behavioral Limits
 
@@ -195,9 +219,9 @@ The opencode integration is verified by:
 
 1. Generator contract tests for the six `generate_opencode*.py` scripts (bats)
 2. MCP merge idempotency and user-key preservation tests
-3. Plugin export shape and event coverage tests
+3. Plugin export shape, actual subprocess execution and global/project lifetime tests
 4. Auto-detection tests for install / update flow
-5. `validate.py --strict` + `audit_skills.py --ci` in CI
+5. `validate.py --strict` + `audit_skills.py --ci` in the local quality gates
 
 ## CLI Commands
 

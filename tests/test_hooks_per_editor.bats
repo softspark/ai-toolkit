@@ -117,8 +117,67 @@ assert 'PreToolUse' in data, 'events live at the top level'
     grep -q '\$HOME/.softspark/ai-toolkit/hooks/' "$HPE_DIR/.devin/hooks.v1.json"
 }
 
-@test "hooks: devin runs plain (no AI_TOOLKIT_HOOK_FORMAT=json; Devin uses flat decision shape)" {
-    ! grep -q 'AI_TOOLKIT_HOOK_FORMAT=json' "$HPE_DIR/.devin/hooks.v1.json"
+@test "hooks: devin requests JSON only for context handlers and keeps guard decisions flat" {
+    python3 - "$HPE_DIR/.devin/hooks.v1.json" <<'PY'
+import json
+import sys
+
+hooks = json.load(open(sys.argv[1]))
+for entries in hooks.values():
+    for entry in entries:
+        for handler in entry["hooks"]:
+            command = handler["command"]
+            is_context = any(name in command for name in (
+                "user-prompt-submit.sh", "post-tool-use.sh",
+            ))
+            assert ("AI_TOOLKIT_HOOK_FORMAT=json" in command) == is_context, command
+PY
+}
+
+@test "hooks: devin generated commands deliver prompt and edit context and still block destructive tools" {
+    python3 - "$TOOLKIT_DIR" "$HPE_DIR/.devin/hooks.v1.json" <<'PY'
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+toolkit = Path(sys.argv[1])
+hooks = json.load(open(sys.argv[2]))
+cases = (
+    ("UserPromptSubmit", "user-prompt-submit.sh", {"prompt": "hello"}),
+    ("PostToolUse", "post-tool-use.sh", {"tool_name": "edit", "tool_input": {"file_path": "notes.md"}}),
+    ("PreToolUse", "guard-destructive.sh", {"tool_name": "exec", "tool_input": {"command": "rm -rf /tmp/example"}}),
+)
+with tempfile.TemporaryDirectory(prefix="devin-context-") as temporary:
+    root = Path(temporary)
+    runtime = root / ".softspark/ai-toolkit"
+    shutil.copytree(toolkit / "app/hooks", runtime / "hooks")
+    env = dict(os.environ, HOME=str(root), AI_TOOLKIT_DIR=str(runtime),
+               TOOLKIT_HOOK_PROFILE="standard", AI_TOOLKIT_SEARCH_FIRST="off",
+               AI_TOOLKIT_DISABLED_HOOKS="", AI_TOOLKIT_HOOK_FORMAT="",
+               AI_TOOLKIT_HOOK_VERBOSE="0", AI_TOOLKIT_HOOK_QUIET="0")
+    for event, script, fields in cases:
+        command = next(handler["command"] for group in hooks[event]
+                       for handler in group["hooks"] if script in handler["command"])
+        payload = dict(fields, hook_event_name=event, session_id="devin-test", prompt_id="turn-1")
+        result = subprocess.run(["bash", "-c", command], cwd=root, env=env,
+                                input=json.dumps(payload), text=True, capture_output=True,
+                                timeout=15, check=False)
+        if event == "PreToolUse":
+            assert result.returncode == 2, result
+            assert "destructive command" in result.stderr, result
+            assert not result.stdout.strip(), result
+        else:
+            assert result.returncode == 0, result
+            assert result.stdout.strip(), (event, result)
+            output = json.loads(result.stdout)
+            context = output["hookSpecificOutput"]
+            assert context["hookEventName"] == event, output
+            assert context["additionalContext"], output
+PY
 }
 
 @test "hooks: gemini commands use \$HOME prefix (not absolute /Users)" {

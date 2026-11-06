@@ -15,10 +15,10 @@ source "$(dirname "$0")/_session-paths.sh"
 # shellcheck source=_hook-io.sh
 source "$(dirname "$0")/_hook-io.sh"
 
-# Read from stdin (Claude Code passes JSON with .session_id, .last_assistant_message)
+# Read native completion payloads from Claude Code and Gemini CLI.
 INPUT=$(cat)
 SESSION_ID=$(hook_session_id)
-LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // "No summary available"' 2>/dev/null | head -5)
+LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // .prompt_response // "No summary available"' 2>/dev/null | head -5)
 
 SESSION_FILE="$SESSION_CONTEXT_FILE"
 

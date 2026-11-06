@@ -41,7 +41,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-destructive.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-destructive.sh\"",
+                        "onFailure": "block"
                     }
                 ]
             },
@@ -51,7 +52,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-path.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-path.sh\"",
+                        "onFailure": "block"
                     }
                 ]
             },
@@ -61,7 +63,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-config.sh\""
+                        "command": "\"$HOME/.softspark/ai-toolkit/hooks/guard-config.sh\"",
+                        "onFailure": "block"
                     }
                 ]
             },

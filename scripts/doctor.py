@@ -602,6 +602,32 @@ def check_antigravity_config(dr: DiagResult, project: Path | None = None,
 CODEX_PROJECT_DOC_MAX_BYTES = 32 * 1024
 
 
+def check_opencode_plugin(dr: DiagResult, project: Path | None = None,
+                          home: Path | None = None) -> None:
+    """Warn about toolkit-owned V1-only plugins without altering user files."""
+    from generate_opencode_plugin import GENERATED_HEADER, PLUGIN_NAME
+
+    project = project or _user_path(".")
+    home = home or Path.home()
+    for root, scope in ((project / ".opencode", " --local"),
+                        (home / ".config/opencode", "")):
+        path = root / "plugins" / PLUGIN_NAME
+        if any(candidate.is_symlink() for candidate in (root, path.parent, path)):
+            continue
+        try:
+            content = path.read_bytes()
+        except OSError:
+            continue
+        if (GENERATED_HEADER in content[:512]
+                and b"export const AiToolkitHooks" in content
+                and b"export default" not in content):
+            dr.warn(
+                f"OpenCode V1-only toolkit plugin at {path} cannot load in V2; "
+                f"run: ai-toolkit install{scope} --editors opencode "
+                "(updated plugin supports V2 and V1 >= 1.18.29)"
+            )
+
+
 def check_codex_instructions(dr: DiagResult, project: Path | None = None,
                              codex_home: Path | None = None) -> None:
     """Warn when Codex would stop reading instructions before the project's.
@@ -1388,6 +1414,7 @@ def main() -> None:
     check_generated_artifacts(dr, fix_mode)
     check_antigravity_workflows(dr)
     check_antigravity_config(dr)
+    check_opencode_plugin(dr)
     check_codex_instructions(dr)
     check_planned_assets(dr)
     check_benchmark_freshness(dr)

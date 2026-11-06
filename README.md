@@ -6,7 +6,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2022%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2037%20passing-success)](tests/)
 
 ## What's New in v5.4.2
 
@@ -278,6 +278,11 @@ See [CLI Reference](kb/reference/cli-reference.md) for all commands and options.
 | Google Antigravity | Project `.agents/{rules,workflows,skills,agents,hooks}/`; user `~/.gemini/config/{skills,agents,hooks}/`; opt-in native plugin export | ✅ | project + user |
 | Codex CLI | Project: `.agents/skills/*` + `.codex/{agents,hooks}/` + `.codex/{hooks.json,config.toml}`; user: `$CODEX_HOME/{AGENTS.md,agents,hooks.json,config.toml}` + `$HOME/.agents/skills/*` | ✅ | project + user |
 | opencode | `.opencode/{agents,commands,plugins,skills}/*` + `opencode.{json,jsonc}`; user `~/.config/opencode/AGENTS.md` | ✅ | project + global (`~/.config/opencode/`) |
+
+The [2026-11-06 compatibility review](kb/planning/ecosystem-sync-20261106.md)
+covers all 13 registered tools. OpenCode plugins support V2 and V1 1.18.29+;
+Claude's guard failure policy requires Code 2.1.295+. Model selections and
+user-owned configuration remain preserved during updates.
 
 > Claude Code is always installed (primary platform). Other editors are selected with `--editors`; the Claude app uses the separate `claude-app export` flow because its customization store is UI/plugin-managed, except for MCP servers, which `ai-toolkit mcp install --editor claude-app --scope global` writes straight to `claude_desktop_config.json`. The **Hooks** column marks platforms with lifecycle enforcement. Platforms marked — receive guidance without blocking hooks.
 

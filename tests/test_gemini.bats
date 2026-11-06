@@ -239,3 +239,86 @@ assert "Stop" not in GEMINI_SUPPORTED_HOOK_EVENTS
 PY
     [ "$status" -eq 0 ]
 }
+
+@test "gemini hooks: text-only advisory handlers emit one native JSON object" {
+    run python3 - "$TOOLKIT_DIR" <<'PY'
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root / "scripts"))
+from generate_gemini_hooks import build_hook_entry
+
+with tempfile.TemporaryDirectory() as temp:
+    home = Path(temp)
+    hooks = home / ".softspark/ai-toolkit/hooks"
+    hooks.mkdir(parents=True)
+    env = dict(os.environ, HOME=str(home))
+    for script in ("quality-check.sh", "session-start.sh", "mcp-health.sh",
+                   "commit-quality.sh", "session-end.sh"):
+        path = hooks / script
+        command = build_hook_entry("", script)["hooks"][0]["command"]
+        for message in ('finding with "quotes"\nand another line\n', ''):
+            path.write_text("#!/usr/bin/env python3\nimport sys\nsys.stdout.write(" + repr(message) + ")\n")
+            path.chmod(0o755)
+            result = subprocess.run(["bash", "-c", command], env=env, text=True,
+                                    capture_output=True, check=False)
+            assert result.returncode == 0, result
+            document = json.loads(result.stdout)
+            expected = {} if not message else (
+                {"hookSpecificOutput": {"additionalContext": message}}
+                if script == "session-start.sh" else {"systemMessage": message}
+            )
+            assert document == expected, (script, document)
+        path.write_text("#!/usr/bin/env bash\nexit 3\n")
+        path.chmod(0o755)
+        result = subprocess.run(["bash", "-c", command], env=env, text=True,
+                                capture_output=True, check=False)
+        assert result.returncode == 3, (script, result)
+PY
+    [ "$status" -eq 0 ]
+}
+
+@test "gemini hooks: actual PHPStan findings remain advisory and destructive guards still block" {
+    run python3 - "$TOOLKIT_DIR" <<'PY'
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root / "scripts"))
+from generate_gemini_hooks import build_hook_entry
+
+with tempfile.TemporaryDirectory() as temp:
+    home = Path(temp)
+    shutil.copytree(root / "app/hooks", home / ".softspark/ai-toolkit/hooks")
+    project = home / "project"
+    project.mkdir()
+    (project / "composer.json").write_text("{}")
+    phpstan = project / "vendor/bin/phpstan"
+    phpstan.parent.mkdir(parents=True)
+    phpstan.write_text('#!/usr/bin/env bash\necho "PHPStan finding"\nexit 1\n')
+    phpstan.chmod(0o755)
+    env = dict(os.environ, HOME=str(home), TOOLKIT_HOOK_PROFILE="standard",
+               AI_TOOLKIT_DISABLED_HOOKS="")
+    command = build_hook_entry("", "quality-check.sh")["hooks"][0]["command"]
+    result = subprocess.run(["bash", "-c", command], env=env, cwd=project,
+                            input="{}", text=True, capture_output=True, check=False)
+    assert result.returncode == 0, result
+    assert "PHPStan finding" in json.loads(result.stdout)["systemMessage"], result
+    command = build_hook_entry("run_shell_command", "guard-destructive.sh")["hooks"][0]["command"]
+    payload = {"tool_name": "run_shell_command", "tool_input": {"command": "rm -rf /fixture"}}
+    result = subprocess.run(["bash", "-c", command], env=env, cwd=project,
+                            input=json.dumps(payload), text=True, capture_output=True, check=False)
+    assert result.returncode == 2, result
+PY
+    [ "$status" -eq 0 ]
+}

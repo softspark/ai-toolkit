@@ -67,6 +67,8 @@ SUPPORTED_EVENTS = frozenset(
         "SubagentStop",
         "Stop",
         "Interrupt",
+        "PreModelRequest",
+        "PostModelRequest",
     }
 )
 

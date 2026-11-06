@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
 version: "1.3.0"
 created: "2026-04-12"
-last_updated: "2026-10-27"
+last_updated: "2026-11-06"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
 ---
 
@@ -230,7 +230,7 @@ even when its tool list is otherwise portable. Examples include:
 ## Hook Compatibility
 
 Codex does not expose the full Claude hook event surface. The current native
-contract defines 12 events; the Codex hook generator wires 10 of them:
+contract defines 14 events; the Codex hook generator wires 10 of them:
 
 - `SessionStart`
 - `PreToolUse`
@@ -243,7 +243,10 @@ contract defines 12 events; the Codex hook generator wires 10 of them:
 - `SessionEnd`
 - `Stop`
 
-`PostCompact` and `Interrupt` remain unwired; existing user handlers are preserved.
+`PostCompact`, `Interrupt`, `PreModelRequest`, and `PostModelRequest` remain
+unwired; existing user handlers are preserved. The two model-request events are
+diagnostic only and cannot block a request or modify its context. Their user
+command and MCP handlers survive global and project hook refreshes.
 `Interrupt` is advisory and accepts command timeouts of one to three seconds.
 Claude-only events such as `TaskCompleted`,
 `TeammateIdle`, and `Notification` have no Codex equivalent and are not
