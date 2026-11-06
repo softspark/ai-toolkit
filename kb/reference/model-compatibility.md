@@ -3,7 +3,7 @@ title: "Model compatibility for skills and agents"
 category: reference
 service: ai-toolkit
 tags: [models, skills, agents, codex, copilot, claude, effort]
-version: "1.3.0"
+version: "1.3.1"
 created: "2026-09-23"
 last_updated: "2026-11-06"
 description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."

@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-11-06T07:33:37Z",
+  "last_run": "2026-11-06T13:25:03Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -54,7 +54,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "825c9e9f82eef493",
+      "docs_hash": "0738e18bfad7b518",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -217,7 +217,7 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "8631091d73477845",
+      "docs_hash": "05bc3aaa177d4b1e",
       "headings": [
         "API",
         "API Reference",
@@ -375,7 +375,7 @@
       "version": "codex-cli 0.167.0"
     },
     "cursor": {
-      "docs_hash": "1c8476274547fb83",
+      "docs_hash": "e10cbfea2e76b7af",
       "headings": [
         "Agent",
         "Agent SDK",
@@ -409,7 +409,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "9f38f1c6ce5bcb54",
+      "docs_hash": "09ab3245e65916d3",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -450,7 +450,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "9b430824462be7c7",
+      "docs_hash": "344e9980850e40af",
       "headings": [
         "About GitHub Copilot",
         "About GitHub Copilot Dreaming",

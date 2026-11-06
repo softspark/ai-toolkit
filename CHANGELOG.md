@@ -7,6 +7,54 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v5.5.0 - Current editor contracts and OpenCode V2 (2026-11-06)
+
+### Ecosystem
+
+- **OpenCode V2 and V1 compatibility:** `scripts/generate_opencode_plugin.py`
+  emits the documented `id/setup/server` contract for V2 and V1 **1.18.29+**.
+  Upgrade older V1 clients before using this plugin, then run `ai-toolkit update`
+  to regenerate managed copies. `doctor` warns about obsolete V1-only exports.
+  Scoped global/project IDs avoid native collisions; advisory work has one owner
+  per location, while safety guards execute in every registered layer. The
+  current V2 package is `@opencode/cli`; `opencode-ai` still publishes V1.
+- **Claude guard failure policy:** destructive-command, home-path and
+  configuration guards use `onFailure: block` on Claude Code **2.1.295+**.
+  Legacy entries migrate without duplication; hooks owned by other plugins
+  survive. Older clients do not have this infrastructure-failure guarantee.
+- **Codex, Gemini and Devin:** Codex refresh accepts the two diagnostic
+  model-request events. Gemini advisory hooks return native JSON and save native
+  completion responses; Devin prompt/edit hooks emit event-labelled context.
+- **All 13 integrations reviewed:** refresh release metadata and the ecosystem
+  snapshot, distinguish stable/preview channels, and pin Auggie's stable v0
+  references. User model, effort and approval selections remain unchanged.
+
+### Fixed
+
+- **One Claude Stop checker:** remove the duplicate advisory handler from the
+  global and app manifests. `quality-gate.sh` keeps PHPStan advisory through
+  `quality-check.sh --php-only`, preserving checker precedence and Makefile
+  settings. PHPStan now runs synchronously on Stop and TaskCompleted (#43).
+- **OpenCode guard execution:** replace the unsupported Bun stdin path with real
+  subprocess execution in both APIs. Denial, missing guards, crashes and timeouts
+  block tools. Transactional generation refuses user-owned collisions and
+  symlinked destinations; lifecycle cleanup releases advisory ownership.
+- **Isolated release smoke:** `scripts/release.sh` installs the packed artifact
+  in a disposable, network-disabled container with no mounts and the OS user's
+  default home. Host settings are not used as a smoke sandbox.
+
+### Changed
+
+- Hook entries: 29 to 28 across the same 14 Claude events. Skills remain 116 and
+  agents remain 44. Bats coverage grows from 2012 to 2037 tests.
+- Refresh compatibility documentation and remove stale inventory counts from
+  the backward-compatibility policy. All protected public surfaces remain.
+- Skill body budget is unchanged: the largest body remains `design-engineering`
+  at 17,197 bytes, less than 2,000 bytes below the 18,000-byte warning threshold,
+  so the release ratchet does not apply.
+
+---
+
 ## v5.4.2 - Teammate readiness and editor compatibility (2026-10-27)
 
 ### Fixed

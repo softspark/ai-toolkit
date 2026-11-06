@@ -8,26 +8,20 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-2037%20passing-success)](tests/)
 
-## What's New in v5.4.2
+## What's New in v5.5.0
 
-- **Teammate startup is checked before waiting.** Claude teammates can be
-  blocked by an unseen external-import dialog when launched below the repo
-  root. The orchestrator now checks readiness and uses native teammate shutdown;
-  see [diagnosis and recovery](kb/troubleshooting/claude-teammate-startup.md).
-- **Account wrappers supervise client shutdown.** `claude-switch` and
-  `codex-switch` forward SIGHUP/SIGTERM to their own client and wait for it to
-  exit, preventing the reproduced wrapper-termination orphan leak.
-- **Codex hook compatibility.** Search-first guards exclude conversational
-  handoffs and their own continuation prompts, honor the Stop loop guard, and
-  emit native JSON on SubagentStop. Identical advisory invocations can be paired
-  across global/project layers when stable native identities are available.
-- **Local MCP choices survive refresh.** Omitted approval and tool-filter fields
-  are retained for unchanged Codex MCP connections, including empty allowlists.
-- **Windows state reads and test isolation.** PRs #39 and #41 fix native Windows
-  state loading and isolate `USERPROFILE` alongside `HOME` in Python tests.
-- **October 27 compatibility review.** All 13 integrations were reviewed;
-  Antigravity retirement guidance, Copilot event metadata and model references
-  are refreshed. Existing configured models and permissions are preserved.
+- **OpenCode V2 support.** One plugin supports V2 and V1 1.18.29+, with scoped
+  global/project IDs, working subprocess guards and safe managed-file migration.
+- **Claude checks run once.** The duplicate Stop checker is removed while PHPStan
+  stays advisory. Safety guards block infrastructure failures on Code 2.1.295+.
+- **Native hook output.** Gemini returns JSON and saves native completion text;
+  Devin delivers prompt/edit context; Codex preserves model-request diagnostics.
+- **All 13 integrations reviewed.** Release channels, compatibility notes and
+  the ecosystem snapshot match the November 6 review, preserving user settings.
+- **Release smoke is isolated.** Packed-artifact checks run in a disposable
+  container without host settings or home-directory overrides.
+
+See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ### Earlier updates
 
@@ -73,8 +67,6 @@
   MCP server reach a file only when its readers have that server;
   `rag-mcp-legal-rules` is opt-in. Global Claude MCP installs reach every
   claude-switch profile.
-
-See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ## Table of Contents
 

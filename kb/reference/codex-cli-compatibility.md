@@ -3,7 +3,7 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-04-12"
 last_updated: "2026-11-06"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."

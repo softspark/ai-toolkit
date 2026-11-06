@@ -10,6 +10,31 @@ otherwise have to reverse-engineer from a diff.
 
 ---
 
+## OpenCode V2 with an explicit V1 compatibility floor (2026-11-06)
+
+OpenCode V2 2.2.5 is stable through `@opencode/cli`, while the legacy
+`opencode-ai` package and GitHub latest-release endpoint still identify V1.
+Keeping the old named factory export would leave current clients without the
+toolkit's hooks. The documented default object supports V2 `setup` and V1
+`server` from 1.18.29 onward, so the generator adopts that contract at the same
+managed path. Clients older than V1 1.18.29 must upgrade before using the new
+plugin. Doctor warns about old toolkit-owned exports; user plugins are retained.
+
+Global/project plugin IDs differ to avoid native collisions. Advisory work is
+deduplicated per directory/workspace with unload takeover, while every registered
+safety guard still executes. Both runtimes use real subprocess stdin instead of
+the old nonexistent Bun ShellPromise stdin API.
+
+Rejected: retaining a V1-only plugin for the latest release, guessing a dual
+factory format, or deleting a portable project copy when a global copy exists.
+No protected CLI, skill, agent, hook name or installed path is removed. This
+client-version migration is included in minor release 5.5.0 and tracked in
+[issue #44](https://github.com/softspark/ai-toolkit/issues/44).
+
+Source: [OpenCode compatibility contract](https://opencode.ai/v2/docs/build/plugins/server/#support-v1).
+
+---
+
 ## The surface manifest, not the prose, is the contract (2026-08-05)
 
 `BACKWARD_COMPATIBILITY.md` shipped first and enforced nothing. This repository's

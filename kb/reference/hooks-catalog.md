@@ -4,7 +4,7 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.19.0"
+version: "1.20.0"
 created: "2026-03-27"
 last_updated: "2026-11-06"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."

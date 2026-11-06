@@ -10944,9 +10944,9 @@ title: "SOP: Release Preparation"
 category: procedures
 service: ai-toolkit
 tags: [sop, release, version, publish, changelog, semver, provenance, sarif, ecosystem, shellcheck, local-gates]
-version: "2.0.4"
+version: "2.0.5"
 created: "2026-04-10"
-last_updated: "2026-10-27"
+last_updated: "2026-11-06"
 description: "Release procedure for ai-toolkit under Local Release Gates, Publish-Only CI: ecosystem-sync drift check, version sync, changelog, artifact regeneration, then one command (npm run release -- X.Y.Z) that runs every gate on macOS and in Linux containers, tags, pushes and watches the publish-only workflow."
 ---
 
@@ -11015,7 +11015,7 @@ the same release command. This runs the complete host and Linux Bats suites
 serially; it does not skip any gate. The default is 4 workers, and only the
 integers 1 through 4 are accepted (invalid values fail before any gate).
 Every test container is capped at 1 CPU, 3 GiB RAM, no swap and 512 processes.
-These limits apply to the three `docker run` gates, not the initial Docker
+These limits apply to the four `docker run` gates, not the initial Docker
 toolchain image build. `npm test` outside the release script keeps its default
 of four workers. Serial execution can take longer than the estimate above.
 
@@ -11267,7 +11267,7 @@ stops at the first failure and prints the tail of that gate's log.
 | 2. Version and notes | `package.json`, `manifest.json`, `app/.claude-plugin/plugin.json`, `package-lock.json` (both fields) say `X.Y.Z`; CHANGELOG `## vX.Y.Z`; README `What's New in vX.Y.Z`; `HEAD` subject `chore: release vX.Y.Z` |
 | 3. Gates (macOS host) | Required files; `generate:all` changes no committed file; `ecosystem_doctor.py --offline --check`; `validate.py --strict`; `evaluate_skills.py`; `audit_skills.py --ci`; `audit_skills.py --sarif` (kept for step 7); `audit_skills.py --permissions` (logged for review); `shellcheck --severity=warning` on hooks, plugin hooks and the release script; registry-vs-generator drift; `publish.yml` still has `--provenance` and `id-token: write`; `npm test` with zero `not ok`; the gates left the tree unchanged |
 | 4. Linux | The repository (tracked files plus `.git`, copied in, never mounted) into throwaway containers: `ubuntu:24.04` runs the full bats suite as a non-root user; `python:3.11-slim` (the declared floor) runs `py_compile`, an import of every `scripts/` module, `test:py`, `lint:py` and `typecheck:py`; `python:3.13-slim` runs `py_compile` and the import check |
-| 5. Build and smoke | `npm pack` into the log directory; the tarball carries `NOTICE` and excludes the repository-only `AGENTS.md` and `scripts/release.sh`; installed into a scratch prefix with a scratch `HOME`, `ai-toolkit --version` reports `X.Y.Z` and `ai-toolkit help` runs |
+| 5. Build and smoke | `npm pack` into the log directory; the tarball carries `NOTICE` and excludes the repository-only `AGENTS.md` and `scripts/release.sh`; stream it into a disposable, network-disabled container with no mounts and the tester user's default home; install into a scratch prefix, verify `ai-toolkit --version` reports `X.Y.Z` and `ai-toolkit help` runs |
 | 6. Tag and push | Lightweight tag `vX.Y.Z` on `HEAD` (the repository's existing format); asserts `vX.Y.Z^{commit}` is `HEAD` and its subject is `chore: release vX.Y.Z`; `git push origin main`; `git push origin refs/tags/vX.Y.Z` |
 | 7. Watch publish | Finds the `publish.yml` run for the tagged commit, `gh run watch --exit-status`; `npm view` shows `X.Y.Z` with a SLSA v1 provenance attestation; the GitHub Release exists; uploads the step-3 SARIF to code scanning for `refs/tags/vX.Y.Z` |
 
@@ -11791,9 +11791,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.14.2"
+version: "1.15.0"
 created: "2026-03-23"
-last_updated: "2026-10-27"
+last_updated: "2026-11-06"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
 ---
 
@@ -12863,7 +12863,7 @@ title: "AI Toolkit - Codex CLI Compatibility"
 category: reference
 service: ai-toolkit
 tags: [codex, compatibility, install, skills, hooks]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-04-12"
 last_updated: "2026-11-06"
 description: "Reference for how ai-toolkit maps Claude-oriented skills, hooks, and plugin packs to Codex CLI."
@@ -15502,7 +15502,7 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.19.0"
+version: "1.20.0"
 created: "2026-03-27"
 last_updated: "2026-11-06"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -18037,7 +18037,7 @@ title: "Model compatibility for skills and agents"
 category: reference
 service: ai-toolkit
 tags: [models, skills, agents, codex, copilot, claude, effort]
-version: "1.3.0"
+version: "1.3.1"
 created: "2026-09-23"
 last_updated: "2026-11-06"
 description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."

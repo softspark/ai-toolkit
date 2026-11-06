@@ -95,10 +95,34 @@ runuser() { printf '%s\\n' "$@"; }
     result = subprocess.run(['bash', '-euc', script], text=True, capture_output=True,
                             env=dict(os.environ, RELEASE_TEST_JOBS=selected_jobs), timeout=5)
     assert result.returncode == 0, result.stderr
-    expected = ['-u', 'tester', '--', 'env', 'HOME=/home/tester', 'bats', 'tests/']
+    expected = ['-u', 'tester', '--', 'bats', 'tests/']
     if selected_jobs != '1':
         expected += ['--jobs', selected_jobs, '--no-parallelize-within-files']
     assert result.stdout.splitlines() == expected
+
+
+def test_package_smoke_runs_only_in_an_isolated_container(release_harness):
+    result, commands = release_harness('TARBALL="$SOURCE_TAR"\ngate_smoke')
+    assert result.returncode == 0, result.stderr
+    assert len(commands) == 1
+    command = commands[0]
+    assert command[:4] == ['docker', 'run', '--rm', '-i']
+    assert command[4:12] == RESOURCE_ARGS
+    assert command[command.index('--network') + 1] == 'none'
+    assert command[command.index('--user') + 1] == 'tester'
+    assert command[command.index('--workdir') + 1] == '/tmp'
+    assert command[command.index('-e') + 1] == 'EXPECTED_VERSION=true'
+    assert not any(arg in ('-v', '--volume', '--mount', '--privileged') for arg in command)
+    assert not any(arg.startswith(('HOME=', 'CODEX_HOME=')) for arg in command)
+    assert 'ai-toolkit-release-linux:ubuntu24.04' in command
+    body = command[-1]
+    subprocess.run(['bash', '-n', '-c', body], check=True)
+    assert 'getent passwd' in body
+    assert 'cat > "$smoke_dir/package.tgz"' in body
+    assert 'npm install --global --prefix "$smoke_dir/prefix"' in body
+    assert '"$reported" = "$EXPECTED_VERSION"' in body
+    assert '"$smoke_dir/prefix/bin/ai-toolkit" help' in body
+    assert 'HOME=' not in body
 
 
 @pytest.mark.parametrize('jobs', ['', '0', '5', '-1', '1.5', '01', 'auto', '1; exit 0'])

@@ -20,7 +20,8 @@ Changing any of these is a **breaking change** and needs the deprecation path be
 
 ### 1. Skill and agent names
 
-108 skill directories under `app/skills/` and 44 agent files under `app/agents/`.
+The skill directories under `app/skills/` and agent files under `app/agents/`
+are inventoried in `app/surface.json` and the current catalogs.
 Skill names are the user's slash commands (`/review`, `/debug`, `/tdd`) and appear
 in muscle memory, shell aliases, CI invocations, and other people's docs. Agent
 names appear in skill frontmatter (`agent:`) and in `Agent` tool calls.
@@ -29,20 +30,20 @@ A rename is a break even when the behaviour is identical.
 
 ### 2. Skill frontmatter fields and their meaning
 
-| Field | Skills using it | Notes |
-|---|---|---|
-| `name` | 108 | must equal the directory name |
-| `description` | 108 | the routing surface — see below |
-| `allowed-tools` | 108 | narrowing it can break a working skill |
-| `effort` | 106 | |
-| `user-invocable` | 79 | |
-| `argument-hint` | 57 | |
-| `disable-model-invocation` | 32 | |
-| `context` | 22 | pairs with `agent` |
-| `agent` | 22 | pairs with `context: fork` |
-| `hooks` | 5 | skill-scoped hooks |
-| `scripts` | 4 | |
-| `model` | 3 | |
+| Field | Contract |
+|---|---|
+| `name` | Must equal the directory name |
+| `description` | Routing surface, see below |
+| `allowed-tools` | Narrowing it can break a working skill |
+| `effort` | Preserve the selected reasoning contract |
+| `user-invocable` | Controls explicit invocation |
+| `argument-hint` | Documents accepted input |
+| `disable-model-invocation` | Controls model-triggered invocation |
+| `context` | Pairs with `agent` |
+| `agent` | Pairs with `context: fork` |
+| `hooks` | Skill-scoped hooks |
+| `scripts` | Bundled script references |
+| `model` | Model selection metadata |
 
 `description` deserves its own line: it decides which prompts select the skill.
 Rewording it moves routing, so it is a behavioural change even when no other line
@@ -80,7 +81,7 @@ and what it reads and writes are not.
 
 ### 7. KB taxonomy
 
-The eight categories in `VALID_KB_CATEGORIES` (`scripts/validate.py`) and the
+The categories in `VALID_KB_CATEGORIES` (`scripts/validate.py`) and the
 matching list in `app/skills/documentation-standards/SKILL.md`. Consumers file
 their own KB documents against it; dropping a category invalidates their
 frontmatter. The two lists are one taxonomy in two places — a change belongs in

@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.14.2"
+version: "1.15.0"
 created: "2026-03-23"
-last_updated: "2026-10-27"
+last_updated: "2026-11-06"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
 ---
 

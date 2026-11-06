@@ -293,9 +293,9 @@ gate_bats_linux() {
         chown -R tester:tester /home/tester/repo
         cd /home/tester/repo
         if [ "$RELEASE_TEST_JOBS" = 1 ]; then
-            runuser -u tester -- env HOME=/home/tester bats tests/
+            runuser -u tester -- bats tests/
         else
-            runuser -u tester -- env HOME=/home/tester bats tests/ --jobs "$RELEASE_TEST_JOBS" --no-parallelize-within-files
+            runuser -u tester -- bats tests/ --jobs "$RELEASE_TEST_JOBS" --no-parallelize-within-files
         fi
     ' <"$SOURCE_TAR"
 }
@@ -385,13 +385,21 @@ gate_pack() {
 }
 
 gate_smoke() {
-    local sandbox="$LOG_DIR/smoke" reported
-    rm -rf "$sandbox" && mkdir -p "$sandbox/home" "$sandbox/prefix" || return 1
-    HOME="$sandbox/home" npm install --global --prefix "$sandbox/prefix" --no-audit --no-fund "$TARBALL" || return 1
-    reported="$(HOME="$sandbox/home" "$sandbox/prefix/bin/ai-toolkit" --version)" || return 1
-    [ "$reported" = "$(json_field package.json ".version")" ] || { echo "installed CLI reports $reported"; return 1; }
-    HOME="$sandbox/home" "$sandbox/prefix/bin/ai-toolkit" help || return 1
-    rm -rf "$sandbox"
+    local expected
+    expected="$(json_field package.json ".version")" || return 1
+    # Reuse the Linux toolchain built by step 4. Stream only the package into a
+    # disposable container: no host mounts, credentials, or HOME overrides.
+    docker run --rm -i "${DOCKER_RESOURCE_ARGS[@]}" \
+        --network none --user tester --workdir /tmp \
+        -e EXPECTED_VERSION="$expected" "$LINUX_TOOLCHAIN_IMAGE" bash -euc '
+        test "$HOME" = "$(getent passwd "$(id -u)" | cut -d: -f6)"
+        smoke_dir="$(mktemp -d)"
+        cat > "$smoke_dir/package.tgz"
+        npm install --global --prefix "$smoke_dir/prefix" --no-audit --no-fund "$smoke_dir/package.tgz"
+        reported="$("$smoke_dir/prefix/bin/ai-toolkit" --version)"
+        [ "$reported" = "$EXPECTED_VERSION" ] || { echo "installed CLI reports $reported"; exit 1; }
+        "$smoke_dir/prefix/bin/ai-toolkit" help
+    ' <"$TARBALL"
 }
 
 run_build_and_smoke() {
