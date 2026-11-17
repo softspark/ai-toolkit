@@ -12,7 +12,7 @@ from typing import TypedDict
 
 import claude_switch
 import codex_switch
-from account_status import AccountStatus, print_status
+from account_status import AccountStatus, display_text, print_status
 
 
 class ProviderStatus(TypedDict):
@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
     if options.json:
         print(json.dumps({"account_count": count, "providers": providers}))
     else:
-        print(f"\n  LLM STATUS · {count} accounts")
+        print(f"\n  LLM STATUS {display_text('·', '-')} {count} accounts")
         for name, provider in providers.items():
             print_provider(name, provider, options)
         if count == 0 and not has_error:

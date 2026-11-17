@@ -9,6 +9,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+- Fixed redirected output from `claude-switch status`, `codex-switch status`
+  and `llm-status` on Windows code pages that cannot encode the progress bar.
 - Antigravity keeps all 13 legacy workflows alongside their replacement skills.
   Install and doctor messages now point to the migration steps for each client.
   Doctor also detects unmigrated files in Google's global `global_workflows`
