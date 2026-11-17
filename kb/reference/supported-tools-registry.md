@@ -3,7 +3,7 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.22.0"
+version: "1.22.1"
 created: "2026-04-23"
 last_updated: "2026-11-17"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
@@ -14,6 +14,23 @@ description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, 
 The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed by `scripts/ecosystem_doctor.py`. This document is a derived view. Update it whenever the JSON changes. The [2026-09-23 review](../planning/ecosystem-sync-20260923.md) records source-backed classifications for every target; local CLI versions are observations, not claims about the latest upstream release.
 
 ## Tool Count: 13
+
+The 2026-11-17 patch review fetched all 13 documentation pages. Roo Code,
+Aider and Augment matched the previous snapshot. Claude Chat, Devin Desktop,
+Gemini CLI and Antigravity had content-only changes. Claude Code and Cline
+headings lost invisible spaces. Cursor removed a navigation heading, and
+OpenCode now redirects V2 documentation to its main site, where the server
+plugin reference still describes the same setup contract.
+[OpenCode server plugins](https://opencode.ai/docs/build/plugins/server/)
+
+Copilot featured optional browser use on its landing page. Codex added links
+to commerce and cloud services in shared navigation. The locally probed Codex
+CLI was 0.169.0, while GitHub had published 0.169.1. Claude Code's local binary,
+GitHub release and npm `latest` all reported 2.1.326. The toolkit retains its
+existing editor settings and account-selected model defaults.
+[Copilot browser use](https://docs.github.com/en/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/browser-use) ·
+[Codex 0.169.1](https://github.com/openai/codex/releases/tag/rust-v0.169.1) ·
+[Claude Code 2.1.326](https://github.com/anthropics/claude-code/releases/tag/v2.1.326)
 
 The [2026-11-06 sync](../planning/ecosystem-sync-20261106.md) records all 13
 current release and configuration reviews, including channel differences and

@@ -3,9 +3,9 @@ title: "AI Toolkit - Agents Catalog"
 category: reference
 service: ai-toolkit
 tags: [agents, catalog, roles, ai-development]
-version: "1.5.0"
+version: "1.6.0"
 created: "2026-03-23"
-last_updated: "2026-10-01"
+last_updated: "2026-11-18"
 description: "Complete catalog of specialized agents with roles, models, and use cases."
 ---
 
@@ -62,7 +62,7 @@ keep their configured models. See [conditional delegation](model-compatibility.m
 | **code-reviewer** | opus | Code review, standards, quality audit |
 | **test-engineer** | sonnet | Test strategy, TDD, unit/integration/E2E tests |
 | **qa-automation-engineer** | sonnet | Playwright, Cypress, API testing, performance testing |
-| **security-auditor** | opus | OWASP, CVE analysis, pen testing, vulnerability assessment |
+| **security-auditor** | opus | OWASP code review, CVE applicability, configuration hardening |
 | **security-architect** | opus | Threat modeling, secure design, AuthN/AuthZ |
 | **system-governor** | opus | Constitution guardian, validates changes, VETO power |
 

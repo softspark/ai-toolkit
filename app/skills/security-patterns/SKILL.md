@@ -105,9 +105,13 @@ When the app embeds an LLM, every byte the model emits — plus tool results, re
 - **Keep secrets out of injectable context.** Never place API keys, internal URLs, or other users' data in a prompt that an injected instruction could later echo back into output. If the model cannot see it, it cannot be coaxed into leaking it.
 - **Bound indirect (second-order) injection.** Content ingested now may carry instructions that only fire on a later turn — a poisoned doc indexed today, a web page fetched mid-task, a comment in a parsed file. Sanitize and size-limit everything at the moment it crosses the trust boundary, not when it is finally read.
 
-### Carve-out: Authorized Defensive Work
+### Regression tests for trust boundaries
 
-Building injection **detection** (classifiers, guardrails, eval suites) and running **authorized** red-team exercises — CTF, sanctioned pentest, internal adversarial testing of these defenses — is fully in scope. Generating injection payloads for that purpose is expected; the OWASP / authorized-testing framing of this skill applies to LLM apps exactly as it does to SQLi or XSS work.
+Use synthetic documents with inert marker text to verify that the application keeps
+retrieved content in its designated data field. Test tool authorization separately
+with a local fake tool and an ordinary request outside the user's assigned role.
+Assert that the application records a denial and the fake tool receives zero calls.
+Pair it with an allowed request to check that the permission boundary is effective.
 
 ---
 
@@ -162,5 +166,5 @@ For marketing e-mail and SMS (commercial vs transactional classification, per-ch
 - For dependency vulnerability scanning — use `/cve-scan`
 - For HIPAA-specific healthcare compliance — use `/hipaa-validate`
 - For threat modeling of a new architecture — delegate to the `security-architect` agent
-- For penetration testing and CVE exploitation — delegate to `security-auditor` agent
+- For a source and configuration review with remediation and regression checks, use the `security-auditor` agent.
 - For content moderation (LLM safety filters) — use `/content-moderation-patterns`

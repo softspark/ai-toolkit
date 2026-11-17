@@ -54,6 +54,22 @@ def test_read_only_explorer_has_no_shell_or_write_tools(tmp_path: Path) -> None:
     assert parse_frontmatter(result)["tools"] == ["view", "codebase-retrieval"]
 
 
+def test_security_auditor_keeps_local_scanner_access_and_omits_editors(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[2]
+    source = (root / "app/agents/security-auditor.md").read_text(encoding="utf-8")
+    assert set(parse_frontmatter(source)["tools"].split(", ")) == {"Read", "Grep", "Glob", "Bash"}
+    scanner = (root / "app/skills/hipaa-validate/SKILL.md").read_text(encoding="utf-8")
+    assert parse_frontmatter(scanner)["agent"] == "security-auditor"
+
+    augment.generate(tmp_path)
+    emitted = (tmp_path / ".augment/agents/ai-toolkit-security-auditor.md").read_text()
+
+    assert parse_frontmatter(emitted)["tools"] == ["view", "codebase-retrieval", "launch-process"]
+    assert "Use Bash only for local inspection" in emitted
+    assert "## Regression checks" in emitted
+    assert "### Test Payloads" not in emitted
+
+
 def test_unsupported_orchestration_is_explained_without_extra_permissions(tmp_path: Path) -> None:
     source = write_agent(tmp_path, "coordinator", "Read, Agent, TeamCreate, TeamDelete, SendMessage, TaskCreate, TaskList, TaskUpdate")
 

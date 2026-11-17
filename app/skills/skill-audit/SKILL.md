@@ -160,5 +160,5 @@ The `/skill-audit` slash command wraps this scanner with Claude's analysis for r
 - For general code-quality metrics (complexity, coverage, duplication) — use `/analyze`
 - For dependency CVE scans — use `/cve-scan`
 - For HIPAA-specific audits — use `/hipaa-validate`
-- For live pentesting of a deployed app — delegate to the `security-auditor` agent
+- For application code, configuration and dependency reviews, use `security-auditor`.
 - When the project has its own security scanner (semgrep, snyk) — prefer it; `/skill-audit` is toolkit-specific

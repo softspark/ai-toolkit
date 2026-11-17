@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-11-06T13:25:03Z",
+  "last_run": "2026-11-17T22:32:07Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -54,7 +54,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "0738e18bfad7b518",
+      "docs_hash": "edda2384a385153a",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -96,20 +96,20 @@
       }
     },
     "claude-code": {
-      "docs_hash": "41595e19d82b0f86",
+      "docs_hash": "aab7a5bc21171529",
       "headings": [
         "Code review and pull requests",
         "Core concepts",
         "Documentation Index",
+        "Get started",
         "Getting started",
+        "Next steps",
         "On this page",
         "Overview",
         "Platforms and integrations",
         "Use Claude Code",
-        "\u200bGet started",
-        "\u200bNext steps",
-        "\u200bUse Claude Code everywhere",
-        "\u200bWhat you can do"
+        "Use Claude Code everywhere",
+        "What you can do"
       ],
       "markers": {
         "ConfigChange": false,
@@ -166,12 +166,13 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.319 (Claude Code)"
+      "version": "2.1.326 (Claude Code)"
     },
     "cline": {
-      "docs_hash": "c9d8fca13259188d",
+      "docs_hash": "4e450f3c22bc024d",
       "headings": [
         "API Reference",
+        "Applications",
         "Best Practices",
         "Bring Your Own Key",
         "CLI",
@@ -181,13 +182,16 @@
         "ClinePass",
         "Configurations",
         "Documentation Index",
+        "Enterprise Solutions",
         "Features",
         "Getting Started",
         "IDE Specific Features",
         "JetBrains Plugin",
         "Kanban",
+        "Model access",
         "Observability",
         "On this page",
+        "Other IDE Supports",
         "Resources",
         "SDK",
         "Security &amp; Governance",
@@ -195,11 +199,7 @@
         "Troubleshooting",
         "Usage",
         "VS Code Extension",
-        "\u200bApplications",
-        "\u200bEnterprise Solutions",
-        "\u200bModel access",
-        "\u200bOther IDE Supports",
-        "\u200bWhat is Cline?"
+        "What is Cline?"
       ],
       "markers": {
         "AGENTS.md": false,
@@ -217,9 +217,8 @@
       }
     },
     "codex-cli": {
-      "docs_hash": "05bc3aaa177d4b1e",
+      "docs_hash": "7504f67b0d66cb64",
       "headings": [
-        "API",
         "API Reference",
         "Advanced deployment",
         "Advertiser API",
@@ -244,9 +243,12 @@
         "ChatGPT web",
         "ChatKit",
         "Choose a model",
+        "Cloud providers",
         "Codex Cloud",
         "Codex Security",
         "Collaboration and sharing",
+        "Collections",
+        "Commerce Partner Playbook",
         "Community",
         "Compose with scripts and CI",
         "Computer and code",
@@ -270,7 +272,6 @@
         "Extend ChatGPT and Codex",
         "Extend and automate",
         "Feature Configuration",
-        "File Upload",
         "Fit Codex to your terminal",
         "Foundations",
         "GPT-Live",
@@ -298,6 +299,7 @@
         "Permissions",
         "Plan",
         "Plugins and connections",
+        "Product feeds \u00b7 Reference",
         "Programs",
         "Prompting",
         "Realtime API",
@@ -372,10 +374,10 @@
         "plugin.json": false,
         "sandbox": true
       },
-      "version": "codex-cli 0.167.0"
+      "version": "codex-cli 0.169.0"
     },
     "cursor": {
-      "docs_hash": "e10cbfea2e76b7af",
+      "docs_hash": "cccf22684e663085",
       "headings": [
         "Agent",
         "Agent SDK",
@@ -385,7 +387,6 @@
         "Cursor Documentation",
         "Customize",
         "Get Started",
-        "Grok Bot",
         "Integrations",
         "Models",
         "More resources",
@@ -409,7 +410,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "09ab3245e65916d3",
+      "docs_hash": "9bcb8592aec8b6f3",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -450,12 +451,12 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "344e9980850e40af",
+      "docs_hash": "3694987b08da8663",
       "headings": [
         "About GitHub Copilot",
-        "About GitHub Copilot Dreaming",
         "About GitHub Copilot agents",
         "About GitHub Copilot auto model selection",
+        "About browser use in GitHub Copilot",
         "About cloud sandboxes for GitHub Copilot",
         "About computer use in GitHub Copilot",
         "About default availability of Copilot features and models",
@@ -488,7 +489,7 @@
       }
     },
     "google-antigravity": {
-      "docs_hash": "864e06167cc84912",
+      "docs_hash": "5e1e134d21000bd5",
       "headings": [],
       "markers": {
         "AGENTS.md": false,
@@ -516,17 +517,15 @@
       }
     },
     "opencode": {
-      "docs_hash": "de9734b57f96c3bf",
+      "docs_hash": "6616f6a53b5cff5f",
       "headings": [
         "CLI",
-        "Configure",
         "Connect",
         "Customize",
         "Desktop",
         "Docker",
         "Intro",
         "Learn",
-        "On this page",
         "Web"
       ],
       "markers": {
@@ -551,7 +550,7 @@
         "plugin setup/server compatibility": false,
         "plugins": true,
         "primary mode": false,
-        "rules": false,
+        "rules": true,
         "skills (native .opencode/skills)": false,
         "skills (via .claude/skills fallback)": false,
         "skills array (local paths + HTTP URLs)": false,
@@ -581,7 +580,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "a34d0b5bf4dbcb8c",
+      "docs_hash": "debac1cc0dca7ed2",
       "headings": [
         "Accounts",
         "Agent Command Center",

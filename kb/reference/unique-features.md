@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [features, differentiators, constitution, hooks, security, tdd, memory]
 created: "2026-04-13"
-last_updated: "2026-09-21"
+last_updated: "2026-11-18"
 description: "Detailed description of ai-toolkit's unique features: constitution enforcement, hooks system, security scanning, effort budgeting, quality gates, and more."
 ---
 
@@ -156,7 +156,7 @@ The `/review` skill outputs findings with per-issue confidence scores (1-10) and
 | Agent | Key exit criteria |
 |-------|------------------|
 | `code-reviewer` | Every finding has file:line + evidence, not just opinion |
-| `security-auditor` | Each finding includes proof-of-concept or exploit path |
+| `security-auditor` | Each finding cites evidence from the reviewed source or configuration and identifies a remediation |
 | `test-engineer` | No empty/placeholder tests, mocks only at boundaries |
 | `debugger` | Root cause identified, regression test added |
 | `backend-specialist` | Input validation, error format, query optimization |

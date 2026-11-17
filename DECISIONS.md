@@ -10,6 +10,19 @@ otherwise have to reverse-engineer from a diff.
 
 ---
 
+## Make the security auditor a defensive role (2026-11-18)
+
+The `security-auditor` agent reviews source code, configuration, dependency
+advisories and local evidence of fixes. Findings should identify the affected
+code, expected security property and a way to verify the correction. Existing
+audit workflows can continue to delegate to the same agent.
+
+Version 6 removes the agent's active penetration-testing role. Teams that
+delegated that work to the agent must revise those steps before upgrading.
+The major version makes that capability change explicit for existing installs.
+
+---
+
 ## Keep Antigravity's 13 legacy workflow files (2026-11-17)
 
 Continue generating the 13 workspace workflows alongside their same-named skills.

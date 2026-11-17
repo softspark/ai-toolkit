@@ -8,18 +8,16 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-2037%20passing-success)](tests/)
 
-## What's New in v5.5.0
+## What's New in v6.0.0
 
-- **OpenCode V2 support.** One plugin supports V2 and V1 1.18.29+, with scoped
-  global/project IDs, working subprocess guards and safe managed-file migration.
-- **Claude checks run once.** The duplicate Stop checker is removed while PHPStan
-  stays advisory. Safety guards block infrastructure failures on Code 2.1.295+.
-- **Native hook output.** Gemini returns JSON and saves native completion text;
-  Devin delivers prompt/edit context; Codex preserves model-request diagnostics.
-- **All 13 integrations reviewed.** Release channels, compatibility notes and
-  the ecosystem snapshot match the November 6 review, preserving user settings.
-- **Release smoke is isolated.** Packed-artifact checks run in a disposable
-  container without host settings or home-directory overrides.
+- **Security audits.** `security-auditor` reviews source, configuration and
+  dependencies, then verifies fixes with local checks. If a custom workflow used
+  the agent for active penetration testing, update that step before upgrading.
+- **Windows status output.** Redirecting account status to a legacy-encoded
+  pipe now preserves readable progress bars and paths.
+- **Antigravity compatibility.** All 13 legacy workflows remain available
+  alongside their skills. Doctor also checks the global `global_workflows`
+  directory and gives migration instructions for your client.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

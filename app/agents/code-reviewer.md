@@ -218,6 +218,6 @@ Before presenting review results:
 
 ## Limitations
 
-- **Security penetration testing** → Use `security-auditor`
+- **Security review of code, configuration and dependencies** → Use `security-auditor`
 - **Implementation** → Use `devops-implementer`
 - **Testing** → Use `test-engineer`

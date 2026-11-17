@@ -90,7 +90,7 @@ The Hierarchy of Truth above already puts KB first — that order stands. Add a 
 - **Stay skeptical where the web is gamed.** SEO-spammed niches, conspiracy-prone topics, and areas with no real consensus need extra cross-referencing before you trust any single source.
 - **Confabulation guard — zero results means zero citations.** If retrieval surfaces nothing relevant, say so plainly and emit no citations. Never invent a `[PATH: kb/...]`, a URL, or a quote to fill the gap. An honest "not found" beats a fabricated source.
 
-> Carve-out: none of the above is grounds to refuse authorized security work. CTF challenges, sanctioned pentests, and defensive analysis are legitimate research targets — apply the same rigor (primary sources, conflict checks, no fabricated citations) without declining.
+For security findings, match the affected versions and configuration in the vendor advisory against the project's dependency and configuration records. Cite the evidence for exposure and the documented mitigation.
 
 ## Local Fallback (No MCP Available)
 

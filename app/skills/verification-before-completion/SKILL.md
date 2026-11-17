@@ -50,7 +50,7 @@ A prompt — yours, the user's, or another agent's — naming a file, table, col
 - Before you read from, write to, import, or quote any such resource, confirm it: `Read` the file, `ls`/`grep` the path, list the table, check the lockfile. One look beats a confident guess.
 - Never reconstruct a file's contents, a function's body, or an API's signature from its name alone. The name tells you almost nothing about the shape. If you haven't read it, you don't know it.
 - A plausible-sounding path or symbol is the easiest thing in the world to invent. Treat your own fluency here as a warning sign, not as evidence.
-- AUTHORIZED security work (CTF, sanctioned pentest, defensive review) still verifies — probing whether a path/endpoint/parameter actually exists is part of the job, not an exception to it.
+- For a security finding, verify the route, input and relevant control in the source or configuration. Cite the file and line or the result of an existing defensive check.
 
 ## Declare Ungrounded as a Real Outcome
 

@@ -7,7 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v6.0.0 - Defensive security audits and CLI compatibility (2026-11-18)
+
+### Breaking change
+
+- **Security auditor.** Restricted `security-auditor` to defensive source and
+  configuration review, dependency assessment and local verification of fixes.
+  The agent no longer provides active penetration testing or exploit development.
+  Update custom workflows that used it for these tasks before upgrading. Existing
+  defensive workflows can continue using the same agent name.
+  The canonical tool list is `Read`, `Grep`, `Glob` and `Bash`. The profile
+  instructs the agent to use Bash for local inspection, reviewed scanners and
+  isolated tests. Runtime enforcement depends on the client.
+
+### Fixed
 
 - Fixed redirected output from `claude-switch status`, `codex-switch status`
   and `llm-status` on Windows code pages that cannot encode the progress bar.
@@ -15,6 +28,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   Install and doctor messages now point to the migration steps for each client.
   Doctor also detects unmigrated files in Google's global `global_workflows`
   directory. [Compatibility decision](DECISIONS.md#keep-antigravitys-13-legacy-workflow-files-2026-11-17)
+
+### Maintenance
+
+- Updated the pinned GitHub Release action to v3.0.4 and refreshed the
+  ecosystem snapshot after reviewing all 13 integrations.
+- The largest skill body, `design-engineering`, is 17,197 bytes. The warning
+  threshold stays at 18,000 bytes under the release SOP's budget rule.
 
 ## v5.5.0 - Current editor contracts and OpenCode V2 (2026-11-06)
 

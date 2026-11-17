@@ -95,7 +95,7 @@ The toolkit is organised as five stacked layers. Higher layers depend on lower l
 | `code-reviewer` | opus | Code review, standards |
 | `test-engineer` | sonnet | Test strategy, implementation |
 | `qa-automation-engineer` | sonnet | E2E, API, performance testing |
-| `security-auditor` | opus | Security audit, pen testing, OWASP, vulnerability assessment |
+| `security-auditor` | opus | OWASP code review, configuration hardening, dependency assessment |
 | `security-architect` | opus | Threat modeling, secure design, AuthN/AuthZ |
 | `system-governor` | opus | Constitution guardian, VETO power |
 

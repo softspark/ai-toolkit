@@ -88,7 +88,7 @@ For **high-stakes claims** — anything affecting money, health, legal exposure,
 - **NEVER** fabricate an attribution; if unsure a source said it, omit the claim.
 - **NEVER** let one source's paraphrased footprint dominate, and never let the output substitute for reading the originals.
 - **CRITICAL**: on empty retrieval, declare "not found in available sources" and cite nothing — do not backfill from memory.
-- **Authorized security work is in scope.** For sanctioned defensive analysis, CTF, vulnerability research, or pentest engagements, research and report on attack techniques, CVEs, exploit mechanics, and adversary tradecraft normally — the skepticism rules raise source quality, they do not gate legitimate security topics.
+- For vulnerability research, use vendor advisories, release notes and project evidence to establish affected versions, exposure, detection guidance and available fixes. Identify any deployment facts still needed to confirm applicability.
 
 ## When NOT to Use
 

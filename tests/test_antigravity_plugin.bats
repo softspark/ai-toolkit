@@ -59,6 +59,10 @@ with zipfile.ZipFile(sys.argv[1]) as zf:
     assert "python3 scripts/audit_skills.py" not in audit_skill
     assert "${extensionPath}/skills/cve-scan/scripts/cve_scan.py" in security_agent
     assert "app/skills/cve-scan/scripts/cve_scan.py" not in security_agent
+    frontmatter = security_agent.split("---\n", 2)[1]
+    tools = {line.strip()[2:] for line in frontmatter.splitlines() if line.startswith("  - ")}
+    assert tools == {"view_file", "grep_search", "find_by_name", "list_dir", "run_command"}
+    assert "Use Bash only for local inspection" in security_agent
 
     with tempfile.TemporaryDirectory() as temporary:
         zf.extractall(temporary)
