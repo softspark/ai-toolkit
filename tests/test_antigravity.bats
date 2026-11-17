@@ -187,7 +187,7 @@ PY
     [ "$count" -ge 10 ]
 }
 
-@test "antigravity: retired workflows keep all slash names through native skills" {
+@test "antigravity: deprecated workflows point to their same-named native skills" {
     count=0
     for workflow in "$AG_TMP"/project/.agents/workflows/ai-toolkit-*.md; do
         name="$(basename "$workflow" .md)"
@@ -196,7 +196,7 @@ PY
         grep -q "^name: $name$" "$skill"
         grep -q '^description: ' "$skill"
         grep -q 'ai-toolkit-managed: antigravity-workflow-skill' "$skill"
-        grep -q 'DEPRECATED: workflows retired 2026-10-19' "$workflow"
+        grep -Fq "DEPRECATED: migrate this workflow to .agents/skills/$name/SKILL.md" "$workflow"
         count=$((count + 1))
     done
     [ "$count" -eq 13 ]

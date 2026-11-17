@@ -4,7 +4,7 @@ category: reference
 service: ai-toolkit
 tags: [windows, wsl, install, uninstall, dependencies, hooks, security]
 created: "2026-04-24"
-last_updated: "2026-10-27"
+last_updated: "2026-11-17"
 description: "Windows support model for ai-toolkit: WSL, Git Bash, dependency detection, hooks, and fail-closed managed mutations."
 ---
 
@@ -63,14 +63,21 @@ and reports `No files were changed`. Run the command from WSL to remove managed
 customizations, inject or remove external hooks, and generate/update native
 Codex hooks safely.
 
-Antigravity's new workflow-to-skill replacements also require these primitives.
-On native Windows, that optional generation step prints a WSL or
-`/migrate-workflows` instruction and skips the new skill writes, while preserving
-the existing legacy workflow and catalogue-pointer output. Use WSL to generate
-the replacements safely, or use the Antigravity migration command. Legacy
-workflows retired on 2026-10-19. No unprotected transaction fallback is used.
+Antigravity's workflow-to-skill replacements also require these primitives.
+Native Windows keeps the legacy workflow and catalogue-pointer output. Use WSL
+to generate the same-named skills, run `/migrate-workflows` in Antigravity App
+2.12.0 or later, or follow the manual steps for the IDE and CLI.
+[Official migration guide](https://antigravity.google/docs/migration/workflows-to-skills/)
 
 ## Verification
+
+Windows contributors run the full development suite in WSL. The suite exercises
+POSIX permissions, signals and executable scripts. See the
+[required contributor checks](../../.github/CONTRIBUTING.md#required-checks).
+
+When `claude-switch status`, `codex-switch status` or `llm-status` writes to a
+pipe, the display uses ASCII alternatives for unsupported symbols and escapes
+path characters that the pipe's encoding cannot represent.
 
 ```bash
 ai-toolkit doctor

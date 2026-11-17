@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+source "$TOOLKIT_DIR/tests/fixtures/doctor-runtime-stubs.bash"
 
 setup() {
     export AG_HOOK_TMP
@@ -181,6 +182,7 @@ PY
 }
 
 @test "antigravity hooks: ai-toolkit doctor fails on the caller's broken project hooks" {
+    create_doctor_runtime_stubs "$AG_HOOK_TMP"
     project="$AG_HOOK_TMP/project"
     mkdir -p "$project/.agents/hooks" "$AG_HOOK_TMP/home"
     cat > "$project/.agents/hooks.json" <<'JSON'

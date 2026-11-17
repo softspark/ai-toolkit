@@ -63,7 +63,8 @@ def sync_workflow_skills(target: Path, relative_roots: tuple[str, ...]) -> int:
     if not secure_fs.SECURE_DIR_FD:
         print(
             "Antigravity workflow-skill generation requires POSIX path protection. "
-            "Use WSL or Antigravity /migrate-workflows; legacy workflow/pointer output is retained.",
+            "Use WSL for toolkit generation, /migrate-workflows in Antigravity App 2.12.0+, "
+            "or the manual migration guide for IDE and CLI.",
             file=sys.stderr,
         )
         return 0

@@ -41,6 +41,11 @@ test: add bats tests for doctor command
 
 ## Required Checks
 
+On Windows, use WSL with Linux Python, Node.js, Bats and GNU parallel to run
+the full development suite. Several tests exercise POSIX file descriptors,
+permissions, signals and executable scripts. Native Windows with Git Bash is
+supported for the CLI within the [Windows support contract](../kb/reference/windows-support.md).
+
 No GitHub workflow tests pull requests: CI only publishes release tags, and the
 maintainer runs every gate locally before a release. Run these before asking for
 review:

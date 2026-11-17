@@ -715,7 +715,7 @@
       "display_name": "Google Antigravity",
       "kind": "editor",
       "reviewed_version": "2.29.0",
-      "release_review_note": "2026-11-06 classes A/C/D: reviewed Antigravity App 2.29.0 (2026-11-03) and CLI 1.5.1 (2026-11-05). Optional PreInvocation termination/error output, remote agents, ACP and plugin-auth additions do not require enabling new policies. Workflow retirement remains covered by migration issue #34.",
+      "release_review_note": "2026-11-06 classes A/C/D: reviewed Antigravity App 2.29.0 (2026-11-03) and CLI 1.5.1 (2026-11-05). Optional PreInvocation termination/error output, remote agents, ACP and plugin-auth additions do not require enabling new policies. On 2026-11-17 the migration guide still supports legacy workflows. Keep workspace workflows and their same-named skills (decision #34).",
       "urls": {
         "docs": "https://antigravity.google/docs",
         "release_notes": "https://antigravity.google/docs/changelog",

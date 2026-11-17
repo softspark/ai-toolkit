@@ -28,9 +28,8 @@ catalogue; instead we emit a pointer skill that teaches Antigravity to look up
 the real catalogue in ``.claude/skills/`` or ``~/.claude/skills/``. The legacy
 ``.agent/skills/`` copy is no longer written, and reinstalling removes the one
 an older release left behind.
-The 13 standard workflow commands also ship as same-named native skills, since
-workflow execution retired on 2026-10-19. Legacy workflow files remain for older
-clients; native skills take precedence when both exist.
+The 13 standard workflow commands also ship as same-named native skills.
+Clients that load both formats give the skill precedence.
 
 Usage:
   python3 scripts/generate_antigravity.py [target-dir]
@@ -147,8 +146,8 @@ def _is_owned_pointer_dir(pointer_dir: Path) -> bool:
 
 def generate_global(target_dir: Path) -> None:
     """Write the skill pointer to Antigravity's documented HOME-scoped skill
-    dirs. ``~/.gemini/antigravity-cli/skills/`` is canonical for the CLI;
-    ``~/.gemini/config/skills/`` is canonical for the IDE/shared product.
+    dirs. ``~/.gemini/config/skills/`` is the shared global root.
+    ``~/.gemini/antigravity-cli/skills/`` supports older CLI installations.
     Global rules reach Antigravity through ``~/.gemini/GEMINI.md``, which the
     Gemini generator owns, so no modular ``~/.gemini/config/rules/`` files are
     emitted here (rules stay project-local).
@@ -165,7 +164,7 @@ def generate_global(target_dir: Path) -> None:
 
 def _legacy_workflow(filename: str, render) -> str:
     notice = (
-        "<!-- DEPRECATED: workflows retired 2026-10-19; use "
+        "<!-- DEPRECATED: migrate this workflow to "
         f".agents/skills/{Path(filename).stem}/SKILL.md. "
         "https://antigravity.google/docs/migration/workflows-to-skills/ -->"
     )
@@ -291,8 +290,7 @@ def generate(target_dir: Path, *,
         opt_in_rules=opt_in_rules,
     )
     _warn_oversized(rules)
-    # Native skills retain slash names after workflows retired on 2026-10-19.
-    # Keep the legacy workflows and the existing skill-directory opt-out.
+    # Keep workflow commands available when a project opts out of skill writes.
     if emit_skill_pointer:
         target_dir.mkdir(parents=True, exist_ok=True)
         sync_workflow_skills(target_dir, (".agents/skills",))

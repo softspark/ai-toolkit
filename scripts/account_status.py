@@ -24,6 +24,19 @@ class AccountStatus(TypedDict):
     usage: dict[str, object]
 
 
+def display_text(text: str, fallback: str | None = None) -> str:
+    """Keep text in the output stream's encoding, including redirected Windows pipes."""
+    encoding = sys.stdout.encoding
+    if encoding:
+        try:
+            text.encode(encoding)
+        except UnicodeEncodeError:
+            if fallback is not None:
+                return fallback
+            return text.encode(encoding, errors="backslashreplace").decode(encoding)
+    return text
+
+
 def format_timestamp(value: object) -> str:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         return "unknown"
@@ -66,7 +79,9 @@ def progress_bar(percentage: float) -> str:
     steps = min(80, max(0, round(percentage * 0.8)))
     full, fraction = divmod(steps, 8)
     partial = "▏▎▍▌▋▊▉"[fraction - 1] if fraction else ""
-    return "█" * full + partial + "░" * (10 - full - bool(partial))
+    empty = 10 - full - bool(partial)
+    return display_text("█" * full + partial + "░" * empty,
+                        "#" * full + ("+" if partial else "") + "-" * empty)
 
 
 def window_cell(usage: dict[str, object], name: str, color: bool) -> tuple[str, str]:
@@ -89,20 +104,22 @@ def window_cell(usage: dict[str, object], name: str, color: bool) -> tuple[str, 
 def short_path(value: str) -> str:
     path = Path(value)
     try:
-        return str(Path("~") / path.relative_to(Path.home()))
+        path = Path("~") / path.relative_to(Path.home())
     except ValueError:
-        return value
+        return display_text(value)
+    return display_text(str(path))
 
 
 def print_account_row(account: AccountStatus, width: int, color: bool) -> None:
-    name = ("› " if account["selected"] else "  ") + account["name"] + (" *" if account["is_default"] else "")
+    marker = display_text("› ", "> ") if account["selected"] else "  "
+    name = marker + account["name"] + (" *" if account["is_default"] else "")
     usage = account["usage"]
     if not usage.get("windows"):
         label = "Unavailable: " + str(usage.get("refresh_error", "usage_unavailable"))
         retry = usage.get("retry_after_seconds")
         if isinstance(retry, int) and not isinstance(retry, bool):
             label += f", retry in {duration(retry)}"
-        name = name if len(name) <= 22 else name[:21] + "…"
+        name = name if len(name) <= 22 else name[:21] + display_text("…", "~")
         if width < 86:
             print("  " + paint(name, "active", color))
             print(paint(f"    {label}\n", "dim", color))
@@ -118,7 +135,7 @@ def print_account_row(account: AccountStatus, width: int, color: bool) -> None:
         print(f"    7d  {week}  {reset_week}")
         print(paint(f"    Updated: {updated}\n", "dim", color))
         return
-    name = name if len(name) <= 22 else name[:21] + "…"
+    name = name if len(name) <= 22 else name[:21] + display_text("…", "~")
     print("  " + paint(name.ljust(22), "active" if account["selected"] else "dim", color)
           + f"  {five}  {week}  " + paint(updated, "dim", color))
     if reset_five or reset_week:
@@ -133,13 +150,14 @@ def print_status(selected: dict[str, str | None], accounts: list[AccountStatus],
         color_mode == "auto" and sys.stdout.isatty() and os.environ.get("TERM") != "dumb"))
     width = shutil.get_terminal_size(fallback=(100, 24)).columns
     print("\n  " + paint(title, "title", color) + paint(f"   {len(accounts)} profiles", "dim", color))
-    print(f"  Active: {selected['account']}" + paint(f" · {selected['source']} routing\n", "dim", color))
+    separator = display_text("·", "-")
+    print(f"  Active: {selected['account']}" + paint(f" {separator} {selected['source']} routing\n", "dim", color))
     if width >= 86:
         print(paint(f"  {'PROFILE':22}  {'5h LIMIT':20}  {'7d LIMIT':20}  UPDATED", "dim", color))
-        print(paint("  " + "─" * 76, "dim", color))
+        print(paint("  " + display_text("─", "-") * 76, "dim", color))
     for account in accounts:
         print_account_row(account, width, color)
-    print(paint("  › active  * default  · live usage", "dim", color))
+    print(paint(f"  {display_text('›', '>')} active  * default  {separator} live usage", "dim", color))
     if verbose:
         print_status_details(selected, accounts)
     else:

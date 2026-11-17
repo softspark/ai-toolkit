@@ -5,7 +5,7 @@ service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
 version: "1.22.0"
 created: "2026-04-23"
-last_updated: "2026-11-06"
+last_updated: "2026-11-17"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
@@ -202,22 +202,22 @@ For current model defaults and optional Claude-to-Codex execution, see
 
 ### Google Antigravity
 
-Workflows retired on 2026-10-19. The generator adds the 13 existing command
-names as `.agents/skills/<workflow-name>/SKILL.md`, and in both documented global
-skill roots. Legacy workflow files remain with a deprecation comment. User-owned
-skill collisions and extra resources are preserved; `emit_skill_pointer=False`
-still opts out of skill-directory writes. Doctor reports unmigrated local/global
-workflows. On native Windows, use WSL or `/migrate-workflows`; the generator
-retains legacy output and explains why it skipped protected skill writes.
-[Official migration](https://antigravity.google/docs/migration/workflows-to-skills/).
-Legacy output remains an older-client fallback until a documented removal
-release under [issue #34](https://github.com/softspark/ai-toolkit/issues/34);
-the retirement date alone does not authorize removing user workflow files.
+Google continues to document legacy workflow execution. Keep all 13 workspace
+workflow files and their same-named skills. A skill takes precedence when the
+client discovers both. The generator preserves user-owned skill collisions and
+extra resources. Workspace installs with `emit_skill_pointer=False` and native
+Windows installs that skip protected skill writes retain the workflow fallback.
+Doctor reports local and global workflows missing a replacement. Use
+`/migrate-workflows` in App 2.12.0 or later, or migrate manually in the IDE or
+CLI. [Official migration guide](https://antigravity.google/docs/migration/workflows-to-skills/)
+
+Removal has no target release. Review the fallback when Google documents
+removal for a supported client. [Decision for issue #34](../../DECISIONS.md#keep-antigravitys-13-legacy-workflow-files-2026-11-17)
 
 | Field | Value |
 |-------|-------|
 | ID | `google-antigravity` |
-| Review 2026-11-06 | Classes A/C/D. App [2.29.0 and CLI 1.5.1](https://antigravity.google/docs/changelog) retain existing hooks, agent inheritance and plugin contracts. Shared `~/.gemini/config/skills` is canonical for App and CLI; legacy CLI paths remain supported. Optional termination/remote-agent/ACP features are not enabled. Workflow migration remains tracked in issue #34. |
+| Review 2026-11-06 | Classes A/C/D. App [2.29.0 and CLI 1.5.1](https://antigravity.google/docs/changelog) retain existing hooks, agent inheritance and plugin contracts. Shared `~/.gemini/config/skills` is canonical for App and CLI; legacy CLI paths remain supported. Optional termination/remote-agent/ACP features are not enabled. |
 | Docs | https://antigravity.google/docs (official hook and configuration pages are now readable through the web index; use feature pages to verify) |
 | Changelog | https://antigravity.google/docs/changelog |
 | Config paths | Rules/workflows: `.agents/rules/*.md` (each needs `trigger:` frontmatter or Antigravity silently discards it; 24,000-byte per-file cap; always-on and global rules share a 20,000-token budget), `.agents/workflows/*.md`. Skills: canonical `.agents/skills/*/SKILL.md`; `.agent/skills/*/SKILL.md` is legacy, no longer written, and the old pointer copy is removed on reinstall. Agents: `.agents/agents/ai-toolkit-*/agent.md`. Hooks: `.agents/hooks.json` plus `.agents/hooks/ai-toolkit-antigravity-hook.py`, invoked as `python3 hooks/…` because handlers run from the `hooks.json` directory. Plugins: `.agents/plugins/<plugin>/plugin.json`. MCP: `.agents/mcp_config.json`. Cross-tool instructions: `AGENTS.md`, `GEMINI.md`. |

@@ -189,6 +189,34 @@ def test_text_display_supports_colors_details_and_refresh_errors(configured):
     assert 'Config:' not in result.stdout
 
 
+@pytest.mark.parametrize('command', ['claude-switch', 'codex-switch', 'llm-status'])
+@pytest.mark.parametrize('encoding', ['cp1252', 'ascii'])
+def test_status_writes_to_legacy_encoded_pipe(configured, command, encoding):
+    home, _, project, env = configured
+    bound_project = project / 'café-東京'
+    bound_project.mkdir()
+    for key in ('CLAUDE_SWITCH_CONFIG', 'CODEX_SWITCH_CONFIG'):
+        registry = Path(env[key])
+        data = json.loads(registry.read_text())
+        data['projects'] = {str(bound_project): 'customer'}
+        registry.write_text(json.dumps(data))
+    env['PYTHONIOENCODING'] = encoding + ':strict'
+    # The Codex executable is deliberately absent, even on native Windows.
+    env['PATH'] = str(home)
+    script = ROOT / 'scripts' / (command.replace('-', '_') + '.py')
+    args = [] if command == 'llm-status' else ['status']
+    result = subprocess.run(
+        [sys.executable, str(script), *args, '--verbose'], env=env, cwd=bound_project,
+        capture_output=True, encoding=encoding, timeout=15, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert 'Active: customer' in result.stdout
+    expected_path = str(bound_project).encode(encoding, 'backslashreplace').decode(encoding)
+    assert expected_path in result.stdout
+    if command != 'codex-switch':
+        assert '##+------- 23%' in result.stdout
+
+
 def test_new_claude_response_is_fetched_then_failure_never_shows_last_value(configured):
     home, data, _, _ = configured
     response = home / '.claude/live-response.json'

@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+- Fixed redirected output from `claude-switch status`, `codex-switch status`
+  and `llm-status` on Windows code pages that cannot encode the progress bar.
+- Antigravity keeps all 13 legacy workflows alongside their replacement skills.
+  Install and doctor messages now point to the migration steps for each client.
+  Doctor also detects unmigrated files in Google's global `global_workflows`
+  directory. [Compatibility decision](DECISIONS.md#keep-antigravitys-13-legacy-workflow-files-2026-11-17)
+
 ## v5.5.0 - Current editor contracts and OpenCode V2 (2026-11-06)
 
 ### Ecosystem
@@ -509,7 +518,7 @@ migration of old DSH project files.
   unknown/empty tool grants, report unsupported orchestration, and preserve user
   files while adopting recognized legacy definitions.
 - **Antigravity (class D):** Added same-named native skills for all 13 generated
-  workflow commands before their 2026-11-01 retirement. Retain legacy files,
+  workflow commands in response to Google's deprecation notice. Retain legacy files,
   mark deprecation, preserve ownership during cleanup, and diagnose unmigrated
   commands. Native Windows keeps legacy output with explicit WSL/manual migration
   guidance instead of unsafe protected writes.

@@ -2,7 +2,7 @@
 # Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
 # Source: https://github.com/softspark/ai-toolkit
 
-"""Workflow retirement must preserve slash names and user-owned shared skills."""
+"""Workflow migration must preserve slash names and user-owned shared skills."""
 from __future__ import annotations
 
 import sys
@@ -36,7 +36,7 @@ def test_every_legacy_workflow_keeps_its_slash_name_and_body(tmp_path: Path) -> 
         assert parse_frontmatter(text)["description"] == parse_frontmatter(render())["description"]
         assert split_frontmatter(render())[1] in text
         legacy = (tmp_path / ".agents/workflows" / filename).read_text()
-        assert "DEPRECATED: workflows retired 2026-10-19" in legacy
+        assert f"DEPRECATED: migrate this workflow to .agents/skills/{name}/SKILL.md" in legacy
         assert split_frontmatter(render())[1].strip() in legacy
     assert "codex" not in _detect_editors(tmp_path)
     assert "antigravity" in _detect_editors(tmp_path)
@@ -151,16 +151,27 @@ def test_doctor_accepts_complete_migration_and_warns_for_unmigrated_commands(tmp
     assert result.warnings == 1
 
 
-def test_doctor_checks_global_user_workflows_without_changing_them(tmp_path: Path) -> None:
+@pytest.mark.parametrize("directory", ["workflows", "global_workflows"])
+def test_doctor_checks_global_user_workflows_without_changing_them(
+    tmp_path: Path, directory: str, capsys: pytest.CaptureFixture[str],
+) -> None:
     from doctor import DiagResult, check_antigravity_workflows
 
-    workflow = tmp_path / "home/.gemini/config/workflows/mine.md"
+    config = tmp_path / "home/.gemini/config"
+    workflow = config / directory / "mine.md"
     workflow.parent.mkdir(parents=True)
     workflow.write_text("user workflow")
     result = DiagResult()
     check_antigravity_workflows(result, tmp_path, tmp_path / "home")
     assert result.warnings == 1
+    assert "Migrate manually or run /migrate-workflows in Antigravity App 2.12.0+" in capsys.readouterr().out
     assert workflow.read_text() == "user workflow"
+    skill = config / "skills/mine/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("user skill")
+    result = DiagResult()
+    check_antigravity_workflows(result, tmp_path, tmp_path / "home")
+    assert result.warnings == 0
 
 
 def test_unsupported_native_runtime_keeps_legacy_output_without_unsafe_skill_writes(
@@ -170,7 +181,7 @@ def test_unsupported_native_runtime_keeps_legacy_output_without_unsafe_skill_wri
 
     monkeypatch.setattr(secure_fs, "SECURE_DIR_FD", False)
     generator.generate(tmp_path)
-    assert "Use WSL or Antigravity /migrate-workflows" in capsys.readouterr().err
+    assert "/migrate-workflows in Antigravity App 2.12.0+" in capsys.readouterr().err
     assert (tmp_path / ".agents/workflows/ai-toolkit-debug.md").is_file()
     assert (tmp_path / ".agents/skills/ai-toolkit-skill-catalogue/SKILL.md").is_file()
     assert not (tmp_path / ".agents/skills/ai-toolkit-debug").exists()
