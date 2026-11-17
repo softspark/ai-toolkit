@@ -63,12 +63,11 @@ and reports `No files were changed`. Run the command from WSL to remove managed
 customizations, inject or remove external hooks, and generate/update native
 Codex hooks safely.
 
-Antigravity's new workflow-to-skill replacements also require these primitives.
-On native Windows, that optional generation step prints a WSL or
-`/migrate-workflows` instruction and skips the new skill writes, while preserving
-the existing legacy workflow and catalogue-pointer output. Use WSL to generate
-the replacements safely, or use the Antigravity migration command. Legacy
-workflows retired on 2026-10-19. No unprotected transaction fallback is used.
+Antigravity's workflow-to-skill replacements also require these primitives.
+Native Windows keeps the legacy workflow and catalogue-pointer output. Use WSL
+to generate the same-named skills, run `/migrate-workflows` in Antigravity App
+2.12.0 or later, or follow the manual steps for the IDE and CLI.
+[Official migration guide](https://antigravity.google/docs/migration/workflows-to-skills/)
 
 ## Verification
 

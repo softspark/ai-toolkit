@@ -10,6 +10,24 @@ otherwise have to reverse-engineer from a diff.
 
 ---
 
+## Keep Antigravity's 13 legacy workflow files (2026-11-17)
+
+Continue generating the 13 workspace workflows alongside their same-named skills.
+Google still documents legacy workflows in the IDE and gives a skill precedence
+when both formats exist. Projects that opt out of toolkit skill writes and native
+Windows installations that skip protected writes can still use the workflow files.
+The migration command is available in App 2.12.0 and later. IDE and CLI users can
+follow the manual steps. [Google's migration guide](https://antigravity.google/docs/migration/workflows-to-skills/)
+
+There is no scheduled toolkit removal release. Revisit the decision when Google
+documents removal for a supported client. Before announcing a toolkit minor
+release that stops generating workflows, verify all 13 slash commands through
+skills on supported clients and document migration for the two fallback cases
+above. Existing user workflow files stay in place. Follow the project's
+[deprecation policy](BACKWARD_COMPATIBILITY.md#the-deprecation-path).
+
+---
+
 ## OpenCode V2 with an explicit V1 compatibility floor (2026-11-06)
 
 OpenCode V2 2.2.5 is stable through `@opencode/cli`, while the legacy

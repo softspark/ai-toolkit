@@ -554,20 +554,22 @@ def check_antigravity_workflows(dr: DiagResult, project: Path | None = None, hom
     # AI_TOOLKIT_USER_CWD.
     project = project or _user_path(".")
     home = home or Path.home()
-    roots = (project / ".agents", project / ".agent", home / ".gemini/config")
-    for root in roots:
-        workflows = root / "workflows"
+    global_config = home / ".gemini/config"
+    workflow_dirs = (project / ".agents/workflows", project / ".agent/workflows",
+                     global_config / "workflows", global_config / "global_workflows")
+    for workflows in workflow_dirs:
         if not workflows.is_dir():
             continue
+        root = workflows.parent
         for workflow in sorted(workflows.glob("*.md")):
             replacements = [root / "skills" / workflow.stem / "SKILL.md"]
             if root == project / ".agent":
                 replacements.append(project / ".agents/skills" / workflow.stem / "SKILL.md")
             if not any(path.is_file() for path in replacements):
-                install_scope = "" if root == home / ".gemini/config" else " --local"
+                install_scope = "" if root == global_config else " --local"
                 dr.warn(
-                    f"Antigravity workflow {workflow.name} retired 2026-10-19; "
-                    "migrate it to a same-named skill with /migrate-workflows "
+                    f"Antigravity workflow {workflow.name} has no same-named skill. "
+                    "Migrate manually or run /migrate-workflows in Antigravity App 2.12.0+ "
                     f"(toolkit commands: ai-toolkit install{install_scope} --editors antigravity)"
                 )
 
