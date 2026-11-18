@@ -46,19 +46,22 @@ The toolkit's Claude defaults use these roles when available:
 |------|----------|
 | Planning, coordination and acceptance | Native orchestrator, Opus `high` |
 | Bounded implementation, tests and routine fixes | Native implementation agent, Sonnet `high`, or the available Codex plugin |
-| Security work | Prefer Codex `gpt-6-astra`, `xhigh`; otherwise the installed native security agent and its configured model |
+| Defensive source and configuration review | For an approved read-only review, use available Codex `gpt-6.2-astra` at `xhigh`, or the configured native security auditor |
 | Hard debugging | Available Codex at `xhigh`, or the native debugger, Opus `xhigh` |
 
 Use Codex proactively for substantial independent implementation or diagnosis;
 do not require a failure first, and keep trivial edits with the current executor.
 Retain the native domain role, file ownership and review criteria when selecting
-the Codex executor. If Astra is unavailable, report that and use the configured
-native security agent. Do not silently select a different Codex model.
+the Codex executor. If the selected model is unavailable, report it. A native
+auditor can review the same source under the same scope when the approved
+routing policy permits it. An access denial or safety refusal ends that route.
 
 Dispatch with `Agent(subagent_type="codex:codex-rescue", prompt="--fresh ...")`.
 Include the task, working directory, owned paths, relevant evidence, acceptance
-criteria and verification commands. Pass `--model gpt-6-astra --effort xhigh`
-for the security route, and `--effort xhigh` for hard debugging. Ordinary coding
+criteria and verification commands. For the approved defensive review, request
+read-only source inspection, mitigations and isolated regression-test suggestions.
+Pass `--model gpt-6.2-astra --effort xhigh` for that review, or `--effort xhigh`
+for hard debugging. Ordinary coding
 keeps the configured Codex model and effort unless the user chose otherwise.
 These flags control the Codex worker, not the Sonnet forwarding wrapper.
 Do not use the retired Spark alias or substitute a plugin command for the agent.
@@ -67,9 +70,8 @@ Request read-only work explicitly for audits or diagnosis; write access is
 appropriate only for an authorized implementation task. Codex's sandbox and
 approval restrictions still apply. Permission or authentication failures return
 to the supervisor; they do not authorize bypasses or a new account/provider.
-Selecting Astra does not load a security package or confer Trusted Access.
-Use an existing security package only when it is available in the delegated
-runtime and within the user's task; report which workflow actually ran.
+Keep the review within the auditor's defensive scope and existing permissions.
+Preserve the caller's restrictions and report any unavailable capability.
 
 The supervisor owns lifecycle and verification. A background job identifier is
 not completion: collect the final result using the plugin's documented status
@@ -85,21 +87,19 @@ executor, not a Claude `model:` value or an automatic Claude Team member. Reuse
 the installed plugin instead of generating another wrapper or editing its cache.
 <!-- CLAUDE_CODE_ONLY_END -->
 
-## Reviewed model reference (2026-10-27)
+## Reviewed model reference (2026-11-18)
 
 | Model | Claude API ID | API effort default |
 |-------|---------------|--------------------|
 | Claude Opus 5.5 | `claude-opus-5-5` | `medium` |
-| Claude Fable 5.1 | `claude-fable-5-1` | `high` |
+| Claude Fable 5.2 | `claude-fable-5-2` | `high` |
 | Claude Sonnet 5.5 | `claude-sonnet-5-5` | `high` |
 | Claude Haiku 5.5 | `claude-haiku-5-5` | `medium` |
 
-Codex (account and client availability decide): `gpt-6-astra` is the most
-capable model; `gpt-6.1-sol` suits repeated complex coding and agentic work;
-`gpt-6.1-terra` suits writing, visual understanding and computer use; `gpt-6-luna`
-fits focused, repeatable tasks. GPT-5.5 retired from Codex with ChatGPT sign-in
-on 2026-10-14; API-key sessions and the OpenAI API are unaffected. Sol 6.1 accepts
-`low` to `max` effort but not `none` or `minimal`; Terra 6.1 also accepts `none`.
+Codex lists `gpt-6.2-astra` for demanding work and `gpt-6.2-sol` for everyday
+coding. `gpt-6.1-terra` covers writing, visual understanding and computer use,
+and `gpt-6-luna` covers focused tasks. Earlier Astra and Sol models remain
+listed. Check the account's model picker for actual availability.
 
 These are dated identifiers, not a runtime upgrade policy. Check the provider's
 model availability and current [pricing](https://platform.claude.com/docs/en/about-claude/pricing)
@@ -109,13 +109,13 @@ surface retirement or availability problems explicitly.
 
 ## Effort and caching
 
-Opus 5.5, Fable 5.1, Sonnet 5.5 and Haiku 5.5 support `low`, `medium`, `high`,
-`xhigh`, and `max`. Effort is a behavior control, not a hard spending cap. Opus 5.5 and Fable
-5.1 use always-on adaptive thinking; a small output limit can truncate the answer.
+Opus 5.5, Fable 5.2, Sonnet 5.5 and Haiku 5.5 support `low`, `medium`, `high`,
+`xhigh` and `max` API effort. Opus 5.5 and Fable 5.2 use always-on adaptive
+thinking. A small output limit can truncate an answer at any effort.
 
-Changing top-level `output_config.effort` invalidates message cache blocks, with
-model-dependent effects on earlier caches. Supported per-message effort changes
-can preserve the prefix. Do not assume effort tuning is cache-neutral.
+Changing effective top-level `output_config.effort` can invalidate message cache
+blocks and, on some models, earlier caches. Explicitly sending the model's default
+is equivalent to omitting it. A supported per-message update preserves the prefix.
 
 Keep the configured agent/skill effort. An approved application experiment may
 compare effort settings, recording total thinking/output usage and completion
@@ -176,13 +176,13 @@ confidence thresholds, traffic percentages or cost multipliers as universal rule
 
 ## Sources and related skills
 
-Reviewed 2026-10-08:
+Reviewed 2026-11-18.
 - [Claude model overview](https://platform.claude.com/docs/en/models/overview)
 - [Effort](https://platform.claude.com/docs/en/build-with-claude/effort)
 - [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 - [Sonnet 5.5 prompting](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5)
 - [Codex models](https://learn.chatgpt.com/docs/models)
-- [Astra model](https://developers.openai.com/api/docs/models/gpt-6-astra)
+- [GPT-6.2 Astra model](https://developers.openai.com/api/docs/models/gpt-6.2-astra)
 - [Latest OpenAI model guide](https://developers.openai.com/api/docs/guides/latest-model)
 - [Models and Trusted Access](https://learn.chatgpt.com/docs/cyber-safety)
 

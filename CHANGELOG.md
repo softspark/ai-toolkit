@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+- Auggie installs select agent tool names for the detected 1.x or 0.x CLI.
+  Hook matchers cover both generations. Devin file hooks now cover native
+  writes, patches and notebook edits.
+- Local Aider installation preserves the user's model and other YAML settings.
+  OpenCode agents receive quoted hex colors accepted by the 2.3.1 schema.
+- The optional Codex route for defensive source review uses GPT-6.2 Astra.
+  Delegation examples respect the configured role, and the model references
+  cover GPT-6.2 Sol and Claude Fable 5.2.
+
 ## v6.0.0 - Defensive security audits and CLI compatibility (2026-11-18)
 
 ### Breaking change

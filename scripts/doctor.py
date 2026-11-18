@@ -73,6 +73,7 @@ VALID_EVENTS = frozenset({
 })
 
 EXPECTED_HOOKS = [
+    "_devin-file-hook.py",
     "_hook-io.sh",
     "_locate-toolkit.sh",
     "_search-capability.sh",

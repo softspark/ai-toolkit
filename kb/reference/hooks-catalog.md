@@ -4,9 +4,9 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.20.0"
+version: "1.21.0"
 created: "2026-03-27"
-last_updated: "2026-11-06"
+last_updated: "2026-11-18"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
 ---
 
@@ -873,10 +873,10 @@ Devin CLI uses a **Claude-compatible** hook format (docs.devin.ai/cli/extensibil
 
 - **Standalone file shape:** in `.devin/hooks.v1.json` the entire file IS the hooks object — no top-level `"hooks"` wrapper key (unlike `.claude/settings.json`).
 - **Events:** Claude-style PascalCase — `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`. `post_cascade_response` maps to `Stop` (which carries no response text on stdin).
-- **Matchers:** regex against the Devin **tool name** (`read`, `edit`, `exec`, `grep`, `glob`, `mcp__<server>__<tool>`) — NOT Claude's `Bash`/`Edit`, so the shared guards reliably fire.
+- **File tools.** Path checks cover `read`, `notebook_read`, `grep`, `glob`, `edit`, `write`, `notebook_edit` and `apply_patch`. The four editing tools also run config protection before an edit and the usual context, governance and test-cohesion hooks afterwards. Separate matchers handle `exec` and MCP. [Devin lifecycle hook reference](https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks#tool-names-you-can-match)
 - **Block contract:** the guard scripts retain flat verdicts or stderr plus exit 2. Context-only `user-prompt-submit.sh` and `post-tool-use.sh` commands use `AI_TOOLKIT_HOOK_FORMAT=json` so Devin receives `hookSpecificOutput.additionalContext` with the explicit `UserPromptSubmit` or `PostToolUse` event. Blocking guards keep their existing format.
-- **Stdin payload:** flat `{ "hook_event_name", "tool_name", "tool_input" }` — already handled by `_hook-io.sh` via its `.tool_name` / `.tool_input.*` branches, so no normalizer change was needed.
-- **Global bonus:** Devin CLI reads `~/.claude/settings.json` + `.claude/settings.json` hooks directly (`read_config_from.claude` default on, since CLI `2026.3.20-2`), so a global `ai-toolkit install` already covers Devin even without the project-local file.
+- **File arguments.** The Devin adapter reads `tool_input`, translates `notebook_path`, and splits each patch by file. Guards check every add, update, deletion and move destination before Devin applies the patch. Unrecognized patch input returns exit code 2. After a multi-file edit, Devin receives one context response covering all affected paths. A failed tool response skips edit notifications and audit entries.
+- **Installation.** `ai-toolkit install --local --editors windsurf --profile full` writes the native matchers to the project and installs their runtime globally. Regeneration preserves user hook groups and refuses malformed or symlinked hook configuration. Devin can also load Claude settings when `read_config_from.claude` is enabled.
 
 ## Troubleshooting
 

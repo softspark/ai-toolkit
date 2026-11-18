@@ -155,11 +155,10 @@ catalog and secret-loading mechanism. Do not assume a filename or deployment
 layout exists. Keep model identity separate from credentials and reasoning effort.
 
 For current model capabilities consult `model-routing-patterns` and official
-model documentation. OpenAI's reviewed reasoning guide recommends `gpt-6-astra`
-for reasoning workloads and requires Responses for its function calling; that is
-a candidate for evaluation, not authorization to replace a configured model.
-Effort values are model-dependent; do not automatically send `none` or transplant
-Claude thinking parameters into OpenAI requests.
+model documentation. An approved evaluation can compare `gpt-6.2-sol` with
+`gpt-6.2-astra` on the same workload and budget. Both require Responses for
+tool calling. Check each model's supported effort and keep earlier conversation
+items in order to preserve eligible cached input and reasoning context.
 
 ## Cost Optimization Strategies
 

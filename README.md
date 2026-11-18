@@ -6,7 +6,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-116-brightgreen)](app/skills/)
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
-[![Tests](https://img.shields.io/badge/tests-2037%20passing-success)](tests/)
+[![Tests](https://img.shields.io/badge/tests-2038%20passing-success)](tests/)
 
 ## What's New in v6.0.0
 
@@ -396,8 +396,9 @@ autonomous-development
 Claude Code uses Opus `high` for coordination, Sonnet `high` for bounded
 implementation and tests, and Opus `xhigh` for hard debugging. If the official
 Codex plugin is installed, enabled and available in the active agent catalog,
-the supervisor can also assign work to Codex, preferring Astra `xhigh` for
-security. Otherwise it keeps the available native agents and configured models.
+the supervisor can also assign work to Codex, preferring GPT-6.2 Astra at
+`xhigh` for defensive, read-only reviews of source and configuration.
+Otherwise it keeps the available native agents and configured models.
 Detection never installs or enables a plugin. See
 [conditional model routing](kb/reference/model-compatibility.md#conditional-claude-to-codex-delegation).
 

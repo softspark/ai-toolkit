@@ -378,6 +378,10 @@ PY
 }
 
 @test "profiles: augment + full emits agents, commands, and HOME settings.json" {
+    mkdir -p "$TMP_HOME/bin"
+    printf '%s\n' '#!/bin/sh' 'echo "auggie 1.2.2"' > "$TMP_HOME/bin/auggie"
+    chmod +x "$TMP_HOME/bin/auggie"
+    export PATH="$TMP_HOME/bin:$PATH"
     run_install --editors augment --profile full >/dev/null 2>&1
     [ -d "$TEST_PROJECT/.augment/agents" ]
     compgen -G "$TEST_PROJECT/.augment/agents/ai-toolkit-*.md" >/dev/null
@@ -385,6 +389,8 @@ PY
     # HOME-scoped hooks file (per v3 contract: augment hooks only in HOME)
     [ -f "$TMP_HOME/.augment/settings.json" ]
     grep -q '"_source": "ai-toolkit"' "$TMP_HOME/.augment/settings.json"
+    grep -q '^tools: \[read, grep, find\]$' "$TEST_PROJECT/.augment/agents/ai-toolkit-explorer-agent.md"
+    grep -q '^tools: \[read, grep, find\]$' "$TMP_HOME/.augment/agents/ai-toolkit-explorer-agent.md"
 }
 
 # ── Devin hooks: full only ─────────────────────────────────────────────────
@@ -397,6 +403,23 @@ PY
 @test "profiles: windsurf + full emits .devin/hooks.v1.json only" {
     run_install --editors windsurf --profile full >/dev/null 2>&1
     [ -f "$TEST_PROJECT/.devin/hooks.v1.json" ]
+    [ -r "$TMP_HOME/.softspark/ai-toolkit/hooks/_devin-file-hook.py" ]
+    run python3 - "$TEST_PROJECT/.devin/hooks.v1.json" <<'PY'
+import json
+import re
+import subprocess
+import sys
+
+with open(sys.argv[1]) as handle:
+    groups = json.load(handle)["PreToolUse"]
+command = next(h["command"] for group in groups if re.search(group["matcher"], "write")
+               for h in group["hooks"] if "guard-config.sh" in h["command"])
+event = {"tool_name": "write", "tool_input": {"file_path": "ruff.toml", "content": "fixture"}}
+result = subprocess.run(["bash", "-c", command], input=json.dumps(event),
+                        text=True, capture_output=True, timeout=10)
+assert result.returncode == 2 and "ruff.toml is protected" in result.stderr, result
+PY
+    [ "$status" -eq 0 ]
     [ ! -f "$TEST_PROJECT/.windsurf/hooks.json" ]
     grep -q '"_source": "ai-toolkit"' "$TEST_PROJECT/.devin/hooks.v1.json"
 }

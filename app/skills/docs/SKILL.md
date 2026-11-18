@@ -148,9 +148,10 @@ If the inventory script reports `doc_coverage_percent < 50` and the project has 
 
 ```
 Create an agent team for documentation:
-- Teammate 1 (documenter): "Document the [module-1] directory. Generate docstrings for all public functions." Use Sonnet.
-- Teammate 2 (documenter): "Document the [module-2] directory. Generate docstrings for all public functions." Use Sonnet.
-- Teammate 3 (documenter): "Generate README sections: installation, usage, API reference." Use Opus.
+Keep each teammate's configured model and effort unless the user selected an override.
+- Teammate 1 (documenter): "Document the [module-1] directory. Generate docstrings for all public functions."
+- Teammate 2 (documenter): "Document the [module-2] directory. Generate docstrings for all public functions."
+- Teammate 3 (documenter): "Generate README sections: installation, usage, API reference."
 Teammates should NOT overlap — each owns their assigned scope.
 ```
 

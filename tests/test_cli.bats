@@ -356,6 +356,10 @@ PY
     [ "$status" -eq 0 ]
     [ -f "$TEST_TMP/.aider.conf.yml" ]
     grep -q 'model:' "$TEST_TMP/.aider.conf.yml"
+    echo 'model: my-provider/my-model' > .aider.conf.yml
+    run $CLI aider-conf
+    [ "$status" -eq 0 ]
+    [ "$(cat .aider.conf.yml)" = 'model: my-provider/my-model' ]
 }
 
 @test "cli: help lists roo-modes command" {

@@ -68,11 +68,11 @@ hook_file_path() {
 }
 
 hook_old_content() {
-    hook_json '(.tool_input.old_string // .tool_input.old_str_1 // .tool_info.old_string // .tool_info.old_str_1 // .tool_info.edits[0].old_string // "")'
+    hook_json '(.tool_input.old_string // .tool_input.old_str_1 // .tool_info.old_string // .tool_info.old_str_1 // .tool_info.edits[0].old_string // ([.tool_input.edits[]?.oldText // empty] | join("\n")))'
 }
 
 hook_new_content() {
-    hook_json '(.tool_input.new_string // .tool_input.new_str_1 // .tool_input.content // .tool_info.new_string // .tool_info.new_str_1 // .tool_info.content // .tool_info.edits[0].new_string // .file_changes[0].content? // "")'
+    hook_json '(.tool_input.new_string // .tool_input.new_str_1 // .tool_input.content // .tool_input.file_content // .tool_info.new_string // .tool_info.new_str_1 // .tool_info.content // .tool_info.edits[0].new_string // .file_changes[0].content? // ([.tool_input.edits[]?.newText // empty] | join("\n")))'
 }
 
 hook_emit_context() {

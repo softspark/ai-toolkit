@@ -37,4 +37,4 @@ Phase 1 → Phase 2 → Phase 3
 ## Agent Assignments
 | Task | Agent | Model |
 |------|-------|-------|
-| [Task] | [agent-name] | opus/sonnet |
+| [Task] | [agent-name] | [configured model or explicit user choice] |

@@ -3,9 +3,9 @@ title: "AI Toolkit - opencode Compatibility"
 category: reference
 service: ai-toolkit
 tags: [opencode, compatibility, install, skills, hooks, mcp, plugins]
-version: "1.3.0"
+version: "1.4.0"
 created: "2026-04-16"
-last_updated: "2026-11-06"
+last_updated: "2026-11-18"
 description: "Reference for how ai-toolkit integrates with opencode — AGENTS.md, Agent Skills, subagents, slash commands, JS plugin hooks, and MCP config."
 ---
 
@@ -13,7 +13,7 @@ description: "Reference for how ai-toolkit integrates with opencode — AGENTS.m
 
 ## Summary
 
-Reviewed against OpenCode V2 2.2.5 and the V1 1.19.5 compatibility line.
+Reviewed against OpenCode V2 2.3.1 and the V1 1.19.6 compatibility line.
 The generated plugin requires V2 or V1 1.18.29 and later. V2 is published as
 `@opencode/cli`; the older `opencode-ai` package and GitHub latest-release
 endpoint still identify V1, so they are not the latest-product authority.
@@ -71,7 +71,9 @@ Each file in `app/agents/*.md` emits a corresponding `.opencode/agents/ai-toolki
 
 - `description` — copied from the source agent frontmatter
 - `mode: subagent` (required)
-- `color` — copied when present
+- `color` uses a quoted six-digit hex value. The generator translates toolkit
+  color names, preserves valid hex colors and omits unrecognized values.
+  [OpenCode 2.3.1 agent schema](https://github.com/anomalyco/opencode/blob/v2.3.1/packages/schema/src/config/agent.ts)
 
 The `model` field is deliberately omitted. opencode requires the `provider/model-id` form; ai-toolkit only stores a short alias (`opus`/`sonnet`/`haiku`) which cannot be mapped without assuming a provider. opencode falls back to the user's `default_agent` / top-level `model` config.
 

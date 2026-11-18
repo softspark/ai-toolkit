@@ -1552,7 +1552,10 @@ def _atomic_write_bytes(path: Path, content: bytes) -> None:
     temp_path = Path(temp_name)
     try:
         if mode is not None:
-            os.fchmod(fd, mode)
+            if hasattr(os, "fchmod"):
+                os.fchmod(fd, mode)
+            else:  # Windows chmod supports the read-only bit.
+                os.chmod(temp_path, mode)
         with os.fdopen(fd, "wb") as handle:
             fd = -1
             handle.write(content)

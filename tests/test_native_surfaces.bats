@@ -33,6 +33,9 @@ TOOLKIT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 setup_file() {
     export NS_DIR; NS_DIR="$(mktemp -d)"
     export NS_LOG; NS_LOG="$(mktemp -d)"
+    printf '%s\n' '#!/bin/sh' 'echo "auggie 1.2.2"' > "$NS_LOG/auggie"
+    chmod +x "$NS_LOG/auggie"
+    export PATH="$NS_LOG:$PATH"
     python3 "$TOOLKIT_DIR/scripts/generate_augment_agents.py"   "$NS_DIR" > "$NS_LOG/aug-agents.log"   2>&1
     echo $? > "$NS_LOG/aug-agents.status"
     python3 "$TOOLKIT_DIR/scripts/generate_augment_commands.py" "$NS_DIR" > "$NS_LOG/aug-commands.log" 2>&1
@@ -82,7 +85,8 @@ teardown_file() {
         ! grep -q '^disabled_tools:' "$f" || { echo "allowlist overridden in $f"; return 1; }
         grep -q '<!-- ai-toolkit-managed: augment-agent -->' "$f" || return 1
     done
-    grep -q '^tools: \[view, codebase-retrieval\]$' "$NS_DIR/.augment/agents/ai-toolkit-explorer-agent.md"
+    grep -q '^tools: \[read, grep, find\]$' "$NS_DIR/.augment/agents/ai-toolkit-explorer-agent.md"
+    grep -q '^extensions: false$' "$NS_DIR/.augment/agents/ai-toolkit-explorer-agent.md"
 }
 
 @test "augment_agents: ai-engineer body includes expertise heading" {

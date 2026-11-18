@@ -3,9 +3,9 @@ title: "Global Install Model"
 category: reference
 service: ai-toolkit
 tags: [install, global, claude, codex, plugins, local-setup]
-version: "3.8.0"
+version: "3.8.1"
 created: "2026-03-26"
-last_updated: "2026-10-08"
+last_updated: "2026-11-18"
 description: "Reference description of Claude Code global install, Claude app plugin export, project-local editor setup, global Codex plugin layering, and command responsibilities in ai-toolkit."
 ---
 
@@ -202,7 +202,10 @@ These files still stay local to a repository as part of the core install model:
 - `.cline/hooks/<Event>` plus `.clinerules/hooks/<Event>` compatibility for Cline profiles `standard`, `strict`, and `full`
 - `.clinerules/workflows/ai-toolkit-*.md`
 - `.roomodes`
-- `.aider.conf.yml`
+- `.aider.conf.yml` is created on first install. Local install, update and reset
+  preserve existing YAML, including model choices edited in a generated file.
+  Uninstall removes an unchanged template. It retains files edited after
+  installation and older configurations whose original contents cannot be verified.
 - `.augment/rules/ai-toolkit-*.md`
 - `.agents/rules/*.md` and `.agents/workflows/*.md` (Google Antigravity; singular `.agent/` still read as fallback)
 - `.git/hooks/pre-commit` (fallback)

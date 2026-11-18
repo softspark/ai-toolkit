@@ -12,12 +12,12 @@ Cache repeated prefixes when reuse offsets write costs. Cache eligibility and
 pricing depend on the model and platform; a short system prompt is not cached
 merely because it repeats.
 
-## Dated cache reference (2026-10-08)
+## Claude API cache reference (2026-11-18)
 
 | Model | Minimum eligible prefix | Cache read / base input price |
 |-------|-------------------------|-------------------------------|
 | Claude Opus 5.5 | 512 tokens | 5% |
-| Claude Fable 5.1 | 512 tokens | 2.5% |
+| Claude Fable 5.2 | 512 tokens | 2.5% |
 | Claude Sonnet 5.5 | 512 tokens | 5% |
 | Claude Haiku 5.5 | 512 tokens | 10% |
 
@@ -77,10 +77,10 @@ heartbeat requests simply to keep an unused prefix warm.
 ## Invalidation
 
 Changing tools invalidates subsequent system and message prefixes; changing the
-system invalidates subsequent messages. Top-level effort changes invalidate
-message cache blocks and can affect earlier blocks depending on the model.
-Supported per-message effort updates preserve earlier prefixes. Changing the
-model is not a promise of cross-model cache reuse.
+system invalidates subsequent messages. Changing effective top-level effort can
+invalidate messages and, on some models, earlier blocks. Explicitly setting the
+model's default effort is equivalent to omitting it. A supported per-message
+effort update preserves the existing prefix. Check cache usage after switching models.
 
 A static string passed as `system` alone does not enable caching: configure
 `cache_control` at the request or content-block level. Keep tool definitions,
@@ -112,7 +112,7 @@ minutes, within the approved cost policy.
 
 ## Sources and related skills
 
-Reviewed 2026-10-08:
+Reviewed 2026-11-18.
 - [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 - [Pricing](https://platform.claude.com/docs/en/about-claude/pricing)
 

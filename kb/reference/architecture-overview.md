@@ -3,9 +3,9 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.15.0"
+version: "1.15.1"
 created: "2026-03-23"
-last_updated: "2026-11-06"
+last_updated: "2026-11-18"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
 ---
 
@@ -190,7 +190,7 @@ project-scoped native MCP files: `.cursor/mcp.json`, `.github/mcp.json`,
 | `cline-hooks` | `./` | Generates eight executable files under `.cline/hooks/` and `.clinerules/hooks/` |
 | `roo-modes` | `./` | Generates `.roomodes` |
 | `roo-dir-rules` | `./` | Generates `.roo/rules/*.md` |
-| `aider-conf` | `./` | Generates `.aider.conf.yml` |
+| `aider-conf` | `./` | Creates `.aider.conf.yml` on first use and preserves existing settings |
 | `conventions-md` | `./` | Generates `CONVENTIONS.md` (Aider auto-loaded) |
 | `augment-dir-rules` | `./` | Generates `.augment/rules/ai-toolkit-*.md` |
 | `antigravity-rules` | `./` | Generates `.agents/rules/` + `.agents/workflows/` |

@@ -28,7 +28,8 @@ NATIVE_HINT = (
 AVAILABLE_HINT = (
     "AI Toolkit: local metadata indicates the installed Codex plugin is enabled. "
     "Apply the model-routing-patterns skill before choosing an executor, including "
-    "its security Astra/xhigh and debugging routes. "
+    "its Astra/xhigh route for defensive read-only reviews of source and "
+    "configuration, and its debugging route. "
     "This is a hint, not authorization: delegate only if codex:codex-rescue is also "
     "callable in the current Claude agent catalog and the task permits it. Respect "
     "managed/session restrictions and explicit model choices. Otherwise use available "

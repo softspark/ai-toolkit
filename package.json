@@ -60,7 +60,7 @@
     "generate:cline": "python3 scripts/generate_cline_rules.py .",
     "generate:cline-hooks": "python3 scripts/generate_cline_hooks.py .",
     "generate:roo": "python3 scripts/generate_roo_modes.py > .roomodes",
-    "generate:aider": "python3 scripts/generate_aider_conf.py > .aider.conf.yml",
+    "generate:aider": "python3 scripts/generate_aider_conf.py .",
     "generate:language-rules": "python3 scripts/generate_language_rules_skills.py",
     "generate:toolkit-rules": "python3 scripts/generate_toolkit_rules_skills.py",
     "generate:opencode-agents": "python3 scripts/generate_opencode_agents.py .",

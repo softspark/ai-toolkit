@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-11-17T22:32:07Z",
+  "last_run": "2026-11-18T00:31:06Z",
   "schema_version": 1,
   "tools": {
     "aider": {
@@ -24,7 +24,7 @@
       }
     },
     "augment": {
-      "docs_hash": "b1ea0ec045c7159b",
+      "docs_hash": "a5da718bde608207",
       "headings": [
         "Getting started",
         "Introducing Auggie CLI",
@@ -54,7 +54,7 @@
       }
     },
     "claude-app": {
-      "docs_hash": "edda2384a385153a",
+      "docs_hash": "9f88162622d8473d",
       "headings": [
         "Add global and folder instructions",
         "Availability",
@@ -71,6 +71,7 @@
         "Get started",
         "Get started with Claude Cowork",
         "Global instructions",
+        "Have Claude always ask before using a connector tool",
         "How Claude Cowork runs your tasks",
         "I&#x27;m hitting usage limits quickly",
         "I&#x27;m seeing &quot;Setting up Claude&#x27;s workspace&quot; when I start Cowork; what does this mean?",
@@ -96,7 +97,7 @@
       }
     },
     "claude-code": {
-      "docs_hash": "aab7a5bc21171529",
+      "docs_hash": "8211a90d5c5eddaf",
       "headings": [
         "Code review and pull requests",
         "Core concepts",
@@ -166,7 +167,7 @@
         "userConfig": false,
         "workflows": true
       },
-      "version": "2.1.326 (Claude Code)"
+      "version": "2.1.327 (Claude Code)"
     },
     "cline": {
       "docs_hash": "4e450f3c22bc024d",
@@ -377,7 +378,7 @@
       "version": "codex-cli 0.169.0"
     },
     "cursor": {
-      "docs_hash": "cccf22684e663085",
+      "docs_hash": "382775229fffd98a",
       "headings": [
         "Agent",
         "Agent SDK",
@@ -410,7 +411,7 @@
       }
     },
     "gemini-cli": {
-      "docs_hash": "9bcb8592aec8b6f3",
+      "docs_hash": "91f14a5956e13c8a",
       "headings": [
         "Breadcrumbs",
         "Directory actions",
@@ -451,7 +452,7 @@
       "version": "0.57.0"
     },
     "github-copilot": {
-      "docs_hash": "3694987b08da8663",
+      "docs_hash": "4bddce4094dfe11e",
       "headings": [
         "About GitHub Copilot",
         "About GitHub Copilot agents",
@@ -580,7 +581,7 @@
       }
     },
     "windsurf": {
-      "docs_hash": "debac1cc0dca7ed2",
+      "docs_hash": "e5f1382e8b03b5e0",
       "headings": [
         "Accounts",
         "Agent Command Center",

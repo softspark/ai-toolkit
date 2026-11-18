@@ -24,6 +24,7 @@ Writes files to target-dir/.opencode/agents/.
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -34,6 +35,11 @@ from prompt_surfaces import strip_claude_code_only
 from secure_fs import OwnedEdit, apply_owned_edits, lexical_absolute
 
 AGENT_PREFIX = "ai-toolkit-"
+AGENT_COLORS = {
+    "blue": "#0000FF", "cyan": "#00FFFF", "green": "#008000", "magenta": "#FF00FF",
+    "orange": "#FFA500", "purple": "#800080", "red": "#FF0000", "teal": "#008080",
+    "yellow": "#FFFF00",
+}
 
 
 def _agent_body(agent_file: Path) -> str:
@@ -63,8 +69,9 @@ def _render_opencode_agent(agent_file: Path) -> str:
     # only stores a short alias (opus/sonnet/haiku) which is not mappable
     # without assuming a provider, so we deliberately omit it — opencode falls
     # back to the user's `default_agent` / top-level `model` config.
-    if color:
-        lines.append(f"color: {color}")
+    color = AGENT_COLORS.get(color.lower(), color)
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+        lines.append(f'color: "{color}"')
     lines.append("---")
     lines.append("")
     body = strip_claude_code_only(_agent_body(agent_file)).rstrip()

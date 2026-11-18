@@ -159,15 +159,13 @@ For complex bugs (open >1h, unclear root cause), spawn teammates to investigate 
 
 ```
 Create an agent team to debug this issue:
+Keep each teammate's configured model and effort unless the user selected an override.
 - Teammate 1 (debugger): "Investigate if [bug] is caused by [hypothesis A: database issue].
   Check logs, connection pools, timeouts, query performance."
-  Use Opus.
 - Teammate 2 (debugger): "Investigate if [bug] is caused by [hypothesis B: race condition].
   Look for async issues, locking, concurrency, shared state."
-  Use Opus.
 - Teammate 3 (debugger): "Investigate if [bug] is caused by [hypothesis C: configuration drift].
   Compare env vars, config files, recent changes, dependency versions."
-  Use Opus.
 Have them talk to each other to challenge each other's theories.
 Report consensus when done.
 ```

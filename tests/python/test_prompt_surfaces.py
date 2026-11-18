@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -193,7 +194,7 @@ def test_codex_plugin_stage_omits_claude_delegation(tmp_path: Path) -> None:
     assert validate_staged_plugin(staged) == []
     skill = (staged / "skills/model-routing-patterns/SKILL.md").read_text(encoding="utf-8")
     assert "codex:codex-rescue" not in skill
-    assert "--model gpt-6-astra" not in skill
+    assert not re.search(r"--(?:model|effort)(?:[=\s])", skill)
 
 
 @pytest.mark.parametrize("vendor", ["cursor", "augment", "opencode"])
@@ -253,8 +254,26 @@ def test_real_codex_skills_cannot_delegate_back_to_claude_plugin(name: str) -> N
     source = ROOT / "app" / "skills" / name / "SKILL.md"
     result = build_codex_skill_text(source)
     assert "codex:codex-rescue" not in result
-    assert "--model gpt-6-astra" not in result
+    assert not re.search(r"--(?:model|effort)(?:[=\s])", result)
     assert "CLAUDE_CODE_ONLY" not in result
+
+
+@pytest.mark.parametrize("name", ["docs", "debug", "refactor", "review"])
+def test_teammate_examples_use_configured_role_models(name: str) -> None:
+    source = ROOT / "app" / "skills" / name / "SKILL.md"
+    body = source.read_text(encoding="utf-8")
+    assert "each teammate's configured model and effort" in body
+    assert not re.search(r"\buse\s+(?:claude\s+)?(?:opus|sonnet|haiku|fable)\b", body, re.IGNORECASE)
+
+
+def test_claude_routing_flags_stay_in_defensive_host_scoped_block() -> None:
+    source = ROOT / "app/skills/model-routing-patterns/SKILL.md"
+    body = source.read_text(encoding="utf-8")
+    scoped = body.split(START, 1)[1].split(END, 1)[0]
+    assert "approved read-only review" in scoped
+    assert "--model gpt-6.2-astra --effort xhigh" in scoped
+    assert "An access denial or safety refusal ends that route" in scoped
+    assert not re.search(r"--(?:model|effort)(?:[=\s])", strip_claude_code_only(body))
 
 
 def test_native_worker_and_supervisor_defaults_follow_approved_roles() -> None:

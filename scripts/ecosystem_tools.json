@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "description": "Authoritative registry of tools ai-toolkit integrates with. Consumed by scripts/ecosystem_doctor.py to detect upstream doc/version drift.",
-  "last_updated": "2026-11-17",
+  "last_updated": "2026-11-18",
   "tools": [
     {
       "id": "claude-code",
       "display_name": "Claude Code",
       "kind": "primary",
-      "reviewed_version": "2.1.326",
-      "release_review_note": "2026-11-17: GitHub and npm latest both identify 2.1.326. npm stable is 2.1.311 and next is 2.1.327. The documented optional Code Mode and startup diagnostics require no generator update.",
+      "reviewed_version": "2.1.327",
+      "release_review_note": "2026-11-18: GitHub and npm latest report 2.1.327. The conservative npm stable channel is 2.1.311.",
       "urls": {
         "docs": "https://code.claude.com/docs",
         "release_notes": "https://github.com/anthropics/claude-code/releases",
@@ -100,18 +100,15 @@
         "command": "claude --version"
       },
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
           "A",
           "C"
         ],
-        "note": "The headings lost zero-width spaces. Claude Code 2.1.326 adds optional Code Mode and startup diagnostics. The hook reference retains onFailure:block, and skills and plugin manifests keep the toolkit's supported format.",
+        "note": "The release adds /status diagnostics for malformed customization files and unmatched hook matchers. Local diagnostics and the optional MCP stdin input do not change the generated agent or hook format.",
         "sources": [
-          "https://code.claude.com/docs/en/hooks",
-          "https://code.claude.com/docs/en/skills",
-          "https://code.claude.com/docs/en/plugins-reference",
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.326",
-          "https://registry.npmjs.org/@anthropic-ai/claude-code"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.327",
+          "https://registry.npmjs.org/-/package/@anthropic-ai/claude-code/dist-tags"
         ]
       }
     },
@@ -121,7 +118,7 @@
       "kind": "app",
       "urls": {
         "docs": "https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork",
-        "release_notes": "https://support.claude.com/en/articles/13837440-use-plugins-in-claude",
+        "release_notes": "https://support.claude.com/en/articles/12138966-release-notes",
         "changelog": null
       },
       "config_paths": [
@@ -151,18 +148,19 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
-          "A"
+          "A",
+          "C"
         ],
-        "note": "The Cowork introduction changed without heading or marker changes. The current help reference still documents custom plugin ZIP uploads.",
+        "note": "Desktop users can check their channel in application settings. Plugin ZIP distribution, Cowork hooks and subagents are tracked separately from the Desktop update channel.",
         "sources": [
-          "https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork",
+          "https://support.claude.com/en/articles/10065433-install-claude-desktop",
           "https://support.claude.com/en/articles/13837440-use-plugins-in-claude"
         ]
       },
       "reviewed_version": null,
-      "release_review_note": "2026-11-06 classes A/C: reviewed dated November 5 product release notes and current plugin documentation. Product release notes do not expose one stable app/runtime semver. Enterprise inference hooks/admin controls and personal-finance UI do not require toolkit plugin changes."
+      "release_review_note": "2026-11-18: Desktop offers Stable and Latest release channels. The hosted Chat and Cowork runtimes do not share a published Desktop semver."
     },
     {
       "id": "cursor",
@@ -218,18 +216,20 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
-          "A"
+          "A",
+          "C"
         ],
-        "note": "The Grok Bot heading disappeared from the landing page. Cursor still documents native hooks, rules, skills, subagents and MCP under Customize.",
+        "note": "Cursor documents project hooks and native subagents. Generated agents use model: inherit. Release-note coverage and the current downloadable binary are recorded separately.",
         "sources": [
-          "https://cursor.com/docs",
+          "https://api2.cursor.sh/updates/api/download/stable/darwin-arm64/cursor",
+          "https://cursor.com/docs/release-notes/ide.md",
           "https://cursor.com/docs/hooks"
         ]
       },
-      "reviewed_version": "3.27",
-      "release_review_note": "2026-11-06 classes A/C: the official product release-notes timeline lists Cursor IDE and Agents Window 3.27, dated 2026-10-22. The November 5 hosted-app announcement is a separate cloud capability, not a new declared IDE version. Hook and native agent contracts remain compatible."
+      "reviewed_version": "3.30.14",
+      "release_review_note": "2026-11-18: The stable desktop download manifest reports 3.30.14. The published IDE notes document changes through 3.27."
     },
     {
       "id": "windsurf",
@@ -265,7 +265,7 @@
         "scripts/generate_windsurf_skills.py",
         "scripts/generate_devin_hooks.py"
       ],
-      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary rules/workflows/hooks tree; legacy .windsurf rules remain a read fallback. Cascade and its .windsurf/hooks.json format ended on 2026-07-01, so ai-toolkit now emits only .devin/hooks.v1.json. Current Devin skill docs list project .agents/skills, .devin/skills and .windsurf/skills, and user ~/.agents/skills, ~/.config/devin/skills and ~/.codeium/<channel>/skills; ai-toolkit emits a single canonical pointer under .windsurf/skills and no longer also writes .devin/skills. Devin CLI also imports ~/.claude/settings.json hooks when read_config_from.claude is enabled.",
+      "status_note": "Windsurf rebranded to Devin Desktop on 2026-06-02. .devin/ is the primary rules/workflows/hooks tree; current clients also load legacy .windsurf rules when both trees exist. Cascade and its .windsurf/hooks.json format ended on 2026-07-01, so ai-toolkit now emits only .devin/hooks.v1.json. Current Devin skill docs list project .agents/skills, .devin/skills and .windsurf/skills, and user ~/.agents/skills, ~/.config/devin/skills and ~/.codeium/<channel>/skills; ai-toolkit emits a single canonical pointer under .windsurf/skills and no longer also writes .devin/skills. Devin CLI also imports ~/.claude/settings.json hooks when read_config_from.claude is enabled.",
       "capability_markers": [
         "Cascade",
         "windsurfrules",
@@ -282,18 +282,20 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
-          "A"
+          "A",
+          "B"
         ],
-        "note": "The Desktop introduction changed without heading or marker changes. Devin still documents repository rules and AGENTS.md.",
+        "note": "Flat hooks.v1.json matchers cover native read, grep, glob, write, edit, notebook tools and apply_patch alongside supported legacy names. File guards inspect each patch source and move destination. Both rule trees can load on current Devin.",
         "sources": [
-          "https://docs.devin.ai/desktop",
-          "https://docs.devin.ai/cli/extensibility/rules"
+          "https://docs.devin.ai/desktop/changelog.md",
+          "https://static.devin.ai/cli/current/manifest.json",
+          "https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks.md"
         ]
       },
-      "reviewed_version": "3.11.238",
-      "release_review_note": "2026-11-06 classes A/B/C: reviewed Devin Desktop stable 3.11.238, published 2026-10-30. Recent Desktop changes concern UI, diagnostics and account policies. Corrected generated prompt/edit hook output against the current Devin lifecycle contract. https://docs.devin.ai/desktop/changelog"
+      "reviewed_version": "3.14.30819",
+      "release_review_note": "2026-11-18: The Desktop changelog lists 3.14.30819. The independent Devin CLI manifest reports 3000.14.30821."
     },
     {
       "id": "github-copilot",
@@ -343,26 +345,27 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
+          "A",
           "C"
         ],
-        "note": "The landing page featured browser use in place of Dreaming. These are optional agent capabilities. The existing CLI and cloud hook configuration remains documented separately.",
+        "note": "Native exports use GitHub's CLI and editor hook/skill contracts. Model availability and browser permissions depend on the host and organization policy.",
         "sources": [
-          "https://docs.github.com/en/copilot",
-          "https://docs.github.com/en/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/browser-use",
-          "https://docs.github.com/en/copilot/reference/hooks-reference"
+          "https://github.com/github/copilot-cli/releases/tag/v1.0.113",
+          "https://docs.github.com/en/copilot/reference/hooks-reference",
+          "https://docs.github.com/en/copilot/reference/ai-models/supported-models"
         ]
       },
-      "reviewed_version": "1.0.106",
-      "release_review_note": "2026-11-06 classes A/C: reviewed Copilot CLI stable 1.0.106, published 2026-11-06. This is the CLI release, not a version claim for every IDE extension or cloud agent. Current release changes diagnostics, configuration UX, sandbox extensions and runtime reliability; emitted native hooks, instructions, skills and agent metadata remain compatible. https://github.com/github/copilot-cli/releases/tag/v1.0.106"
+      "reviewed_version": "1.0.113",
+      "release_review_note": "2026-11-18: Copilot CLI 1.0.113 adds an administrator switch for built-in Browser Use. The CLI has its own release stream."
     },
     {
       "id": "gemini-cli",
       "display_name": "Gemini CLI",
       "kind": "editor",
-      "reviewed_version": "0.67.0",
-      "release_review_note": "2026-11-06 classes A/B/C: reviewed stable Gemini CLI 0.67.0 (2026-11-04). The documented stable hook set remains eleven events; SubagentStop work in nightly releases is not treated as a stable contract. Corrected JSON output for text-only advisory hooks and native prompt_response session summaries. Installed binary observations remain separate.",
+      "reviewed_version": "0.68.0",
+      "release_review_note": "2026-11-18: GitHub lists Gemini CLI 0.68.0 as stable.",
       "urls": {
         "docs": "https://github.com/google-gemini/gemini-cli/tree/main/docs",
         "release_notes": "https://github.com/google-gemini/gemini-cli/releases",
@@ -417,13 +420,14 @@
         "command": "gemini --version"
       },
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
           "A"
         ],
-        "note": "The repository documentation listing changed without a heading or marker change. BeforeTool and AfterTool still match tool names in settings.",
+        "note": "The tagged hook enumeration retains eleven events. Generated agents omit Claude model aliases. Existing Gemini hook output uses the host's documented JSON shapes.",
         "sources": [
-          "https://github.com/google-gemini/gemini-cli/tree/main/docs",
+          "https://github.com/google-gemini/gemini-cli/releases/tag/v0.68.0",
+          "https://github.com/google-gemini/gemini-cli/blob/v0.68.0/packages/core/src/hooks/types.ts",
           "https://geminicli.com/docs/hooks/reference/"
         ]
       }
@@ -433,7 +437,7 @@
       "display_name": "Cline",
       "kind": "editor",
       "reviewed_version": "4.1.26",
-      "release_review_note": "2026-11-06 classes A/C/D: current GitHub stable release remains Cline 4.1.26 (2026-10-26). Reviewed emitted skill/rule paths and hook payloads; provider catalog and cloud-task UI changes do not require generator changes.",
+      "release_review_note": "2026-11-18: Cline's extension release is 4.1.26. The standalone CLI has separate distribution metadata.",
       "urls": {
         "docs": "https://docs.cline.bot",
         "release_notes": "https://github.com/cline/cline/releases",
@@ -483,13 +487,14 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
-          "A"
+          "A",
+          "C"
         ],
-        "note": "Five headings lost their zero-width prefixes. Cline's skill reference still uses SKILL.md bundles.",
+        "note": "The extension exposes separate local and cloud task model picks. The toolkit emits rules, hooks and a skill pointer, leaving those picks to Cline.",
         "sources": [
-          "https://docs.cline.bot",
+          "https://github.com/cline/cline/releases/tag/v4.1.26",
           "https://docs.cline.bot/customization/skills"
         ]
       }
@@ -498,15 +503,15 @@
       "id": "roo-code",
       "display_name": "Roo Code",
       "kind": "editor",
-      "reviewed_version": "3.94.0",
-      "release_review_note": "2026-11-06 classes A/C: reviewed Zoo Code stable 3.94.0, published 2026-10-31. Provider/catalog, MCP OAuth, UI and dependency updates do not change the emitted .roomodes or rule-file contracts. https://github.com/Zoo-Code-Org/Zoo-Code/releases/tag/v3.94.0",
+      "reviewed_version": "3.98.0",
+      "release_review_note": "2026-11-18: Zoo Code 3.98.0 is the successor release. Original Roo Code remains archived at 3.54.0.",
       "urls": {
         "docs": "https://docs.zoocode.dev",
         "release_notes": "https://github.com/Zoo-Code-Org/Zoo-Code/releases",
         "changelog": null
       },
       "status": "succeeded-by-fork",
-      "status_note": "Upstream RooCodeInc/Roo-Code archived/read-only 2026-05-15, frozen at v3.54.0. Review the successor Zoo-Code-Org/Zoo-Code (marketplace ZooCodeOrganization.zoo-code, docs.zoocode.dev); release 3.92.0 was reviewed on 2026-10-27. Current custom-mode docs explicitly retain JSON .roomodes, and the documented Roo-to-Zoo import accepts exported settings. Emitted .roomodes and .roo/rules contracts remain compatible; this does not establish parity for every product feature. Use Zoo GitHub releases as the authoritative release feed. Global skills use native ~/.agents/skills discovery.",
+      "status_note": "Upstream RooCodeInc/Roo-Code archived/read-only 2026-05-15, frozen at v3.54.0. Review the successor Zoo-Code-Org/Zoo-Code (marketplace ZooCodeOrganization.zoo-code, docs.zoocode.dev); release 3.98.0 was reviewed on 2026-11-18. Current custom-mode docs explicitly retain JSON .roomodes, and the documented Roo-to-Zoo import accepts exported settings. Emitted .roomodes and .roo/rules contracts remain compatible; this does not establish parity for every product feature. Use Zoo GitHub releases as the authoritative release feed. Global skills use native ~/.agents/skills discovery.",
       "config_paths": [
         ".roomodes",
         ".roo/rules/*.md",
@@ -538,16 +543,16 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-11-06",
+        "date": "2026-11-18",
         "classes": [
           "A",
           "C"
         ],
-        "note": "Current Zoo documentation still accepts project .roomodes as JSON or YAML with the emitted description, whenToUse and read/edit/command/mcp groups. Global YAML preference does not deprecate project JSON. Roo-to-Zoo settings import remains available. Preserve current modes and model selection; optional provider, OAuth and UI additions require no generator changes.",
+        "note": "Zoo retains project .roomodes and offers experimental dynamic thinking effort. Generated modes preserve the host model selection.",
         "sources": [
+          "https://github.com/Zoo-Code-Org/Zoo-Code/releases/tag/v3.98.0",
           "https://docs.zoocode.dev/features/custom-modes",
-          "https://docs.zoocode.dev/roo-to-zoo-migration",
-          "https://github.com/Zoo-Code-Org/Zoo-Code/releases/tag/v3.94.0"
+          "https://docs.zoocode.dev/roo-to-zoo-migration"
         ]
       }
     },
@@ -589,27 +594,27 @@
         "command": "aider --version"
       },
       "documentation_review": {
-        "date": "2026-11-06",
+        "date": "2026-11-18",
         "classes": [
-          "A"
+          "A",
+          "B"
         ],
-        "note": "The options reference retains emitted architect/auto-accept-architect, read, lint-cmd, test-cmd, model/editor-model, commit-prompt, attribution and language settings. No generator migration is needed. Removed a stale latest-version claim from the test header so release metadata remains centralized. Stable package availability and the documentation's unreleased main-branch features are recorded separately.",
+        "note": "Toolkit installation preserves existing local and global Aider configuration, including model and editor-model. Fresh toolkit-generated files supply the documented Sonnet default.",
         "sources": [
-          "https://aider.chat/docs/config/options.html",
-          "https://aider.chat/HISTORY.html",
           "https://pypi.org/project/aider-chat/0.86.2/",
-          "https://github.com/Aider-AI/aider/tree/v0.86.2"
+          "https://github.com/Aider-AI/aider/tree/v0.86.2",
+          "https://aider.chat/docs/config/options.html"
         ]
       },
       "reviewed_version": "0.86.2",
-      "release_review_note": "2026-11-06 class A: latest published stable aider-chat is 0.86.2 (PyPI upload 2026-02-12), also present as source tag v0.86.2. GitHub's latest-release endpoint still points to 0.86.0 and the HISTORY page labels 0.86.1, so use package metadata plus the stable source tag rather than treating that endpoint as authoritative. No model defaults changed. https://pypi.org/project/aider-chat/0.86.2/"
+      "release_review_note": "2026-11-18: PyPI publishes aider-chat 0.86.2 and the source repository has the matching v0.86.2 tag. Its GitHub latest-release feed still reports 0.86.0."
     },
     {
       "id": "augment",
       "display_name": "Augment",
       "kind": "editor",
       "urls": {
-        "docs": "https://docs.augmentcode.com/cli/v0/overview.md",
+        "docs": "https://docs.augmentcode.com/cli/overview.md",
         "release_notes": "https://www.augmentcode.com/changelog",
         "changelog": null
       },
@@ -660,35 +665,34 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-11-06",
+        "date": "2026-11-18",
         "classes": [
-          "A",
-          "C"
+          "B",
+          "E"
         ],
-        "note": "Pinned evidence to official /cli/v0/ references. Stable 0.x still uses view, launch-process, str-replace-editor, save-file and codebase-retrieval; disabled_tools overrides tools, so emitted agents correctly omit it. Upcoming 1.x renames native tools and changes allowlist semantics, adds PromptSubmit/Notification and removes plugin rules. That prerelease migration is recorded but not applied to stable users. No permission or model expansion.",
+        "note": "Auggie 1.x uses native read, grep, find, edit, write and bash with extensions: false. Version 0.x retains its separate tool vocabulary. Hooks recognize both families. Agent output omits model: 1.x uses the current model and 0.x uses the CLI default.",
         "sources": [
-          "https://docs.augmentcode.com/cli/v0/overview.md",
-          "https://docs.augmentcode.com/cli/v0/hooks.md",
+          "https://registry.npmjs.org/-/package/@augmentcode/auggie/dist-tags",
+          "https://docs.augmentcode.com/cli/subagents.md",
+          "https://docs.augmentcode.com/cli/hooks.md",
           "https://docs.augmentcode.com/cli/v0/subagents.md",
-          "https://docs.augmentcode.com/cli/v0/custom-commands.md",
-          "https://docs.augmentcode.com/cli/whats-new",
-          "https://registry.npmjs.org/@augmentcode/auggie",
-          "https://www.augmentcode.com/changelog"
+          "https://docs.augmentcode.com/cli/v0/hooks.md",
+          "https://docs.augmentcode.com/cli/whats-new.md"
         ],
         "access_notes": [
-          "The web reader could not open versioned v0 HTML routes; official .md routes were successfully fetched directly over HTTPS."
+          "The 1.x overview still describes an earlier release channel. npm latest and v0-release identify the packages available on the review date."
         ]
       },
-      "reviewed_version": "0.37.0",
-      "release_review_note": "2026-11-06 classes A/C: npm latest and v0-release identify stable Auggie 0.37.0. Unversioned CLI documentation now describes 1.x prerelease; npm preview/prerelease identify 1.2.0-prerelease.202611051212. Stable output continues to use the 0.x native tool allowlist and matching hook names. VS Code 0.904.1 is a separate extension release.",
-      "status_note": " As of 2026-11-06 the stable target is Auggie 0.37.0. Unversioned CLI references now describe the 1.x prerelease; use versioned /cli/v0/ contracts for stable generation. The 1.x tool/permission migration requires a separate supported-version decision before adoption."
+      "reviewed_version": "1.2.2",
+      "release_review_note": "2026-11-18: npm latest selects Auggie 1.2.2 and v0-release selects 0.37.1. npm tags identify the current distribution channels.",
+      "status_note": "Auggie 1.x and 0.x share file locations but use different tool names. Use the installed major version. With no local CLI, retain the owned agent files' family or default to 1.x for a new installation. Both omit model overrides. Unknown installed majors are reported before agent writes."
     },
     {
       "id": "google-antigravity",
       "display_name": "Google Antigravity",
       "kind": "editor",
-      "reviewed_version": "2.29.0",
-      "release_review_note": "2026-11-06 classes A/C/D: reviewed Antigravity App 2.29.0 (2026-11-03) and CLI 1.5.1 (2026-11-05). Optional PreInvocation termination/error output, remote agents, ACP and plugin-auth additions do not require enabling new policies. On 2026-11-17 the migration guide still supports legacy workflows. Keep workspace workflows and their same-named skills (decision #34).",
+      "reviewed_version": "2.33.0",
+      "release_review_note": "2026-11-18: Google lists Antigravity App 2.33.0 and CLI 1.5.9 in separate release channels with gradual rollout.",
       "urls": {
         "docs": "https://antigravity.google/docs",
         "release_notes": "https://antigravity.google/docs/changelog",
@@ -724,7 +728,7 @@
         "scripts/antigravity_plugin.py",
         "scripts/mcp_editors.py"
       ],
-      "status_note": "Reviewed App 2.29.0 and CLI 1.5.1. The shared ~/.gemini/config/skills surface is now canonical for App and CLI; legacy CLI skill locations remain supported. Optional PreInvocation terminationBehavior/errorMessage and remote-agent/ACP features are not enabled by toolkit defaults.",
+      "status_note": "Reviewed App 2.33.0 and CLI 1.5.9. The shared ~/.gemini/config/skills surface is now canonical for App and CLI; legacy CLI skill locations remain supported. Optional PreInvocation terminationBehavior/errorMessage and remote-agent/ACP features are not enabled by toolkit defaults.",
       "capability_markers": [
         "agent manager",
         "artifacts",
@@ -751,13 +755,14 @@
       ],
       "version_probe": null,
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
-          "A"
+          "A",
+          "C"
         ],
-        "note": "Changed landing-page content. Google still documents working legacy workflows and same-named skill precedence. App 2.12.0+ has the migration command. IDE and CLI use the manual procedure documented in toolkit decision #34.",
+        "note": "The App adds SSH project connections and GitHub status. The CLI adds run_workflow and administrator plugin controls. Keep workspace workflows and same-named native skills per decision #34.",
         "sources": [
-          "https://antigravity.google/docs",
+          "https://antigravity.google/docs/changelog.md",
           "https://antigravity.google/docs/migration/workflows-to-skills/",
           "https://antigravity.google/docs/hooks",
           "https://antigravity.google/docs/skills/"
@@ -769,7 +774,7 @@
       "display_name": "Codex CLI",
       "kind": "editor",
       "reviewed_version": "0.169.1",
-      "release_review_note": "2026-11-17: GitHub identifies 0.169.1 as the latest release. The local 0.169.0 probe is recorded separately. UI and opt-in gateway changes require no toolkit settings change.",
+      "release_review_note": "2026-11-18: GitHub lists 0.169.1. The earlier local 0.169.0 probe describes the workstation only.",
       "urls": {
         "docs": "https://learn.chatgpt.com/docs/codex/cli",
         "release_notes": "https://github.com/openai/codex/releases",
@@ -835,18 +840,17 @@
         "command": "codex --version"
       },
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
           "A",
           "C"
         ],
-        "note": "Commerce, cloud provider and collection headings are shared navigation. Local 0.169.0 adds optional terminal workspaces, gateway onboarding and explicit project trust. The toolkit preserves the user's trust decision. Hooks and config remain documented. The 0.169.1 release has no listed feature highlights.",
+        "note": "The current Codex model catalog lists GPT-6.2 Astra and Sol. Native agent TOML leaves model and reasoning effort to the session. Project trust and account entitlements remain host settings.",
         "sources": [
-          "https://learn.chatgpt.com/docs/codex/cli",
+          "https://github.com/openai/codex/releases/tag/rust-v0.169.1",
+          "https://learn.chatgpt.com/docs/models",
           "https://learn.chatgpt.com/docs/hooks",
-          "https://learn.chatgpt.com/docs/config-file/config-reference",
-          "https://github.com/openai/codex/releases/tag/rust-v0.169.0",
-          "https://github.com/openai/codex/releases/tag/rust-v0.169.1"
+          "https://learn.chatgpt.com/docs/config-file/config-reference"
         ]
       }
     },
@@ -854,10 +858,10 @@
       "id": "opencode",
       "display_name": "opencode",
       "kind": "editor",
-      "reviewed_version": "2.2.5",
-      "release_review_note": "2026-11-06 classes B/D: current @opencode/cli latest is 2.2.5 (2026-10-30); legacy opencode-ai latest and GitHub releases/latest still report 1.19.5. Live V2 migration docs now use the opencode binary and no longer label V2 beta. Migrated emitted plugin to the documented dual V2 setup / V1 server entrypoint, requiring V1 >=1.18.29 for compatibility.",
+      "reviewed_version": "2.3.1",
+      "release_review_note": "2026-11-18: npm latest reports @opencode/cli 2.3.1 and opencode-ai 1.19.6. The V1 package and V2 package have independent release tags.",
       "urls": {
-        "docs": "https://opencode.ai/v2/docs/",
+        "docs": "https://opencode.ai/docs/",
         "release_notes": "https://github.com/anomalyco/opencode/releases",
         "changelog": null
       },
@@ -877,7 +881,7 @@
         "skills/*.md",
         "skills/**/SKILL.md"
       ],
-      "status_note": "OpenCode V2 2.2.5 is the current @opencode/cli release; the separately maintained opencode-ai V1 package remains at 1.19.5. V2 uses the opencode binary and introduces a new plugin/server API. The toolkit emits a documented dual-version plugin object (id/setup/server), supporting V2 and V1 >=1.18.29 without changing the auto-discovered .opencode/plugins/ai-toolkit-hooks.js path. Older V1 clients must upgrade before using this plugin. User plugin declarations, agents, commands, skills, models and permissions are preserved. Optional GUI plugin and model-generation features remain unconfigured. Global/project plugin IDs are scoped; one runtime executor per location avoids duplicate hooks.",
+      "status_note": "OpenCode V2 2.3.1 is the current @opencode/cli release; the separately maintained opencode-ai V1 package remains at 1.19.6. V2 uses the opencode binary and introduces a new plugin/server API. The toolkit emits a documented dual-version plugin object (id/setup/server), supporting V2 and V1 >=1.18.29 without changing the auto-discovered .opencode/plugins/ai-toolkit-hooks.js path. Older V1 clients must upgrade before using this plugin. User plugin declarations, agents, commands, skills, models and permissions are preserved. Optional GUI plugin and model-generation features remain unconfigured. Global/project plugin IDs are scoped; one runtime executor per location avoids duplicate hooks.",
       "our_generators": [
         "scripts/generate_opencode.py",
         "scripts/generate_opencode_agents.py",
@@ -919,14 +923,16 @@
         "command": "opencode --version"
       },
       "documentation_review": {
-        "date": "2026-11-17",
+        "date": "2026-11-18",
         "classes": [
-          "A"
+          "A",
+          "B"
         ],
-        "note": "The v2 documentation URL redirects to the primary documentation. The landing page gained a rules marker and changed navigation headings. The server plugin reference still uses an id and setup function and documents V1 support.",
+        "note": "V2 accepts a six-digit hex agent color and drops unsupported names. Generated subagents use hex colors, omit model overrides and retain the native tool policy. The dual id/setup/server plugin supports V2 and V1 from 1.18.29.",
         "sources": [
-          "https://opencode.ai/v2/docs/",
-          "https://opencode.ai/docs/",
+          "https://registry.npmjs.org/-/package/@opencode/cli/dist-tags",
+          "https://registry.npmjs.org/-/package/opencode-ai/dist-tags",
+          "https://github.com/anomalyco/opencode/blob/v2.3.1/packages/schema/src/config/agent.ts",
           "https://opencode.ai/docs/build/plugins/server/"
         ]
       }

@@ -19,8 +19,8 @@ Only in Claude Code, apply the `model-routing-patterns` skill before assigning
 work. Use `codex:codex-rescue` only when its plugin is installed, enabled and
 callable in this session. Otherwise use installed native agents and their
 configured models. Preserve the user's explicit model choices. The skill owns
-the Sonnet `high`, security Astra `xhigh` and debugging `xhigh` routes and the
-plugin's forwarding, lifecycle and verification requirements.
+the implementation, defensive read-only review and debugging routes, including
+model availability, effort, permissions and result verification.
 <!-- CLAUDE_CODE_ONLY_END -->
 
 ## Your Role

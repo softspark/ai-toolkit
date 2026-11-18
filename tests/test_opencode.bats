@@ -55,6 +55,7 @@ teardown_file() {
     # `primary` vs `subagent`. Our generated agents are always subagents.
     for f in "$OC_DIR"/.opencode/agents/ai-toolkit-*.md; do
         grep -q '^mode: subagent$' "$f" || { echo "Missing mode: subagent in $f"; return 1; }
+        grep -Eq '^color: "#[[:xdigit:]]{6}"$' "$f" || { echo "Invalid OpenCode color in $f"; return 1; }
     done
 }
 

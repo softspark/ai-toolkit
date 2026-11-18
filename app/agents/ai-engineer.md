@@ -71,9 +71,9 @@ API IDs, client aliases such as `opus`, and a model's reasoning effort are
 different settings. Preserve an explicitly requested model and approved fallback
 policy; do not silently switch providers, models or agent permissions.
 
-For new OpenAI reasoning evaluations, the reviewed guide recommends
-`gpt-6-astra`. Its tool calling uses Responses, not Chat Completions, and it does
-not accept `reasoning.effort: "none"`. Check effort support for each exact model.
+For new OpenAI reasoning evaluations, compare `gpt-6.2-sol` for routine work
+and `gpt-6.2-astra` for demanding tasks. Both use Responses for tool calling.
+When migrating from `none` or `minimal` effort, use `low` if the change is approved.
 Use `client.responses.create(...)`, handle response status and structured output
 items, and preserve tool-call IDs and reasoning items through multi-step flows.
 `response.output_text` is the SDK text convenience field, not a substitute for

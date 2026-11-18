@@ -6,29 +6,27 @@
 """Generate ``.augment/agents/ai-toolkit-*.md`` files for Augment Code.
 
 Each ai-toolkit agent in ``app/agents/`` is mirrored as an Augment native
-subagent. Stable Auggie 0.x frontmatter (per docs.augmentcode.com/cli/v0/subagents)
-documents: name, description, color, model, tools, disabled_tools.
+subagent. Auggie 1.x and 0.x read the same files but use different tool names.
+See https://docs.augmentcode.com/cli/subagents and its versioned 0.x reference.
 
     ---
     name: <slug>
     description: "<single-line description>"
     color: <color-name>       # optional UI hint
-    tools: [view, save-file, ...]
+    tools: [read, grep, find]
+    extensions: false        # 1.x only: keep permissions within the allowlist
     ---
 
     <body from agent file>
 
 Design choices:
 
-* ``model`` is omitted. The docs state "If not specified, the CLI default model
-  is used" and do not document ``inherit`` as a value. ai-toolkit stores short
-  aliases (``opus``/``sonnet``/``haiku``) that do not map to Augment's full
-  model ids, so we omit the field to defer to the CLI default.
+* Omit ``model`` and ``thinking``. In 1.x the subagent uses the current
+  model. In 0.x it uses the CLI default.
 * ``tools`` maps the source permissions to documented native Augment names.
   Unsupported Claude orchestration tools are omitted with a capability note;
   unknown tools and empty native allowlists fail before writes.
-  ``disabled_tools`` is never emitted because it overrides the allowlist,
-  including when empty.
+  The generated allowlist is the complete set of granted tools.
 * Files carry both the ``ai-toolkit-`` prefix and an ownership marker. Cleanup
   also recognizes the legacy generated frontmatter shape. Unowned destinations
   and stale user-authored files are preserved.
@@ -41,24 +39,35 @@ Writes files to ``target-dir/.augment/agents/``.
 from __future__ import annotations
 
 import re
+import shutil
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from emission import agents_dir
+from doctor import _probe_version
 from frontmatter import frontmatter_field
+from mcp_editors import ConfigUpdate, apply_config_updates
 from prompt_surfaces import strip_claude_code_only
 from secure_fs import apply_owned_edits, lexical_absolute
 
 AGENT_PREFIX = "ai-toolkit-"
 MANAGED_MARKER = "<!-- ai-toolkit-managed: augment-agent -->"
-TOOL_MAPPING = {
+V0_TOOLS = {
     "Read": ("view",),
     "Grep": ("codebase-retrieval",),
     "Glob": ("view", "codebase-retrieval"),
     "Edit": ("str-replace-editor",),
     "Write": ("save-file",),
     "Bash": ("launch-process",),
+}
+V1_TOOLS = {
+    "Read": ("read",),
+    "Grep": ("grep",),
+    "Glob": ("find",),
+    "Edit": ("edit",),
+    "Write": ("write",),
+    "Bash": ("bash",),
 }
 UNSUPPORTED_ORCHESTRATION = frozenset({
     "Agent", "TeamCreate", "TeamDelete", "SendMessage",
@@ -77,7 +86,7 @@ def _agent_body(agent_file: Path) -> str:
     return parts[2].lstrip("\n")
 
 
-def _mapped_tools(agent_file: Path) -> tuple[list[str], list[str]]:
+def _mapped_tools(agent_file: Path, mapping: dict[str, tuple[str, ...]]) -> tuple[list[str], list[str]]:
     """Translate only granted capabilities; never widen an unknown permission."""
     mapped: list[str] = []
     unsupported: list[str] = []
@@ -87,9 +96,9 @@ def _mapped_tools(agent_file: Path) -> tuple[list[str], list[str]]:
         if tool in UNSUPPORTED_ORCHESTRATION:
             unsupported.append(tool)
             continue
-        if tool not in TOOL_MAPPING:
+        if tool not in mapping:
             raise ValueError(f"Unknown Augment source tool in {agent_file}: {tool}")
-        for native in TOOL_MAPPING[tool]:
+        for native in mapping[tool]:
             if native not in mapped:
                 mapped.append(native)
     if not mapped:
@@ -97,12 +106,12 @@ def _mapped_tools(agent_file: Path) -> tuple[list[str], list[str]]:
     return mapped, unsupported
 
 
-def _render_augment_agent(agent_file: Path) -> str:
+def _render_augment_agent(agent_file: Path, major: int = 1) -> str:
     """Render a single Augment subagent .md file from an ai-toolkit agent."""
     name = frontmatter_field(agent_file, "name")
     description = frontmatter_field(agent_file, "description")
     color = frontmatter_field(agent_file, "color")
-    tools, unsupported = _mapped_tools(agent_file)
+    tools, unsupported = _mapped_tools(agent_file, V0_TOOLS if major == 0 else V1_TOOLS)
 
     # Escape description for YAML quoted string
     safe_desc = description.replace('"', "'")
@@ -110,13 +119,14 @@ def _render_augment_agent(agent_file: Path) -> str:
     lines: list[str] = ["---"]
     lines.append(f"name: {name}")
     lines.append(f'description: "{safe_desc}"')
-    # `model` is omitted: Augment's docs say the CLI default model is used when
-    # absent, and `inherit` is not a documented value. Our short aliases do not
-    # map to Augment's provider-qualified ids, so we defer to the CLI default.
     if color:
+        if major == 1:
+            color = {"teal": "cyan", "magenta": "purple"}.get(color, color)
         lines.append(f"color: {color}")
     tools_flow = ", ".join(tools)
     lines.append(f"tools: [{tools_flow}]")
+    if major == 1:
+        lines.append("extensions: false")
     lines.append("---")
     lines.append("")
     lines.extend([MANAGED_MARKER, ""])
@@ -153,6 +163,28 @@ def _cleanup_stale(agents_out: Path, expected: set[str]) -> int:
     return removed
 
 
+def _target_major(agents_out: Path) -> int:
+    """Use the installed client, preserving an existing generation when it is absent."""
+    executable = shutil.which("auggie")
+    if executable:
+        probe = _probe_version(executable)
+        if probe.version:
+            major = int(probe.version.split(".")[0])
+            if major in (0, 1):
+                return major
+        raise RuntimeError(f"Unsupported Auggie version: {probe.version or probe.error}")
+
+    for path in sorted(agents_out.glob(f"{AGENT_PREFIX}*.md")):
+        source = agents_dir / f"{path.stem.removeprefix(AGENT_PREFIX)}.md"
+        if not source.is_file() or path.is_symlink() or not path.is_file():
+            continue
+        content = path.read_bytes()
+        if _is_managed_agent(content):
+            header = content.partition(b"\n---\n")[0]
+            return 1 if b"\nextensions: false" in header else 0
+    return 1
+
+
 def generate(
     target_dir: Path, config_root: Path | None = None
 ) -> tuple[int, int]:
@@ -164,32 +196,34 @@ def generate(
     """
     base = config_root if config_root is not None else target_dir / ".augment"
     agents_out = base / "agents"
+    for directory in (target_dir, base, agents_out):
+        if directory.is_symlink():
+            raise RuntimeError(f"Refusing symlinked Augment agents directory: {directory}")
+    major = _target_major(agents_out)
 
-    rendered: list[tuple[Path, str]] = []
+    updates = []
+    expected: set[str] = set()
     for agent_file in sorted(agents_dir.glob("*.md")):
         name = frontmatter_field(agent_file, "name")
         description = frontmatter_field(agent_file, "description")
         if not name or not description:
             continue
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name) or f"{AGENT_PREFIX}{name}.md" in expected:
+            raise ValueError(f"Invalid or duplicate Augment agent name: {name!r}")
         out_path = agents_out / f"{AGENT_PREFIX}{name}.md"
-        rendered.append((out_path, _render_augment_agent(agent_file)))
-
-    for directory in (target_dir, base, agents_out):
-        if directory.is_symlink():
-            raise RuntimeError(f"Refusing symlinked Augment agents directory: {directory}")
-    agents_out.mkdir(parents=True, exist_ok=True)
-    written = 0
-    for out_path, content in rendered:
-        if out_path.is_symlink() or (out_path.exists() and (
-            not out_path.is_file() or not _is_managed_agent(out_path.read_bytes())
-        )):
+        expected.add(out_path.name)
+        rendered = _render_augment_agent(agent_file, major).encode("utf-8")
+        if out_path.is_symlink() or (out_path.exists() and not out_path.is_file()):
             print(f"Warning: preserving unowned Augment agent: {out_path}", file=sys.stderr)
             continue
-        out_path.write_text(content, encoding="utf-8")
-        written += 1
+        original = out_path.read_bytes() if out_path.exists() else None
+        if original is not None and not _is_managed_agent(original):
+            print(f"Warning: preserving unowned Augment agent: {out_path}", file=sys.stderr)
+            continue
+        updates.append(ConfigUpdate(out_path, original, rendered))
 
-    removed = _cleanup_stale(agents_out, {path.name for path, _ in rendered})
-    return written, removed
+    apply_config_updates(updates)
+    return len(updates), _cleanup_stale(agents_out, expected)
 
 
 def _is_managed_agent(content: bytes) -> bool:

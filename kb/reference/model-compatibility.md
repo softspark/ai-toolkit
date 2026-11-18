@@ -3,48 +3,49 @@ title: "Model compatibility for skills and agents"
 category: reference
 service: ai-toolkit
 tags: [models, skills, agents, codex, copilot, claude, effort]
-version: "1.3.1"
+version: "1.4.0"
 created: "2026-09-23"
-last_updated: "2026-11-06"
+last_updated: "2026-11-18"
 description: "Dated model snapshot and rules separating runtime selection, API parameters and prompt guidance."
 ---
 
 # Model compatibility for skills and agents
 
-Reviewed 2026-11-06. These are documentation snapshots, not a guarantee that a
-model is enabled on a particular account. Check the active client's picker and
-policy before selecting a model. Preserve a user's explicit choice; do not
-replace a tiered workflow with a single flagship model.
+Reviewed 2026-11-18. Check the active client's picker, project policy and user
+selection before choosing a model. Account access varies by provider and client.
 
 ## Runtime selection and API examples are different surfaces
 
-The November ecosystem review rechecked the current OpenAI model guide, Codex
-models and custom-agent schema, Claude model and effort references, structured
-outputs and prompt caching. The existing model families and API schema guidance
-remain applicable. This review changes no runtime model, effort, permission or
-budget defaults and makes no live quality or cost claim.
+All 44 native Claude agents declare a tier alias (18 Opus, 25 Sonnet, one Haiku).
+Thirteen set effort (12 `high`, one `xhigh`). Of 116 skills, only `orchestrate`,
+`swarm` and `workflow` set a model, each using Opus. Skill effort declarations
+comprise 13 `low`, 74 `medium`, 26 `high`, one `xhigh` and two omitted. Use the
+configured role in delegation examples unless the user requests an override.
 
 | Surface | Selection contract | Toolkit behavior |
 |---------|--------------------|------------------|
 | Claude Code | Named models and `opus`/`sonnet`/`haiku` aliases; resolution depends on provider and configuration | Existing agent tiers remain aliases; skill and agent frontmatter are Claude-specific unless an adapter explicitly maps them |
 | Codex | Client model picker/configuration and native custom-agent configuration | Generated agents omit model overrides, preserving the host's selection; Claude skill `effort` is not a Codex reasoning setting |
 | Copilot | Account/client model availability, picker and supported custom-agent configuration | Generated agents omit provider-specific model defaults; Claude aliases are not portable Copilot model IDs |
+| Other editor agents | Cursor and Antigravity emit `model: inherit`. Augment, Gemini and OpenCode omit the model field. | Each host resolves its own model selection. |
+| Aider | New toolkit configuration files set `model` and `editor-model` to `claude-sonnet-5-5` | The global installer preserves an existing configuration file. |
 | API examples | Explicit provider model ID plus that model's endpoint and capability contract | Receive configured models, budgets and rates; application fallback must use an approved compatible set |
 
 Claude aliases do not imply the same concrete model on every provider. The
 current Claude Code reference maps Anthropic API `opus` to Opus 5.5, `sonnet`
 to Sonnet 5.5 and `haiku` to Haiku 5.5, while other providers can resolve
-differently. Sonnet 5.5 requires Claude Code 2.1.284 or later and Haiku 5.5
-requires 2.1.293 or later. See
+differently. By default, `fable` selects Fable 5.2 except in Claude apps gateway
+sessions, where it selects Fable 5. Opus 5.5 requires Claude Code 2.1.280 or
+later, Sonnet 5.5 requires 2.1.284 and Haiku 5.5 requires 2.1.293. See
 [Claude Code model configuration](https://code.claude.com/docs/en/model-config).
 
 ## Reviewed model families
 
 | Provider/surface | Current examples at review time | Important boundary |
 |------------------|---------------------------------|--------------------|
-| OpenAI API | `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6-luna` (`gpt-6-sol` still listed) | Use Responses for reasoning with tools; Astra and Sol 6.1 reject `none` (Sol 6.1 also `minimal`; use `low`), while Terra 6.1 and GPT-6 Sol/Luna allow `none` |
-| Codex | `gpt-6.1-sol` for repeated complex work, `gpt-6-astra` most capable, `gpt-6.1-terra` for writing and visual/computer work, `gpt-6-luna` for focused tasks, according to account/client availability | Start from the selected/default effort; higher reasoning and orchestration modes are explicit choices |
-| Claude API | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`, `claude-haiku-5-5` | Opus 5.5 and Haiku 5.5 default to medium effort, Fable/Sonnet to high; all four support `low` to `max` |
+| OpenAI API | `gpt-6.2-astra` and `gpt-6.2-sol` | Both require Responses for tool calling. Use `low` when migrating a request from `none` or `minimal`. Keep prefix history stable across turns. |
+| Codex | `gpt-6.2-sol` for everyday coding, `gpt-6.2-astra` for demanding work, `gpt-6.1-terra` for visual and writing tasks, `gpt-6-luna` for focused work | Earlier Astra and Sol IDs remain in the model catalog. Preserve configured choices within the account's available models. |
+| Claude API | `claude-opus-5-5`, `claude-fable-5-2`, `claude-sonnet-5-5`, `claude-haiku-5-5` | Opus and Haiku default to `medium`. Fable and Sonnet default to `high`. All four support `low`, `medium`, `high`, `xhigh` and `max`. Fable 5.1 remains selectable by ID. |
 | GitHub Copilot | Offers models from multiple providers, including current GPT-6 and Claude families | Plan, organization policy and client determine the actual list; utility models are not selectable session models |
 
 Sources: [OpenAI latest model guide](https://developers.openai.com/api/docs/guides/latest-model),
@@ -71,9 +72,13 @@ full request/response contract is migrated.
   Claude's `output_config.effort`, and an editor's reasoning control are not
   interchangeable schemas. Do not forward unsupported sampling parameters to
   reasoning requests.
-- Changing effort does not universally preserve cache. Use the provider's
-  documented per-message update mechanism where supported; re-check cache
-  invalidation rules for ordinary request-level changes.
+- Claude Code skill effort applies for the turn or fork. For an agent with no
+  effort setting, the session's chosen effort applies when the agent uses the
+  same model. Invocation overrides, `CLAUDE_CODE_EFFORT_LEVEL` and managed caps
+  affect the effective level. [Claude Code model configuration](https://code.claude.com/docs/en/model-config).
+- On the Claude API, changing effective top-level effort can invalidate cached
+  messages. Setting the model's default explicitly is equivalent to omitting it.
+  Supported per-message updates keep earlier cached content. [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
 - Ask for a concrete result, constraints, evidence and acceptance criteria.
   Avoid blanket requests to expose chain-of-thought, unsupported universal
   performance claims, or unconditional maximum effort for every reviewer.
@@ -96,16 +101,17 @@ the current model or force a cross-provider call merely to satisfy routing.
 Explicit task-level model choices take precedence.
 
 When available, Codex can own an implementation task before Claude gets stuck.
-Security prefers `--model gpt-6-astra --effort xhigh`; hard debugging uses
-`--effort xhigh` or the native debugger. Normal Codex implementation retains its
-configured model and effort. The forwarding wrapper's Claude model is separate.
-An unavailable Astra route is reported and falls back to the existing native
-security agent, without silently substituting another Codex model.
+An approved read-only review of source or configuration may use `gpt-6.2-astra`
+at `xhigh`. The review returns static evidence, mitigations and safe regression
+checks. If the model is unavailable, report it and use the configured native
+auditor only within the approved routing policy. An access denial or safety
+refusal ends that route. Hard debugging uses `xhigh` or the native debugger.
+Routine implementation keeps its configured model and effort.
 
 The supervisor supplies working directory, owned paths, acceptance criteria and
 checks; it collects final results, reviews changes and validates tests. A job ID,
-empty output or a partial result is not completion. Security package loading and
-account access are separate from selecting Astra. Existing permissions remain.
+empty output or a partial result is not completion. Each delegated review
+retains the caller's scope and permissions.
 
 Claude-only instruction blocks are omitted from generated native agents,
 commands and materialized skills for other clients. Marker-only skills preserve

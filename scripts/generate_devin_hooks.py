@@ -17,9 +17,9 @@ there is **no** top-level ``"hooks"`` wrapper key (unlike
 ``.claude/settings.json`` or ``.devin/config.json``).
 
 Events use Claude-style PascalCase names. Matchers are regexes against the
-Devin **tool name** (``read``, ``edit``, ``exec``, ``grep``, ``glob``,
-``mcp__<server>__<tool>``) — NOT Claude's ``Bash``/``Edit`` names — so the
-shared guard scripts reliably fire under Devin.
+Devin tool name. File hooks translate notebook paths and individual patch
+operations into shared guard inputs. The shell and MCP handlers receive the
+original event.
 
 Blocking contract: Devin honors exit 2 and flat ``{"decision":"block",
 "reason":...}`` JSON. Shared guards retain their existing stderr/exit-code
@@ -36,7 +36,10 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
+import stat
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,19 +48,21 @@ from secure_fs import apply_owned_edits, lexical_absolute
 HOOKS_PREFIX = '"$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
 CONTEXT_SCRIPTS = frozenset({"user-prompt-submit.sh", "post-tool-use.sh"})
+FILE_READS = "^(read|notebook_read|grep|glob)$"
+FILE_EDITS = "^(edit|write|notebook_edit|apply_patch)$"
 
 # event -> list of (matcher_regex, [script names]).
 # Matchers target Devin tool names: read, edit, exec, mcp__<server>__<tool>.
 # An empty matcher fires for every tool name (Devin: omitted/empty = match all).
 DEVIN_HOOKS: dict[str, list[tuple[str, list[str]]]] = {
     "PreToolUse": [
-        ("^(read|edit)$", ["guard-path.sh"]),
-        ("^edit$", ["guard-config.sh"]),
+        (FILE_READS, ["guard-path.sh"]),
+        (FILE_EDITS, ["guard-path.sh", "guard-config.sh"]),
         ("^exec$", ["guard-destructive.sh", "commit-quality.sh", "revert-guard.sh"]),
         ("^mcp__", ["guard-config.sh"]),
     ],
     "PostToolUse": [
-        ("^edit$", ["post-tool-use.sh", "governance-capture.sh", "test-cohesion.sh"]),
+        (FILE_EDITS, ["post-tool-use.sh", "governance-capture.sh", "test-cohesion.sh"]),
         ("^exec$", ["governance-capture.sh"]),
         ("^mcp__.*__(smart_query|hybrid_search_kb|crag_search|multi_hop_search|verify_answer)$",
          ["search-tracker.sh"]),
@@ -71,21 +76,23 @@ DEVIN_HOOKS: dict[str, list[tuple[str, list[str]]]] = {
 }
 
 
+def _handler_command(matcher: str, script: str) -> str:
+    command = f'{HOOKS_PREFIX}{script}"'
+    if matcher in (FILE_READS, FILE_EDITS):
+        command = f'python3 -I -S {HOOKS_PREFIX}_devin-file-hook.py" {script}'
+        if script.startswith("guard-"):
+            command += " || exit 2"
+    if script in CONTEXT_SCRIPTS:
+        command = "AI_TOOLKIT_HOOK_FORMAT=json " + command
+    return command
+
+
 def build_hook_entry(matcher: str, scripts: list[str]) -> dict:
     """Build one Devin matcher-group: ``{matcher, hooks:[{type,command}]}``."""
     return {
         "_source": SOURCE_TAG,
         "matcher": matcher,
-        "hooks": [
-            {
-                "type": "command",
-                "command": (
-                    ("AI_TOOLKIT_HOOK_FORMAT=json " if s in CONTEXT_SCRIPTS else "")
-                    + f'{HOOKS_PREFIX}{s}"'
-                ),
-            }
-            for s in scripts
-        ],
+        "hooks": [{"type": "command", "command": _handler_command(matcher, s)} for s in scripts],
     }
 
 
@@ -120,27 +127,39 @@ def merge_hooks(existing: dict, toolkit: dict) -> dict:
     return merged
 
 
+def _read_hook_file(path: Path) -> bytes | None:
+    if path.parent.is_symlink() or path.is_symlink():
+        raise ValueError(f"Refusing symlinked Devin hook configuration: {path}")
+    if not path.exists():
+        return None
+    if not path.is_file():
+        raise ValueError(f"Devin hooks must be a regular file: {path}")
+    return path.read_bytes()
+
+
 def generate(target_dir: Path) -> Path:
     devin_dir = target_dir / ".devin"
-    devin_dir.mkdir(parents=True, exist_ok=True)
     path = devin_dir / "hooks.v1.json"
-
-    # The standalone hooks.v1.json file IS the hooks object (no wrapper key).
-    existing: dict = {}
-    if path.is_file():
-        try:
-            with open(path, encoding="utf-8") as f:
-                existing = json.load(f)
-            if not isinstance(existing, dict):
-                existing = {}
-        except (json.JSONDecodeError, OSError):
-            existing = {}
-
-    merged = merge_hooks(existing, build_toolkit_hooks())
-
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(merged, f, indent=4, ensure_ascii=False, sort_keys=True)
-        f.write("\n")
+    original = _read_hook_file(path)
+    devin_dir.mkdir(parents=True, exist_ok=True)
+    existing = _load_json(original, HOOKS_FILE) if original is not None else {}
+    if not isinstance(existing, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    content = _dump(merge_hooks(existing, build_toolkit_hooks()))
+    if content == original:
+        return path
+    temporary = tempfile.NamedTemporaryFile(dir=devin_dir, prefix=".hooks.", delete=False)
+    temporary_path = Path(temporary.name)
+    try:
+        with temporary:
+            temporary.write(content)
+        if original is not None:
+            temporary_path.chmod(stat.S_IMODE(path.stat().st_mode))
+        if _read_hook_file(path) != original:
+            raise RuntimeError(f"Devin hook configuration changed before replacement: {path}")
+        os.replace(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
     return path
 
 

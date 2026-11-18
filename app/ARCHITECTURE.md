@@ -373,7 +373,7 @@ Codex receives the toolkit instruction core in `$CODEX_HOME/AGENTS.md` (global; 
 opencode is the 11th supported editor. Five generators handle its integration surface:
 
 - `generate_opencode.py` → the toolkit section of `~/.config/opencode/AGENTS.md` (global; the project's `AGENTS.md` stays project-owned).
-- `generate_opencode_agents.py` → `.opencode/agents/ai-toolkit-*.md` (one per ai-toolkit agent, `mode: subagent`).
+- `generate_opencode_agents.py` → `.opencode/agents/ai-toolkit-*.md` (one per ai-toolkit agent, `mode: subagent`). The adapter translates source colors to quoted hex values and leaves model selection to OpenCode.
 - `generate_opencode_commands.py` → `.opencode/commands/ai-toolkit-*.md` (one per user-invocable skill, uses required `template: |` field; knowledge-only skills excluded).
 - `generate_opencode_plugin.py` → `.opencode/plugins/ai-toolkit-hooks.js` (one default `id/setup/server` object for OpenCode V2 and V1 1.18.29+). V1 retains its event bridge; V2 registers native tool/prompt/compaction hooks and location-scoped session events. Both invoke shared Bash hooks through `node:child_process.spawn` with JSON on stdin and preserve pre-tool exit-2 blocking.
 - `generate_opencode_json.py` → `opencode.json` MCP merge (translates `.mcp.json` local/remote shapes; preserves user-authored keys; idempotent).

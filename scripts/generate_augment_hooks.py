@@ -13,18 +13,14 @@ user-scope file: it accepts an optional target directory and defaults to the
 user's `$HOME`, writing `~/.augment/settings.json`. Project-local hook emission
 for `--local` installs is a possible future extension.
 
-Targets stable Auggie 0.x; unversioned upstream docs describe the 1.x prerelease.
-Augment hook events (per docs.augmentcode.com/cli/v0/hooks.md):
+The same user settings can serve Auggie 1.x and 0.x. Match both generations
+of native tool names with one hook per action.
+Augment hook events (per docs.augmentcode.com/cli/hooks.md):
     PreToolUse, PostToolUse, SessionStart, SessionEnd, Stop
 Schema mirrors Claude Code — each event holds an array of groups, each group
 holds `{matcher?, hooks: [{type, command, timeout?}]}`. We tag the outer group
 with `_source: ai-toolkit` so we can strip and rewrite idempotently without
 clobbering user hook groups.
-
-Common Augment tool names relevant to our hooks:
-    launch-process (shell), view (read), str-replace-editor (edit),
-    save-file (write), remove-files (delete), web-fetch, web-search,
-    codebase-retrieval, github-api, linear.
 
 Usage:
     python3 scripts/generate_augment_hooks.py [target-dir]
@@ -40,10 +36,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from mcp_editors import ConfigUpdate, apply_config_updates
 from secure_fs import apply_owned_edits, lexical_absolute
 
 HOOKS_PREFIX = 'AI_TOOLKIT_HOOK_FORMAT=json "$HOME/.softspark/ai-toolkit/hooks/'
 SOURCE_TAG = "ai-toolkit"
+SHELL = "^(bash|launch-process)$"
+FILE_ACCESS = "^(read|grep|find|ls|edit|write|view|str-replace-editor|save-file|remove-files)$"
+FILE_EDIT = "^(edit|write|str-replace-editor|save-file)$"
 
 # Event -> list of (matcher, script). Matcher is a regex over tool_name.
 AUGMENT_HOOKS: dict[str, list[tuple[str, str]]] = {
@@ -52,17 +52,17 @@ AUGMENT_HOOKS: dict[str, list[tuple[str, str]]] = {
         ("", "mcp-health.sh"),
     ],
     "PreToolUse": [
-        ("launch-process", "guard-destructive.sh"),
-        ("launch-process", "commit-quality.sh"),
-        ("launch-process", "revert-guard.sh"),
-        ("view|str-replace-editor|save-file|remove-files", "guard-path.sh"),
-        ("str-replace-editor|save-file", "guard-config.sh"),
+        (SHELL, "guard-destructive.sh"),
+        (SHELL, "commit-quality.sh"),
+        (SHELL, "revert-guard.sh"),
+        (FILE_ACCESS, "guard-path.sh"),
+        (FILE_EDIT, "guard-config.sh"),
     ],
     "PostToolUse": [
-        ("str-replace-editor|save-file", "post-tool-use.sh"),
-        ("str-replace-editor|save-file", "test-cohesion.sh"),
-        ("launch-process|str-replace-editor|save-file", "governance-capture.sh"),
-        ("web-fetch|web-search|codebase-retrieval", "search-tracker.sh"),
+        (FILE_EDIT, "post-tool-use.sh"),
+        (FILE_EDIT, "test-cohesion.sh"),
+        (f"{SHELL}|{FILE_EDIT}", "governance-capture.sh"),
+        ("^(web-fetch|web-search|codebase-retrieval)$", "search-tracker.sh"),
     ],
     "Stop": [
         ("", "quality-check.sh"),
@@ -116,7 +116,15 @@ def strip_toolkit_hooks(hooks: dict) -> dict:
         if not isinstance(entries, list):
             kept[event] = entries
             continue
-        survivors = [e for e in entries if not _is_toolkit_entry(e)]
+        survivors = []
+        for entry in entries:
+            if not _is_toolkit_entry(entry):
+                survivors.append(entry)
+            elif entry.get("_source") != SOURCE_TAG:
+                # Before 2.13 each handler carried its own ownership tag.
+                handlers = [h for h in entry["hooks"] if not isinstance(h, dict) or h.get("_source") != SOURCE_TAG]
+                if handlers:
+                    survivors.append({**entry, "hooks": handlers})
         if survivors:
             kept[event] = survivors
     return kept
@@ -142,25 +150,23 @@ def _resolve_target_dir(argv: list[str]) -> Path:
 def generate(target_dir: Path) -> Path:
     """Write `<target_dir>/.augment/settings.json` and return its path."""
     aug_dir = target_dir / ".augment"
-    aug_dir.mkdir(parents=True, exist_ok=True)
     path = aug_dir / "settings.json"
-
+    if target_dir.is_symlink() or aug_dir.is_symlink() or path.is_symlink():
+        raise RuntimeError(f"Refusing symlinked Augment settings path: {path}")
     settings: dict = {}
-    if path.is_file():
-        try:
-            with open(path, encoding="utf-8") as f:
-                settings = json.load(f)
-            if not isinstance(settings, dict):
-                settings = {}
-        except (json.JSONDecodeError, OSError):
-            settings = {}
+    original = path.read_bytes() if path.exists() else None
+    if original is not None:
+        settings = json.loads(original.decode("utf-8"))
+        if not isinstance(settings, dict):
+            raise ValueError(f"Expected an Augment settings object in {path}")
 
-    existing_hooks = settings.get("hooks") if isinstance(settings.get("hooks"), dict) else {}
-    settings["hooks"] = merge_hooks(existing_hooks or {}, build_toolkit_hooks())
+    existing_hooks = settings.get("hooks", {})
+    if not isinstance(existing_hooks, dict):
+        raise ValueError(f"Expected an Augment hooks object in {path}")
+    settings["hooks"] = merge_hooks(existing_hooks, build_toolkit_hooks())
 
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(settings, f, indent=4, ensure_ascii=False, sort_keys=True)
-        f.write("\n")
+    content = (json.dumps(settings, indent=4, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
+    apply_config_updates([ConfigUpdate(path, original, content)])
     return path
 
 

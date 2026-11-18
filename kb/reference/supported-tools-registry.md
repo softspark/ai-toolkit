@@ -3,9 +3,9 @@ title: "Supported Tools Registry"
 category: reference
 service: ai-toolkit
 tags: [editors, platforms, generators, integration, ecosystem]
-version: "1.22.1"
+version: "1.23.0"
 created: "2026-04-23"
-last_updated: "2026-11-17"
+last_updated: "2026-11-18"
 description: "Human-readable view of scripts/ecosystem_tools.json: Claude Code, Claude Chat/Cowork, and 11 editors."
 ---
 
@@ -15,29 +15,15 @@ The canonical data lives in **`scripts/ecosystem_tools.json`** and is consumed b
 
 ## Tool Count: 13
 
-The 2026-11-17 patch review fetched all 13 documentation pages. Roo Code,
-Aider and Augment matched the previous snapshot. Claude Chat, Devin Desktop,
-Gemini CLI and Antigravity had content-only changes. Claude Code and Cline
-headings lost invisible spaces. Cursor removed a navigation heading, and
-OpenCode now redirects V2 documentation to its main site, where the server
-plugin reference still describes the same setup contract.
-[OpenCode server plugins](https://opencode.ai/docs/build/plugins/server/)
+The 2026-11-18 review compares each integration with its publisher's release
+feed and configuration reference. The toolkit adapts Auggie permissions by CLI
+generation, checks each file touched by a Devin patch, and emits V2-compatible
+OpenCode agent colors. Existing Aider configuration keeps its selected models.
+The review rows link to the evidence for each distribution channel. Local
+version probes in the doctor snapshot describe the workstation where it ran.
 
-Copilot featured optional browser use on its landing page. Codex added links
-to commerce and cloud services in shared navigation. The locally probed Codex
-CLI was 0.169.0, while GitHub had published 0.169.1. Claude Code's local binary,
-GitHub release and npm `latest` all reported 2.1.326. The toolkit retains its
-existing editor settings and account-selected model defaults.
-[Copilot browser use](https://docs.github.com/en/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/browser-use) ·
-[Codex 0.169.1](https://github.com/openai/codex/releases/tag/rust-v0.169.1) ·
-[Claude Code 2.1.326](https://github.com/anthropics/claude-code/releases/tag/v2.1.326)
-
-The [2026-11-06 sync](../planning/ecosystem-sync-20261106.md) records all 13
-current release and configuration reviews, including channel differences and
-the OpenCode V2 migration. Locally installed prereleases remain observations.
-
-The [2026-10-02 release review](../planning/ecosystem-sync-20261002.md) verifies
-all 13 integrations and records the adopted Augment and Antigravity migrations.
+Earlier reviews are available for [November 6](../planning/ecosystem-sync-20261106.md)
+and [October 2](../planning/ecosystem-sync-20261002.md).
 
 The recommended primary working set is Claude Code, Codex and Antigravity.
 Other listed integrations remain supported and opt-in. This changes neither
@@ -56,7 +42,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `claude-code` |
-| Review 2026-11-06 | Classes A/B/C. npm/GitHub latest is [2.1.318](https://github.com/anthropics/claude-code/releases/tag/v2.1.318); the conservative `stable` tag is 2.1.311 and local 2.1.319 belongs to `next`. Three existing safety guards now set `onFailure: block` (Claude Code 2.1.295+) and migrate old tagged/untagged entries without duplicating them. Optional mods and administrator settings are not enabled. |
+| Review 2026-11-18 | Classes A/C. GitHub and npm `latest` report 2.1.327. npm `stable` is 2.1.311. `/status` now lists broken customizations and unmatched hook matchers. [Release](https://github.com/anthropics/claude-code/releases/tag/v2.1.327) · [npm channels](https://registry.npmjs.org/-/package/@anthropic-ai/claude-code/dist-tags) |
 | Docs | https://code.claude.com/docs (platform.claude.com/docs 307-redirects here) |
 | Release notes | https://github.com/anthropics/claude-code/releases |
 | Changelog | https://code.claude.com/docs/en/changelog; GitHub release feed is authoritative when the generated page lags (local version observed 2026-09-23: 2.1.280; documentation contracts were reviewed independently of the local version) |
@@ -67,7 +53,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Other capabilities | slash commands, MCP server/client, sub-agent, output style, `SKILL.md` (≥500 lines warn) |
 | Plugin component coverage | Existing plugin packaging uses skills and hooks. Native workflows, output styles, LSP servers, experimental themes and monitors, MCP-backed channels, and root plugin `settings.json` are recognized class C surfaces and are not generated. Claude Code accepts only `agent` and `subagentStatusLine` in root plugin settings. |
 | Version probe | `claude --version` |
-| Notes | v2.1.169 added `disableBundledSkills` setting + `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` env var (hides bundled skills/built-in slash commands from the model; toolkit skills in `.claude/skills/` are unaffected — useful when toolkit skills overlap built-ins) and `claude --safe-mode` / `CLAUDE_CODE_SAFE_MODE` (starts with hooks, skills, agents, and CLAUDE.md disabled — first isolation step when debugging toolkit rule enforcement). `fallbackModel` settings key (v2.1.166) noted as not-adopted (class C, no toolkit surface writes model settings). |
+| Notes | v2.1.169 added `disableBundledSkills` setting + `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` env var (hides bundled skills/built-in slash commands from the model; toolkit skills in `.claude/skills/` are unaffected — useful when toolkit skills overlap built-ins) and `claude --safe-mode` / `CLAUDE_CODE_SAFE_MODE` (starts with hooks, skills, agents, and CLAUDE.md disabled — first isolation step when debugging toolkit rule enforcement). `fallbackModel` settings key (v2.1.166) noted as not-adopted (class C, the toolkit does not set Claude Code model fallback). |
 
 ---
 
@@ -78,8 +64,9 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `claude-app` |
-| Review 2026-11-06 | Classes A/C. [Plugin distribution](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) retains the exported ZIP and runtime split. Native validation accepts the exported failure policy; hosted Cowork runtime enforcement is unverified because its version is not published. Account sync remains separate from local installation. |
+| Review 2026-11-18 | Classes A/C. Desktop has Stable and Latest release channels. Hosted Chat and Cowork have no single published runtime version. Skills work in both, while hooks and subagents run in Cowork. [Desktop channels](https://support.claude.com/en/articles/10065433-install-claude-desktop) · [Plugin distribution](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) |
 | Docs | https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork |
+| Release notes | [Claude app releases](https://support.claude.com/en/articles/12138966-release-notes) |
 | Plugin docs | https://support.claude.com/en/articles/13837440-use-plugins-in-claude |
 | Config surfaces | `Settings > Cowork > Global instructions`, Cowork folder instructions, `Customize > Skills`, `Customize > Plugins`, plus the one file-based surface: `claude_desktop_config.json` (macOS `~/Library/Application Support/Claude/`, Windows `%APPDATA%/Claude/`, Linux `~/.config/Claude/`; `CLAUDE_USER_DATA_DIR` overrides the root) |
 | Plugin layout | `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`; ai-toolkit uses manifest paths under `claude-app/` for its generated app-only rules and hooks |
@@ -97,7 +84,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `cursor` |
-| Review 2026-11-06 | Classes A/C. IDE/Agents Window [3.27](https://cursor.com/docs/release-notes) retains the generated 21 version-1 hook events and native subagents. Hosted-app deployment is a separate cloud feature. Agent model inheritance remains unchanged. |
+| Review 2026-11-18 | Classes A/C. The stable desktop download reports 3.30.14. Published IDE release notes currently cover releases through 3.27. Generated subagents set `model: inherit`. [Stable manifest](https://api2.cursor.sh/updates/api/download/stable/darwin-arm64/cursor) · [IDE notes](https://cursor.com/docs/release-notes/ide.md) |
 | Docs | https://cursor.com/docs |
 | Changelog | https://cursor.com/changelog |
 | Stable docs mirror | https://cursor.com/llms.txt (all doc pages have .md twins) |
@@ -113,7 +100,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `windsurf` |
-| Review 2026-11-06 | Classes A/B/C. Devin Desktop [3.11.238](https://docs.devin.ai/desktop/changelog). Prompt/edit hooks now emit native JSON context with the event name; blocking guards retain their verdicts and exit codes. Skill discovery still accepts `.windsurf/skills/`. Both rule trees load; compatibility emission is not native deduplication. |
+| Review 2026-11-18 | Classes A/B. Desktop is 3.14.30819. The independent CLI manifest reports 3000.14.30821. File hooks match native read, write, notebook and patch tools. Guard checks include both source and destination for a move. [Desktop notes](https://docs.devin.ai/desktop/changelog.md) · [CLI manifest](https://static.devin.ai/cli/current/manifest.json) · [Hook API](https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks.md) |
 | Docs | https://docs.devin.ai/desktop (Windsurf rebranded to Devin Desktop ~2026-06-02; docs.windsurf.com resolves here) |
 | Changelog | https://docs.devin.ai/desktop/changelog (windsurf.com/changelog 308-permanent-redirects here) |
 | Stable docs mirror | https://docs.devin.ai/desktop/... per-page .md twins. Current Devin loads both `.devin/rules/` and `.windsurf/rules/`; only the global rule file has native-over-legacy precedence. Dual emission supports older clients and may repeat rules on current clients. |
@@ -131,7 +118,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `github-copilot` |
-| Review 2026-11-06 | Classes A/C. CLI [1.0.106](https://github.com/github/copilot-cli/releases/tag/v1.0.106) retains generated hooks, skills and agent metadata. CLI versions do not identify every IDE/cloud release. New session, sandbox and UI settings remain opt-in; no model overrides are added. |
+| Review 2026-11-18 | Classes A/C. CLI 1.0.113 supports a managed setting for Browser Use. CLI versions cover the command-line client only. Toolkit custom agents omit model overrides so each host applies its own selection and policy. [CLI release](https://github.com/github/copilot-cli/releases/tag/v1.0.113) |
 | Docs | https://docs.github.com/en/copilot |
 | Release notes | https://github.blog/changelog/label/copilot/ |
 | Native docs | [VS Code hooks](https://code.visualstudio.com/docs/agent-customization/hooks), [VS Code skills](https://code.visualstudio.com/docs/agent-customization/agent-skills), [Hooks reference](https://docs.github.com/en/copilot/reference/hooks-reference), [skills](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills), [CLI config directory](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference) |
@@ -147,7 +134,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `gemini-cli` |
-| Review 2026-11-06 | Classes A/B/C. Stable [0.67.0](https://github.com/google-gemini/gemini-cli/releases/tag/v0.67.0). Text-only advisory hooks now return native JSON, with SessionStart context and system messages for checker diagnostics. Session summaries accept native `prompt_response`. Eleven stable hook events remain supported; nightly-only changes are not adopted. |
+| Review 2026-11-18 | Class A. Stable CLI 0.68.0 retains eleven hook events. Generated native agents omit the Claude model setting. [Release](https://github.com/google-gemini/gemini-cli/releases/tag/v0.68.0) · [Tagged hook contract](https://github.com/google-gemini/gemini-cli/blob/v0.68.0/packages/core/src/hooks/types.ts) |
 | Docs | https://github.com/google-gemini/gemini-cli/tree/main/docs |
 | Release notes | https://github.com/google-gemini/gemini-cli/releases |
 | Config paths | `GEMINI.md`, `.gemini/settings.json`, `~/.gemini/settings.json`, `.gemini/commands/*.toml`, `.gemini/skills/*/SKILL.md`, `.gemini/agents/*.md`, `.agents/skills/*/SKILL.md`, `~/.gemini/skills/*/SKILL.md`, `~/.gemini/agents/*.md`, `~/.agents/skills/*/SKILL.md` (the `.agents/skills` alias wins over `.gemini/skills` within the same tier). Extension packages keep `gemini-extension.json` at the package root and install below `~/.gemini/extensions/<name>/`. |
@@ -163,7 +150,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `cline` |
-| Review 2026-11-06 | Classes A/C/D. Stable [4.1.26](https://github.com/cline/cline/releases/tag/v4.1.26) remains current. Recommended `.cline/skills/`, extensionless hook files and native cancel/contextModification output remain compatible. The extension still marks TaskComplete and PreCompact as coming soon. The official repository supplied the hook contract when the docs page returned navigation only. |
+| Review 2026-11-18 | Classes A/C. The extension is 4.1.26. It supports separate local and cloud task model settings. The standalone CLI has its own release stream. [Extension release](https://github.com/cline/cline/releases/tag/v4.1.26) |
 | Docs | https://docs.cline.bot |
 | Release notes | https://github.com/cline/cline/releases |
 | Config paths | **Extension compatibility:** `.clinerules/*.md`, `.clinerules/workflows/*.md`, `.clinerules/skills/*/SKILL.md`, `.clinerules/hooks/` (project), `~/Documents/Cline/Rules/` (global rules), `~/Documents/Cline/Hooks/` (global hooks), `~/.cline/data/settings/cline_mcp_settings.json`. **CLI/SDK primary layout:** `.cline/{rules,hooks,agents,plugins,skills}/`, `~/.cline/{rules,hooks,agents,plugins,skills}/`; CLI `--hooks-dir` defaults to `~/.cline/hooks`. **Cross-tool:** `AGENTS.md` + `~/.agents/AGENTS.md` (rules sources), `.claude/skills/*/SKILL.md` (native skill discovery). |
@@ -178,7 +165,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `roo-code` |
-| Review 2026-11-06 | Classes A/C. Successor Zoo [3.94.0](https://github.com/Zoo-Code-Org/Zoo-Code/releases/tag/v3.94.0) retains JSON `.roomodes`, native rule paths and Roo settings import. Provider, OAuth and UI updates require no generator migration. |
+| Review 2026-11-18 | Classes A/C. Zoo Code 3.98.0 adds an optional dynamic effort setting and retains project `.roomodes`. Roo Code's archived repository remains at 3.54.0. [Successor release](https://github.com/Zoo-Code-Org/Zoo-Code/releases/tag/v3.98.0) · [Custom modes](https://docs.zoocode.dev/features/custom-modes) |
 | Docs | https://roocodeinc.github.io/Roo-Code (frozen; docs.roocode.com 301-redirects here). Successor docs: https://docs.zoocode.dev |
 | Release notes | https://github.com/Zoo-Code-Org/Zoo-Code/releases (authoritative). Original RooCodeInc/Roo-Code is archived/read-only since 2026-05-15, frozen at v3.54.0. Follow the successor **Zoo-Code-Org/Zoo-Code** (marketplace `ZooCodeOrganization.zoo-code`); the reviewed release is recorded above. |
 | Config paths | `.roomodes` (JSON still fully supported), `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/skills/*/SKILL.md`, `~/.roo/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md`, `~/.agents/skills/*`, `.roo/commands/*.md`, `~/.roo/commands/*.md`, `.roo/mcp.json`, `~/.roo/rules/`, `mcp_settings.json` + global custom modes live in VS Code globalStorage (`<globalStorage>/rooveterinaryinc.roo-cline/settings/custom_modes.yaml`), NOT `~/.roo/custom_modes.yaml` |
@@ -191,7 +178,7 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `aider` |
-| Review 2026-11-06 | Class A. [aider-chat 0.86.2](https://pypi.org/project/aider-chat/0.86.2/) is the current published stable package, confirmed by its source tag. GitHub's latest-release endpoint and HISTORY lag it. Emitted options remain supported; no model defaults change. |
+| Review 2026-11-18 | Classes A/B. PyPI and the source tag identify 0.86.2. The GitHub latest-release feed still lists 0.86.0. Fresh toolkit configuration supplies `model` and `editor-model`. Existing project and user YAML retain their selections during install and update. [PyPI](https://pypi.org/project/aider-chat/0.86.2/) · [Source tag](https://github.com/Aider-AI/aider/tree/v0.86.2) |
 | Docs | https://aider.chat/docs |
 | Changelog | https://aider.chat/HISTORY.html |
 | Config paths | `.aider.conf.yml`, `CONVENTIONS.md`, `~/.aider.conf.yml` |
@@ -206,15 +193,15 @@ For current model defaults and optional Claude-to-Codex execution, see
 | Field | Value |
 |-------|-------|
 | ID | `augment` |
-| Review 2026-11-06 | Classes A/C. Stable Auggie 0.37.0 uses the [versioned v0 contracts](https://docs.augmentcode.com/cli/v0/subagents.md); unversioned docs now describe 1.x prerelease with renamed tools and different permissions. Keep stable allowlists, omit `disabled_tools`, and inherit the CLI model. |
-| Docs | https://docs.augmentcode.com |
+| Review 2026-11-18 | Classes B/E. npm `latest` is Auggie 1.2.2 and `v0-release` is 0.37.1. Toolkit agent and hook generation supports both families. The documentation banner lags the package channel. [npm channels](https://registry.npmjs.org/-/package/@augmentcode/auggie/dist-tags) · [1.x subagents](https://docs.augmentcode.com/cli/subagents.md) · [0.x subagents](https://docs.augmentcode.com/cli/v0/subagents.md) |
+| Docs | [Auggie CLI 1.x](https://docs.augmentcode.com/cli/overview.md) · [Auggie CLI 0.x](https://docs.augmentcode.com/cli/v0/overview.md) |
 | Changelog | https://www.augmentcode.com/changelog |
 | Config paths | `.augment/rules/*.md`, `.augment-guidelines` (workspace root, legacy single-file), `~/.augment/user-guidelines.md`, `.augment/agents/*.md`, `.augment/commands/*.md`, `.augment/skills/*/SKILL.md`, `.augment/settings.json`, `.augment/settings.local.json`, `~/.augment/rules/*.md`, `~/.augment/settings.json`, `/etc/augment/settings.json`. Auggie CLI also discovers skills/commands from `.claude/` and `.agents/` (`.augment/` wins on precedence). |
 | Our generators | `scripts/generate_augment.py`, `scripts/generate_augment_rules.py`, `scripts/generate_augment_agents.py` (profile=full), `scripts/generate_augment_commands.py` (profile=full), `scripts/generate_augment_hooks.py` (profile=full, HOME-scoped), `scripts/generate_augment_skills.py` (profile=full) |
-| Agent permission contract | Native allowlist only: `Read` → `view`, `Grep` → `codebase-retrieval`, `Glob` → `view` + `codebase-retrieval` (deduplicated), `Edit` → `str-replace-editor`, `Write` → `save-file`, `Bash` → `launch-process`. `disabled_tools` is omitted because it overrides `tools`, even when empty. Unmapped Claude orchestration tools are omitted with an explicit capability note; unknown tools and empty native allowlists fail before any output changes. Model remains the CLI default. Generated agents carry ownership markers; cleanup recognizes legacy exports and preserves user files. [Official subagent reference](https://docs.augmentcode.com/cli/subagents) |
+| Agent permissions | In 1.x the allowlist uses `read`, `grep`, `find`, `edit`, `write` and `bash`, and `extensions: false` prevents extra extension tools. The 0.x generator retains `view`, `codebase-retrieval`, `str-replace-editor`, `save-file` and `launch-process`. Both omit `model`: 1.x inherits the current model and 0.x uses the CLI default. With no local CLI, existing owned files determine the format, and fresh installations use 1.x. Unknown installed major versions fail before agent writes. [1.x contract](https://docs.augmentcode.com/cli/subagents.md) · [0.x contract](https://docs.augmentcode.com/cli/v0/subagents.md) |
 | Global install | `ai-toolkit install --editors augment` writes `~/.augment/rules/ai-toolkit.md` **plus** (profile=full) `~/.augment/agents/`, `~/.augment/commands/`, and hooks in `~/.augment/settings.json` — all documented user-tier surfaces. A global-only Augment user previously got no hooks/agents/commands. Skills need no global emission: Auggie natively reads `~/.claude/skills/`. |
 | Tracked capabilities | `.augment`, Agent mode, Next Edit, MCP, context engine, Auggie CLI, `always_apply`, `agent_requested`, subagents, custom commands, `SKILL.md`, `PreToolUse`, `PostToolUse`, `SessionStart`, `SessionEnd`, `Stop`, `Notification`, ACP Mode, plugins/marketplace |
-| Earlier baseline / notes | Auggie CLI v0.31.0. Since v0.30.0 (2026-06-25) `PreToolUse`/`PostToolUse` hooks fire during sub-agent sessions. The shared hook input adapter normalizes Augment's `conversation_id`, so edit and quality state remains isolated across parallel sub-agents. `Notification` is enum-only (doctor flipped its marker), with no dedicated handler documented, so class C (do NOT wire). Plugins/marketplace (`auggie plugin marketplace add`, `.augment-plugin`/`.claude-plugin` layouts, `enabledPlugins`/`autoUpdateMarketplaces` in settings) are documented but not yet a shipping target. |
+| Hook compatibility | Matchers support native tool names from both families. The shared adapter reads Augment's `conversation_id` to isolate session state. Version 1.x documents `PromptSubmit` and `Notification`. [Hooks](https://docs.augmentcode.com/cli/hooks.md) · [1.x changes](https://docs.augmentcode.com/cli/whats-new.md) |
 | SPA caveat | Mintlify Next.js SPA; use `https://docs.augmentcode.com/<path>.md` siblings (discoverable via `/llms.txt`) for machine reads |
 
 ### Google Antigravity
@@ -234,7 +221,7 @@ removal for a supported client. [Decision for issue #34](../../DECISIONS.md#keep
 | Field | Value |
 |-------|-------|
 | ID | `google-antigravity` |
-| Review 2026-11-06 | Classes A/C/D. App [2.29.0 and CLI 1.5.1](https://antigravity.google/docs/changelog) retain existing hooks, agent inheritance and plugin contracts. Shared `~/.gemini/config/skills` is canonical for App and CLI; legacy CLI paths remain supported. Optional termination/remote-agent/ACP features are not enabled. |
+| Review 2026-11-18 | Classes A/C. App 2.33.0 adds SSH project connections and GitHub status. CLI 1.5.9 adds a workflow tool and administrator plugin controls. Generated agents inherit the model, and workspace workflows remain available alongside their skill replacements. [App and CLI notes](https://antigravity.google/docs/changelog.md) |
 | Docs | https://antigravity.google/docs (official hook and configuration pages are now readable through the web index; use feature pages to verify) |
 | Changelog | https://antigravity.google/docs/changelog |
 | Config paths | Rules/workflows: `.agents/rules/*.md` (each needs `trigger:` frontmatter or Antigravity silently discards it; 24,000-byte per-file cap; always-on and global rules share a 20,000-token budget), `.agents/workflows/*.md`. Skills: canonical `.agents/skills/*/SKILL.md`; `.agent/skills/*/SKILL.md` is legacy, no longer written, and the old pointer copy is removed on reinstall. Agents: `.agents/agents/ai-toolkit-*/agent.md`. Hooks: `.agents/hooks.json` plus `.agents/hooks/ai-toolkit-antigravity-hook.py`, invoked as `python3 hooks/…` because handlers run from the `hooks.json` directory. Plugins: `.agents/plugins/<plugin>/plugin.json`. MCP: `.agents/mcp_config.json`. Cross-tool instructions: `AGENTS.md`, `GEMINI.md`. |
@@ -243,7 +230,7 @@ removal for a supported client. [Decision for issue #34](../../DECISIONS.md#keep
 | Install profiles | `minimal`: rules/workflows/skills only. `standard` and `strict`: add native hooks. `full`: additionally adds native agents. Global install follows the same gates under `~/.gemini/config/`; it never auto-installs the plugin. |
 | Plugin flow | `ai-toolkit antigravity-plugin export [output]` creates a self-contained ZIP with exact manifest fields `$schema`, `name`, `description`, rules, skills, agents, hooks, runtime, and LICENSE. Verify offline with `ai-toolkit antigravity-plugin verify <archive-or-dir>`, then install manually under `.agents/plugins/<plugin>/` for a workspace, `~/.gemini/antigravity-cli/plugins/<plugin>/` for CLI, or `~/.gemini/config/plugins/<plugin>/` for the IDE/shared product. Hook commands resolve from `${extensionPath}`. |
 | Tracked capabilities | Antigravity, agent manager, artifacts, MCP, workflows, rules, skills, hooks, six native hook events (three wired), subagents, agent permissions, plugins, global skills/hooks/agents, `AGENTS.md`, `GEMINI.md`, `serverUrl` |
-| Reviewed baseline / notes | The release reviewed above is the Antigravity App; earlier CLI/IDE observations are historical. Native agent models remain `inherit`/`flash`/`pro`; toolkit agents preserve `inherit` and validate tool names. Antigravity defines `SessionStart`, `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the toolkit wires only `PreToolUse` (matcher `run_command`), `PreInvocation`, and `Stop`. Optional `SessionStart` is tracked without adding a handler. The shell command is `.toolCall.args.CommandLine`. Handlers run via `sh -c` from the directory containing `hooks.json` (agy 1.3.1 runtime observation, 2026-10-07). The adapter returns native camelCase payloads, object-shaped `injectSteps`, and bounded Stop continuation. MCP normalizes legacy input `url` into `serverUrl` and rejects `httpUrl`; optional arguments, environment, working directory, authentication and tool controls remain preserved. |
+| Reviewed baseline / notes | The App and CLI release numbers are tracked separately. Native agent models remain `inherit`/`flash`/`pro`; toolkit agents preserve `inherit` and validate tool names. Antigravity defines `SessionStart`, `PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`; the toolkit wires only `PreToolUse` (matcher `run_command`), `PreInvocation`, and `Stop`. Optional `SessionStart` is tracked without adding a handler. The shell command is `.toolCall.args.CommandLine`. Handlers run via `sh -c` from the directory containing `hooks.json` (agy 1.3.1 runtime observation, 2026-10-07). The adapter returns native camelCase payloads, object-shaped `injectSteps`, and bounded Stop continuation. MCP normalizes legacy input `url` into `serverUrl` and rejects `httpUrl`; optional arguments, environment, working directory, authentication and tool controls remain preserved. |
 | Doc access note | Docs are a JavaScript SPA, but the official search index exposes the current MCP guide and changelog text. Verify changelog claims against the dated official entry because the MCP guide's warning can lag schema releases. |
 
 ### Codex CLI
@@ -251,7 +238,7 @@ removal for a supported client. [Decision for issue #34](../../DECISIONS.md#keep
 | Field | Value |
 |-------|-------|
 | ID | `codex-cli` |
-| Review 2026-11-06 | Classes A/B/C. Stable [0.167.0](https://github.com/openai/codex/releases/tag/rust-v0.167.0). The validator now accepts and preserves user `PreModelRequest`/`PostModelRequest` diagnostics during global/project refreshes. Native skills, agents and plugins remain compatible; trust, model and permission settings are preserved. |
+| Review 2026-11-18 | Classes A/C. GitHub lists CLI 0.169.1. The host model catalog includes GPT-6.2 Astra and Sol. Generated agent TOML leaves the model and reasoning effort to the session. [CLI release](https://github.com/openai/codex/releases/tag/rust-v0.169.1) · [Model catalog](https://learn.chatgpt.com/docs/models) |
 | Docs | https://learn.chatgpt.com/docs/codex/cli (official Codex CLI documentation; local version observed during the 2026-09-23 review: codex-cli 0.155.1) |
 | Release notes | https://github.com/openai/codex/releases |
 | Config paths | **Instructions:** project `AGENTS.md` (root→cwd chain, closest wins) and global `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md`; `~/.codex/AGENTS.override.md` takes precedence). NOTE: `~/AGENTS.md` is NOT a global-instruction surface — Codex only reads it if a session's cwd is exactly `$HOME`. Plus `.agents/skills/*/SKILL.md`, `.codex/agents/*.toml`, `~/.codex/agents/*.toml`, `.codex/hooks.json`, `~/.codex/hooks.json`, `.codex/config.toml` (project layers, root→cwd, closest wins, trusted projects only), `~/.codex/config.toml`. **Native plugins:** root `plugin.json` (portable Agent Plugins manifest), `.codex-plugin/plugin.json` (compatibility overlay), root `skills/*/SKILL.md`, default `hooks/hooks.json`, and `.agents/plugins/marketplace.json`. |
@@ -268,8 +255,8 @@ removal for a supported client. [Decision for issue #34](../../DECISIONS.md#keep
 | Field | Value |
 |-------|-------|
 | ID | `opencode` |
-| Review 2026-11-06 | Classes A/B/C/D. Stable [V2 2.2.5](https://github.com/anomalyco/opencode/releases/tag/v2.2.5) ships as `@opencode/cli`; legacy `opencode-ai` and GitHub latest-release still report V1 1.19.5. The plugin now uses documented `id/setup/server` compatibility for V2 and V1 1.18.29+, with real subprocess tests. Doctor warns about the old managed export. |
-| Docs | https://opencode.ai/v2/docs/ |
+| Review 2026-11-18 | Classes A/B. V2 is `@opencode/cli` 2.3.1. The V1 `opencode-ai` package is 1.19.6. Toolkit agents emit six-digit hex colors and omit model overrides. The shared plugin has V2 `setup` and V1 `server` entry points for V1 1.18.29+. [V2 package](https://registry.npmjs.org/-/package/@opencode/cli/dist-tags) · [V1 package](https://registry.npmjs.org/-/package/opencode-ai/dist-tags) · [V2 agent schema](https://github.com/anomalyco/opencode/blob/v2.3.1/packages/schema/src/config/agent.ts) |
+| Docs | https://opencode.ai/docs/ |
 | Release notes | https://github.com/sst/opencode/releases (redirects to anomalyco/opencode) |
 | Config paths | `opencode.json`, `opencode.jsonc`, `.opencode/agents/*.md`, `.opencode/commands/*.md`, `.opencode/plugins/*`, `.opencode/skills/*/SKILL.md`, `AGENTS.md`; skill fallback discovery: `.claude/skills/`, `.agents/skills/`, `~/.config/opencode/skills/`, `~/.claude/skills/`, `~/.agents/skills/`; V2 package/config surfaces: `skills/*.md`, `skills/**/SKILL.md`, `skills` array with local paths or HTTP URLs |
 | Our generators | `scripts/generate_opencode.py`, `scripts/generate_opencode_agents.py`, `scripts/generate_opencode_commands.py`, `scripts/generate_opencode_json.py`, `scripts/generate_opencode_plugin.py`, `scripts/generate_opencode_skills.py` |

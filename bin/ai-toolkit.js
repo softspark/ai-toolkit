@@ -36,7 +36,6 @@ const GENERATORS = {
   'gemini-md':            { script: 'generate_gemini.py',        dest: 'GEMINI.md' },
   'cline-rules':          { script: 'generate_cline.py',         dest: '.clinerules' },
   'roo-modes':            { script: 'generate_roo_modes.py',     dest: '.roomodes' },
-  'aider-conf':           { script: 'generate_aider_conf.py',    dest: '.aider.conf.yml' },
   'augment-rules':        { script: 'generate_augment.py',       dest: path.join('.augment', 'rules', 'ai-toolkit.md'), mkdir: '.augment/rules' },
   'agents-md':            { script: 'generate_agents_md.py',     dest: 'AGENTS.md' },
   'codex-md':             { script: 'generate_codex.py',         dest: 'AGENTS.md' },
@@ -674,6 +673,7 @@ function handleGenerateAll(_args) {
     writeGeneratorOutput(gen);
   }
   // Directory-based generators (multi-file output)
+  run(scriptPath('generate_aider_conf.py'), [CWD]);
   run(scriptPath('generate_antigravity.py'), [CWD]);
   run(scriptPath('generate_antigravity_hooks.py'), [CWD]);
   run(scriptPath('generate_antigravity_agents.py'), [CWD]);
@@ -820,6 +820,7 @@ const SPECIAL_HANDLERS = {
   'remove-mcp':   handleRemoveMcp,
   'llms-txt':     (_args) => generateLlmsTxt(),
   'antigravity-rules': (_args) => run(scriptPath('generate_antigravity.py'), [CWD]),
+  'aider-conf': (_args) => run(scriptPath('generate_aider_conf.py'), [CWD]),
   'cursor-mdc':   (_args) => run(scriptPath('generate_cursor_mdc.py'), [CWD]),
   'windsurf-dir-rules': (_args) => run(scriptPath('generate_windsurf_rules.py'), [CWD]),
   'cline-dir-rules': (_args) => run(scriptPath('generate_cline_rules.py'), [CWD]),

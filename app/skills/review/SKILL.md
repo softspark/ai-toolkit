@@ -64,12 +64,13 @@ For significant PRs or large changesets, create a parallel review team:
 
 ```
 Create an agent team to review [target]:
+Keep each teammate's configured model and effort unless the user selected an override.
 - Teammate 1 (security-auditor): "Review for security vulnerabilities, auth issues,
-  injection risks, secret leaks. Report with severity ratings." Use Opus.
+  injection risks, secret leaks. Report with severity ratings."
 - Teammate 2 (performance-optimizer): "Check for N+1 queries, memory leaks,
-  unnecessary allocations, caching opportunities. Report with impact ratings." Use Opus.
+  unnecessary allocations, caching opportunities. Report with impact ratings."
 - Teammate 3 (test-engineer): "Validate test coverage, edge cases, mock quality,
-  missing assertions. Report coverage gaps." Use Opus.
+  missing assertions. Report coverage gaps."
 Each reviewer should report findings independently. Do NOT modify files.
 ```
 

@@ -128,8 +128,9 @@ If the scan reports >5 smells across multiple files, use Agent Teams:
 
 ```
 Create an agent team for refactoring:
-- Teammate 1 (code-reviewer): "Plan the refactoring strategy for [identified smells]. Document what to change and why." Use Opus. READ-ONLY.
-- Teammate 2 (backend-specialist): "Implement the refactoring changes identified by the reviewer." Use Opus.
+Keep each teammate's configured model and effort unless the user selected an override.
+- Teammate 1 (code-reviewer): "Plan the refactoring strategy for [identified smells]. Document what to change and why." READ-ONLY.
+- Teammate 2 (backend-specialist): "Implement the refactoring changes identified by the reviewer."
 Teammate 1 completes first, then Teammate 2 acts on the plan.
 ```
 
