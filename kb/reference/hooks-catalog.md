@@ -4,7 +4,7 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.21.0"
+version: "1.22.0"
 created: "2026-03-27"
 last_updated: "2026-11-18"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -281,10 +281,19 @@ The pre-commit hook blocks the commit on `1` and on any status it does not know,
 | Fires | After every Claude response |
 | Mode | Background (`"async": true`): writes a file and exits 0, nothing to wait for |
 
-**Action:** Writes enriched session context to the per-repo session store (`~/.softspark/ai-toolkit/sessions/<repo-key>/session-context.md`) for cross-session persistence. Captures:
-- Session ID and last assistant message (first 5 lines)
-- Git branch, uncommitted change count, and diff stat (last 5 lines)
-- Agent-written checkpoints from `session-context.md.checkpoints` in the same store (if present — written by proactive checkpointing per Constitution Art. I §5)
+**Action:** Replaces `~/.softspark/ai-toolkit/sessions/<repo-key>/session-context.md` with a private summary. It records a timestamp, a short fingerprint of the normalized session ID, and the Git commit and number of changed paths when available. Claude replies and Gemini response text are excluded.
+
+For a handoff, append one labelled item per line below a `## Checkpoint <timestamp>` heading in the existing `session-context.md.checkpoints` file:
+
+```text
+Objective: Verify the installer update
+Completed steps: Ran the previous-version fixture
+Key decisions: Keep user-edited configuration
+Next action: Run the upgrade test
+Artifacts: tests/test_install.bats
+```
+
+The summary keeps the last value of each recognized field if it passes filtering in each of the last five checkpoints, including `Files modified` and `Pending steps`. Use repository-relative paths and short descriptions. Free-form lines, code fences, values over 400 characters and fields containing common credential or personal-address patterns are omitted. Authors must keep sensitive or identifying information out of their notes. Filtering applies to the derived summary; the source checkpoint file remains in place. Only regular checkpoint files with verifiable file identity are read. Startup and compaction omit older unstructured summaries until a subsequent Stop writes the current format.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -360,7 +369,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 2. **Active instincts** — lists each instinct with confidence score and pattern name from `.claude/instincts/*.md`
 3. **Session context** — preserves task state from the per-repo session store (if exists)
 4. **Git working state** — branch name, uncommitted change count, last commit (if inside a git repo)
-5. **Key decisions** — last 10 lines from `decisions.md` in the per-repo session store (if exists)
+5. **Key decisions** — reports the presence of the per-repo `decisions.md` file for explicit follow-up.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -747,8 +756,8 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 Gemini's text-only advisory handlers are wrapped as JSON. `SessionStart` adds
 native `additionalContext`; checker, MCP health, commit and session-end messages
 use `systemMessage`. Wrappers preserve infrastructure failure status, and
-blocking/JSON-native handlers retain their contracts. Session persistence accepts
-the native `AfterAgent.prompt_response` when `last_assistant_message` is absent.
+blocking/JSON-native handlers retain their contracts. `AfterAgent` writes the
+same metadata and structured checkpoint fields as Claude's Stop event.
 
 OpenCode uses one default `id/setup/server` export for V2 and V1 1.18.29+.
 Both entrypoints use an argument-separated subprocess transport. The V2 bridge

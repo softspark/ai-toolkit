@@ -42,3 +42,19 @@ export SESSION_REPO_ROOT SESSION_REPO_KEY SESSION_DIR
 export SESSION_CONTEXT_FILE SESSION_CHECKPOINTS_FILE SESSION_END_FILE SESSION_DECISIONS_FILE
 
 unset -f _session_repo_root
+
+# Old summaries may include raw replies. Read the marker and body through
+# one descriptor so a concurrent Stop cannot swap their versions mid-read.
+print_session_context() {
+    [ -f "$SESSION_CONTEXT_FILE" ] && [ ! -L "$SESSION_CONTEXT_FILE" ] || return 0
+    local header
+    {
+        IFS= read -r header || return 0
+        if [ "$header" = "# Session Context (structured v1)" ]; then
+            printf '%s\n' "$header"
+            cat
+        else
+            printf '%s\n' 'Previous-format session context omitted.'
+        fi
+    } < "$SESSION_CONTEXT_FILE"
+}

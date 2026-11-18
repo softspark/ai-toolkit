@@ -53,7 +53,20 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 Random fixes waste time and create new bugs. Quick patches mask underlying issues. Complete each phase before proceeding to the next.
 
 ### Phase 1 — Root Cause Investigation
-Read error messages and stack traces completely. Reproduce reliably (or gather more data — don't guess). Check recent changes (`git diff`, new deps, config). For multi-component systems: log boundary in/out at each layer, identify WHERE it breaks before WHY.
+Start at the entry point the user actually used. Record one command, its fixture
+and environment, what should happen, and the observation that identifies this
+symptom. A failing exit code alone can mean the setup failed. For example, a CLI
+test for truncated output should compare the expected last record with stdout.
+Keep the original command and input when reducing the case. Each reduction must
+still show the same symptom. Use synthetic data or redact logs before sharing.
+
+For an intermittent failure, choose a bounded number of trials and record
+failures / attempts, with the seed, concurrency or timing when relevant. If the
+original environment is unavailable, record the exact observation still needed
+and identify which evidence came from the reporter.
+
+Check recent code, dependency and configuration changes. For a multi-service
+failure, trace the same input across boundaries to find where results diverge.
 
 ### Phase 2 — Pattern Analysis
 Find similar working code in the same codebase. Compare against references **completely**, not skimming. List every difference, however small.
@@ -62,7 +75,12 @@ Find similar working code in the same codebase. Compare against references **com
 Form a single hypothesis ("X is the root cause because Y"). Test minimally — smallest possible change, one variable at a time. Verify before continuing — if it didn't work, form a NEW hypothesis. Don't stack fixes on top of fixes.
 
 ### Phase 4 — Implementation
-Write a failing test case FIRST (use `/tdd`). Implement single fix at root cause. No "while I'm here" improvements.
+Turn the failing case into a regression test and fix its cause. Rerun both the
+regression test and the original command with its original fixture. Report the
+observed result before and after. For an intermittent case repeat the same
+trial budget and conditions; a run with zero failures measures that sample.
+If the original scenario remains unverified, say which check passed and which
+still needs to run.
 
 ### "5 Whys" — depth gate
 Ask "Why?" at least 5 times to find the real issue. Stop at the first plausible answer = symptom fixing. Example: crash → null pointer → user object null → API 404 → invalid user ID → **frontend allowed negative IDs** (root cause).
@@ -185,16 +203,16 @@ Report consensus when done.
 - [ ] Identified error/symptom
 - [ ] Checked relevant logs
 - [ ] Verified service health
-- [ ] Reproduced issue
+- [ ] Recorded the original command or user action, fixture and symptom
 - [ ] Formed hypothesis
-- [ ] Tested fix
+- [ ] Reran the original scenario and the regression test; recorded failures / attempts for intermittent cases
 
 ## Rules
 
 - **MUST** form a testable hypothesis before changing code
 - **NEVER** apply fixes without first reproducing the symptom
 - **CRITICAL**: trace from symptom to root cause — do not stop at the first plausible explanation
-- **MANDATORY**: if the bug is intermittent, log enough state to reproduce it deterministically before fixing
+- For intermittent cases, preserve a deterministic reproduction when one is available and report the measured failure counts.
 - **MUST** finish collecting evidence (logs, health, recent diff, error-parser output) before forming the hypothesis — an investigation that halts at the first error found reports what the user already saw and misses the one they did not
 
 ## Gotchas

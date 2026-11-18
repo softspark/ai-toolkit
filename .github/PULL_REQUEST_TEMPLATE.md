@@ -10,6 +10,18 @@
 - [ ] Test improvement
 - [ ] Other: ___
 
+## Behavior and evidence
+
+<!-- Give a command, fixture or user action, the previous result and the result on the tested revision. Identify reported or unavailable baselines. For docs-only changes, describe what you verified. -->
+
+## Impact and recovery
+
+<!-- Who or what is affected? What does reverting the commit restore? Mention any files, data or external actions that need separate recovery. -->
+
+## Test plan
+
+- [ ] <!-- Command or manual check, tested revision and observed result. Leave pending checks unchecked. -->
+
 ## Checklist
 
 - [ ] I have read the [Contributing Guide](CONTRIBUTING.md)
@@ -20,7 +32,7 @@
 - [ ] `bats tests/` passes
 - [ ] New code has no external dependencies (stdlib only)
 - [ ] No secrets, tokens, or API keys in the code
-- [ ] I did **not** modify generated files (AGENTS.md, llms.txt, llms-full.txt, GEMINI.md, .roomodes, .aider.conf.yml)
+- [ ] Tracked generated files are current for these changes.
 - [ ] I did **not** bump `version` in package.json, manifest.json, or plugin.json (maintainer handles releases)
 - [ ] I did **not** update README counts/badges or ARCHITECTURE.md counts (maintainer handles these)
 

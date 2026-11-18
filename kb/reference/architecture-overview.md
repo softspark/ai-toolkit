@@ -3,7 +3,7 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.15.1"
+version: "1.15.2"
 created: "2026-03-23"
 last_updated: "2026-11-18"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
@@ -148,8 +148,8 @@ surfaces below `$CODEX_HOME` (default `~/.codex`) while user skills remain in
 the documented shared `$HOME/.agents/skills/` directory. Experimental plugin
 packs can layer their rules, skills, and hooks onto that Codex user target.
 
-Gemini advisory hook output is converted to native JSON; its completion
-`prompt_response` feeds the shared session summary. Devin prompt/edit hooks emit
+Gemini advisory hook output is converted to native JSON. Its completion hook
+saves session metadata and selected checkpoint fields. Devin prompt/edit hooks emit
 event-labelled JSON context. Codex refresh preserves both model-request diagnostic
 events. OpenCode's generated plugin supports V2 and V1 1.18.29+ through one
 default export. Claude safety guards use `onFailure: block` on clients 2.1.295+.

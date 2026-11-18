@@ -64,6 +64,10 @@ accessible to remote reviewers: attach sanitized evidence through the configured
 provider or include the necessary results in the PR body. Never publish
 credentials, local session stores or private logs wholesale.
 
+For behavior changes, include the original observation and the result of the
+same check on the tested head. Identify a reporter-supplied baseline. Describe
+which users or data are affected and any recovery work a revert cannot do.
+
 When label management is enabled, use the repository's existing names and valid
 transitions for review, changes requested, QA and ready status. Do not create a
 new label taxonomy unasked. A label is a convenience, not a completion gate.

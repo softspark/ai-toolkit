@@ -39,6 +39,10 @@ with zipfile.ZipFile(archive) as plugin:
     assert "plugin.json" in names
     assert ".codex-plugin/plugin.json" in names
     assert "skills/debug/SKILL.md" in names
+    debug = plugin.read("skills/debug/SKILL.md").decode()
+    assert "failures / attempts" in debug and "original fixture" in debug
+    pr = plugin.read("skills/pr/SKILL.md").decode()
+    assert "## Behavior and evidence" in pr and "## Impact and recovery" in pr
     assert "hooks/hooks.json" in names
     assert "hooks/guard-destructive.sh" in names
     assert "LICENSE" in names

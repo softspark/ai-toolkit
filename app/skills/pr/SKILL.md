@@ -38,6 +38,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/pr-summary.py [base_branch]
 ```
 
 The script outputs JSON with:
+- **base_sha**, **head_sha**: resolved commits used to summarize the changes
 - **title_suggestion**: auto-generated PR title from dominant commit type and scope
 - **commits[]**: each commit parsed into type, scope, description (conventional commits)
 - **groups**: commits grouped by type (Features, Bug Fixes, etc.)
@@ -83,6 +84,19 @@ with actual repository/branch values and the prepared body file:
 gh pr create --base develop --head feat/csv-export --title "feat: export filtered orders" --body-file /absolute/run/pr-body.md
 ```
 
+For a behavior change, give the reviewer one comparison they can repeat. Name the
+fixture or action, what happened before, and what happened at the tested head.
+Use an observed result from a test, command or UI. Identify its revision when
+known. If the only baseline is the reporter's description, attribute it; if no
+baseline is available, say so. For a docs-only change, a checked link, rendered
+example or other relevant verification is enough. Redact private inputs.
+
+Name the affected users, callers or stored state. Explain what reverting the
+commit would restore and which effects would require a separate recovery step.
+For example, reverting an installer can stop it overwriting settings on the
+next run; recovering a previously overwritten file needs a backup. Fit these
+details into the project's existing template when it has one.
+
 Publishing must already be authorized by the task and allowed by the current
 host. A missing permission leaves a prepared, reviewable result and a concrete
 blocker. Creating a PR does not authorize merging it. Record the returned URL
@@ -94,15 +108,14 @@ immediately in the autonomous run before continuing.
 ## Summary
 <1-3 bullet points describing changes>
 
-## Changes
-- [ ] Feature implementation
-- [ ] Tests added/updated
-- [ ] Documentation updated
+## Behavior and evidence
+<fixture or action, observed baseline and source, result on the tested revision>
+
+## Impact and recovery
+<affected callers or data, what a revert restores, any additional recovery>
 
 ## Test plan
-- [ ] CI checks pass (lint, typecheck, tests)
-- [ ] Manual testing completed
-- [ ] No regressions
+- [ ] <specific check, tested commit and actual result; leave pending checks open>
 
 ## Screenshots
 <if applicable>
@@ -118,6 +131,7 @@ Before creating PR:
 - [ ] Documentation updated if needed
 - [ ] Commit messages follow conventional commits
 - [ ] Changes against the actual base are reviewed; merge conflicts are resolved
+- [ ] Evidence distinguishes observations from reports. The recovery note covers persistent effects.
 
 ## Useful gh Commands
 

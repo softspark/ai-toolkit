@@ -894,10 +894,11 @@ session_dir_for_cwd() {
     cd "$TEST_TMP/project" 2>/dev/null || { mkdir -p "$TEST_TMP/project"; cd "$TEST_TMP/project"; }
     sdir="$(session_dir_for_cwd)"
     mkdir -p "$sdir"
-    echo "Working on feature X" > "$sdir/session-context.md"
+    echo "Working on feature X with OLD-PRIVATE-VALUE" > "$sdir/session-context.md"
     AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Session Context"
+    [[ "$output" != *OLD-PRIVATE-VALUE* ]]
 }
 
 @test "save-session: two repos get isolated session stores" {
@@ -909,8 +910,9 @@ session_dir_for_cwd() {
     run_hook_with_input "save-session.sh" '{"session_id":"sid-b","last_assistant_message":"work B"}'
     dir_b="$(session_dir_for_cwd)"
     [ "$dir_a" != "$dir_b" ]
-    grep -q "sid-a" "$dir_a/session-context.md"
-    grep -q "sid-b" "$dir_b/session-context.md"
+    session_a=$(grep '^Session fingerprint: ' "$dir_a/session-context.md")
+    session_b=$(grep '^Session fingerprint: ' "$dir_b/session-context.md")
+    [ "$session_a" != "$session_b" ]
 }
 
 @test "session-start: loads active instincts by default (no verbose needed)" {
@@ -1195,9 +1197,11 @@ PY
     cd "$TEST_TMP/project"
     sdir="$(session_dir_for_cwd)"
     mkdir -p "$sdir"
-    echo "Task: implement auth" > "$sdir/session-context.md"
+    echo "Task: implement auth OLD-PRIVATE-VALUE" > "$sdir/session-context.md"
+    echo "OLD-PRIVATE-DECISION" > "$sdir/decisions.md"
     run_hook "pre-compact.sh"
     echo "$output" | grep -q "Session Context"
+    [[ "$output" != *OLD-PRIVATE* ]]
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1252,7 +1256,7 @@ PY
     [ "$status" -eq 0 ]
     [ ! -f ".claude/session-context.md" ]
     [ -f "$(session_dir_for_cwd)/session-context.md" ]
-    grep -q "test-session-123" "$(session_dir_for_cwd)/session-context.md"
+    grep -Eq '^Session fingerprint: [0-9a-f]{16}$' "$(session_dir_for_cwd)/session-context.md"
 }
 
 @test "save-session: accepts alternate runtime conversation id" {
@@ -1260,8 +1264,8 @@ PY
     run_hook_with_input "save-session.sh" \
         '{"conversation_id":"augment-save-session","last_assistant_message":"saved"}'
     [ "$status" -eq 0 ]
-    grep -q "Session: augment-save-session" \
-        "$(session_dir_for_cwd)/session-context.md"
+    grep -Eq '^Session fingerprint: [0-9a-f]{16}$' "$(session_dir_for_cwd)/session-context.md"
+    [[ "$(cat "$(session_dir_for_cwd)/session-context.md")" != *augment-save-session* ]]
 }
 
 @test "save-session: skips writing when no session ID" {
@@ -1272,19 +1276,45 @@ PY
     [ ! -f "$(session_dir_for_cwd)/session-context.md" ]
 }
 
-@test "save-session: preserves native Gemini response and prefers the existing assistant field" {
+@test "save-session: Claude and Gemini omit raw replies and retain only safe checkpoint fields" {
     mkdir -p "$TEST_TMP/project"
     cd "$TEST_TMP/project"
+    sdir="$(session_dir_for_cwd)"
+    mkdir -p "$sdir"
+    cat > "$sdir/session-context.md.checkpoints" <<'EOF'
+## Checkpoint 2026-11-18T00:00:00Z
+Objective: Verify CLI upgrade
+- **Key decisions:** Preserve user preferences
+- Pending steps: Run install tests
+Artifacts: tests/test_install.bats
+Opaque note: ignored-private-comment
+Completed steps: API_KEY=fictional-credential
+Files modified: https://example.test/manifest?signature=synthetic-value
+```text
+Decision: ignored-code-block
+```
+EOF
+    cp "$sdir/session-context.md.checkpoints" "$TEST_TMP/original-checkpoints"
     run_hook_with_input "save-session.sh" \
-        '{"session_id":"gemini-native-response","hook_event_name":"AfterAgent","prompt_response":"Gemini result"}'
+        '{"session_id":"gemini-native-response","hook_event_name":"AfterAgent","prompt_response":"private-gemini-text"}'
     [ "$status" -eq 0 ]
-    grep -q '^Gemini result$' "$(session_dir_for_cwd)/session-context.md"
+    [[ "$(cat "$sdir/session-context.md")" != *private-gemini-text* ]]
 
     run_hook_with_input "save-session.sh" \
-        '{"session_id":"gemini-native-response","last_assistant_message":"Preferred result","prompt_response":"Fallback result"}'
+        '{"session_id":"claude-native","last_assistant_message":"private-claude-text","prompt_response":"private-fallback-text"}'
     [ "$status" -eq 0 ]
-    grep -q '^Preferred result$' "$(session_dir_for_cwd)/session-context.md"
-    ! grep -q '^Fallback result$' "$(session_dir_for_cwd)/session-context.md"
+    summary="$(cat "$sdir/session-context.md")"
+    [[ "$summary" == *"Objective: Verify CLI upgrade"* ]]
+    [[ "$summary" == *"Decision: Preserve user preferences"* ]]
+    [[ "$summary" == *"Next action: Run install tests"* ]]
+    [[ "$summary" == *"Artifacts: tests/test_install.bats"* ]]
+    for forbidden in private- ignored- fictional- synthetic-value; do
+        [[ "$summary" != *"$forbidden"* ]]
+    done
+    cmp "$TEST_TMP/original-checkpoints" "$sdir/session-context.md.checkpoints"
+    AI_TOOLKIT_HOOK_VERBOSE=1 run_hook "session-start.sh"
+    [[ "$output" == *"Next action: Run install tests"* ]]
+    [[ "$output" != *fictional-credential* ]]
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════

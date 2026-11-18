@@ -77,7 +77,7 @@ fi
 SESSION_FILE="$SESSION_CONTEXT_FILE"
 if [ -f "$SESSION_FILE" ] && [ "${AI_TOOLKIT_HOOK_QUIET:-0}" != "1" ] && [ "${AI_TOOLKIT_HOOK_VERBOSE:-0}" = "1" ]; then
     printf '%s\n' "=== Session Context ==="
-    cat "$SESSION_FILE"
+    print_session_context
     printf '%s\n' "====================="
 fi
 

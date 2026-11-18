@@ -41,12 +41,14 @@ commit_file() {
 import json, sys
 d = json.loads(sys.argv[1])
 assert d["base"] == "develop"
+assert d["base_sha"] == sys.argv[2]
+assert d["head_sha"] == sys.argv[3] and d["base_sha"] != d["head_sha"]
 assert d["total_commits"] == 1 and d["files_changed"] == 1
 assert d["title_suggestion"] == "feat(api): expose endpoint"
 assert d["groups"] == {"Features": ["expose endpoint"]}
 assert d["commits"][0]["scope"] == "api"
 assert not d["has_breaking"] and not d["has_tests"]
-' "$output"
+' "$output" "$(git rev-parse develop)" "$(git rev-parse HEAD)"
 }
 
 @test "pr-summary: default prefers cached remote develop over local main" {

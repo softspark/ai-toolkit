@@ -205,7 +205,7 @@
 - **tdd**: TDD with red-green-refactor loop and vertical slices. Triggers: TDD, test-first, red-green-refactor, test driving development.
 - **test**: Runs project test suite with coverage, auto-detects framework (pytest, vitest, jest, flutter, go, cargo, phpunit). Triggers: run tests, test suite, coverage report.
 - **testing-patterns**: Testing strategy: pyramid, AAA, mocks/fakes/stubs, flaky tests, coverage. Triggers: test, fixture, mock, stub, e2e, TDD, Playwright, Cypress, flaky, coverage, property-based.
-- **triage-issue**: Bug triage: explores codebase for root cause, files GitHub issue with TDD fix plan. Triggers: triage, investigate bug, fix plan, root cause, file issue, bug report.
+- **triage-issue**: Triage an existing GitHub issue or investigate a new bug report. Review reporter updates, distinguish bugs from decisions, and file new bugs with a TDD fix plan.
 - **typescript-patterns**: TypeScript types: generics, discriminated unions, Zod, satisfies, branded types. Triggers: TypeScript, TS, generics, Zod, satisfies, strict mode.
 - **typescript-rules**: TypeScript/JavaScript coding rules: style, patterns, security, testing. Triggers: .ts, .tsx, .js, .jsx, package.json, tsconfig.json, React, Next.js, Vue, Vite, Vitest, Jest, ESLint.
 - **ubiquitous-language**: Extracts DDD ubiquitous language glossary, flags ambiguities, saves to UBIQUITOUS_LANGUAGE.md. Triggers: define domain terms, build glossary, harden terminology, DDD, domain model.
@@ -9858,9 +9858,9 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: ai-toolkit
 tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, isolation]
-version: "1.2.2"
+version: "1.2.3"
 created: "2026-07-26"
-last_updated: "2026-09-08"
+last_updated: "2026-11-18"
 description: "Smoke-test a published @softspark/ai-toolkit npm artifact in a disposable container or VM with its default HOME, no host settings or credential mounts, host-side configuration fingerprints, and retained evidence. Covers provenance, CLI, doctor, installed skill scripts, scanner wiring, and the plugin-pack lifecycle."
 ---
 
@@ -10054,7 +10054,7 @@ for D in "$HOME"/.claude/skills/*/; do
   # Match ANY interpreter and ANY extension. Narrowing this to `python3` and
   # `.py` is how the first version of this phase reported "no invocation" for a
   # skill that used `python`, and missed one that ran a .py file through bash.
-  ref=$(grep -ohE '(python3?|bash|sh|node) +\$\{CLAUDE_SKILL_DIR\}/scripts/[A-Za-z0-9_.-]+' "$D/SKILL.md" | head -1)
+  ref=$(grep -ohE '(python3?|bash|sh|node) +"?\$\{CLAUDE_SKILL_DIR\}/scripts/[A-Za-z0-9_.-]+' "$D/SKILL.md" | head -1)
   [ -n "$ref" ] || { printf '%-22s NO ${CLAUDE_SKILL_DIR} INVOCATION\n' "$s"; continue; }
   interp=${ref%% *}
   rel=${ref##*\$\{CLAUDE_SKILL_DIR\}/}
@@ -11791,7 +11791,7 @@ title: "AI Toolkit - Architecture Overview"
 category: reference
 service: ai-toolkit
 tags: [architecture, overview, design, structure]
-version: "1.15.1"
+version: "1.15.2"
 created: "2026-03-23"
 last_updated: "2026-11-18"
 description: "Architecture of ai-toolkit: install ownership, runtime adapters, skill tiers, and project integration."
@@ -11936,8 +11936,8 @@ surfaces below `$CODEX_HOME` (default `~/.codex`) while user skills remain in
 the documented shared `$HOME/.agents/skills/` directory. Experimental plugin
 packs can layer their rules, skills, and hooks onto that Codex user target.
 
-Gemini advisory hook output is converted to native JSON; its completion
-`prompt_response` feeds the shared session summary. Devin prompt/edit hooks emit
+Gemini advisory hook output is converted to native JSON. Its completion hook
+saves session metadata and selected checkpoint fields. Devin prompt/edit hooks emit
 event-labelled JSON context. Codex refresh preserves both model-request diagnostic
 events. OpenCode's generated plugin supports V2 and V1 1.18.29+ through one
 default export. Claude safety guards use `onFailure: block` on clients 2.1.295+.
@@ -15505,7 +15505,7 @@ category: reference
 section: reference
 service: ai-toolkit
 tags: [hooks, quality, safety, enforcement, settings.json]
-version: "1.21.0"
+version: "1.22.0"
 created: "2026-03-27"
 last_updated: "2026-11-18"
 description: "Complete reference of all ai-toolkit hooks: events, scripts, installation, and runtime behavior."
@@ -15782,10 +15782,19 @@ The pre-commit hook blocks the commit on `1` and on any status it does not know,
 | Fires | After every Claude response |
 | Mode | Background (`"async": true`): writes a file and exits 0, nothing to wait for |
 
-**Action:** Writes enriched session context to the per-repo session store (`~/.softspark/ai-toolkit/sessions/<repo-key>/session-context.md`) for cross-session persistence. Captures:
-- Session ID and last assistant message (first 5 lines)
-- Git branch, uncommitted change count, and diff stat (last 5 lines)
-- Agent-written checkpoints from `session-context.md.checkpoints` in the same store (if present — written by proactive checkpointing per Constitution Art. I §5)
+**Action:** Replaces `~/.softspark/ai-toolkit/sessions/<repo-key>/session-context.md` with a private summary. It records a timestamp, a short fingerprint of the normalized session ID, and the Git commit and number of changed paths when available. Claude replies and Gemini response text are excluded.
+
+For a handoff, append one labelled item per line below a `## Checkpoint <timestamp>` heading in the existing `session-context.md.checkpoints` file:
+
+```text
+Objective: Verify the installer update
+Completed steps: Ran the previous-version fixture
+Key decisions: Keep user-edited configuration
+Next action: Run the upgrade test
+Artifacts: tests/test_install.bats
+```
+
+The summary keeps the last value of each recognized field if it passes filtering in each of the last five checkpoints, including `Files modified` and `Pending steps`. Use repository-relative paths and short descriptions. Free-form lines, code fences, values over 400 characters and fields containing common credential or personal-address patterns are omitted. Authors must keep sensitive or identifying information out of their notes. Filtering applies to the derived summary; the source checkpoint file remains in place. Only regular checkpoint files with verifiable file identity are read. Startup and compaction omit older unstructured summaries until a subsequent Stop writes the current format.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -15861,7 +15870,7 @@ Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 2. **Active instincts** — lists each instinct with confidence score and pattern name from `.claude/instincts/*.md`
 3. **Session context** — preserves task state from the per-repo session store (if exists)
 4. **Git working state** — branch name, uncommitted change count, last commit (if inside a git repo)
-5. **Key decisions** — last 10 lines from `decisions.md` in the per-repo session store (if exists)
+5. **Key decisions** — reports the presence of the per-repo `decisions.md` file for explicit follow-up.
 
 Skipped when `TOOLKIT_HOOK_PROFILE=minimal`.
 
@@ -16248,8 +16257,8 @@ Beyond the global Claude Code hooks above, editor profiles emit native hook file
 Gemini's text-only advisory handlers are wrapped as JSON. `SessionStart` adds
 native `additionalContext`; checker, MCP health, commit and session-end messages
 use `systemMessage`. Wrappers preserve infrastructure failure status, and
-blocking/JSON-native handlers retain their contracts. Session persistence accepts
-the native `AfterAgent.prompt_response` when `last_assistant_message` is absent.
+blocking/JSON-native handlers retain their contracts. `AfterAgent` writes the
+same metadata and structured checkpoint fields as Claude's Stop event.
 
 OpenCode uses one default `id/setup/server` export for V2 and V1 1.18.29+.
 Both entrypoints use an argument-separated subprocess transport. The V2 bridge
@@ -19073,7 +19082,7 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.8.0"
+version: "1.9.0"
 created: "2026-03-23"
 last_updated: "2026-11-18"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
@@ -19107,7 +19116,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | Skill | Slash Command | Effort | Description |
 |-------|---------------|--------|-------------|
 | **commit** | `/commit` | medium | Create well-structured git commits (Conventional Commits) |
-| **pr** | `/pr` | medium | Create GitHub pull request with template and checks |
+| **pr** | `/pr` | medium | Present before/after evidence, impact and recovery alongside results for the tested head |
 | **test** | `/test` | medium | Run tests (auto-detect: pytest, vitest, jest, phpunit, flutter, go, cargo) |
 | **build** | `/build` | low | Build the current project (auto-detects project type) |
 | **lint** | `/lint` | low | Run linting and type checking (ruff/mypy, eslint/tsc, phpstan, dart analyze) |
@@ -19132,7 +19141,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **agent-creator** | `/agent-creator` | high | Create new specialized agents with trigger and tool selection guidance |
 | **plugin-creator** | `/plugin-creator` | high | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
 | **health** | `/health` | medium | Check health of project services (auto-detect) |
-| **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
+| **prd-to-issues** | `/prd-to-issues` | medium | Publish approved vertical slices with verified blocker relationships and resume interrupted publication |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 | **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references |
 | **a11y-validate** | `/a11y-validate` | medium | Scan codebase for accessibility violations: WCAG 2.1 Level AA, EN 301 549, European Accessibility Act (EAA / EU 2019/882). Covers semantics, keyboard, focus, color contrast, forms, media, ARIA, motion, mobile (React Native + Flutter), and EAA accessibility-statement documentation. |
@@ -19145,7 +19154,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | Skill | Slash Command | Effort | Description |
 |-------|---------------|--------|-------------|
 | **explore** | `/explore` | medium | Explore and understand codebase structure and tech stack |
-| **debug** | `/debug` | medium | Systematic debugging with logs, health checks, diagnostics (Tier 1 — single agent) |
+| **debug** | `/debug` | xhigh | Record a symptom-specific check and rerun it together with the regression test |
 | **review** | `/review` | high | Review code changes: quality, security, performance (Tier 1 — single agent) |
 | **plan** | `/plan` | high | Create structured plan with task breakdown and agent assignments |
 | **refactor** | `/refactor` | high | Plan and execute code refactoring with safety checks (Tier 1 — single agent) |
@@ -19167,7 +19176,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **ubiquitous-language** | `/ubiquitous-language` | medium | Extract DDD-style ubiquitous language glossary from conversation |
 | **refactor-plan** | `/refactor-plan` | high | Create detailed refactor plan with tiny commits via user interview |
 | **qa-session** | `/qa-session` | high | Interactive QA session — report bugs conversationally, file GitHub issues |
-| **triage-issue** | `/triage-issue` | high | Triage bug with deep codebase exploration and TDD fix plan |
+| **triage-issue** | `/triage-issue` | high | Assess existing issues using the discussion and source, or investigate a new report and prepare its fix plan |
 | **architecture-audit** | `/architecture-audit` | high | Discover shallow modules and propose module-deepening refactors |
 | **subagent-development** | `/subagent-development` | high | Execute plans with 2-stage review (spec + quality) per task |
 | **repeat** | `/repeat` | medium | Autonomous loop with safety controls (Ralph Wiggum pattern) |

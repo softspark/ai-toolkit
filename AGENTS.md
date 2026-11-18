@@ -72,6 +72,7 @@ Stale counts = broken user trust. This is non-negotiable.
 `/workflow` types: `feature-development`, `backend-feature`, `frontend-feature`, `api-design`, `database-evolution`, `test-coverage`, `security-audit`, `codebase-onboarding`, `spike`, `debugging`, `incident-response`, `performance-optimization`, `infrastructure-change`, `application-deploy`, `proactive-troubleshooting`
 
 ## Key Conventions
+- Write checkpoint decisions, next steps and repository-relative artifact references on separate labelled lines. Redact sensitive information before appending to the checkpoint file. See the [session save contract](kb/reference/hooks-catalog.md#stop-session-save--save-sessionsh).
 - Claude agent tiers, editor model inheritance and the optional Codex review route are documented in `kb/reference/model-compatibility.md`. Reviewed editor releases and native configuration formats are in `kb/reference/supported-tools-registry.md`.
 - All scripts live in `scripts/` (Python) and `app/hooks/` (Bash) — never at repo root
 - `install` / `update` = global (`~/.claude/` and every global editor surface); `--local` runs that global layer first, then what only the project can hold

@@ -362,18 +362,18 @@ See [Unique Features](kb/reference/unique-features.md) for detailed descriptions
 | `/swarm` | Parallel Agent Teams: `map-reduce`, `consensus`, `relay` | max |
 | `/plan` | Implementation plan with task breakdown | high |
 | `/review` | Code review: quality, security, performance | high |
-| `/debug` | Systematic debugging with diagnostics | medium |
+| `/debug` | Reproduce a specific symptom and rerun the original check after the fix | xhigh |
 | `/refactor` | Safe refactoring with pattern analysis | high |
 | `/tdd` | Test-driven development with red-green-refactor | high |
 | `/commit` | Structured commit with linting | medium |
-| `/pr` | Pull request with generated checklist | medium |
+| `/pr` | Pull request with before/after evidence, affected users and recovery steps | medium |
 | `/docs` | Generate README, API docs, architecture notes | high |
 | `/explore` | Interactive codebase visualization | medium |
 | `/write-a-prd` | Create PRD through interactive interview | high |
 | `/prd-to-plan` | Convert PRD into vertical-slice implementation plan | high |
 | `/design-an-interface` | Generate 3+ radically different interface designs | high |
 | `/grill-me` | Stress-test a plan through Socratic questioning | medium |
-| `/triage-issue` | Triage bug with deep investigation and TDD fix plan | high |
+| `/triage-issue` | Assess an existing issue and its replies, or investigate a new report | high |
 | `/architecture-audit` | Discover shallow modules, propose refactors | high |
 | `/council` | 4-perspective decision evaluation | high |
 | `/cve-scan` | Scan dependencies for known CVEs | medium |

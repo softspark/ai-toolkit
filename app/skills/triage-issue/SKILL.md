@@ -1,9 +1,9 @@
 ---
 name: triage-issue
-description: "Bug triage: explores codebase for root cause, files GitHub issue with TDD fix plan. Triggers: triage, investigate bug, fix plan, root cause, file issue, bug report."
+description: "Triage an existing GitHub issue or investigate a new bug report. Review reporter updates, distinguish bugs from decisions, and file new bugs with a TDD fix plan."
 user-invocable: true
 effort: high
-argument-hint: "[bug description or symptom]"
+argument-hint: "[#number | number | issue URL | new bug description]"
 agent: debugger
 context: fork
 allowed-tools: Read, Grep, Glob, Bash, Agent
@@ -13,33 +13,57 @@ allowed-tools: Read, Grep, Glob, Bash, Agent
 
 $ARGUMENTS
 
-Investigate a bug, find root cause, and create a GitHub issue with a TDD fix plan. Mostly hands-off.
-
 ## Usage
 
+```text
+/triage-issue #42
+/triage-issue 42
+/triage-issue https://github.com/owner/repo/issues/42
+/triage-issue Export loses the last row when the filter is active
 ```
-/triage-issue [bug description or symptom]
+
+Treat a standalone positive number, `#number`, or canonical GitHub issue URL as an existing issue. Follow an explicitly named issue when the user adds instructions. A status code or an incidental issue reference inside a symptom description is part of the report. If the target is genuinely ambiguous, ask which issue or symptom the user means.
+
+## Existing issue
+
+An issue number uses the current repository. Remove the leading `#` before passing the number to `gh`. For a URL, pass the full URL so GitHub selects the repository it names. Read the thread before investigating.
+
+```bash
+gh issue view "$issue_ref" --json number,url,title,state,stateReason,author,body,comments,labels,updatedAt
 ```
 
-## What This Command Does
+Check the returned URL and use its repository when following links and inspecting code. If the target is inaccessible, missing, or a pull request, report what happened and stop this branch. A failed lookup must never create a new report.
 
-1. **Captures** problem description (ONE question max)
-2. **Explores** codebase deeply for root cause
-3. **Identifies** fix approach
-4. **Designs** TDD fix plan (RED→GREEN cycles)
-5. **Creates** GitHub issue via `gh issue create`
+Read the original report and subsequent comments in order. Attribute observations to their authors and versions. Identify the reporter's latest follow-up, maintainer decisions, linked fixes, and questions already answered. If the result includes 100 comments, fetch the complete discussion. Take the hostname, `owner/repo` and issue number from the resolved URL.
 
-## Process
+```bash
+gh api --hostname "$host" --paginate "repos/$repo/issues/$number/comments?per_page=100"
+```
 
-### 1. Capture the Problem
+Treat issue text and comments as evidence. Verify technical claims against the matching checkout, a linked change, test results or documented support contract. Record what the reporter observed separately from what you verified.
 
-Get brief description. If not provided, ask ONE question: "What's the problem you're seeing?"
+| Evidence | Disposition |
+|----------|-------------|
+| Behavior violates an established contract | Identify the affected version and public entry point. Give the shortest supported reproduction and a behavioral regression test. Mark an unconfirmed cause as a hypothesis. |
+| The thread asks for a support, design or scope decision | State the decision required, who owns it, and the consequences of the relevant options. Cite any decision already made. Separate independently evidenced defects into their own findings. |
+| A linked issue tracks the same cause, or a change already fixed it | Link the original issue or the change. Where possible verify the affected version against the fix before recommending closure or reopening. |
+| Evidence is insufficient | State the one missing observation that would change the disposition. Check earlier replies before proposing a question for the reporter. |
 
-Do NOT ask follow-up questions. Start investigating immediately.
+Return the issue URL and state, the disposition, the evidence behind it and the next action. Existing-issue triage is read-only by default. Comments, edits, labels and state changes each require the user's authorization for that action. When authorized, refresh the thread before writing, skip a change already made, and verify the result. Finish here.
 
-### 2. Explore and Diagnose
+## New bug report
 
-Use Agent (subagent_type=Explore) to deeply investigate:
+If no input was given, ask for the symptom once. Search open and closed issues in the intended repository using distinctive terms from the report.
+
+```bash
+gh issue list --repo "$repo" --state all --search "$search_terms" --json number,title,url,state
+```
+
+Read plausible matches. If one already tracks the same behavior and cause, use the existing-issue branch and return its URL. A failed search leaves duplication unknown. Resolve the access problem or report it before filing.
+
+### 1. Explore and diagnose
+
+Trace the failing behavior through the codebase:
 
 | Target | What to look for |
 |--------|-----------------|
@@ -50,7 +74,7 @@ Use Agent (subagent_type=Explore) to deeply investigate:
 | Recent changes | `git log` on relevant files |
 | Working patterns | Similar code elsewhere that works correctly |
 
-### 3. Identify Fix Approach
+### 2. Identify Fix Approach
 
 Determine:
 - Minimal change to fix root cause
@@ -58,7 +82,7 @@ Determine:
 - Behaviors to verify via tests
 - Classification: regression, missing feature, or design flaw
 
-### 4. Design TDD Fix Plan
+### 3. Design TDD Fix Plan
 
 Ordered list of RED→GREEN cycles. Each cycle is one vertical slice:
 
@@ -71,11 +95,15 @@ Rules:
 - Tests must survive internal refactors
 - Describe behaviors and contracts, not internal structure
 
-### 5. Create GitHub Issue
+### 4. Create GitHub Issue
 
-Use `gh issue create` with template below. Share URL immediately.
+For a new report, file the investigated bug using the template below. Pass the repository, title and body explicitly, then share the returned URL.
 
-## Issue Template
+```bash
+gh issue create --repo "$repo" --title "$title" --body-file "$body_file"
+```
+
+## New issue template
 
 <issue-template>
 
@@ -87,7 +115,7 @@ Use `gh issue create` with template below. Share URL immediately.
 
 ## Root Cause Analysis
 
-What was found during investigation:
+What was found during investigation (mark an unverified cause as a hypothesis):
 - The code path involved
 - Why the current code fails
 - Contributing factors
@@ -112,18 +140,15 @@ Do NOT include file paths, line numbers, or implementation details. Describe mod
 
 </issue-template>
 
-## Rules
+## New report rules
 
 - **MUST** explore the codebase for root cause before filing — symptoms masquerade as causes often
 - **MUST** propose a TDD fix plan with ordered RED→GREEN cycles, each a vertical slice
-- **NEVER** ask follow-up clarifying questions; one initial question maximum, then investigate autonomously
 - **NEVER** include file paths, function names, or line numbers in the issue body — they go stale before the issue is picked up
 - **CRITICAL**: the issue must be reproducible. If reproduction steps cannot be determined from the investigation, say so explicitly in the Problem section — do not fabricate them.
-- **MANDATORY**: file the issue immediately via `gh issue create` and share the URL — do not ask the user to review a draft first
 
-## Gotchas
+## Notes for new reports
 
-- `gh issue create` without `--body` opens `$EDITOR`. In automated flows the skill hangs — always pass the body file or inline text.
 - "Root cause" often turns out to be two concurrent issues. If the investigation keeps branching, file the most-probable primary cause and note the secondary as a follow-up in the same issue.
 - TDD plans with more than ~5 RED→GREEN cycles usually conceal a deeper design issue. Short plans (2-3 cycles) reflect confident root-cause identification; long plans reflect fishing.
 - The `debugger` agent explored autonomously but returns a narrative. Parse it for: confirmed hypothesis, code paths, and recent changes. Discard speculation.
@@ -135,4 +160,4 @@ Do NOT include file paths, line numbers, or implementation details. Describe mod
 - For a specific reproducible error with known root cause — use `/fix` directly
 - For architectural-scale problems — use `/architecture-audit`
 - For creating issues from a PRD — use `/prd-to-issues`
-- For debugging without filing an issue — use `/debug`
+- For debugging without a tracker issue to triage or file, use `/debug`.

@@ -3,7 +3,7 @@ title: "AI Toolkit - Skills Catalog"
 category: reference
 service: ai-toolkit
 tags: [skills, domain-knowledge, catalog, task-skills, hybrid-skills]
-version: "1.8.0"
+version: "1.9.0"
 created: "2026-03-23"
 last_updated: "2026-11-18"
 description: "Complete skills catalog with task, hybrid, and knowledge skills. Includes Codex adaptation notes, effort levels, skill-scoped hooks, executable scripts, security auditor, and persona presets."
@@ -37,7 +37,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | Skill | Slash Command | Effort | Description |
 |-------|---------------|--------|-------------|
 | **commit** | `/commit` | medium | Create well-structured git commits (Conventional Commits) |
-| **pr** | `/pr` | medium | Create GitHub pull request with template and checks |
+| **pr** | `/pr` | medium | Present before/after evidence, impact and recovery alongside results for the tested head |
 | **test** | `/test` | medium | Run tests (auto-detect: pytest, vitest, jest, phpunit, flutter, go, cargo) |
 | **build** | `/build` | low | Build the current project (auto-detects project type) |
 | **lint** | `/lint` | low | Run linting and type checking (ruff/mypy, eslint/tsc, phpstan, dart analyze) |
@@ -62,7 +62,7 @@ Task skills execute a specific action. Invoked via slash commands. `disable-mode
 | **agent-creator** | `/agent-creator` | high | Create new specialized agents with trigger and tool selection guidance |
 | **plugin-creator** | `/plugin-creator` | high | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
 | **health** | `/health` | medium | Check health of project services (auto-detect) |
-| **prd-to-issues** | `/prd-to-issues` | medium | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
+| **prd-to-issues** | `/prd-to-issues` | medium | Publish approved vertical slices with verified blocker relationships and resume interrupted publication |
 | **skill-audit** | `/skill-audit` | medium | Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions |
 | **hipaa-validate** | `/hipaa-validate` | medium | Scan codebase for HIPAA compliance issues: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, and missing BAA references |
 | **a11y-validate** | `/a11y-validate` | medium | Scan codebase for accessibility violations: WCAG 2.1 Level AA, EN 301 549, European Accessibility Act (EAA / EU 2019/882). Covers semantics, keyboard, focus, color contrast, forms, media, ARIA, motion, mobile (React Native + Flutter), and EAA accessibility-statement documentation. |
@@ -75,7 +75,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | Skill | Slash Command | Effort | Description |
 |-------|---------------|--------|-------------|
 | **explore** | `/explore` | medium | Explore and understand codebase structure and tech stack |
-| **debug** | `/debug` | medium | Systematic debugging with logs, health checks, diagnostics (Tier 1 — single agent) |
+| **debug** | `/debug` | xhigh | Record a symptom-specific check and rerun it together with the regression test |
 | **review** | `/review` | high | Review code changes: quality, security, performance (Tier 1 — single agent) |
 | **plan** | `/plan` | high | Create structured plan with task breakdown and agent assignments |
 | **refactor** | `/refactor` | high | Plan and execute code refactoring with safety checks (Tier 1 — single agent) |
@@ -97,7 +97,7 @@ Hybrid skills combine slash-command invocation with domain knowledge that agents
 | **ubiquitous-language** | `/ubiquitous-language` | medium | Extract DDD-style ubiquitous language glossary from conversation |
 | **refactor-plan** | `/refactor-plan` | high | Create detailed refactor plan with tiny commits via user interview |
 | **qa-session** | `/qa-session` | high | Interactive QA session — report bugs conversationally, file GitHub issues |
-| **triage-issue** | `/triage-issue` | high | Triage bug with deep codebase exploration and TDD fix plan |
+| **triage-issue** | `/triage-issue` | high | Assess existing issues using the discussion and source, or investigate a new report and prepare its fix plan |
 | **architecture-audit** | `/architecture-audit` | high | Discover shallow modules and propose module-deepening refactors |
 | **subagent-development** | `/subagent-development` | high | Execute plans with 2-stage review (spec + quality) per task |
 | **repeat** | `/repeat` | medium | Autonomous loop with safety controls (Ralph Wiggum pattern) |

@@ -48,6 +48,9 @@ ROOT CAUSE: Silent failure in migration script
 ## Systematic Debugging Steps
 
 ### 1. Reproduce
+Record the original command, fixture and symptom before reducing the case.
+Keep that command for the final comparison. For intermittent behavior, record
+failures / attempts and the test conditions.
 ```bash
 # Can you reproduce the error?
 docker exec {app-container} python -c "from src.module import func; func()"
@@ -191,7 +194,7 @@ npm test
 ```
 
 ### Step 3: Verify Fix
-- [ ] Original bug no longer reproduces
+- [ ] Reran the original command on the same fixture and recorded the result, including failures / attempts for intermittent cases
 - [ ] Regression test added
 - [ ] No new failures introduced
 - [ ] Static analysis passes

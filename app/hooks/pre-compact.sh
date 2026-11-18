@@ -40,7 +40,7 @@ fi
 # ---------------------------------------------------------------------------
 if [ -f "$SESSION_CONTEXT_FILE" ]; then
     echo "=== Session Context ==="
-    cat "$SESSION_CONTEXT_FILE"
+    print_session_context
     echo "======================="
 fi
 
@@ -63,8 +63,7 @@ fi
 # ---------------------------------------------------------------------------
 if [ -f "$SESSION_DECISIONS_FILE" ]; then
     echo "=== Key Decisions This Session ==="
-    # Only show last 10 lines to keep token budget tight
-    tail -10 "$SESSION_DECISIONS_FILE"
+    echo "A decisions.md file is available in the per-repo session store."
     echo "=================================="
 fi
 

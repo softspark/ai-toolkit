@@ -161,7 +161,7 @@ installed. See `kb/howto/autonomous-development.md` for the public contract.
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `commit` | `/commit` | Create well-structured git commits (Conventional Commits) |
-| `pr` | `/pr` | Create GitHub pull request with template and checks |
+| `pr` | `/pr` | Summarize observed behavior, verification, impact and recovery in a pull request |
 | `test` | `/test` | Run tests (pytest, vitest, phpunit, flutter, go, cargo) |
 | `build` | `/build` | Build project (auto-detects type) |
 | `lint` | `/lint` | Run linting and type checking |
@@ -186,7 +186,7 @@ installed. See `kb/howto/autonomous-development.md` for the public contract.
 | `command-creator` | `/command-creator` | Create new slash commands with frontmatter and workflow guidance |
 | `agent-creator` | `/agent-creator` | Create new specialized agents with tools and trigger guidance |
 | `plugin-creator` | `/plugin-creator` | Create experimental opt-in plugin packs with manifests, conventions, and optional modules |
-| `prd-to-issues` | `/prd-to-issues` | Break PRD into GitHub issues with vertical slices and HITL/AFK tagging |
+| `prd-to-issues` | `/prd-to-issues` | Publish vertical slices and reconcile their blocker relationships |
 | `skill-audit` | `/skill-audit` | Scan skills and agents for security risks, dangerous patterns, secrets |
 | `hipaa-validate` | `/hipaa-validate` | Scan codebase for HIPAA compliance: PHI exposure, missing audit logging, unencrypted transmission/storage, access control gaps, temp file exposure, missing BAA references |
 | `mcp-builder` | `/mcp-builder` | Build production-grade MCP servers using 4-phase methodology (research, implement, test, evaluate) |
@@ -195,7 +195,7 @@ installed. See `kb/howto/autonomous-development.md` for the public contract.
 | Skill | Slash Command | Purpose |
 |-------|---------------|---------|
 | `explore` | `/explore` | Codebase exploration and tech stack discovery |
-| `debug` | `/debug` | Systematic debugging with logs and diagnostics |
+| `debug` | `/debug` | Reproduce the symptom and verify the original scenario after the fix |
 | `review` | `/review` | Code review for quality, security, performance |
 | `plan` | `/plan` | Create structured plan with task breakdown |
 | `refactor` | `/refactor` | Plan and execute code refactoring with safety checks |
@@ -218,7 +218,7 @@ installed. See `kb/howto/autonomous-development.md` for the public contract.
 | `ubiquitous-language` | `/ubiquitous-language` | Extract DDD-style ubiquitous language glossary |
 | `refactor-plan` | `/refactor-plan` | Create detailed refactor plan with tiny commits |
 | `qa-session` | `/qa-session` | Interactive QA session with GitHub issue filing |
-| `triage-issue` | `/triage-issue` | Triage bug with deep investigation and TDD fix plan |
+| `triage-issue` | `/triage-issue` | Investigate a new report or recommend a disposition for an existing issue |
 | `architecture-audit` | `/architecture-audit` | Discover shallow modules and propose deepening refactors |
 | `subagent-development` | `/subagent-development` | Execute plans with 2-stage review (spec + quality) per task |
 | `repeat` | `/repeat` | Autonomous loop with safety controls (Ralph Wiggum pattern) |

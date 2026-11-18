@@ -3,9 +3,9 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: ai-toolkit
 tags: [sop, post-release, smoke-test, npm, sandbox, plugin-pack, provenance, isolation]
-version: "1.2.2"
+version: "1.2.3"
 created: "2026-07-26"
-last_updated: "2026-09-08"
+last_updated: "2026-11-18"
 description: "Smoke-test a published @softspark/ai-toolkit npm artifact in a disposable container or VM with its default HOME, no host settings or credential mounts, host-side configuration fingerprints, and retained evidence. Covers provenance, CLI, doctor, installed skill scripts, scanner wiring, and the plugin-pack lifecycle."
 ---
 
@@ -199,7 +199,7 @@ for D in "$HOME"/.claude/skills/*/; do
   # Match ANY interpreter and ANY extension. Narrowing this to `python3` and
   # `.py` is how the first version of this phase reported "no invocation" for a
   # skill that used `python`, and missed one that ran a .py file through bash.
-  ref=$(grep -ohE '(python3?|bash|sh|node) +\$\{CLAUDE_SKILL_DIR\}/scripts/[A-Za-z0-9_.-]+' "$D/SKILL.md" | head -1)
+  ref=$(grep -ohE '(python3?|bash|sh|node) +"?\$\{CLAUDE_SKILL_DIR\}/scripts/[A-Za-z0-9_.-]+' "$D/SKILL.md" | head -1)
   [ -n "$ref" ] || { printf '%-22s NO ${CLAUDE_SKILL_DIR} INVOCATION\n' "$s"; continue; }
   interp=${ref%% *}
   rel=${ref##*\$\{CLAUDE_SKILL_DIR\}/}

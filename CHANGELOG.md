@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+- `/triage-issue` reads existing issues and their discussions before proposing
+  a disposition. `/prd-to-issues` reconciles published slices and records native
+  GitHub blocking relationships where available.
+- `/debug` records a repeatable check for the original symptom. `/pr` includes
+  before/after evidence and identifies effects that require recovery after a revert.
+- Session handoffs retain next steps and artifact references while limiting the
+  response and checkpoint content written to the managed summary.
+
 ## v6.1.0 - Editor compatibility and model routing (2026-11-18)
 
 ### Ecosystem

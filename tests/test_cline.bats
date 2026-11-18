@@ -96,7 +96,9 @@ teardown_file() {
 }
 
 @test "generate_cline_rules.py workflows cover common development lifecycle" {
-    [ -f "$CLINE_TMP/.clinerules/workflows/ai-toolkit-debug.md" ]
+    local debug_workflow="$CLINE_TMP/.clinerules/workflows/ai-toolkit-debug.md"
+    grep -Fq 'failures / attempts' "$debug_workflow"
+    grep -Fq 'Rerun the original command' "$debug_workflow"
     [ -f "$CLINE_TMP/.clinerules/workflows/ai-toolkit-feature-development.md" ]
     [ -f "$CLINE_TMP/.clinerules/workflows/ai-toolkit-refactor.md" ]
     [ -f "$CLINE_TMP/.clinerules/workflows/ai-toolkit-security-audit.md" ]

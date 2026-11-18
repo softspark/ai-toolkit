@@ -208,6 +208,8 @@ def generate_summary(base: str | None) -> dict[str, Any]:
     )
     return {
         "base": base,
+        "base_sha": base_commit,
+        "head_sha": head,
         "total_commits": len(commits),
         "title_suggestion": suggest_title(commits),
         "commits": commits,
