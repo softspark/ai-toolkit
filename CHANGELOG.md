@@ -7,15 +7,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v6.2.0 - Issue workflows, PR evidence and private session handoffs (2026-11-18)
 
-- `/triage-issue` reads existing issues and their discussions before proposing
-  a disposition. `/prd-to-issues` reconciles published slices and records native
-  GitHub blocking relationships where available.
-- `/debug` records a repeatable check for the original symptom. `/pr` includes
-  before/after evidence and identifies effects that require recovery after a revert.
-- Session handoffs retain next steps and artifact references while limiting the
-  response and checkpoint content written to the managed summary.
+### Added
+
+- **Existing-issue triage.** Pass a GitHub issue number or URL to `/triage-issue`
+  to review the report, later replies and current code. New reports are checked
+  for duplicates in both open and closed issues.
+- **Dependency-aware publication.** `/prd-to-issues` records and verifies
+  native GitHub blocker relationships for approved slices. Text links remain
+  available when the API or permissions do not support native links. Local
+  receipts allow interrupted publication to resume without blindly retrying.
+
+### Changed
+
+- **Debugging and pull requests.** `/debug` reruns the original symptom check
+  after the fix and records failures per trial for intermittent issues. `/pr`
+  reports before/after evidence, affected callers and any recovery beyond a revert.
+- **Session handoffs.** Generated summaries omit raw assistant replies and
+  select fields from the five most recent checkpoints. Common credential
+  patterns are filtered. Source checkpoint files are preserved, so sensitive
+  values still need to be redacted before writing them. The shared hooks omit
+  previous-format summaries until a new Stop event writes a structured one.
+
+The catalog contains 116 skills and 44 agents. The largest skill body,
+`design-engineering`, remains 17,197 bytes, within the 18,000-byte warning threshold.
 
 ## v6.1.0 - Editor compatibility and model routing (2026-11-18)
 

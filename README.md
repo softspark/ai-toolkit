@@ -8,17 +8,16 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-2038%20passing-success)](tests/)
 
-## What's New in v6.1.0
+## What's New in v6.2.0
 
-- **Auggie upgrades** select agent tools for the installed 0.x or 1.x CLI and
-  preserve custom hooks during migration.
-- **Devin file hooks** check native writes, notebook edits and all paths in a
-  patch, including move destinations.
-- **Aider** keeps customized model settings across reinstall and uninstall.
-- **OpenCode** displays the toolkit's agent colors correctly in 2.3.1.
-- **Model routing** respects each teammate's configured model. The optional
-  defensive source-review route uses GPT-6.2 Astra, and the reference covers
-  GPT-6.2 Sol and Claude Fable 5.2.
+- **Triage an existing issue.** Give `/triage-issue` a GitHub issue number or
+  URL to review the discussion and the reporter's latest update.
+- **Track blockers.** `/prd-to-issues` creates native GitHub dependencies
+  where supported and can resume an interrupted publication.
+- **Verify the fix.** `/debug` repeats the original check. `/pr` shows the
+  before/after result, affected users and any recovery steps.
+- **Resume a session.** The handoff summary retains selected checkpoint fields
+  and artifact references. Raw responses are omitted from the summary.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
