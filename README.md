@@ -8,16 +8,17 @@
 [![Agents](https://img.shields.io/badge/agents-44-blue)](app/agents/)
 [![Tests](https://img.shields.io/badge/tests-2038%20passing-success)](tests/)
 
-## What's New in v6.0.0
+## What's New in v6.1.0
 
-- **Security audits.** `security-auditor` reviews source, configuration and
-  dependencies, then verifies fixes with local checks. If a custom workflow used
-  the agent for active penetration testing, update that step before upgrading.
-- **Windows status output.** Redirecting account status to a legacy-encoded
-  pipe now preserves readable progress bars and paths.
-- **Antigravity compatibility.** All 13 legacy workflows remain available
-  alongside their skills. Doctor also checks the global `global_workflows`
-  directory and gives migration instructions for your client.
+- **Auggie upgrades** select agent tools for the installed 0.x or 1.x CLI and
+  preserve custom hooks during migration.
+- **Devin file hooks** check native writes, notebook edits and all paths in a
+  patch, including move destinations.
+- **Aider** keeps customized model settings across reinstall and uninstall.
+- **OpenCode** displays the toolkit's agent colors correctly in 2.3.1.
+- **Model routing** respects each teammate's configured model. The optional
+  defensive source-review route uses GPT-6.2 Astra, and the reference covers
+  GPT-6.2 Sol and Claude Fable 5.2.
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 

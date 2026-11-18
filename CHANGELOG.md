@@ -7,16 +7,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v6.1.0 - Editor compatibility and model routing (2026-11-18)
 
-- Auggie installs select agent tool names for the detected 1.x or 0.x CLI.
-  Hook matchers cover both generations. Devin file hooks now cover native
-  writes, patches and notebook edits.
-- Local Aider installation preserves the user's model and other YAML settings.
-  OpenCode agents receive quoted hex colors accepted by the 2.3.1 schema.
-- The optional Codex route for defensive source review uses GPT-6.2 Astra.
-  Delegation examples respect the configured role, and the model references
-  cover GPT-6.2 Sol and Claude Fable 5.2.
+### Ecosystem
+
+- **Auggie 1.x and 0.x (B/E).** Select tool names for the installed CLI and
+  match both generations of hook events. Upgrades preserve user hooks and
+  roll back partial agent rewrites.
+- **Devin file hooks (B).** Check writes, notebook edits and every file in a
+  patch, including move destinations. Failed edits no longer produce change
+  notifications.
+- **Aider configuration (B).** Preserve user-edited local and global YAML,
+  including model choices, through install, reset and uninstall.
+- **OpenCode 2.3.1 (B).** Emit agent colors as quoted six-digit hex values so
+  the client displays them. The release review covers all 13 integrations.
+
+### Model routing
+
+- **Claude and Codex.** Removed 11 hard-coded model choices in delegation
+  examples. The optional read-only Codex route for defensive source review
+  uses GPT-6.2 Astra at `xhigh`. Model references now cover GPT-6.2 Sol and
+  Claude Fable 5.2.
+
+The catalog contains 116 skills and 44 agents. Bats coverage increased from
+2,037 to 2,038 cases. The largest skill body is `design-engineering` at 17,197
+bytes, within the release SOP's 18,000-byte warning threshold.
 
 ## v6.0.0 - Defensive security audits and CLI compatibility (2026-11-18)
 
